@@ -1,0 +1,5 @@
+name = "Dev-Dom-Design"          # Choose something unique
+compatibility_date = "2026-05-21"
+
+# Point to the folder containing your index.html, CSS, JS, images, etc.
+assets = { directory = "./" }   # or "./dist", "./build", "./" etc.
