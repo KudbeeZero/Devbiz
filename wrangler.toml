@@ -1,4 +1,4 @@
-name = "Dev-Dom-Design"          # Choose something unique
+name = "dev1-dom-design"          # Choose something unique
 compatibility_date = "2026-05-21"
 
 # Point to the folder containing your index.html, CSS, JS, images, etc.
