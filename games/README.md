@@ -33,5 +33,5 @@ Principles:
 
 ## Featured on the site
 
-Games are showcased on the main website under **Games** (`Index.html` → `#page-games`):
+Games are showcased on the main website under **Games** (`index.html` → `#page-games`):
 hero banner, featured card, screenshot gallery, dev logs, Play Demo, roadmap, and coming-soon.
