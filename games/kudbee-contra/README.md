@@ -84,7 +84,9 @@ keeping a crisp, consistent layout. The fixed-timestep loop targets a steady **6
 - **K9 companion** — a hovering robotic missile-dog. Defeat enemies to charge the **OVERDRIVE**
   meter; when full, trigger the Special and K9 unleashes a homing **missile barrage** that
   locks onto enemies for a few seconds, then recharges through combat.
-- Weapons: Pulse Rifle + Spread Shot power-up (table built to add Plasma/Laser/Missiles).
+- Weapons: Pulse Rifle, Spread Shot, **Plasma Cannon** (piercing), and **Laser** (rapid
+  piercing) — picked up through the level.
+- **Progression:** enemies grant XP; level-ups raise max health and upgrade K9.
 - Enemies: Alien Drone (patrol→chase), Cyber Soldier (ranged + cover), Mechanical Turret,
   and the **Hive Sentinel** 2-phase mini-boss.
 - Combat FX: enemy projectiles, explosions, particles, hit flashes, floating **damage

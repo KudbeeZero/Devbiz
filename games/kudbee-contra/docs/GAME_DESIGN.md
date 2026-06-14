@@ -42,9 +42,20 @@ splash-damage missiles for a few seconds, then the meter drains and rebuilds thr
 |---------------|--------|----------|
 | Pulse Rifle   | ✅ P1  | Fast single bolt, default. |
 | Spread Shot   | ✅ P1  | 5-pellet fan, power-up. |
-| Plasma Cannon | 🔜     | Charged heavy shot, pierces. |
-| Laser         | 🔜     | Continuous beam, DPS over time. |
-| Missiles      | 🔜     | Homing arc, splash. |
+| Plasma Cannon | ✅ P1  | Heavy slow bolt that **pierces** a whole line of enemies. |
+| Laser         | ✅ P1  | Rapid-fire **piercing** beam-bolts. |
+| Missiles      | ✅ P1  | Homing + splash — fired by the K9 companion barrage. |
+
+Weapons are picked up in the level (Spread `S`, Plasma `P`, Laser `L`) and shown on the HUD.
+
+## Progression — XP & levels
+
+Defeated enemies grant **XP**. Filling the XP bar triggers a **LEVEL UP**, which:
+- grants **+1 max health** (capped) with a small heal,
+- **upgrades K9** — longer barrages, faster cadence, and from level 3 a second missile per volley.
+
+The HUD shows the current **LV** and an XP bar; each level-up flashes a toast. This is the
+seed of the deeper "bonus power" progression on the roadmap (unlockable K9 modes & abilities).
 
 Weapons are a data table (`entities/weapons.js`) — new entries need no engine changes.
 

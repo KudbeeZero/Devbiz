@@ -53,6 +53,10 @@
     this.companion = new KC.Companion(this);
     this.power = 0;
     this.powerMax = 100;
+    this.xp = 0;
+    this.playerLevel = 1;
+    this.xpToNext = 80;
+    this.levelFlash = 0;
     this.enemies = [];
     this.pickups = this.level.pickups.map((p) => ({
       kind: p.kind, x: p.x, y: p.y, w: 26, h: 26, phase: Math.random() * 6, taken: false,
@@ -99,6 +103,30 @@
   // Charge the OVERDRIVE meter (drives the K9 companion special).
   Game.prototype.addPower = function (n) {
     this.power = Math.min(this.powerMax, this.power + n);
+  };
+
+  // Award XP and roll over into level-ups (which buff the operative + K9).
+  Game.prototype.addXP = function (n) {
+    this.xp += n;
+    while (this.xp >= this.xpToNext) {
+      this.xp -= this.xpToNext;
+      this._levelUp();
+    }
+  };
+
+  Game.prototype._levelUp = function () {
+    this.playerLevel++;
+    this.xpToNext = Math.round(this.xpToNext * 1.35);
+    this.levelFlash = 1.8;
+    // +1 max health (capped) with a small heal; K9 grows stronger each level.
+    if (this.player.maxHealth < 12) {
+      this.player.maxHealth++;
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + 1);
+    }
+    this.companion.level = this.playerLevel;
+    this.audio.powerup();
+    this.camera.shake(0.22);
+    this.particles.burst(this.player.cx(), this.player.cy(), '#7CFFb2', 26, 280, { glow: true });
   };
 
   Game.prototype.maybeDropPickup = function (x, y) {
@@ -149,6 +177,8 @@
     // ---- Active play ----
     const p = this.player;
     p.update(dt, this.input, this.level);
+
+    if (this.levelFlash > 0) this.levelFlash -= dt;
 
     // Special: unleash the K9 missile barrage when OVERDRIVE is charged.
     if (this.input.justPressed('special') && this.power >= this.powerMax && !this.companion.active && !p.dead) {
@@ -267,20 +297,28 @@
         for (let j = 0; j < this.enemies.length; j++) {
           const e = this.enemies[j];
           if (Util.aabb(this._prBox(pr), e.box())) {
-            e.hurt(pr.damage);
-            this.particles.spark(pr.x, pr.y, pr.color);
-            if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
-            pr.dead = true;
-            break;
+            if (pr.pierce) {
+              if (pr.hit.indexOf(e) !== -1) continue;  // already struck
+              e.hurt(pr.damage);
+              pr.hit.push(e);
+              this.particles.spark(pr.x, pr.y, pr.color);
+              // piercing bolts keep going
+            } else {
+              e.hurt(pr.damage);
+              this.particles.spark(pr.x, pr.y, pr.color);
+              if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
+              pr.dead = true;
+              break;
+            }
           }
         }
         // vs boss
         if (!pr.dead && this.boss && !this.boss.dead && this.bossActive) {
-          if (Util.aabb(this._prBox(pr), this.boss.box())) {
+          if (Util.aabb(this._prBox(pr), this.boss.box()) && pr.hit.indexOf(this.boss) === -1) {
             this.boss.hurt(pr.damage);
             this.particles.spark(pr.x, pr.y, pr.color);
             if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
-            pr.dead = true;
+            if (pr.pierce) pr.hit.push(this.boss); else pr.dead = true;
           }
         }
       } else {
@@ -354,8 +392,8 @@
       if (Util.aabb({ x: pk.x, y: pk.y, w: pk.w, h: pk.h }, { x: p.x, y: p.y, w: p.w, h: p.h })) {
         if (pk.kind === 'health') {
           p.health = Math.min(p.maxHealth, p.health + 2);
-        } else if (pk.kind === 'spread') {
-          p.weaponKey = 'spread';
+        } else {
+          p.weaponKey = pk.kind;   // spread | plasma | laser
         }
         this.audio.powerup();
         this.particles.burst(pk.x + pk.w / 2, pk.y + pk.h / 2, pk.kind === 'health' ? '#4dff9e' : '#ffd34d', 14, 200, { glow: true });
@@ -415,6 +453,21 @@
     else if (this.state === 'pause') this._drawCenter(ctx, 'PAUSED', 'Press P / Start to resume');
     else if (this.state === 'gameover') this._drawCenter(ctx, 'GAME OVER', 'Score ' + this.score + ' — Press Enter / A to retry', '#ff5d6d');
     else if (this.state === 'win') this._drawCenter(ctx, 'OUTPOST CLEARED', 'Score ' + this.score + ' — Press Enter / A to play again', '#7CFFb2');
+
+    // Level-up flash toast.
+    if (this.levelFlash > 0 && (this.state === 'play' || this.state === 'pause')) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, this.levelFlash);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#7CFFb2';
+      ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 16;
+      ctx.font = '900 32px monospace';
+      ctx.fillText('LEVEL UP!  LV ' + this.playerLevel, this.viewW / 2, 130);
+      ctx.font = '14px monospace';
+      ctx.fillText('+1 MAX HEALTH · K9 UPGRADED', this.viewW / 2, 156);
+      ctx.restore();
+      ctx.textAlign = 'left';
+    }
 
     if (this.debug) this._drawDebug(ctx);
   };
@@ -533,7 +586,18 @@
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px monospace';
     ctx.fillText(String(this.score).padStart(6, '0'), this.viewW - 20, 20);
+
+    // Level + XP bar (top-right, under score).
+    ctx.fillStyle = '#7CFFb2';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('LV ' + this.playerLevel, this.viewW - 20, 48);
     ctx.textAlign = 'left';
+    const xw = 120, xh = 5, xx = this.viewW - 20 - xw, xy = 66;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    this._roundRect(ctx, xx, xy, xw, xh, 2); ctx.fill();
+    ctx.fillStyle = '#7CFFb2'; ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 6;
+    this._roundRect(ctx, xx, xy, xw * Math.min(1, this.xp / this.xpToNext), xh, 2); ctx.fill();
+    ctx.shadowBlur = 0;
 
     // Boss bar.
     if (this.bossActive && this.boss && !this.boss.dead) {

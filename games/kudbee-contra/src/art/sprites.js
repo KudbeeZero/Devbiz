@@ -318,15 +318,21 @@
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.translate(0, Math.sin(phase * 3) * 3);
-    const color = kind === 'health' ? '#4dff9e' : '#ffd34d';
-    ctx.shadowColor = color;
+    const map = {
+      health: { c: '#4dff9e', t: '+' },
+      spread: { c: '#ffd34d', t: 'S' },
+      plasma: { c: '#c46bff', t: 'P' },
+      laser: { c: '#ff5d6d', t: 'L' },
+    };
+    const info = map[kind] || map.spread;
+    ctx.shadowColor = info.c;
     ctx.shadowBlur = 16;
     this._roundRect(ctx, -w * 0.35, -h * 0.35, w * 0.7, h * 0.7, 5, 'rgba(0,0,0,0.4)');
-    ctx.fillStyle = color;
+    ctx.fillStyle = info.c;
     ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(kind === 'health' ? '+' : 'S', 0, 1);
+    ctx.fillText(info.t, 0, 1);
     ctx.shadowBlur = 0;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';

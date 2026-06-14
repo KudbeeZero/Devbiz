@@ -19,11 +19,13 @@
         p.damage = cfg.damage || 1;
         p.friendly = !!cfg.friendly;
         p.color = cfg.color || '#fff';
-        p.style = cfg.style || 'bolt';     // bolt | enemy | grenade
+        p.style = cfg.style || 'bolt';     // bolt | enemy | grenade | missile | plasma | laser
         p.life = cfg.life || 2.0;
         p.gravity = cfg.gravity || 0;
         p.fuse = cfg.fuse || 0;            // grenades explode on fuse end
         p.spin = 0;
+        p.pierce = !!cfg.pierce;           // passes through enemies
+        p.hit = [];                        // enemies already struck (for pierce)
       }
     );
   }
@@ -45,8 +47,9 @@
         damage: weapon.damage,
         friendly: friendly,
         color: weapon.color,
-        style: 'bolt',
-        life: 1.6,
+        style: weapon.style || 'bolt',
+        pierce: weapon.pierce,
+        life: weapon.style === 'laser' ? 0.9 : 1.6,
       });
     }
   };
@@ -111,6 +114,19 @@
         ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(10, 0); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#9fefff';
         ctx.fillRect(-9, -2, 4, 4);
+      } else if (p.style === 'plasma') {
+        // fat glowing plasma orb with a bright core
+        ctx.shadowBlur = 20;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius * 0.45, 0, Math.PI * 2); ctx.fill();
+      } else if (p.style === 'laser') {
+        // thin elongated streak along travel direction
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Math.atan2(p.vy, p.vx));
+        ctx.fillRect(-16, -1.5, 32, 3);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-16, -0.5, 32, 1);
       } else if (p.friendly) {
         // bright bolt with trail
         ctx.beginPath();

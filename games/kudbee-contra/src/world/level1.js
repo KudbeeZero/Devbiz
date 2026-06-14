@@ -71,9 +71,10 @@
     pickups: [
       { kind: 'spread', x: 1080, y: 320 },
       { kind: 'health', x: 2360, y: 430 },
-      { kind: 'spread', x: 3300, y: 340 },
+      { kind: 'plasma', x: 3300, y: 340 },
       { kind: 'health', x: 4400, y: 430 },
-      { kind: 'spread', x: 5100, y: 400 },
+      { kind: 'laser', x: 5100, y: 400 },
+      { kind: 'spread', x: 2900, y: 430 },
     ],
 
     // Decorative glowing plants / consoles (purely visual, drawn in gameplay layer).

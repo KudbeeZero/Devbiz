@@ -32,10 +32,36 @@
       style: 'bolt',
       sfx: 'spread',
     },
+    plasma: {
+      name: 'Plasma Cannon',
+      cooldown: 0.5,
+      speed: 520,
+      damage: 5,
+      pellets: 1,
+      spread: 0,
+      radius: 9,
+      color: '#c46bff',
+      style: 'plasma',
+      pierce: true,        // tears through a whole line of enemies
+      sfx: 'spread',
+    },
+    laser: {
+      name: 'Laser',
+      cooldown: 0.07,
+      speed: 1150,
+      damage: 1,
+      pellets: 1,
+      spread: 0,
+      radius: 3,
+      color: '#ff5d6d',
+      style: 'laser',
+      pierce: true,        // hitscan-fast piercing beam bolts
+      sfx: 'shoot',
+    },
   };
 
   // Display order for the HUD / future weapon-wheel.
-  WEAPONS._order = ['pulse', 'spread'];
+  WEAPONS._order = ['pulse', 'spread', 'plasma', 'laser'];
 
   KC.Weapons = WEAPONS;
 })(window.KC = window.KC || {});

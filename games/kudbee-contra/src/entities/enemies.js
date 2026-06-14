@@ -64,6 +64,7 @@
     this.game.camera.shake(0.12);
     this.game.addScore(this.score, this.cx(), this.cy());
     this.game.addPower(15);
+    this.game.addXP(20);
     this.game.maybeDropPickup(this.cx(), this.cy());
   };
 
@@ -234,6 +235,7 @@
     }
     this.game.audio.explosion();
     this.game.addScore(this.score, this.cx(), this.cy());
+    this.game.addXP(250);
     this.game.onBossDefeated();
   };
 

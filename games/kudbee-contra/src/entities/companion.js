@@ -32,6 +32,7 @@
     this.active = false;
     this.activeT = 0;
     this.fireCd = 0;
+    this.level = 1;          // raised by the game's level-up system
   };
 
   Companion.prototype.cx = function () { return this.x + this.w / 2; };
@@ -40,7 +41,8 @@
   // Fire the special: kick off the homing-missile barrage.
   Companion.prototype.activate = function () {
     this.active = true;
-    this.activeT = BARRAGE_TIME;
+    // Higher operative levels extend the barrage and tighten its cadence.
+    this.activeT = BARRAGE_TIME + (this.level - 1) * 0.5;
     this.fireCd = 0.15;
     this.game.audio.powerup();
     this.game.audio.bossAlarm();
@@ -63,8 +65,15 @@
       this.fireCd -= dt;
       if (this.fireCd <= 0) {
         const tgt = this._nearest(targets);
-        if (tgt) { this._fireMissile(tgt); this.fireCd = FIRE_INTERVAL; }
-        else this.fireCd = 0.12;
+        if (tgt) {
+          this._fireMissile(tgt);
+          // From level 3+, fire a second missile at another target.
+          if (this.level >= 3) {
+            const t2 = this._nearest(targets.filter((t) => t !== tgt));
+            if (t2) this._fireMissile(t2);
+          }
+          this.fireCd = Math.max(0.16, FIRE_INTERVAL - (this.level - 1) * 0.025);
+        } else this.fireCd = 0.12;
       }
       if (this.activeT <= 0) this.active = false;
     }
