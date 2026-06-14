@@ -400,6 +400,50 @@
     .frame-bar span { font-size: 11px; color: #8a93a8; margin-left: 8px; letter-spacing: 0.05em; }
     .play-actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
 
+    /* ===== Pop-out game window (modal) ===== */
+    .game-modal {
+        position: fixed; inset: 0; z-index: 4000; display: none;
+        align-items: center; justify-content: center; padding: 24px;
+    }
+    .game-modal.open { display: flex; animation: gmfade 0.25s ease; }
+    @keyframes gmfade { from { opacity: 0; } to { opacity: 1; } }
+    .gm-backdrop {
+        position: absolute; inset: 0; cursor: pointer;
+        background: radial-gradient(circle at 50% 30%, rgba(57,230,255,0.10), transparent 60%), rgba(3,4,10,0.82);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .gm-window {
+        position: relative; z-index: 1;
+        width: min(1100px, 96vw); max-height: 92vh;
+        display: flex; flex-direction: column;
+        border-radius: 16px; overflow: hidden;
+        border: 1px solid var(--border-hover); background: #05050f;
+        box-shadow: 0 40px 120px -30px rgba(57,230,255,0.5), 0 0 0 1px rgba(57,230,255,0.08);
+        animation: gmpop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    }
+    @keyframes gmpop { from { transform: scale(0.92) translateY(14px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+    .gm-bar {
+        display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+        background: linear-gradient(180deg, #0b0d1c, #070810); border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .gm-bar .gm-dots { display: inline-flex; gap: 7px; }
+    .gm-bar .gm-dots .d { width: 11px; height: 11px; border-radius: 50%; }
+    .gm-bar .gm-dots .d.r { background: #ff5f57; } .gm-bar .gm-dots .d.y { background: #febc2e; } .gm-bar .gm-dots .d.g { background: #28c840; }
+    .gm-title { font-size: 12px; color: #aeb8cc; letter-spacing: 0.06em; margin-left: 10px; font-family: 'Space Grotesk', sans-serif; }
+    .gm-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .gm-act {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 26px; border-radius: 7px; cursor: pointer;
+        background: transparent; border: 1px solid transparent; color: #aeb8cc;
+        font-size: 14px; text-decoration: none; transition: all 0.15s; line-height: 1;
+    }
+    .gm-act:hover { background: rgba(57,230,255,0.14); border-color: var(--border-hover); color: #fff; }
+    .gm-close:hover { background: rgba(255,95,87,0.2); border-color: rgba(255,95,87,0.5); }
+    .gm-body { position: relative; flex: 1; min-height: 0; background: #05050f; }
+    .gm-body iframe { width: 100%; height: min(78vh, 760px); border: 0; display: block; }
+    @media (max-width: 640px) { .gm-body iframe { height: 80vh; } .game-modal { padding: 10px; } }
+
     /* gallery */
     .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
     .shot {
@@ -735,7 +779,7 @@
                 <h2>Kudbee Contra</h2>
                 <p>A 2.5D side-scrolling run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and turrets, and topple the Hive Sentinel — playable right in your browser.</p>
                 <div class="ggroup">
-                    <a href="games/kudbee-contra/index.html" class="btn-primary">▶ Play Now</a>
+                    <a href="games/kudbee-contra/index.html" class="btn-primary" data-game="games/kudbee-contra/index.html" data-title="Kudbee Contra — Neon Jungle Outpost">▶ Play Now</a>
                     <label for="page-games" class="btn-secondary">View Game Page</label>
                 </div>
             </div>
@@ -754,7 +798,7 @@
                 <h2>Kudbee Darts</h2>
                 <p>Predictive flick-throw darts done right. Drag to aim with a live landing reticle, play 501 &amp; Cricket, and climb a league of smart AI rivals — earning XP and unlocking neon dart skins. Pass-and-play or take on the bots, right in your browser.</p>
                 <div class="ggroup">
-                    <a href="games/kudbee-darts/index.html" class="btn-primary">▶ Play Now</a>
+                    <a href="games/kudbee-darts/index.html" class="btn-primary" data-game="games/kudbee-darts/index.html" data-title="Kudbee Darts — Bullseye League">▶ Play Now</a>
                     <label for="page-games" class="btn-secondary">View Game Page</label>
                 </div>
             </div>
@@ -941,7 +985,7 @@
             <iframe src="games/kudbee-contra/index.html" title="Kudbee Contra — playable demo" loading="lazy" allow="autoplay; gamepad"></iframe>
         </div>
         <div class="play-actions">
-            <a href="games/kudbee-contra/index.html" class="btn-primary" target="_blank" rel="noopener">⛶ Play Fullscreen</a>
+            <a href="games/kudbee-contra/index.html" class="btn-primary" target="_blank" rel="noopener" data-game="games/kudbee-contra/index.html" data-title="Kudbee Contra — Neon Jungle Outpost">▶ Play in Window</a>
             <a href="games/kudbee-contra/README.md" class="btn-secondary" target="_blank" rel="noopener">📖 Game Docs</a>
         </div>
     </div>
@@ -979,7 +1023,7 @@
             <iframe src="games/kudbee-darts/index.html" title="Kudbee Darts — playable demo" loading="lazy" allow="autoplay; gamepad"></iframe>
         </div>
         <div class="play-actions">
-            <a href="games/kudbee-darts/index.html" class="btn-primary" target="_blank" rel="noopener">⛶ Play Fullscreen</a>
+            <a href="games/kudbee-darts/index.html" class="btn-primary" target="_blank" rel="noopener" data-game="games/kudbee-darts/index.html" data-title="Kudbee Darts — Bullseye League">▶ Play in Window</a>
             <a href="games/kudbee-darts/README.md" class="btn-secondary" target="_blank" rel="noopener">📖 Game Docs</a>
         </div>
     </div>
@@ -1119,6 +1163,22 @@
     </section>
 </div>
 
+<!-- Pop-out game window (opened by any [data-game] trigger) -->
+<div class="game-modal" id="gameModal" aria-hidden="true">
+    <div class="gm-backdrop" data-gm-close></div>
+    <div class="gm-window" role="dialog" aria-modal="true" aria-label="Game window">
+        <div class="gm-bar">
+            <span class="gm-dots"><span class="d r" data-gm-close title="Close"></span><span class="d y"></span><span class="d g"></span></span>
+            <span class="gm-title" id="gmTitle">Kudbee Games</span>
+            <span class="gm-actions">
+                <a class="gm-act" id="gmNewTab" target="_blank" rel="noopener" title="Open in a new browser tab">⛶</a>
+                <button class="gm-act gm-close" type="button" data-gm-close title="Close (Esc)">✕</button>
+            </span>
+        </div>
+        <div class="gm-body"><iframe id="gmFrame" title="Kudbee game window" allow="autoplay; gamepad; fullscreen"></iframe></div>
+    </div>
+</div>
+
 <!-- Footer -->
 <footer>
     <div class="footer-grid">
@@ -1127,7 +1187,7 @@
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
         <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-contact">Contact</label></div>
-        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><label for="page-games">All Games</label></div>
+        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html" data-game="games/kudbee-contra/index.html" data-title="Kudbee Contra — Neon Jungle Outpost">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html" data-game="games/kudbee-darts/index.html" data-title="Kudbee Darts — Bullseye League">Play Kudbee Darts</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
     <div class="footer-bottom">
@@ -1144,6 +1204,50 @@
 (function () {
     'use strict';
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    /* --------------------------------------------------------------
+     * Pop-out game window: any element with [data-game] opens the game
+     * in an in-page modal window (no popup blockers, works on mobile).
+     * Links keep their href so it still works with JS disabled.
+     * ------------------------------------------------------------ */
+    (function () {
+        var modal = document.getElementById('gameModal');
+        if (!modal) return;
+        var frame = document.getElementById('gmFrame');
+        var titleEl = document.getElementById('gmTitle');
+        var newTab = document.getElementById('gmNewTab');
+        var lastFocus = null;
+
+        function openGame(src, title) {
+            lastFocus = document.activeElement;
+            frame.src = src;
+            titleEl.textContent = title || 'Kudbee Games';
+            newTab.href = src;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeGame() {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            frame.src = 'about:blank';   // stop the game + free audio
+            document.body.style.overflow = '';
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+
+        document.querySelectorAll('[data-game]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                openGame(el.getAttribute('data-game'), el.getAttribute('data-title'));
+            });
+        });
+        modal.querySelectorAll('[data-gm-close]').forEach(function (el) {
+            el.addEventListener('click', closeGame);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('open')) closeGame();
+        });
+    })();
 
     // Close mobile menu after a nav choice.
     var mobileToggle = document.getElementById('mobile-menu-toggle');
