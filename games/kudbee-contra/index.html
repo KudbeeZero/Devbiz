@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Kudbee Contra — a 2.5D side-scrolling run-and-gun. Playable browser prototype by Kudbee Games Studio.">
+<meta name="theme-color" content="#05050f">
+<title>Kudbee Contra — Neon Jungle Outpost</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: #05050f;
+    color: #cfe9ff;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(57,230,255,0.10), transparent 60%),
+      #05050f;
+  }
+  #frame {
+    position: relative;
+    width: min(100vw, calc(100vh * 1.6));
+    height: min(100vh, calc(100vw / 1.6));
+    box-shadow: 0 0 60px rgba(57,230,255,0.18), inset 0 0 0 1px rgba(57,230,255,0.12);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #05050f;
+  }
+  canvas {
+    display: block; width: 100%; height: 100%;
+    image-rendering: optimizeQuality;
+    touch-action: none;
+  }
+
+  /* Top-left back link */
+  .back-link {
+    position: absolute; top: 10px; left: 12px; z-index: 30;
+    font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #9fb6c8; text-decoration: none; padding: 6px 10px;
+    border: 1px solid rgba(159,182,200,0.25); border-radius: 6px;
+    background: rgba(5,5,15,0.5); backdrop-filter: blur(6px);
+    transition: all 0.2s;
+  }
+  .back-link:hover { color: #fff; border-color: #39e6ff; }
+
+  /* Touch controls — shown only on coarse pointers (mobile/tablet). */
+  #touch { position: absolute; inset: 0; z-index: 20; display: none; pointer-events: none; }
+  @media (pointer: coarse) { #touch { display: block; } }
+  #touch .pad, #touch .btns { position: absolute; bottom: 4%; pointer-events: none; }
+  #touch .pad { left: 3%; }
+  #touch .btns { right: 3%; }
+  .tbtn {
+    pointer-events: auto;
+    width: 64px; height: 64px; margin: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(159,182,200,0.35);
+    background: rgba(20,28,40,0.45);
+    color: #cfe9ff; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); user-select: none;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tbtn.pressed { background: rgba(57,230,255,0.35); border-color: #39e6ff; }
+  .tbtn.big { width: 76px; height: 76px; }
+  .row { display: flex; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); }
+  .dpad .spacer { visibility: hidden; }
+
+  .hint {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 10; font-size: 11px; color: #45586a; letter-spacing: 0.05em;
+    pointer-events: none;
+  }
+  @media (pointer: coarse) { .hint { display: none; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <a class="back-link" href="../../index.html#games">&larr; Studio</a>
+    <canvas id="game" width="960" height="600"></canvas>
+
+    <!-- On-screen touch controls (mobile). data-action maps to engine/input.js -->
+    <div id="touch">
+      <div class="pad">
+        <div class="dpad">
+          <div class="spacer"></div>
+          <div class="tbtn" data-action="up">▲</div>
+          <div class="spacer"></div>
+          <div class="tbtn" data-action="left">◀</div>
+          <div class="tbtn" data-action="down">▼</div>
+          <div class="tbtn" data-action="right">▶</div>
+        </div>
+      </div>
+      <div class="btns">
+        <div class="row">
+          <div class="tbtn" data-action="special">K9</div>
+          <div class="tbtn" data-action="grenade">GRN</div>
+          <div class="tbtn big" data-action="fire">FIRE</div>
+        </div>
+        <div class="row">
+          <div class="tbtn" data-action="slide">SLD</div>
+          <div class="tbtn big" data-action="jump">JUMP</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">~ debug FPS · M mute</div>
+  </div>
+</div>
+
+<!-- Engine + game modules loaded as ordered classic scripts (no bundler). -->
+<script src="src/engine/util.js"></script>
+<script src="src/engine/loop.js"></script>
+<script src="src/engine/input.js"></script>
+<script src="src/engine/camera.js"></script>
+<script src="src/engine/audio.js"></script>
+<script src="src/engine/particles.js"></script>
+<script src="src/art/sprites.js"></script>
+<script src="src/world/parallax.js"></script>
+<script src="src/world/level1.js"></script>
+<script src="src/entities/weapons.js"></script>
+<script src="src/entities/projectiles.js"></script>
+<script src="src/entities/player.js"></script>
+<script src="src/entities/enemies.js"></script>
+<script src="src/entities/companion.js"></script>
+<script src="src/game.js"></script>
+<script>
+  (function () {
+    var canvas = document.getElementById('game');
+    var touchRoot = document.getElementById('touch');
+    var game = new KC.Game({ canvas: canvas, touchRoot: touchRoot });
+
+    // Load the asset manifest (procedural fallback if absent), then start.
+    game.sprites.load('assets/manifest.json').then(function () {
+      game.start();
+    });
+
+    // Unlock audio on first interaction (browser autoplay policy).
+    var unlock = function () { game.audio.unlock(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+  })();
+</script>
+</body>
+</html>
