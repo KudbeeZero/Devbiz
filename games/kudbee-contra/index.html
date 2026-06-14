@@ -81,9 +81,12 @@
     pointer-events: none;
   }
   @media (pointer: coarse) { .hint { display: none; } }
+  /* When embedded in a pop-out window / iframe, hide the in-game back-link. */
+  .embedded .back-link { display: none; }
 </style>
 </head>
 <body>
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
 <div id="stage">
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>

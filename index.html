@@ -398,6 +398,13 @@
     .frame-bar .d { width: 10px; height: 10px; border-radius: 50%; }
     .frame-bar .d.r { background: #ff5f57; } .frame-bar .d.y { background: #febc2e; } .frame-bar .d.g { background: #28c840; }
     .frame-bar span { font-size: 11px; color: #8a93a8; margin-left: 8px; letter-spacing: 0.05em; }
+    .frame-bar .frame-expand {
+        pointer-events: auto; margin-left: auto; cursor: pointer;
+        background: rgba(57,230,255,0.12); border: 1px solid var(--border-hover);
+        color: #cfe9ff; border-radius: 6px; font-size: 11px; padding: 3px 10px;
+        letter-spacing: 0.04em; transition: all 0.15s; font-family: 'Space Grotesk', sans-serif;
+    }
+    .frame-bar .frame-expand:hover { background: rgba(57,230,255,0.28); color: #fff; border-color: var(--cyan); }
     .play-actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
 
     /* ===== Pop-out game window (modal) ===== */
@@ -981,7 +988,7 @@
     <!-- Live playable embed -->
     <div class="play-frame reveal">
         <div class="play-window">
-            <div class="frame-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span>kudbee-contra · neon jungle outpost</span></div>
+            <div class="frame-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span>kudbee-contra · neon jungle outpost</span><button type="button" class="frame-expand" data-game="games/kudbee-contra/index.html" data-title="Kudbee Contra — Neon Jungle Outpost">⛶ Window</button></div>
             <iframe src="games/kudbee-contra/index.html" title="Kudbee Contra — playable demo" loading="lazy" allow="autoplay; gamepad"></iframe>
         </div>
         <div class="play-actions">
@@ -1019,7 +1026,7 @@
     <!-- Live playable embed -->
     <div class="play-frame reveal">
         <div class="play-window">
-            <div class="frame-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span>kudbee-darts · bullseye league</span></div>
+            <div class="frame-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span>kudbee-darts · bullseye league</span><button type="button" class="frame-expand" data-game="games/kudbee-darts/index.html" data-title="Kudbee Darts — Bullseye League">⛶ Window</button></div>
             <iframe src="games/kudbee-darts/index.html" title="Kudbee Darts — playable demo" loading="lazy" allow="autoplay; gamepad"></iframe>
         </div>
         <div class="play-actions">
