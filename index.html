@@ -746,6 +746,25 @@
         </div>
     </section>
 
+    <!-- Featured game banner #2 -->
+    <section class="game-banner reveal">
+        <div class="game-banner-inner">
+            <div class="game-banner-text">
+                <span class="kicker">◆ Kudbee Games Studio · Game #2</span>
+                <h2>Kudbee Darts</h2>
+                <p>Predictive flick-throw darts done right. Drag to aim with a live landing reticle, play 501 &amp; Cricket, and climb a league of smart AI rivals — earning XP and unlocking neon dart skins. Pass-and-play or take on the bots, right in your browser.</p>
+                <div class="ggroup">
+                    <a href="games/kudbee-darts/index.html" class="btn-primary">▶ Play Now</a>
+                    <label for="page-games" class="btn-secondary">View Game Page</label>
+                </div>
+            </div>
+            <div class="game-art">
+                <canvas data-scene="darts" class="shot-canvas" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></canvas>
+                <div class="scan"></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Process -->
     <section class="section">
         <div class="section-head reveal">
@@ -905,9 +924,15 @@
 <div class="page page-games">
     <section class="games-hero">
         <div class="studio-badge">◆ Kudbee Games Studio</div>
-        <h2 class="gradient-text">Kudbee Contra</h2>
-        <p>A 2.5D side-scrolling run-and-gun. Original IP, cinematic neon worlds, and chunky arcade combat — playable instantly in your browser.</p>
+        <h2 class="gradient-text">Our Games</h2>
+        <p>Original IP, cinematic neon worlds, instant browser play. Two titles live — with more from the studio on the way.</p>
     </section>
+
+    <!-- ===== Game #1: Kudbee Contra ===== -->
+    <div class="section-head reveal" style="padding-top:0;">
+        <span class="section-label">Game #1</span>
+        <h2 class="section-title">Kudbee Contra</h2>
+    </div>
 
     <!-- Live playable embed -->
     <div class="play-frame reveal">
@@ -937,6 +962,37 @@
             <div class="ghl reveal"><div class="ic">🎥</div><h4>Cinematic Camera</h4><p>Screen shake, look-ahead, and a boss-reveal zoom.</p></div>
             <div class="ghl reveal"><div class="ic">🎮</div><h4>Play Anywhere</h4><p>Keyboard, gamepad, and on-screen touch controls.</p></div>
             <div class="ghl reveal"><div class="ic">⚡</div><h4>60 FPS, No Install</h4><p>Pure HTML5 Canvas. Loads instantly, runs offline.</p></div>
+        </div>
+    </section>
+
+    <!-- ===== Game #2: Kudbee Darts ===== -->
+    <div class="section-head reveal" style="padding-top:0;">
+        <span class="section-label">Game #2</span>
+        <h2 class="section-title">Kudbee Darts</h2>
+        <p class="section-subtitle">Predictive flick-throw darts — 501 &amp; Cricket, smart AI leagues, unlockable skins.</p>
+    </div>
+
+    <!-- Live playable embed -->
+    <div class="play-frame reveal">
+        <div class="play-window">
+            <div class="frame-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span>kudbee-darts · bullseye league</span></div>
+            <iframe src="games/kudbee-darts/index.html" title="Kudbee Darts — playable demo" loading="lazy" allow="autoplay; gamepad"></iframe>
+        </div>
+        <div class="play-actions">
+            <a href="games/kudbee-darts/index.html" class="btn-primary" target="_blank" rel="noopener">⛶ Play Fullscreen</a>
+            <a href="games/kudbee-darts/README.md" class="btn-secondary" target="_blank" rel="noopener">📖 Game Docs</a>
+        </div>
+    </div>
+
+    <!-- Feature highlights -->
+    <section class="section">
+        <div class="ghl-grid">
+            <div class="ghl reveal"><div class="ic">🎯</div><h4>Predictive Throw</h4><p>Drag to aim — a live reticle shows exactly where the dart lands before you release.</p></div>
+            <div class="ghl reveal"><div class="ic">🧠</div><h4>Smart AI Leagues</h4><p>Rookie, Pro &amp; Legend rivals with believable aim scatter and real checkout strategy.</p></div>
+            <div class="ghl reveal"><div class="ic">🎲</div><h4>501 &amp; Cricket</h4><p>The two classic pub modes — finish on a double, or close the board and rack points.</p></div>
+            <div class="ghl reveal"><div class="ic">🏆</div><h4>Climb the Ladder</h4><p>Beat each rival to advance, earn XP, build win streaks, and level up.</p></div>
+            <div class="ghl reveal"><div class="ic">🎨</div><h4>Unlockable Skins</h4><p>Earn neon dart skins as you progress — equip your favourite glow.</p></div>
+            <div class="ghl reveal"><div class="ic">📱</div><h4>Drag-to-Throw</h4><p>One-finger controls on mobile, mouse on desktop. Progress saves locally.</p></div>
         </div>
     </section>
 
@@ -989,6 +1045,7 @@
         </div>
         <div class="soon-grid">
             <div class="soon-card reveal"><div class="soon-ic">🛰️</div><h4>Project: Orbital</h4><p>A zero-gravity twin-stick skirmish.</p><span class="tag">Concept</span></div>
+            <div class="soon-card reveal"><div class="soon-ic">🌐</div><h4>Darts: Online Leagues</h4><p>Live ladders &amp; cloud stats for Kudbee Darts.</p><span class="tag">Planned</span></div>
             <div class="soon-card reveal"><div class="soon-ic">🌿</div><h4>Untitled Roguelite</h4><p>Procedural alien-jungle survival.</p><span class="tag">Concept</span></div>
             <div class="soon-card reveal"><div class="soon-ic">🧩</div><h4>Kudbee Puzzles</h4><p>Bite-size brain-benders for the web.</p><span class="tag">Concept</span></div>
         </div>
@@ -1070,7 +1127,7 @@
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
         <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-contact">Contact</label></div>
-        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-contra/README.md">Game Docs</a><label for="page-games">Roadmap</label></div>
+        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
     <div class="footer-bottom">
@@ -1193,7 +1250,26 @@
         web1: function (ctx, w, h) { var g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#0e2a4a'); g.addColorStop(1, '#0a1226'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(57,230,255,0.18)'; ctx.fillRect(w * 0.1, h * 0.2, w * 0.8, h * 0.12); ctx.fillStyle = 'rgba(255,255,255,0.12)'; for (var i = 0; i < 3; i++) ctx.fillRect(w * 0.1 + i * w * 0.28, h * 0.45, w * 0.22, h * 0.3); },
         web2: function (ctx, w, h) { var g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#1a0e3e'); g.addColorStop(1, '#0a0a1e'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(196,107,255,0.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w * 0.1, h * 0.7); for (var x = 0.1; x <= 0.9; x += 0.1) ctx.lineTo(w * x, h * (0.4 + Math.sin(x * 9) * 0.2)); ctx.stroke(); ctx.fillStyle = 'rgba(124,255,178,0.5)'; ctx.fillRect(w * 0.1, h * 0.2, w * 0.3, h * 0.08); },
         ai1: function (ctx, w, h) { ctx.fillStyle = '#120a2e'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(196,107,255,0.5)'; ctx.fillStyle = palette.violet; for (var i = 0; i < 6; i++) { var nx = w * (0.2 + Math.random() * 0.6), ny = h * (0.2 + Math.random() * 0.6); ctx.shadowColor = palette.violet; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(nx, ny, 6, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; },
-        ai2: function (ctx, w, h) { ctx.fillStyle = '#0a1a2e'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = palette.cyan; ctx.shadowColor = palette.cyan; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, h * 0.18, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(57,230,255,0.4)'; for (var i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, h * (0.22 + i * 0.07), 0, 7); ctx.stroke(); } }
+        ai2: function (ctx, w, h) { ctx.fillStyle = '#0a1a2e'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = palette.cyan; ctx.shadowColor = palette.cyan; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, h * 0.18, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(57,230,255,0.4)'; for (var i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, h * (0.22 + i * 0.07), 0, 7); ctx.stroke(); } },
+        darts: function (ctx, w, h) {
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0f24'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            var cx = w * 0.5, cy = h * 0.5, R = Math.min(w, h) * 0.42;
+            for (var i = 0; i < 20; i++) {
+                var a0 = (i * 18 - 9 - 90) * Math.PI / 180, a1 = (i * 18 + 9 - 90) * Math.PI / 180, even = i % 2 === 0;
+                ctx.beginPath(); ctx.arc(cx, cy, R * 0.62, a0, a1); ctx.arc(cx, cy, R * 0.094, a1, a0, true); ctx.closePath();
+                ctx.fillStyle = even ? '#0d1228' : '#161d3c'; ctx.fill();
+                ctx.save(); ctx.shadowColor = even ? palette.cyan : palette.violet; ctx.shadowBlur = 10; ctx.fillStyle = even ? palette.cyan : palette.violet;
+                ctx.beginPath(); ctx.arc(cx, cy, R * 0.629, a0, a1); ctx.arc(cx, cy, R * 0.582, a1, a0, true); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.arc(cx, cy, R * 0.953, a1, a0, true); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+            ctx.save(); ctx.shadowColor = palette.green; ctx.shadowBlur = 12; ctx.fillStyle = palette.green; ctx.beginPath(); ctx.arc(cx, cy, R * 0.094, 0, 7); ctx.fill();
+            ctx.shadowColor = '#ff3c5d'; ctx.fillStyle = '#ff3c5d'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.0374, 0, 7); ctx.fill(); ctx.restore();
+            function dart(px, py, ang, col) { ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = '#eaf6ff'; ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(12, -3); ctx.lineTo(12, 3); ctx.closePath(); ctx.fill(); ctx.fillStyle = col; ctx.fillRect(0, -3, 12, 6); ctx.fillStyle = '#1a2236'; ctx.fillRect(-10, -2, 10, 4); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-20, -6); ctx.lineTo(-15, 0); ctx.lineTo(-20, 6); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.restore(); }
+            var t20a = -90 * Math.PI / 180, rx = cx + Math.cos(t20a) * R * 0.605, ry = cy + Math.sin(t20a) * R * 0.605;
+            dart(rx, ry, t20a + Math.PI * 0.15, palette.cyan); dart(cx, cy, Math.PI * 0.9, palette.amber);
+            ctx.save(); ctx.strokeStyle = palette.green; ctx.shadowColor = palette.green; ctx.shadowBlur = 12; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rx, ry, 14, 0, 7); ctx.stroke(); ctx.restore();
+        }
     };
 
     function paintAll() {
