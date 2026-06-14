@@ -131,8 +131,29 @@
     ctx.restore();
   };
 
+  // Shared helper: draw an enemy from a manifest image, fit to the hitbox.
+  // anchor 'bottom' seats ground units; 'center' suits floating ones.
+  Sprites.prototype._enemyImg = function (ctx, key, w, h, dir, factor, anchor, glow) {
+    const img = this.images[key];
+    const dh = h * factor;
+    const dw = dh * (img.width / img.height);
+    ctx.save();
+    if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 12; }
+    if (anchor === 'bottom') {
+      ctx.translate(w / 2, h);
+      ctx.scale(dir, 1);
+      ctx.drawImage(img, -dw / 2, -dh, dw, dh);
+    } else {
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(dir, 1);
+      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+    }
+    ctx.restore();
+  };
+
   // --- Alien Drone --------------------------------------------------------
   Sprites.prototype.drawDrone = function (ctx, w, h, state) {
+    if (this.has('enemy.drone')) { this._enemyImg(ctx, 'enemy.drone', w, h, state.dir >= 0 ? 1 : -1, 1.5, 'center', '#c46bff'); return; }
     const phase = state.phase || 0;
     ctx.save();
     ctx.translate(w / 2, h / 2);
@@ -163,6 +184,7 @@
 
   // --- Cyber Soldier ------------------------------------------------------
   Sprites.prototype.drawSoldier = function (ctx, w, h, state) {
+    if (this.has('enemy.soldier')) { this._enemyImg(ctx, 'enemy.soldier', w, h, state.dir || 1, 1.32, 'bottom', '#ff5d3c'); return; }
     const dir = state.dir || 1;
     const phase = state.phase || 0;
     ctx.save();
@@ -185,6 +207,7 @@
 
   // --- Mechanical Turret --------------------------------------------------
   Sprites.prototype.drawTurret = function (ctx, w, h, state) {
+    if (this.has('enemy.turret')) { this._enemyImg(ctx, 'enemy.turret', w, h, state.dir || 1, 1.35, 'bottom', '#ffb13c'); return; }
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.shadowColor = '#ffb13c';
@@ -211,6 +234,11 @@
 
   // --- Mini-Boss: "Hive Sentinel" -----------------------------------------
   Sprites.prototype.drawBoss = function (ctx, w, h, state) {
+    if (this.has('boss.hive-sentinel')) {
+      const enraged = state.phaseNum >= 2;
+      this._enemyImg(ctx, 'boss.hive-sentinel', w, h, 1, 1.3, 'center', enraged ? '#ff3c5d' : '#c46bff');
+      return;
+    }
     const phase = state.phase || 0;
     ctx.save();
     ctx.translate(w / 2, h / 2);

@@ -59,8 +59,11 @@
     // If a painted/AI-generated backdrop is supplied via the manifest
     // (bg.neon-jungle.far), use it for layers 0-2 and skip the procedural
     // sky/skyline/canopy. Otherwise fall through to the procedural version.
-    if (this.sprites && this.sprites.has && this.sprites.has('bg.neon-jungle.far')) {
-      this._drawImageBackdrop(ctx, cam, this.sprites.images['bg.neon-jungle.far']);
+    const S = this.sprites;
+    if (S && S.has && S.has('bg.neon-jungle.far')) {
+      this._drawImageBackdrop(ctx, cam, S.images['bg.neon-jungle.far']);
+      // Moons: farthest layer, slowest parallax, floated in the upper sky.
+      if (S.has('bg.neon-jungle.moons')) this._drawMoons(ctx, cam, S.images['bg.neon-jungle.moons']);
       return;
     }
 
@@ -144,17 +147,23 @@
     }
     ctx.restore();
 
-    // Layer 4: near vines hanging from the top, strong parallax.
-    const off = cam.parallaxX(1.25) % 320;
-    ctx.fillStyle = 'rgba(6,20,12,0.92)';
-    for (let x = (off % 320) - 320; x < W + 320; x += 320) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.quadraticCurveTo(x + 30, 60, x + 10, 130);
-      ctx.lineTo(x + 30, 130);
-      ctx.quadraticCurveTo(x + 55, 60, x + 40, 0);
-      ctx.closePath();
-      ctx.fill();
+    // Layer 4: nearest foliage. Use the foreground image when supplied,
+    // otherwise procedural hanging vines. Both use strong parallax.
+    const S = this.sprites;
+    if (S && S.has && S.has('bg.neon-jungle.fore')) {
+      this._drawForeground(ctx, cam, S.images['bg.neon-jungle.fore']);
+    } else {
+      const off = cam.parallaxX(1.25) % 320;
+      ctx.fillStyle = 'rgba(6,20,12,0.92)';
+      for (let x = (off % 320) - 320; x < W + 320; x += 320) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.quadraticCurveTo(x + 30, 60, x + 10, 130);
+        ctx.lineTo(x + 30, 130);
+        ctx.quadraticCurveTo(x + 55, 60, x + 40, 0);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
 
     // Layer 6: god-ray light shafts (screen-space, additive).
@@ -213,6 +222,30 @@
     gg.addColorStop(1, '#061009');
     ctx.fillStyle = gg;
     ctx.fillRect(0, H * 0.72, W, H * 0.28);
+  };
+
+  // Moons drift very slowly (factor 0.07) high in the sky — the deepest layer.
+  Parallax.prototype._drawMoons = function (ctx, cam, img) {
+    const W = this.viewW, H = this.viewH;
+    const dw = W * 1.55;
+    const dh = dw * (img.height / img.width);
+    const dy = H * 0.30 - dh / 2;
+    let off = cam.parallaxX(0.07) % dw;
+    if (off > 0) off -= dw;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    for (let x = off; x < W + dw; x += dw) ctx.drawImage(img, x, dy, dw, dh);
+    ctx.restore();
+  };
+
+  // Foreground foliage: nearest layer, fastest parallax (factor 1.2), tiled.
+  Parallax.prototype._drawForeground = function (ctx, cam, img) {
+    const W = this.viewW, H = this.viewH;
+    const dh = H;
+    const dw = dh * (img.width / img.height);
+    let off = cam.parallaxX(1.2) % dw;
+    if (off > 0) off -= dw;
+    for (let x = off; x < W + dw; x += dw) ctx.drawImage(img, x, 0, dw, dh);
   };
 
   Parallax.prototype._tiled = function (ctx, cam, factor, span, draw) {

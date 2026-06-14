@@ -7,16 +7,17 @@
     "player.jump": "",
     "player.slide": "",
     "companion.idle": "characters/companion_k9.png",
-    "enemy.drone": "",
-    "enemy.soldier": "",
-    "enemy.turret": "",
-    "boss.hive-sentinel": "",
+    "enemy.drone": "enemies/drone.png",
+    "enemy.soldier": "enemies/soldier.png",
+    "enemy.turret": "enemies/turret.png",
+    "boss.hive-sentinel": "enemies/boss.png",
     "pickup.health": "",
     "pickup.spread": "",
     "bg.neon-jungle.far": "backgrounds/neon-jungle-far.jpg",
+    "bg.neon-jungle.moons": "backgrounds/moons.png",
     "bg.neon-jungle.back": "",
     "bg.neon-jungle.mid": "",
-    "bg.neon-jungle.fore": "",
+    "bg.neon-jungle.fore": "backgrounds/foreground.png",
     "ui.logo": ""
   }
 }
