@@ -56,6 +56,14 @@
   Parallax.prototype.drawBack = function (ctx, cam) {
     const W = this.viewW, H = this.viewH;
 
+    // If a painted/AI-generated backdrop is supplied via the manifest
+    // (bg.neon-jungle.far), use it for layers 0-2 and skip the procedural
+    // sky/skyline/canopy. Otherwise fall through to the procedural version.
+    if (this.sprites && this.sprites.has && this.sprites.has('bg.neon-jungle.far')) {
+      this._drawImageBackdrop(ctx, cam, this.sprites.images['bg.neon-jungle.far']);
+      return;
+    }
+
     // Layer 0: sky gradient.
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#0a0420');
@@ -180,6 +188,31 @@
     vig.addColorStop(1, 'rgba(0,0,0,0.45)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
+  };
+
+  // Tile a supplied backdrop image across the view with slow parallax, then
+  // lay the procedural ground band on top so platforms read clearly.
+  Parallax.prototype._drawImageBackdrop = function (ctx, cam, img) {
+    const W = this.viewW, H = this.viewH;
+    const aspect = img.width / img.height;
+    const drawH = H;
+    const drawW = drawH * aspect;
+    const factor = 0.25;
+    let off = cam.parallaxX(factor) % drawW;
+    if (off > 0) off -= drawW;
+    for (let x = off; x < W + drawW; x += drawW) {
+      ctx.drawImage(img, x, 0, drawW, drawH);
+    }
+    // Subtle wash to seat the art into the game's palette.
+    ctx.fillStyle = 'rgba(8,8,24,0.12)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Ground band (matches procedural baseline).
+    const gg = ctx.createLinearGradient(0, H * 0.7, 0, H);
+    gg.addColorStop(0, '#0c1f17');
+    gg.addColorStop(1, '#061009');
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, H * 0.72, W, H * 0.28);
   };
 
   Parallax.prototype._tiled = function (ctx, cam, factor, span, draw) {
