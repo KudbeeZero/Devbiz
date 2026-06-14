@@ -20,6 +20,7 @@
     this.touchRoot = opts.touchRoot || null;
     this.hud = opts.hud || null;       // optional DOM callbacks
     this.debug = false;
+    this.autoFire = false;             // mobile: fire continuously without a button
 
     this.viewW = VIEW_W;
     this.viewH = VIEW_H;

@@ -171,8 +171,8 @@
     // ---- Integrate + collide ----
     this._moveAndCollide(dt, level);
 
-    // ---- Shooting ----
-    if (input.down('fire') && this.fireCd <= 0 && !this.sliding) this._shoot();
+    // ---- Shooting (auto-fire on touch devices) ----
+    if ((input.down('fire') || this.game.autoFire) && this.fireCd <= 0 && !this.sliding) this._shoot();
 
     // ---- Grenade ----
     if (input.justPressed('grenade') && this.grenadeCd <= 0) {

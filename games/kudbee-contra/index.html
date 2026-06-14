@@ -50,28 +50,30 @@
   }
   .back-link:hover { color: #fff; border-color: #39e6ff; }
 
-  /* Touch controls — shown only on coarse pointers (mobile/tablet). */
+  /* Touch controls — shown only on coarse pointers (mobile/tablet).
+     Minimal + see-through: move left/right, jump, and small grenade/K9.
+     The gun auto-fires on touch, so there's no fire button to fight with. */
   #touch { position: absolute; inset: 0; z-index: 20; display: none; pointer-events: none; }
   @media (pointer: coarse) { #touch { display: block; } }
-  #touch .pad, #touch .btns { position: absolute; bottom: 4%; pointer-events: none; }
-  #touch .pad { left: 3%; }
-  #touch .btns { right: 3%; }
+  #touch .pad, #touch .btns { position: absolute; bottom: 5%; pointer-events: none; display: flex; align-items: flex-end; }
+  #touch .pad { left: 4%; gap: 16px; }
+  #touch .btns { right: 4%; flex-direction: column; align-items: flex-end; gap: 12px; }
+  #touch .mini-row { display: flex; gap: 12px; }
   .tbtn {
     pointer-events: auto;
-    width: 64px; height: 64px; margin: 6px;
+    width: 58px; height: 58px;
     border-radius: 50%;
-    border: 1px solid rgba(159,182,200,0.35);
-    background: rgba(20,28,40,0.45);
+    border: 1px solid rgba(159,182,200,0.28);
+    background: rgba(14,20,30,0.30);
     color: #cfe9ff; font-size: 12px; font-weight: 700;
     display: inline-flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(4px); user-select: none;
-    text-transform: uppercase; letter-spacing: 0.04em;
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    user-select: none; text-transform: uppercase; letter-spacing: 0.04em;
   }
-  .tbtn.pressed { background: rgba(57,230,255,0.35); border-color: #39e6ff; }
-  .tbtn.big { width: 76px; height: 76px; }
-  .row { display: flex; }
-  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); }
-  .dpad .spacer { visibility: hidden; }
+  .tbtn.pressed { background: rgba(57,230,255,0.42); border-color: #39e6ff; }
+  .tbtn.jump { width: 84px; height: 84px; font-size: 13px;
+    background: rgba(57,230,255,0.15); border-color: rgba(57,230,255,0.45); }
+  .tbtn.mini { width: 46px; height: 46px; font-size: 10px; opacity: 0.8; }
 
   .hint {
     position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
@@ -87,28 +89,19 @@
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <canvas id="game" width="960" height="600"></canvas>
 
-    <!-- On-screen touch controls (mobile). data-action maps to engine/input.js -->
+    <!-- On-screen touch controls (mobile). data-action maps to engine/input.js.
+         Move + jump only; the gun auto-fires on touch devices. -->
     <div id="touch">
       <div class="pad">
-        <div class="dpad">
-          <div class="spacer"></div>
-          <div class="tbtn" data-action="up">▲</div>
-          <div class="spacer"></div>
-          <div class="tbtn" data-action="left">◀</div>
-          <div class="tbtn" data-action="down">▼</div>
-          <div class="tbtn" data-action="right">▶</div>
-        </div>
+        <div class="tbtn" data-action="left">◀</div>
+        <div class="tbtn" data-action="right">▶</div>
       </div>
       <div class="btns">
-        <div class="row">
-          <div class="tbtn" data-action="special">K9</div>
-          <div class="tbtn" data-action="grenade">GRN</div>
-          <div class="tbtn big" data-action="fire">FIRE</div>
+        <div class="mini-row">
+          <div class="tbtn mini" data-action="grenade">GRN</div>
+          <div class="tbtn mini" data-action="special">K9</div>
         </div>
-        <div class="row">
-          <div class="tbtn" data-action="slide">SLD</div>
-          <div class="tbtn big" data-action="jump">JUMP</div>
-        </div>
+        <div class="tbtn jump" data-action="jump">JUMP</div>
       </div>
     </div>
 
@@ -137,6 +130,19 @@
     var canvas = document.getElementById('game');
     var touchRoot = document.getElementById('touch');
     var game = new KC.Game({ canvas: canvas, touchRoot: touchRoot });
+
+    // Mobile: auto-fire so you only steer + jump (no fire button to juggle).
+    var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    game.autoFire = coarse;
+    window.addEventListener('touchstart', function () { game.autoFire = true; }, { once: true });
+
+    // Tap anywhere to start/retry on touch (menu, game-over, win screens).
+    canvas.addEventListener('touchstart', function () {
+      if (game.state === 'menu' || game.state === 'gameover' || game.state === 'win') {
+        game.input._held.jump = true;
+        setTimeout(function () { game.input._held.jump = false; }, 70);
+      }
+    }, { passive: true });
 
     // Load the asset manifest (procedural fallback if absent), then start.
     game.sprites.load('assets/manifest.json').then(function () {
