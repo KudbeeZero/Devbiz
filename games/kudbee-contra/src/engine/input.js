@@ -14,7 +14,7 @@
 (function (KC) {
   'use strict';
 
-  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'fire', 'grenade', 'slide', 'start', 'pause'];
+  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'fire', 'grenade', 'slide', 'special', 'start', 'pause'];
 
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left',
@@ -25,6 +25,7 @@
     KeyK: 'fire', KeyX: 'fire',
     KeyL: 'grenade', KeyC: 'grenade',
     ShiftLeft: 'slide', ShiftRight: 'slide',
+    KeyE: 'special', KeyQ: 'special',
     Enter: 'start',
     Escape: 'pause', KeyP: 'pause',
   };
@@ -103,6 +104,8 @@
       if (on(2)) pad.fire = true;     // X
       if (on(1)) pad.grenade = true;  // B
       if (on(5)) pad.slide = true;    // RB
+      if (on(3)) pad.special = true;  // Y
+      if (on(7)) pad.special = true;  // RT
       if (on(9)) pad.start = true;    // Start
       if (on(8)) pad.pause = true;    // Select
     }

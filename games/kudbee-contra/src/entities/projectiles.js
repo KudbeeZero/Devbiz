@@ -101,6 +101,16 @@
         ctx.fillRect(-5, -3, 10, 6);
         ctx.fillStyle = '#ff5d3c';
         ctx.fillRect(-2, -6, 4, 3);
+      } else if (p.style === 'missile') {
+        // homing rocket: oriented body + exhaust
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Math.atan2(p.vy, p.vx));
+        ctx.fillStyle = '#ffd34d';
+        ctx.fillRect(-6, -3, 11, 6);
+        ctx.fillStyle = '#ff5d3c';
+        ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(10, 0); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#9fefff';
+        ctx.fillRect(-9, -2, 4, 4);
       } else if (p.friendly) {
         // bright bolt with trail
         ctx.beginPath();

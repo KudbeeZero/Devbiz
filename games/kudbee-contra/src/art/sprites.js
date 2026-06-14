@@ -57,6 +57,8 @@
 
   // --- Kudbee Operative (player) ------------------------------------------
   Sprites.prototype.drawPlayer = function (ctx, w, h, state) {
+    // Use the supplied character image (manifest: player.idle) when present.
+    if (this.has('player.idle')) { this._drawPlayerImage(ctx, w, h, state); return; }
     const dir = state.dir || 1;
     const phase = state.phase || 0;
     ctx.save();
@@ -106,6 +108,25 @@
     ctx.fillRect(20, -2, 4, 4); // muzzle tip
     ctx.restore();
 
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  };
+
+  // Draw the player from a manifest image, anchored feet-to-hitbox-bottom and
+  // flipped to face the travel direction. Slides squash the sprite.
+  Sprites.prototype._drawPlayerImage = function (ctx, w, h, state) {
+    const img = this.images['player.idle'];
+    const dir = state.dir || 1;
+    const sliding = state.action === 'slide';
+    const dh = h * 1.6 * (sliding ? 0.6 : 1);
+    const dw = dh * (img.width / img.height);
+    const bob = state.moving ? Math.sin(state.phase || 0) * 1.5 : Math.sin((state.phase || 0) * 0.4) * 0.8;
+    ctx.save();
+    ctx.translate(w / 2, h + bob);     // bottom-center of the hitbox
+    ctx.scale(dir, 1);
+    ctx.shadowColor = '#39e6ff';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, -dw / 2, -dh + 4, dw, dh);
     ctx.shadowBlur = 0;
     ctx.restore();
   };
@@ -212,6 +233,54 @@
     // Cannon pods
     this._roundRect(ctx, -w * 0.5, h * 0.1, w * 0.16, h * 0.22, 4, '#222');
     this._roundRect(ctx, w * 0.34, h * 0.1, w * 0.16, h * 0.22, 4, '#222');
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  };
+
+  // --- K9 Companion (robotic missile-dog) ---------------------------------
+  Sprites.prototype.drawCompanion = function (ctx, w, h, state) {
+    const dir = state.dir || 1;
+    const phase = state.phase || 0;
+    const active = state.active;
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(dir, 1);
+    const accent = active ? '#ff5d3c' : '#39e6ff';
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = active ? 18 : 12;
+
+    // Hover thruster glow underneath.
+    ctx.fillStyle = active ? 'rgba(255,93,60,0.5)' : 'rgba(57,230,255,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.42, w * 0.3, 4 + Math.sin(phase * 3) * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body.
+    this._roundRect(ctx, -w * 0.42, -h * 0.18, w * 0.7, h * 0.42, 7, '#243447');
+    this._roundRect(ctx, -w * 0.42, -h * 0.18, w * 0.7, h * 0.16, 7, '#2f4a63');
+
+    // Missile pod on the back (two tubes).
+    this._roundRect(ctx, -w * 0.3, -h * 0.36, w * 0.34, h * 0.2, 3, '#1a2636');
+    ctx.fillStyle = active ? '#ffd34d' : '#5a6b80';
+    ctx.fillRect(-w * 0.26, -h * 0.32, 4, 4);
+    ctx.fillRect(-w * 0.14, -h * 0.32, 4, 4);
+
+    // Head with visor eye.
+    this._roundRect(ctx, w * 0.18, -h * 0.1, w * 0.3, h * 0.34, 5, '#2f4a63');
+    ctx.fillStyle = accent;
+    ctx.fillRect(w * 0.3, -h * 0.02, w * 0.16, 4); // eye band
+    // Antenna ear.
+    ctx.strokeStyle = accent; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(w * 0.24, -h * 0.1); ctx.lineTo(w * 0.2, -h * 0.34); ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.beginPath(); ctx.arc(w * 0.2, -h * 0.36, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Little legs.
+    ctx.fillStyle = '#1a2636';
+    ctx.fillRect(-w * 0.3, h * 0.22, 5, h * 0.18);
+    ctx.fillRect(-w * 0.05, h * 0.22, 5, h * 0.18);
+    ctx.fillRect(w * 0.22, h * 0.22, 5, h * 0.18);
+
     ctx.shadowBlur = 0;
     ctx.restore();
   };

@@ -50,6 +50,9 @@
     this.camera.x = 0;
     this.camera.zoomTo(1);
     this.player = new KC.Player(this);
+    this.companion = new KC.Companion(this);
+    this.power = 0;
+    this.powerMax = 100;
     this.enemies = [];
     this.pickups = this.level.pickups.map((p) => ({
       kind: p.kind, x: p.x, y: p.y, w: 26, h: 26, phase: Math.random() * 6, taken: false,
@@ -91,6 +94,11 @@
   Game.prototype.addScore = function (n, x, y) {
     this.score += n;
     if (x != null) this.particles.damageNumber(x, y - 10, '+' + n, n >= 1000);
+  };
+
+  // Charge the OVERDRIVE meter (drives the K9 companion special).
+  Game.prototype.addPower = function (n) {
+    this.power = Math.min(this.powerMax, this.power + n);
   };
 
   Game.prototype.maybeDropPickup = function (x, y) {
@@ -142,6 +150,12 @@
     const p = this.player;
     p.update(dt, this.input, this.level);
 
+    // Special: unleash the K9 missile barrage when OVERDRIVE is charged.
+    if (this.input.justPressed('special') && this.power >= this.powerMax && !this.companion.active && !p.dead) {
+      this.companion.activate();
+      this.power = 0;
+    }
+
     // Respawn / game-over sequencing.
     if (p.dead) {
       this.respawnTimer -= dt;
@@ -175,8 +189,14 @@
       if (this.reveal <= 0) this.camera.zoomTo(1);
     }
 
+    // Companion follows + (when active) fires homing missiles at targets.
+    var targets = this.enemies;
+    if (this.boss && !this.boss.dead && this.bossActive) targets = this.enemies.concat([this.boss]);
+    this.companion.update(dt, p, targets);
+
     // Projectiles + collisions.
     this.projectiles.update(dt, this.level.groundY);
+    this._homeMissiles(dt);
     this._resolveCollisions();
     this.projectiles.sweep();
 
@@ -249,6 +269,7 @@
           if (Util.aabb(this._prBox(pr), e.box())) {
             e.hurt(pr.damage);
             this.particles.spark(pr.x, pr.y, pr.color);
+            if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
             pr.dead = true;
             break;
           }
@@ -258,6 +279,7 @@
           if (Util.aabb(this._prBox(pr), this.boss.box())) {
             this.boss.hurt(pr.damage);
             this.particles.spark(pr.x, pr.y, pr.color);
+            if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
             pr.dead = true;
           }
         }
@@ -271,6 +293,46 @@
         }
       }
     }
+  };
+
+  // Steer active companion missiles toward the nearest target each frame.
+  Game.prototype._homeMissiles = function (dt) {
+    const active = this.projectiles.pool.active;
+    for (let i = 0; i < active.length; i++) {
+      const pr = active[i];
+      if (pr.dead || pr.style !== 'missile') continue;
+      let best = null, bd = Infinity;
+      for (let j = 0; j < this.enemies.length; j++) {
+        const e = this.enemies[j];
+        const d = Util.dist(pr.x, pr.y, e.cx(), e.cy());
+        if (d < bd) { bd = d; best = e; }
+      }
+      if (this.boss && !this.boss.dead && this.bossActive) {
+        const d = Util.dist(pr.x, pr.y, this.boss.cx(), this.boss.cy());
+        if (d < bd) { bd = d; best = this.boss; }
+      }
+      if (best) {
+        const desired = Math.atan2(best.cy() - pr.y, best.cx() - pr.x);
+        const cur = Math.atan2(pr.vy, pr.vx);
+        let diff = desired - cur;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        const turn = 7 * dt;
+        const na = cur + Util.clamp(diff, -turn, turn);
+        const sp = Math.hypot(pr.vx, pr.vy);
+        pr.vx = Math.cos(na) * sp;
+        pr.vy = Math.sin(na) * sp;
+      }
+      // smoke/spark trail
+      this.particles.emit({ x: pr.x, y: pr.y, vx: 0, vy: 0, life: 0.3, size: 3, color: '#ffd34d', glow: true, shrink: true, gravity: 0, drag: 0 });
+    }
+  };
+
+  Game.prototype._missileBlast = function (x, y) {
+    this.particles.explosion(x, y, false);
+    this.audio.explosion();
+    this.camera.shake(0.18);
+    this._areaDamage(x, y, 64, 2);
   };
 
   Game.prototype._areaDamage = function (x, y, radius, dmg) {
@@ -339,6 +401,7 @@
 
     this.projectiles.draw(ctx);
     if (this.state !== 'menu') this.player.draw(ctx, this.sprites);
+    if (this.companion && this.state !== 'menu') this.companion.draw(ctx, this.sprites);
     this.particles.draw(ctx);
 
     ctx.restore();
@@ -442,6 +505,29 @@
     ctx.fillStyle = '#ffd34d';
     ctx.fillText(this.player.weapon().name.toUpperCase(), 20, 60);
 
+    // OVERDRIVE meter (drives the K9 companion special).
+    const ox = 20, oy = 86, ow = 156, oh = 9;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    this._roundRect(ctx, ox, oy, ow, oh, 4); ctx.fill();
+    const frac = this.power / this.powerMax;
+    const ready = frac >= 1;
+    ctx.fillStyle = ready ? '#ffd34d' : '#c46bff';
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = ready ? 12 : 5;
+    this._roundRect(ctx, ox, oy, Math.max(0, ow * frac), oh, 4); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.font = 'bold 10px monospace';
+    if (this.companion.active) {
+      ctx.fillStyle = '#ff5d3c';
+      ctx.fillText('K9 BARRAGE ACTIVE', ox, oy + oh + 4);
+    } else if (ready) {
+      const blink = Math.floor(performance.now() / 350) % 2 === 0;
+      ctx.fillStyle = blink ? '#ffd34d' : '#8a7a3a';
+      ctx.fillText('OVERDRIVE READY — E / Y', ox, oy + oh + 4);
+    } else {
+      ctx.fillStyle = '#8a7fa0';
+      ctx.fillText('OVERDRIVE ' + Math.floor(frac * 100) + '%', ox, oy + oh + 4);
+    }
+
     // Score (right aligned).
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ffffff';
@@ -497,7 +583,7 @@
     }
     ctx.fillStyle = '#5d7488';
     ctx.font = '12px monospace';
-    ctx.fillText('Move: WASD/Arrows  Jump: Space  Fire: K/X  Grenade: L/C  Slide: Shift', this.viewW / 2, this.viewH - 40);
+    ctx.fillText('Move WASD/Arrows · Jump Space · Fire K/X · Grenade L/C · Slide Shift · K9 Special E', this.viewW / 2, this.viewH - 40);
     ctx.textAlign = 'left';
     ctx.restore();
   };

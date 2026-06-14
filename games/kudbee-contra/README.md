@@ -34,6 +34,7 @@ toolchain.
 | Fire          | K or X              | X              | FIRE               |
 | Grenade       | L or C              | B              | GRN                |
 | Slide         | Shift               | RB             | SLD                |
+| K9 Special    | E or Q              | Y / RT         | K9                 |
 | Pause         | P or Esc            | Start          | —                  |
 | Start / Retry | Enter               | A              | tap                |
 
@@ -80,6 +81,9 @@ keeping a crisp, consistent layout. The fixed-timestep loop targets a steady **6
 
 - Player: run, jump, **double-jump**, slide, 8-way aim, shoot, grenades, i-frames, death,
   respawn, 3 lives.
+- **K9 companion** — a hovering robotic missile-dog. Defeat enemies to charge the **OVERDRIVE**
+  meter; when full, trigger the Special and K9 unleashes a homing **missile barrage** that
+  locks onto enemies for a few seconds, then recharges through combat.
 - Weapons: Pulse Rifle + Spread Shot power-up (table built to add Plasma/Laser/Missiles).
 - Enemies: Alien Drone (patrol→chase), Cyber Soldier (ranged + cover), Mechanical Turret,
   and the **Hive Sentinel** 2-phase mini-boss.

@@ -23,6 +23,19 @@ Agile cyber-soldier in cyan reactive armor with a glowing visor and back-mounted
 - **Survivability:** 6 health pips, post-hit invulnerability window, 3 lives, checkpoint
   respawn near the current camera position.
 
+## K9 — companion missile-dog
+
+The operative is accompanied by **K9**, a robotic cybernetic hound (your "Jarvis") that hovers
+at your side. Combat charges an **OVERDRIVE** meter; at full charge you trigger the **Special**
+and K9 enters a **missile barrage**: it locks onto the nearest targets and fires homing,
+splash-damage missiles for a few seconds, then the meter drains and rebuilds through kills.
+
+- **Status:** ✅ Phase 1 (always-present companion + barrage special).
+- **Charge:** +15 OVERDRIVE per enemy defeated; barrage lasts ~5s firing every ~0.3s.
+- **Missiles:** homing (steer toward nearest enemy/boss), splash damage on impact.
+- **Future:** levelled upgrades (wider barrages, shield drone mode, secondary abilities),
+  and a "level-up / bonus power" progression that unlocks new K9 modes.
+
 ## Weapons
 
 | Weapon        | Status | Behavior |
