@@ -1,0 +1,9 @@
+{
+  "$schema-note": "Asset swap-in for Kudbee Darts. Non-empty path = use the image; empty = draw the procedural placeholder (see src/art/sprites.js + src/world/board.js). The dartboard + darts are ALWAYS procedural so hit detection stays pixel-exact; only the background/branding is image-swappable (e.g. Adobe Firefly art).",
+  "version": 1,
+  "assets": {
+    "bg.stage": "",
+    "bg.preview": "",
+    "ui.logo": ""
+  }
+}

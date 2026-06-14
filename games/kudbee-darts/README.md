@@ -1,0 +1,76 @@
+# Kudbee Darts 🎯
+
+> **Kudbee Games Studio — Game #2**
+> Predictive flick-throw darts in your browser. Original IP, zero install, 60 FPS.
+
+Play **501** and **Cricket** against a friend (pass-and-play) or a league of smart AI
+rivals. Drag to aim with a **live predictive reticle** that shows exactly where the dart
+will land before you let go, climb the **league ladder**, earn **XP**, and unlock **neon
+dart skins**.
+
+## Play
+
+- **Hosted:** `/(site)/games/kudbee-darts/index.html`
+- **Locally:** from the repo root run `python3 -m http.server 8000`, then open
+  <http://localhost:8000/games/kudbee-darts/index.html>
+
+## Controls
+
+| Action            | Mouse / Touch                              | Keyboard |
+|-------------------|--------------------------------------------|----------|
+| Aim               | Press on the board and drag the reticle    | —        |
+| Throw             | Release                                    | —        |
+| Menu select       | Tap a button                               | Enter    |
+| Pause             | `P` (tap upper area resume / lower quit)   | `P`      |
+| Mute              | `M`                                        | `M`      |
+| Debug FPS         | `` ` ``                                    | `` ` ``  |
+
+The longer you hover while aiming, the more the reticle **wobbles** — a quick, committed
+throw groups tighter. Where the reticle sits at release (plus a little scatter) is what
+scores, so the prediction is honest.
+
+## Modes
+
+- **501** — race from 501 to exactly zero. You must **finish on a double** (the bull
+  counts as D25). Bust (going below 0, landing on 1, or hitting 0 without a double) reverts
+  the whole turn. A live **checkout hint** suggests your finishing route.
+- **Cricket** — close `20·19·18·17·16·15` and the **bull** by hitting each three times
+  (single = 1 mark, double = 2, treble = 3). Once you've closed a number, extra hits
+  **score** its value — until your opponent closes it too. Win by closing everything with
+  points ≥ your opponent.
+
+## Opponents & League
+
+- **2P Hotseat** — pass-and-play on one device.
+- **AI tiers** — Rookie / Pro / Legend. Difficulty is modelled honestly: every dart (yours
+  and theirs) scores through the *same* board hit-test; the AI just has a wider/narrower
+  Gaussian aim **scatter** and more/less ambitious target choice per tier.
+- **Career ladder** — climb a ranked list of named rivals; beat one to unlock the next plus
+  a dart skin. Progress, XP, levels, win streaks, stats and skins persist in `localStorage`.
+
+## Architecture
+
+Pure HTML5 Canvas 2D + vanilla JS, **no build step**, classic ordered `<script>` tags
+attaching to the global `window.KD` namespace — the same engine pattern as Kudbee Contra.
+
+```
+src/
+  engine/   util · loop (fixed 60Hz) · input (pointer drag) · camera · audio · particles
+  art/      sprites (procedural darts + manifest swap-in)
+  world/    board (dartboard geometry, exact polar hit-test, baked neon render)
+  entities/ dart (predictive throw physics) · players (human + AI strategy)
+  modes/    x01 (501 + checkout solver) · cricket
+  progression.js (XP / ladder / skins / stats, localStorage)
+  game.js   (state machine, turn director, HUD, juice)
+assets/     manifest.json (+ Firefly background swap-in; the board stays procedural)
+docs/       GAME_DESIGN · BOARD_MATH · ASSET_PIPELINE
+```
+
+See `docs/BOARD_MATH.md` for the dartboard geometry and hit-test derivation, and
+`docs/ASSET_PIPELINE.md` for how generated art swaps in.
+
+## Tech
+
+Original code-synthesized Web Audio SFX, pooled particles, trauma-based screen shake,
+slow-mo on big hits, confetti on wins. No external assets required — the dartboard and darts
+are drawn procedurally so hit detection is pixel-exact. All original IP.
