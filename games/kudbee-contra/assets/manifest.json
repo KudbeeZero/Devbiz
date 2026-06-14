@@ -1,0 +1,21 @@
+{
+  "$schema-note": "Asset swap-in manifest for Kudbee Contra. Map a logical key to a file path relative to this assets/ folder. A NON-EMPTY path loads that image and overrides the procedural placeholder; an EMPTY string keeps the code-drawn placeholder. See docs/ASSET_PIPELINE.md. Drop production/AI-generated art into the matching subfolder, set its path here, and it renders with zero code changes.",
+  "version": 1,
+  "assets": {
+    "player.idle": "",
+    "player.run": "",
+    "player.jump": "",
+    "player.slide": "",
+    "enemy.drone": "",
+    "enemy.soldier": "",
+    "enemy.turret": "",
+    "boss.hive-sentinel": "",
+    "pickup.health": "",
+    "pickup.spread": "",
+    "bg.neon-jungle.far": "",
+    "bg.neon-jungle.back": "",
+    "bg.neon-jungle.mid": "",
+    "bg.neon-jungle.fore": "",
+    "ui.logo": ""
+  }
+}
