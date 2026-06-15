@@ -1,0 +1,115 @@
+# Kudbee Leaderboard 🏆
+
+> Self-contained **online leaderboard + accounts** service for Kudbee games.
+> Clerk auth, **Cloudflare Worker + D1** in production, a **portable Node dev
+> server** for local testing and any Node host. No build step, no framework.
+
+It ships in **keyless demo mode** so it runs and is testable *today* — players
+pick a display name and post. Flip on real accounts later by pasting one Clerk
+publishable key; **zero code changes.**
+
+```
+leaderboard/
+  shared/      core.js (API + metrics + ranking) · auth.js (Clerk JWT verify + demo) · http.js
+  worker/      worker.js (Cloudflare entry) · store-d1.js · schema.sql · wrangler.toml
+  server/      dev-server.js (portable Node) · store-file.js (JSON store)
+  public/      leaderboard.html · app.js · styles.css · config.js
+  client/      kd-leaderboard.js (browser SDK, used by the page and games)
+  test/        api.test.js (demo + real RS256 JWT verification)
+```
+
+The **same `shared/` logic** runs on both Cloudflare and Node — the platform
+files are thin adapters, so behaviour can't drift between dev and prod.
+
+## Run it locally
+
+```bash
+cd leaderboard
+npm run dev           # → http://localhost:8787
+```
+
+- `/`            the Bullseye League page
+- `/game/`       Kudbee Darts (served same-origin so the page can read your
+                 local profile and publish it)
+- `/api/health`  API health check
+
+Play a match in the game, then hit **Publish your stats** on the page. In demo
+mode you just pick a name; your best-ever values are stored and ranked.
+
+Run the tests (demo flow, validation, ranking, and real Clerk JWT verification
+against a mocked JWKS):
+
+```bash
+npm test
+```
+
+## Metrics
+
+Defined once in `shared/core.js` (`GAMES.darts`): **rating, bestCheckout,
+total180s, wins, bestStreak**. The server keeps each player's *best-ever* value
+and clamps inputs to sane bounds (e.g. checkout ≤ 170). Add a metric there +
+a column in `schema.sql` to extend. Add another game by adding a `GAMES` entry.
+
+`rating` mirrors the in-game formula so the page and the game agree:
+`1180 + level*38 + ladderRank*150 + bestStreak*22 + wins*6`.
+
+## API
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/health` | — | liveness |
+| GET | `/api/leaderboard?game=darts&metric=rating&limit=50` | optional | standings (flags `you`) |
+| GET | `/api/me?game=darts` | required | your record + ranks |
+| POST | `/api/scores` `{game,name,metrics}` | required | upsert best-ever |
+
+Auth is a `Authorization: Bearer <clerk-session-jwt>` header (real accounts) or
+`X-Demo-User: <id>` + `X-Demo-Name` (demo). The browser SDK handles this for you.
+
+## Deploy to Cloudflare (production)
+
+The studio site already deploys on Cloudflare (`wrangler.toml` at the repo root).
+This Worker adds the `/api/*` routes backed by D1.
+
+```bash
+cd leaderboard/worker
+npx wrangler d1 create kudbee-leaderboard          # paste database_id into wrangler.toml
+npx wrangler d1 execute kudbee-leaderboard --remote --file ./schema.sql
+npx wrangler deploy
+```
+
+To serve the **site + games + leaderboard API from one Worker**, uncomment the
+`[assets]` block in `worker/wrangler.toml` (`directory = "../"`). Otherwise deploy
+the Worker standalone and point `public/config.js` `API_BASE` at its URL.
+
+## Turn on real accounts (Clerk)
+
+1. Create a Clerk application (or `clerk apps create "Kudbee" --json` with the
+   Clerk CLI — the `clerk-setup` skill covers this).
+2. Frontend: put your **publishable key** in `public/config.js`:
+   ```js
+   CLERK_PUBLISHABLE_KEY: 'pk_test_xxx',
+   ```
+   The page then loads Clerk from the CDN and shows real sign-in (Google/email).
+3. Backend: set the same key as a Worker var and disable demo:
+   ```bash
+   cd leaderboard/worker
+   npx wrangler deploy   # with CLERK_PUBLISHABLE_KEY set in wrangler.toml [vars]
+   # and ALLOW_DEMO = "0", CLERK_AUTHORIZED_PARTIES = "https://your-site.com"
+   ```
+   The backend derives the **issuer + JWKS** from the publishable key and verifies
+   every submission's RS256 signature **networklessly** (no secret key needed for
+   token verification). No code changes — the same files, now gated by real auth.
+
+> Security note: scores are submitted by the client, so the server clamps them to
+> believable bounds and keeps best-ever values. That stops trivial tampering but
+> isn't full anti-cheat — for that, validate match results server-side later.
+
+## Wire it into the games / studio nav
+
+The leaderboard page links back to the game via `config.js` `GAME_URL`
+(default `/game/`; on the studio site set `/games/kudbee-darts/`). To add a
+link the other way, drop this into the game or studio nav:
+
+```html
+<a href="/leaderboard/public/leaderboard.html">🏆 Online League</a>
+```

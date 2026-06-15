@@ -1,0 +1,12 @@
+{
+  "name": "kudbee-leaderboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained online leaderboard + accounts service for Kudbee games (Clerk auth, Cloudflare Worker + D1 in production, a portable Node dev server for local/any host).",
+  "scripts": {
+    "dev": "node server/dev-server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18.17.0" }
+}

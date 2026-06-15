@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Kudbee Bullseye League — the global online leaderboard for Kudbee Darts. Sign in, publish your stats, and climb the world rankings.">
+<meta name="theme-color" content="#05050f">
+<title>Bullseye League — Kudbee Darts Online Leaderboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="back" href="/game/">&larr; Play Kudbee Darts</a>
+    <div class="account" id="account"><!-- filled by app.js --></div>
+  </div>
+
+  <div class="hero">
+    <h1>BULLSEYE LEAGUE</h1>
+    <div class="sub">Global online leaderboard · Kudbee Darts</div>
+    <div id="modeBadge" class="mode-badge">connecting…</div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="board">
+    <div class="head"><div>#</div><div>Player</div><div style="text-align:right">Score</div></div>
+    <div id="rows"><div class="empty">Loading standings…</div></div>
+  </div>
+
+  <div class="publish" id="publish">
+    <h2>Publish your stats</h2>
+    <p id="publishHint">Reading your local Kudbee Darts profile…</p>
+    <div class="statgrid" id="statgrid"></div>
+    <div class="actions">
+      <button class="btn green" id="publishBtn">Publish my stats</button>
+      <span id="publishStatus" style="color:var(--dim);font-size:13px"></span>
+    </div>
+  </div>
+
+  <div class="note">
+    Demo mode lets anyone pick a name and post — great for testing. Flip on real accounts by
+    pasting your Clerk publishable key into <code>config.js</code>; the same page then signs
+    players in with Google / email and the backend verifies every submission.
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="../client/kd-leaderboard.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

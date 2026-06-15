@@ -1,0 +1,32 @@
+# Kudbee Leaderboard — Cloudflare Worker config (deploy from this folder).
+#
+#   1. Create the D1 db:     npx wrangler d1 create kudbee-leaderboard
+#      -> paste the returned database_id below.
+#   2. Apply the schema:     npx wrangler d1 execute kudbee-leaderboard --remote --file ./schema.sql
+#   3. (later) enable Clerk:  npx wrangler secret put CLERK_SECRET_KEY   # optional, not required for JWT verify
+#      and set CLERK_PUBLISHABLE_KEY below (the issuer/JWKS are derived from it).
+#   4. Deploy:               npx wrangler deploy
+#
+# This Worker can run standalone (API only) or front the studio site by adding
+# an [assets] binding pointing at the repo root.
+name = "kudbee-leaderboard"
+main = "worker.js"
+compatibility_date = "2026-05-21"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kudbee-leaderboard"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+# Leave Clerk unset to run in keyless DEMO mode. To go live, set the
+# publishable key (issuer + JWKS are derived from it) and turn demo off.
+# CLERK_PUBLISHABLE_KEY = "pk_test_xxx"
+# CLERK_AUTHORIZED_PARTIES = "https://your-studio-site.com"
+ALLOW_DEMO = "1"
+ALLOWED_ORIGINS = "*"
+
+# To also serve the studio site + games from this Worker, uncomment:
+# [assets]
+# directory = "../"
+# binding = "ASSETS"
