@@ -26,6 +26,11 @@
         p.spin = cfg.spin || 0;
         p.rot = cfg.rot || 0;
         p.rect = cfg.rect || false;
+        p.ring = cfg.ring || false;
+        p.r0 = cfg.r0 || 0;
+        p.r1 = cfg.r1 || 0;
+        p.lw = cfg.lw || 3;
+        p.streak = cfg.streak || false;
       }
     );
   }
@@ -55,6 +60,44 @@
     this.burst(x, y, color || '#cfe9ff', 10, 220, { glow: true, life: 0.35, size: 2, drag: 3 });
     this.burst(x, y, '#ffffff', 5, 120, { glow: true, life: 0.2, size: 1.5 });
     this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.16, size: 22, color: color || '#39e6ff', glow: true });
+  };
+
+  /* An expanding shockwave ring (Darts-of-Fury style hit feedback). */
+  Particles.prototype.shockwave = function (x, y, color, r1, life, lw) {
+    this.emit({
+      x: x, y: y, vx: 0, vy: 0,
+      life: life || 0.45, color: color || '#39e6ff',
+      ring: true, r0: 4, r1: r1 || 64, lw: lw || 3, glow: true,
+    });
+  };
+
+  /* The scoring explosion: a radial spray whose density scales with the score,
+   * plus one or two shockwave rings and a few outward light streaks. Big hits
+   * (treble-20, bull, checkout) get a denser, golder, longer-lived burst. */
+  Particles.prototype.scoreBurst = function (x, y, color, score, big) {
+    color = color || '#39e6ff';
+    const n = Math.max(8, Math.min(46, Math.round((score || 5) * (big ? 1.4 : 0.9))));
+    this.burst(x, y, color, n, big ? 380 : 270, {
+      glow: true, life: big ? 0.6 : 0.42, size: big ? 3 : 2.2, drag: 2.4,
+    });
+    // Bright white core sparks.
+    this.burst(x, y, '#ffffff', big ? 10 : 6, 180, { glow: true, life: 0.24, size: 1.6, drag: 3 });
+    // Outward light streaks for a punchy "pop".
+    const streaks = big ? 10 : 6;
+    for (let i = 0; i < streaks; i++) {
+      const a = (i / streaks) * Math.PI * 2 + Math.random() * 0.3;
+      const s = (big ? 420 : 300) * (0.7 + Math.random() * 0.5);
+      this.emit({
+        x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: big ? 0.42 : 0.3, size: big ? 4 : 3, color: big ? '#ffd34d' : color,
+        glow: true, drag: 4, streak: true,
+      });
+    }
+    this.shockwave(x, y, color, big ? 110 : 70, big ? 0.55 : 0.4, big ? 4 : 3);
+    if (big) {
+      this.shockwave(x, y, '#ffd34d', 150, 0.7, 2.5);
+      this.burst(x, y, '#ffd34d', 14, 320, { glow: true, life: 0.7, size: 3, drag: 1.6, gravity: 120 });
+    }
   };
 
   Particles.prototype.spark = function (x, y, color) {
@@ -124,8 +167,30 @@
         ctx.shadowBlur = 0;
         continue;
       }
+      if (p.ring) {
+        const tt = 1 - k;                       // 0 -> 1 over the ring's life
+        const rad = p.r0 + (p.r1 - p.r0) * (tt * (2 - tt)); // ease-out expand
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = Math.max(0.5, p.lw * k);
+        ctx.shadowColor = p.color; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        continue;
+      }
       if (p.glow) { ctx.shadowColor = p.color; ctx.shadowBlur = 12; }
       ctx.fillStyle = p.color;
+      if (p.streak) {
+        const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 1;
+        const ux = p.vx / sp, uy = p.vy / sp;
+        const len = p.size * 4;
+        ctx.strokeStyle = p.color; ctx.lineWidth = p.size * 0.7; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - ux * len, p.y - uy * len);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        continue;
+      }
       if (p.rect) {
         ctx.save();
         ctx.translate(p.x, p.y);

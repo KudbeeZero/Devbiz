@@ -48,6 +48,25 @@ scores, so the prediction is honest.
 - **Career ladder** — climb a ranked list of named rivals; beat one to unlock the next plus
   a dart skin. Progress, XP, levels, win streaks, stats and skins persist in `localStorage`.
 
+## Dart Workshop
+
+Open **🎯 Dart Workshop** from the menu to craft your dart from three independent parts,
+with a big live preview:
+
+- **Barrel** — the 5 neon skins (unlocked by leveling up / climbing the ladder).
+- **Tip** — Steel · Needle · Neon Spike · Plasma · Gold Point.
+- **Flight** — Standard · Slim · Kite · Shark · Star · Ghost.
+
+Tips and flights are bought once with **coins** earned from matches, then equipped freely.
+Everything in the Workshop is **purely cosmetic** — every dart flies through the exact same
+physics, so the game stays fair.
+
+## Leaderboard
+
+**🏆 Leaderboard** shows the **Bullseye League** standings — you ranked against the AI
+ladder by a rating derived from your level, ladder progress and streaks — alongside a
+career card (501/Cricket records, 180s, best checkout, streaks, coins).
+
 ## Architecture
 
 Pure HTML5 Canvas 2D + vanilla JS, **no build step**, classic ordered `<script>` tags
@@ -72,5 +91,8 @@ See `docs/BOARD_MATH.md` for the dartboard geometry and hit-test derivation, and
 ## Tech
 
 Original code-synthesized Web Audio SFX, pooled particles, trauma-based screen shake,
-slow-mo on big hits, confetti on wins. No external assets required — the dartboard and darts
-are drawn procedurally so hit detection is pixel-exact. All original IP.
+slow-mo on big hits, confetti on wins. The throw has Darts-of-Fury feel: the board **lunges**
+in and snaps back on release, the dart **lofts and barrel-rolls** in flight, and the scoring
+**explosion scales with the score** (radial spray + shockwave rings, gold on big hits). Darts
+stick with their **tip exactly on the scoring pixel**. No external assets required — the
+dartboard and darts are drawn procedurally so hit detection is pixel-exact. All original IP.
