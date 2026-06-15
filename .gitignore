@@ -1,0 +1,13 @@
+# Claude Code session state
+.claude/
+
+# macOS
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/
+
+# Local environment files
+.env
+.env.local
