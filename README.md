@@ -10,6 +10,9 @@ index.html              Single-file marketing site (CSS-only routing, no build s
 wrangler.toml           Cloudflare Pages config (serves the repo root as static assets)
 games/                  Kudbee Games Studio
   kudbee-contra/        Flagship title — a playable 2.5D run-and-gun (HTML5 Canvas)
+  kudbee-darts/         Predictive flick-throw darts game (501 + Cricket, AI leagues)
+tools/                  Kudbee developer utilities (standalone HTML, no build step)
+  token-analyzer/       Token Price Analyzer — track AI model costs across sessions
 ```
 
 ## Run locally
@@ -33,3 +36,26 @@ python3 -m http.server 8000
 
 All art and audio are **original** (procedurally generated placeholders with a documented
 swap-in pipeline for production / AI-generated assets). No copyrighted material.
+
+## Baton
+
+### ✅ Completed units
+
+| Unit | PR | Status |
+|---|---|---|
+| Kudbee Contra — vertical slice | #1 | Merged |
+| Mobile touch controls + auto-fire | #2 | Merged |
+| Kudbee Darts — full game | #3 | Merged |
+| Token Price Analyzer tool | #4 | **Open → awaiting audit** |
+
+### 🔲 Backlog (not blocking PR #4)
+
+- **Nav mobile overflow** — 6 nav items may wrap on mid-size screens; consider a scrollable pill row or hiding "Tools" behind a "More" dropdown at ≤768 px
+- **Pricing table staleness** — no automated update when model prices change; a comment in the JS marks the cache date (`2026-06-04`)
+- **Session editing** — currently sessions are append-only; an edit-in-place flow would be useful
+- **Daily cost sparkline** — a timeline chart showing cost per day would complement the existing model breakdown bar chart
+- **Bookmarklet / CLI snippet** — a one-liner to pre-fill the log form from terminal output (e.g. Cursor usage stats)
+
+### ⛔ Working agreement
+
+One PR open at a time. Do not start the next implementation unit until PR #4 is audited and merged.
