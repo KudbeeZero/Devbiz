@@ -25,6 +25,11 @@
   // Skins unlocked at level milestones (in addition to ladder rewards).
   const SKIN_UNLOCKS = { 3: 'green', 6: 'violet', 10: 'gold', 15: 'ember' };
 
+  // Dart Workshop coin shop. Defaults are free; the rest are bought with coins
+  // earned from matches. (Cosmetic only — they never change the physics.)
+  const TIP_COST    = { steel: 0, needle: 40, neon: 80, goldp: 120, plasma: 200 };
+  const FLIGHT_COST = { standard: 0, slim: 30, kite: 60, shark: 100, star: 140, ghost: 160 };
+
   function defaults() {
     return {
       version: 1,
@@ -37,6 +42,10 @@
         cricket: { played: 0, won: 0, marks: 0, points: 0 },
       },
       skins: { owned: ['cyan'], equipped: 'cyan' },
+      // Dart Workshop loadout: equipped + owned tips/flights.
+      darts: { tip: 'steel', flight: 'standard' },
+      ownedTips: ['steel'],
+      ownedFlights: ['standard'],
       settings: { sound: true },
     };
   }
@@ -60,6 +69,9 @@
           this.data = Object.assign(d, parsed);
           this.data.stats = Object.assign(d.stats, parsed.stats || {});
           this.data.skins = Object.assign(d.skins, parsed.skins || {});
+          this.data.darts = Object.assign(d.darts, parsed.darts || {});
+          this.data.ownedTips = parsed.ownedTips || d.ownedTips;
+          this.data.ownedFlights = parsed.ownedFlights || d.ownedFlights;
           this.data.settings = Object.assign(d.settings, parsed.settings || {});
         }
       }
@@ -86,6 +98,40 @@
       const nm = (KD.Sprites.SKINS[id] || {}).name || id;
       if (this.onToast) this.onToast('SKIN UNLOCKED', nm);
     }
+  };
+
+  // ---- Dart Workshop: tips & flights ------------------------------------
+  Progression.prototype.tipCost = function (id) { return TIP_COST[id] || 0; };
+  Progression.prototype.flightCost = function (id) { return FLIGHT_COST[id] || 0; };
+  Progression.prototype.ownsTip = function (id) { return this.data.ownedTips.indexOf(id) !== -1; };
+  Progression.prototype.ownsFlight = function (id) { return this.data.ownedFlights.indexOf(id) !== -1; };
+
+  // Buy-if-needed-then-equip. Returns 'equipped' | 'bought' | 'poor'.
+  Progression.prototype.chooseTip = function (id) {
+    if (!this.ownsTip(id)) {
+      const cost = this.tipCost(id);
+      if (this.data.coins < cost) return 'poor';
+      this.data.coins -= cost;
+      this.data.ownedTips.push(id);
+      this.data.darts.tip = id; this.save();
+      if (this.onToast) this.onToast('TIP UNLOCKED', (KD.Sprites.TIPS[id] || {}).name || id);
+      return 'bought';
+    }
+    this.data.darts.tip = id; this.save();
+    return 'equipped';
+  };
+  Progression.prototype.chooseFlight = function (id) {
+    if (!this.ownsFlight(id)) {
+      const cost = this.flightCost(id);
+      if (this.data.coins < cost) return 'poor';
+      this.data.coins -= cost;
+      this.data.ownedFlights.push(id);
+      this.data.darts.flight = id; this.save();
+      if (this.onToast) this.onToast('FLIGHT UNLOCKED', (KD.Sprites.FLIGHTS[id] || {}).name || id);
+      return 'bought';
+    }
+    this.data.darts.flight = id; this.save();
+    return 'equipped';
   };
 
   // ---- XP / levels ------------------------------------------------------

@@ -16,13 +16,14 @@
   'use strict';
   const Util = KD.Util;
 
-  // Wobble tuning.
-  const WOBBLE_BASE = 0.006;   // board-radius units at t=0
-  const WOBBLE_GROW = 0.020;   // per second of hover
-  const WOBBLE_MAX = 0.060;
+  // Wobble tuning. (Tuned up for a slightly harder, more skill-rewarding aim:
+  // hover too long and the group opens up fast.)
+  const WOBBLE_BASE = 0.007;   // board-radius units at t=0
+  const WOBBLE_GROW = 0.028;   // per second of hover
+  const WOBBLE_MAX = 0.078;
   const W1 = 7.3, W2 = 5.1;    // Lissajous frequencies (rad/s)
 
-  const FLIGHT_TIME = 0.34;    // seconds, cosmetic
+  const FLIGHT_TIME = 0.40;    // seconds, cosmetic (a touch more loft hang-time)
 
   function Dart(game) {
     this.game = game;
@@ -39,6 +40,7 @@
     this.landX = 0; this.landY = 0;
     this.result = null;
     this.skin = null;
+    this.parts = null;         // { tip, flight } — cosmetic, set per thrower
   }
 
   Dart.prototype.reset = function () {
@@ -110,12 +112,17 @@
     this.landY = p.y + sy;
     this.result = this.game.board.hitTest(this.landX, this.landY);
 
-    // Cosmetic flight: from the oche (bottom-center) up to the landing point.
-    this._fromX = this.game.viewW / 2;
-    this._fromY = this.game.viewH - 30;
+    // Cosmetic flight: from the player's hand (just right of the oche centre)
+    // up to the landing point, with a little hand-sway to the side on the way.
+    this._fromX = this.game.viewW / 2 + 64;
+    this._fromY = this.game.viewH - 24;
+    this._sway = (Math.random() * 2 - 1) * 26;   // lateral hand-sway, px
+    this._roll = (Math.random() < 0.5 ? -1 : 1);  // barrel-roll direction
     this._ft = 0;
     this.state = 'flying';
     this.game.audio.whoosh();
+    // The board lunges in and snaps back as the dart leaves the hand.
+    if (this.game.lungeBoard) this.game.lungeBoard();
     return this.result;
   };
 
@@ -169,21 +176,30 @@
     ctx.restore();
   };
 
-  // The cosmetic dart flying toward the board, scaling for depth.
+  // The cosmetic dart flying toward the board: arcs up, lofts over, scales for
+  // depth, and rolls slightly on its axis as it travels (the Darts-of-Fury feel).
   Dart.prototype.drawFlight = function (ctx) {
     if (this.state !== 'flying') return;
     const k = this._ft / FLIGHT_TIME;
     const e = Util.smooth(k);
-    const x = Util.lerp(this._fromX, this.landX, e);
-    // Parabolic lift so it arcs in.
+    // Lateral hand-sway eases out to zero by the time it lands.
+    const sway = (this._sway || 0) * Math.sin(k * Math.PI) ;
+    const x = Util.lerp(this._fromX, this.landX, e) + sway;
+    // Parabolic lift so it lofts in, peaking past the midpoint.
     const baseY = Util.lerp(this._fromY, this.landY, e);
-    const y = baseY - Math.sin(k * Math.PI) * 60;
-    const scale = Util.lerp(1.4, 0.5, e);
-    const ang = Math.atan2(this.landY - this._fromY, this.landX - this._fromX);
+    const y = baseY - Math.sin(k * Math.PI) * 78;
+    const scale = Util.lerp(1.45, 0.48, e);
+    // Travel angle, tilted slightly up early so it reads as lofting then dropping.
+    const ang = Math.atan2(this.landY - this._fromY, this.landX - this._fromX)
+              + Math.cos(k * Math.PI) * 0.16;
+    // Barrel roll: squashes the silhouette vertically as it spins.
+    const spin = (this._roll || 1) * (k * 14);
+    const roll = 0.4 + 0.6 * Math.abs(Math.cos(spin));
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
-    this.game.sprites.drawDart(ctx, 46 * scale, this.skin, k);
+    ctx.scale(1, roll);
+    this.game.sprites.drawDart(ctx, 46 * scale, this.skin, k, this.parts);
     ctx.restore();
   };
 
