@@ -46,7 +46,7 @@ swap-in pipeline for production / AI-generated assets). No copyrighted material.
 | Kudbee Contra — vertical slice | #1 | Merged |
 | Mobile touch controls + auto-fire | #2 | Merged |
 | Kudbee Darts — full game | #3 | Merged |
-| Token Price Analyzer tool | #4 | **Open → awaiting audit** |
+| Token Price Analyzer tool | #4 | **Open → audit+polish complete, ready to merge** |
 
 ### 🔲 Backlog (not blocking PR #4)
 

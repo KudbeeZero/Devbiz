@@ -222,6 +222,12 @@
     .p-provider { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 1px; }
     .p-rates { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
     .p-rates .hi { color: var(--cyan); font-weight: 600; }
+    /* Mobile price note shown below pricing reference on small screens */
+    .price-note-mobile {
+        display: none; font-size: 11px; color: var(--text-dim); margin-top: 10px;
+        padding: 7px 10px; background: var(--bg-secondary); border: 1px solid var(--border);
+        border-radius: 8px; text-align: center;
+    }
 
     /* CHARTS */
     .charts-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; margin-bottom: 28px; }
@@ -239,7 +245,7 @@
     .history-header h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 9px; }
     .history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .history-wrap { overflow-x: auto; }
-    .history-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    .history-table { width: 100%; border-collapse: collapse; min-width: 720px; }
     .history-table th {
         font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
         padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; font-weight: 600;
@@ -255,12 +261,15 @@
     }
     .light .model-badge { background: rgba(0,0,0,0.05); }
     .cost-cell { color: var(--cyan); font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
-    .del-btn {
+    /* Row action buttons (edit + delete) */
+    .row-actions { display: flex; gap: 5px; align-items: center; }
+    .del-btn, .edit-btn {
         background: none; border: 1px solid var(--border); color: var(--text-dim);
         border-radius: 7px; width: 28px; height: 28px; cursor: pointer; font-size: 11px;
         display: flex; align-items: center; justify-content: center; transition: all 0.2s;
     }
     .del-btn:hover { border-color: #ff5d3c; color: #ff5d3c; background: rgba(255,93,60,0.08); }
+    .edit-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(57,230,255,0.08); }
     .empty-state { padding: 60px 24px; text-align: center; color: var(--text-dim); }
     .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
     .empty-state p { font-size: 14px; line-height: 1.7; }
@@ -283,6 +292,16 @@
     .btn-secondary:hover { border-color: var(--cyan); color: var(--text-primary); }
     .btn-danger { color: #ff5d3c; border-color: rgba(255,93,60,0.3); }
     .btn-danger:hover { border-color: #ff5d3c; background: rgba(255,93,60,0.08); color: #ff5d3c; }
+
+    /* Cancel edit link */
+    .cancel-edit-link {
+        font-size: 13px; color: var(--text-dim); cursor: pointer; text-decoration: underline;
+        background: none; border: none; font-family: inherit; padding: 0; display: none;
+    }
+    .cancel-edit-link:hover { color: var(--text-muted); }
+    .cancel-edit-link.visible { display: inline; }
+    /* Cost over time full-width panel */
+    .chart-panel-full { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 28px; margin-bottom: 28px; }
 
     /* TOAST */
     .toast {
@@ -309,6 +328,7 @@
         .nav-left .logo-link, .nav-left .nav-divider { display: none; }
         .calc-actions { flex-wrap: wrap; }
         .price-note { display: none; }
+        .price-note-mobile { display: block; }
         .history-actions .btn-secondary:first-child { display: none; }
     }
 </style>
@@ -423,7 +443,7 @@
         <div class="panel">
             <div class="panel-title">
                 <span class="dot-pulse" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:pulse 2s ease-in-out infinite;"></span>
-                Log a Session
+                <span id="formPanelTitle">Log a Session</span>
             </div>
             <form class="log-form" id="logForm" onsubmit="return false;">
                 <div class="form-group">
@@ -444,7 +464,10 @@
                     <label class="form-label" for="logDesc">Description <span style="opacity:.5;font-size:10px;">(optional)</span></label>
                     <input type="text" class="form-input" id="logDesc" placeholder="Code review, feature build, Q&A…" maxlength="120">
                 </div>
-                <button type="submit" class="btn-primary" style="justify-content:center;">+ Add Session</button>
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <button type="submit" class="btn-primary" id="logSubmitBtn" style="flex:1;justify-content:center;">+ Add Session</button>
+                    <button type="button" class="cancel-edit-link" id="cancelEditBtn">Cancel edit</button>
+                </div>
             </form>
         </div>
 
@@ -454,6 +477,7 @@
                 Pricing Reference
             </div>
             <div class="pricing-list" id="pricingList"></div>
+            <p class="price-note-mobile">Prices per 1M tokens · cached 2026-06-04</p>
         </div>
     </div>
 
@@ -473,6 +497,15 @@
             </div>
             <canvas id="chartDonut" height="180"></canvas>
         </div>
+    </div>
+
+    <!-- ============ COST OVER TIME ============ -->
+    <div class="chart-panel-full">
+        <div class="chart-title">
+            Cost Over Time
+            <span class="chart-note" id="chartLineNote">last 14 days</span>
+        </div>
+        <canvas id="chartLine" height="160"></canvas>
     </div>
 
     <!-- ============ HISTORY ============ -->
@@ -557,11 +590,12 @@ function fmtCost(v) {
     if (v === 0) return '$0.00';
     if (v < 0.0001) return '<$0.0001';
     if (v < 0.01)   return '$' + v.toFixed(4);
-    if (v < 1)      return '$' + v.toFixed(4);
+    if (v < 1)      return '$' + v.toFixed(2);
     return '$' + v.toFixed(2);
 }
 function fmtTokens(n) {
     n = Math.round(n);
+    if (n === 0) return '0';
     if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
     if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
     if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
@@ -572,6 +606,14 @@ function fmtDate(iso) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
            ' <span style="color:var(--text-dim);font-size:11px;">' +
            d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + '</span>';
+}
+function isoDay(iso) {
+    // Returns YYYY-MM-DD string in local time
+    var d = new Date(iso);
+    var y  = d.getFullYear();
+    var mo = String(d.getMonth() + 1).padStart(2, '0');
+    var da = String(d.getDate()).padStart(2, '0');
+    return y + '-' + mo + '-' + da;
 }
 
 /* ============================================================
@@ -682,18 +724,67 @@ document.getElementById('calcLog').addEventListener('click', function () {
 });
 
 /* ============================================================
-   SESSION LOGGING
+   SESSION LOGGING + EDIT STATE
    ============================================================ */
+var editingId = null; // null = add mode, number = edit mode (session id)
+
+var logSubmitBtn   = document.getElementById('logSubmitBtn');
+var cancelEditBtn  = document.getElementById('cancelEditBtn');
+var formPanelTitle = document.getElementById('formPanelTitle');
+var logForm        = document.getElementById('logForm');
+
+function setAddMode() {
+    editingId = null;
+    logSubmitBtn.textContent = '+ Add Session';
+    formPanelTitle.textContent = 'Log a Session';
+    cancelEditBtn.classList.remove('visible');
+    document.getElementById('logModel').value = 'claude-sonnet-4-6';
+    document.getElementById('logIn').value  = '';
+    document.getElementById('logOut').value = '';
+    document.getElementById('logDesc').value = '';
+}
+
+function startEdit(session) {
+    editingId = session.id;
+    logSubmitBtn.textContent = 'Update Session';
+    formPanelTitle.textContent = 'Edit Session';
+    cancelEditBtn.classList.add('visible');
+    document.getElementById('logModel').value = session.model;
+    document.getElementById('logIn').value  = session.inTokens || '';
+    document.getElementById('logOut').value = session.outTokens || '';
+    document.getElementById('logDesc').value = session.desc || '';
+    logForm.closest('.panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+cancelEditBtn.addEventListener('click', function() { setAddMode(); });
+
 document.getElementById('logForm').addEventListener('submit', function () {
     var modelId = logModelEl.value;
     var inTok  = parseInt(document.getElementById('logIn').value)  || 0;
     var outTok = parseInt(document.getElementById('logOut').value) || 0;
     var desc   = document.getElementById('logDesc').value.trim();
     if (!inTok && !outTok) { showToast('⚠', 'Enter at least one token count'); return; }
-    addSession(modelId, inTok, outTok, desc);
-    document.getElementById('logIn').value  = '';
-    document.getElementById('logOut').value = '';
-    document.getElementById('logDesc').value = '';
+
+    if (editingId !== null) {
+        // Update existing session in-place
+        var idx = sessions.findIndex(function(s) { return s.id === editingId; });
+        if (idx !== -1) {
+            sessions[idx].model     = modelId;
+            sessions[idx].inTokens  = inTok;
+            sessions[idx].outTokens = outTok;
+            sessions[idx].cost      = calcCost(modelId, inTok, outTok);
+            sessions[idx].desc      = desc;
+        }
+        saveSessions(sessions);
+        renderAll();
+        showToast('✓', 'Session updated');
+        setAddMode();
+    } else {
+        addSession(modelId, inTok, outTok, desc);
+        document.getElementById('logIn').value  = '';
+        document.getElementById('logOut').value = '';
+        document.getElementById('logDesc').value = '';
+    }
 });
 
 function addSession(modelId, inTok, outTok, desc) {
@@ -715,6 +806,8 @@ function addSession(modelId, inTok, outTok, desc) {
 function deleteSession(id) {
     sessions = sessions.filter(function(s) { return s.id !== id; });
     saveSessions(sessions);
+    // If we were editing this session, reset form
+    if (editingId === id) { setAddMode(); }
     renderAll();
     showToast('🗑', 'Session removed');
 }
@@ -751,7 +844,10 @@ function renderHistory() {
             '<td>' + fmtTokens(s.outTokens) + '</td>' +
             '<td class="cost-cell">' + fmtCost(s.cost) + '</td>' +
             '<td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (s.desc || '') + '">' + (s.desc || '<span style="color:var(--text-dim)">—</span>') + '</td>' +
-            '<td><button class="del-btn" data-id="' + s.id + '" title="Delete session">✕</button></td>' +
+            '<td><div class="row-actions">' +
+                '<button class="edit-btn" data-id="' + s.id + '" title="Edit session">✎</button>' +
+                '<button class="del-btn" data-id="' + s.id + '" title="Delete session">✕</button>' +
+            '</div></td>' +
         '</tr>';
     }).join('');
     container.innerHTML =
@@ -761,12 +857,19 @@ function renderHistory() {
     container.querySelectorAll('.del-btn').forEach(function(btn) {
         btn.addEventListener('click', function() { deleteSession(+btn.dataset.id); });
     });
+    container.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = +btn.dataset.id;
+            var session = sessions.find(function(s) { return s.id === id; });
+            if (session) { startEdit(session); }
+        });
+    });
 }
 
 /* ============================================================
    CHARTS
    ============================================================ */
-function drawCharts() { drawBarChart(); drawDonutChart(); }
+function drawCharts() { drawBarChart(); drawDonutChart(); drawLineChart(); }
 
 function setupCanvas(id, h) {
     var canvas = document.getElementById(id);
@@ -916,6 +1019,125 @@ function drawDonutChart() {
 }
 
 /* ============================================================
+   COST OVER TIME — LINE/AREA CHART (last 14 days)
+   ============================================================ */
+function drawLineChart() {
+    var cv = setupCanvas('chartLine', 160);
+    var ctx = cv.ctx, W = cv.W, H = cv.H;
+    ctx.clearRect(0, 0, W, H);
+
+    // Build last-14-days date range (local time)
+    var today = new Date();
+    var days = [];
+    for (var d = 13; d >= 0; d--) {
+        var dt = new Date(today);
+        dt.setDate(today.getDate() - d);
+        var y  = dt.getFullYear();
+        var mo = String(dt.getMonth() + 1).padStart(2, '0');
+        var da = String(dt.getDate()).padStart(2, '0');
+        days.push(y + '-' + mo + '-' + da);
+    }
+
+    // Sum cost per day
+    var costByDay = {};
+    sessions.forEach(function(s) {
+        var day = isoDay(s.date);
+        if (costByDay[day] === undefined) costByDay[day] = 0;
+        costByDay[day] += s.cost;
+    });
+
+    var values = days.map(function(d) { return costByDay[d] || 0; });
+    var daysWithData = days.filter(function(d) { return costByDay[d] > 0; });
+
+    // Need at least 2 days with data to draw a meaningful line
+    if (daysWithData.length < 2) {
+        ctx.fillStyle = isLight ? '#8b93a9' : '#646c82';
+        ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Log more sessions to see trends', W / 2, H / 2);
+        document.getElementById('chartLineNote').textContent = 'need 2+ days of data';
+        return;
+    }
+    document.getElementById('chartLineNote').textContent = 'last 14 days';
+
+    var maxVal = Math.max.apply(null, values);
+    if (maxVal === 0) maxVal = 1;
+
+    var pad = { top: 18, right: 16, bottom: 32, left: 16 };
+    var chartW = W - pad.left - pad.right;
+    var chartH = H - pad.top - pad.bottom;
+    var n = days.length;
+    var stepX = chartW / (n - 1);
+
+    // Compute point coordinates
+    var pts = values.map(function(v, i) {
+        return {
+            x: pad.left + i * stepX,
+            y: pad.top + chartH - (v / maxVal) * chartH
+        };
+    });
+
+    // Fill area under line with gradient from rgba(57,230,255,0.3) to transparent
+    var areaGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+    areaGrad.addColorStop(0, 'rgba(57,230,255,0.30)');
+    areaGrad.addColorStop(1, 'rgba(57,230,255,0.00)');
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        var mx = (pts[i - 1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(mx, pts[i - 1].y, mx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pad.top + chartH);
+    ctx.lineTo(pts[0].x, pad.top + chartH);
+    ctx.closePath();
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    // Draw the line itself
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        var mx = (pts[i - 1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(mx, pts[i - 1].y, mx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.strokeStyle = '#39e6ff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#39e6ff';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Dots + cost labels for days that have data
+    values.forEach(function(v, i) {
+        if (v === 0) return;
+        var p = pts[i];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#39e6ff';
+        ctx.shadowColor = '#39e6ff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = isLight ? '#28304a' : '#e6e8f0';
+        ctx.font = 'bold 9px Space Grotesk, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(fmtCost(v), p.x, p.y - 8);
+    });
+
+    // X-axis date labels: first, middle, last
+    var labelIdxs = [0, Math.floor((n - 1) / 2), n - 1];
+    labelIdxs.forEach(function(i) {
+        var parts = days[i].split('-');
+        var label = new Date(+parts[0], +parts[1] - 1, +parts[2])
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        ctx.fillStyle = isLight ? '#8b93a9' : '#646c82';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = i === 0 ? 'left' : i === n - 1 ? 'right' : 'center';
+        ctx.fillText(label, pts[i].x, H - 8);
+    });
+}
+
+/* ============================================================
    RENDER ALL
    ============================================================ */
 function renderAll() { renderStats(); renderHistory(); drawCharts(); }
@@ -978,6 +1200,7 @@ document.getElementById('clearAllBtn').addEventListener('click', function () {
     if (!confirm('Delete all ' + sessions.length + ' session(s)? This cannot be undone.')) return;
     sessions = [];
     saveSessions(sessions);
+    setAddMode();
     renderAll();
     showToast('🗑', 'All sessions cleared');
 });
