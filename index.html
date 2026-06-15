@@ -631,6 +631,10 @@
         .process-grid { grid-template-columns: 1fr 1fr; }
         .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
     }
+    @media (max-width: 820px) {
+        /* 6 nav items can crowd at mid-size screens — tighten label padding */
+        .nav-center label { padding: 8px 10px; font-size: 12px; }
+    }
     @media (max-width: 768px) {
         .nav-center, .nav-cta { display: none; }
         .hamburger { display: block; }
