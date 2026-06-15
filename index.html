@@ -30,6 +30,7 @@
 <input type="radio" name="page" id="page-games" hidden>
 <input type="radio" name="page" id="page-work" hidden>
 <input type="radio" name="page" id="page-contact" hidden>
+<input type="radio" name="page" id="page-tools" hidden>
 
 <input type="checkbox" id="mobile-menu-toggle" hidden>
 <input type="checkbox" id="theme-toggle" hidden>
@@ -194,7 +195,8 @@
     #page-services:checked ~ .theme-wrapper .nav-center label[for="page-services"],
     #page-games:checked ~ .theme-wrapper .nav-center label[for="page-games"],
     #page-work:checked ~ .theme-wrapper .nav-center label[for="page-work"],
-    #page-contact:checked ~ .theme-wrapper .nav-center label[for="page-contact"] {
+    #page-contact:checked ~ .theme-wrapper .nav-center label[for="page-contact"],
+    #page-tools:checked ~ .theme-wrapper .nav-center label[for="page-tools"] {
         background: var(--grad); color: #fff; box-shadow: var(--shadow-glow);
     }
     .nav-center label .tag {
@@ -248,7 +250,8 @@
     #page-services:checked ~ .theme-wrapper .page-services,
     #page-games:checked ~ .theme-wrapper .page-games,
     #page-work:checked ~ .theme-wrapper .page-work,
-    #page-contact:checked ~ .theme-wrapper .page-contact { display: block; }
+    #page-contact:checked ~ .theme-wrapper .page-contact,
+    #page-tools:checked ~ .theme-wrapper .page-tools { display: block; }
 
     /* ===== BUTTONS ===== */
     .btn-primary {
@@ -657,6 +660,7 @@
         <li><label for="page-games">Games<span class="tag">NEW</span></label></li>
         <li><label for="page-work">Work</label></li>
         <li><label for="page-contact">Contact</label></li>
+        <li><label for="page-tools">Tools<span class="tag">NEW</span></label></li>
     </ul>
     <div class="nav-right">
         <label for="theme-toggle" class="theme-switch" title="Toggle theme"></label>
@@ -671,6 +675,7 @@
     <label for="page-games">Games — NEW</label>
     <label for="page-work">Work</label>
     <label for="page-contact">Contact</label>
+    <label for="page-tools">Tools — NEW</label>
 </div>
 
 <!-- ==================== HOME ==================== -->
@@ -1119,6 +1124,47 @@
     </section>
 </div>
 
+<!-- ==================== TOOLS ==================== -->
+<div class="page page-tools">
+    <section class="section" style="padding-top: 130px;">
+        <div class="section-head reveal">
+            <span class="section-label">Developer Tools</span>
+            <h2 class="section-title">Kudbee Tools</h2>
+            <p class="section-subtitle">Utilities we build and use every day — shipped as standalone browser apps.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal" style="border-color:rgba(57,230,255,0.2);background:linear-gradient(160deg,rgba(57,230,255,0.04),var(--bg-card));">
+                <div class="feature-icon" style="background:linear-gradient(135deg,rgba(57,230,255,0.20),rgba(111,91,255,0.15));">
+                    <svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M12 10h5M12 14h5M5 18v-1a3 3 0 013-3h8a3 3 0 013 3v1"/></svg>
+                </div>
+                <h3>Token Price Analyzer</h3>
+                <p>Track AI model token usage and estimated cost across sessions. Log input/output tokens from Cursor, the terminal, or any AI workflow — with live charts and JSON export.</p>
+                <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">
+                    <span style="font-size:11px;color:var(--text-dim);background:var(--bg-secondary);border:1px solid var(--border);padding:3px 9px;border-radius:6px;">Claude</span>
+                    <span style="font-size:11px;color:var(--text-dim);background:var(--bg-secondary);border:1px solid var(--border);padding:3px 9px;border-radius:6px;">GPT-4o</span>
+                    <span style="font-size:11px;color:var(--text-dim);background:var(--bg-secondary);border:1px solid var(--border);padding:3px 9px;border-radius:6px;">Gemini</span>
+                    <span style="font-size:11px;color:var(--text-dim);background:var(--bg-secondary);border:1px solid var(--border);padding:3px 9px;border-radius:6px;">localStorage</span>
+                </div>
+                <a href="tools/token-analyzer/index.html" class="btn-primary" style="display:inline-flex;text-decoration:none;padding:11px 20px;font-size:14px;">
+                    Open Tool →
+                </a>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed;opacity:0.6;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                <h3 style="color:var(--text-muted);">More tools coming</h3>
+                <p>We're building more utilities for the AI-native development workflow. Prompt cost estimators, diff viewers, and more.</p>
+                <span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Coming soon</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed;opacity:0.6;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+                <h3 style="color:var(--text-muted);">Open source</h3>
+                <p>All Kudbee tools are zero-build pure HTML — no npm, no bundler, no framework. Fork, extend, and adapt freely.</p>
+                <span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Coming soon</span>
+            </div>
+        </div>
+    </section>
+</div>
+
 <!-- Footer -->
 <footer>
     <div class="footer-grid">
@@ -1126,7 +1172,7 @@
             <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
-        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-contact">Contact</label></div>
+        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
         <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
