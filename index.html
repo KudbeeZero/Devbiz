@@ -185,11 +185,12 @@
         background: var(--bg-secondary); border: 1px solid var(--border);
         border-radius: 12px; padding: 4px;
     }
-    .nav-center label {
+    .nav-center label, .nav-center a {
         color: var(--text-muted); font-size: 13px; cursor: pointer;
         padding: 8px 16px; border-radius: 8px; transition: all 0.2s; font-weight: 500;
+        text-decoration: none; display: inline-block;
     }
-    .nav-center label:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-center label:hover, .nav-center a:hover { color: var(--text-primary); background: var(--bg-card); }
 
     #page-home:checked ~ .theme-wrapper .nav-center label[for="page-home"],
     #page-services:checked ~ .theme-wrapper .nav-center label[for="page-services"],
@@ -240,8 +241,8 @@
         transform: translateY(-130%); opacity: 0; transition: transform 0.35s ease, opacity 0.35s; display: flex;
     }
     #mobile-menu-toggle:checked ~ .theme-wrapper .mobile-nav { transform: translateY(0); opacity: 1; }
-    .mobile-nav label { display: block; padding: 13px 16px; color: var(--text-muted); font-size: 15px; cursor: pointer; border-radius: 9px; transition: all 0.2s; }
-    .mobile-nav label:hover { color: var(--text-primary); background: var(--bg-card); }
+    .mobile-nav label, .mobile-nav a { display: block; padding: 13px 16px; color: var(--text-muted); font-size: 15px; cursor: pointer; border-radius: 9px; transition: all 0.2s; text-decoration: none; }
+    .mobile-nav label:hover, .mobile-nav a:hover { color: var(--text-primary); background: var(--bg-card); }
 
     /* ===== PAGES ===== */
     .page { display: none; animation: pageIn 0.5s ease both; }
@@ -665,6 +666,7 @@
         <li><label for="page-work">Work</label></li>
         <li><label for="page-contact">Contact</label></li>
         <li><label for="page-tools">Tools<span class="tag">NEW</span></label></li>
+        <li><a href="leaderboard/public/leaderboard.html">🏆 League<span class="tag">NEW</span></a></li>
     </ul>
     <div class="nav-right">
         <label for="theme-toggle" class="theme-switch" title="Toggle theme"></label>
@@ -680,6 +682,7 @@
     <label for="page-work">Work</label>
     <label for="page-contact">Contact</label>
     <label for="page-tools">Tools — NEW</label>
+    <a href="leaderboard/public/leaderboard.html">🏆 League — NEW</a>
 </div>
 
 <!-- ==================== HOME ==================== -->
@@ -1177,7 +1180,7 @@
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
         <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
-        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><label for="page-games">All Games</label></div>
+        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
     <div class="footer-bottom">
