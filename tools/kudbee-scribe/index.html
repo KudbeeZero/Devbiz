@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kudbee Scribe — a privacy-first writing assistant. Live readability, style, grammar and clarity checks that run entirely in your browser, with optional AI deep analysis.">
+    <title>Kudbee Scribe · Kudbee Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --orange: #ff9054;
+        --red: #ff5d3c;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1240px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .score-num, .panel-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -140px; left: -100px;
+        background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 30%; right: -140px;
+        background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 18px; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: '🌙'; font-size: 10px; position: absolute; top: 2px; left: 2px;
+        width: 16px; height: 16px; border-radius: 50%; background: var(--grad);
+        display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+    }
+    .light .theme-btn::after { transform: translateX(18px); content: '☀️'; }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 96px; }
+
+    /* Page header */
+    .page-header { margin-bottom: 28px; }
+    .page-header .kicker {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
+        color: var(--cyan); font-weight: 600; margin-bottom: 12px; display: block;
+    }
+    .page-header h1 { font-size: clamp(30px, 5vw, 48px); color: var(--text-primary); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 10px; }
+    .page-header p { font-size: 15px; color: var(--text-muted); max-width: 620px; }
+
+    /* TOOLBAR */
+    .toolbar {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
+    }
+    .toolbar-group { display: flex; align-items: center; gap: 8px; }
+    .form-label-inline { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+    .form-select {
+        padding: 9px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+        border-radius: 9px; color: var(--text-primary); font-size: 13px; font-family: inherit;
+        outline: none; transition: border-color 0.2s, box-shadow 0.2s; cursor: pointer; appearance: none;
+    }
+    .light .form-select { background: var(--bg-elevated); }
+    .form-select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(57,230,255,0.12); }
+    .privacy-pill {
+        margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
+        font-size: 12px; font-weight: 600; color: var(--green);
+        background: rgba(124,255,178,0.08); border: 1px solid rgba(124,255,178,0.25);
+        padding: 7px 13px; border-radius: 20px; white-space: nowrap;
+    }
+    .toggle-wrap { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none; }
+    .toggle-wrap input { accent-color: var(--accent); cursor: pointer; }
+
+    /* BUTTONS */
+    .btn-primary {
+        padding: 11px 20px; background: var(--grad); color: #fff; border: none;
+        border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-glow);
+        display: inline-flex; align-items: center; gap: 7px; font-family: inherit; white-space: nowrap;
+        text-decoration: none;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 32px -6px var(--accent-glow); }
+    .btn-secondary {
+        padding: 10px 15px; background: var(--bg-secondary); color: var(--text-muted);
+        border: 1px solid var(--border); border-radius: 9px; font-size: 13px; font-weight: 500;
+        cursor: pointer; transition: all 0.2s; font-family: inherit;
+        display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn-secondary:hover { border-color: var(--cyan); color: var(--text-primary); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); background: rgba(255,93,60,0.08); }
+    .btn-ai {
+        position: relative; padding: 11px 18px; border-radius: 10px; cursor: pointer;
+        font-size: 13px; font-weight: 600; font-family: inherit; white-space: nowrap;
+        color: var(--text-primary); background: var(--bg-elevated);
+        border: 1px solid transparent;
+        background-image: linear-gradient(var(--bg-elevated), var(--bg-elevated)), var(--grad);
+        background-origin: border-box; background-clip: padding-box, border-box;
+        display: inline-flex; align-items: center; gap: 7px; transition: transform 0.15s;
+    }
+    .btn-ai:hover { transform: translateY(-1px); }
+    .btn-ai:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* GRID */
+    .scribe-grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 22px; align-items: start; }
+
+    /* EDITOR PANE */
+    .editor-pane { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+    .counts-bar {
+        display: flex; flex-wrap: wrap; gap: 20px; padding: 14px 22px;
+        border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.015);
+    }
+    .light .counts-bar { background: var(--bg-secondary); }
+    .count-item { display: flex; flex-direction: column; line-height: 1.2; }
+    .count-num { font-size: 17px; font-weight: 700; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; }
+    .count-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+    .editor {
+        min-height: 460px; padding: 26px 28px; font-size: 16px; line-height: 1.85;
+        color: var(--text-secondary); outline: none; white-space: pre-wrap; word-wrap: break-word;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    .editor:empty::before { content: attr(data-placeholder); color: var(--text-dim); pointer-events: none; }
+
+    /* Highlights (marks) */
+    .editor mark { background: none; border-radius: 3px; padding: 0 1px; cursor: pointer; transition: background 0.15s; }
+    .m-passive    { box-shadow: inset 0 -2px 0 var(--violet); }
+    .m-adverb     { box-shadow: inset 0 -2px 0 var(--amber); }
+    .m-weak       { box-shadow: inset 0 -2px 0 var(--cyan); }
+    .m-filler     { box-shadow: inset 0 -2px 0 var(--orange); }
+    .m-cliche     { box-shadow: inset 0 -2px 0 var(--red); }
+    .m-long       { background: rgba(111,91,255,0.10); box-shadow: inset 0 -2px 0 var(--accent); }
+    .m-dupe       { box-shadow: inset 0 -2px 0 var(--red); }
+    .m-repeatstart{ box-shadow: inset 0 -2px 0 var(--green); }
+    .m-sticky     { background: rgba(255,211,77,0.07); box-shadow: inset 0 -2px 0 var(--amber); }
+    .m-spell      { box-shadow: inset 0 -2px 0 var(--red); text-decoration: underline wavy var(--red); text-underline-offset: 3px; }
+    .editor mark.pulse { animation: markpulse 1s ease; }
+    @keyframes markpulse { 0%,100% { background: none; } 30% { background: rgba(57,230,255,0.28); } }
+    /* category hide toggles */
+    .hide-passive .m-passive, .hide-adverb .m-adverb, .hide-weak .m-weak,
+    .hide-filler .m-filler, .hide-cliche .m-cliche, .hide-long .m-long,
+    .hide-dupe .m-dupe, .hide-repeatstart .m-repeatstart, .hide-sticky .m-sticky,
+    .hide-spell .m-spell { background: none; box-shadow: none; text-decoration: none; cursor: text; }
+
+    /* REPORT PANE */
+    .report-pane { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 86px; }
+    .score-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px;
+        padding: 24px; position: relative; overflow: hidden;
+    }
+    .score-card::before {
+        content: ''; position: absolute; top: 0; right: 0; width: 240px; height: 200px;
+        background: radial-gradient(circle at 100% 0%, rgba(111,91,255,0.12), transparent 65%); pointer-events: none;
+    }
+    .score-top { display: flex; align-items: center; gap: 18px; }
+    .score-ring { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
+    .score-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; font-weight: 700; color: var(--text-primary); }
+    .score-meta h3 { font-size: 17px; color: var(--text-primary); margin-bottom: 2px; }
+    .score-band { font-size: 13px; font-weight: 600; }
+    .score-readout { display: flex; gap: 22px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .readout-item { display: flex; flex-direction: column; }
+    .readout-num { font-size: 18px; font-weight: 700; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; }
+    .readout-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; }
+
+    .report-list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+    .report-list-head { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; }
+    .report-row {
+        display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+        border-bottom: 1px solid var(--border); transition: background 0.15s;
+    }
+    .report-row:last-child { border-bottom: none; }
+    .report-row.flagged { cursor: pointer; }
+    .report-row.flagged:hover { background: rgba(255,255,255,0.02); }
+    .light .report-row.flagged:hover { background: rgba(0,0,0,0.02); }
+    .report-row.pulse-row { background: rgba(57,230,255,0.10); }
+    .cat-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .cat-info { flex: 1; min-width: 0; }
+    .cat-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .cat-desc { font-size: 11px; color: var(--text-dim); }
+    .cat-count {
+        font-size: 12px; font-weight: 700; color: var(--text-secondary);
+        background: rgba(255,255,255,0.06); border-radius: 20px; padding: 2px 10px; min-width: 30px; text-align: center;
+    }
+    .light .cat-count { background: rgba(0,0,0,0.05); }
+    .cat-count.zero { color: var(--green); }
+    .cat-toggle { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .report-row.muted .cat-name, .report-row.muted .cat-desc { opacity: 0.45; }
+
+    /* AI panel */
+    .ai-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; }
+    .ai-panel-head { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+    .ai-status { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+    .ai-status code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+    .ai-spinner { width: 18px; height: 18px; border: 2px solid var(--border-hover); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ai-rewrite { background: rgba(57,230,255,0.04); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 12px 0; font-size: 14px; line-height: 1.7; color: var(--text-secondary); white-space: pre-wrap; }
+    .ai-suggestion { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .ai-suggestion:last-child { border-bottom: none; }
+    .ai-sug-type { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cyan); font-weight: 700; }
+    .ai-sug-body { font-size: 13px; margin-top: 4px; }
+    .ai-sug-body del { color: var(--red); text-decoration: line-through; }
+    .ai-sug-body ins { color: var(--green); text-decoration: none; }
+    .ai-sug-reason { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+    .ai-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+    /* tip / legend */
+    .tip-row { font-size: 12px; color: var(--text-dim); margin-top: 14px; text-align: center; }
+
+    /* TOAST */
+    .toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 999;
+        background: var(--bg-elevated); border: 1px solid var(--border-hover);
+        border-radius: 12px; padding: 13px 18px; font-size: 13px; color: var(--text-primary);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(80px); opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        display: flex; align-items: center; gap: 9px; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* RESPONSIVE */
+    @media (max-width: 980px) {
+        .scribe-grid { grid-template-columns: 1fr; }
+        .report-pane { position: static; }
+    }
+    @media (max-width: 600px) {
+        .main { padding: 28px 14px 72px; }
+        .nav-left .logo-link, .nav-left .nav-divider { display: none; }
+        .toolbar { padding: 12px; }
+        .privacy-pill { margin-left: 0; }
+        .editor { padding: 20px 18px; font-size: 15px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="mesh"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Scribe</span>
+            <span class="nav-badge">TOOL</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <!-- Page header -->
+    <header class="page-header">
+        <span class="kicker">⬡ Kudbee Tools</span>
+        <h1>Kudbee <span class="gradient-text">Scribe</span></h1>
+        <p>A privacy-first writing assistant. Get instant readability scores, style, clarity and grammar suggestions — all computed in your browser. Nothing is uploaded unless you explicitly run AI Deep Analysis.</p>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <label class="form-label-inline" for="presetSel">Goal</label>
+            <select class="form-select" id="presetSel">
+                <option value="general">General</option>
+                <option value="academic">Academic</option>
+                <option value="business">Business</option>
+                <option value="casual">Casual</option>
+                <option value="story">Story</option>
+            </select>
+        </div>
+        <label class="toggle-wrap" title="Turn off live in-text highlighting while typing fast">
+            <input type="checkbox" id="hlToggle" checked> Highlights
+        </label>
+        <button class="btn-ai" id="aiBtn" title="Run optional Claude-powered deep analysis">✨ AI Deep Analysis</button>
+        <button class="btn-secondary" id="exportBtn">⬇ Export Report</button>
+        <button class="btn-secondary" id="sampleBtn">Load sample</button>
+        <button class="btn-secondary btn-danger" id="clearBtn">Clear</button>
+        <span class="privacy-pill">🔒 Private — text stays in your browser</span>
+    </div>
+
+    <!-- Editor + report -->
+    <div class="scribe-grid">
+        <section class="editor-pane">
+            <div class="counts-bar">
+                <div class="count-item"><span class="count-num" id="cWords">0</span><span class="count-lbl">Words</span></div>
+                <div class="count-item"><span class="count-num" id="cChars">0</span><span class="count-lbl">Characters</span></div>
+                <div class="count-item"><span class="count-num" id="cSentences">0</span><span class="count-lbl">Sentences</span></div>
+                <div class="count-item"><span class="count-num" id="cAvg">0</span><span class="count-lbl">Avg words/sentence</span></div>
+                <div class="count-item"><span class="count-num" id="cRead">0m</span><span class="count-lbl">Read time</span></div>
+            </div>
+            <div class="editor" id="editor" contenteditable="true" spellcheck="false"
+                 data-placeholder="Start writing or paste your text here…"></div>
+        </section>
+
+        <aside class="report-pane">
+            <div class="score-card">
+                <div class="score-top">
+                    <div class="score-ring">
+                        <svg width="92" height="92" viewBox="0 0 92 92">
+                            <circle cx="46" cy="46" r="40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+                            <circle id="scoreArc" cx="46" cy="46" r="40" fill="none" stroke="url(#sg)" stroke-width="8"
+                                    stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2"
+                                    transform="rotate(-90 46 46)"/>
+                            <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#39e6ff"/><stop offset="50%" stop-color="#6f5bff"/><stop offset="100%" stop-color="#c46bff"/>
+                            </linearGradient></defs>
+                        </svg>
+                        <div class="score-num" id="scoreNum">—</div>
+                    </div>
+                    <div class="score-meta">
+                        <h3>Writing score</h3>
+                        <div class="score-band" id="scoreBand">Start writing…</div>
+                    </div>
+                </div>
+                <div class="score-readout">
+                    <div class="readout-item"><span class="readout-num" id="rFre">—</span><span class="readout-lbl">Reading ease</span></div>
+                    <div class="readout-item"><span class="readout-num" id="rGrade">—</span><span class="readout-lbl">Grade level</span></div>
+                    <div class="readout-item"><span class="readout-num" id="rVariety">—</span><span class="readout-lbl">Sentence variety</span></div>
+                </div>
+            </div>
+
+            <div class="report-list">
+                <div class="report-list-head"><span>Suggestions</span><span class="cat-count" id="totalCount">0</span></div>
+                <div id="reportRows"></div>
+            </div>
+
+            <div class="ai-panel" id="aiPanel" hidden>
+                <div class="ai-panel-head">✨ AI Deep Analysis <span style="font-size:10px;color:var(--text-dim);font-weight:600;">powered by Claude</span></div>
+                <div id="aiBody" class="ai-status"></div>
+            </div>
+        </aside>
+    </div>
+
+    <p class="tip-row">100% local heuristic analysis · No account · Drafts auto-save in this browser · AI is opt-in</p>
+
+</main>
+</div>
+
+<div class="toast" id="toast"><span id="toastIco">✓</span><span id="toastMsg"></span></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * Kudbee Scribe — client-side writing analysis engine (vanilla, no deps)
+ * Everything below runs entirely in the browser. The only network call is
+ * the optional AI Deep Analysis, which is opt-in and off unless SCRIBE_API
+ * is configured by the site owner.
+ * ===================================================================== */
+
+/* Configure this to your deployed Cloudflare Worker to enable AI Deep
+ * Analysis, e.g. 'https://kudbee-scribe.<account>.workers.dev/api/scribe'.
+ * Empty = fully private/offline mode (AI button degrades gracefully). */
+const SCRIBE_API = '';
+
+/* ---------- dictionaries ---------- */
+const INTENSIFIERS = new Set(['very','really','quite','just','rather','somewhat','basically',
+    'actually','literally','simply','totally','completely','extremely','absolutely','definitely',
+    'truly','highly','particularly','especially','fairly','pretty','so','too','much']);
+const VAGUE_WORDS = new Set(['things','thing','stuff','good','bad','nice','great','big','small',
+    'get','got','make','made','lot','lots','many','some','aspect','area','kind','sort','area']);
+const ADVERB_WHITELIST = new Set(['only','family','supply','reply','apply','rely','early','holy',
+    'fly','ally','jelly','belly','bully','rally','july','italy','ugly','silly','daily','likely',
+    'lonely','lovely','friendly','deadly','costly','elderly','monthly','weekly','yearly','hourly']);
+
+const FILLER_PHRASES = [
+    { re: /\bin order to\b/gi, fix: 'to' },
+    { re: /\bdue to the fact that\b/gi, fix: 'because' },
+    { re: /\bat this point in time\b/gi, fix: 'now' },
+    { re: /\bin the event that\b/gi, fix: 'if' },
+    { re: /\bfor the purpose of\b/gi, fix: 'to' },
+    { re: /\beach and every\b/gi, fix: 'each' },
+    { re: /\bin spite of the fact that\b/gi, fix: 'although' },
+    { re: /\bwith regard to\b/gi, fix: 'about' },
+    { re: /\bin the process of\b/gi, fix: '' },
+    { re: /\bit is important to note that\b/gi, fix: '' },
+    { re: /\bthe fact that\b/gi, fix: 'that' },
+    { re: /\ba large number of\b/gi, fix: 'many' },
+    { re: /\bin my opinion\b/gi, fix: '' },
+    { re: /\bneedless to say\b/gi, fix: '' }
+];
+
+const CLICHES = [
+    'at the end of the day','think outside the box','low-hanging fruit','hit the ground running',
+    'move the needle','circle back','boil the ocean','a perfect storm','needle in a haystack',
+    'the elephant in the room','bite the bullet','ahead of the curve','best of both worlds',
+    'last but not least','only time will tell','in this day and age','when all is said and done',
+    'par for the course','tip of the iceberg','raise the bar','back to the drawing board',
+    'gold standard','game changer','win-win','touch base','on the same page','take it to the next level',
+    'the bottom line','first and foremost','few and far between','tried and true','time will tell',
+    'easier said than done','add insult to injury','better late than never','calm before the storm'
+];
+
+const IRREGULAR_PP = ['done','gone','made','seen','known','given','taken','written','shown','held',
+    'found','kept','told','left','put','set','sent','built','brought','bought','caught','taught',
+    'paid','said','read','lost','won','met','begun','chosen','driven','eaten','fallen','forgotten',
+    'hidden','spoken','stolen','broken','thrown','grown','drawn','worn'];
+
+const COMMON_TYPOS = {
+    teh:'the', adn:'and', recieve:'receive', recieved:'received', definately:'definitely',
+    seperate:'separate', occured:'occurred', untill:'until', alot:'a lot', wich:'which',
+    thier:'their', becuase:'because', accross:'across', beleive:'believe', calender:'calendar',
+    enviroment:'environment', goverment:'government', neccessary:'necessary', occassion:'occasion',
+    publically:'publicly', tommorow:'tomorrow', wierd:'weird', acheive:'achieve', adress:'address',
+    arguement:'argument', begining:'beginning', concious:'conscious', embarass:'embarrass',
+    existance:'existence', foriegn:'foreign', grammer:'grammar', independant:'independent',
+    knowlege:'knowledge', maintainance:'maintenance', occurence:'occurrence', persistant:'persistent',
+    priviledge:'privilege', recomend:'recommend', refered:'referred', relevent:'relevant',
+    succesful:'successful', suprise:'surprise', truely:'truly', useable:'usable', writting:'writing',
+    youre:"you're", dont:"don't", cant:"can't", wont:"won't", isnt:"isn't", didnt:"didn't",
+    wouldnt:"wouldn't", couldnt:"couldn't", shouldnt:"shouldn't", thats:"that's", whats:"what's",
+    arent:"aren't", wasnt:"wasn't", werent:"weren't", hasnt:"hasn't", havent:"haven't"
+};
+
+const GLUE = new Set(('the of and a to in is it you that he was for on are as with his they at be this ' +
+    'have from or one had by but not what all were we when your can said there use an each which she do how ' +
+    'their if will up other about out many then them these so some her would make like him into time has look ' +
+    'two more write go see number no way could people my than first been call who its now find long down day did ' +
+    'get come may part over very just much most also such even well back where any new should because any our').split(' '));
+
+/* category metadata for report rows */
+const CATEGORIES = [
+    { id:'spell',       name:'Spelling',           desc:'Common misspellings', color:'var(--red)' },
+    { id:'passive',     name:'Passive voice',      desc:'Prefer an active subject', color:'var(--violet)' },
+    { id:'adverb',      name:'Adverbs',            desc:'-ly words — try stronger verbs', color:'var(--amber)' },
+    { id:'weak',        name:'Vague & weak words', desc:'Be more specific', color:'var(--cyan)' },
+    { id:'filler',      name:'Filler & redundancy',desc:'Tighten wordy phrases', color:'var(--orange)' },
+    { id:'cliche',      name:'Clichés',            desc:'Try fresher phrasing', color:'var(--red)' },
+    { id:'long',        name:'Long sentences',     desc:'Consider splitting', color:'var(--accent)' },
+    { id:'dupe',        name:'Repeated words',     desc:'Accidental duplicates', color:'var(--red)' },
+    { id:'repeatstart', name:'Repeated openers',   desc:'Sentences starting alike', color:'var(--green)' },
+    { id:'sticky',      name:'Sticky sentences',   desc:'Too many glue words', color:'var(--amber)' }
+];
+
+const PRESETS = {
+    general:  { longLen: 30, targetGrade: 9 },
+    academic: { longLen: 40, targetGrade: 13 },
+    business: { longLen: 28, targetGrade: 10 },
+    casual:   { longLen: 25, targetGrade: 8 },
+    story:    { longLen: 26, targetGrade: 7 }
+};
+
+const WEIGHTS = { passive:1.2, adverb:0.6, weak:0.8, filler:1.0, cliche:1.6, long:1.5,
+    dupe:1.0, repeatstart:0.8, sticky:1.0, spell:2.2 };
+
+const SAMPLE = "At the end of the day, the quarterly report was written by the marketing team in order to summarize results. It was very very important and basically really good. The the numbers were recieved late. The numbers were strong. The numbers were clear. The numbers were promising. This particular sentence has been deliberately stretched out with a great many glue words and filler so that it becomes a long and sticky sentence that the analyzer should obviously and definitely flag for being far too long, somewhat redundant, and absolutely full of unnecessary intensifiers that do not actually add much value to the reader at all.";
+
+/* ---------- syllable counter (cached) ---------- */
+const sylCache = new Map();
+function countSyllables(word) {
+    if (sylCache.has(word)) return sylCache.get(word);
+    let w = word.toLowerCase().replace(/[^a-z]/g, '');
+    let n;
+    if (w.length <= 3) { n = 1; }
+    else {
+        w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+        w = w.replace(/^y/, '');
+        const m = w.match(/[aeiouy]{1,2}/g);
+        n = m ? m.length : 1;
+        if (n < 1) n = 1;
+    }
+    sylCache.set(word, n);
+    return n;
+}
+
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+const CLICHE_RE = new RegExp('\\b(' + CLICHES.map(escRe).join('|') + ')\\b', 'gi');
+const PASSIVE_RE = new RegExp('\\b(am|is|are|was|were|be|been|being)\\s+(\\w+(?:ed|en)\\b|(?:' +
+    IRREGULAR_PP.join('|') + ')\\b)', 'gi');
+
+/* ---------- the analyzer ---------- */
+function analyze(text, presetKey) {
+    const preset = PRESETS[presetKey] || PRESETS.general;
+    const issues = [];
+    const counts = {}; CATEGORIES.forEach(c => counts[c.id] = 0);
+
+    // tokens
+    const tokens = [];
+    for (const m of text.matchAll(/\b[\w']+\b/g)) {
+        tokens.push({ word: m[0], lower: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length });
+    }
+    const W = tokens.length;
+
+    // sentences
+    const sentences = [];
+    const sentRe = /[^.!?]+[.!?]+(?:["')\]]*)|[^.!?]+$/g;
+    let sm;
+    while ((sm = sentRe.exec(text)) !== null) {
+        const raw = sm[0];
+        if (raw.trim().length === 0) continue;
+        const lead = raw.length - raw.replace(/^\s+/, '').length;
+        sentences.push({ text: raw.trim(), start: sm.index + lead, end: sm.index + raw.length });
+    }
+    const St = sentences.length;
+
+    // readability
+    let Sy = 0;
+    for (const t of tokens) Sy += countSyllables(t.word);
+    let fre = 0, fkgl = 0;
+    if (W > 0 && St > 0) {
+        fre = 206.835 - 1.015 * (W / St) - 84.6 * (Sy / W);
+        fkgl = 0.39 * (W / St) + 11.8 * (Sy / W) - 15.59;
+    }
+    fre = Math.max(0, Math.min(100, fre));
+    fkgl = Math.max(0, fkgl);
+
+    function add(cat, start, end, message, suggestion) {
+        issues.push({ category: cat, start, end, text: text.slice(start, end), message, suggestion });
+        counts[cat]++;
+    }
+
+    // 1. passive voice
+    let pm;
+    while ((pm = PASSIVE_RE.exec(text)) !== null) {
+        add('passive', pm.index, pm.index + pm[0].length, 'Possible passive voice — consider an active subject.');
+    }
+    // 2. adverbs (-ly)
+    for (const t of tokens) {
+        if (t.lower.length > 4 && t.lower.endsWith('ly') && !ADVERB_WHITELIST.has(t.lower)) {
+            add('adverb', t.start, t.end, 'Adverb — a stronger verb may be clearer.');
+        }
+    }
+    // 3. weak / intensifiers
+    for (const t of tokens) {
+        if (INTENSIFIERS.has(t.lower)) add('weak', t.start, t.end, 'Intensifier — often cuttable.', '');
+        else if (VAGUE_WORDS.has(t.lower)) add('weak', t.start, t.end, 'Vague word — be specific.');
+    }
+    // 4. filler phrases
+    for (const fp of FILLER_PHRASES) {
+        fp.re.lastIndex = 0; let fm;
+        while ((fm = fp.re.exec(text)) !== null) {
+            add('filler', fm.index, fm.index + fm[0].length,
+                fp.fix ? ('Wordy — try “' + fp.fix + '”.') : 'Filler — consider removing.', fp.fix);
+        }
+    }
+    // 5. clichés
+    CLICHE_RE.lastIndex = 0; let cm;
+    while ((cm = CLICHE_RE.exec(text)) !== null) {
+        add('cliche', cm.index, cm.index + cm[0].length, 'Cliché — try fresh phrasing.');
+    }
+    // 6. spelling (common typos)
+    for (const t of tokens) {
+        const fix = COMMON_TYPOS[t.lower];
+        if (fix) {
+            const cased = /^[A-Z]/.test(t.word) ? fix.charAt(0).toUpperCase() + fix.slice(1) : fix;
+            add('spell', t.start, t.end, 'Likely typo — “' + cased + '”.', cased);
+        }
+    }
+    // 7. adjacent duplicate words
+    for (let i = 1; i < tokens.length; i++) {
+        if (tokens[i].lower === tokens[i - 1].lower && tokens[i].lower.length > 1) {
+            add('dupe', tokens[i].start, tokens[i].end, 'Repeated word.');
+        }
+    }
+    // 8. long sentences + variety
+    const lens = [];
+    for (const s of sentences) {
+        const wc = (s.text.match(/\b[\w']+\b/g) || []).length;
+        lens.push(wc);
+        if (wc > preset.longLen) {
+            add('long', s.start, s.end, 'Long sentence (' + wc + ' words) — consider splitting.');
+        }
+    }
+    // 9. repeated sentence starts
+    const starters = {};
+    for (const s of sentences) {
+        const fm2 = s.text.match(/^[\W]*([\w']+)/);
+        if (!fm2) continue;
+        const key = fm2[1].toLowerCase();
+        (starters[key] = starters[key] || []).push({ s, w: fm2[1] });
+    }
+    Object.values(starters).forEach(list => {
+        if (list.length >= 3) list.forEach(item => {
+            const idx = item.s.text.indexOf(item.w);
+            const start = item.s.start + (idx < 0 ? 0 : idx);
+            add('repeatstart', start, start + item.w.length, 'Several sentences open the same way.');
+        });
+    });
+    // 10. sticky sentences
+    for (const s of sentences) {
+        const sw = s.text.match(/\b[\w']+\b/g) || [];
+        if (sw.length < 8) continue;
+        let glue = 0; for (const w of sw) if (GLUE.has(w.toLowerCase())) glue++;
+        if (glue / sw.length > 0.55) {
+            add('sticky', s.start, s.end, 'Sticky sentence — high proportion of glue words.');
+        }
+    }
+
+    // sentence variety (stdev of lengths)
+    let variety = '—';
+    if (lens.length >= 3) {
+        const mean = lens.reduce((a, b) => a + b, 0) / lens.length;
+        const sd = Math.sqrt(lens.reduce((a, b) => a + (b - mean) * (b - mean), 0) / lens.length);
+        variety = sd < 4 ? 'Low' : sd < 8 ? 'Good' : 'High';
+    }
+
+    // score
+    let penalty = 0;
+    if (W > 0) {
+        for (const c of CATEGORIES) {
+            if (c.id === 'long') penalty += WEIGHTS.long * (counts.long / Math.max(1, St) * 10);
+            else penalty += (WEIGHTS[c.id] || 0) * (counts[c.id] / W * 100);
+        }
+    }
+    const readPenalty = Math.min(15, Math.abs(fkgl - preset.targetGrade) * 1.6);
+    let score = W < 5 ? null : Math.max(0, Math.min(100, Math.round(100 - penalty - readPenalty)));
+
+    return {
+        issues, counts, score,
+        stats: { W, St, chars: text.length, Sy, fre, fkgl, variety,
+                 avg: St ? W / St : 0, readMin: Math.max(1, Math.ceil(W / 225)) }
+    };
+}
+
+/* =====================================================================
+ * DOM wiring + contenteditable highlight rendering with caret restore
+ * ===================================================================== */
+const editor = document.getElementById('editor');
+const presetSel = document.getElementById('presetSel');
+const hlToggle = document.getElementById('hlToggle');
+const reportRows = document.getElementById('reportRows');
+
+let lastResult = null;
+let debTimer = null;
+const DRAFT_KEY = 'kudbee_scribe_draft';
+const PRESET_KEY = 'kudbee_scribe_preset';
+const hidden = {}; // category -> bool (suggestions hidden in editor)
+
+function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* caret as a character offset within the editor's text */
+function getCaretOffset() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.startContainer)) return null;
+    const pre = range.cloneRange();
+    pre.selectNodeContents(editor);
+    pre.setEnd(range.startContainer, range.startOffset);
+    return pre.toString().length;
+}
+function setCaretOffset(offset) {
+    if (offset == null) return;
+    const sel = window.getSelection();
+    const range = document.createRange();
+    let remaining = offset, done = false;
+    function walk(node) {
+        if (done) return;
+        if (node.nodeType === 3) {
+            const len = node.nodeValue.length;
+            if (remaining <= len) { range.setStart(node, remaining); range.collapse(true); done = true; }
+            else { remaining -= len; }
+        } else {
+            for (let i = 0; i < node.childNodes.length && !done; i++) walk(node.childNodes[i]);
+        }
+    }
+    walk(editor);
+    if (!done) { range.selectNodeContents(editor); range.collapse(false); }
+    sel.removeAllRanges(); sel.addRange(range);
+}
+
+function renderHighlights(text, issues) {
+    // sort + drop overlaps (keep earliest, then longest)
+    const sorted = issues.slice().sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+    const kept = [];
+    let lastEnd = -1;
+    for (const is of sorted) {
+        if (is.start >= lastEnd) { kept.push(is); lastEnd = is.end; }
+    }
+    let html = '', cursor = 0;
+    kept.forEach((is, i) => {
+        if (is.start > cursor) html += escapeHtml(text.slice(cursor, is.start));
+        html += '<mark class="m-' + is.category + '" data-i="' + i + '" title="' +
+                escapeHtml(is.message) + '">' + escapeHtml(text.slice(is.start, is.end)) + '</mark>';
+        cursor = is.end;
+    });
+    if (cursor < text.length) html += escapeHtml(text.slice(cursor));
+    editor.dataset.kept = JSON.stringify(kept.map(k => ({ s: k.start, e: k.end, c: k.category })));
+    return html.replace(/\n/g, '<br>');
+}
+
+function run(restoreCaret) {
+    const text = editor.innerText.replace(/ /g, ' ');
+    const presetKey = presetSel.value;
+    const res = analyze(text, presetKey);
+    lastResult = res;
+    updateCounts(res.stats);
+    updateScore(res);
+    updateReport(res);
+
+    if (hlToggle.checked && text.trim().length) {
+        const caret = restoreCaret ? getCaretOffset() : null;
+        editor.innerHTML = renderHighlights(text, res.issues);
+        if (restoreCaret) setCaretOffset(caret);
+    }
+    saveDraft(text);
+}
+
+function updateCounts(s) {
+    document.getElementById('cWords').textContent = s.W;
+    document.getElementById('cChars').textContent = s.chars;
+    document.getElementById('cSentences').textContent = s.St;
+    document.getElementById('cAvg').textContent = s.avg ? s.avg.toFixed(1) : '0';
+    document.getElementById('cRead').textContent = (s.W ? s.readMin : 0) + 'm';
+}
+
+function updateScore(res) {
+    const arc = document.getElementById('scoreArc');
+    const num = document.getElementById('scoreNum');
+    const band = document.getElementById('scoreBand');
+    const s = res.score;
+    if (s == null) {
+        num.textContent = '—'; band.textContent = 'Write a little more…';
+        band.style.color = 'var(--text-dim)'; arc.style.strokeDashoffset = 251.2;
+    } else {
+        num.textContent = s;
+        arc.style.strokeDashoffset = 251.2 - (251.2 * s / 100);
+        let label, color;
+        if (s >= 90) { label = 'Excellent'; color = 'var(--green)'; }
+        else if (s >= 75) { label = 'Strong'; color = 'var(--cyan)'; }
+        else if (s >= 60) { label = 'Fair'; color = 'var(--amber)'; }
+        else { label = 'Needs work'; color = 'var(--orange)'; }
+        band.textContent = label; band.style.color = color;
+    }
+    document.getElementById('rFre').textContent = res.stats.W ? Math.round(res.stats.fre) : '—';
+    document.getElementById('rGrade').textContent = res.stats.W ? res.stats.fkgl.toFixed(1) : '—';
+    document.getElementById('rVariety').textContent = res.stats.variety;
+}
+
+function buildReportRows() {
+    reportRows.innerHTML = '';
+    CATEGORIES.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'report-row'; row.dataset.cat = c.id;
+        row.innerHTML =
+            '<span class="cat-swatch" style="background:' + c.color + '"></span>' +
+            '<div class="cat-info"><div class="cat-name">' + c.name + '</div>' +
+            '<div class="cat-desc">' + c.desc + '</div></div>' +
+            '<span class="cat-count zero">0</span>' +
+            '<input type="checkbox" class="cat-toggle" checked title="Show in text">';
+        const toggle = row.querySelector('.cat-toggle');
+        toggle.addEventListener('change', () => {
+            hidden[c.id] = !toggle.checked;
+            editor.classList.toggle('hide-' + c.id, !toggle.checked);
+            row.classList.toggle('muted', !toggle.checked);
+        });
+        row.addEventListener('click', e => {
+            if (e.target === toggle) return;
+            jumpToCategory(c.id, row);
+        });
+        reportRows.appendChild(row);
+    });
+}
+
+function updateReport(res) {
+    let total = 0;
+    CATEGORIES.forEach(c => {
+        const n = res.counts[c.id]; total += n;
+        const row = reportRows.querySelector('[data-cat="' + c.id + '"]');
+        const cnt = row.querySelector('.cat-count');
+        cnt.textContent = n;
+        cnt.classList.toggle('zero', n === 0);
+        row.classList.toggle('flagged', n > 0);
+    });
+    document.getElementById('totalCount').textContent = total;
+}
+
+function jumpToCategory(catId, row) {
+    const mark = editor.querySelector('.m-' + catId);
+    if (!mark) return;
+    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    mark.classList.add('pulse');
+    setTimeout(() => mark.classList.remove('pulse'), 1000);
+    row.classList.add('pulse-row');
+    setTimeout(() => row.classList.remove('pulse-row'), 1000);
+}
+
+/* ---------- draft autosave ---------- */
+let saveTimer = null;
+function saveDraft(text) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        try { localStorage.setItem(DRAFT_KEY, text); } catch (e) {}
+    }, 600);
+}
+
+/* ---------- events ---------- */
+editor.addEventListener('input', () => {
+    clearTimeout(debTimer);
+    debTimer = setTimeout(() => run(true), 260);
+});
+// paste as plain text so highlight rebuild stays clean
+editor.addEventListener('paste', e => {
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, t);
+});
+
+presetSel.addEventListener('change', () => {
+    try { localStorage.setItem(PRESET_KEY, presetSel.value); } catch (e) {}
+    run(false);
+});
+hlToggle.addEventListener('change', () => {
+    if (!hlToggle.checked) {
+        // strip marks back to plain text
+        editor.textContent = editor.innerText.replace(/ /g, ' ');
+    }
+    run(false);
+});
+
+document.getElementById('sampleBtn').addEventListener('click', () => {
+    editor.textContent = SAMPLE; run(false); showToast('✓', 'Sample text loaded');
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+    if (editor.innerText.trim() && !confirm('Clear the editor and delete the saved draft?')) return;
+    editor.textContent = '';
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    document.getElementById('aiPanel').hidden = true;
+    run(false); showToast('🗑', 'Cleared');
+});
+
+document.getElementById('exportBtn').addEventListener('click', exportReport);
+document.getElementById('aiBtn').addEventListener('click', runAI);
+
+/* =====================================================================
+ * Export report (self-contained HTML, same Blob pattern as token-analyzer)
+ * ===================================================================== */
+function exportReport() {
+    if (!lastResult || !lastResult.stats.W) { showToast('!', 'Nothing to export yet'); return; }
+    const s = lastResult.stats, r = lastResult;
+    const rows = CATEGORIES.map(c =>
+        '<tr><td>' + c.name + '</td><td style="text-align:right">' + r.counts[c.id] + '</td></tr>').join('');
+    const text = editor.innerText;
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Kudbee Scribe Report</title>' +
+        '<style>body{font-family:system-ui,sans-serif;max-width:780px;margin:40px auto;padding:0 20px;color:#111;line-height:1.6}' +
+        'h1{font-size:24px}table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left}' +
+        '.big{font-size:40px;font-weight:700}.muted{color:#666;font-size:13px}.doc{white-space:pre-wrap;background:#f6f6f9;padding:16px;border-radius:8px}</style>' +
+        '</head><body><h1>Kudbee Scribe — Writing Report</h1>' +
+        '<p class="muted">Generated ' + new Date().toLocaleString() + ' · Goal: ' + presetSel.value + '</p>' +
+        '<p class="big">Score: ' + (r.score == null ? '—' : r.score) + '/100</p>' +
+        '<table><tr><th>Metric</th><th style="text-align:right">Value</th></tr>' +
+        '<tr><td>Words</td><td style="text-align:right">' + s.W + '</td></tr>' +
+        '<tr><td>Sentences</td><td style="text-align:right">' + s.St + '</td></tr>' +
+        '<tr><td>Avg words / sentence</td><td style="text-align:right">' + s.avg.toFixed(1) + '</td></tr>' +
+        '<tr><td>Reading ease (Flesch)</td><td style="text-align:right">' + Math.round(s.fre) + '</td></tr>' +
+        '<tr><td>Grade level (Flesch-Kincaid)</td><td style="text-align:right">' + s.fkgl.toFixed(1) + '</td></tr>' +
+        '<tr><td>Sentence variety</td><td style="text-align:right">' + s.variety + '</td></tr>' +
+        '</table><h2>Suggestions by category</h2><table><tr><th>Category</th><th style="text-align:right">Count</th></tr>' +
+        rows + '</table><h2>Document</h2><div class="doc">' + escapeHtml(text) + '</div>' +
+        '<p class="muted">Produced by Kudbee Scribe · analysis ran locally in the browser.</p></body></html>';
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'kudbee-scribe-report.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('⬇', 'Report exported');
+}
+
+/* =====================================================================
+ * Optional AI Deep Analysis — opt-in, degrades gracefully
+ * ===================================================================== */
+const AI_CONSENT_KEY = 'kudbee_scribe_ai_consent';
+async function runAI() {
+    const panel = document.getElementById('aiPanel');
+    const body = document.getElementById('aiBody');
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    if (!SCRIBE_API) {
+        body.innerHTML = 'AI Deep Analysis is <strong>not configured</strong> in this build — Scribe is running ' +
+            'in private/offline mode, so your text never leaves the browser. To enable Claude-powered rewrites, ' +
+            'deploy the Scribe Worker and set <code>SCRIBE_API</code> in this file. Your local analysis above is ' +
+            'always available and unaffected.';
+        return;
+    }
+    const text = editor.innerText.trim();
+    if (text.length < 10) { body.textContent = 'Write a little more before running AI analysis.'; return; }
+
+    if (!localStorage.getItem(AI_CONSENT_KEY)) {
+        if (!confirm('AI Deep Analysis sends your text to Kudbee\'s AI endpoint (Claude) for a rewrite and suggestions. Continue?')) {
+            body.textContent = 'Cancelled — your text was not sent.'; return;
+        }
+        try { localStorage.setItem(AI_CONSENT_KEY, '1'); } catch (e) {}
+    }
+
+    body.innerHTML = '<span class="ai-spinner"></span> Analyzing with Claude…';
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 30000);
+    try {
+        const resp = await fetch(SCRIBE_API, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ text, preset: presetSel.value, goal: 'rewrite' }),
+            signal: ctrl.signal
+        });
+        clearTimeout(to);
+        const data = await resp.json().catch(() => ({ error: 'bad_response' }));
+        if (!resp.ok || data.error) { renderAIError(data.error || ('HTTP ' + resp.status)); return; }
+        renderAI(data);
+    } catch (e) {
+        clearTimeout(to);
+        renderAIError(e.name === 'AbortError' ? 'timeout' : 'network');
+    }
+}
+
+function renderAIError(code) {
+    const map = { ai_unavailable: 'AI is not enabled on the server (no API key configured).',
+        upstream_error: 'The AI service returned an error. Try again shortly.',
+        timeout: 'The request timed out.', network: 'Could not reach the AI endpoint.' };
+    document.getElementById('aiBody').innerHTML =
+        '⚠ ' + (map[code] || ('AI is temporarily unavailable (' + code + ').')) +
+        ' Your local analysis above is unaffected.';
+}
+
+function renderAI(data) {
+    const body = document.getElementById('aiBody');
+    let html = '';
+    if (data.summary) html += '<p class="ai-status">' + escapeHtml(data.summary) + '</p>';
+    if (Array.isArray(data.suggestions) && data.suggestions.length) {
+        html += data.suggestions.map(s =>
+            '<div class="ai-suggestion"><div class="ai-sug-type">' + escapeHtml(s.type || 'suggestion') + '</div>' +
+            '<div class="ai-sug-body"><del>' + escapeHtml(s.original || '') + '</del> → <ins>' +
+            escapeHtml(s.improved || '') + '</ins></div>' +
+            (s.reason ? '<div class="ai-sug-reason">' + escapeHtml(s.reason) + '</div>' : '') + '</div>').join('');
+    }
+    if (data.rewrite) {
+        html += '<div class="ai-sug-type" style="margin-top:14px">Suggested rewrite</div>' +
+            '<div class="ai-rewrite" id="aiRewrite">' + escapeHtml(data.rewrite) + '</div>' +
+            '<div class="ai-actions">' +
+            '<button class="btn-secondary" id="copyRewrite">Copy rewrite</button>' +
+            '<button class="btn-primary" id="applyRewrite">Replace editor</button></div>';
+    }
+    body.innerHTML = html || 'No suggestions returned.';
+    const copyBtn = document.getElementById('copyRewrite');
+    const applyBtn = document.getElementById('applyRewrite');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(data.rewrite).then(() => showToast('✓', 'Rewrite copied'));
+    });
+    if (applyBtn) applyBtn.addEventListener('click', () => {
+        editor.textContent = data.rewrite; run(false); showToast('✓', 'Editor updated with rewrite');
+    });
+}
+
+/* =====================================================================
+ * Toast + theme + init
+ * ===================================================================== */
+const toastEl = document.getElementById('toast');
+const toastIco = document.getElementById('toastIco');
+const toastMsg = document.getElementById('toastMsg');
+let toastTmr = null;
+function showToast(icon, msg) {
+    toastIco.textContent = icon; toastMsg.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+let isLight = localStorage.getItem('kudbee_theme') === 'light';
+function applyTheme() {
+    document.body.classList.toggle('light', isLight);
+    document.getElementById('themeBtn').title = isLight ? 'Switch to dark' : 'Switch to light';
+}
+applyTheme();
+document.getElementById('themeBtn').addEventListener('click', () => {
+    isLight = !isLight;
+    localStorage.setItem('kudbee_theme', isLight ? 'light' : 'dark');
+    applyTheme();
+});
+
+// init
+buildReportRows();
+try {
+    const savedPreset = localStorage.getItem(PRESET_KEY);
+    if (savedPreset && PRESETS[savedPreset]) presetSel.value = savedPreset;
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (draft && draft.trim()) {
+        editor.textContent = draft;
+        setTimeout(() => showToast('↻', 'Draft restored'), 400);
+    }
+} catch (e) {}
+run(false);
+</script>
+</body>
+</html>

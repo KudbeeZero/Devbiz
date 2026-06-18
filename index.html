@@ -31,6 +31,7 @@
 <input type="radio" name="page" id="page-work" hidden>
 <input type="radio" name="page" id="page-contact" hidden>
 <input type="radio" name="page" id="page-tools" hidden>
+<input type="radio" name="page" id="page-scribe" hidden>
 
 <input type="checkbox" id="mobile-menu-toggle" hidden>
 <input type="checkbox" id="theme-toggle" hidden>
@@ -197,7 +198,8 @@
     #page-games:checked ~ .theme-wrapper .nav-center label[for="page-games"],
     #page-work:checked ~ .theme-wrapper .nav-center label[for="page-work"],
     #page-contact:checked ~ .theme-wrapper .nav-center label[for="page-contact"],
-    #page-tools:checked ~ .theme-wrapper .nav-center label[for="page-tools"] {
+    #page-tools:checked ~ .theme-wrapper .nav-center label[for="page-tools"],
+    #page-scribe:checked ~ .theme-wrapper .nav-center label[for="page-scribe"] {
         background: var(--grad); color: #fff; box-shadow: var(--shadow-glow);
     }
     .nav-center label .tag {
@@ -252,7 +254,8 @@
     #page-games:checked ~ .theme-wrapper .page-games,
     #page-work:checked ~ .theme-wrapper .page-work,
     #page-contact:checked ~ .theme-wrapper .page-contact,
-    #page-tools:checked ~ .theme-wrapper .page-tools { display: block; }
+    #page-tools:checked ~ .theme-wrapper .page-tools,
+    #page-scribe:checked ~ .theme-wrapper .page-scribe { display: block; }
 
     /* ===== BUTTONS ===== */
     .btn-primary {
@@ -666,6 +669,7 @@
         <li><label for="page-work">Work</label></li>
         <li><label for="page-contact">Contact</label></li>
         <li><label for="page-tools">Tools<span class="tag">NEW</span></label></li>
+        <li><label for="page-scribe">Scribe<span class="tag">NEW</span></label></li>
         <li><a href="leaderboard/public/leaderboard.html">🏆 League<span class="tag">NEW</span></a></li>
     </ul>
     <div class="nav-right">
@@ -682,6 +686,7 @@
     <label for="page-work">Work</label>
     <label for="page-contact">Contact</label>
     <label for="page-tools">Tools — NEW</label>
+    <label for="page-scribe">Scribe — NEW</label>
     <a href="leaderboard/public/leaderboard.html">🏆 League — NEW</a>
 </div>
 
@@ -1172,6 +1177,125 @@
     </section>
 </div>
 
+<!-- ==================== SCRIBE ==================== -->
+<div class="page page-scribe">
+    <section class="section" style="padding-top:130px;">
+        <div class="section-head reveal">
+            <span class="section-label">Writing Tool</span>
+            <h2 class="section-title">Kudbee <span class="gradient-text">Scribe</span></h2>
+            <p class="section-subtitle">A privacy-first writing assistant inspired by tools like ProWritingAid — but rebuilt our way. Instant readability, style, clarity and grammar feedback that runs entirely in your browser, with optional Claude-powered deep analysis when you want it.</p>
+        </div>
+        <div class="cta-group" style="justify-content:center;display:flex;gap:14px;flex-wrap:wrap;">
+            <a href="tools/kudbee-scribe/index.html" class="btn-primary">Open Scribe →</a>
+            <label for="page-contact" class="btn-secondary">Talk to us</label>
+        </div>
+        <div class="hero-pills" style="justify-content:center;margin-top:26px;">
+            <span class="hero-pill"><b>100%</b> private by default</span>
+            <span class="hero-pill"><b>Offline</b> capable</span>
+            <span class="hero-pill"><b>AI</b> deep analysis</span>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">What it checks</span>
+            <h2 class="section-title">Cleaner, clearer, more confident writing</h2>
+            <p class="section-subtitle">Twelve live checks score your draft and highlight exactly what to fix — no sign-up, no waiting.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                <h3>Readability scores</h3>
+                <p>Flesch Reading Ease and Flesch-Kincaid grade level, updated live as you type, tuned to your chosen goal.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+                <h3>Style & grammar</h3>
+                <p>Passive voice, adverb overuse, vague words, filler, clichés, sticky sentences, repeats and common typos.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                <h3>Privacy-first</h3>
+                <p>All analysis runs locally in your browser. Your words never leave your device unless you opt in to AI.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <h3>Goal presets</h3>
+                <p>Academic, Business, Casual, Story or General — each tunes thresholds and the target reading grade.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#ffd34d" stroke-width="1.6" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <h3>One-click fixes</h3>
+                <p>Apply suggested corrections instantly, export a shareable report, and auto-save drafts between sessions.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8H20l-4.9 3.6L17 18l-5-3.7L7 18l1.9-5.6L4 8.8h6.1z"/></svg></div>
+                <h3>AI Deep Analysis</h3>
+                <p>Opt in to a Claude-powered rewrite and targeted suggestions when you want a second set of eyes.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Try it →</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">How it works</span>
+            <h2 class="section-title">Three steps to a better draft</h2>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon">1</div>
+                <h3>Paste your text</h3>
+                <p>Drop in an email, essay, post or chapter. Live word, sentence and reading-time counts appear instantly.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">2</div>
+                <h3>See it scored</h3>
+                <p>Get an at-a-glance writing score plus colour-coded highlights you can toggle category by category.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">3</div>
+                <h3>Polish & export</h3>
+                <p>Apply fixes, optionally run AI deep analysis, then export a clean report — all without leaving the page.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Pricing</span>
+            <h2 class="section-title">Free to start</h2>
+            <p class="section-subtitle">The full local analyzer is free and unlimited. Paid tiers for AI and teams are on the way.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <h3>Free</h3>
+                <p>Unlimited local analysis · all 12 checks · readability scores · goal presets · export · draft autosave.</p>
+                <a href="tools/kudbee-scribe/index.html" class="more">Open Scribe →</a>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed;opacity:0.65;">
+                <h3 style="color:var(--text-muted);">Pro</h3>
+                <p>Everything in Free plus unlimited Claude-powered AI deep analysis and rewrites.</p>
+                <span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Coming soon</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed;opacity:0.65;">
+                <h3 style="color:var(--text-muted);">Teams</h3>
+                <p>Shared style presets, team reports and seat management for editorial workflows.</p>
+                <span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Coming soon</span>
+            </div>
+        </div>
+        <div class="cta-group" style="justify-content:center;display:flex;gap:14px;flex-wrap:wrap;margin-top:40px;">
+            <a href="tools/kudbee-scribe/index.html" class="btn-primary">Start writing free →</a>
+            <label for="page-contact" class="btn-secondary">Request a feature</label>
+        </div>
+    </section>
+</div>
+
 <!-- Footer -->
 <footer>
     <div class="footer-grid">
@@ -1179,7 +1303,7 @@
             <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
-        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
+        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-scribe">Scribe</label><label for="page-contact">Contact</label></div>
         <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
