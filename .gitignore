@@ -15,6 +15,9 @@
 # Dependencies
 node_modules/
 
+# Build output (recording-it/ Vite app)
+dist/
+
 # Test coverage output
 coverage/
 

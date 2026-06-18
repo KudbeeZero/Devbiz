@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Kudbee Recording It — Worker Infrastructure</title>
+    <meta
+      name="description"
+      content="Privacy-first, 100% client-side, mobile-first browser screen recorder. Worker infrastructure scaffold."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <h1>Kudbee Recording It</h1>
+      <p class="tagline">Privacy-first screen recording — everything runs on your device.</p>
+
+      <!-- This page is an infrastructure scaffold, not the product UI. It boots the worker layer
+           and surfaces the detected environment so the plumbing can be verified in a browser. -->
+      <section class="panel">
+        <h2>Environment</h2>
+        <pre id="capabilities">Detecting capabilities…</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Workers</h2>
+        <pre id="worker-status">Worker pool not started.</pre>
+        <p class="hint">Open the console for the full <code>CAPABILITIES</code> snapshot and boot logs.</p>
+      </section>
+    </main>
+
+    <!-- App entry as an ES module so it can import the src/ infrastructure directly. -->
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
