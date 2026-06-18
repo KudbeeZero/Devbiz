@@ -1,0 +1,28 @@
+# Cloudflare Pages headers.
+# NOTE: No Content-Security-Policy here on purpose — the site uses intentional inline
+# <style>/<script> + Google Fonts, which would force CSP 'unsafe-inline'. CSP is tracked
+# as a separate hardening PR.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), browsing-topics=()
+
+# HTML: always revalidate so content updates ship immediately.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Long-cache immutable game asset files (images / audio / media), not the game HTML.
+/games/*/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# SEO / discovery files.
+/robots.txt
+  Cache-Control: public, max-age=86400
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+/llms.txt
+  Cache-Control: public, max-age=86400

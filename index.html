@@ -25,6 +25,98 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="alternate" type="text/plain" href="https://kudbee.dev/llms.txt" title="llms.txt">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://kudbee.dev/#org",
+          "name": "Kudbee",
+          "url": "https://kudbee.dev/",
+          "email": "hello@kudbee.dev",
+          "description": "Creative dev studio: web design, live AI agent training, and original browser games. Home of Kudbee Games Studio.",
+          "logo": "https://kudbee.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg",
+          "knowsAbout": ["Web design", "AI agent training", "Game development", "Conversion optimization", "SEO"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://kudbee.dev/#website",
+          "url": "https://kudbee.dev/",
+          "name": "Kudbee",
+          "description": "Premium web design, live AI agent training, and original game development.",
+          "publisher": { "@id": "https://kudbee.dev/#org" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "ProfessionalService",
+          "@id": "https://kudbee.dev/#service",
+          "name": "Kudbee",
+          "url": "https://kudbee.dev/",
+          "parentOrganization": { "@id": "https://kudbee.dev/#org" },
+          "email": "hello@kudbee.dev",
+          "areaServed": "Worldwide",
+          "makesOffer": [
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Web Design & Development", "description": "Custom, high-performance websites engineered for conversions, SEO, and AI discoverability." } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agent Training", "description": "Live Zoom sessions that take your team from zero to deploying production-ready AI agents." } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Game Development", "description": "Original browser games with cinematic 2.5D worlds, fluid combat, and a 60 FPS feel." } }
+          ]
+        },
+        {
+          "@type": "VideoGame",
+          "name": "Kudbee Contra",
+          "url": "https://kudbee.dev/games/kudbee-contra/index.html",
+          "description": "A 2.5D side-scrolling run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and turrets, and topple the Hive Sentinel — playable in your browser.",
+          "genre": "Run and gun",
+          "gamePlatform": "Web browser",
+          "applicationCategory": "Game",
+          "operatingSystem": "Web",
+          "publisher": { "@id": "https://kudbee.dev/#org" },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        },
+        {
+          "@type": "VideoGame",
+          "name": "Kudbee Darts",
+          "url": "https://kudbee.dev/games/kudbee-darts/index.html",
+          "description": "Predictive flick-throw darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and unlockable neon dart skins — playable in your browser.",
+          "genre": "Sports",
+          "gamePlatform": "Web browser",
+          "applicationCategory": "Game",
+          "operatingSystem": "Web",
+          "publisher": { "@id": "https://kudbee.dev/#org" },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Token Price Analyzer",
+          "url": "https://kudbee.dev/tools/token-analyzer/index.html",
+          "description": "Track AI model token usage and estimated cost across sessions, with live charts and JSON export.",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Kudbee Scribe",
+          "url": "https://kudbee.dev/tools/kudbee-scribe/index.html",
+          "description": "Privacy-first writing assistant — instant readability, style, clarity, and grammar feedback in the browser.",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://kudbee.dev/#faq",
+          "mainEntity": [
+            { "@type": "Question", "name": "How fast can you start?", "acceptedAnswer": { "@type": "Answer", "text": "Most projects kick off within a week of our discovery call." } },
+            { "@type": "Question", "name": "Do you train remote teams?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — all AI training is delivered live over Zoom, with recordings for replay." } },
+            { "@type": "Question", "name": "Is the game really free to play?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Kudbee Contra runs free in your browser — no install, no signup." } }
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
 
@@ -703,7 +795,7 @@
 <div class="content">
 
 <!-- Navigation -->
-<nav class="nav-bar">
+<nav class="nav-bar" aria-label="Primary">
     <label for="page-home" class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></label>
     <ul class="nav-center">
         <li><label for="page-home">Home</label></li>
@@ -723,7 +815,7 @@
     </div>
 </nav>
 
-<div class="mobile-nav">
+<div class="mobile-nav" role="navigation" aria-label="Mobile">
     <label for="page-home">Home</label>
     <label for="page-services">Services</label>
     <label for="page-agents">Agents — NEW</label>
@@ -734,6 +826,9 @@
     <label for="page-scribe">Scribe — NEW</label>
     <a href="leaderboard/public/leaderboard.html">🏆 League — NEW</a>
 </div>
+
+<!-- Primary content (CSS-routed views; an intermediate <main> is safe — selectors use a descendant combinator) -->
+<main id="main">
 
 <!-- ==================== HOME ==================== -->
 <div class="page page-home">
@@ -810,7 +905,7 @@
     </section>
 
     <!-- Featured game banner -->
-    <section class="game-banner reveal">
+    <section class="game-banner reveal" aria-label="Kudbee Contra">
         <div class="game-banner-inner">
             <div class="game-banner-text">
                 <span class="kicker">◆ Kudbee Games Studio · Game #1</span>
@@ -829,7 +924,7 @@
     </section>
 
     <!-- Featured game banner #2 -->
-    <section class="game-banner reveal">
+    <section class="game-banner reveal" aria-label="Kudbee Darts">
         <div class="game-banner-inner">
             <div class="game-banner-text">
                 <span class="kicker">◆ Kudbee Games Studio · Game #2</span>
@@ -1677,6 +1772,8 @@
         </div>
     </section>
 </div>
+
+</main><!-- /main -->
 
 <!-- Footer -->
 <footer>
