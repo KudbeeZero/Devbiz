@@ -8,39 +8,39 @@ games, and the tools — runs as static HTML with no tracking-heavy frameworks. 
 hello@kudbee.dev (we reply within 24 hours).
 
 ## Services
-- [Web Design & Development](https://kudbee.dev/): Custom, high-performance websites
+- [Web Design & Development](https://devbiz.kudbee.workers.dev/): Custom, high-performance websites
   engineered for conversions, SEO, and AI discoverability.
-- [AI Agent Training](https://kudbee.dev/): Live Zoom sessions that take a team from zero
+- [AI Agent Training](https://devbiz.kudbee.workers.dev/): Live Zoom sessions that take a team from zero
   to deploying production-ready AI agents.
-- [Support Agent Suite](https://kudbee.dev/): Custom AI support agents tailored to a
+- [Support Agent Suite](https://devbiz.kudbee.workers.dev/): Custom AI support agents tailored to a
   business's docs and workflows.
-- [Game Development](https://kudbee.dev/): Original browser games with cinematic 2.5D
+- [Game Development](https://devbiz.kudbee.workers.dev/): Original browser games with cinematic 2.5D
   worlds, fluid combat, and a 60 FPS feel.
 
 ## Games
-- [Kudbee Contra](https://kudbee.dev/games/kudbee-contra/index.html): A 2.5D side-scrolling
+- [Kudbee Contra](https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html): A 2.5D side-scrolling
   run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and turrets, and topple
   the Hive Sentinel. Free, in-browser, no install.
-- [Kudbee Darts](https://kudbee.dev/games/kudbee-darts/index.html): Predictive flick-throw
+- [Kudbee Darts](https://devbiz.kudbee.workers.dev/games/kudbee-darts/index.html): Predictive flick-throw
   darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and unlockable neon
   dart skins. Free, in-browser.
-- [Online League](https://kudbee.dev/leaderboard/public/leaderboard.html): Live leaderboard
+- [Online League](https://devbiz.kudbee.workers.dev/leaderboard/public/leaderboard.html): Live leaderboard
   for Kudbee games.
 
 ## Tools (free, browser-based, zero-build)
-- [Token Price Analyzer](https://kudbee.dev/tools/token-analyzer/index.html): Track AI model
+- [Token Price Analyzer](https://devbiz.kudbee.workers.dev/tools/token-analyzer/index.html): Track AI model
   token usage and estimated cost across sessions, with live charts and JSON export.
-- [Coverage Breakdown](https://kudbee.dev/tools/coverage-dashboard/index.html): Read-only
+- [Coverage Breakdown](https://devbiz.kudbee.workers.dev/tools/coverage-dashboard/index.html): Read-only
   view of the project's scoped test-coverage gate.
-- [Kudbee Scribe](https://kudbee.dev/tools/kudbee-scribe/index.html): Privacy-first writing
+- [Kudbee Scribe](https://devbiz.kudbee.workers.dev/tools/kudbee-scribe/index.html): Privacy-first writing
   assistant — instant readability, style, clarity, and grammar feedback in the browser.
 
 ## Contact
 - Email: hello@kudbee.dev
 - AI training is delivered live over Zoom, with recordings for replay.
-- Start a project: https://kudbee.dev/ (Contact section)
+- Start a project: https://devbiz.kudbee.workers.dev/ (Contact section)
 
 ## Notes for AI agents
 - The website is a single HTML document with CSS-routed views; all content is present in
-  the DOM of https://kudbee.dev/.
+  the DOM of https://devbiz.kudbee.workers.dev/.
 - Games and tools are free to play/use, run client-side, and require no signup.

@@ -43,4 +43,4 @@ Disallow: /*.toml$
 Disallow: /*.md$
 Allow: /
 
-Sitemap: https://kudbee.dev/sitemap.xml
+Sitemap: https://devbiz.kudbee.workers.dev/sitemap.xml
