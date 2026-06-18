@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kudbee Coverage Breakdown — a read-only view of the scoped coverage gate for leaderboard/shared/.">
+    <title>Coverage Breakdown · Kudbee Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --red: #ff6b5d;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .stat-value, .panel-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -140px; left: -100px;
+        background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 30%; right: -140px;
+        background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 18px; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: '🌙'; font-size: 10px; position: absolute; top: 2px; left: 2px;
+        width: 16px; height: 16px; border-radius: 50%; background: var(--grad);
+        display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+    }
+    .light .theme-btn::after { transform: translateX(18px); content: '☀️'; }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 96px; }
+    .page-header { margin-bottom: 28px; }
+    .page-header .kicker {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
+        color: var(--cyan); font-weight: 600; margin-bottom: 12px; display: block;
+    }
+    .page-header h1 { font-size: clamp(32px, 5vw, 52px); color: var(--text-primary); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 12px; }
+    .page-header p { font-size: 16px; color: var(--text-muted); max-width: 620px; }
+
+    /* SCOPE / HONESTY BANNER */
+    .scope-banner {
+        background: linear-gradient(135deg, rgba(255,211,77,0.07), rgba(255,144,84,0.05));
+        border: 1px solid rgba(255,211,77,0.28); border-radius: 14px;
+        padding: 16px 20px; margin-bottom: 28px;
+        display: flex; gap: 14px; align-items: flex-start;
+    }
+    .scope-banner .si { font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+    .scope-banner .st { font-size: 13.5px; color: var(--text-secondary); }
+    .scope-banner .st b { color: var(--text-primary); }
+    .scope-banner code {
+        font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border);
+        padding: 1px 6px; border-radius: 5px; color: var(--cyan);
+    }
+
+    /* VERDICT BANNER */
+    .verdict {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+        border-radius: 18px; padding: 26px 30px; margin-bottom: 28px;
+        border: 1px solid var(--border); position: relative; overflow: hidden;
+    }
+    .verdict::before { content: ''; position: absolute; inset: 0; opacity: 0.12; pointer-events: none; }
+    .verdict.pass { border-color: rgba(124,255,178,0.4); }
+    .verdict.pass::before { background: radial-gradient(circle at 0% 0%, var(--green), transparent 60%); }
+    .verdict.fail { border-color: rgba(255,107,93,0.45); }
+    .verdict.fail::before { background: radial-gradient(circle at 0% 0%, var(--red), transparent 60%); }
+    .verdict-left { display: flex; align-items: center; gap: 18px; position: relative; }
+    .verdict-icon { font-size: 34px; }
+    .verdict-status { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    .verdict.pass .verdict-status { color: var(--green); }
+    .verdict.fail .verdict-status { color: var(--red); }
+    .verdict-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .verdict-meta { font-size: 12px; color: var(--text-dim); text-align: right; position: relative; line-height: 1.7; }
+    .verdict-meta .mono { color: var(--text-muted); }
+
+    /* STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+        padding: 22px; position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.2s;
+    }
+    .stat-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
+    .stat-card.ok::after { background: linear-gradient(90deg, #7CFFb2, #39e6ff); }
+    .stat-card.bad::after { background: linear-gradient(90deg, #ff6b5d, #ff9054); }
+    .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .stat-value { font-size: 30px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+    .stat-value .pct { font-size: 16px; color: var(--text-dim); font-weight: 600; }
+    .stat-sub { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .stat-sub .pill {
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 5px;
+    }
+    .stat-card.ok .pill { color: var(--green); background: rgba(124,255,178,0.1); border: 1px solid rgba(124,255,178,0.3); }
+    .stat-card.bad .pill { color: var(--red); background: rgba(255,107,93,0.1); border: 1px solid rgba(255,107,93,0.32); }
+    .stat-sub .thr { color: var(--text-dim); }
+
+    /* PANELS */
+    .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 28px; margin-bottom: 28px; }
+    .panel-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 9px; }
+    .panel-note { font-size: 12.5px; color: var(--text-dim); margin-bottom: 20px; }
+    canvas { display: block; width: 100%; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    .cov-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+    .cov-table th {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+        padding: 11px 14px; border-bottom: 1px solid var(--border); text-align: right; font-weight: 600;
+    }
+    .cov-table th:first-child { text-align: left; }
+    .cov-table td { padding: 12px 14px; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid var(--border); text-align: right; }
+    .cov-table td:first-child { text-align: left; }
+    .cov-table tr:last-child td { border-bottom: none; }
+    .cov-table tr:hover td { background: rgba(255,255,255,0.018); }
+    .light .cov-table tr:hover td { background: rgba(0,0,0,0.02); }
+    .file-name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--text-primary); font-weight: 600; }
+    .cell-val { font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+    .cell-val.below { color: var(--red); }
+    .cell-counts { font-size: 11px; color: var(--text-dim); }
+    .weak-tag {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+        color: var(--amber); background: rgba(255,211,77,0.1); border: 1px solid rgba(255,211,77,0.3);
+        padding: 1px 6px; border-radius: 4px; margin-left: 8px;
+    }
+
+    /* GLOBS */
+    .globs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .glob-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+    .glob-col.inc h4 { color: var(--green); }
+    .glob-col.exc h4 { color: var(--text-dim); }
+    .glob-list { display: flex; flex-direction: column; gap: 7px; }
+    .glob-item {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px;
+        background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+        padding: 8px 12px; color: var(--text-secondary);
+    }
+    .glob-col.inc .glob-item { border-left: 3px solid var(--green); }
+    .glob-col.exc .glob-item { border-left: 3px solid var(--border-hover); color: var(--text-muted); }
+
+    /* BUTTONS */
+    .btn-secondary {
+        padding: 10px 16px; background: var(--bg-secondary); color: var(--text-muted);
+        border: 1px solid var(--border); border-radius: 9px; font-size: 13px; font-weight: 500;
+        cursor: pointer; transition: all 0.2s; font-family: inherit;
+        display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn-secondary:hover { border-color: var(--cyan); color: var(--text-primary); }
+
+    .footer-note { font-size: 12.5px; color: var(--text-dim); margin-top: 8px; line-height: 1.8; }
+    .footer-note code { color: var(--text-muted); }
+    .actions-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 28px; }
+    .actions-row .hint { font-size: 12px; color: var(--text-dim); }
+
+    .empty-state { padding: 48px 24px; text-align: center; color: var(--text-dim); }
+    .empty-icon { font-size: 34px; margin-bottom: 12px; opacity: 0.5; }
+
+    /* TOAST */
+    .toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 999;
+        background: var(--bg-elevated); border: 1px solid var(--border-hover);
+        border-radius: 12px; padding: 13px 18px; font-size: 13px; color: var(--text-primary);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(80px); opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        display: flex; align-items: center; gap: 9px; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 900px) {
+        .stats-row { grid-template-columns: 1fr 1fr; }
+        .globs-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+        .main { padding: 32px 16px 72px; }
+        .nav-left .logo-link, .nav-left .nav-divider { display: none; }
+        .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="mesh"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Coverage Breakdown</span>
+            <span class="nav-badge">Read-only</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬡ Kudbee Tools</span>
+        <h1>Coverage <span class="gradient-text">Breakdown</span></h1>
+        <p>A read-only window onto the project's coverage gate — the same numbers and thresholds CI enforces. This page shows the data; it never changes it.</p>
+    </header>
+
+    <!-- Honesty / scope banner -->
+    <div class="scope-banner">
+        <span class="si">🔭</span>
+        <span class="st">
+            <b>Scope: <code>leaderboard/shared/</code> only.</b>
+            This gate measures the deterministic, framework-free leaderboard logic — the one place in this repo where a coverage percentage is meaningful.
+            It is <b>not</b> a whole-repository coverage gate: games, the marketing site, DB adapters, dev servers and tooling are deliberately out of scope.
+            Thresholds live in <code>leaderboard/.c8rc.json</code> and change only through a code-reviewed config edit — never from this page.
+        </span>
+    </div>
+
+    <div class="actions-row">
+        <button class="btn-secondary" id="importBtn" type="button">⤓ Load a c8 summary…</button>
+        <input type="file" id="fileInput" accept="application/json,.json" hidden>
+        <span class="hint">Optional: inspect a local <code class="mono">coverage-summary.json</code> from <code class="mono">npm run coverage</code>. Viewing only — nothing is saved or uploaded.</span>
+    </div>
+
+    <!-- Verdict + body, rendered by JS -->
+    <div id="view"></div>
+
+</main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toastIco">✓</span><span id="toastMsg"></span></div>
+
+<script>
+/* ============================================================
+   Kudbee Coverage Breakdown — read-only.
+   Renders the snapshot produced by leaderboard/scripts/coverage-snapshot.mjs
+   (committed at ./coverage-data.json), or a c8 coverage-summary.json the
+   user loads locally. No thresholds are computed or edited here; the gate
+   config in leaderboard/.c8rc.json is the source of truth.
+   ============================================================ */
+var METRICS = ['lines', 'branches', 'functions', 'statements'];
+var METRIC_LABEL = { lines: 'Lines', branches: 'Branches', functions: 'Functions', statements: 'Statements' };
+var data = null;
+
+/* ---------- THEME (matches the rest of Kudbee Tools) ---------- */
+var isLight = localStorage.getItem('kudbee_theme') === 'light';
+function applyTheme() {
+    document.body.classList.toggle('light', isLight);
+    document.getElementById('themeBtn').title = isLight ? 'Switch to dark' : 'Switch to light';
+}
+applyTheme();
+document.getElementById('themeBtn').addEventListener('click', function () {
+    isLight = !isLight;
+    localStorage.setItem('kudbee_theme', isLight ? 'light' : 'dark');
+    applyTheme();
+    if (data) drawBars();
+});
+
+/* ---------- TOAST ---------- */
+var toastEl = document.getElementById('toast'), toastIco = document.getElementById('toastIco'),
+    toastMsg = document.getElementById('toastMsg'), toastTmr;
+function showToast(icon, msg) {
+    toastIco.textContent = icon; toastMsg.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+}
+
+/* ---------- helpers ---------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+function fmtPct(n) { return (typeof n === 'number' ? n.toFixed(2) : '—') + '%'; }
+var cssVar = function (n) { return getComputedStyle(document.body).getPropertyValue(n).trim(); };
+
+/* ---------- render ---------- */
+function render() {
+    var view = document.getElementById('view');
+    if (!data) {
+        view.innerHTML = '<div class="panel"><div class="empty-state"><div class="empty-icon">📊</div>'
+            + '<p>No coverage snapshot found.<br>Run <code class="mono">npm run coverage &amp;&amp; npm run coverage:snapshot</code> in <code class="mono">leaderboard/</code>, '
+            + 'or load a <code class="mono">coverage-summary.json</code> above.</p></div></div>';
+        return;
+    }
+
+    var pass = !!data.pass;
+    var thr = data.thresholds || {};
+    var total = data.total || {};
+    var files = (data.files || []).slice();
+
+    var html = '';
+
+    /* verdict */
+    html += '<div class="verdict ' + (pass ? 'pass' : 'fail') + '">'
+        + '<div class="verdict-left">'
+        + '<span class="verdict-icon">' + (pass ? '✅' : '⛔') + '</span>'
+        + '<div><div class="verdict-status">' + (pass ? 'GATE PASSING' : 'GATE FAILING') + '</div>'
+        + '<div class="verdict-sub">' + esc(data.scope || 'leaderboard/shared/')
+        + ' · every metric must meet its threshold for CI to pass</div></div></div>'
+        + '<div class="verdict-meta">'
+        + (data.commit ? 'commit <span class="mono">' + esc(data.commit) + '</span><br>' : '')
+        + (data.generatedAt ? 'generated ' + esc(new Date(data.generatedAt).toLocaleString()) : '')
+        + '</div></div>';
+
+    /* metric cards */
+    html += '<div class="stats-row">';
+    METRICS.forEach(function (m) {
+        var val = total[m];
+        var t = thr[m];
+        var ok = typeof val === 'number' && typeof t === 'number' ? val >= t : true;
+        html += '<div class="stat-card ' + (ok ? 'ok' : 'bad') + '">'
+            + '<div class="stat-label">' + METRIC_LABEL[m] + '</div>'
+            + '<div class="stat-value">' + (typeof val === 'number' ? val.toFixed(1) : '—') + '<span class="pct">%</span></div>'
+            + '<div class="stat-sub"><span class="pill">' + (ok ? 'Pass' : 'Below') + '</span>'
+            + '<span class="thr">min ' + (typeof t === 'number' ? t + '%' : 'n/a') + '</span></div>'
+            + '</div>';
+    });
+    html += '</div>';
+
+    /* bar chart */
+    html += '<div class="panel"><div class="panel-title">📉 Line coverage by file</div>'
+        + '<div class="panel-note">Sorted weakest-first. The dashed line marks the line-coverage threshold ('
+        + (typeof thr.lines === 'number' ? thr.lines + '%' : 'n/a') + ').</div>'
+        + '<canvas id="bars" height="200"></canvas></div>';
+
+    /* per-file table */
+    html += '<div class="panel"><div class="panel-title">🗂️ Per-file breakdown</div>'
+        + '<div class="panel-note">Weakest files first. Cells below their threshold are flagged.</div>'
+        + '<div class="table-wrap"><table class="cov-table"><thead><tr>'
+        + '<th>File</th>' + METRICS.map(function (m) { return '<th>' + METRIC_LABEL[m] + '</th>'; }).join('')
+        + '</tr></thead><tbody>';
+    if (!files.length) {
+        html += '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:28px;">No files in scope.</td></tr>';
+    }
+    files.forEach(function (f, i) {
+        var weak = (i === 0 && files.length > 1);
+        html += '<tr><td><span class="file-name">' + esc(f.path) + '</span>'
+            + (weak ? '<span class="weak-tag">weakest</span>' : '') + '</td>';
+        METRICS.forEach(function (m) {
+            var v = f.metrics ? f.metrics[m] : undefined;
+            var below = typeof v === 'number' && typeof thr[m] === 'number' && v < thr[m];
+            var c = f.counts && f.counts[m] ? f.counts[m] : null;
+            html += '<td><span class="cell-val' + (below ? ' below' : '') + '">' + fmtPct(v) + '</span>'
+                + (c ? '<br><span class="cell-counts">' + c.covered + '/' + c.total + '</span>' : '') + '</td>';
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+
+    /* globs */
+    html += '<div class="panel"><div class="panel-title">🎯 What the gate counts</div>'
+        + '<div class="panel-note">Defined in <code class="mono">leaderboard/.c8rc.json</code>. Only included files that the tests actually load are measured.</div>'
+        + '<div class="globs-grid">'
+        + '<div class="glob-col inc"><h4>Included</h4><div class="glob-list">'
+        + (data.include || []).map(function (g) { return '<div class="glob-item">' + esc(g) + '</div>'; }).join('')
+        + '</div></div>'
+        + '<div class="glob-col exc"><h4>Excluded</h4><div class="glob-list">'
+        + (data.exclude || []).map(function (g) { return '<div class="glob-item">' + esc(g) + '</div>'; }).join('')
+        + '</div></div>'
+        + '</div>'
+        + '<p class="footer-note">Thresholds are read-only here. To change the gate, edit '
+        + '<code>leaderboard/.c8rc.json</code> in a reviewed pull request — the CI gate, not this page, is the source of truth.</p>'
+        + '</div>';
+
+    view.innerHTML = html;
+    drawBars();
+}
+
+/* ---------- bar chart (Canvas 2D, DPR-aware — same pattern as token-analyzer) ---------- */
+function setupCanvas(id, h) {
+    var canvas = document.getElementById(id);
+    if (!canvas) return null;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var W = canvas.getBoundingClientRect().width || 640;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(h * dpr);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx, W: W, H: h };
+}
+
+function drawBars() {
+    var cv = setupCanvas('bars', 200);
+    if (!cv || !data) return;
+    var ctx = cv.ctx, W = cv.W, H = cv.H;
+    ctx.clearRect(0, 0, W, H);
+
+    var files = (data.files || []);
+    if (!files.length) return;
+
+    var padL = 8, padR = 8, padT = 14, padB = 46;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var n = files.length;
+    var gap = 18;
+    var bw = Math.min(90, (plotW - gap * (n - 1)) / n);
+    var startX = padL + (plotW - (bw * n + gap * (n - 1))) / 2;
+
+    var green = cssVar('--green') || '#7CFFb2';
+    var red = cssVar('--red') || '#ff6b5d';
+    var dim = cssVar('--text-dim') || '#646c82';
+    var muted = cssVar('--text-muted') || '#9aa3b8';
+    var thr = data.thresholds ? data.thresholds.lines : null;
+
+    /* threshold line */
+    if (typeof thr === 'number') {
+        var ty = padT + plotH - (thr / 100) * plotH;
+        ctx.strokeStyle = 'rgba(255,211,77,0.7)';
+        ctx.setLineDash([5, 5]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padL, ty); ctx.lineTo(W - padR, ty); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = cssVar('--amber') || '#ffd34d';
+        ctx.font = '600 11px Inter, sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('min ' + thr + '%', W - padR, ty - 5);
+    }
+
+    ctx.textAlign = 'center';
+    files.forEach(function (f, i) {
+        var v = f.metrics ? f.metrics.lines : 0;
+        var x = startX + i * (bw + gap);
+        var bh = Math.max(2, (v / 100) * plotH);
+        var y = padT + plotH - bh;
+        var below = typeof thr === 'number' && v < thr;
+
+        var grad = ctx.createLinearGradient(0, y, 0, y + bh);
+        if (below) { grad.addColorStop(0, red); grad.addColorStop(1, 'rgba(255,107,93,0.35)'); }
+        else { grad.addColorStop(0, green); grad.addColorStop(1, 'rgba(57,230,255,0.35)'); }
+        ctx.fillStyle = grad;
+        roundRect(ctx, x, y, bw, bh, 6); ctx.fill();
+
+        ctx.fillStyle = below ? red : muted;
+        ctx.font = '700 12px "Space Grotesk", sans-serif';
+        ctx.fillText(v.toFixed(0) + '%', x + bw / 2, y - 7);
+
+        ctx.fillStyle = dim;
+        ctx.font = '500 10px ui-monospace, monospace';
+        var name = f.path.replace(/^shared\//, '');
+        if (name.length > 14) name = name.slice(0, 13) + '…';
+        ctx.fillText(name, x + bw / 2, H - padB + 18);
+    });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+/* ---------- load: committed snapshot, then allow local import ---------- */
+function normalizeSnapshot(json) {
+    /* Already our compact snapshot? Use as-is. */
+    if (json && json.version && json.total && Array.isArray(json.files)) return json;
+
+    /* Raw c8 coverage-summary.json: { total, "<abs path>": {...}, ... } */
+    if (json && json.total && json.total.lines) {
+        var pct = function (e, m) { return e && e[m] && typeof e[m].pct === 'number' ? e[m].pct : 0; };
+        var counts = function (e, m) { return { covered: e && e[m] ? (e[m].covered || 0) : 0, total: e && e[m] ? (e[m].total || 0) : 0 }; };
+        var files = Object.keys(json).filter(function (k) { return k !== 'total'; }).map(function (k) {
+            var e = json[k];
+            var rel = k.split('/shared/').length > 1 ? 'shared/' + k.split('/shared/').pop() : k.split('/').pop();
+            var metrics = {}, c = {};
+            METRICS.forEach(function (m) { metrics[m] = pct(e, m); c[m] = counts(e, m); });
+            return { path: rel, metrics: metrics, counts: c };
+        }).sort(function (a, b) { return a.metrics.lines - b.metrics.lines; });
+        var total = {}, tc = {};
+        METRICS.forEach(function (m) { total[m] = pct(json.total, m); tc[m] = counts(json.total, m); });
+        return {
+            version: 1, scope: 'imported coverage-summary.json',
+            generatedAt: new Date().toISOString(), commit: null,
+            thresholds: (data && data.thresholds) || {}, // keep last-known thresholds if any
+            include: (data && data.include) || [], exclude: (data && data.exclude) || [],
+            total: total, totalCounts: tc, files: files,
+            pass: data && data.thresholds ? METRICS.every(function (m) { return total[m] >= data.thresholds[m]; }) : true
+        };
+    }
+    throw new Error('Unrecognized coverage JSON.');
+}
+
+document.getElementById('importBtn').addEventListener('click', function () { document.getElementById('fileInput').click(); });
+document.getElementById('fileInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+        try {
+            data = normalizeSnapshot(JSON.parse(ev.target.result));
+            render();
+            showToast('✓', 'Loaded ' + file.name + ' (view only)');
+        } catch (err) { showToast('⚠', 'Could not read that file'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+});
+
+window.addEventListener('resize', function () { if (data) drawBars(); });
+
+/* Load the committed snapshot generated by the gate. */
+fetch('./coverage-data.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('no snapshot'); return r.json(); })
+    .then(function (json) { data = json; render(); })
+    .catch(function () { render(); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Scoped coverage gate — leaderboard/shared/ ONLY.
+# This is deliberately NOT a whole-repo coverage gate: it covers the
+# deterministic, framework-free leaderboard logic in leaderboard/shared/,
+# the one place in this repo where a coverage percentage is meaningful.
+# Thresholds live in leaderboard/.c8rc.json and change only via code review.
+name: Leaderboard shared/ coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  coverage:
+    name: leaderboard/shared/ coverage gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: leaderboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No lockfile is committed for this zero-build repo, so use `npm install`.
+      - name: Install dev dependencies
+        run: npm install
+
+      # Fails the build if leaderboard/shared/ drops below the thresholds in
+      # leaderboard/.c8rc.json (c8 --check-coverage). This is the entire gate.
+      - name: Run scoped coverage gate
+        run: npm run coverage
+
+      # Keep the read-only dashboard honest: its committed snapshot must match
+      # freshly measured coverage (ignoring the volatile generatedAt/commit
+      # fields), so it can never display stale or hand-edited numbers.
+      - name: Verify dashboard snapshot is fresh
+        run: npm run coverage:snapshot -- --check
