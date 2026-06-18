@@ -4,6 +4,9 @@ Standard PR workflow for this repository. These rules govern how every PR is pla
 opened, watched, audited, merged, and closed. They apply to all agents and contributors.
 A condensed copy lives in [`../CLAUDE.md`](../CLAUDE.md).
 
+Per-PR tracking — numbered IDs, status labels, and owner approval state — lives in the
+[Build Ledger](BUILD_LEDGER.md), which applies these rules item by item.
+
 ## 1. One PR = One Purpose
 
 Every PR must have one lane only:
