@@ -62,6 +62,13 @@ Use **only** these labels:
 | DBZ-012 | Devbiz | #12 | `claude/coverage-gate-breakdown-eii751` | coverage | `MANUAL_CHECK` | Owner manual preview review of the breakdown app | Review branch preview; approve merge if correct | CI green, snapshot freshness passing, Cloudflare preview deployed, no unresolved comments. Scope frozen. |
 | DBZ-011 | Devbiz | #11 | (merged) | docs | `MERGED` | — | None | Global PR flow rules (`CLAUDE.md` + `docs/PR_FLOW.md`). |
 | DBZ-009 | Devbiz | #9 | `claude/prowritingaid-writing-tool-qed9pf` | feature | `AWAITING_AUDIT` | Owner manual preview (passed) | Owner audit / merge decision | Kudbee Scribe writing tool + landing page. CI green; preview reviewed (PASS). AI Worker documented but disabled; private/client-side default. Scope frozen. |
+| DBZ-007 | Devbiz | #7 | (merged) | feature | `MERGED` | — | None | 🏆 Online League nav link (top nav, mobile nav, footer). |
+| DBZ-006 | Devbiz | #6 | `claude/vellum-ai-research-launch-5f19vn` | feature | `MANUAL_CHECK` | Live `ANTHROPIC_API_KEY` + Worker deploy to verify the agent end-to-end | Review; provide key/deploy or waive to merge in keyless demo mode | **Open, not merged.** Live AI concierge + Kudbee Doctrine page; ships in keyless demo. |
+| DBZ-005 | Devbiz | #5 | (merged) | feature | `MERGED` | — | None | Kudbee Darts polish + Dart Workshop, Leaderboard & online Bullseye League. |
+| DBZ-004 | Devbiz | #4 | (merged) | feature | `MERGED` | — | None | Token Price Analyzer tool + Tools nav page. |
+| DBZ-003 | Devbiz | #3 | (merged) | feature | `MERGED` | — | None | Kudbee Darts game (501 + Cricket, AI leagues). |
+| DBZ-002 | Devbiz | #2 | (merged) | feature | `MERGED` | — | None | Simplified mobile touch controls + auto-fire. |
+| DBZ-001 | Devbiz | #1 | (merged) | feature | `MERGED` | — | None | Kudbee Games Studio launch: Kudbee Contra + full site redesign. |
 
 > Column definitions — **ID:** internal build number · **Repo:** project ·
 > **PR:** PR number or `N/A` · **Branch:** branch name if known · **Lane:** docs,
@@ -69,8 +76,10 @@ Use **only** these labels:
 > **Status:** one of the labels above · **Gate:** what must happen before merge ·
 > **Next Owner Action:** what the owner must do next · **Notes:** short context.
 
-PRs prior to #11 predate this ledger and are not backfilled; add new items going
-forward.
+History for PRs #1–#7 is backfilled above (one row per PR, IDs aligned to PR
+numbers). Of that range, **#6 is still open** (`MANUAL_CHECK`) — it is not merged.
+Not yet tracked here: merged PRs #8 and #16 (`INFRA-001`) and open PR #10 — add
+them on a docs lane if desired.
 
 ---
 
