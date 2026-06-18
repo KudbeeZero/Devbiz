@@ -61,6 +61,7 @@ Use **only** these labels:
 | DBZ-013 | Devbiz | #13 | `claude/build-ledger-dbz` | docs | `DRAFT` | Owner review of docs | Review & merge the docs PR | This ledger + CLAUDE.md reference. Process-only. |
 | DBZ-012 | Devbiz | #12 | `claude/coverage-gate-breakdown-eii751` | coverage | `MANUAL_CHECK` | Owner manual preview review of the breakdown app | Review branch preview; approve merge if correct | CI green, snapshot freshness passing, Cloudflare preview deployed, no unresolved comments. Scope frozen. |
 | DBZ-011 | Devbiz | #11 | (merged) | docs | `MERGED` | — | None | Global PR flow rules (`CLAUDE.md` + `docs/PR_FLOW.md`). |
+| DBZ-009 | Devbiz | #9 | `claude/prowritingaid-writing-tool-qed9pf` | feature | `AWAITING_AUDIT` | Owner manual preview (passed) | Owner audit / merge decision | Kudbee Scribe writing tool + landing page. CI green; preview reviewed (PASS). AI Worker documented but disabled; private/client-side default. Scope frozen. |
 
 > Column definitions — **ID:** internal build number · **Repo:** project ·
 > **PR:** PR number or `N/A` · **Branch:** branch name if known · **Lane:** docs,
