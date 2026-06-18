@@ -1,0 +1,15 @@
+name = "kudbee-scribe"
+main = "worker.js"
+compatibility_date = "2026-05-21"
+
+[vars]
+# Tighten this to your production site origin before launch, e.g.
+# ALLOWED_ORIGINS = "https://kudbee.com"
+ALLOWED_ORIGINS = "*"
+
+# Optional model override. Default is claude-haiku-4-5 (lowest cost).
+# Use claude-sonnet-4-6 for higher-quality rewrites at higher cost.
+# SCRIBE_MODEL = "claude-haiku-4-5"
+
+# ANTHROPIC_API_KEY is a SECRET — never commit it. Set it with:
+#   npx wrangler secret put ANTHROPIC_API_KEY
