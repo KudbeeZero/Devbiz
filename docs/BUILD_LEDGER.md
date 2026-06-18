@@ -58,7 +58,8 @@ Use **only** these labels:
 
 | ID | Repo | PR | Branch | Lane | Status | Gate | Next Owner Action | Notes |
 |---|---|---|---|---|---|---|---|---|
-| DBZ-013 | Devbiz | #13 | `claude/build-ledger-dbz` | docs | `DRAFT` | Owner review of docs | Review & merge the docs PR | This ledger + CLAUDE.md reference. Process-only. |
+| DBZ-014 | Devbiz | #14 | `claude/build-ledger-system` | docs | `DRAFT` | Owner review of docs | Review & merge the docs PR | Ledger reconcile: closes out DBZ-013. Process-only. |
+| DBZ-013 | Devbiz | #13 | (merged) | docs | `MERGED` | — | None | This ledger + `CLAUDE.md`/`PR_FLOW.md` references. Process-only. Merged 2026-06-18. |
 | DBZ-012 | Devbiz | #12 | `claude/coverage-gate-breakdown-eii751` | coverage | `MANUAL_CHECK` | Owner manual preview review of the breakdown app | Review branch preview; approve merge if correct | CI green, snapshot freshness passing, Cloudflare preview deployed, no unresolved comments. Scope frozen. |
 | DBZ-011 | Devbiz | #11 | (merged) | docs | `MERGED` | — | None | Global PR flow rules (`CLAUDE.md` + `docs/PR_FLOW.md`). |
 
