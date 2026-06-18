@@ -58,6 +58,7 @@ Use **only** these labels:
 
 | ID | Repo | PR | Branch | Lane | Status | Gate | Next Owner Action | Notes |
 |---|---|---|---|---|---|---|---|---|
+| DBZ-015 | Devbiz | #22 | `claude/cinematic-ui-north-star` | docs | `DRAFT` | Owner review of the North Star vision | Review & merge the North Star doc; then greenlight Phase A Foundation as a separate PR | Cinematic UI North Star (audit + vision, no site code). Owner locked 2026-06-18: Deep Lab primary / Space secondary; one-exhibit-first museum; Phase A Foundation first; proof read-only. See `docs/cinematic-ui-north-star.md`. |
 | DBZ-013 | Devbiz | #13 | `claude/build-ledger-dbz` | docs | `DRAFT` | Owner review of docs | Review & merge the docs PR | This ledger + CLAUDE.md reference. Process-only. |
 | DBZ-012 | Devbiz | #12 | `claude/coverage-gate-breakdown-eii751` | coverage | `MANUAL_CHECK` | Owner manual preview review of the breakdown app | Review branch preview; approve merge if correct | CI green, snapshot freshness passing, Cloudflare preview deployed, no unresolved comments. Scope frozen. |
 | DBZ-011 | Devbiz | #11 | (merged) | docs | `MERGED` | — | None | Global PR flow rules (`CLAUDE.md` + `docs/PR_FLOW.md`). |
