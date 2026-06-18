@@ -29,6 +29,7 @@
 <input type="radio" name="page" id="page-services" hidden>
 <input type="radio" name="page" id="page-games" hidden>
 <input type="radio" name="page" id="page-work" hidden>
+<input type="radio" name="page" id="page-agents" hidden>
 <input type="radio" name="page" id="page-contact" hidden>
 <input type="radio" name="page" id="page-tools" hidden>
 
@@ -196,6 +197,7 @@
     #page-services:checked ~ .theme-wrapper .nav-center label[for="page-services"],
     #page-games:checked ~ .theme-wrapper .nav-center label[for="page-games"],
     #page-work:checked ~ .theme-wrapper .nav-center label[for="page-work"],
+    #page-agents:checked ~ .theme-wrapper .nav-center label[for="page-agents"],
     #page-contact:checked ~ .theme-wrapper .nav-center label[for="page-contact"],
     #page-tools:checked ~ .theme-wrapper .nav-center label[for="page-tools"] {
         background: var(--grad); color: #fff; box-shadow: var(--shadow-glow);
@@ -251,6 +253,7 @@
     #page-services:checked ~ .theme-wrapper .page-services,
     #page-games:checked ~ .theme-wrapper .page-games,
     #page-work:checked ~ .theme-wrapper .page-work,
+    #page-agents:checked ~ .theme-wrapper .page-agents,
     #page-contact:checked ~ .theme-wrapper .page-contact,
     #page-tools:checked ~ .theme-wrapper .page-tools { display: block; }
 
@@ -662,6 +665,7 @@
     <ul class="nav-center">
         <li><label for="page-home">Home</label></li>
         <li><label for="page-services">Services</label></li>
+        <li><label for="page-agents">Agents<span class="tag">NEW</span></label></li>
         <li><label for="page-games">Games<span class="tag">NEW</span></label></li>
         <li><label for="page-work">Work</label></li>
         <li><label for="page-contact">Contact</label></li>
@@ -678,6 +682,7 @@
 <div class="mobile-nav">
     <label for="page-home">Home</label>
     <label for="page-services">Services</label>
+    <label for="page-agents">Agents — NEW</label>
     <label for="page-games">Games — NEW</label>
     <label for="page-work">Work</label>
     <label for="page-contact">Contact</label>
@@ -932,6 +937,307 @@
     </section>
 </div>
 
+<!-- ==================== SUPPORT AGENT SUITE ==================== -->
+<div class="page page-agents">
+
+    <!-- Hero -->
+    <section class="games-hero">
+        <div class="studio-badge">◆ Support Agent Suite</div>
+        <h2><span class="gradient-text">Support Agent Suite</span></h2>
+        <p>AI agents that organize customer requests, draft replies, and keep support moving — with humans still in control.</p>
+        <div class="cta-group" style="margin-top:30px;">
+            <label for="page-contact" class="btn-primary">Book a Demo</label>
+            <a href="#agent-capabilities" class="btn-secondary">View Agent Capabilities</a>
+        </div>
+        <p style="margin-top:26px; font-size:14px; color:var(--text-dim);">Built for customer support first. Expandable for the rest of the business.</p>
+    </section>
+
+    <!-- Problem -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">The Problem</span>
+            <h2 class="section-title">Support chaos is expensive</h2>
+            <p class="section-subtitle">Messages pile up across channels, details slip, and the same replies get retyped all day. Most small teams can't justify a heavyweight support platform — but the work doesn't stop.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div>
+                <h3>Messages come from everywhere</h3>
+                <p>Email, chat, forms, DMs, and voicemails all land in different places — with no single view of what's open.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+                <h3>Details get missed</h3>
+                <p>When threads run long and the queue is busy, important context and follow-ups quietly fall through the cracks.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
+                <h3>Repetitive replies waste hours</h3>
+                <p>The same questions get answered over and over, eating time that should go toward real work and real customers.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <h3>Enterprise tools cost too much</h3>
+                <p>Full-scale support suites are priced for big teams. Small businesses need something lean that just works.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#39e6ff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5M17 17a3 3 0 1 0 6 0 3 3 0 0 0-6 0zM7 7a3 3 0 1 0-6 0 3 3 0 0 0 6 0z"/></svg></div>
+                <h3>Owners need to move faster</h3>
+                <p>Operators want to respond quickly and stay organized — without hiring a full support team to do it.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution / How it works -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">The Solution</span>
+            <h2 class="section-title">One suite that keeps support moving</h2>
+            <p class="section-subtitle">The Support Agent Suite reads what comes in, organizes it, and prepares the work — so a human can review, approve, and send in a fraction of the time.</p>
+        </div>
+        <div class="feature-card reveal" style="max-width:680px; margin:0 auto;">
+            <ul class="feature-list">
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Reads incoming support requests across channels</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Categorizes each request by urgency and topic</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Drafts professional replies for human review</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Creates follow-up tasks so nothing is forgotten</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Summarizes customer history into quick context</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Flags risky or sensitive issues for a person to handle</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Keeps the owner or operator in control at every step</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Core Support Agents -->
+    <section class="section" id="agent-capabilities">
+        <div class="section-head reveal">
+            <span class="section-label">Agent Capabilities</span>
+            <h2 class="section-title">Your core support agents</h2>
+            <p class="section-subtitle">Six focused agents that each own one part of the support workflow — working together, all reviewable by you.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
+                <h3>Inbox Triage Agent</h3>
+                <p>Sorts every incoming request by urgency and topic, so the queue is organized the moment messages arrive.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <h3>Reply Draft Agent</h3>
+                <p>Drafts clear, professional responses in your voice — ready for a human to review, tweak, and approve.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+                <h3>Follow-Up Agent</h3>
+                <p>Tracks what still needs action and reminds the team, so open items don't slip after the first reply.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                <h3>Knowledge Base Agent</h3>
+                <p>Turns repeated questions into reusable, on-brand answers so common requests get handled instantly.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                <h3>Escalation Agent</h3>
+                <p>Flags angry, legal, billing, or otherwise sensitive messages so a person reviews them before anything goes out.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#c46bff" stroke-width="1.6" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+                <h3>Summary Agent</h3>
+                <p>Condenses long back-and-forth threads into quick notes so anyone can pick up the context in seconds.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Human Control -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Human in the Loop</span>
+            <h2 class="section-title">Agents assist. Humans approve.</h2>
+            <p class="section-subtitle">The suite is built to speed up your team — not to act on its own. You stay the decision-maker on everything that matters.</p>
+        </div>
+        <div class="feature-card reveal" style="max-width:680px; margin:0 auto;">
+            <ul class="feature-list">
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> No blind auto-sending by default — replies wait for review</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> The business owner controls every final decision</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Sensitive issues are flagged for a human, not actioned automatically</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Every agent output is reviewable before it's used</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Permissions and access stay narrow by design</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Business Value -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Business Value</span>
+            <h2 class="section-title">What it changes day to day</h2>
+            <p class="section-subtitle">Practical wins for small businesses, service companies, creators, and local teams.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+                <h3>Faster response times</h3>
+                <p>Drafts and context are ready the moment you open a message — reply in minutes, not hours.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                <h3>Fewer missed messages</h3>
+                <p>Triage and follow-ups keep the queue visible so nothing quietly disappears.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
+                <h3>Less repetitive typing</h3>
+                <p>Reusable answers and drafts cut the copy-paste grind out of everyday support.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+                <h3>Better organization</h3>
+                <p>Every request is sorted, summarized, and tracked in one consistent flow.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+                <h3>Lower support workload</h3>
+                <p>The routine work shrinks, freeing the team for higher-value conversations.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#7CFFb2" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/></svg></div>
+                <h3>More professional comms</h3>
+                <p>Consistent tone and complete answers make every reply feel polished and on-brand.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Use Cases</span>
+            <h2 class="section-title">Where it fits</h2>
+            <p class="section-subtitle">Everyday support scenarios the suite is built to handle.</p>
+        </div>
+        <div class="feature-card reveal" style="max-width:760px; margin:0 auto;">
+            <ul class="feature-list">
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Service-business customer requests</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Appointment follow-ups and reminders</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Product support questions</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Billing and account questions</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Quote and pricing requests</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Complaint handling and recovery</li>
+                <li><svg width="16" height="16" fill="none" stroke="#39e6ff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Internal task routing to the right person</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Expansion / Add-On Agents -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Expansion Agents</span>
+            <h2 class="section-title">Grow beyond support when you're ready</h2>
+            <p class="section-subtitle">Start by fixing support chaos. As your needs grow, the same suite can expand into other workflows — added only when it makes sense for you.</p>
+        </div>
+        <div class="card-grid">
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+                <h3 style="color:var(--text-muted);">Sales Follow-Up</h3>
+                <p>Nudges warm leads and keeps deals from going cold.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 14H4.5a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 6 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 11 4.6V4.5a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 18 6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 11h.1a2 2 0 0 1 0 4h-.1z"/></svg></div>
+                <h3 style="color:var(--text-muted);">Operations Tasks</h3>
+                <p>Turns requests into routed, trackable internal tasks.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                <h3 style="color:var(--text-muted);">Appointment Reminders</h3>
+                <p>Confirms, reminds, and reschedules without the back-and-forth.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+                <h3 style="color:var(--text-muted);">Internal Research</h3>
+                <p>Pulls together background so answers are quick and informed.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></div>
+                <h3 style="color:var(--text-muted);">Content Drafts</h3>
+                <p>Spins up first drafts for FAQs, updates, and announcements.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+            <div class="feature-card reveal" style="border-style:dashed; opacity:0.65;">
+                <div class="feature-icon"><svg width="26" height="26" fill="none" stroke="#646c82" stroke-width="1.6" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <h3 style="color:var(--text-muted);">Lead Organization</h3>
+                <p>Captures and sorts new leads so none get lost in the inbox.</p>
+                <span style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Add-on</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing / Package Teaser -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Packages</span>
+            <h2 class="section-title">Start where it makes sense</h2>
+            <p class="section-subtitle">Every engagement is scoped to your business. Book a demo and we'll recommend the right starting point.</p>
+        </div>
+        <div class="packages-grid">
+            <div class="package-card">
+                <h3>Starter Setup</h3>
+                <div class="price">Let's talk</div>
+                <div class="price-note">one-time setup</div>
+                <ul><li>Inbox Triage + Reply Draft agents</li><li>Connected to your main channel</li><li>Review-before-send workflow</li><li>Onboarding & handoff</li></ul>
+                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Book a Demo</label>
+            </div>
+            <div class="package-card featured">
+                <h3>Business Support Suite</h3>
+                <div class="price">Let's talk</div>
+                <div class="price-note">most popular</div>
+                <ul><li>All six core support agents</li><li>Follow-ups, summaries & escalation</li><li>Reusable knowledge base answers</li><li>Priority setup & ongoing tuning</li></ul>
+                <label for="page-contact" class="btn-primary" style="width:100%; justify-content:center;">Book a Demo</label>
+            </div>
+            <div class="package-card">
+                <h3>Custom Agent Workflow</h3>
+                <div class="price">Custom</div>
+                <div class="price-note">tailored scope</div>
+                <ul><li>Everything in Business Support</li><li>Expansion / add-on agents</li><li>Custom workflows & integrations</li><li>Dedicated build partner</li></ul>
+                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Contact Us</label>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust / Safety -->
+    <section class="section">
+        <div class="section-head reveal">
+            <span class="section-label">Trust &amp; Safety</span>
+            <h2 class="section-title">Built to stay in your control</h2>
+            <p class="section-subtitle">Sensible defaults that keep a human in charge of the decisions that matter.</p>
+        </div>
+        <div class="feature-card reveal" style="max-width:680px; margin:0 auto;">
+            <ul class="feature-list">
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Review-before-send workflow on outgoing replies</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Clear permission boundaries for each agent</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> No unnecessary data access — only what's needed</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Human approval required on sensitive actions</li>
+                <li><svg width="16" height="16" fill="none" stroke="#c46bff" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Audit-friendly activity logs on the roadmap</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="section" style="text-align:center;">
+        <div class="section-head reveal" style="margin-bottom:32px;">
+            <h2 class="section-title">Ready to turn support chaos into organized action?</h2>
+            <p class="section-subtitle">Book a demo to see the suite on your real workflow, or start with a focused agent plan.</p>
+        </div>
+        <div class="cta-group reveal">
+            <label for="page-contact" class="btn-primary">Book a Demo</label>
+            <label for="page-contact" class="btn-secondary">Start with an Agent Plan</label>
+        </div>
+    </section>
+</div>
+
 <!-- ==================== GAMES ==================== -->
 <div class="page page-games">
     <section class="games-hero">
@@ -1083,7 +1389,7 @@
             <div class="portfolio-item cat-web"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="web1"></canvas></div><div class="portfolio-info"><h4>ScaleUp Agency</h4><span>Web · Marketing Site</span></div></div>
             <div class="portfolio-item cat-ai"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai1"></canvas></div><div class="portfolio-info"><h4>TechCorp Enablement</h4><span>AI · Team Training</span></div></div>
             <div class="portfolio-item cat-web"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="web2"></canvas></div><div class="portfolio-info"><h4>InnovateCo Platform</h4><span>Web · SaaS Dashboard</span></div></div>
-            <div class="portfolio-item cat-ai"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai2"></canvas></div><div class="portfolio-info"><h4>Support Agent Suite</h4><span>AI · Custom Agents</span></div></div>
+            <label for="page-agents" class="portfolio-item cat-ai" style="cursor:pointer;"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai2"></canvas></div><div class="portfolio-info"><h4>Support Agent Suite</h4><span>AI · Custom Agents</span></div></label>
             <div class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="boss"></canvas></div><div class="portfolio-info"><h4>Hive Sentinel</h4><span>Game · Boss Design</span></div></div>
         </div>
     </section>
@@ -1103,7 +1409,7 @@
                     <div class="form-group"><label>Name</label><input type="text" placeholder="Your name"></div>
                     <div class="form-group"><label>Email</label><input type="email" placeholder="you@company.com"></div>
                 </div>
-                <div class="form-group"><label>Interested in</label><select><option>Web Design & Development</option><option>AI Agent Training</option><option>Game Development</option><option>Something else</option></select></div>
+                <div class="form-group"><label>Interested in</label><select><option>Web Design & Development</option><option>AI Agent Training</option><option>Support Agent Suite</option><option>Game Development</option><option>Something else</option></select></div>
                 <div class="form-group"><label>Message</label><textarea placeholder="What are you building?"></textarea></div>
                 <button class="btn-primary" style="justify-content:center;">Send Message</button>
                 <p class="form-note">We typically reply within 24 hours.</p>
@@ -1179,7 +1485,7 @@
             <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
-        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
+        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-agents">Support Agents</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
         <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
         <div class="footer-col"><h4>Connect</h4><a>X / Twitter</a><a>GitHub</a><a>LinkedIn</a></div>
     </div>
