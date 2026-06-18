@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "scope": "leaderboard/shared/",
+  "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
+  "generatedAt": "2026-06-18T08:49:31.115Z",
+  "commit": "a97282b",
+  "thresholds": {
+    "lines": 88,
+    "branches": 60,
+    "functions": 88,
+    "statements": 88
+  },
+  "include": [
+    "shared/**"
+  ],
+  "exclude": [
+    "test/**",
+    "server/**",
+    "worker/**",
+    "client/**",
+    "public/**",
+    "scripts/**"
+  ],
+  "total": {
+    "lines": 90.67,
+    "branches": 64.88,
+    "functions": 90.9,
+    "statements": 90.67
+  },
+  "totalCounts": {
+    "lines": {
+      "covered": 321,
+      "total": 354
+    },
+    "branches": {
+      "covered": 85,
+      "total": 131
+    },
+    "functions": {
+      "covered": 20,
+      "total": 22
+    },
+    "statements": {
+      "covered": 321,
+      "total": 354
+    }
+  },
+  "files": [
+    {
+      "path": "shared/http.js",
+      "metrics": {
+        "lines": 55.81,
+        "branches": 71.42,
+        "functions": 50,
+        "statements": 55.81
+      },
+      "counts": {
+        "lines": {
+          "covered": 24,
+          "total": 43
+        },
+        "branches": {
+          "covered": 5,
+          "total": 7
+        },
+        "functions": {
+          "covered": 1,
+          "total": 2
+        },
+        "statements": {
+          "covered": 24,
+          "total": 43
+        }
+      }
+    },
+    {
+      "path": "shared/auth.js",
+      "metrics": {
+        "lines": 93.58,
+        "branches": 68.25,
+        "functions": 90.9,
+        "statements": 93.58
+      },
+      "counts": {
+        "lines": {
+          "covered": 146,
+          "total": 156
+        },
+        "branches": {
+          "covered": 43,
+          "total": 63
+        },
+        "functions": {
+          "covered": 10,
+          "total": 11
+        },
+        "statements": {
+          "covered": 146,
+          "total": 156
+        }
+      }
+    },
+    {
+      "path": "shared/core.js",
+      "metrics": {
+        "lines": 97.41,
+        "branches": 60.65,
+        "functions": 100,
+        "statements": 97.41
+      },
+      "counts": {
+        "lines": {
+          "covered": 151,
+          "total": 155
+        },
+        "branches": {
+          "covered": 37,
+          "total": 61
+        },
+        "functions": {
+          "covered": 9,
+          "total": 9
+        },
+        "statements": {
+          "covered": 151,
+          "total": 155
+        }
+      }
+    }
+  ],
+  "pass": true
+}

@@ -43,6 +43,34 @@ against a mocked JWKS):
 npm test
 ```
 
+## Coverage gate (scoped to `shared/`)
+
+There is a **real, quantitative coverage gate** — but it is scoped *honestly* to
+`leaderboard/shared/` only. That's the deterministic, framework-free leaderboard
+logic (`core.js`, `auth.js`, `http.js`) where a coverage percentage is actually
+meaningful. **This is not a whole-repository coverage gate.** The Worker/D1
+adapters, the dev server, the browser SDK, the games and the marketing site are
+deliberately *out of scope* — a percentage there would be noise, not a signal.
+
+```bash
+npm run coverage           # run tests under c8; FAILS if shared/ drops below threshold
+npm run coverage:snapshot  # refresh the JSON the read-only dashboard renders
+```
+
+- **Config / thresholds** live in `.c8rc.json` — the single, code-reviewed source
+  of truth (`include: ["shared/**"]`, `all: false`, plus `lines`/`branches`/
+  `functions`/`statements` floors). Change the gate only by editing that file in a
+  reviewed PR.
+- **CI** runs the gate on every push/PR (`.github/workflows/coverage.yml`,
+  job *"leaderboard/shared/ coverage gate"*). It fails the build if coverage drops
+  below the thresholds, and it verifies the committed dashboard snapshot is fresh.
+- **Breakdown dashboard:** a *read-only* view at `tools/coverage-dashboard/` shows
+  the exact per-file numbers, the configured thresholds, pass/fail status, and the
+  weakest files. It only visualizes the data — it cannot change the gate.
+
+The thresholds are set at the *current measured* coverage (floored, not aspired);
+no test was backfilled to inflate a number, and there is no fake "80%" claim.
+
 ## Metrics
 
 Defined once in `shared/core.js` (`GAMES.darts`): **rating, bestCheckout,
