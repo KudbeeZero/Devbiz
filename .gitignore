@@ -11,3 +11,12 @@
 # Local environment files
 .env
 .env.local
+
+# Dependencies
+node_modules/
+
+# Test coverage output
+coverage/
+
+# Logs
+*.log
