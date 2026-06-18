@@ -58,6 +58,7 @@ Use **only** these labels:
 
 | ID | Repo | PR | Branch | Lane | Status | Gate | Next Owner Action | Notes |
 |---|---|---|---|---|---|---|---|---|
+| DBZ-014 | Devbiz | N/A | `claude/ai-code-review-learning-q4ouka` | docs | `PLAN` | Owner review of the Code Lens spec | Review spec; approve concept + name, then greenlight Phase 2 scaffold | Code Lens: learn-as-you-build code review tool. Local heuristics + opt-in AI, language-agnostic. Spec/plan only — no tool code. See `docs/code-lens-plan.md`. |
 | DBZ-013 | Devbiz | #13 | `claude/build-ledger-dbz` | docs | `DRAFT` | Owner review of docs | Review & merge the docs PR | This ledger + CLAUDE.md reference. Process-only. |
 | DBZ-012 | Devbiz | #12 | `claude/coverage-gate-breakdown-eii751` | coverage | `MANUAL_CHECK` | Owner manual preview review of the breakdown app | Review branch preview; approve merge if correct | CI green, snapshot freshness passing, Cloudflare preview deployed, no unresolved comments. Scope frozen. |
 | DBZ-011 | Devbiz | #11 | (merged) | docs | `MERGED` | — | None | Global PR flow rules (`CLAUDE.md` + `docs/PR_FLOW.md`). |
