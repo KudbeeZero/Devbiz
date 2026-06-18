@@ -1,0 +1,15 @@
+# Cloudflare Pages / Netlify response headers.
+#
+# These headers are SCOPED to /recording-it/* on purpose: the Recording It sub-app needs
+# cross-origin isolation (COOP + COEP) so it can use SharedArrayBuffer and multi-threaded
+# ffmpeg.wasm. The rest of the Kudbee marketing site is intentionally left untouched and stays
+# non-isolated, so nothing about the existing site's behavior changes.
+#
+# CORP: cross-origin lets the app's own assets be embedded by the isolated document. Cross-origin
+# CDN assets (unpkg / jsdelivr / huggingface / opencv.org) must send their own CORP/CORS headers
+# to load under COEP:require-corp — those CDNs do.
+
+/recording-it/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
