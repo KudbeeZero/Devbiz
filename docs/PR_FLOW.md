@@ -141,6 +141,25 @@ Stop and ask before:
 - retargeting branches
 - opening a new PR lane
 
+### 11a. Confirmation token for highest-stakes actions
+
+Routine actions (ordinary merges, opening normal lanes, docs) may be delegated to
+a trusted coordinator. But the **highest-stakes, hard-to-reverse subset** below
+must include a confirmation token of the form `OWNER-OK: <phrase>` in the
+authorizing instruction:
+
+- production deploy
+- changing permissions/security policy
+- changing pricing, or enabling payment
+- enabling AI/API keys
+- changing token/credit or blockchain/proof behavior
+- changing production environment variables
+
+The agreed `<phrase>` is shared **out-of-band** and is **never stored in the repo,
+PR bodies, or comments** — committing it would defeat the tripwire. If a
+highest-stakes instruction arrives **without** the token, the agent pauses and
+confirms with the owner before acting, even under full delegation.
+
 ## 12. Closed Lane Rule
 
 When a PR is merged or closed:
