@@ -12,11 +12,26 @@
 
 | Decision | Choice |
 |---|---|
-| Engine | **Local heuristics + opt-in Claude AI** (the proven Kudbee Scribe pattern) |
+| Engine | **Local/deterministic first + opt-in Claude AI later** (the proven Kudbee Scribe pattern) |
 | Scope | **Language-agnostic** — HTML is first-class; JS / CSS / JSON / Python and others supported |
 | First pass | **Spec / plan PR only** (Phase 1) — no tool code yet, concept approved first |
 | Reference inspiration | **Kudbee Scribe** (`tools/kudbee-scribe/`) — privacy-first local analysis + optional AI |
-| Working name | **Kudbee Code Lens** (owner confirms final name — cheap to change while it's a doc) |
+| Name | **Code Lens** (confirmed by owner) |
+
+**Owner directional approval (2026-06-18) — PR #20 approved directionally, with these decisions:**
+
+1. **Name** — keep **Code Lens**.
+2. **Scope priority** — **Phase 2 is a deterministic, read-only scaffold first** (see
+   §9.1): repo/code map · diff/PR intake · coverage/test signal intake · issue
+   taxonomy · report output. **No auto-fixes, no repo writes, no merge automation.**
+3. **AI-layer timing** — **defer the AI layer** until the Phase 2 scaffold works on
+   deterministic local/sample data. When added it must sit behind a **provider
+   interface** with: a mock/fake provider for tests · an env-gated live provider ·
+   no client-side secrets · no live-API requirement for CI · no automatic code
+   changes from AI output (see §8).
+4. **Score thresholds** — **advisory, not blocking.** Bands: **90–100 green** ·
+   **75–89 yellow / needs review** · **below 75 red / high attention.** Not
+   merge-blocking until real baseline data exists across several PRs (see §7).
 
 ---
 
@@ -178,6 +193,19 @@ a **per-category breakdown** (SEO, A11y, Perf, Correctness, …) so the 90 → 9
 is visible and each fix shows what it's worth. The missing-items checklist doubles
 as the to-do list.
 
+**Score bands (locked by owner — advisory, not blocking):**
+
+| Band | Range | Meaning |
+|---|---|---|
+| 🟢 Green | **90–100** | Strong — no high-attention issues |
+| 🟡 Yellow | **75–89** | Needs review |
+| 🔴 Red | **below 75** | High attention |
+
+**Advisory only.** The score is a coaching signal, **not** a merge gate. It must
+**not** become merge-blocking until we have real baseline data across several PRs —
+otherwise we'd be tuning thresholds blind. Bands and weights stay adjustable while
+that baseline is gathered.
+
 **Honest tradeoff:** the local score is a *heuristic* of best-practice coverage. It
 is **not** a guarantee of zero runtime errors — it can't execute the code or know
 your intent. It's a directional coach, not a compiler. (The opt-in AI layer in §8
@@ -185,19 +213,29 @@ is where deeper, context-aware review comes from.)
 
 ---
 
-## 8. Opt-in Claude AI "Deep Explain"
+## 8. Opt-in Claude AI "Deep Explain" — deferred until after Phase 2
 
-Off by default, exactly like Kudbee Scribe (`DBZ-009`) and the Vellum concierge
-(`DBZ-006`). The local engine is the product; AI is an explicit upgrade.
+**Deferred by owner decision (2026-06-18).** The AI layer is **not** built until the
+Phase 2 deterministic scaffold (§9.1) is working end-to-end on local/sample data.
+The deterministic engine is the product; AI is an explicit, later upgrade — off by
+default, exactly like Kudbee Scribe (`DBZ-009`) and the Vellum concierge (`DBZ-006`).
 
-- A **"Deep Explain with Claude"** button sends the current snippet to Claude for a
-  conversational explanation and options tailored to the code's real intent — the
-  thing heuristics can't do.
-- **Manual gate.** Going live needs an `ANTHROPIC_API_KEY` behind a Cloudflare
-  Worker (never a key in client code — mirror the leaderboard Worker pattern). Until
-  then Code Lens ships **keyless / local-only**, fully functional without AI.
+When AI is added, it **must** sit behind a **provider interface** with these
+non-negotiables:
+
+| Requirement | Why |
+|---|---|
+| **Mock / fake provider for tests** | Tests run with deterministic canned output — no network, no flakiness. |
+| **Env-gated live provider** | The real Claude provider activates only when its env/secret is present. |
+| **No client-side secrets** | Keys live only in a Cloudflare Worker (mirror the leaderboard Worker), never in shipped HTML/JS. |
+| **No live-API requirement for CI** | CI passes with the mock provider; it never needs a real key or network call. |
+| **No automatic code changes from AI output** | AI output is advisory text/suggestions only — it never writes files, applies fixes, or pushes. |
+
+- A **"Deep Explain with Claude"** button (when enabled) sends the current
+  snippet/diff to the live provider for a conversational explanation and
+  intent-aware options — the thing heuristics can't do.
 - **Owner-only decision.** Enabling AI / API keys is an owner-only action per
-  CLAUDE.md §11; this phase only *documents* it, it does not enable anything.
+  CLAUDE.md §11; this phase only *documents* it and it stays off until then.
 
 ---
 
@@ -209,25 +247,55 @@ Following the "one PR = one purpose" + phase-order rules in
 | Phase | Deliverable | AI key needed? |
 |---|---|---|
 | **1** | This spec doc (no code) ← *this PR* | No |
-| **2** | Scaffold `tools/code-lens/` shell — nav, paste box, two-pane layout, theme | No |
-| **3** | Local heuristic engine — universal checks + HTML deep module + Quality Score | No |
+| **2** | **Deterministic, read-only scaffold** (§9.1) — intake + report output, no writes | No |
+| **3** | Heuristic depth — universal checks + HTML deep module + Quality Score bands | No |
 | **4** | Homepage Tools-page card + footer link (replace a "coming soon" card) | No |
 | **5** | Hardening / tests + deeper language modules (JS / CSS / Python) | No |
-| **6** | Opt-in Claude "Deep Explain" Worker (manual gate, owner-only) | Yes (key + Worker) |
+| **6** | Opt-in Claude "Deep Explain" behind the provider interface (§8) | Yes (key + Worker) |
 
-Phases 1–4 deliver a genuinely useful, fully local learning tool. Phases 5–6
-deepen and add AI.
+Phases 1–5 deliver a genuinely useful, fully deterministic learning tool. Phase 6
+adds AI — and only behind the §8 provider interface.
+
+### 9.1 Phase 2 scope — deterministic, read-only scaffold (locked by owner)
+
+Phase 2 is **additive and safe**: it ships the deterministic skeleton that
+everything else builds on, with **no** way to mutate a repo. Six capabilities,
+all read-only, all runnable on **local/sample data** (no live services required):
+
+| Capability | What it does (read-only) |
+|---|---|
+| **Repo / code map** | Build a structural map of files, languages, and entry points from a local checkout or sample fixture. |
+| **Diff / PR intake** | Ingest a diff or PR payload (from a file/fixture) and identify the changed surface to review. |
+| **Coverage / test signal intake** | Read existing coverage/test reports if present and attach them as signals — never run or require them in CI. |
+| **Issue taxonomy** | Classify findings into stable categories/severities (SEO, A11y, Perf, Correctness, …) — the schema §6 builds on. |
+| **Report output** | Emit a structured, human-readable review report (and a machine-readable form) — the deliverable. |
+| **Sample/fixture mode** | Run the whole pipeline against bundled sample data so it's demoable and testable with zero external dependencies. |
+
+**Hard guardrails for Phase 2 (must all hold):**
+
+- ❌ **No auto-fixes** — it describes issues, it never edits code.
+- ❌ **No repo writes** — read-only; it never commits, pushes, or modifies files under review.
+- ❌ **No merge automation** — it never merges, approves, or gates a PR.
+- ❌ **No secrets / no live AI calls in CI** — deterministic local/sample data only.
+- ❌ **No root marketing-site changes** unless explicitly required (Code Lens lives under `tools/`).
+
+This makes Phase 2 fully reversible and reviewable on its own, consistent with
+PR_FLOW §1 (one purpose) and the "additive and safe" instruction.
 
 ---
 
-## 10. Open items for the owner
+## 10. Open items — resolved (2026-06-18)
 
-1. **Name** — keep "Code Lens", or pick another (Kudbee Mentor / Codex / Read-Along)?
-2. **Scope priority** — go **HTML depth first** (richest value for your use case),
-   or spread **breadth across languages early** (shallower per language)?
-3. **AI Deep Explain** — keep it on the roadmap now (Phase 6), or defer it entirely
-   until the local tool proves out?
-4. **Score grading** — what thresholds/labels do you want (e.g. 90+ = "Strong",
-   99+ = "Ship-ready"), and which categories should weigh most?
+All four open items were decided by the owner when PR #20 was approved directionally
+(captured in the "Owner directional approval" block up top):
 
-Once you confirm 1–2, the next step is **Phase 2** (the `tools/code-lens/` scaffold).
+1. **Name** — ✅ keep **Code Lens**.
+2. **Scope priority** — ✅ **Phase 2 deterministic read-only scaffold first** (§9.1).
+3. **AI Deep Explain** — ✅ **deferred** until after the Phase 2 scaffold, then only
+   behind the §8 provider interface.
+4. **Score grading** — ✅ **advisory bands** 90–100 / 75–89 / <75 (§7), not
+   merge-blocking until baseline data exists.
+
+**Next step:** with these locked, PR #20 is **ready for review**. After it is
+reviewed/merged, **Phase 2** (the deterministic read-only scaffold, §9.1) opens as a
+**separate PR** — no auto-merge, additive and safe.
