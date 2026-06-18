@@ -20,6 +20,24 @@ Everything is static — any file server works for local preview:
 python3 -m http.server 8000
 ```
 
+## BUILD LEDGER
+
+Every PR, phase, and active work lane is tracked with a numbered ID, a status label, and
+an owner approval state in [`docs/BUILD_LEDGER.md`](docs/BUILD_LEDGER.md). Consult it to
+see what is ready to merge, waiting, blocked, or must not be touched.
+
+- **IDs** use per-project prefixes: `DBZ-###` (Devbiz), `GV-###` (GrowVerse),
+  `REC-###` (Recorded It), `BOOM-###` (BOOMSKI / Copy Snap), `FR-###` (Frontier),
+  `INFRA-###` (cross-project). One ID per work item, never reused.
+- **Status labels** (use only these): `PLAN`, `BUILDING`, `DRAFT`, `AWAITING_AUDIT`,
+  `MANUAL_CHECK`, `APPROVED`, `MERGED`, `HOLD`, `FIX_FIRST`, `BLOCKED`.
+- **Approval rule:** an advisor (e.g. ChatGPT) may return `APPROVE` / `HOLD` /
+  `FIX_FIRST` / `MANUAL_CHECK_REQUIRED`, but **no agent may merge** without explicit
+  owner authorization for that specific PR. Mark `APPROVED` only when the
+  merge-readiness rule in the ledger is fully met.
+
+Keep ledger updates on a docs/process lane — never bundled into feature or CI PRs.
+
 ## PR FLOW RULES
 
 These rules govern how every future PR is planned, opened, watched, audited, merged, and
