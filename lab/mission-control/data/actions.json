@@ -35,6 +35,14 @@
       "blocks": "GrowVerse plant review panel merge"
     },
     {
+      "priority": "high",
+      "kind": "test",
+      "title": "Verify Cloudflare Access is live for /lab/*",
+      "where": "Manual / external — Cloudflare Zero Trust (not configured in this repo)",
+      "action": "Open /lab/mission-control/ in an incognito/private browser window. EXPECTED: a Cloudflare Access screen appears before the page loads — if so, sign in with the allowed owner email + one-time PIN. IF the dashboard loads with NO prompt: Access is NOT configured yet — do not share the link publicly; configure Cloudflare Zero Trust Access for /lab and /lab/* (see docs/PRIVATE_TESTING_GATE.md). Note: there is no Mission Control password, no app-level login, and no basic-auth in the repo — Access lives in Cloudflare Zero Trust, not in committed code.",
+      "blocks": "Safe sharing of any deployed /lab link"
+    },
+    {
       "priority": "medium",
       "kind": "configure",
       "title": "Configure Cloudflare Access for /lab/* (now also covers /lab/mission-control)",
