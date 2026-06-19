@@ -184,6 +184,7 @@
     }
     .badge.tool { color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); }
     .badge.game { color: var(--violet); border: 1px solid rgba(196,107,255,0.4); }
+    .badge.ops { color: var(--green); border: 1px solid rgba(124,255,178,0.4); }
     .badge.soon { color: var(--amber); border: 1px solid rgba(255,211,77,0.4); }
 
     .card h3 { font-size: 19px; font-weight: 600; color: var(--text-primary); }
@@ -254,6 +255,9 @@
         </div>
     </div>
 
+    <div class="section-label">Operations · Control Plane</div>
+    <div class="grid" id="opsGrid"></div>
+
     <div class="section-label">Tools</div>
     <div class="grid" id="toolsGrid"></div>
 
@@ -274,6 +278,14 @@
  * markup changes needed. `status: 'live'` links out; 'soon' renders a
  * non-clickable "In build" card.
  * ------------------------------------------------------------------------- */
+const OPS = [
+    {
+        icon: '🛰️', kind: 'ops', title: 'Mission Control',
+        desc: 'Central project operations board — every repo, PR, agent, blocker, decision, and the owner-action queue in one place. Renders from editable data files.',
+        href: './mission-control/index.html', status: 'live'
+    }
+];
+
 const TOOLS = [
     {
         icon: '📊', kind: 'tool', title: 'Coverage Dashboard',
@@ -302,7 +314,7 @@ const GAMES = [
 
 function cardHTML(item) {
     const live = item.status === 'live';
-    const tag = item.kind === 'game' ? 'game' : 'tool';
+    const tag = item.kind === 'game' ? 'game' : item.kind === 'ops' ? 'ops' : 'tool';
     const badge = live
         ? `<span class="badge ${tag}">${tag}</span>`
         : `<span class="badge soon">In build</span>`;
@@ -320,6 +332,7 @@ function cardHTML(item) {
     </${tag_}>`;
 }
 
+document.getElementById('opsGrid').innerHTML = OPS.map(cardHTML).join('');
 document.getElementById('toolsGrid').innerHTML = TOOLS.map(cardHTML).join('');
 document.getElementById('gamesGrid').innerHTML = GAMES.map(cardHTML).join('');
 

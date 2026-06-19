@@ -1,0 +1,78 @@
+{
+  "_comment": "Active PR Board. state: draft | open | merged | blocked | queued | closed. ci: green | pending | failing | none | unknown. mergeReadiness: free text. url optional. Cross-repo PRs are labeled 'reported' because this dashboard cannot verify them from the devbiz session.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "number": "this PR",
+      "repo": "KudbeeZero/devbiz",
+      "title": "Mission Control v1 — gated /lab/mission-control dashboard",
+      "state": "draft",
+      "ci": "none",
+      "preview": "Cloudflare branch preview (after push)",
+      "ownerAction": "Review + merge",
+      "lastUpdate": "2026-06-19",
+      "mergeReadiness": "Static, additive, zero-build. Local render check pending owner browser pass.",
+      "url": ""
+    },
+    {
+      "number": "#27",
+      "repo": "GrowVerse (cross-repo)",
+      "title": "Plant review panel",
+      "state": "open",
+      "ci": "unknown",
+      "preview": "reported — verify in GrowVerse",
+      "ownerAction": "Review CI + visual",
+      "lastUpdate": "reported",
+      "mergeReadiness": "Reported pending CI/visual review. Not verifiable from devbiz — treat as reported.",
+      "url": ""
+    },
+    {
+      "number": "#24",
+      "repo": "KudbeeZero/devbiz",
+      "title": "Private Studio Lab tool hub + Aether Wing placeholder (Cloudflare Access-gated)",
+      "state": "merged",
+      "ci": "none",
+      "preview": "merged to main",
+      "ownerAction": "Configure Cloudflare Access (follow-up)",
+      "lastUpdate": "2026-06-19",
+      "mergeReadiness": "Merged. Access config is the remaining owner gate.",
+      "url": "https://github.com/KudbeeZero/Devbiz/pull/24"
+    },
+    {
+      "number": "#6",
+      "repo": "KudbeeZero/devbiz",
+      "title": "Live AI concierge widget + Doctrine page (UI/content; backend extracted)",
+      "state": "draft",
+      "ci": "unknown",
+      "preview": "—",
+      "ownerAction": "Decide: rebase onto main + merge keyless UI, or hold",
+      "lastUpdate": "2026-06-19",
+      "mergeReadiness": "Held as draft; backend + deploy-arch require explicit OWNER-OK. Ships keyless demo.",
+      "url": "https://github.com/KudbeeZero/Devbiz/pull/6"
+    },
+    {
+      "number": "#20",
+      "repo": "KudbeeZero/devbiz",
+      "title": "docs: Code Lens — Phase 1 spec",
+      "state": "draft",
+      "ci": "none",
+      "preview": "—",
+      "ownerAction": "Review concept; greenlight or hold Phase 2",
+      "lastUpdate": "2026-06-18",
+      "mergeReadiness": "Docs/spec only, fully reversible. Awaiting owner concept sign-off.",
+      "url": "https://github.com/KudbeeZero/Devbiz/pull/20"
+    },
+    {
+      "number": "#14",
+      "repo": "KudbeeZero/devbiz",
+      "title": "docs: reconcile build ledger (close out DBZ-013)",
+      "state": "draft",
+      "ci": "none",
+      "preview": "—",
+      "ownerAction": "Review + merge or close",
+      "lastUpdate": "2026-06-18",
+      "mergeReadiness": "Docs-only, one-file diff. May be superseded by later ledger edits — verify before merge.",
+      "url": "https://github.com/KudbeeZero/Devbiz/pull/14"
+    }
+  ]
+}

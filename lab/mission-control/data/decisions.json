@@ -1,0 +1,48 @@
+{
+  "_comment": "Decision Log. Major owner decisions, newest first. date is free text ('2026-06-19' or 'reported').",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "date": "2026-06-19",
+      "decision": "No new feature/game/GrowVerse/Frontier/tool work starts until Mission Control v1 exists",
+      "project": "All lanes",
+      "why": "Build velocity is outpacing project tracking; the owner needs one place to see every repo, PR, agent, status, blocker, and owner action first.",
+      "followUp": "Ship Mission Control v1, then the owner re-opens lanes deliberately."
+    },
+    {
+      "date": "2026-06-19",
+      "decision": "Devbiz remains the /lab hub/site repo",
+      "project": "Devbiz",
+      "why": "Keeps the gated control plane + marketing site in one zero-build static repo.",
+      "followUp": "Mission Control lives at /lab/mission-control inside Devbiz."
+    },
+    {
+      "date": "2026-06-19",
+      "decision": "Aether Wing gameplay should NOT be built in Devbiz",
+      "project": "FRONTIER: Aether Wing",
+      "why": "Devbiz is zero-build static; the game needs a real Vite/TypeScript/Three.js toolchain.",
+      "followUp": "Build it in the correct frontier-al scaffold after folder/repo confirmation."
+    },
+    {
+      "date": "2026-06-19",
+      "decision": "Aether Wing is built in the frontier-al Vite/TypeScript/Three.js scaffold after folder/repo confirmation",
+      "project": "FRONTIER: Aether Wing",
+      "why": "Right tool for a 3D game; keeps Devbiz clean.",
+      "followUp": "Owner confirms the frontier-al folder/repo; then Phase 1 kickoff."
+    },
+    {
+      "date": "2026-06-19",
+      "decision": "No wallet / blockchain / account systems in Phase 1 Aether Wing",
+      "project": "FRONTIER: Aether Wing",
+      "why": "Keep Phase 1 focused on a playable slice; defer economy/identity.",
+      "followUp": "Revisit only after a playable Phase 1 is verified."
+    },
+    {
+      "date": "reported",
+      "decision": "Cloudflare Access protects /lab externally; local dev remains open",
+      "project": "Devbiz",
+      "why": "Edge gate before assets are served — no secrets in the repo, no login form to maintain, nothing to bypass client-side.",
+      "followUp": "Owner configures Access in the Cloudflare dashboard (see docs/PRIVATE_TESTING_GATE.md)."
+    }
+  ]
+}
