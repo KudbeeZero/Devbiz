@@ -5,13 +5,13 @@
     {
       "name": "GrowVerse Plant Review / Vercel Readiness",
       "repo": "KudbeeZero/mainnet-growverse-v2.0 (public; current v2)",
-      "phase": "Audited & build-verified — awaiting owner Vercel decision",
-      "activePR": "this PR (draft) — readiness report",
+      "phase": "LIVE at growverse.dev — deployment verification",
+      "activePR": "this PR (draft) — readiness + domain verification",
       "state": "active",
-      "statusLabel": "audited — build verified",
-      "lastOwnerAction": "Launched the GrowVerse Vercel-readiness lane via AI Command Center",
-      "nextAction": "Review the readiness report; approve a no-secret Vercel preview of growpod/web + an additive gated /review/plant-review route (in the GrowVerse repo)",
-      "notes": "VERIFIED: cloned the public repo, ran next build — succeeds. growpod/web = Next.js 15 App Router (npm, standalone — NOT in the pnpm workspaces). Plant review = /dev/plant-review (NODE_ENV dev-gated, 404s in prod) using the canonical GrowChamber renderer; no backend calls, no wallet/Algo secrets. Vercel root dir = growpod/web, npm install, next build. Backend stays on Fly. Report: lab/ai-command-center/lanes/growverse-vercel-readiness.md. No deploy/secrets/DNS changed."
+      "statusLabel": "live + verifying",
+      "lastOwnerAction": "Confirmed growverse.dev live on Vercel (phone)",
+      "nextAction": "Fix www.growverse.dev (503 → redirect to apex in Vercel); confirm Vercel dashboard settings; run local vercel whoami/link/preview from growpod/web (this container has no vercel CLI/auth)",
+      "notes": "VERIFIED LIVE (external): growverse.dev → 200 on Vercel, HSTS+CSP, cache HIT; /dev/plant-review → 404 in prod (safely blocked); /review/plant-review → 404 (gated route not deployed). www.growverse.dev → 503 (resolves but not attached → add + redirect in Vercel). Repo build verified earlier (growpod/web, Next.js 15 App Router, npm, no wallet/Algo). Report: lab/ai-command-center/lanes/growverse-vercel-readiness.md. No deploy/secrets/DNS changed by the agent."
     },
     {
       "name": "AI Command Center",

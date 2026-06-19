@@ -113,3 +113,54 @@ npm run build          # next build — verified working
 
 - **Phone-checkable:** this report; the recommended settings; the route plan.
 - **Requires your desktop/account:** running `vercel login` / creating the Vercel project / connecting a domain; deploying the Fly backend; merging any change into the GrowVerse repo.
+
+---
+
+## Domain & deployment verification (live — 2026-06-19)
+
+**Live setup (final):**
+- **Primary domain:** `growverse.dev` — **LIVE & healthy.** Verified externally: `HTTP/2 200`, `server: Vercel`, `x-vercel-cache: HIT`, valid `strict-transport-security` (HSTS preload) + strict `content-security-policy`.
+- **Optional redirect:** `www.growverse.dev` → `growverse.dev` — **needs fixing** (see below).
+- **Hosting:** Vercel. **Domain/DNS currently:** Vercel-managed. **Cloudflare:** not used for this domain yet.
+- **Future backend reserved:** `api.growverse.dev`.
+- **Future frontend env placeholder:** `NEXT_PUBLIC_API_BASE_URL=https://api.growverse.dev` (not set now; placeholder only).
+
+**Verified externally (no account needed):**
+| Check | Result |
+|---|---|
+| `https://growverse.dev/` | ✅ 200, served by Vercel, HSTS + CSP active |
+| `https://growverse.dev/dev/plant-review` | ✅ **404 in production** — dev route safely blocked publicly |
+| `https://growverse.dev/review/plant-review` | 404 — gated review route not deployed yet (expected; it's a proposed additive PR) |
+| `https://growverse.dev/account` | 307 (client/route redirect) — renders the account UI; no crash |
+| `https://www.growverse.dev/` | ⚠️ **HTTP 503** — DNS resolves but the host isn't serving |
+
+**`www` finding + recommended fix (no DNS change by me):** `www.growverse.dev`
+resolves but returns **503**, i.e. it's pointed toward Vercel but **not attached to
+the project / no redirect configured**. Fix in the **Vercel dashboard**: Project →
+Settings → Domains → add `www.growverse.dev` and set it to **redirect to
+`growverse.dev`** (Vercel will provide the DNS/redirect automatically). This is a
+Vercel-side domain config, not a Cloudflare DNS change.
+
+**Dashboard-only — owner to confirm (I cannot see your Vercel/Cloudflare accounts):**
+- [ ] Vercel **project name**
+- [ ] **GitHub repo/branch/commit** deployed (expect `mainnet-growverse-v2.0`, your prod branch)
+- [ ] **Root Directory** = `growpod/web`
+- [ ] Framework **Next.js** · Build = default `next build` · Output = default/blank
+- [ ] `growverse.dev` set as **Primary** domain
+- [ ] Vercel default `*.vercel.app` URL still works as **fallback**
+- [ ] **No Cloudflare DNS changed**; **`frontierprotocol.app` records untouched**
+- [ ] **No wallet/Algorand secrets** added (review board needs none — verified in source)
+- [ ] **New Account / “I Have a Key”** panel: appears **app-local UI** (renders with no crash, no required secret); confirm in source whether any account action calls the backend before relying on it offline.
+
+**Local Vercel workflow — run on YOUR machine (not this container):**
+```bash
+cd ~/projects/growverse-vercel-audit/growpod/web   # the app root
+pwd; git status -sb; git remote -v                 # path check
+npx vercel whoami                                  # confirm account/team (your auth)
+npx vercel link                                    # link to the existing growverse.dev project
+# preview only — NEVER --prod without explicit approval:
+# npx vercel        # preview deploy → returns a preview URL to review first
+```
+> This container has **no `vercel` CLI, no Vercel auth, and no GrowVerse checkout**,
+> so `whoami`/`link`/preview must run where your Vercel login lives. Production
+> deploy stays **owner-approved only**, after build + route + env + `/dev/*` checks.

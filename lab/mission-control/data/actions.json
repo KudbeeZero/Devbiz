@@ -4,6 +4,14 @@
   "items": [
     {
       "priority": "high",
+      "kind": "configure",
+      "title": "Fix www.growverse.dev (returns 503) — add it to the Vercel project as a redirect to growverse.dev",
+      "where": "Vercel → Project → Settings → Domains (NOT a Cloudflare/DNS change)",
+      "action": "www.growverse.dev resolves but returns HTTP 503 (pointed at Vercel but not attached). Add www.growverse.dev to the project and set it to redirect to the apex growverse.dev (Vercel handles the redirect). Apex is healthy (200, Vercel, HSTS+CSP); /dev/plant-review correctly 404s in prod.",
+      "blocks": "www → apex redirect working"
+    },
+    {
+      "priority": "high",
       "kind": "decide",
       "title": "Review the GrowVerse Vercel-readiness report and approve the next safe step",
       "where": "KudbeeZero/mainnet-growverse-v2.0 · lab/ai-command-center/lanes/growverse-vercel-readiness.md",
