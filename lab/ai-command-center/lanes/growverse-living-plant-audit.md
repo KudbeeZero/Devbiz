@@ -111,3 +111,59 @@ being a local demo**:
 Cloned + read the real source (this container). I did **not** run `npm install`/build
 or change anything. No secrets, no wallet/Algo, no deploy, no DNS. The gameplay PR
 (either option's code) requires a GrowVerse-repo-scoped session.
+
+---
+
+## Option A — Backend wiring runbook (owner chose this, 2026-06-19)
+
+**Verified config (from `growpod/web/next.config.mjs`):**
+- Server-side rewrites proxy `/api/:path*`, `/health`, `/openapi.json` →
+  **`BACKEND_URL`**, which defaults to **`http://localhost:8000`** when unset →
+  on Vercel that's the `DNS_HOSTNAME_RESOLVED_PRIVATE` 404. **`BACKEND_URL` is the
+  one var that breaks login.**
+- Client base = `NEXT_PUBLIC_API_BASE` (empty → same-origin relative → uses the
+  rewrite). CSP `connect-src` auto-includes `NEXT_PUBLIC_API_BASE` if set.
+- Fly backend app = **`frontiernext`** (region `ord`); `[deploy] release_command`
+  runs `alembic upgrade head && seed` and **requires the `DATABASE_URL` secret**.
+
+> ⛔ **Blocker found (verified now): the backend is not reachable.**
+> `https://frontiernext.fly.dev/health` → **timeout** (app down / scaled to zero),
+> and `https://api.frontierprotocol.app/health` → **403 Cloudflare challenge**.
+> Wiring Vercel does nothing until the backend is up at a **challenge-free** origin.
+
+**Step 0 — bring the Fly backend up + confirm DB (your machine, `fly` CLI):**
+```bash
+fly status -a frontiernext
+fly machine list -a frontiernext      # ensure ≥1 machine is started (Fly auto-stops idle ones)
+fly secrets list -a frontiernext      # DATABASE_URL must be set (release_command needs it)
+fly deploy                            # if needed — runs migrations + seed
+curl https://frontiernext.fly.dev/health   # must return 200 before continuing
+```
+(If you want it always-on, set `auto_stop_machines = false` / `min_machines_running = 1`
+in `fly.toml [http_service]`.)
+
+**Step 1 — choose a challenge-free API origin for `BACKEND_URL`:**
+- Simplest: `https://frontiernext.fly.dev` (Fly's own domain — no Cloudflare challenge), once Step 0 returns 200.
+- Or `https://api.growverse.dev` pointed at the Fly app with Cloudflare **DNS-only
+  (grey cloud)** so there's no JS challenge. (`api.frontierprotocol.app` is
+  orange-clouded → 403 challenge → unusable for server-to-server.)
+
+**Step 2 — set the env var on the GrowVerse Vercel project (Settings → Environment Variables, Production + Preview):**
+- `BACKEND_URL = https://frontiernext.fly.dev`  *(or the api.growverse.dev DNS-only host)*
+- Leave `NEXT_PUBLIC_API_BASE` **empty** → client uses same-origin → Vercel rewrite
+  → backend → **no CORS**, CSP `connect-src 'self'` stays valid. (Only set it to the
+  API origin if you want direct client→API; then the backend must send CORS for
+  `https://growverse.dev`.)
+- It's a URL, not a secret — but **you** set it in Vercel; I won't touch your project.
+
+**Step 3 — redeploy** the Vercel project (env changes need a new deployment).
+
+**Step 4 — verify:**
+```bash
+curl https://growverse.dev/health      # → 200 (proxied), NOT the DNS_HOSTNAME_RESOLVED_PRIVATE 404
+# then on growverse.dev: "New account" → returns an api key, no raw 404
+```
+Ping me after and I'll re-verify `growverse.dev/health` + the account path externally.
+
+**Order of operations:** Step 0 (backend up) is the real blocker — `BACKEND_URL`
+can't help until `frontiernext.fly.dev/health` returns 200.
