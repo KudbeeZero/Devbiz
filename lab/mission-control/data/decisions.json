@@ -4,6 +4,13 @@
   "items": [
     {
       "date": "2026-06-19",
+      "decision": "GrowVerse protected review pattern: public app growverse.dev; protected review host review.growverse.dev; route /review/plant-review; keep /dev/plant-review local-dev-only and never public",
+      "project": "GrowVerse Plant Review / Vercel Readiness",
+      "why": "Lets the canonical GrowChamber board be reviewed on a real URL without exposing /dev/* or shipping to players. Full URL: https://review.growverse.dev/review/plant-review.",
+      "followUp": "review.growverse.dev DNS already resolves (503 — not attached/route not deployed). Implement the gated /review/plant-review route as an additive PR in the GrowVerse repo (mainnet-growverse-v2.0), then attach the host + protection in Vercel. Not implemented in this devbiz docs lane."
+    },
+    {
+      "date": "2026-06-19",
       "decision": "Mission Control v1 stays the static foundation; evolve via AI Command Center v1 next, then a D1/R2 operations database + document/evidence vault",
       "project": "Mission Control",
       "why": "Keep PR #25 clean as a zero-build foundation (no database/control features added to it). Sequence backend/control work deliberately: AI Command Center v1 is the next clean PR; the operations database + document vault come after, unless the owner re-prioritizes. Future controls must stay honest (manual/reported/database-only) until wired to real Cloudflare D1/R2/Worker APIs — no faked live control.",

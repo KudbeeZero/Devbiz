@@ -58,7 +58,21 @@
 
 ---
 
-## Protected review route (recommended — additive change in the GrowVerse repo)
+## Protected review route — ✅ CONFIRMED DECISION (owner, 2026-06-19)
+
+- **Public app:** `growverse.dev`
+- **Protected review host:** `review.growverse.dev`
+- **Protected review route:** `/review/plant-review`
+- **Full future review URL:** `https://review.growverse.dev/review/plant-review`
+- **`/dev/plant-review`** stays **local-development-only** and never public (currently 404s in prod ✅ — keep it that way).
+
+> **Status:** `review.growverse.dev` DNS already resolves but returns **503**
+> (pointed at Vercel, not yet attached to the project / route not deployed). The
+> route is **not implemented yet** — that's a separate additive PR **in the
+> GrowVerse repo** (`mainnet-growverse-v2.0`), to be done in a session with write
+> access there. This devbiz docs lane only records the decision.
+
+**Implementation plan (for the GrowVerse-repo PR, when approved):**
 
 The catch: `/dev/plant-review` 404s on **any** prod build, so a plain Vercel preview won't show it. To review on a deployed URL without exposing `/dev/*` or shipping to players:
 
@@ -132,7 +146,8 @@ npm run build          # next build — verified working
 | `https://growverse.dev/dev/plant-review` | ✅ **404 in production** — dev route safely blocked publicly |
 | `https://growverse.dev/review/plant-review` | 404 — gated review route not deployed yet (expected; it's a proposed additive PR) |
 | `https://growverse.dev/account` | 307 (client/route redirect) — renders the account UI; no crash |
-| `https://www.growverse.dev/` | ⚠️ **HTTP 503** — DNS resolves but the host isn't serving |
+| `https://www.growverse.dev/` | ⚠️ **HTTP 503** — DNS resolves but not attached/serving (re-checked: still 503) |
+| `https://review.growverse.dev/` | ⚠️ **HTTP 503** — DNS already resolves but not attached to the project yet (this is the confirmed protected review host) |
 
 **`www` finding + recommended fix (no DNS change by me):** `www.growverse.dev`
 resolves but returns **503**, i.e. it's pointed toward Vercel but **not attached to
