@@ -4,16 +4,28 @@
   "updated": "2026-06-19",
   "items": [
     {
-      "name": "AI Command Center Agent",
-      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
-      "pr": "this PR (ai-command-center-v1)",
-      "purpose": "Build AI Command Center v1 — static/manual-first prompt launcher + reported agent/session roster + reporting protocol.",
+      "name": "GrowVerse Vercel-Readiness Agent",
+      "assigned": "GrowVerse repo (audit) — driven from devbiz control plane",
+      "pr": "this PR (growverse-vercel-readiness)",
+      "purpose": "Audit GrowVerse for Vercel deployment readiness + design a protected plant-review route. Deliver a checklist + recommended settings.",
       "status": "active",
-      "subscription": "subscribed to this PR's activity (CI failure / review comment / conflict)",
+      "subscription": "subscribed to this PR's activity",
       "ci": "pending",
       "lastUpdate": "2026-06-19",
-      "ownerAction": "Phone browser-check /lab/ai-command-center/ on the preview, then approve/merge",
-      "notes": "This session. Lane registered in Mission Control before build. No backend, no secrets, no live control — manual-first by design."
+      "ownerAction": "Grant GrowVerse repo access (or paste key files) — audit is BLOCKED without it",
+      "notes": "BLOCKED on repo access: this devbiz session cannot read the GrowVerse repo (scope = kudbeezero/devbiz; no list_repos/add_repo). Delivered the readiness checklist + recommended Vercel settings; repo-specific findings are pending access — not fabricated."
+    },
+    {
+      "name": "AI Command Center Agent",
+      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
+      "pr": "#28 (merged)",
+      "purpose": "Build AI Command Center v1 — static/manual-first prompt launcher + reported agent/session roster + reporting protocol.",
+      "status": "complete",
+      "subscription": "unsubscribed (PR #28 merged)",
+      "ci": "green",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "None — merged + live",
+      "notes": "PR #28 merged after owner phone check. Manual-first by design; no backend, no secrets, no live control."
     },
     {
       "name": "Devbiz Mission Control Agent",

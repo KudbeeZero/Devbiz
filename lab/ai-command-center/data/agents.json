@@ -4,13 +4,22 @@
   "updated": "2026-06-19",
   "items": [
     {
-      "name": "AI Command Center Agent",
-      "session": "this build session",
-      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
+      "name": "GrowVerse Vercel-Readiness Agent",
+      "session": "this lane session",
+      "assigned": "GrowVerse repo (audit) — driven from the devbiz control plane",
       "status": "active",
       "lastUpdate": "2026-06-19",
-      "ownerAction": "Phone browser-check the preview, then approve/merge",
-      "notes": "Building ACC v1. Registered in Mission Control before build. Manual-first, no live control."
+      "ownerAction": "Grant GrowVerse repo access (or paste key files) — audit is BLOCKED without it",
+      "notes": "Vercel-readiness audit. BLOCKED: this session can't read the GrowVerse repo. Checklist + recommended settings delivered; repo-specific findings pending access (not fabricated). See lanes/growverse-vercel-readiness.md."
+    },
+    {
+      "name": "AI Command Center Agent",
+      "session": "build session",
+      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
+      "status": "complete",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "None — PR #28 merged + live",
+      "notes": "Built ACC v1. Registered in Mission Control before build. Manual-first, no live control."
     },
     {
       "name": "Mission Control Agent",

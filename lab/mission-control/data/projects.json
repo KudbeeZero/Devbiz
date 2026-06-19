@@ -3,15 +3,26 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "name": "GrowVerse Plant Review / Vercel Readiness",
+      "repo": "GrowVerse (separate repo — NOT in this session's scope)",
+      "phase": "Audit — BLOCKED on repo access",
+      "activePR": "this PR (draft) — readiness checklist only",
+      "state": "blocked",
+      "statusLabel": "blocked — needs GrowVerse repo access",
+      "lastOwnerAction": "Launched the GrowVerse Vercel-readiness lane via AI Command Center",
+      "nextAction": "Grant a session access to the GrowVerse repo (or paste package.json / next.config / the plant-review route) so the audit can run",
+      "notes": "Vercel deployment-readiness audit + protected plant-review route design. This devbiz session canNOT read the GrowVerse repo (GitHub scope = kudbeezero/devbiz only; no list_repos/add_repo tool). Delivered: a full readiness CHECKLIST + recommended Vercel settings + review-route design (lab/ai-command-center/lanes/growverse-vercel-readiness.md). Repo-specific confirmations are pending access — not fabricated. No deploy, no secrets, no wallet/Algorand."
+    },
+    {
       "name": "AI Command Center",
       "repo": "KudbeeZero/devbiz",
-      "phase": "v1 build — static/manual-first prompt + agent console",
-      "activePR": "this PR (draft)",
-      "state": "active",
-      "statusLabel": "building",
-      "lastOwnerAction": "Greenlit AI Command Center v1 from fresh main (static/manual-first, no backend)",
-      "nextAction": "Phone browser-check /lab/ai-command-center/ on the preview, then approve/merge",
-      "notes": "Gated /lab/ai-command-center — manual-first Prompt Launcher + reported agent/session roster + model reference + reporting protocol. No backend, no D1/R2, no secrets, no live control. Registered in Mission Control before build per the lane-kickoff rule."
+      "phase": "v1 — merged + live",
+      "activePR": "#28 (merged)",
+      "state": "merged",
+      "statusLabel": "merged + live",
+      "lastOwnerAction": "Phone-checked, approved, and merged PR #28",
+      "nextAction": "None — live at /lab/ai-command-center",
+      "notes": "Gated /lab/ai-command-center — manual-first Prompt Launcher + reported agent/session roster + model reference + reporting protocol. No backend, no D1/R2, no secrets, no live control."
     },
     {
       "name": "Devbiz /lab hub foundation",

@@ -4,11 +4,19 @@
   "items": [
     {
       "priority": "high",
-      "kind": "test",
-      "title": "Phone browser-check AI Command Center v1 on the preview, then approve/merge",
-      "where": "Branch preview: /lab/ai-command-center/ (and /lab/ for the card, /lab/mission-control/ for the registered lane)",
-      "action": "Open the preview from your phone: confirm the console renders, the Prompt Launcher builds + copies a prompt, the agent/session roster + model reference render from JSON, mobile layout is usable, no obvious broken styling. Then approve/merge (owner-only, no auto-merge).",
-      "blocks": "Merging AI Command Center v1"
+      "kind": "provide",
+      "title": "Give a session access to the GrowVerse repo so the Vercel-readiness audit can run",
+      "where": "GrowVerse repo (separate from devbiz — this session is scoped to kudbeezero/devbiz only)",
+      "action": "Run the GrowVerse Vercel-readiness lane in a session scoped to the GrowVerse repo, OR paste the key files here: package.json, next.config.*, vercel.json (if any), the /dev/plant-review route file, and the GrowChamber renderer entry. Until then the audit is blocked — I will not fabricate findings about a repo I can't see. The readiness checklist + recommended settings are ready to apply (lab/ai-command-center/lanes/growverse-vercel-readiness.md).",
+      "blocks": "Confirming GrowVerse Vercel readiness; any deploy decision"
+    },
+    {
+      "priority": "high",
+      "kind": "configure",
+      "title": "Configure Cloudflare Access for /lab/* before sharing links widely",
+      "where": "Cloudflare Zero Trust → Access → Applications → Self-hosted",
+      "action": "The control room (Mission Control + AI Command Center) is now real — protect it. Add your-domain/lab + /lab/* to an Access app, Allow policy = your email(s), One-time PIN. See docs/PRIVATE_TESTING_GATE.md. Verify in incognito (Access screen should appear before the page).",
+      "blocks": "Safely sharing any /lab link"
     },
     {
       "priority": "high",
