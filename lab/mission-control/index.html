@@ -432,14 +432,21 @@
             </ul>
             <h3>Must also report</h3>
             <ul>
-                <li>Repo · Branch · PR number</li>
+                <li>Repo · Branch · PR</li>
                 <li>CI status (precise — "CI green", "local passed, CI pending", "no CI configured")</li>
                 <li>Preview / dev route</li>
-                <li>Files changed summary</li>
+                <li>Files changed</li>
                 <li>Verification performed</li>
                 <li>Owner action now</li>
                 <li>Next recommended unit</li>
-                <li>Agent state: <em>active · parked · complete · unsubscribed</em></li>
+                <li>Agent state: <em>active · parked · subscribed · complete · unknown</em></li>
+            </ul>
+            <h3>Rules</h3>
+            <ul>
+                <li>Never say <em>"standing by"</em> when owner action is required.</li>
+                <li>Say <strong>"Owner action now:"</strong> when the owner must click / test / approve / merge / configure.</li>
+                <li>If nothing is needed, say <strong>"No owner action right now."</strong></li>
+                <li>Always report whether the agent is active, parked, subscribed, complete, or unsubscribed.</li>
             </ul>
             <div style="margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                 <span class="row-meta">Copyable template for future agents</span>
@@ -449,26 +456,23 @@
 Done:
 Needs you:
 
+Repo:
+Branch:
+PR:
+CI status:
+Preview/dev route:
+Files changed:
+Verification performed:
 Owner action now:
-- (exactly what to click / test / approve / merge — or "No owner action right now")
-
-Report:
-- Repo:
-- Branch:
-- PR number:
-- CI status:        (e.g. CI green | local passed, CI pending | no CI configured)
-- Preview/dev route:
-- Files changed:
-- Verification performed:
-- Next recommended unit:
-- Agent state:       (active | parked | complete | unsubscribed)</pre>
+Next recommended unit:
+Agent state: active / parked / subscribed / complete / unknown</pre>
         </div>
     </section>
 
 </main>
 
 <footer class="foot">
-    Kudbee Mission Control — private operations board · renders from <a href="./data/README.md">data/*.json</a> · <a href="../index.html">Back to Lab</a>
+    Kudbee Mission Control — private operations board · <a href="./README.md">Operating Guide</a> · renders from <a href="./data/README.md">data/*.json</a> · <a href="../index.html">Back to Lab</a>
 </footer>
 
 </div>
@@ -602,6 +606,8 @@ async function renderAgents() {
                 <dl class="kv">
                     <dt>PR / lane</dt><dd>${esc(a.pr)}</dd>
                     <dt>Purpose</dt><dd>${esc(a.purpose)}</dd>
+                    ${a.ci ? `<dt>CI</dt><dd>${chip(a.ci, 'plain')}</dd>` : ''}
+                    ${a.subscription ? `<dt>Sub</dt><dd>${esc(a.subscription)}</dd>` : ''}
                     <dt>Owner</dt><dd class="next">${esc(a.ownerAction)}</dd>
                     <dt>Updated</dt><dd>${esc(a.lastUpdate)}</dd>
                 </dl>

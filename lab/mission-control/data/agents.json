@@ -1,47 +1,79 @@
 {
-  "_comment": "Agent Registry. HONESTY NOTE: this dashboard cannot see or control external Claude/Codex sessions. Every status here is REPORTED by whoever last edited this file — it is not a live integration. status: active | parked | subscribed | complete | unknown.",
+  "_comment": "Agent Registry / Census. HONESTY NOTE: this dashboard cannot see or control external Claude/Codex/Fly sessions. Every status here is REPORTED by whoever last edited this file — it is not a live integration. status: active | parked | subscribed | complete | unknown. Do not invent agents; mark genuinely-unknown watchers as 'unknown' / needs confirmation.",
   "reportedOnly": true,
   "updated": "2026-06-19",
   "items": [
     {
-      "name": "Mission Control Builder",
+      "name": "Devbiz Mission Control Agent",
       "assigned": "KudbeeZero/devbiz · /lab/mission-control",
-      "pr": "this PR",
-      "purpose": "Build Mission Control v1 (operations/control-plane dashboard).",
+      "pr": "#25",
+      "purpose": "Build + harden Mission Control v1 (operations/control-plane dashboard) and keep the registry current.",
       "status": "active",
+      "subscription": "subscribed to PR #25 activity (CI failure / review comment / conflict)",
+      "ci": "green",
       "lastUpdate": "2026-06-19",
-      "ownerAction": "Review + merge the PR",
-      "notes": "This session. Will report closeout (Asked/Done/Needs you) when the PR is up."
+      "ownerAction": "Browser-check /lab/mission-control on the PR #25 preview, then approve/merge",
+      "notes": "This session. Active + subscribed. CI green (Workers build success; coverage gate unaffected — lab/-only change). Remaining gate is the owner's browser visual check."
     },
     {
-      "name": "Aether Wing Phase 1 (unassigned)",
-      "assigned": "frontier-al (TBD)",
+      "name": "Devbiz Lab Foundation Agent",
+      "assigned": "KudbeeZero/devbiz · /lab hub + Aether Wing placeholder",
+      "pr": "#24",
+      "purpose": "Stand up the private gated /lab tool hub and the Aether Wing placeholder route.",
+      "status": "complete",
+      "subscription": "none",
+      "ci": "none (static lane)",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Configure Cloudflare Access for /lab/* (follow-up, not a blocker)",
+      "notes": "PR #24 merged. Lane complete. Mission Control now extends this hub."
+    },
+    {
+      "name": "Aether Wing Phase 1 Agent",
+      "assigned": "frontier-al (Vite/TypeScript/Three.js — folder/repo NOT confirmed)",
       "pr": "none",
-      "purpose": "Build the Aether Wing Phase 1 playable slice in the frontier-al scaffold.",
+      "purpose": "Build the Aether Wing Phase 1 playable slice in the correct frontier-al scaffold (NOT in Devbiz).",
       "status": "parked",
+      "subscription": "none",
+      "ci": "n/a",
       "lastUpdate": "2026-06-19",
-      "ownerAction": "Confirm frontier-al folder/repo to unpark",
-      "notes": "Parked by owner freeze + missing repo confirmation. No gameplay work until both clear."
+      "ownerAction": "Confirm the correct frontier-al / Linux folder/repo before any gameplay work",
+      "notes": "Not started. Parked by owner freeze + missing folder/repo confirmation. No wallet/blockchain/account systems in Phase 1."
     },
     {
-      "name": "GrowVerse review (reported)",
-      "assigned": "GrowVerse · PR #27",
+      "name": "GrowVerse Plant Review Agent",
+      "assigned": "GrowVerse · /dev/plant-review (cross-repo — not in devbiz scope)",
       "pr": "#27",
-      "purpose": "Plant review panel work, pending CI/visual review.",
+      "purpose": "Plant review panel work, reported pending CI + final owner visual review.",
       "status": "unknown",
+      "subscription": "unknown",
+      "ci": "unknown (needs verification)",
       "lastUpdate": "reported",
-      "ownerAction": "Owner reviews PR #27",
-      "notes": "Cross-repo, not visible from this session. Status is reported only — update this row when you have real info."
+      "ownerAction": "Browser-check GrowVerse /dev/plant-review before merging that lane, if PR #27 is still open",
+      "notes": "Reported / needs verification. Cross-repo — cannot be confirmed from this devbiz session. Update this row when real status is known; do not assume green or merged."
     },
     {
-      "name": "PR watchers",
-      "assigned": "any subscribed PR",
-      "pr": "—",
-      "purpose": "Listen for CI failure / merge conflict / review comment / owner-action-required and surface only actionable events.",
+      "name": "Fly / Flyctl Diagnostic Agent",
+      "assigned": "Fly.io (flyctl) — exact CLI path not confirmed",
+      "pr": "none",
+      "purpose": "Read-only Fly.io / flyctl diagnostics, if this lane is still relevant.",
+      "status": "parked",
+      "subscription": "none",
+      "ci": "n/a",
+      "lastUpdate": "reported",
+      "ownerAction": "Provide the exact Fly CLI path ONLY if this diagnostic is still active; otherwise this row can be retired",
+      "notes": "Read-only / parked, pending the exact flyctl path. Listed as reported — confirm relevance before reactivating. Not invented work; retire if no longer applicable."
+    },
+    {
+      "name": "Legacy PR watchers (pre-#25)",
+      "assigned": "unknown",
+      "pr": "unknown",
+      "purpose": "Any earlier watcher subscriptions whose state is not known from this session.",
       "status": "unknown",
-      "lastUpdate": "2026-06-19",
-      "ownerAction": "None unless an actionable event appears",
-      "notes": "No active subscription reported in this session. Subscriptions report only actionable events, never 'standing by'."
+      "subscription": "needs confirmation",
+      "ci": "n/a",
+      "lastUpdate": "unknown",
+      "ownerAction": "Confirm whether any old watchers are still subscribed",
+      "notes": "Placeholder, not an invented agent. Marked unknown / needs confirmation per instruction. Replace or delete once the owner confirms what (if anything) is still watching."
     }
   ]
 }

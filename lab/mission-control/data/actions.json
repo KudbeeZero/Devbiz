@@ -1,17 +1,41 @@
 {
-  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide.",
+  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide | provide. Use honest 'if still open / if still active' wording for conditional items.",
   "updated": "2026-06-19",
   "items": [
     {
       "priority": "high",
-      "kind": "confirm",
-      "title": "Confirm the frontier-al folder/repo for Aether Wing",
-      "where": "frontier-al (Vite/TypeScript/Three.js scaffold) — repo/path TBD",
-      "action": "Tell the next agent exactly where Aether Wing should be built (which repo + folder). No Frontier / Aether Wing gameplay starts until this is confirmed.",
-      "blocks": "FRONTIER: Aether Wing Phase 1, frontier-al scaffold"
+      "kind": "test",
+      "title": "Browser-check /lab/mission-control on the PR #25 preview",
+      "where": "Branch preview: /lab/mission-control/ (and /lab/ for the Mission Control card)",
+      "action": "When you're home: open the dashboard, confirm it renders, Owner Action Queue is on top, all 7 sections populate, theme toggle + copy buttons work, mobile is usable, console is clean. This is the only remaining gate I cannot do (no browser in my environment).",
+      "blocks": "Marking PR #25 ready / merge"
     },
     {
       "priority": "high",
+      "kind": "merge",
+      "title": "If the browser check passes, approve / merge PR #25",
+      "where": "KudbeeZero/devbiz · PR #25 (draft)",
+      "action": "Owner-only. No auto-merge. Merge only after the browser gate passes and you're satisfied with scope.",
+      "blocks": "Resuming any new lanes (owner froze new work until Mission Control v1 lands)"
+    },
+    {
+      "priority": "high",
+      "kind": "confirm",
+      "title": "Confirm the correct frontier-al folder/repo before Aether Wing Phase 1",
+      "where": "frontier-al (Vite/TypeScript/Three.js) — exact repo/Linux folder TBD",
+      "action": "Tell the next agent exactly where Aether Wing should be built. No Frontier / Aether Wing gameplay starts until this is confirmed.",
+      "blocks": "FRONTIER: Aether Wing Phase 1, frontier-al scaffold"
+    },
+    {
+      "priority": "medium",
+      "kind": "test",
+      "title": "Browser-check GrowVerse /dev/plant-review before merging that lane — if PR #27 is still open",
+      "where": "GrowVerse repo · /dev/plant-review · PR #27 (cross-repo — reported, not verifiable from devbiz)",
+      "action": "If PR #27 is still open: do the visual review at /dev/plant-review and check CI, then decide merge/hold. Status here is reported / needs verification.",
+      "blocks": "GrowVerse plant review panel merge"
+    },
+    {
+      "priority": "medium",
       "kind": "configure",
       "title": "Configure Cloudflare Access for /lab/* (now also covers /lab/mission-control)",
       "where": "Cloudflare Zero Trust → Access → Applications → Self-hosted",
@@ -19,20 +43,12 @@
       "blocks": "Safe sharing of any deployed /lab link"
     },
     {
-      "priority": "medium",
-      "kind": "review",
-      "title": "Review GrowVerse plant review panel — PR #27 (CI + visual)",
-      "where": "GrowVerse repo · PR #27 (cross-repo — not visible from devbiz; status below is reported, not verified here)",
-      "action": "Check CI state and do the visual review on PR #27, then decide merge/hold.",
-      "blocks": "GrowVerse plant review panel merge"
-    },
-    {
-      "priority": "medium",
-      "kind": "review",
-      "title": "Review & test this Mission Control PR",
-      "where": "KudbeeZero/devbiz · /lab/mission-control",
-      "action": "Open /lab and /lab/mission-control locally, confirm the dashboard renders, then mark the PR ready / merge when satisfied.",
-      "blocks": "Resuming feature/game work (owner froze new lanes until Mission Control v1 exists)"
+      "priority": "low",
+      "kind": "provide",
+      "title": "Provide the exact Fly CLI path — only if the Fly diagnostic is still active",
+      "where": "Fly.io (flyctl)",
+      "action": "If the Fly/Flyctl diagnostic lane is still relevant, give the exact flyctl path so it can resume read-only. If it's no longer relevant, say so and the agent row can be retired.",
+      "blocks": "Nothing — conditional / housekeeping"
     },
     {
       "priority": "low",
