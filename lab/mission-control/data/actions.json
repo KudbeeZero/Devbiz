@@ -4,11 +4,11 @@
   "items": [
     {
       "priority": "high",
-      "kind": "provide",
-      "title": "Give a session access to the GrowVerse repo so the Vercel-readiness audit can run",
-      "where": "GrowVerse repo (separate from devbiz — this session is scoped to kudbeezero/devbiz only)",
-      "action": "Run the GrowVerse Vercel-readiness lane in a session scoped to the GrowVerse repo, OR paste the key files here: package.json, next.config.*, vercel.json (if any), the /dev/plant-review route file, and the GrowChamber renderer entry. Until then the audit is blocked — I will not fabricate findings about a repo I can't see. The readiness checklist + recommended settings are ready to apply (lab/ai-command-center/lanes/growverse-vercel-readiness.md).",
-      "blocks": "Confirming GrowVerse Vercel readiness; any deploy decision"
+      "kind": "decide",
+      "title": "Review the GrowVerse Vercel-readiness report and approve the next safe step",
+      "where": "KudbeeZero/mainnet-growverse-v2.0 · lab/ai-command-center/lanes/growverse-vercel-readiness.md",
+      "action": "AUDIT DONE + BUILD VERIFIED. Decide: (1) approve a no-secret Vercel preview of growpod/web (Root Dir = growpod/web, npm install, next build), and (2) approve an additive gated /review/plant-review route in the GrowVerse repo so the canonical GrowChamber board can be previewed without exposing /dev/* (it 404s in prod). No secrets/wallet needed. Any GrowVerse code change needs a session with write access to that repo.",
+      "blocks": "A protected Vercel preview of the plant review board"
     },
     {
       "priority": "high",

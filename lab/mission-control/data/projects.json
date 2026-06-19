@@ -4,14 +4,14 @@
   "items": [
     {
       "name": "GrowVerse Plant Review / Vercel Readiness",
-      "repo": "GrowVerse (separate repo — NOT in this session's scope)",
-      "phase": "Audit — BLOCKED on repo access",
-      "activePR": "this PR (draft) — readiness checklist only",
-      "state": "blocked",
-      "statusLabel": "blocked — needs GrowVerse repo access",
+      "repo": "KudbeeZero/mainnet-growverse-v2.0 (public; current v2)",
+      "phase": "Audited & build-verified — awaiting owner Vercel decision",
+      "activePR": "this PR (draft) — readiness report",
+      "state": "active",
+      "statusLabel": "audited — build verified",
       "lastOwnerAction": "Launched the GrowVerse Vercel-readiness lane via AI Command Center",
-      "nextAction": "Grant a session access to the GrowVerse repo (or paste package.json / next.config / the plant-review route) so the audit can run",
-      "notes": "Vercel deployment-readiness audit + protected plant-review route design. This devbiz session canNOT read the GrowVerse repo (GitHub scope = kudbeezero/devbiz only; no list_repos/add_repo tool). Delivered: a full readiness CHECKLIST + recommended Vercel settings + review-route design (lab/ai-command-center/lanes/growverse-vercel-readiness.md). Repo-specific confirmations are pending access — not fabricated. No deploy, no secrets, no wallet/Algorand."
+      "nextAction": "Review the readiness report; approve a no-secret Vercel preview of growpod/web + an additive gated /review/plant-review route (in the GrowVerse repo)",
+      "notes": "VERIFIED: cloned the public repo, ran next build — succeeds. growpod/web = Next.js 15 App Router (npm, standalone — NOT in the pnpm workspaces). Plant review = /dev/plant-review (NODE_ENV dev-gated, 404s in prod) using the canonical GrowChamber renderer; no backend calls, no wallet/Algo secrets. Vercel root dir = growpod/web, npm install, next build. Backend stays on Fly. Report: lab/ai-command-center/lanes/growverse-vercel-readiness.md. No deploy/secrets/DNS changed."
     },
     {
       "name": "AI Command Center",

@@ -1,126 +1,115 @@
-# GrowVerse — Vercel Readiness & Protected Review Route (audit plan)
+# GrowVerse — Vercel Readiness & Protected Review Route
 
-**Lane:** GrowVerse Plant Review / Vercel Readiness · **Status:** ⛔ **BLOCKED on
-repo access** (see below) · **Driven from:** devbiz control plane (Mission Control + AI Command Center)
+**Lane:** GrowVerse Plant Review / Vercel Readiness · **Status:** ✅ **Audited & build-verified**
+**Repo audited:** `KudbeeZero/mainnet-growverse-v2.0` (public; the current v2 — `growVerseRepelitv1` is the older one) · **Driven from:** devbiz control plane
 
-> **Honesty up front.** This session runs in an **isolated cloud container**, not
-> your local WSL machine, and its GitHub access is scoped to `kudbeezero/devbiz`
-> only. I **could not clone or read the GrowVerse repo** from here, so the
-> repo-specific answers below are a **checklist to confirm**, not findings. I have
-> **not** fabricated framework/build/env facts about code I can't see. Everything
-> marked **⟨confirm⟩** needs a session that can actually read the GrowVerse repo
-> (or you pasting the key files).
+> **How this was audited (honest):** this session is a cloud container, not your
+> WSL — so I could not write to `/home/kudbee/...` or use your local `gh`/`vercel`
+> auth. But both GrowVerse repos are **public**, so I cloned `mainnet-growverse-v2.0`
+> into the container, read the real source, and **ran `next build` — it succeeded.**
+> Findings below are verified against the real code, not assumed.
 
 ---
 
-## Why the live audit is blocked (facts, from this container)
+## Verdict (owner's 7 questions)
 
-| Check | Result |
+1. **Fresh clone path:** I cloned the public repo in-container at `/tmp/...` (ephemeral). **You** should clone on your machine — exact commands at the bottom.
+2. **Does it build locally?** ✅ **Yes.** `npm install` + `next build` in `growpod/web` succeeded (Next.js 15.1.6, React 19, Node 22). Produced a normal hybrid route manifest.
+3. **Can Vercel deploy it as-is?** ✅ **Yes**, with the settings below — **two caveats**: (a) `/dev/plant-review` 404s in any production build (so you need a dedicated gated review route to preview it); (b) live game data needs the Flask backend URL, but the **visual review board needs neither backend nor secrets**.
+4. **Exact Vercel settings:** see the table below.
+5. **Env vars later:** see the env section — all **public flags** (default `false`) + one public API base; **no wallet/Algo secrets** for the review board.
+6. **Login/admin/secret blocking deploy?** Nothing secret is needed to build/preview the review board. The only real "blocker" was repo access from this session — resolved (public). Doing it on **your** Vercel account requires *your* `vercel login` (don't share it with me).
+7. **Safe to approve next:** add a gated `/review/plant-review` route in the GrowVerse repo (additive), then a no-secret Vercel **preview** of `growpod/web`. Details below.
+
+---
+
+## What the repo actually is (verified)
+
+- **Monorepo, two deploy targets by design** (from the repo's own `fly.toml`):
+  - **Backend** = Flask/Python (`growpod/`, gunicorn, `alembic`, `growpodempire`) → **Fly.io** (`api.frontierprotocol.app`); needs `DATABASE_URL`. *Not your Vercel target.*
+  - **Frontend** = **Next.js app in `growpod/web/`** (`growv2-web`) — the public game UI. The repo notes it as Cloudflare Pages today; **this is what moves to Vercel.**
+- **`growpod/web` is a standalone npm app** — it has its **own `package-lock.json`** and is **not** a member of the root or `growpod` pnpm workspaces. → On Vercel, install with **npm**, not pnpm.
+- **Framework:** Next.js **15.1.6**, **App Router** (`growpod/web/src/app/**`), React 19, Tailwind 3, Zustand, TanStack Query.
+- **Build output:** hybrid — mix of `○ Static (prerendered)` and `ƒ Dynamic (server-rendered)` routes. **Not** a static export (`output: 'export'` is NOT set). Vercel serves this natively (serverless functions).
+- **`next.config.mjs`:** strict security headers (CSP, HSTS, X-Frame DENY) + `rewrites()` proxying `/api/*`, `/health`, `/openapi.json` to `BACKEND_URL` (default `localhost:8000`).
+
+## Plant Review Board (verified)
+
+- **Route:** `growpod/web/src/app/dev/plant-review/page.tsx` → `PlantReviewPanel.tsx`.
+- **Dev-only gate is real:** `if (process.env.NODE_ENV !== "development") notFound();` — in any production build (incl. Vercel preview) it **404s before the panel renders**. Confirmed: it built as a route that returns 404 in prod. **Players never see it.**
+- **Canonical renderer:** the panel inspects the real **`<GrowChamber>`** renderer (`components/viz/GrowChamber.tsx`) via `@/lib/chamber/*` (`chamberCore`, `strainVisuals`, `budDna`). ✅ canonical, not a fork.
+- **No backend calls** in `PlantReviewPanel` (no `fetch`/`useQuery`) → **fully client-side**; renders standalone with no backend, **no secrets**.
+- **No wallet/Algorand deps** anywhere in `growpod/web` (verified by grep). Chain/contracts are **feature flags, default `false`**.
+
+---
+
+## Exact Vercel settings (`growpod/web`)
+
+| Setting | Value |
 |---|---|
-| Environment | Cloud container — `whoami=root`, `HOME=/root`, cwd `/home/user/Devbiz`. **Not** your WSL. |
-| `/home/kudbee/projects/growverse-vercel-audit` | Does **not** exist here (that's your local machine). |
-| `gh` CLI | **Not installed** in this container. |
-| `vercel` CLI | **Not installed** in this container. |
-| Node toolchain | ✅ present: node v22, npm 10, pnpm 10, yarn 1.22, git 2.43. |
-| Network → github.com | ✅ reachable. |
-| Clone `KudbeeZero/{growverse,GrowVerse}` | ❌ **"Repository not found"** + auth failed — private or different name/org, and **no GitHub token** in this container. |
-| GitHub MCP scope | `kudbeezero/devbiz` only; no `list_repos`/`add_repo` tool to add GrowVerse. |
-
-**Net:** to run the real audit you need **one** of:
-1. Run this lane from a session/agent that has the GrowVerse repo in scope (e.g. your local WSL with `gh`/`git` already authed, or a Claude session scoped to the GrowVerse repo), **or**
-2. Paste the key files here (no secrets): `package.json`, `pnpm-lock.yaml`/`package-lock.json`/`yarn.lock`, `next.config.*`, `vercel.json` (if any), `app/dev/plant-review/**` (or wherever that route lives), and the GrowChamber renderer entry.
+| Framework Preset | **Next.js** |
+| **Root Directory** | **`growpod/web`** (monorepo subdir — set this in Vercel project settings) |
+| Install Command | **npm** — leave default; Vercel sees `growpod/web/package-lock.json`. **Do not** force pnpm (web isn't in the pnpm workspaces). |
+| Build Command | default `next build` |
+| Output Directory | default (`.next`) — do not override |
+| Node version | 20.x or 22.x |
+| `vercel.json` | **Not needed.** Security headers + rewrites already live in `next.config.mjs` (Vercel honors them). Add one later only for custom regions/redirects. |
+| **Docker** | **Not** the Vercel path — the root `Dockerfile`/`fly.toml` are the **Python backend**. Vercel builds Next natively. (Docker stays for the Fly backend / local parity only.) |
 
 ---
 
-## Audit checklist (run against the real repo)
+## Protected review route (recommended — additive change in the GrowVerse repo)
 
-Report first (before editing): `pwd`, repo URL, `branch`, `git status -sb`,
-`git remote -v`, package manager, framework, build command, root directory.
+The catch: `/dev/plant-review` 404s on **any** prod build, so a plain Vercel preview won't show it. To review on a deployed URL without exposing `/dev/*` or shipping to players:
 
-- [ ] **Framework** ⟨confirm⟩ — Next.js? App Router (`app/`) or Pages (`pages/`)? Version?
-- [ ] **Package manager** ⟨confirm⟩ — by lockfile: `pnpm-lock.yaml`→pnpm · `package-lock.json`→npm · `yarn.lock`→yarn.
-- [ ] **Build command** ⟨confirm⟩ — default Next.js is `next build`.
-- [ ] **Output mode** ⟨confirm⟩ — is `output: 'export'` (static) or `output: 'standalone'` set in `next.config`? Default (unset) = Vercel-native SSR/hybrid.
-- [ ] **SSR / server routes** ⟨confirm⟩ — any `app/**/route.ts`, server actions, `getServerSideProps`, dynamic segments, middleware? If yes → **not** a pure static export.
-- [ ] **Static export possible?** ⟨confirm⟩ — only if there are zero server-only features. A canvas/WebGL review board is client-side, but confirm no server routes back it.
-- [ ] **Env vars needed now** ⟨confirm⟩ — grep `process.env.` and `NEXT_PUBLIC_`.
-- [ ] **Public vs private env** ⟨confirm⟩ — `NEXT_PUBLIC_*` are embedded in the client bundle (safe, non-secret only); everything else is server-only.
-- [ ] **Algo/wallet secrets for the Review Board?** ⟨confirm⟩ — a *visual* review board on the canonical GrowChamber renderer should need **none**. Verify it doesn't import wallet/Algorand client code at build/render.
-- [ ] **`/dev/plant-review` truly dev-only?** ⟨confirm⟩ — is it guarded (e.g. `NODE_ENV`/middleware 404 in prod) or shippable? It must **not** be reachable in a public prod build.
-- [ ] **GrowChamber renderer** ⟨confirm⟩ — does the Plant Review Board import the **canonical** renderer (not a fork/copy)?
-- [ ] **Deploys on Vercel as-is?** ⟨confirm⟩ — after the above, does `next build` succeed locally with no required secrets?
-- [ ] **Config changes needed for Vercel?** ⟨confirm⟩ — usually none; see below.
+1. **Add `growpod/web/src/app/review/plant-review/page.tsx`** that renders `<PlantReviewPanel />` gated by a **non-secret env flag** (e.g. `NEXT_PUBLIC_ENABLE_REVIEW === "true"`), defaulting off. Reuse the existing flag pattern (`NEXT_PUBLIC_ENABLE_*`). Keep `/dev/plant-review` exactly as-is (dev-only).
+2. **Protect the deployment**, not just the route: turn on **Vercel Deployment Protection** (preview protection / Vercel Authentication) so only you/teammates open the preview — or front it with **Cloudflare Access** later.
+3. Result: enable the flag on a protected Vercel **preview** → review the canonical GrowChamber board on a real URL, no backend, no secrets, players unaffected.
+
+> This is a small additive PR **in the GrowVerse repo** (not devbiz). I can draft it once a session has write access to `mainnet-growverse-v2.0`.
 
 ---
 
-## Recommended Vercel settings (Next.js App Router — confirm against repo)
+## Env vars (verified — `growpod/web/.env.local.example` exists)
 
-| Setting | Recommendation |
-|---|---|
-| Framework preset | **Next.js** (auto-detected). |
-| Root Directory | Repo root, **unless** GrowVerse is a monorepo — then the app subfolder (the dir with `package.json` + `next.config`). ⟨confirm⟩ |
-| Install command | Auto from lockfile (pnpm/npm/yarn). Don't override unless needed. |
-| Build command | Default `next build` (leave blank to use the preset). |
-| Output directory | Default (Vercel handles `.next`). **Do not** set a custom output for a standard Next app. |
-| Node version | Pin via `package.json` `engines.node` (e.g. `>=20`) or Project Settings → Node 20.x. ⟨confirm⟩ |
-| `vercel.json` | **Not needed** for a standard Next.js app. Add only if you need custom headers/redirects/regions — keep it minimal and harmless. |
-| **Docker** | **Not** the production path — Vercel builds Next.js natively. Docker is fine to *document* for local/dev parity only. |
-| Deployment Protection | Use Vercel **preview protection** (and/or front the domain with Cloudflare Access later) so previews aren't public. ⟨confirm plan tier⟩ |
+| Var | Scope | Needed for review board? | Notes |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_BASE` | public | ❌ no | Flask API base; only for live game data. Empty → relative + dev rewrite. |
+| `BACKEND_URL` | server-only | ❌ no | `next.config` rewrite target (default `localhost:8000`). Dev/local. |
+| `NEXT_PUBLIC_ENABLE_MARKETPLACE` | public flag | ❌ no | default `false` |
+| `NEXT_PUBLIC_ENABLE_CHAIN` | public flag | ❌ no | default `false` (Algorand path stays off) |
+| `NEXT_PUBLIC_ENABLE_CONTRACTS` | public flag | ❌ no | default `false` |
+| `NEXT_PUBLIC_ENABLE_CUP` | public flag | ❌ no | default `false` |
+| `NEXT_PUBLIC_ENABLE_UNIVERSITY` | public flag | ❌ no | default `false` |
+| (proposed) `NEXT_PUBLIC_ENABLE_REVIEW` | public flag | ✅ for the gated route | default `false`; enable only on the protected preview |
 
-> If `output: 'export'` is set and the board is fully static, Vercel still deploys
-> it fine as a static site — but you lose server routes. Don't add `export` just
-> to "simplify"; match what the app actually needs.
-
----
-
-## Protected review route (design)
-
-- **Keep `/dev/plant-review` dev-only.** Guard it so a production build 404s it —
-  e.g. middleware or a server check: `if (process.env.NODE_ENV !== 'development') return notFound()`. Never expose it publicly.
-- **Add a safe review route** for sharing: **`/review/plant-review`** (preferred) or
-  `/lab/plant-review`. Protect it with **one** of:
-  1. **Cloudflare Access** on that path once the domain is fronted by Cloudflare (your preferred security layer) — *not configured in this lane*; recommendation only.
-  2. **Vercel deployment/preview protection** (so only authed teammates open the preview).
-  3. A lightweight **app-level gate**: Next.js middleware checking an env-configured allowlist or a non-secret review token (`REVIEW_ACCESS_TOKEN`) — a gate, **not** a wallet/Algo secret.
-- The review route should render the **canonical GrowChamber renderer** (read-only/visual), with **no wallet/Algorand wiring**.
+- **Required now (build/preview the review board):** none. The board renders client-side.
+- **Required later (full game):** `NEXT_PUBLIC_API_BASE` → the deployed Fly backend; the backend itself needs `DATABASE_URL` (Fly secret, not Vercel).
+- **Secret-free status:** ✅ the web app / review board need **no secrets** and **no wallet/Algo keys**.
 
 ---
 
-## Env var framework (placeholders only — put in the GrowVerse repo, not here)
+## Domain / Cloudflare (recommendation only — nothing changed)
 
+- **Vercel = hosting** for `growpod/web`; **Cloudflare = registrar/DNS/security**.
+- When connecting a domain: add Vercel's DNS target in Cloudflare as **DNS-only (grey cloud)** for the Vercel host (proxying/orange-cloud in front of Vercel can conflict). No DNS change, no domain purchase, no Cloudflare Access in this lane.
+- Backend stays on **Fly** (`api.frontierprotocol.app`) — keep frontend↔backend on separate hosts via `NEXT_PUBLIC_API_BASE`.
+
+---
+
+## Exact commands for YOUR machine (WSL)
+
+```bash
+mkdir -p ~/projects && cd ~/projects
+git clone https://github.com/KudbeeZero/mainnet-growverse-v2.0.git growverse-vercel-audit
+cd growverse-vercel-audit/growpod/web
+npm install            # package-lock.json present → npm (not pnpm)
+npm run build          # next build — verified working
+# optional preview (asks for YOUR Vercel login — do not share it with the agent):
+# npx vercel        # set Root Directory = growpod/web when prompted
 ```
-# .env.example  (GrowVerse) — placeholders only, never commit real values
-# --- needed to BUILD/PREVIEW the review board (confirm against repo) ---
-NEXT_PUBLIC_APP_URL=            # e.g. https://growverse-preview.vercel.app
-# NEXT_PUBLIC_* = public, embedded in client bundle — non-secret config only
-
-# --- review-route gate (optional, non-secret) ---
-REVIEW_ACCESS_TOKEN=           # server-only gate for /review/plant-review (NOT a wallet key)
-
-# --- deferred to LATER lanes (do NOT add now) ---
-# ALGOD_*, INDEXER_*, WALLET_* ...  ← economy/chain; not required for the visual review board
-```
-
-- **Required now (build/preview):** likely none or just `NEXT_PUBLIC_APP_URL`. ⟨confirm⟩
-- **Required later:** any real data source + the Algo/wallet set — **explicitly deferred**, not part of this lane.
-- **Secret-free status:** the review board should be **secret-free**. ⟨confirm by grep⟩
-
----
-
-## Domain / Cloudflare (recommendation only — no changes made)
-
-- **Vercel = hosting.** **Cloudflare = registrar/DNS/security.** No DNS changes, no
-  domain purchase, no Cloudflare Access configured in this lane.
-- When you do connect a domain: add the Vercel-provided DNS target in Cloudflare.
-  Note the known caveat — proxying (orange-cloud) Cloudflare *in front of* Vercel
-  can conflict; Vercel generally wants **DNS-only (grey cloud)** or careful config.
-  Document and decide later; don't change DNS now.
-
----
 
 ## Phone-checkable vs desktop/account-required
 
-- **Phone-checkable:** this report; the recommended settings; the review-route plan.
-- **Requires desktop / account access (cannot be done from this container):**
-  the fresh clone + `pnpm/npm install` + local `next build`/lint/typecheck;
-  `vercel whoami`/`vercel link`/any preview deploy; reading the private GrowVerse repo.
+- **Phone-checkable:** this report; the recommended settings; the route plan.
+- **Requires your desktop/account:** running `vercel login` / creating the Vercel project / connecting a domain; deploying the Fly backend; merging any change into the GrowVerse repo.

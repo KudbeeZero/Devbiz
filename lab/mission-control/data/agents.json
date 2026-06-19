@@ -12,8 +12,8 @@
       "subscription": "subscribed to this PR's activity",
       "ci": "pending",
       "lastUpdate": "2026-06-19",
-      "ownerAction": "Grant GrowVerse repo access (or paste key files) — audit is BLOCKED without it",
-      "notes": "BLOCKED on repo access: this devbiz session cannot read the GrowVerse repo (scope = kudbeezero/devbiz; no list_repos/add_repo). Delivered the readiness checklist + recommended Vercel settings; repo-specific findings are pending access — not fabricated."
+      "ownerAction": "Review the readiness report; approve a no-secret Vercel preview + the gated review route",
+      "notes": "AUDIT DONE: cloned the public mainnet-growverse-v2.0, ran next build (succeeds). growpod/web = Next.js 15 App Router (npm, standalone). Plant review is dev-gated + uses the canonical GrowChamber; no backend/secrets/wallet. Full report in lanes/growverse-vercel-readiness.md."
     },
     {
       "name": "AI Command Center Agent",
