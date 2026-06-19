@@ -4,8 +4,8 @@
 > AI agent training, and develops original browser games. Home of Kudbee Games Studio.
 
 Kudbee is a zero-build, privacy-respecting studio. Everything we ship — the site, the
-games, and the tools — runs as static HTML with no tracking-heavy frameworks. Contact:
-hello@kudbee.dev (we reply within 24 hours).
+games, and the tools — runs as static HTML with no tracking-heavy frameworks. Reach us
+through the Contact section at https://devbiz.kudbee.workers.dev/ (we reply within 24 hours).
 
 ## Services
 - [Web Design & Development](https://devbiz.kudbee.workers.dev/): Custom, high-performance websites
@@ -36,7 +36,7 @@ hello@kudbee.dev (we reply within 24 hours).
   assistant — instant readability, style, clarity, and grammar feedback in the browser.
 
 ## Contact
-- Email: hello@kudbee.dev
+- Reach us through the Contact section at https://devbiz.kudbee.workers.dev/
 - AI training is delivered live over Zoom, with recordings for replay.
 - Start a project: https://devbiz.kudbee.workers.dev/ (Contact section)
 
