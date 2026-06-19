@@ -3,6 +3,12 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "title": "AI Command Center v1 kickoff (placeholder — next clean PR)",
+      "purpose": "The next build lane after Mission Control v1. Scope to be defined by the owner; this is a placeholder, not a finished spec.",
+      "link": "../ROADMAP.md",
+      "body": "PLACEHOLDER — owner to define scope. Build AI Command Center v1 as its own clean PR (one lane), after the merged Mission Control v1 static foundation and before the D1/R2 operations database + document vault. Keep honest labels; no faked live control; no secrets committed. Standing up any backend (Worker/D1/R2/API keys) is an owner-only infra decision requiring explicit OWNER-OK."
+    },
+    {
       "title": "Mission Control v1 kickoff",
       "purpose": "The prompt that created this dashboard — reuse to extend or rebuild Mission Control.",
       "link": "",

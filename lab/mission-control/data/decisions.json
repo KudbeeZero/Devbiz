@@ -4,6 +4,13 @@
   "items": [
     {
       "date": "2026-06-19",
+      "decision": "Mission Control v1 stays the static foundation; evolve via AI Command Center v1 next, then a D1/R2 operations database + document/evidence vault",
+      "project": "Mission Control",
+      "why": "Keep PR #25 clean as a zero-build foundation (no database/control features added to it). Sequence backend/control work deliberately: AI Command Center v1 is the next clean PR; the operations database + document vault come after, unless the owner re-prioritizes. Future controls must stay honest (manual/reported/database-only) until wired to real Cloudflare D1/R2/Worker APIs — no faked live control.",
+      "followUp": "See lab/mission-control/ROADMAP.md. Standing up Cloudflare D1/R2/Worker is an owner-only infra lane (CLAUDE.md §11) needing explicit OWNER-OK (PR_FLOW.md §11a)."
+    },
+    {
+      "date": "2026-06-19",
       "decision": "No new feature/game/GrowVerse/Frontier/tool work starts until Mission Control v1 exists",
       "project": "All lanes",
       "why": "Build velocity is outpacing project tracking; the owner needs one place to see every repo, PR, agent, status, blocker, and owner action first.",
