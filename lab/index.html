@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Kudbee Studio Lab — private testing environment and tool library. Access-gated.">
+    <title>Studio Lab · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .panel-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -140px; left: -100px;
+        background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 30%; right: -140px;
+        background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 18px; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: var(--grad); transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .light .theme-btn::after { transform: translateX(18px); }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 48px 28px 80px; }
+
+    .page-header { text-align: center; max-width: 760px; margin: 0 auto 14px; }
+    .kicker {
+        display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--cyan); margin-bottom: 16px;
+    }
+    .page-header h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.05; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+    .page-header p { margin-top: 16px; color: var(--text-muted); font-size: 17px; }
+
+    /* Private banner */
+    .gate-banner {
+        max-width: 820px; margin: 28px auto 0; display: flex; gap: 14px; align-items: flex-start;
+        padding: 16px 20px; border-radius: 14px;
+        background: linear-gradient(135deg, rgba(124,255,178,0.06), rgba(57,230,255,0.05));
+        border: 1px solid rgba(124,255,178,0.22);
+    }
+    .gate-banner svg { flex-shrink: 0; margin-top: 2px; color: var(--green); }
+    .gate-banner .gb-title { color: var(--text-primary); font-weight: 600; font-size: 14px; }
+    .gate-banner .gb-body { color: var(--text-muted); font-size: 13.5px; margin-top: 3px; }
+    .gate-banner code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--cyan); }
+
+    /* Section label */
+    .section-label {
+        display: flex; align-items: center; gap: 12px; margin: 52px 2px 22px;
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600;
+        letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* Card grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .card {
+        position: relative; display: flex; flex-direction: column;
+        padding: 24px; border-radius: var(--radius);
+        background: var(--bg-card); border: 1px solid var(--border);
+        text-decoration: none; color: inherit; overflow: hidden;
+        transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .card.live:hover { transform: translateY(-4px); border-color: var(--border-hover); box-shadow: 0 18px 50px -22px rgba(57,230,255,0.4); }
+    .card.soon { cursor: default; opacity: 0.96; }
+    .card.soon:hover { transform: translateY(-4px); border-color: rgba(255,211,77,0.35); }
+    .card::before {
+        content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(111,91,255,0.10), transparent 70%);
+    }
+    .card:hover::before { opacity: 1; }
+
+    .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-icon {
+        width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center;
+        font-size: 22px; background: var(--bg-secondary); border: 1px solid var(--border);
+    }
+    .badge {
+        font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+        padding: 4px 9px; border-radius: 6px;
+    }
+    .badge.tool { color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); }
+    .badge.game { color: var(--violet); border: 1px solid rgba(196,107,255,0.4); }
+    .badge.soon { color: var(--amber); border: 1px solid rgba(255,211,77,0.4); }
+
+    .card h3 { font-size: 19px; font-weight: 600; color: var(--text-primary); }
+    .card p { margin-top: 8px; font-size: 14px; color: var(--text-muted); flex: 1; }
+    .card-foot {
+        margin-top: 18px; display: flex; align-items: center; gap: 6px;
+        font-size: 13px; font-weight: 600; color: var(--cyan);
+    }
+    .card.soon .card-foot { color: var(--amber); }
+    .card-foot svg { transition: transform 0.2s; }
+    .card.live:hover .card-foot svg { transform: translateX(3px); }
+
+    /* Footer */
+    .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
+    .foot a { color: var(--text-muted); text-decoration: none; }
+    .foot a:hover { color: var(--cyan); }
+
+    @media (max-width: 600px) {
+        .main { padding: 32px 18px 64px; }
+        .nav-bar { padding: 12px 16px; }
+        .nav-title { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Site
+        </a>
+        <a href="../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Studio Lab</span>
+            <span class="nav-badge">Private</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬡ Kudbee Studio Lab</span>
+        <h1>The <span class="gradient-text">Tool Library</span></h1>
+        <p>A private workbench for testing Kudbee tools, utilities, and in-development games — all in one gated launchpad.</p>
+    </header>
+
+    <div class="gate-banner" role="note">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div>
+            <div class="gb-title">Access-gated in production &amp; preview</div>
+            <div class="gb-body">This area is protected at the edge by <strong>Cloudflare Access</strong>. Only allow-listed accounts reach it once deployed; local dev stays open for fast iteration. Setup: <code>docs/PRIVATE_TESTING_GATE.md</code>.</div>
+        </div>
+    </div>
+
+    <div class="section-label">Tools</div>
+    <div class="grid" id="toolsGrid"></div>
+
+    <div class="section-label">Games · In Build</div>
+    <div class="grid" id="gamesGrid"></div>
+
+</main>
+
+<footer class="foot">
+    Kudbee Studio Lab — private testing environment · <a href="../index.html">Back to site</a>
+</footer>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+ * Tool library registry. Add a new entry here to surface a new card — no
+ * markup changes needed. `status: 'live'` links out; 'soon' renders a
+ * non-clickable "In build" card.
+ * ------------------------------------------------------------------------- */
+const TOOLS = [
+    {
+        icon: '📊', kind: 'tool', title: 'Coverage Dashboard',
+        desc: 'Visual breakdown of test coverage across the studio codebase — files, lines, and trend snapshots.',
+        href: '../tools/coverage-dashboard/index.html', status: 'live'
+    },
+    {
+        icon: '🪙', kind: 'tool', title: 'Token Analyzer',
+        desc: 'Track AI model token usage and estimated cost across sessions. All data stays local in your browser.',
+        href: '../tools/token-analyzer/index.html', status: 'live'
+    },
+    {
+        icon: '✍️', kind: 'tool', title: 'Kudbee Scribe',
+        desc: 'Writing tool and editor — drafting, clarity passes, and structure, client-side by default.',
+        href: '../tools/kudbee-scribe/index.html', status: 'live'
+    }
+];
+
+const GAMES = [
+    {
+        icon: '🚀', kind: 'game', title: 'FRONTIER: Aether Wing',
+        desc: 'Arcade space dogfighter — pilot the Aether Wing Mk-I through debris fields, drone swarms, and ASCEND energy anomalies. Playable slice in build.',
+        href: './aether-wing/index.html', status: 'soon'
+    }
+];
+
+function cardHTML(item) {
+    const live = item.status === 'live';
+    const tag = item.kind === 'game' ? 'game' : 'tool';
+    const badge = live
+        ? `<span class="badge ${tag}">${tag}</span>`
+        : `<span class="badge soon">In build</span>`;
+    const foot = live
+        ? `<span class="card-foot">Open <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>`
+        : `<span class="card-foot">Preview roadmap <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>`;
+    const cls = live ? 'card live' : 'card soon';
+    const tag_ = item.href ? 'a' : 'div';
+    const hrefAttr = item.href ? ` href="${item.href}"` : '';
+    return `<${tag_} class="${cls}"${hrefAttr}>
+        <div class="card-top"><div class="card-icon">${item.icon}</div>${badge}</div>
+        <h3>${item.title}</h3>
+        <p>${item.desc}</p>
+        ${foot}
+    </${tag_}>`;
+}
+
+document.getElementById('toolsGrid').innerHTML = TOOLS.map(cardHTML).join('');
+document.getElementById('gamesGrid').innerHTML = GAMES.map(cardHTML).join('');
+
+/* Pointer-follow glow on cards */
+document.querySelectorAll('.card').forEach(c => {
+    c.addEventListener('pointermove', e => {
+        const r = c.getBoundingClientRect();
+        c.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        c.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
+});
+
+/* Theme toggle (shared convention: localStorage 'kudbee-theme') */
+const themeBtn = document.getElementById('themeBtn');
+const saved = localStorage.getItem('kudbee-theme');
+if (saved === 'light') document.body.classList.add('light');
+themeBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    localStorage.setItem('kudbee-theme', document.body.classList.contains('light') ? 'light' : 'dark');
+});
+</script>
+</body>
+</html>
