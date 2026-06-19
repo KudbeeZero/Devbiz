@@ -1,0 +1,47 @@
+{
+  "_comment": "Agent Registry. HONESTY NOTE: this dashboard cannot see or control external Claude/Codex sessions. Every status here is REPORTED by whoever last edited this file — it is not a live integration. status: active | parked | subscribed | complete | unknown.",
+  "reportedOnly": true,
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "name": "Mission Control Builder",
+      "assigned": "KudbeeZero/devbiz · /lab/mission-control",
+      "pr": "this PR",
+      "purpose": "Build Mission Control v1 (operations/control-plane dashboard).",
+      "status": "active",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Review + merge the PR",
+      "notes": "This session. Will report closeout (Asked/Done/Needs you) when the PR is up."
+    },
+    {
+      "name": "Aether Wing Phase 1 (unassigned)",
+      "assigned": "frontier-al (TBD)",
+      "pr": "none",
+      "purpose": "Build the Aether Wing Phase 1 playable slice in the frontier-al scaffold.",
+      "status": "parked",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Confirm frontier-al folder/repo to unpark",
+      "notes": "Parked by owner freeze + missing repo confirmation. No gameplay work until both clear."
+    },
+    {
+      "name": "GrowVerse review (reported)",
+      "assigned": "GrowVerse · PR #27",
+      "pr": "#27",
+      "purpose": "Plant review panel work, pending CI/visual review.",
+      "status": "unknown",
+      "lastUpdate": "reported",
+      "ownerAction": "Owner reviews PR #27",
+      "notes": "Cross-repo, not visible from this session. Status is reported only — update this row when you have real info."
+    },
+    {
+      "name": "PR watchers",
+      "assigned": "any subscribed PR",
+      "pr": "—",
+      "purpose": "Listen for CI failure / merge conflict / review comment / owner-action-required and surface only actionable events.",
+      "status": "unknown",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "None unless an actionable event appears",
+      "notes": "No active subscription reported in this session. Subscriptions report only actionable events, never 'standing by'."
+    }
+  ]
+}

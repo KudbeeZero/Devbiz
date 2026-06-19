@@ -1,0 +1,30 @@
+{
+  "_comment": "Prompt Ledger. Store or link major reusable prompts. Use 'body' for an inline copyable prompt, or 'link' for a path/URL. Keep bodies short; link out to docs for long ones.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "title": "Mission Control kickoff",
+      "purpose": "The prompt that created this dashboard — reuse to extend or rebuild Mission Control.",
+      "link": "",
+      "body": "Build a gated /lab/mission-control operations dashboard for Devbiz. Sections: Owner Action Queue (first), Active Project Lanes, Active PR Board, Agent Registry (reported status only), Decision Log, Prompt Ledger, Agent Reporting Protocol. Render from data/*.json so future agents update the registry, not the UI. Keep zero-build/static, dark-theme, mobile-usable, honest labels (reported/manual/unknown). One PR lane only."
+    },
+    {
+      "title": "Aether Wing Phase 1 kickoff",
+      "purpose": "Start the first playable slice once the frontier-al folder/repo is confirmed.",
+      "link": "",
+      "body": "PRECONDITION: owner has confirmed the frontier-al folder/repo. Build Aether Wing Phase 1 as a playable slice in the frontier-al Vite/TypeScript/Three.js scaffold (NOT in Devbiz). No wallet/blockchain/account systems. Deliver: one PR lane, a verifiable slice with active-play screenshots, and a closeout (Asked/Done/Needs you). Devbiz only keeps the gated placeholder route."
+    },
+    {
+      "title": "Agent closeout format",
+      "purpose": "The required closeout every agent ends with.",
+      "link": "",
+      "body": "Asked:\nDone:\nNeeds you:\n\nIf anything requires the owner, lead with:\nOwner action now:\n(then exactly what to click, test, approve, or merge)"
+    },
+    {
+      "title": "Future agent reporting protocol",
+      "purpose": "The full reporting contract all future agents must follow. Rendered in the Agent Reporting Protocol section below with a copyable template.",
+      "link": "#protocol",
+      "body": "See the Agent Reporting Protocol section on this page — copy the template there."
+    }
+  ]
+}

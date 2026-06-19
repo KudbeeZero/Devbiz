@@ -1,0 +1,46 @@
+{
+  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "priority": "high",
+      "kind": "confirm",
+      "title": "Confirm the frontier-al folder/repo for Aether Wing",
+      "where": "frontier-al (Vite/TypeScript/Three.js scaffold) — repo/path TBD",
+      "action": "Tell the next agent exactly where Aether Wing should be built (which repo + folder). No Frontier / Aether Wing gameplay starts until this is confirmed.",
+      "blocks": "FRONTIER: Aether Wing Phase 1, frontier-al scaffold"
+    },
+    {
+      "priority": "high",
+      "kind": "configure",
+      "title": "Configure Cloudflare Access for /lab/* (now also covers /lab/mission-control)",
+      "where": "Cloudflare Zero Trust → Access → Applications → Self-hosted",
+      "action": "Add your-domain/lab and /lab/* to an Access app with an Allow policy = your email(s). Until then, /lab and /lab/mission-control are reachable by URL in production. See docs/PRIVATE_TESTING_GATE.md.",
+      "blocks": "Safe sharing of any deployed /lab link"
+    },
+    {
+      "priority": "medium",
+      "kind": "review",
+      "title": "Review GrowVerse plant review panel — PR #27 (CI + visual)",
+      "where": "GrowVerse repo · PR #27 (cross-repo — not visible from devbiz; status below is reported, not verified here)",
+      "action": "Check CI state and do the visual review on PR #27, then decide merge/hold.",
+      "blocks": "GrowVerse plant review panel merge"
+    },
+    {
+      "priority": "medium",
+      "kind": "review",
+      "title": "Review & test this Mission Control PR",
+      "where": "KudbeeZero/devbiz · /lab/mission-control",
+      "action": "Open /lab and /lab/mission-control locally, confirm the dashboard renders, then mark the PR ready / merge when satisfied.",
+      "blocks": "Resuming feature/game work (owner froze new lanes until Mission Control v1 exists)"
+    },
+    {
+      "priority": "low",
+      "kind": "decide",
+      "title": "Decide on the three open Devbiz draft PRs",
+      "where": "KudbeeZero/devbiz · PR #6 (AI concierge), #20 (Code Lens spec), #14 (ledger reconcile)",
+      "action": "Each is a draft awaiting an owner decision (merge, hold, or close). None are blocking Mission Control.",
+      "blocks": "Nothing — housekeeping"
+    }
+  ]
+}

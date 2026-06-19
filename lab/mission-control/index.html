@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Kudbee Mission Control — private project operations board. Access-gated.">
+    <title>Mission Control · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --red: #ff7a8a;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .panel-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.4; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -160px; left: -110px;
+        background: radial-gradient(circle, rgba(57,230,255,0.26), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 36%; right: -150px;
+        background: radial-gradient(circle, rgba(196,107,255,0.22), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: var(--grad); transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .light .theme-btn::after { transform: translateX(18px); }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 40px 28px 90px; }
+
+    .page-header { max-width: 820px; margin: 0 auto 6px; text-align: center; }
+    .kicker {
+        display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+    }
+    .page-header h1 { font-size: clamp(32px, 5.5vw, 52px); line-height: 1.05; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+    .page-header p { margin-top: 14px; color: var(--text-muted); font-size: 16px; }
+
+    /* Jump nav */
+    .jump {
+        position: sticky; top: 56px; z-index: 90;
+        display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+        margin: 26px auto 8px; padding: 10px;
+        background: rgba(6,6,12,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border); border-radius: 14px;
+    }
+    .light .jump { background: rgba(246,247,251,0.7); }
+    .jump a {
+        font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--text-muted);
+        padding: 6px 12px; border-radius: 9px; border: 1px solid transparent; transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .jump a:hover { color: var(--text-primary); border-color: var(--border-hover); background: var(--bg-secondary); }
+
+    /* Section */
+    .section { margin-top: 46px; scroll-margin-top: 120px; }
+    .section-head {
+        display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .section-head h2 {
+        font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .section-head .count {
+        font-size: 12px; font-weight: 700; color: var(--text-dim);
+        border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+    }
+    .section-head .desc { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+    .sec-icon { font-size: 18px; }
+
+    /* Cards grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .grid.wide { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+    .item {
+        position: relative; display: flex; flex-direction: column;
+        padding: 18px 20px; border-radius: 14px;
+        background: var(--bg-card); border: 1px solid var(--border);
+        transition: border-color 0.2s, transform 0.2s;
+    }
+    .item:hover { border-color: var(--border-hover); }
+    .item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .item-title { font-size: 15.5px; font-weight: 600; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; }
+    .item-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: 10px; font-size: 13px; }
+    .kv dt { color: var(--text-dim); font-weight: 500; white-space: nowrap; }
+    .kv dd { color: var(--text-secondary); }
+    .kv dd.next { color: var(--cyan); font-weight: 500; }
+
+    /* Chips */
+    .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .chip.ok    { color: var(--green);  border-color: rgba(124,255,178,0.4); }
+    .chip.warn  { color: var(--amber);  border-color: rgba(255,211,77,0.42); }
+    .chip.bad   { color: var(--red);    border-color: rgba(255,122,138,0.45); }
+    .chip.info  { color: var(--cyan);   border-color: rgba(57,230,255,0.4); }
+    .chip.muted { color: var(--text-dim); }
+    .chip.violet{ color: var(--violet); border-color: rgba(196,107,255,0.42); }
+    .chip.plain::before { display: none; }
+
+    /* Owner Action Queue (hero) */
+    .oaq {
+        margin-top: 22px; padding: 4px; border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255,211,77,0.10), rgba(255,122,138,0.07));
+        border: 1px solid rgba(255,211,77,0.28);
+    }
+    .oaq-inner { padding: 18px 20px; }
+    .oaq-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .oaq-head h2 { font-size: 19px; color: var(--text-primary); font-weight: 700; }
+    .oaq-head .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 0 rgba(255,211,77,0.6); animation: pulse 2.2s infinite; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,211,77,0.5);} 70%{box-shadow:0 0 0 10px rgba(255,211,77,0);} 100%{box-shadow:0 0 0 0 rgba(255,211,77,0);} }
+    .oaq-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+    .oaq-list { display: flex; flex-direction: column; gap: 10px; }
+    .oaq-item {
+        display: flex; gap: 14px; align-items: flex-start;
+        padding: 14px 16px; border-radius: 12px;
+        background: var(--bg-elevated); border: 1px solid var(--border);
+    }
+    .light .oaq-item { background: var(--bg-card); }
+    .oaq-num {
+        flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px;
+        background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary);
+    }
+    .oaq-body { flex: 1; min-width: 0; }
+    .oaq-row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+    .oaq-title { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+    .oaq-action { font-size: 13.5px; color: var(--text-secondary); }
+    .oaq-where { font-size: 12px; color: var(--text-dim); margin-top: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .oaq-blocks { font-size: 12px; color: var(--amber); margin-top: 5px; }
+    .oaq-blocks span { color: var(--text-dim); }
+
+    /* Decision / prompt / generic list rows */
+    details.row {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+        padding: 0; margin-bottom: 10px; overflow: hidden;
+    }
+    details.row > summary {
+        list-style: none; cursor: pointer; padding: 14px 16px;
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    details.row > summary::-webkit-details-marker { display: none; }
+    details.row > summary::after { content: '▾'; margin-left: auto; color: var(--text-dim); font-size: 12px; transition: transform 0.2s; }
+    details.row[open] > summary::after { transform: rotate(180deg); }
+    .row-title { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+    .row-meta { font-size: 12px; color: var(--text-dim); }
+    .row-body { padding: 0 16px 16px; font-size: 13.5px; color: var(--text-secondary); }
+    .row-body .kv { margin-top: 0; }
+
+    /* Prompt code blocks */
+    pre.prompt {
+        margin-top: 10px; padding: 14px; border-radius: 10px;
+        background: var(--bg-primary); border: 1px solid var(--border);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.55;
+        color: var(--text-secondary); white-space: pre-wrap; word-break: break-word;
+    }
+    .light pre.prompt { background: #f0f1f6; }
+    .copy-btn {
+        font-size: 11.5px; font-weight: 600; color: var(--cyan); cursor: pointer;
+        background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+        padding: 5px 11px; transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: var(--cyan); }
+    .copy-btn.done { color: var(--green); border-color: rgba(124,255,178,0.4); }
+
+    /* Protocol */
+    .protocol {
+        padding: 22px; border-radius: 16px;
+        background: linear-gradient(135deg, rgba(57,230,255,0.05), rgba(111,91,255,0.05));
+        border: 1px solid var(--border);
+    }
+    .protocol p { font-size: 14px; color: var(--text-muted); }
+    .protocol ul { margin: 12px 0 0 18px; font-size: 13.5px; color: var(--text-secondary); }
+    .protocol li { margin: 3px 0; }
+    .protocol h3 { font-size: 15px; color: var(--text-primary); margin-top: 18px; }
+
+    .note-banner {
+        margin-top: 14px; display: flex; gap: 12px; align-items: flex-start;
+        padding: 13px 16px; border-radius: 12px;
+        background: rgba(57,230,255,0.05); border: 1px solid rgba(57,230,255,0.18);
+        font-size: 13px; color: var(--text-muted);
+    }
+    .note-banner svg { flex-shrink: 0; margin-top: 2px; color: var(--cyan); }
+    .note-banner strong { color: var(--text-secondary); }
+
+    .err {
+        padding: 14px 16px; border-radius: 12px; font-size: 13.5px;
+        background: rgba(255,122,138,0.08); border: 1px solid rgba(255,122,138,0.3); color: var(--red);
+    }
+    .err code { font-family: ui-monospace, monospace; color: var(--amber); }
+
+    /* Footer */
+    .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
+    .foot a { color: var(--text-muted); text-decoration: none; }
+    .foot a:hover { color: var(--cyan); }
+
+    @media (max-width: 600px) {
+        .main { padding: 28px 16px 64px; }
+        .nav-bar { padding: 12px 14px; }
+        .nav-title { display: none; }
+        .jump { top: 52px; }
+        .section-head .desc { display: none; }
+        .grid, .grid.wide { grid-template-columns: 1fr; }
+        .oaq-item { flex-direction: row; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Lab
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Mission Control</span>
+            <span class="nav-badge">Private</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬢ Project Operations</span>
+        <h1>Mission <span class="gradient-text">Control</span></h1>
+        <p>One board for every repo, PR, agent, blocker, and owner decision — so build velocity never outruns tracking.</p>
+    </header>
+
+    <!-- Jump nav -->
+    <nav class="jump" aria-label="Section jump">
+        <a href="#owner-actions">⚡ Owner Actions</a>
+        <a href="#projects">Projects</a>
+        <a href="#prs">PR Board</a>
+        <a href="#agents">Agents</a>
+        <a href="#decisions">Decisions</a>
+        <a href="#prompts">Prompts</a>
+        <a href="#protocol">Protocol</a>
+    </nav>
+
+    <!-- 1. OWNER ACTION QUEUE (first) -->
+    <section class="oaq" id="owner-actions" aria-labelledby="oaq-h">
+        <div class="oaq-inner">
+            <div class="oaq-head"><span class="pulse" aria-hidden="true"></span><h2 id="oaq-h">Owner Action Queue</h2></div>
+            <p class="oaq-sub">Only what needs <strong>you</strong> right now — highest priority first.</p>
+            <div class="oaq-list" id="oaqList"></div>
+        </div>
+    </section>
+
+    <!-- 2. PROJECTS -->
+    <section class="section" id="projects">
+        <div class="section-head">
+            <h2><span class="sec-icon">🗂️</span> Active Project Lanes <span class="count" id="projCount">–</span></h2>
+            <span class="desc">Every major project &amp; repo</span>
+        </div>
+        <div class="grid" id="projGrid"></div>
+    </section>
+
+    <!-- 3. PR BOARD -->
+    <section class="section" id="prs">
+        <div class="section-head">
+            <h2><span class="sec-icon">🔀</span> Active PR Board <span class="count" id="prCount">–</span></h2>
+            <span class="desc">draft · open · merged · blocked</span>
+        </div>
+        <div class="grid wide" id="prGrid"></div>
+    </section>
+
+    <!-- 4. AGENT REGISTRY -->
+    <section class="section" id="agents">
+        <div class="section-head">
+            <h2><span class="sec-icon">🛰️</span> Agent Registry <span class="count" id="agentCount">–</span></h2>
+            <span class="desc">reported status only</span>
+        </div>
+        <div class="note-banner">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><strong>Reported status, not live.</strong> Mission Control cannot see or control external Claude/Codex sessions. Every row below is whatever the last editor recorded in <code>data/agents.json</code> — treat it as a logbook, not telemetry.</div>
+        </div>
+        <div class="grid" id="agentGrid" style="margin-top:14px"></div>
+    </section>
+
+    <!-- 5. DECISION LOG -->
+    <section class="section" id="decisions">
+        <div class="section-head">
+            <h2><span class="sec-icon">📜</span> Decision Log <span class="count" id="decCount">–</span></h2>
+            <span class="desc">major owner decisions</span>
+        </div>
+        <div id="decList"></div>
+    </section>
+
+    <!-- 6. PROMPT LEDGER -->
+    <section class="section" id="prompts">
+        <div class="section-head">
+            <h2><span class="sec-icon">💬</span> Prompt Ledger <span class="count" id="promptCount">–</span></h2>
+            <span class="desc">reusable prompts</span>
+        </div>
+        <div id="promptList"></div>
+    </section>
+
+    <!-- 7. AGENT REPORTING PROTOCOL -->
+    <section class="section" id="protocol">
+        <div class="section-head">
+            <h2><span class="sec-icon">📋</span> Agent Reporting Protocol</h2>
+            <span class="desc">all future agents must follow</span>
+        </div>
+        <div class="protocol">
+            <p>Every future agent ends with the <strong>closeout</strong> below, and reports the full status block so the owner can update this board without digging.</p>
+            <h3>Required closeout</h3>
+            <ul>
+                <li><strong>Asked:</strong> what the owner requested</li>
+                <li><strong>Done:</strong> what actually shipped (verified, not assumed)</li>
+                <li><strong>Needs you:</strong> exact owner action, or "No owner action right now"</li>
+            </ul>
+            <h3>Must also report</h3>
+            <ul>
+                <li>Repo · Branch · PR number</li>
+                <li>CI status (precise — "CI green", "local passed, CI pending", "no CI configured")</li>
+                <li>Preview / dev route</li>
+                <li>Files changed summary</li>
+                <li>Verification performed</li>
+                <li>Owner action now</li>
+                <li>Next recommended unit</li>
+                <li>Agent state: <em>active · parked · complete · unsubscribed</em></li>
+            </ul>
+            <div style="margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <span class="row-meta">Copyable template for future agents</span>
+                <button class="copy-btn" id="copyProto">Copy template</button>
+            </div>
+            <pre class="prompt" id="protoTemplate">Asked:
+Done:
+Needs you:
+
+Owner action now:
+- (exactly what to click / test / approve / merge — or "No owner action right now")
+
+Report:
+- Repo:
+- Branch:
+- PR number:
+- CI status:        (e.g. CI green | local passed, CI pending | no CI configured)
+- Preview/dev route:
+- Files changed:
+- Verification performed:
+- Next recommended unit:
+- Agent state:       (active | parked | complete | unsubscribed)</pre>
+        </div>
+    </section>
+
+</main>
+
+<footer class="foot">
+    Kudbee Mission Control — private operations board · renders from <a href="./data/README.md">data/*.json</a> · <a href="../index.html">Back to Lab</a>
+</footer>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+ * Mission Control renderer. The dashboard renders ENTIRELY from the JSON files
+ * in ./data/ — future agents update the registry there, never this markup.
+ * Loaded via fetch(), so preview over HTTP (python3 -m http.server), not file://.
+ * ------------------------------------------------------------------------- */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Map free-text status words → chip color class. */
+function chipClass(v) {
+    const s = String(v || '').toLowerCase();
+    if (/(merged|live|green|complete|active|ok|done|pass)/.test(s)) return 'ok';
+    if (/(frozen|blocked|fail|bad|conflict)/.test(s)) return 'bad';
+    if (/(pending|review|building|draft|warn|manual|hold|parked|queued|reported)/.test(s)) return 'warn';
+    if (/(unknown|none|n\/a|—)/.test(s)) return 'muted';
+    return 'info';
+}
+function chip(label, extra) { return `<span class="chip ${chipClass(label)} ${extra||''}">${esc(label)}</span>`; }
+function priChip(p) {
+    const s = String(p||'').toLowerCase();
+    const cls = s === 'high' ? 'bad' : s === 'medium' ? 'warn' : 'muted';
+    return `<span class="chip ${cls}">${esc(p)} priority</span>`;
+}
+
+async function loadJSON(path) {
+    const r = await fetch(path, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
+    return r.json();
+}
+function fail(id, e) {
+    document.getElementById(id).innerHTML =
+        `<div class="err">Could not load this section: <code>${esc(e.message)}</code>.<br>
+         Serve over HTTP (<code>python3 -m http.server</code>) and check the JSON parses.</div>`;
+}
+
+/* 1 — Owner Action Queue */
+async function renderActions() {
+    try {
+        const d = await loadJSON('./data/actions.json');
+        const items = d.items || [];
+        document.getElementById('oaqList').innerHTML = items.length ? items.map((a, i) => `
+            <div class="oaq-item">
+                <div class="oaq-num">${i + 1}</div>
+                <div class="oaq-body">
+                    <div class="oaq-row1">${priChip(a.priority)}<span class="oaq-title">${esc(a.title)}</span></div>
+                    <div class="oaq-action">${esc(a.action)}</div>
+                    ${a.where ? `<div class="oaq-where">${esc(a.where)}</div>` : ''}
+                    ${a.blocks ? `<div class="oaq-blocks"><span>Blocks:</span> ${esc(a.blocks)}</div>` : ''}
+                </div>
+            </div>`).join('') : `<div class="oaq-item"><div class="oaq-body"><div class="oaq-title">No owner action right now.</div></div></div>`;
+    } catch (e) { fail('oaqList', e); }
+}
+
+/* 2 — Projects */
+async function renderProjects() {
+    try {
+        const d = await loadJSON('./data/projects.json');
+        const items = d.items || [];
+        document.getElementById('projCount').textContent = items.length;
+        document.getElementById('projGrid').innerHTML = items.map(p => `
+            <div class="item">
+                <div class="item-top">
+                    <div>
+                        <div class="item-title">${esc(p.name)}</div>
+                        <div class="item-sub">${esc(p.repo)}</div>
+                    </div>
+                    ${chip(p.state)}
+                </div>
+                <dl class="kv">
+                    <dt>Phase</dt><dd>${esc(p.phase)}</dd>
+                    <dt>Active PR</dt><dd>${esc(p.activePR)}</dd>
+                    <dt>Status</dt><dd>${chip(p.statusLabel, 'plain')}</dd>
+                    <dt>Last owner</dt><dd>${esc(p.lastOwnerAction)}</dd>
+                    <dt>Next</dt><dd class="next">${esc(p.nextAction)}</dd>
+                </dl>
+                ${p.notes ? `<details class="row" style="margin-top:10px;background:transparent;border:none"><summary style="padding:6px 0"><span class="row-meta">Notes</span></summary><div class="row-body" style="padding:0">${esc(p.notes)}</div></details>` : ''}
+            </div>`).join('');
+    } catch (e) { fail('projGrid', e); }
+}
+
+/* 3 — PR Board */
+async function renderPRs() {
+    try {
+        const d = await loadJSON('./data/prs.json');
+        const items = d.items || [];
+        document.getElementById('prCount').textContent = items.length;
+        document.getElementById('prGrid').innerHTML = items.map(p => {
+            const titleHTML = p.url
+                ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--border-hover)">${esc(p.title)}</a>`
+                : esc(p.title);
+            return `
+            <div class="item">
+                <div class="item-top">
+                    <div>
+                        <div class="item-title">${esc(p.number)} · ${titleHTML}</div>
+                        <div class="item-sub">${esc(p.repo)}</div>
+                    </div>
+                    ${chip(p.state)}
+                </div>
+                <dl class="kv">
+                    <dt>CI</dt><dd>${chip(p.ci, 'plain')}</dd>
+                    <dt>Preview</dt><dd>${esc(p.preview)}</dd>
+                    <dt>Owner</dt><dd class="next">${esc(p.ownerAction)}</dd>
+                    <dt>Merge</dt><dd>${esc(p.mergeReadiness)}</dd>
+                    <dt>Updated</dt><dd>${esc(p.lastUpdate)}</dd>
+                </dl>
+            </div>`;
+        }).join('');
+    } catch (e) { fail('prGrid', e); }
+}
+
+/* 4 — Agent Registry */
+async function renderAgents() {
+    try {
+        const d = await loadJSON('./data/agents.json');
+        const items = d.items || [];
+        document.getElementById('agentCount').textContent = items.length;
+        document.getElementById('agentGrid').innerHTML = items.map(a => `
+            <div class="item">
+                <div class="item-top">
+                    <div>
+                        <div class="item-title">${esc(a.name)}</div>
+                        <div class="item-sub">${esc(a.assigned)}</div>
+                    </div>
+                    ${chip(a.status)}
+                </div>
+                <dl class="kv">
+                    <dt>PR / lane</dt><dd>${esc(a.pr)}</dd>
+                    <dt>Purpose</dt><dd>${esc(a.purpose)}</dd>
+                    <dt>Owner</dt><dd class="next">${esc(a.ownerAction)}</dd>
+                    <dt>Updated</dt><dd>${esc(a.lastUpdate)}</dd>
+                </dl>
+                ${a.notes ? `<details class="row" style="margin-top:10px;background:transparent;border:none"><summary style="padding:6px 0"><span class="row-meta">Notes</span></summary><div class="row-body" style="padding:0">${esc(a.notes)}</div></details>` : ''}
+            </div>`).join('');
+    } catch (e) { fail('agentGrid', e); }
+}
+
+/* 5 — Decision Log */
+async function renderDecisions() {
+    try {
+        const d = await loadJSON('./data/decisions.json');
+        const items = d.items || [];
+        document.getElementById('decCount').textContent = items.length;
+        document.getElementById('decList').innerHTML = items.map(x => `
+            <details class="row">
+                <summary>
+                    <span class="row-title">${esc(x.decision)}</span>
+                    ${chip(x.project, 'plain')}
+                    <span class="row-meta">${esc(x.date)}</span>
+                </summary>
+                <div class="row-body">
+                    <dl class="kv">
+                        <dt>Why</dt><dd>${esc(x.why)}</dd>
+                        <dt>Follow-up</dt><dd class="next">${esc(x.followUp)}</dd>
+                    </dl>
+                </div>
+            </details>`).join('');
+    } catch (e) { fail('decList', e); }
+}
+
+/* 6 — Prompt Ledger */
+async function renderPrompts() {
+    try {
+        const d = await loadJSON('./data/prompts.json');
+        const items = d.items || [];
+        document.getElementById('promptCount').textContent = items.length;
+        document.getElementById('promptList').innerHTML = items.map((x, i) => `
+            <details class="row">
+                <summary>
+                    <span class="row-title">${esc(x.title)}</span>
+                    <span class="row-meta">${esc(x.purpose)}</span>
+                </summary>
+                <div class="row-body">
+                    ${x.link ? `<div style="margin-bottom:8px"><a href="${esc(x.link)}" style="color:var(--cyan);font-size:13px">${esc(x.link)}</a></div>` : ''}
+                    ${x.body ? `<div style="display:flex;justify-content:flex-end"><button class="copy-btn" data-copy="p${i}">Copy</button></div><pre class="prompt" id="p${i}">${esc(x.body)}</pre>` : ''}
+                </div>
+            </details>`).join('');
+        // wire copy buttons
+        document.querySelectorAll('#promptList .copy-btn').forEach(b => {
+            b.addEventListener('click', () => copyEl(document.getElementById(b.dataset.copy).textContent, b));
+        });
+    } catch (e) { fail('promptList', e); }
+}
+
+/* Clipboard helper with graceful fallback */
+function copyEl(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = 'Copied ✓'; btn.classList.add('done'); setTimeout(() => { btn.textContent = t; btn.classList.remove('done'); }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (_) {}
+    document.body.removeChild(ta);
+}
+
+/* Protocol copy */
+document.getElementById('copyProto').addEventListener('click', function () {
+    copyEl(document.getElementById('protoTemplate').textContent, this);
+});
+
+/* Theme toggle (shared convention: localStorage 'kudbee-theme') */
+const themeBtn = document.getElementById('themeBtn');
+if (localStorage.getItem('kudbee-theme') === 'light') document.body.classList.add('light');
+themeBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    localStorage.setItem('kudbee-theme', document.body.classList.contains('light') ? 'light' : 'dark');
+});
+
+/* Render all */
+renderActions(); renderProjects(); renderPRs(); renderAgents(); renderDecisions(); renderPrompts();
+</script>
+</body>
+</html>
