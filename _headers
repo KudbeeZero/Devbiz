@@ -19,6 +19,13 @@
 /games/*/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Private testing surfaces — keep out of search indexes. The real access control
+# is Cloudflare Access (see docs/PRIVATE_TESTING_GATE.md); this header is hygiene
+# so the gated hub/game routes are never indexed even before Access is configured.
+/lab/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
 # SEO / discovery files.
 /robots.txt
   Cache-Control: public, max-age=86400

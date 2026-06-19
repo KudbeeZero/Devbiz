@@ -15,6 +15,9 @@
 
 User-agent: *
 Disallow: /api/
+Disallow: /lab/
+Disallow: /dogfight
+Disallow: /flight-lab
 Disallow: /docs/
 Disallow: /.github/
 Disallow: /.agents/
