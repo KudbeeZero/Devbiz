@@ -6,6 +6,7 @@ Update the data here — you never have to touch the dashboard markup or JS.
 | File | Section it feeds | Notes |
 |---|---|---|
 | `actions.json` | Owner Action Queue (top) | Only what needs the **owner** now. Order high → low priority. |
+| `focus-board.json` | Focus Board (near top) | The **three active projects** + launch sequence. Per project: `state`, `priorityLabel`, `labels[]`, `blocker`, `ownerAction`, `nextSafeActions[]`, `backlog[]`, `links[]`. A `links[]` entry may carry `pending: "PR #NN"` when its target file only lands after that PR merges (rendered as a non-clickable "pending" pill, never a dead link). Plus a `brain` block for the `devbiz-memory` candidate (tracked, not synced). |
 | `projects.json` | Active Project Lanes | One entry per major project/repo. |
 | `prs.json` | Active PR Board | Cross-repo PRs must be labeled **reported** (this dashboard can't verify them). |
 | `agents.json` | Agent Registry | **Reported status only** — no live integration with external sessions. |
