@@ -106,6 +106,29 @@ Protocol** section.
 
 ---
 
+## Access & login (there is no password in the repo)
+
+`/lab/mission-control` has **no app-level login, no shared password, and no
+basic-auth** — none of that exists in this repo, by design. The only intended
+protection is **Cloudflare Access (Zero Trust)**, an edge gate configured in the
+Cloudflare dashboard (not committed here). See
+[`docs/PRIVATE_TESTING_GATE.md`](../../docs/PRIVATE_TESTING_GATE.md).
+
+**Owner verification checklist (manual / external):**
+
+1. Open `/lab/mission-control/` in an **incognito/private** window.
+2. **Expected:** a **Cloudflare Access** screen appears *before* the page loads →
+   sign in with the **allowed owner email + one-time PIN**.
+3. **If the dashboard loads with no prompt:** Access is **not configured yet** —
+   **do not share the link publicly**, and configure Cloudflare Zero Trust Access
+   for `/lab` and `/lab/*` per the gate doc.
+
+> `noindex` headers + `robots.txt Disallow` on `/lab/*` are crawler **hygiene
+> only — not access control**. The real gate is Cloudflare Access. This task does
+> not change any Cloudflare policy.
+
+---
+
 ## Environment / secrets
 
 Mission Control needs **no secrets**. For future lanes that do:
