@@ -1,0 +1,96 @@
+{
+  "_comment": "Wiring Map / feed-source registry for the Mission Control Feed layer. Each source describes WHERE a feed of Mission Packets comes from and HOW honest it is. wiring: live | partial | manual | placeholder | not wired. sourceType: agent-report | pr-feed | branch-feed | ci-feed | deploy-feed | security-feed | release-feed | repo-health | worker-feed | manual-status | placeholder. 'live' is ONLY allowed when a real integration genuinely exists and is verified — no source here is 'live' yet. 'needsNext' states the exact backend/API/webhook required to upgrade the wiring. 'lastVerified' is a date or the honest word 'never'.",
+  "updated": "2026-06-19",
+  "sources": [
+    {
+      "id": "manual-packets",
+      "label": "Manual Mission Packets",
+      "sourceType": "manual-status",
+      "wiring": "manual",
+      "lastVerified": "2026-06-19",
+      "reads": "feed/data/packets.json",
+      "summary": "Hand-authored packets the owner/agents write directly. Honest, human-edited — the temporary source of truth until real feeds are wired.",
+      "needsNext": "Nothing — manual by design. Migrate into the operations DB (D1) later if/when that infra lane is approved."
+    },
+    {
+      "id": "agent-registry",
+      "label": "Agent Reports (from v1 registry)",
+      "sourceType": "agent-report",
+      "wiring": "manual",
+      "lastVerified": "2026-06-19",
+      "reads": "../data/agents.json",
+      "summary": "Normalizes Mission Control v1's agent census into agent-report packets. Reported status only — Mission Control cannot see or control external Claude/Codex/Fly sessions.",
+      "needsNext": "A real agent check-in path (each agent POSTs a signed report to a Worker, or drops a JSON file into the Agent Feed Inbox). Until then this is a reported logbook, not telemetry."
+    },
+    {
+      "id": "agent-feed-inbox",
+      "label": "Agent Feed Inbox",
+      "sourceType": "agent-report",
+      "wiring": "partial",
+      "lastVerified": "2026-06-19",
+      "reads": "feed/data/inbox.json → docs/agent-feed/inbox/*.json",
+      "summary": "A real place for agents to post reports: drop a JSON report into docs/agent-feed/inbox/ and add a line to feed/data/inbox.json. Partial — the drop+index path is wired and read here, but ingestion is still manual (no Worker auto-collects reports).",
+      "needsNext": "A Worker (or scheduled job) that validates and indexes inbox reports automatically, plus an authenticated post endpoint so agents don't hand-edit the index."
+    },
+    {
+      "id": "owner-actions",
+      "label": "Owner Action Queue (from v1)",
+      "sourceType": "manual-status",
+      "wiring": "manual",
+      "lastVerified": "2026-06-19",
+      "reads": "../data/actions.json",
+      "summary": "Normalizes the v1 owner-action queue into owner-action packets so 'what needs you now' surfaces in the feed too.",
+      "needsNext": "Nothing — manual by design. Could derive from real feeds once PR/CI/deploy feeds are live."
+    },
+    {
+      "id": "pr-feed",
+      "label": "PR / Branch Feed",
+      "sourceType": "pr-feed",
+      "wiring": "not wired",
+      "lastVerified": "never",
+      "reads": "../data/prs.json (reported only)",
+      "summary": "PR feed NOT wired yet. The cards shown are normalized from the v1 reported PR board — they are NOT live from GitHub and must never be treated as verified CI/merge state.",
+      "needsNext": "Server-side ONLY GitHub adapter: a Cloudflare Worker holding the GitHub token as a secret (never in browser), calling the REST/GraphQL API or receiving webhooks, caching + rate-limiting responses, separating preview vs production branches, and writing branch/PR#/CI/review/conflict/deploy state + a last-verified timestamp into a feed the page can read. No token may ever be wired client-side."
+    },
+    {
+      "id": "ci-feed",
+      "label": "Build / CI Feed",
+      "sourceType": "ci-feed",
+      "wiring": "placeholder",
+      "lastVerified": "never",
+      "reads": "—",
+      "summary": "Build/CI feed is a placeholder. The repo has one real GitHub Actions gate (coverage on leaderboard/shared/), but it is not yet read into Mission Control.",
+      "needsNext": "Same server-side Worker as the PR feed: read GitHub Actions run status (or receive check_run webhooks) and expose verified CI state. Never mark a build green unless the exact check completed successfully from a real source."
+    },
+    {
+      "id": "deploy-feed",
+      "label": "Deploy Feed",
+      "sourceType": "deploy-feed",
+      "wiring": "placeholder",
+      "lastVerified": "never",
+      "reads": "—",
+      "summary": "Cloudflare Pages / Vercel deploy state is a placeholder. Deploy status today is reported manually in the owner action queue, not read from a deploy API.",
+      "needsNext": "A server-side adapter (Cloudflare Pages deployments API and/or Vercel deployments API) behind a Worker, with preview vs production clearly separated and a last-verified timestamp."
+    },
+    {
+      "id": "security-feed",
+      "label": "Security / Dependency Feed",
+      "sourceType": "security-feed",
+      "wiring": "placeholder",
+      "lastVerified": "never",
+      "reads": "—",
+      "summary": "Security / dependency alerts are a placeholder. No Dependabot / advisory feed is wired into Mission Control yet.",
+      "needsNext": "A server-side adapter reading GitHub Dependabot / security advisories (Worker holds the token), surfaced as security-feed packets with severity. No secrets client-side."
+    },
+    {
+      "id": "worker-feed",
+      "label": "Worker / Health Feed",
+      "sourceType": "worker-feed",
+      "wiring": "placeholder",
+      "lastVerified": "never",
+      "reads": "—",
+      "summary": "Health of deployed Workers (e.g. leaderboard /api/health, growverse-api /health) is a placeholder. Health is reported manually today, not polled.",
+      "needsNext": "A scheduled Worker that pings each service's /health endpoint and records the result + timestamp. Read-only pings only; no secrets."
+    }
+  ]
+}

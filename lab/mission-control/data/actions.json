@@ -45,6 +45,22 @@
     {
       "priority": "low",
       "kind": "test",
+      "title": "Browser-check the new Mission Feed page, then approve/merge",
+      "where": "This PR's branch preview · /lab/mission-control/feed/",
+      "action": "Open the feed on your phone + desktop: confirm System Pulse tiles, Owner Action Now, the filterable Mission Packets board, Agent Reports (incl. the inbox sample), the PR/Branch feed with its 'not wired yet' banner, Build/Deploy + Security placeholders, and the Wiring Map. Verify source labels, freshness, and honesty pills (nothing reads 'live'). Then approve/merge (owner-only).",
+      "blocks": "Mission Control agent/feed layer going live behind Access"
+    },
+    {
+      "priority": "low",
+      "kind": "decide",
+      "title": "Decide on a server-side GitHub feed Worker (to make the PR/CI feed real)",
+      "where": "Owner-only infra lane — needs explicit OWNER-OK (PR_FLOW.md §11a)",
+      "action": "The PR/branch/CI feed is honestly labelled 'not wired'. Making it live needs a Cloudflare Worker holding the GitHub token as a secret (never client-side), caching + rate-limiting, preview/production separation, and a last-verified timestamp. Greenlight this as its own phased lane when ready.",
+      "blocks": "Live PR/CI/deploy feeds in Mission Control"
+    },
+    {
+      "priority": "low",
+      "kind": "test",
       "title": "Browser-check the Focus Board on this PR's preview, then merge",
       "where": "This PR's branch preview · /lab/mission-control/ (Focus Board section near the top)",
       "action": "Open the dashboard on your phone: confirm the Focus Board renders the three project cards (GrowVerse / FRONTIER / Devbiz) with status chips, blocker, owner action, expandable next-actions + backlog, the 'pending PR' doc pills, and the devbiz-memory brain note. Then merge (owner-only).",

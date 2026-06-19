@@ -1,0 +1,20 @@
+{
+  "_comment": "SAMPLE agent report — clearly marked as an example so the inbox path can be verified end-to-end. Replace or delete when real reports start landing. This is not a real audit result.",
+  "id": "INBOX-SAMPLE-001",
+  "agent": "Branch Hygiene Agent",
+  "task": "Sample: scan open branches/PRs for staleness and report into the Agent Feed Inbox.",
+  "status": "watching",
+  "severity": "info",
+  "summary": "SAMPLE report demonstrating the inbox format. A real Branch Hygiene Agent would list stale branches, their last commit date, and whether each is safe to delete — with evidence. This sample asserts nothing real.",
+  "evidence": [
+    "Sample only — no branches were actually scanned.",
+    "Format mirrors docs/agent-feed/inbox/_schema.json"
+  ],
+  "lastUpdate": "2026-06-19",
+  "related": { "branch": "claude/devbiz-mission-control-feed-7dm3xd", "pr": "this PR (draft)", "build": "n/a" },
+  "ownerAction": false,
+  "ownerActionText": "",
+  "nextAction": "Replace this sample with the first real agent report once an agent posts one.",
+  "confidence": "high",
+  "rawStatus": "manual"
+}

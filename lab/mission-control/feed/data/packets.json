@@ -1,0 +1,149 @@
+{
+  "_comment": "Manual Mission Packets — the hand-authored feed source. Each entry follows the Mission Packet model (see ../PACKET_MODEL.md). REQUIRED: id, title, sourceType. Recommended: source, timestamp, severity, status, summary. severity: critical | high | medium | low | info. status: open | in-progress | blocked | resolved | watching | unknown. rawStatus: live | partial | placeholder | not wired (default 'manual' if omitted — but use the model's words honestly). ownerAction true = surfaces in 'Owner Action Now'. confidence: high | medium | low. timestamp: ISO date (YYYY-MM-DD) or the honest word 'reported'/'unknown' — the page computes freshness from real dates and shows 'unknown' otherwise. NEVER label a packet 'live'/'green'/'merged' unless it is actually true and verified.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "id": "MP-FEED-001",
+      "title": "Mission Control Feed layer shipped (this lane)",
+      "source": "Mission Control Feed Agent",
+      "sourceType": "manual-status",
+      "timestamp": "2026-06-19",
+      "severity": "info",
+      "status": "in-progress",
+      "rawStatus": "manual",
+      "confidence": "high",
+      "summary": "New /lab/mission-control/feed page adds the Mission Packet model + adapter layer, an honest Wiring Map, and the Agent Feed Inbox scaffold. Renders from feed/data/*.json and normalizes the existing v1 registry. No backend, no secrets, nothing faked live.",
+      "evidence": [
+        "Route: /lab/mission-control/feed/",
+        "Packet model: feed/PACKET_MODEL.md",
+        "Wiring Map source: feed/data/feeds.json",
+        "Adapters normalize ../data/{agents,actions,prs}.json"
+      ],
+      "related": { "branch": "claude/devbiz-mission-control-feed-7dm3xd", "pr": "this PR (draft)", "build": "no CI for /lab; coverage gate unaffected" },
+      "actionRequired": true,
+      "ownerAction": true,
+      "ownerActionText": "Browser-check /lab/mission-control/feed/ on the branch preview, then approve/merge (owner-only).",
+      "link": "./"
+    },
+    {
+      "id": "MP-PR-FEED-002",
+      "title": "PR feed not wired yet — cards are reported, not live",
+      "source": "Wiring Map",
+      "sourceType": "pr-feed",
+      "timestamp": "2026-06-19",
+      "severity": "medium",
+      "status": "watching",
+      "rawStatus": "not wired",
+      "confidence": "high",
+      "summary": "The PR / Branch feed shows packets normalized from the v1 reported PR board. These are NOT live from GitHub. A safe live feed requires a server-side Worker holding the GitHub token — never a client-side token.",
+      "evidence": [
+        "Source: ../data/prs.json (reported board)",
+        "No GitHub API call is made from the browser",
+        "Upgrade path documented in feed/data/feeds.json → pr-feed.needsNext"
+      ],
+      "related": { "branch": "—", "pr": "—", "build": "—" },
+      "actionRequired": true,
+      "ownerAction": true,
+      "ownerActionText": "Decide whether to greenlight a server-side GitHub feed Worker (owner-only infra lane; needs explicit OWNER-OK).",
+      "link": "./data/feeds.json"
+    },
+    {
+      "id": "MP-DEPLOY-003",
+      "title": "Cloudflare Access for /lab/* — verify before sharing any preview",
+      "source": "Owner gate (manual)",
+      "sourceType": "deploy-feed",
+      "timestamp": "2026-06-19",
+      "severity": "high",
+      "status": "blocked",
+      "rawStatus": "manual",
+      "confidence": "medium",
+      "summary": "The only real gate on /lab/* is Cloudflare Access, configured in the Cloudflare dashboard (not in this repo). noindex + robots.txt are crawler hygiene, NOT access control. If the page loads with no Access prompt, it is not gated.",
+      "evidence": [
+        "docs/PRIVATE_TESTING_GATE.md",
+        "Open /lab/mission-control/feed/ in an incognito window — expect a Cloudflare Access sign-in first"
+      ],
+      "related": { "branch": "—", "pr": "—", "build": "—" },
+      "actionRequired": true,
+      "ownerAction": true,
+      "ownerActionText": "Confirm Cloudflare Zero Trust Access covers /lab and /lab/* with Allow = your email(s) before sharing any deployed link.",
+      "link": "../../../docs/PRIVATE_TESTING_GATE.md"
+    },
+    {
+      "id": "MP-SEC-004",
+      "title": "Security / dependency feed — placeholder",
+      "source": "Wiring Map",
+      "sourceType": "security-feed",
+      "timestamp": "2026-06-19",
+      "severity": "low",
+      "status": "watching",
+      "rawStatus": "placeholder",
+      "confidence": "high",
+      "summary": "No Dependabot / security-advisory feed is wired into Mission Control yet. This placeholder exists so the gap is visible rather than silently missing.",
+      "evidence": ["feed/data/feeds.json → security-feed"],
+      "related": { "branch": "—", "pr": "—", "build": "—" },
+      "actionRequired": false,
+      "ownerAction": false,
+      "confidenceNote": "Honest gap, not an alert.",
+      "link": ""
+    },
+    {
+      "id": "MP-HEALTH-005",
+      "title": "growverse-api health — reported down (login 404)",
+      "source": "Owner report (cross-repo)",
+      "sourceType": "worker-feed",
+      "timestamp": "reported",
+      "severity": "high",
+      "status": "blocked",
+      "rawStatus": "not wired",
+      "confidence": "low",
+      "summary": "Reported only — Mission Control does not poll any /health endpoint yet. growverse.dev login 404s because no healthy backend is wired. This packet mirrors the v1 owner-action queue for visibility; it is not a live health check.",
+      "evidence": [
+        "../data/actions.json → GrowVerse backend/login recovery",
+        "Not verifiable from this session — treat as reported"
+      ],
+      "related": { "branch": "—", "pr": "—", "build": "—" },
+      "actionRequired": true,
+      "ownerAction": true,
+      "ownerActionText": "From your authenticated machine: bring growverse-api up, confirm /health = 200, then wire Vercel BACKEND_URL. Not runnable from Mission Control.",
+      "link": ""
+    },
+    {
+      "id": "MP-CI-007",
+      "title": "Coverage gate is the only real CI — not yet surfaced live here",
+      "source": "Wiring Map",
+      "sourceType": "ci-feed",
+      "timestamp": "2026-06-19",
+      "severity": "info",
+      "status": "watching",
+      "rawStatus": "not wired",
+      "confidence": "high",
+      "summary": "The repo has one real GitHub Actions gate — coverage on leaderboard/shared/ (.github/workflows/coverage.yml). It runs on push/PR but is NOT read into Mission Control. This lane touches only lab/ + docs/, so that gate is unaffected. No build/CI status shown here is live.",
+      "evidence": [
+        ".github/workflows/coverage.yml (real, scoped to leaderboard/shared/)",
+        "This /lab + docs lane does not change leaderboard/shared/ — coverage gate unaffected",
+        "Surfacing real CI requires the server-side Worker — see feed/data/feeds.json → ci-feed"
+      ],
+      "related": { "branch": "—", "pr": "—", "build": "coverage gate (not read here)" },
+      "actionRequired": false,
+      "ownerAction": false,
+      "link": ""
+    },
+    {
+      "id": "MP-RELEASE-006",
+      "title": "No release feed configured",
+      "source": "Wiring Map",
+      "sourceType": "release-feed",
+      "timestamp": "2026-06-19",
+      "severity": "info",
+      "status": "watching",
+      "rawStatus": "placeholder",
+      "confidence": "high",
+      "summary": "There is no tagged-release feed yet. Listed so the absence is explicit, not assumed.",
+      "evidence": [],
+      "related": { "branch": "—", "pr": "—", "build": "—" },
+      "actionRequired": false,
+      "ownerAction": false,
+      "link": ""
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "_comment": "Schema reference for an Agent Feed Inbox report. This is a documentation/example file (not a JSON Schema validator) describing the shape the inbox adapter expects. Each report is one agent-report Mission Packet. Field meanings + allowed enums match lab/mission-control/feed/PACKET_MODEL.md. Required: id, agent, task, status. Everything else is recommended for a useful report. NEVER claim a status you have not verified — use 'reported'/'unknown' honestly.",
+  "fields": {
+    "id": "string — stable unique id, e.g. 'INBOX-2026-06-19-review-agent'",
+    "agent": "string — agent name, e.g. 'Review Agent' | 'Security Agent' | 'UI/UX Agent' | 'Mobile QA Agent' | 'Release Agent' | 'Branch Hygiene Agent' | 'Dependency Agent' | 'PR Watcher Agent' | 'Deploy Watcher Agent'",
+    "task": "string — what the agent was asked to do",
+    "status": "open | in-progress | blocked | resolved | watching | unknown",
+    "severity": "critical | high | medium | low | info",
+    "summary": "string — short plain-language result",
+    "evidence": "string[] — concrete proof: files changed, commands run, screenshots, routes checked",
+    "lastUpdate": "ISO date (YYYY-MM-DD) or 'reported' — the page computes freshness from real dates",
+    "related": { "branch": "string", "pr": "string", "build": "string" },
+    "ownerAction": "boolean — true if the owner must act now",
+    "ownerActionText": "string — the exact owner action (when ownerAction is true)",
+    "nextAction": "string — the next recommended action the agent suggests",
+    "confidence": "high | medium | low",
+    "rawStatus": "live | partial | placeholder | not wired — be honest; a hand-written report is at most 'manual'/'partial', never 'live'"
+  },
+  "example": "See ./sample-report.json"
+}

@@ -3,6 +3,17 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "name": "Mission Control — Feed layer",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "v1 build — agent/feed layer (Mission Packets)",
+      "activePR": "this PR (draft)",
+      "state": "active",
+      "statusLabel": "building",
+      "lastOwnerAction": "Greenlit the next Mission Control update: tie in the agent/feed layer",
+      "nextAction": "Browser-check /lab/mission-control/feed/, then approve/merge",
+      "notes": "New /lab/mission-control/feed page: reusable Mission Packet model (PACKET_MODEL.md), packet-adapter layer normalizing data/*.json, honest Wiring Map (feed/data/feeds.json), and the Agent Feed Inbox scaffold (docs/agent-feed/inbox/). Additive — v1 index.html rendering untouched. No backend/secrets/token; PR/CI/deploy/security feeds honestly labelled not-wired/placeholder."
+    },
+    {
       "name": "AI Command Center",
       "repo": "KudbeeZero/devbiz",
       "phase": "v1 build — static/manual-first prompt + agent console",

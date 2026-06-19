@@ -4,6 +4,18 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "name": "Mission Control Feed Agent",
+      "assigned": "KudbeeZero/devbiz · /lab/mission-control/feed",
+      "pr": "this PR (mission-control-feed)",
+      "purpose": "Build the agent/feed layer — the Mission Packet model + adapter layer, an honest Wiring Map, and the Agent Feed Inbox scaffold. Renders from feed/data/*.json and normalizes the existing v1 registry.",
+      "status": "active",
+      "subscription": "subscribed to this PR's activity (CI failure / review comment / conflict)",
+      "ci": "no CI for /lab; coverage gate unaffected",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Browser-check /lab/mission-control/feed/ on the branch preview, then approve/merge",
+      "notes": "This session. Additive new page beside v1 (v1 index.html untouched apart from one nav link). No backend, no secrets, no GitHub token, nothing labelled live. PR/CI/deploy/security feeds are honestly scaffolded as not-wired/placeholder."
+    },
+    {
       "name": "AI Command Center Agent",
       "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
       "pr": "this PR (ai-command-center-v1)",

@@ -1,0 +1,12 @@
+{
+  "_comment": "Index of agent reports dropped into docs/agent-feed/inbox/. The feed page's inboxAdapter reads this list and fetches each 'file'. NOTE: fetch() resolves the path relative to the FEED PAGE (lab/mission-control/feed/), so '../../../' reaches the repo root. HOW TO POST A REPORT: (1) write a JSON file following docs/agent-feed/inbox/_schema.json into docs/agent-feed/inbox/, (2) add an entry here with its path + a short label. This index is hand-maintained today (wiring: partial) — no Worker auto-collects reports yet.",
+  "updated": "2026-06-19",
+  "reports": [
+    {
+      "id": "INBOX-SAMPLE-001",
+      "label": "Sample agent report (Feed lane)",
+      "file": "../../../docs/agent-feed/inbox/sample-report.json",
+      "added": "2026-06-19"
+    }
+  ]
+}

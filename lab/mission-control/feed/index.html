@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Kudbee Mission Control — Feed layer. Private, Access-gated. Honest Mission Packet stream: agents, PRs, builds, systems, owner actions.">
+    <title>Mission Control · Feed · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --red: #ff7a8a;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .panel-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.4; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -160px; left: -110px;
+        background: radial-gradient(circle, rgba(57,230,255,0.26), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 36%; right: -150px;
+        background: radial-gradient(circle, rgba(196,107,255,0.22), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: var(--grad); transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .light .theme-btn::after { transform: translateX(18px); }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 40px 28px 90px; }
+
+    .page-header { max-width: 860px; margin: 0 auto 6px; text-align: center; }
+    .kicker {
+        display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+    }
+    .page-header h1 { font-size: clamp(32px, 5.5vw, 52px); line-height: 1.05; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+    .page-header p { margin-top: 14px; color: var(--text-muted); font-size: 16px; }
+
+    /* Jump nav */
+    .jump {
+        position: sticky; top: 56px; z-index: 90;
+        display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+        margin: 26px auto 8px; padding: 10px;
+        background: rgba(6,6,12,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border); border-radius: 14px;
+    }
+    .light .jump { background: rgba(246,247,251,0.7); }
+    .jump a {
+        font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--text-muted);
+        padding: 6px 12px; border-radius: 9px; border: 1px solid transparent; transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .jump a:hover { color: var(--text-primary); border-color: var(--border-hover); background: var(--bg-secondary); }
+    .jump a.live { color: var(--cyan); }
+
+    /* Section */
+    .section { margin-top: 46px; scroll-margin-top: 120px; }
+    .section-head {
+        display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .section-head h2 {
+        font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .section-head .count {
+        font-size: 12px; font-weight: 700; color: var(--text-dim);
+        border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+    }
+    .section-head .desc { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+    .sec-icon { font-size: 18px; }
+
+    /* Cards grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+    .grid.wide { grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); }
+    .item {
+        position: relative; display: flex; flex-direction: column;
+        padding: 18px 20px; border-radius: 14px;
+        background: var(--bg-card); border: 1px solid var(--border);
+        transition: border-color 0.2s, transform 0.2s;
+    }
+    .item:hover { border-color: var(--border-hover); }
+    .item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .item-title { font-size: 15.5px; font-weight: 600; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; line-height: 1.3; }
+    .item-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: 10px; font-size: 13px; }
+    .kv dt { color: var(--text-dim); font-weight: 500; white-space: nowrap; }
+    .kv dd { color: var(--text-secondary); }
+    .kv dd.next { color: var(--cyan); font-weight: 500; }
+
+    /* Packet card extras */
+    .packet { border-left: 3px solid var(--border); }
+    .packet.sev-critical { border-left-color: var(--red); }
+    .packet.sev-high { border-left-color: var(--red); }
+    .packet.sev-medium { border-left-color: var(--amber); }
+    .packet.sev-low { border-left-color: var(--cyan); }
+    .packet.sev-info { border-left-color: var(--text-dim); }
+    .packet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+    .packet-summary { font-size: 13.5px; color: var(--text-secondary); }
+    .packet-owner {
+        margin-top: 12px; display: flex; gap: 10px; align-items: flex-start;
+        padding: 11px 13px; border-radius: 10px;
+        background: linear-gradient(135deg, rgba(255,211,77,0.10), rgba(255,122,138,0.06));
+        border: 1px solid rgba(255,211,77,0.30); font-size: 13px; color: var(--text-secondary);
+    }
+    .packet-owner svg { flex-shrink: 0; margin-top: 2px; color: var(--amber); }
+    .packet-owner strong { color: var(--amber); display:block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+    .packet-next { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+    .packet-next b { color: var(--cyan); font-weight: 600; }
+    .packet-link { margin-top: 12px; }
+    .packet-link a { font-size: 12.5px; text-decoration: none; color: var(--cyan); border: 1px solid var(--border); border-radius: 8px; padding: 5px 11px; transition: border-color 0.2s; display: inline-block; }
+    .packet-link a:hover { border-color: var(--cyan); }
+    details.evidence { margin-top: 12px; }
+    details.evidence > summary {
+        list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted);
+        display: flex; align-items: center; gap: 6px;
+    }
+    details.evidence > summary::-webkit-details-marker { display: none; }
+    details.evidence > summary::before { content: '▸'; color: var(--text-dim); transition: transform 0.2s; }
+    details.evidence[open] > summary::before { transform: rotate(90deg); }
+    details.evidence ul { margin: 8px 0 0 4px; padding-left: 16px; font-size: 12.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px; }
+    details.evidence li { word-break: break-word; }
+
+    /* Chips */
+    .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .chip.ok    { color: var(--green);  border-color: rgba(124,255,178,0.4); }
+    .chip.warn  { color: var(--amber);  border-color: rgba(255,211,77,0.42); }
+    .chip.bad   { color: var(--red);    border-color: rgba(255,122,138,0.45); }
+    .chip.info  { color: var(--cyan);   border-color: rgba(57,230,255,0.4); }
+    .chip.muted { color: var(--text-dim); }
+    .chip.violet{ color: var(--violet); border-color: rgba(196,107,255,0.42); }
+    .chip.plain::before { display: none; }
+
+    /* Owner Action Queue (hero) */
+    .oaq {
+        margin-top: 22px; padding: 4px; border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255,211,77,0.10), rgba(255,122,138,0.07));
+        border: 1px solid rgba(255,211,77,0.28);
+    }
+    .oaq-inner { padding: 18px 20px; }
+    .oaq-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .oaq-head h2 { font-size: 19px; color: var(--text-primary); font-weight: 700; }
+    .oaq-head .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 0 rgba(255,211,77,0.6); animation: pulse 2.2s infinite; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,211,77,0.5);} 70%{box-shadow:0 0 0 10px rgba(255,211,77,0);} 100%{box-shadow:0 0 0 0 rgba(255,211,77,0);} }
+    .oaq-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+    .oaq-list { display: flex; flex-direction: column; gap: 10px; }
+    .oaq-item {
+        display: flex; gap: 14px; align-items: flex-start;
+        padding: 14px 16px; border-radius: 12px;
+        background: var(--bg-elevated); border: 1px solid var(--border);
+    }
+    .light .oaq-item { background: var(--bg-card); }
+    .oaq-num {
+        flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px;
+        background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary);
+    }
+    .oaq-body { flex: 1; min-width: 0; }
+    .oaq-row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+    .oaq-title { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+    .oaq-action { font-size: 13.5px; color: var(--text-secondary); }
+    .oaq-where { font-size: 12px; color: var(--text-dim); margin-top: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    /* System Pulse */
+    .pulse-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 20px; }
+    .pulse-tile {
+        padding: 16px 18px; border-radius: 14px; background: var(--bg-card); border: 1px solid var(--border);
+        display: flex; flex-direction: column; gap: 2px;
+    }
+    .pulse-num { font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+    .pulse-num.amber { color: var(--amber); }
+    .pulse-num.red { color: var(--red); }
+    .pulse-num.cyan { color: var(--cyan); }
+    .pulse-num.muted { color: var(--text-dim); }
+    .pulse-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+    .pulse-foot { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+
+    /* Filters */
+    .filters {
+        display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;
+        padding: 14px 16px; border-radius: 14px; background: var(--bg-secondary); border: 1px solid var(--border);
+        margin-bottom: 16px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 7px; }
+    .filter-group .fg-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+    .filter-group .fg-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .filter-btn {
+        font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+        padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border); color: var(--text-muted);
+        background: transparent; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+    .filter-btn.active { color: #06060c; background: var(--cyan); border-color: var(--cyan); }
+    .filter-btn.owner.active { background: var(--amber); border-color: var(--amber); }
+    .filter-reset { margin-left: auto; align-self: center; }
+
+    /* Banners / notes */
+    .note-banner {
+        margin-top: 0; display: flex; gap: 12px; align-items: flex-start;
+        padding: 13px 16px; border-radius: 12px;
+        background: rgba(57,230,255,0.05); border: 1px solid rgba(57,230,255,0.18);
+        font-size: 13px; color: var(--text-muted); margin-bottom: 16px;
+    }
+    .note-banner svg { flex-shrink: 0; margin-top: 2px; color: var(--cyan); }
+    .note-banner strong { color: var(--text-secondary); }
+    .note-banner.warn { background: rgba(255,211,77,0.06); border-color: rgba(255,211,77,0.26); }
+    .note-banner.warn svg { color: var(--amber); }
+
+    .empty {
+        padding: 16px; border-radius: 12px; font-size: 13px; color: var(--text-dim);
+        background: var(--bg-secondary); border: 1px dashed var(--border); text-align: center;
+    }
+    .err {
+        padding: 14px 16px; border-radius: 12px; font-size: 13.5px;
+        background: rgba(255,122,138,0.08); border: 1px solid rgba(255,122,138,0.3); color: var(--red);
+    }
+    .err code { font-family: ui-monospace, monospace; color: var(--amber); }
+
+    /* Wiring Map */
+    .wmap { display: flex; flex-direction: column; gap: 10px; }
+    .wrow {
+        display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center;
+        padding: 14px 16px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border);
+    }
+    .wrow-main { min-width: 0; }
+    .wrow-label { font-size: 14.5px; font-weight: 600; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; }
+    .wrow-type { font-size: 11.5px; color: var(--text-dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
+    .wrow-sum { grid-column: 1 / -1; font-size: 13px; color: var(--text-muted); }
+    .wrow-next { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-secondary); }
+    .wrow-next b { color: var(--cyan); font-weight: 600; }
+    .wrow-verified { font-size: 11px; color: var(--text-dim); font-family: ui-monospace, monospace; }
+
+    /* Footer */
+    .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
+    .foot a { color: var(--text-muted); text-decoration: none; }
+    .foot a:hover { color: var(--cyan); }
+    .foot .honest { margin-top: 10px; font-size: 12px; color: var(--text-dim); max-width: 720px; margin-left: auto; margin-right: auto; }
+
+    @media (max-width: 600px) {
+        .main { padding: 28px 16px 64px; }
+        .nav-bar { padding: 12px 14px; }
+        .nav-title { display: none; }
+        .jump { top: 52px; }
+        .section-head .desc { display: none; }
+        .grid, .grid.wide { grid-template-columns: 1fr; }
+        .oaq-item { flex-direction: row; }
+        .filters { flex-direction: column; gap: 12px; }
+        .filter-reset { margin-left: 0; }
+        .wrow { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Mission Control
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Mission Control · Feed</span>
+            <span class="nav-badge">Private</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬢ Agent / Feed Layer</span>
+        <h1>Mission <span class="gradient-text">Feed</span></h1>
+        <p>One honest stream of Mission Packets — agents, PRs, builds, and systems — so you can see what's happening now, what needs you, and what isn't wired yet.</p>
+    </header>
+
+    <!-- Jump nav -->
+    <nav class="jump" aria-label="Section jump">
+        <a href="#pulse">📡 System Pulse</a>
+        <a href="#owner" class="live">⚡ Owner Action Now</a>
+        <a href="#packets">Mission Packets</a>
+        <a href="#agents">Agent Reports</a>
+        <a href="#prfeed">PR / Branch</a>
+        <a href="#buildfeed">Build / Deploy</a>
+        <a href="#secfeed">Security</a>
+        <a href="#wiring">Wiring Map</a>
+    </nav>
+
+    <!-- 0. SYSTEM PULSE -->
+    <section class="section" id="pulse" style="margin-top:30px">
+        <div class="section-head">
+            <h2><span class="sec-icon">📡</span> System Pulse</h2>
+            <span class="desc">at-a-glance, computed from every packet &amp; source</span>
+        </div>
+        <div class="pulse-grid" id="pulseGrid">
+            <div class="empty">Loading system pulse…</div>
+        </div>
+    </section>
+
+    <!-- 1. OWNER ACTION NOW -->
+    <section class="oaq" id="owner" aria-labelledby="oaq-h">
+        <div class="oaq-inner">
+            <div class="oaq-head"><span class="pulse" aria-hidden="true"></span><h2 id="oaq-h">Owner Action Now</h2></div>
+            <p class="oaq-sub">Only packets flagged <strong>owner action</strong> — highest severity first.</p>
+            <div class="oaq-list" id="oaqList"><div class="empty">Loading owner actions…</div></div>
+        </div>
+    </section>
+
+    <!-- 2. ACTIVE MISSION PACKETS (filterable master board) -->
+    <section class="section" id="packets">
+        <div class="section-head">
+            <h2><span class="sec-icon">🗂️</span> Active Mission Packets <span class="count" id="packetCount">–</span></h2>
+            <span class="desc">unified filterable stream</span>
+        </div>
+        <div class="filters" id="filters" hidden>
+            <div class="filter-group">
+                <span class="fg-label">Source type</span>
+                <div class="fg-row" id="fSource"></div>
+            </div>
+            <div class="filter-group">
+                <span class="fg-label">Severity</span>
+                <div class="fg-row" id="fSeverity"></div>
+            </div>
+            <div class="filter-group">
+                <span class="fg-label">Owner</span>
+                <div class="fg-row">
+                    <button class="filter-btn owner" data-owner="1" type="button">Owner action only</button>
+                </div>
+            </div>
+            <button class="filter-btn filter-reset" id="fReset" type="button">Reset filters</button>
+        </div>
+        <div class="grid wide" id="packetGrid"><div class="empty">Loading mission packets…</div></div>
+    </section>
+
+    <!-- 3. AGENT REPORTS -->
+    <section class="section" id="agents">
+        <div class="section-head">
+            <h2><span class="sec-icon">🛰️</span> Agent Reports <span class="count" id="agentCount">–</span></h2>
+            <span class="desc">reported status only</span>
+        </div>
+        <div class="note-banner">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><strong>Reported, not live.</strong> Agent packets come from the v1 registry (<code>../data/agents.json</code>) and the Agent Feed Inbox. Mission Control cannot see or control external sessions — treat these as a logbook, not telemetry.</div>
+        </div>
+        <div class="grid" id="agentGrid"><div class="empty">Loading agent reports…</div></div>
+    </section>
+
+    <!-- 4. PR / BRANCH FEED -->
+    <section class="section" id="prfeed">
+        <div class="section-head">
+            <h2><span class="sec-icon">🔀</span> PR / Branch Feed <span class="count" id="prCount">–</span></h2>
+            <span class="desc">reported — not live from GitHub</span>
+        </div>
+        <div class="note-banner warn">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div><strong>PR feed not wired yet.</strong> These cards are normalized from the v1 reported PR board (<code>../data/prs.json</code>) — they are <strong>not live from GitHub</strong>. A safe live feed needs a server-side Worker holding the token (no browser token, ever). See the Wiring Map.</div>
+        </div>
+        <div class="grid wide" id="prGrid"><div class="empty">Loading PR / branch feed…</div></div>
+    </section>
+
+    <!-- 5. BUILD / DEPLOY FEED -->
+    <section class="section" id="buildfeed">
+        <div class="section-head">
+            <h2><span class="sec-icon">🏗️</span> Build / Deploy Feed <span class="count" id="buildCount">–</span></h2>
+            <span class="desc">placeholder / not wired</span>
+        </div>
+        <div class="grid wide" id="buildGrid"><div class="empty">Loading build / deploy feed…</div></div>
+    </section>
+
+    <!-- 6. SECURITY / DEPENDENCY FEED -->
+    <section class="section" id="secfeed">
+        <div class="section-head">
+            <h2><span class="sec-icon">🛡️</span> Security / Dependency Feed <span class="count" id="secCount">–</span></h2>
+            <span class="desc">placeholder / not wired</span>
+        </div>
+        <div class="grid wide" id="secGrid"><div class="empty">Loading security feed…</div></div>
+    </section>
+
+    <!-- 7. WIRING MAP / UNWIRED FUTURE FEEDS -->
+    <section class="section" id="wiring">
+        <div class="section-head">
+            <h2><span class="sec-icon">🔌</span> Wiring Map <span class="count" id="wireCount">–</span></h2>
+            <span class="desc">every feed source &amp; what it needs next</span>
+        </div>
+        <div class="note-banner">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><strong>Honest by design.</strong> Nothing here is <code>live</code> in this lane — the mix is manual / partial / placeholder / not&nbsp;wired. Each row says exactly what backend, API, or webhook would upgrade it. Renders from <code>data/feeds.json</code>.</div>
+        </div>
+        <div class="wmap" id="wireMap"><div class="empty">Loading wiring map…</div></div>
+    </section>
+
+</main>
+
+<footer class="foot">
+    Kudbee Mission Control — Feed layer · <a href="./README.md">Operating Guide</a> · <a href="./PACKET_MODEL.md">Packet model</a> · renders from <a href="./data/feeds.json">data/*.json</a> + the v1 registry · <a href="../index.html">Mission Control</a>
+    <div class="honest">No app-level login lives in this repo. The only real gate on <code>/lab/*</code> is Cloudflare Access (configured in the Cloudflare dashboard, not committed). <code>noindex</code> + <code>robots.txt</code> are crawler hygiene, not access control. No secrets, no GitHub token, and nothing labelled <code>live</code> are present in this lane.</div>
+</footer>
+
+</div>
+
+<script>
+/* ===========================================================================
+ * Mission Control — Feed layer.
+ * Every feed source is normalized into a Mission Packet, then rendered into one
+ * honest, consistent stream. Renders from JSON via fetch() — preview over HTTP
+ * (python3 -m http.server), not file://. No backend, no secrets, no GitHub token.
+ *
+ * @typedef {Object} MissionPacket
+ * @property {string}  id
+ * @property {string}  title
+ * @property {string}  source           who/what produced it
+ * @property {string}  sourceType       agent-report | pr-feed | branch-feed | ci-feed |
+ *                                       deploy-feed | security-feed | release-feed |
+ *                                       repo-health | worker-feed | manual-status | placeholder
+ * @property {string}  timestamp        ISO date | 'reported' | 'unknown'
+ * @property {string}  freshness        derived: fresh | recent | aging | stale | unknown
+ * @property {string}  severity         critical | high | medium | low | info
+ * @property {string}  status           open | in-progress | blocked | resolved | watching | unknown
+ * @property {string}  summary
+ * @property {string[]} evidence
+ * @property {{branch:string,pr:string,build:string}} related
+ * @property {boolean} actionRequired
+ * @property {boolean} ownerAction
+ * @property {string}  ownerActionText
+ * @property {string}  nextAction
+ * @property {string}  confidence       high | medium | low
+ * @property {string}  link
+ * @property {string}  rawStatus        live | partial | placeholder | not wired (or manual)
+ *
+ * Feed adapter:
+ * @typedef {{id:string,label:string,sourceType:string,wiring:string,
+ *            load:() => Promise<MissionPacket[]>}} FeedAdapter
+ * ========================================================================= */
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function loadJSON(path) {
+    const r = await fetch(path, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
+    return r.json();
+}
+function fail(id, e) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML =
+        `<div class="err">Could not load this section: <code>${esc(e.message)}</code>.<br>
+         Serve over HTTP (<code>python3 -m http.server</code>) and check the JSON parses.</div>`;
+}
+
+/* ---- honest label → chip color maps -------------------------------------- */
+const SEV_RANK = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
+function sevChip(v) {
+    const s = String(v || 'info').toLowerCase();
+    const cls = s === 'critical' || s === 'high' ? 'bad' : s === 'medium' ? 'warn' : s === 'low' ? 'info' : 'muted';
+    return `<span class="chip ${cls}">${esc(s)}</span>`;
+}
+function statusChip(v) {
+    const s = String(v || 'unknown').toLowerCase();
+    const cls = /resolved|done|merged/.test(s) ? 'ok'
+        : /blocked|fail/.test(s) ? 'bad'
+        : /in-progress|open/.test(s) ? 'info'
+        : /watching|pending/.test(s) ? 'warn' : 'muted';
+    return `<span class="chip ${cls}">${esc(s)}</span>`;
+}
+/* The honesty pill — never green unless genuinely 'live'/'partial'. */
+function rawChip(v) {
+    const s = String(v || 'manual').toLowerCase();
+    const cls = s === 'live' ? 'ok'
+        : s === 'partial' ? 'info'
+        : s === 'manual' ? 'warn'
+        : s === 'not wired' ? 'bad' : 'muted';
+    return `<span class="chip ${cls} plain" title="Raw wiring status">${esc(s)}</span>`;
+}
+function freshChip(f) {
+    const s = String(f || 'unknown').toLowerCase();
+    const cls = s === 'fresh' ? 'ok' : s === 'recent' ? 'info' : s === 'aging' ? 'warn' : s === 'stale' ? 'bad' : 'muted';
+    return `<span class="chip ${cls} plain" title="Freshness from timestamp">${esc(s)}</span>`;
+}
+function typeChip(t) { return `<span class="chip muted plain">${esc(t || 'placeholder')}</span>`; }
+function confChip(c) {
+    if (!c) return '';
+    const s = String(c).toLowerCase();
+    const cls = s === 'high' ? 'ok' : s === 'medium' ? 'warn' : 'muted';
+    return `<span class="chip ${cls} plain" title="Source confidence">conf: ${esc(s)}</span>`;
+}
+function wiringChip(w) {
+    const s = String(w || 'placeholder').toLowerCase();
+    const cls = s === 'live' ? 'ok' : s === 'partial' ? 'info' : s === 'manual' ? 'warn' : s === 'not wired' ? 'bad' : 'muted';
+    return `<span class="chip ${cls}">${esc(s)}</span>`;
+}
+
+/* ---- freshness computed ONLY from real dates (no faking) ------------------ */
+function computeFreshness(ts) {
+    if (ts == null) return 'unknown';
+    const raw = String(ts).trim();
+    if (!raw || /^(reported|unknown|n\/a|—|-)$/i.test(raw)) return 'unknown';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return 'unknown';
+    const days = (Date.now() - d.getTime()) / 86400000;
+    if (days < 0) return 'fresh';        // future-dated → treat as fresh
+    if (days <= 2) return 'fresh';
+    if (days <= 7) return 'recent';
+    if (days <= 30) return 'aging';
+    return 'stale';
+}
+
+/* ---- normalize any partial packet into a full MissionPacket -------------- */
+let _auto = 0;
+function normalize(p, defaults) {
+    p = p || {};
+    defaults = defaults || {};
+    const related = Object.assign({ branch: '—', pr: '—', build: '—' }, p.related || {});
+    const timestamp = p.timestamp != null ? p.timestamp : (defaults.timestamp != null ? defaults.timestamp : 'unknown');
+    return {
+        id: p.id || `${defaults.idPrefix || 'MP'}-${++_auto}`,
+        title: p.title || '(untitled packet)',
+        source: p.source || defaults.source || '—',
+        sourceType: p.sourceType || defaults.sourceType || 'placeholder',
+        timestamp,
+        freshness: computeFreshness(timestamp),
+        severity: (p.severity || defaults.severity || 'info').toLowerCase(),
+        status: (p.status || defaults.status || 'unknown').toLowerCase(),
+        summary: p.summary || '',
+        evidence: Array.isArray(p.evidence) ? p.evidence.filter(Boolean) : [],
+        related,
+        actionRequired: !!p.actionRequired,
+        ownerAction: !!p.ownerAction,
+        ownerActionText: p.ownerActionText || '',
+        nextAction: p.nextAction || '',
+        confidence: (p.confidence || defaults.confidence || '').toLowerCase(),
+        link: p.link || '',
+        rawStatus: (p.rawStatus || defaults.rawStatus || 'manual').toLowerCase()
+    };
+}
+
+/* ===========================================================================
+ * Feed adapters — each returns normalized Mission Packets. The page renders the
+ * union; sections are sourceType views. Adapters never throw to the top: a bad
+ * feed surfaces as its own packet via Promise.allSettled below.
+ * ========================================================================= */
+
+const manualPacketsAdapter = {
+    id: 'manual-packets', label: 'Manual Mission Packets', sourceType: 'manual-status', wiring: 'manual',
+    async load() {
+        const d = await loadJSON('./data/packets.json');
+        return (d.items || []).map(p => normalize(p, { idPrefix: 'MP', source: 'Manual packet', rawStatus: 'manual', confidence: 'medium' }));
+    }
+};
+
+const ownerActionAdapter = {
+    id: 'owner-actions', label: 'Owner Action Queue', sourceType: 'manual-status', wiring: 'manual',
+    async load() {
+        const d = await loadJSON('../data/actions.json');
+        return (d.items || []).map((a, i) => normalize({
+            id: `OA-${i + 1}`,
+            title: a.title,
+            source: 'Owner Action Queue (v1)',
+            sourceType: 'manual-status',
+            timestamp: d.updated,
+            severity: a.priority === 'high' ? 'high' : a.priority === 'medium' ? 'medium' : 'low',
+            status: 'open',
+            summary: a.action,
+            evidence: [a.where ? `Where: ${a.where}` : '', a.blocks ? `Blocks: ${a.blocks}` : ''].filter(Boolean),
+            actionRequired: true,
+            ownerAction: true,
+            ownerActionText: a.action,
+            confidence: 'high',
+            rawStatus: 'manual'
+        }));
+    }
+};
+
+const STATUS_FROM_AGENT = { active: 'in-progress', parked: 'watching', subscribed: 'watching', complete: 'resolved', unknown: 'unknown' };
+const agentReportAdapter = {
+    id: 'agent-registry', label: 'Agent Reports (v1 registry)', sourceType: 'agent-report', wiring: 'manual',
+    async load() {
+        const d = await loadJSON('../data/agents.json');
+        return (d.items || []).map((a, i) => {
+            const st = String(a.status || 'unknown').toLowerCase();
+            const sev = st === 'unknown' ? 'medium' : st === 'parked' ? 'low' : 'info';
+            return normalize({
+                id: `AGENT-${i + 1}`,
+                title: a.name,
+                source: a.assigned,
+                sourceType: 'agent-report',
+                timestamp: a.lastUpdate,
+                severity: sev,
+                status: STATUS_FROM_AGENT[st] || 'unknown',
+                summary: a.purpose,
+                evidence: [
+                    a.pr ? `PR / lane: ${a.pr}` : '',
+                    a.ci ? `CI: ${a.ci}` : '',
+                    a.subscription ? `Sub: ${a.subscription}` : '',
+                    a.notes || ''
+                ].filter(Boolean),
+                related: { pr: a.pr || '—', build: a.ci || '—' },
+                nextAction: a.ownerAction && !/^no owner|^none/i.test(a.ownerAction) ? `Recommended owner action: ${a.ownerAction}` : '',
+                confidence: st === 'unknown' ? 'low' : 'medium',
+                rawStatus: 'manual'
+            });
+        });
+    }
+};
+
+const inboxAdapter = {
+    id: 'agent-feed-inbox', label: 'Agent Feed Inbox', sourceType: 'agent-report', wiring: 'partial',
+    async load() {
+        const idx = await loadJSON('./data/inbox.json');
+        const reports = idx.reports || [];
+        const settled = await Promise.allSettled(reports.map(r => loadJSON(r.file).then(rep => ({ r, rep }))));
+        return settled.filter(s => s.status === 'fulfilled').map(({ value }) => {
+            const { r, rep } = value;
+            return normalize({
+                id: rep.id || r.id,
+                title: `${rep.agent || 'Agent'} — ${rep.task || r.label || 'report'}`,
+                source: 'Agent Feed Inbox',
+                sourceType: 'agent-report',
+                timestamp: rep.lastUpdate || r.added,
+                severity: rep.severity || 'info',
+                status: rep.status || 'unknown',
+                summary: rep.summary,
+                evidence: rep.evidence,
+                related: rep.related,
+                actionRequired: !!rep.ownerAction,
+                ownerAction: !!rep.ownerAction,
+                ownerActionText: rep.ownerActionText,
+                nextAction: rep.nextAction ? `Next: ${rep.nextAction}` : '',
+                confidence: rep.confidence || 'medium',
+                rawStatus: rep.rawStatus || 'partial',
+                link: r.file
+            });
+        });
+    }
+};
+
+const STATUS_FROM_PR = { draft: 'in-progress', open: 'open', merged: 'resolved', blocked: 'blocked', queued: 'watching', closed: 'resolved' };
+const prFeedAdapter = {
+    id: 'pr-feed', label: 'PR / Branch Feed', sourceType: 'pr-feed', wiring: 'not wired',
+    async load() {
+        const d = await loadJSON('../data/prs.json');
+        return (d.items || []).map((p, i) => normalize({
+            id: `PR-${String(p.number || i).replace(/[^\w-]/g, '') || i}`,
+            title: p.title,
+            source: p.repo,
+            sourceType: 'pr-feed',
+            timestamp: p.lastUpdate,
+            severity: p.state === 'blocked' ? 'high' : 'medium',
+            status: STATUS_FROM_PR[String(p.state || '').toLowerCase()] || 'unknown',
+            summary: p.mergeReadiness,
+            evidence: [
+                `PR: ${p.number}`,
+                p.ci ? `CI (reported): ${p.ci}` : '',
+                p.preview ? `Preview: ${p.preview}` : '',
+                p.ownerAction ? `Owner: ${p.ownerAction}` : ''
+            ].filter(Boolean),
+            related: { branch: '—', pr: String(p.number || '—'), build: `${p.ci || 'unknown'} (reported)` },
+            nextAction: p.ownerAction ? `Reported owner step: ${p.ownerAction}` : '',
+            confidence: 'low',
+            rawStatus: 'not wired',
+            link: p.url || ''
+        }));
+    }
+};
+
+const ADAPTERS = [manualPacketsAdapter, ownerActionAdapter, agentReportAdapter, inboxAdapter, prFeedAdapter];
+
+/* ===========================================================================
+ * Render helpers
+ * ========================================================================= */
+function ownerSvg() {
+    return `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+}
+function relatedRow(p) {
+    const parts = [];
+    if (p.related.branch && p.related.branch !== '—') parts.push(`<dt>Branch</dt><dd>${esc(p.related.branch)}</dd>`);
+    if (p.related.pr && p.related.pr !== '—') parts.push(`<dt>PR</dt><dd>${esc(p.related.pr)}</dd>`);
+    if (p.related.build && p.related.build !== '—') parts.push(`<dt>Build</dt><dd>${esc(p.related.build)}</dd>`);
+    return parts.length ? `<dl class="kv">${parts.join('')}</dl>` : '';
+}
+function packetCard(p) {
+    const owner = p.ownerAction && p.ownerActionText ? `
+        <div class="packet-owner">${ownerSvg()}<div><strong>Owner action now</strong>${esc(p.ownerActionText)}</div></div>` : '';
+    const next = p.nextAction ? `<div class="packet-next"><b>→</b> ${esc(p.nextAction)}</div>` : '';
+    const evid = p.evidence.length ? `
+        <details class="evidence"><summary>Evidence (${p.evidence.length})</summary>
+            <ul>${p.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+        </details>` : '';
+    const link = p.link ? `<div class="packet-link"><a href="${esc(p.link)}"${/^https?:/.test(p.link) ? ' target="_blank" rel="noopener"' : ''}>Open ↗</a></div>` : '';
+    const tsLabel = p.freshness === 'unknown' ? esc(p.timestamp || 'unknown') : esc(p.timestamp);
+    return `
+    <div class="item packet sev-${esc(p.severity)}" data-source="${esc(p.sourceType)}" data-sev="${esc(p.severity)}" data-owner="${p.ownerAction ? '1' : '0'}">
+        <div class="item-top">
+            <div style="min-width:0">
+                <div class="item-title">${esc(p.title)}</div>
+                <div class="item-sub">${esc(p.id)} · ${esc(p.source)} · ${tsLabel}</div>
+            </div>
+            ${statusChip(p.status)}
+        </div>
+        <div class="packet-chips">
+            ${typeChip(p.sourceType)}${sevChip(p.severity)}${freshChip(p.freshness)}${rawChip(p.rawStatus)}${confChip(p.confidence)}
+        </div>
+        ${p.summary ? `<div class="packet-summary">${esc(p.summary)}</div>` : ''}
+        ${relatedRow(p)}
+        ${owner}
+        ${next}
+        ${evid}
+        ${link}
+    </div>`;
+}
+function renderGrid(id, packets, emptyMsg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = packets.length ? packets.map(packetCard).join('')
+        : `<div class="empty">${esc(emptyMsg || 'No packets in this feed yet.')}</div>`;
+}
+
+/* ===========================================================================
+ * System Pulse
+ * ========================================================================= */
+function renderPulse(packets, sources) {
+    const owner = packets.filter(p => p.ownerAction).length;
+    const crit = packets.filter(p => p.severity === 'critical' || p.severity === 'high').length;
+    const stale = packets.filter(p => p.freshness === 'stale' || p.freshness === 'unknown').length;
+    const liveSources = sources.filter(s => String(s.wiring).toLowerCase() === 'live').length;
+    const unwired = sources.filter(s => /not wired|placeholder/.test(String(s.wiring).toLowerCase())).length;
+    // newest real-dated packet
+    const dated = packets.map(p => new Date(p.timestamp)).filter(d => !isNaN(d.getTime()));
+    const newest = dated.length ? new Date(Math.max.apply(null, dated)).toISOString().slice(0, 10) : '—';
+
+    const tiles = [
+        { n: packets.length, label: 'Mission packets', cls: '', foot: `${sources.length} feed sources` },
+        { n: owner, label: 'Owner actions', cls: owner ? 'amber' : 'muted', foot: owner ? 'need you now' : 'none right now' },
+        { n: crit, label: 'High / critical', cls: crit ? 'red' : 'muted', foot: 'by severity' },
+        { n: liveSources, label: 'Live feeds', cls: 'muted', foot: liveSources ? 'verified live' : 'none wired yet' },
+        { n: unwired, label: 'Unwired / placeholder', cls: unwired ? 'amber' : 'muted', foot: 'see Wiring Map' },
+        { n: stale, label: 'Stale / undated', cls: stale ? 'amber' : 'muted', foot: `newest: ${newest}` }
+    ];
+    document.getElementById('pulseGrid').innerHTML = tiles.map(t => `
+        <div class="pulse-tile">
+            <div class="pulse-num ${t.cls}">${t.n}</div>
+            <div class="pulse-label">${esc(t.label)}</div>
+            <div class="pulse-foot">${esc(t.foot)}</div>
+        </div>`).join('');
+}
+
+/* ===========================================================================
+ * Owner Action Now
+ * ========================================================================= */
+function renderOwner(packets) {
+    const items = packets.filter(p => p.ownerAction)
+        .sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0));
+    document.getElementById('oaqList').innerHTML = items.length ? items.map((p, i) => `
+        <div class="oaq-item">
+            <div class="oaq-num">${i + 1}</div>
+            <div class="oaq-body">
+                <div class="oaq-row1">${sevChip(p.severity)}<span class="oaq-title">${esc(p.title)}</span>${typeChip(p.sourceType)}</div>
+                <div class="oaq-action">${esc(p.ownerActionText || p.summary)}</div>
+                <div class="oaq-where">${esc(p.id)} · ${esc(p.source)}</div>
+            </div>
+        </div>`).join('')
+        : `<div class="oaq-item"><div class="oaq-body"><div class="oaq-title">No owner action right now.</div></div></div>`;
+}
+
+/* ===========================================================================
+ * Filters (operate on the Active Mission Packets master board)
+ * ========================================================================= */
+const filterState = { source: new Set(), severity: new Set(), ownerOnly: false };
+let ALL_PACKETS = [];
+
+function applyFilters() {
+    const cards = document.querySelectorAll('#packetGrid .packet');
+    let shown = 0;
+    cards.forEach(c => {
+        const okSource = !filterState.source.size || filterState.source.has(c.dataset.source);
+        const okSev = !filterState.severity.size || filterState.severity.has(c.dataset.sev);
+        const okOwner = !filterState.ownerOnly || c.dataset.owner === '1';
+        const show = okSource && okSev && okOwner;
+        c.style.display = show ? '' : 'none';
+        if (show) shown++;
+    });
+    document.getElementById('packetCount').textContent = shown === ALL_PACKETS.length ? ALL_PACKETS.length : `${shown}/${ALL_PACKETS.length}`;
+}
+function buildFilterButtons(packets) {
+    const filters = document.getElementById('filters');
+    filters.hidden = false;
+    const sources = [...new Set(packets.map(p => p.sourceType))].sort();
+    const sevs = ['critical', 'high', 'medium', 'low', 'info'].filter(s => packets.some(p => p.severity === s));
+    document.getElementById('fSource').innerHTML = sources.map(s => `<button class="filter-btn" data-f="source" data-v="${esc(s)}" type="button">${esc(s)}</button>`).join('');
+    document.getElementById('fSeverity').innerHTML = sevs.map(s => `<button class="filter-btn" data-f="severity" data-v="${esc(s)}" type="button">${esc(s)}</button>`).join('');
+
+    filters.querySelectorAll('.filter-btn[data-f]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const set = filterState[btn.dataset.f];
+            if (set.has(btn.dataset.v)) { set.delete(btn.dataset.v); btn.classList.remove('active'); }
+            else { set.add(btn.dataset.v); btn.classList.add('active'); }
+            applyFilters();
+        });
+    });
+    const ownerBtn = filters.querySelector('.filter-btn.owner');
+    ownerBtn.addEventListener('click', () => {
+        filterState.ownerOnly = !filterState.ownerOnly;
+        ownerBtn.classList.toggle('active', filterState.ownerOnly);
+        applyFilters();
+    });
+    document.getElementById('fReset').addEventListener('click', () => {
+        filterState.source.clear(); filterState.severity.clear(); filterState.ownerOnly = false;
+        filters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        applyFilters();
+    });
+}
+
+/* ===========================================================================
+ * Wiring Map
+ * ========================================================================= */
+async function renderWiring() {
+    try {
+        const d = await loadJSON('./data/feeds.json');
+        const sources = d.sources || [];
+        document.getElementById('wireCount').textContent = sources.length;
+        document.getElementById('wireMap').innerHTML = sources.map(s => `
+            <div class="wrow">
+                <div class="wrow-main">
+                    <div class="wrow-label">${esc(s.label)}</div>
+                    <div class="wrow-type">${esc(s.sourceType)}${s.reads ? ' · reads ' + esc(s.reads) : ''}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                    ${wiringChip(s.wiring)}
+                    <span class="wrow-verified">verified: ${esc(s.lastVerified || 'never')}</span>
+                </div>
+                ${s.summary ? `<div class="wrow-sum">${esc(s.summary)}</div>` : ''}
+                ${s.needsNext ? `<div class="wrow-next"><b>Needs next:</b> ${esc(s.needsNext)}</div>` : ''}
+            </div>`).join('');
+        return sources;
+    } catch (e) { fail('wireMap', e); return []; }
+}
+
+/* ===========================================================================
+ * Boot
+ * ========================================================================= */
+async function boot() {
+    // Wiring map first (also returns sources for the pulse).
+    const sources = await renderWiring();
+
+    // Run all packet adapters; a failing one becomes its own honest packet.
+    const results = await Promise.allSettled(ADAPTERS.map(a => a.load()));
+    let packets = [];
+    results.forEach((res, i) => {
+        const a = ADAPTERS[i];
+        if (res.status === 'fulfilled') {
+            packets = packets.concat(res.value);
+        } else {
+            packets.push(normalize({
+                id: `FEED-ERR-${a.id}`,
+                title: `Feed adapter failed: ${a.label}`,
+                source: a.id,
+                sourceType: a.sourceType,
+                timestamp: 'unknown',
+                severity: 'medium',
+                status: 'unknown',
+                summary: `This feed could not load: ${res.reason && res.reason.message ? res.reason.message : res.reason}. Serve over HTTP and check the JSON parses. Showing the error honestly instead of hiding the feed.`,
+                rawStatus: 'not wired',
+                confidence: 'high'
+            }));
+        }
+    });
+
+    ALL_PACKETS = packets;
+
+    // System Pulse
+    renderPulse(packets, sources);
+
+    // Owner Action Now
+    renderOwner(packets);
+
+    // Active Mission Packets (master board) — newest/most-severe first
+    const sorted = packets.slice().sort((a, b) =>
+        (b.ownerAction - a.ownerAction) ||
+        ((SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0)));
+    document.getElementById('packetCount').textContent = sorted.length;
+    document.getElementById('packetGrid').innerHTML = sorted.map(packetCard).join('') || '<div class="empty">No mission packets yet.</div>';
+    buildFilterButtons(sorted);
+
+    // Themed sections (sourceType views)
+    const byType = t => sorted.filter(p => (Array.isArray(t) ? t : [t]).includes(p.sourceType));
+    const agents = byType('agent-report');
+    const pr = byType(['pr-feed', 'branch-feed']);
+    const build = byType(['ci-feed', 'deploy-feed', 'release-feed', 'worker-feed', 'repo-health']);
+    const sec = byType('security-feed');
+
+    document.getElementById('agentCount').textContent = agents.length;
+    renderGrid('agentGrid', agents, 'No agent reports yet — drop one in docs/agent-feed/inbox/ and add it to data/inbox.json.');
+    document.getElementById('prCount').textContent = pr.length;
+    renderGrid('prGrid', pr, 'No PR packets in the reported board.');
+    document.getElementById('buildCount').textContent = build.length;
+    renderGrid('buildGrid', build, 'No build/deploy packets — these feeds are placeholders. See the Wiring Map.');
+    document.getElementById('secCount').textContent = sec.length;
+    renderGrid('secGrid', sec, 'No security/dependency packets — this feed is a placeholder. See the Wiring Map.');
+}
+
+/* Theme toggle (shared convention: localStorage 'kudbee-theme') */
+const themeBtn = document.getElementById('themeBtn');
+if (localStorage.getItem('kudbee-theme') === 'light') document.body.classList.add('light');
+themeBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    localStorage.setItem('kudbee-theme', document.body.classList.contains('light') ? 'light' : 'dark');
+});
+
+boot();
+</script>
+</body>
+</html>
