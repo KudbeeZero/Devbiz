@@ -5,6 +5,14 @@
     {
       "priority": "high",
       "kind": "test",
+      "title": "Phone browser-check AI Command Center v1 on the preview, then approve/merge",
+      "where": "Branch preview: /lab/ai-command-center/ (and /lab/ for the card, /lab/mission-control/ for the registered lane)",
+      "action": "Open the preview from your phone: confirm the console renders, the Prompt Launcher builds + copies a prompt, the agent/session roster + model reference render from JSON, mobile layout is usable, no obvious broken styling. Then approve/merge (owner-only, no auto-merge).",
+      "blocks": "Merging AI Command Center v1"
+    },
+    {
+      "priority": "high",
+      "kind": "test",
       "title": "Browser-check /lab/mission-control on the PR #25 preview",
       "where": "Branch preview: /lab/mission-control/ (and /lab/ for the Mission Control card)",
       "action": "When you're home: open the dashboard, confirm it renders, Owner Action Queue is on top, all 7 sections populate, theme toggle + copy buttons work, mobile is usable, console is clean. This is the only remaining gate I cannot do (no browser in my environment).",

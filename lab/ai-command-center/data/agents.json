@@ -1,0 +1,34 @@
+{
+  "_comment": "Reported agent/session roster for the AI Command Center. HONESTY NOTE: this is a manual logbook — the console cannot see or control external Claude/Codex/Fly sessions. status: active | parked | subscribed | complete | unknown. Mirror or summarize Mission Control's agent census here; do not invent sessions.",
+  "reportedOnly": true,
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "name": "AI Command Center Agent",
+      "session": "this build session",
+      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
+      "status": "active",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Phone browser-check the preview, then approve/merge",
+      "notes": "Building ACC v1. Registered in Mission Control before build. Manual-first, no live control."
+    },
+    {
+      "name": "Mission Control Agent",
+      "session": "reported",
+      "assigned": "KudbeeZero/devbiz · /lab/mission-control",
+      "status": "complete",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "None — foundation + docs merged (#25/#26/#27)",
+      "notes": "Mission Control v1 + Access-verification item + v2 roadmap all merged."
+    },
+    {
+      "name": "External sessions (Claude / Codex / Fly)",
+      "session": "unknown",
+      "assigned": "various",
+      "status": "unknown",
+      "lastUpdate": "reported",
+      "ownerAction": "Confirm what is actually running, if anything",
+      "notes": "Placeholder — the console has NO live view of external sessions. Update only with reported, verified info."
+    }
+  ]
+}
