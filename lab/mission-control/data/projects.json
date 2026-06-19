@@ -3,6 +3,17 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "name": "AI Command Center",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "v1 build — static/manual-first prompt + agent console",
+      "activePR": "this PR (draft)",
+      "state": "active",
+      "statusLabel": "building",
+      "lastOwnerAction": "Greenlit AI Command Center v1 from fresh main (static/manual-first, no backend)",
+      "nextAction": "Phone browser-check /lab/ai-command-center/ on the preview, then approve/merge",
+      "notes": "Gated /lab/ai-command-center — manual-first Prompt Launcher + reported agent/session roster + model reference + reporting protocol. No backend, no D1/R2, no secrets, no live control. Registered in Mission Control before build per the lane-kickoff rule."
+    },
+    {
       "name": "Devbiz /lab hub foundation",
       "repo": "KudbeeZero/devbiz",
       "phase": "Foundation merged · Access config pending",

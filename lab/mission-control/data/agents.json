@@ -4,6 +4,18 @@
   "updated": "2026-06-19",
   "items": [
     {
+      "name": "AI Command Center Agent",
+      "assigned": "KudbeeZero/devbiz · /lab/ai-command-center",
+      "pr": "this PR (ai-command-center-v1)",
+      "purpose": "Build AI Command Center v1 — static/manual-first prompt launcher + reported agent/session roster + reporting protocol.",
+      "status": "active",
+      "subscription": "subscribed to this PR's activity (CI failure / review comment / conflict)",
+      "ci": "pending",
+      "lastUpdate": "2026-06-19",
+      "ownerAction": "Phone browser-check /lab/ai-command-center/ on the preview, then approve/merge",
+      "notes": "This session. Lane registered in Mission Control before build. No backend, no secrets, no live control — manual-first by design."
+    },
+    {
       "name": "Devbiz Mission Control Agent",
       "assigned": "KudbeeZero/devbiz · /lab/mission-control",
       "pr": "#25",
