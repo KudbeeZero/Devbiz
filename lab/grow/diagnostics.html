@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Kudbee Grow — owner diagnostics. Tester activity: audio health, seeds planted, stages reached. Private.">
+    <title>Grow Diagnostics · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #06060c; --bg-elevated: #0b0b16; --bg-card: rgba(255,255,255,0.035); --bg-secondary: rgba(255,255,255,0.025);
+        --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff; --text-secondary: #e6e8f0; --text-muted: #9aa3b8; --text-dim: #646c82;
+        --cyan: #39e6ff; --violet: #c46bff; --green: #7CFFb2; --amber: #ffd34d; --red: #ff6b8b; --accent: #6f5bff;
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%); --radius: 16px; --maxw: 1080px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-secondary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3 { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .nav-bar { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 28px;
+        background: rgba(6,6,12,0.82); backdrop-filter: blur(22px); border-bottom: 1px solid var(--border); z-index: 100; }
+    .nav-left { display: flex; align-items: center; gap: 14px; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+    .logo-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--grad); }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(255,211,77,0.4); padding: 2px 7px; border-radius: 5px; }
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 36px 24px 80px; }
+    h1 { font-size: clamp(26px, 4vw, 36px); color: var(--text-primary); letter-spacing: -0.02em; }
+    .sub { color: var(--text-muted); margin-top: 8px; font-size: 15px; }
+
+    .source { display: flex; align-items: center; gap: 10px; margin: 22px 0; flex-wrap: wrap; }
+    .seg { display: inline-flex; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .seg button { background: none; border: none; color: var(--text-muted); padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .seg button.on { background: var(--bg-secondary); color: #fff; }
+    .btn { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; border-radius: 10px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); }
+    .btn:hover { border-color: var(--border-hover); color: #fff; }
+
+    .banner { padding: 12px 16px; border-radius: 12px; font-size: 13.5px; margin-bottom: 22px; display: flex; gap: 10px; align-items: flex-start; }
+    .banner.local { background: linear-gradient(135deg, rgba(255,211,77,0.07), rgba(57,230,255,0.04)); border: 1px solid rgba(255,211,77,0.25); color: var(--text-secondary); }
+    .banner.live { background: linear-gradient(135deg, rgba(124,255,178,0.07), rgba(57,230,255,0.05)); border: 1px solid rgba(124,255,178,0.25); }
+    .banner code { font-family: ui-monospace, Menlo, monospace; color: var(--cyan); font-size: 12.5px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+    .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .kpi .v { font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .kpi .l { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
+    .kpi.good .v { color: var(--green); } .kpi.warn .v { color: var(--amber); } .kpi.bad .v { color: var(--red); }
+
+    .section-label { display: flex; align-items: center; gap: 12px; margin: 36px 2px 16px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .health { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 720px) { .health { grid-template-columns: 1fr; } }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .card h3 { font-size: 15px; color: var(--text-primary); margin-bottom: 14px; }
+    .bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; display: flex; }
+    .bar > span { height: 100%; }
+    .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+    .funnel-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .funnel-row:last-child { border-bottom: none; }
+    .funnel-row .n { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--text-primary); }
+    .funnel-row .pct { color: var(--text-dim); font-size: 12px; margin-left: 8px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    td { color: var(--text-secondary); }
+    td.ev { font-family: ui-monospace, Menlo, monospace; color: var(--cyan); font-size: 12px; }
+    .muted { color: var(--text-dim); }
+    .empty { padding: 30px; text-align: center; color: var(--text-dim); }
+    .foot { max-width: var(--maxw); margin: 0 auto; padding: 24px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="./index.html" class="back-link"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> Grow</a>
+        <a href="../../index.html" class="logo-link"><span class="logo-mark"></span> kudbee.</a>
+        <span class="nav-title">Diagnostics</span><span class="nav-badge">Private</span>
+    </div>
+    <button class="btn" id="refresh">↻ Refresh</button>
+</nav>
+
+<main class="main">
+    <h1>Grow &amp; audio diagnostics</h1>
+    <p class="sub">What testers are actually doing — is audio playing, did they plant a seed, how far did the grow get.</p>
+
+    <div class="source">
+        <div class="seg" id="seg">
+            <button data-src="local" class="on">This device (local)</button>
+            <button data-src="collector">All testers (collector)</button>
+        </div>
+        <button class="btn" id="clearLocal">Clear local log</button>
+    </div>
+
+    <div id="banner"></div>
+    <div class="grid" id="kpis"></div>
+
+    <div class="section-label">Audio health · &ldquo;is it working?&rdquo;</div>
+    <div class="health">
+        <div class="card">
+            <h3>Music-video audio</h3>
+            <div class="bar" id="audioBar"></div>
+            <div class="legend">
+                <span><i style="background:var(--green)"></i>Played <b id="aOk">0</b></span>
+                <span><i style="background:var(--amber)"></i>Blocked <b id="aBlock">0</b></span>
+                <span><i style="background:var(--red)"></i>Error <b id="aErr">0</b></span>
+            </div>
+            <p class="muted" id="audioVerdict" style="margin-top:12px;font-size:13px"></p>
+        </div>
+        <div class="card">
+            <h3>Grow funnel</h3>
+            <div id="funnel"></div>
+        </div>
+    </div>
+
+    <div class="section-label">Event counts</div>
+    <div class="card"><div id="counts"></div></div>
+
+    <div class="section-label">Recent events</div>
+    <div class="card" style="padding:8px"><div id="recent"></div></div>
+</main>
+
+<footer class="foot">
+    Owner diagnostics · <a href="./index.html" style="color:var(--text-muted)">Grow Companion</a>.
+    Local mode shows only this browser. Deploy the collector Worker to aggregate across testers.
+</footer>
+
+<script>
+/* ===========================================================================
+ * Grow Companion — owner diagnostics.
+ *
+ * Two data sources:
+ *   1. "local"     — reads this browser's localStorage ring-buffer
+ *                    ('kudbee-events') written by track() on the video + grow.
+ *   2. "collector" — fetches aggregates from the telemetry Worker IF its URL +
+ *                    read token are configured below. Until then it's disabled
+ *                    (cross-tester data needs the owner-deployed Worker + KV).
+ * ========================================================================= */
+const COLLECTOR_URL = '';        // e.g. 'https://grow-telemetry.<acct>.workers.dev'  (owner-only)
+const COLLECTOR_TOKEN = '';      // read token (owner-only; do not commit a real one)
+
+const EVENTS_KEY = 'kudbee-events';
+let source = 'local';
+
+function localEvents() {
+    try { return JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]'); } catch (e) { return []; }
+}
+async function collectorStats() {
+    const r = await fetch(COLLECTOR_URL.replace(/\/$/, '') + '/stats?token=' + encodeURIComponent(COLLECTOR_TOKEN), { headers: { 'accept': 'application/json' } });
+    if (!r.ok) throw new Error('collector ' + r.status);
+    return r.json();   // { counts: {event: n}, recent: [...] }
+}
+
+function tally(events) {
+    const counts = {};
+    for (const e of events) counts[e.event] = (counts[e.event] || 0) + 1;
+    return counts;
+}
+
+function el(id) { return document.getElementById(id); }
+function setBanner(mode) {
+    const b = el('banner');
+    if (mode === 'local') {
+        b.className = 'banner local';
+        b.innerHTML = '<span>📍</span><div><b>Local mode.</b> Showing events from <b>this browser only</b>. To see every tester (seeds planted, audio played across devices), deploy the collector Worker in <code>tools/grow-telemetry/</code> and set <code>COLLECTOR_URL</code> — that step is owner-only.</div>';
+    } else if (mode === 'live') {
+        b.className = 'banner live'; b.innerHTML = '<span>🟢</span><div><b>Collector connected.</b> Aggregated across all testers.</div>';
+    } else {
+        b.className = 'banner local'; b.innerHTML = '<span>⚠️</span><div><b>Collector not configured / unreachable.</b> Set <code>COLLECTOR_URL</code> + token after deploying the Worker. Falling back to local.</div>';
+    }
+}
+
+function kpi(v, label, cls) { return '<div class="kpi ' + (cls || '') + '"><div class="v">' + v + '</div><div class="l">' + label + '</div></div>'; }
+
+function render(counts, events) {
+    const g = n => counts[n] || 0;
+    // KPIs
+    el('kpis').innerHTML =
+        kpi(g('video_opened'), 'Video opens') +
+        kpi(g('audio_play_ok'), 'Audio played', g('audio_play_ok') ? 'good' : 'warn') +
+        kpi(g('seed_planted'), 'Seeds planted', g('seed_planted') ? 'good' : '') +
+        kpi(g('reminders_enabled'), 'Reminders enabled') +
+        kpi(g('completed'), 'Songs finished') +
+        kpi((g('audio_blocked') + g('audio_error')), 'Audio problems', (g('audio_blocked') + g('audio_error')) ? 'bad' : 'good');
+
+    // Audio health bar
+    const ok = g('audio_play_ok'), blk = g('audio_blocked'), err = g('audio_error');
+    const tot = ok + blk + err || 1;
+    el('audioBar').innerHTML =
+        '<span style="width:' + (ok / tot * 100) + '%;background:var(--green)"></span>' +
+        '<span style="width:' + (blk / tot * 100) + '%;background:var(--amber)"></span>' +
+        '<span style="width:' + (err / tot * 100) + '%;background:var(--red)"></span>';
+    el('aOk').textContent = ok; el('aBlock').textContent = blk; el('aErr').textContent = err;
+    el('audioVerdict').textContent = (ok + blk + err) === 0
+        ? 'No audio attempts recorded yet.'
+        : (ok / tot > 0.8 ? '✅ Audio is working for the vast majority of plays.'
+            : blk > ok ? '⚠️ Many plays are being blocked (often autoplay before a tap).'
+            : 'Mixed — some plays are failing; check error codes.');
+
+    // Grow funnel
+    const steps = [
+        ['Visited grow', g('grow_visited')],
+        ['Planted a seed', g('seed_planted')],
+        ['Enabled reminders', g('reminders_enabled')],
+        ['Reached a new stage', g('stage_reached')]
+    ];
+    const base = steps[0][1] || 1;
+    el('funnel').innerHTML = steps.map(s =>
+        '<div class="funnel-row"><span>' + s[0] + '</span><span><span class="n">' + s[1] + '</span><span class="pct">' + Math.round(s[1] / base * 100) + '%</span></span></div>'
+    ).join('');
+
+    // All counts
+    const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    el('counts').innerHTML = keys.length
+        ? '<table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>' +
+          keys.map(k => '<tr><td class="ev">' + k + '</td><td>' + counts[k] + '</td></tr>').join('') + '</tbody></table>'
+        : '<div class="empty">No events yet.</div>';
+
+    // Recent
+    if (events && events.length) {
+        const rows = events.slice(-40).reverse().map(e =>
+            '<tr><td class="muted">' + new Date(e.t).toLocaleString() + '</td><td class="ev">' + e.event + '</td><td class="muted">' + (e.page || '') + '</td><td class="muted">' + (e.props ? escapeHtml(JSON.stringify(e.props)) : '') + '</td></tr>').join('');
+        el('recent').innerHTML = '<table><thead><tr><th>When</th><th>Event</th><th>Page</th><th>Props</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    } else {
+        el('recent').innerHTML = '<div class="empty">No recent events' + (source === 'collector' ? ' (collector returns aggregates only).' : '.') + '</div>';
+    }
+}
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+async function load() {
+    if (source === 'collector' && COLLECTOR_URL) {
+        try { const data = await collectorStats(); setBanner('live'); render(data.counts || {}, data.recent || []); return; }
+        catch (e) { setBanner('error'); }
+    } else if (source === 'collector') {
+        setBanner('error');
+    } else {
+        setBanner('local');
+    }
+    const ev = localEvents();
+    render(tally(ev), ev);
+}
+
+document.querySelectorAll('#seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#seg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); source = b.dataset.src; load();
+}));
+el('refresh').addEventListener('click', load);
+el('clearLocal').addEventListener('click', () => { if (confirm('Clear this browser’s local event log?')) { localStorage.removeItem(EVENTS_KEY); load(); } });
+load();
+</script>
+</body>
+</html>

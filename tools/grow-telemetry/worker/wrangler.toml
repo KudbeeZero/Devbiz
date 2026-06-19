@@ -1,0 +1,19 @@
+name = "grow-telemetry"
+main = "worker.js"
+compatibility_date = "2026-05-21"
+
+# Tighten this to the production site origin before launch, e.g.
+#   ALLOWED_ORIGINS = "https://kudbee.com"
+[vars]
+ALLOWED_ORIGINS = "*"
+
+# KV namespace for aggregate counters + recent ring.
+# Create it, then paste the id here (owner-only):
+#   npx wrangler kv:namespace create GROW_KV
+[[kv_namespaces]]
+binding = "GROW_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# STATS_TOKEN is a SECRET — never commit it. Set it with:
+#   npx wrangler secret put STATS_TOKEN
+# Then use the same value as COLLECTOR_TOKEN in lab/grow/diagnostics.html.
