@@ -1,0 +1,104 @@
+{
+  "_comment": "Focus Board — the three active projects and one launch sequence. UI/data/docs only; Mission Control tracks state, it does NOT execute any of these actions. Honest labels: active | live | parked | blocked | manual | reported | not wired. Link objects may carry a 'pending' field naming the PR that must merge before the target exists on main.",
+  "title": "Focus Board",
+  "subtitle": "Three active projects. One launch sequence.",
+  "updated": "2026-06-19",
+  "note": "Tracked, not automated. Mission Control cannot deploy, set env vars, hit a database, or run Fly/Vercel from here — every \"next safe action\" and \"owner action\" below is a human/terminal step. Status words are colour-coded: green = active/live, amber = manual/parked, red = blocked.",
+  "projects": [
+    {
+      "order": 1,
+      "name": "GrowVerse",
+      "repo": "KudbeeZero/mainnet-growverse-v2.0",
+      "priorityLabel": "Launch #1",
+      "state": "active",
+      "stateLabel": "active · first launch priority",
+      "labels": ["active", "blocked: backend/login", "manual: owner terminal"],
+      "blocker": "Backend/login path being resolved. The correct backend is the growpod Python API — frontiernext is NOT the login backend. A growverse-api Fly app shell exists; the database decision/path is in progress. Vercel BACKEND_URL must point at a healthy backend ONLY after a /health check passes.",
+      "ownerAction": "Bring growverse-api up from your authenticated machine (Fly diagnostic), confirm /health = 200, then wire Vercel BACKEND_URL.",
+      "nextSafeActions": [
+        "Set correct DATABASE_URL",
+        "Deploy growverse-api",
+        "Verify /health",
+        "Verify POST /api/game/players",
+        "Set Vercel BACKEND_URL (only to the healthy backend)",
+        "Redeploy Vercel",
+        "Test login on growverse.dev",
+        "Then build Plant Intelligence / Grow Journal"
+      ],
+      "backlog": [
+        { "id": "GV-001", "title": "Backend / Login Recovery", "status": "in progress" },
+        { "id": "GV-002", "title": "Playable Core v1", "status": "planned" },
+        { "id": "GV-003", "title": "Plant Intelligence / Plant Analyst Pro", "status": "planned" },
+        { "id": "GV-004", "title": "Grow Journal / World Memory", "status": "planned" },
+        { "id": "GV-005", "title": "Protected Plant Review Route", "status": "planned" },
+        { "id": "GV-006", "title": "Durable Workflow / Inngest POC", "status": "backlog" }
+      ],
+      "links": [
+        { "label": "Living-plant audit + backend runbook", "href": "../ai-command-center/lanes/growverse-living-plant-audit.md", "pending": "PR #31" },
+        { "label": "Vercel readiness + domain", "href": "../ai-command-center/lanes/growverse-vercel-readiness.md", "pending": "PR #29" },
+        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md", "pending": "PR #32" }
+      ]
+    },
+    {
+      "order": 2,
+      "name": "FRONTIER / Aether Wing",
+      "repo": "frontier-al (repo/folder not confirmed)",
+      "priorityLabel": "Launch #2",
+      "state": "parked",
+      "stateLabel": "parked · second launch priority",
+      "labels": ["parked", "blocked: scaffold unconfirmed"],
+      "blocker": "Canonical scaffold/folder is not confirmed. No gameplay build starts until the real repo/folder is verified.",
+      "ownerAction": "Confirm the actual frontier-al repo/folder so the scaffold can be verified.",
+      "nextSafeActions": [
+        "Confirm the actual repo/folder",
+        "Verify the Vite / React / TS / Three.js scaffold",
+        "Only then build the playable dogfight slice"
+      ],
+      "backlog": [
+        { "id": "FR-001", "title": "Canonical Scaffold Confirmation", "status": "blocked" },
+        { "id": "FR-002", "title": "Playable Space Slice v0", "status": "planned" },
+        { "id": "FR-003", "title": "Season One / Aether Wing campaign design", "status": "backlog" }
+      ],
+      "links": []
+    },
+    {
+      "order": 3,
+      "name": "Devbiz / Control Plane",
+      "repo": "KudbeeZero/devbiz",
+      "priorityLabel": "Live · ongoing",
+      "state": "live",
+      "stateLabel": "live · ongoing control plane",
+      "labels": ["live", "active"],
+      "blocker": "/lab must stay protected on every public surface; the Agent Feed Inbox should be normalized; devbiz-memory should become the canonical brain only if confirmed.",
+      "ownerAction": "Merge PR #30 (404 /lab on Vercel) and configure Cloudflare Access for /lab/*.",
+      "nextSafeActions": [
+        "Ensure the Vercel public mirror blocks /lab (PR #30)",
+        "Verify the Cloudflare Access plan for /lab/*",
+        "Link the Agent Feed Inbox (PR #32)",
+        "Document devbiz-memory as the brain repo (needs confirmation)",
+        "Later: build the Stage 1 GitHub Agent Feed check"
+      ],
+      "backlog": [
+        { "id": "DBZ-001", "title": "Block /lab from public Vercel", "status": "in review" },
+        { "id": "DBZ-002", "title": "Agent Feed Inbox", "status": "in review" },
+        { "id": "DBZ-003", "title": "GitHub Agent Feed Check", "status": "planned" },
+        { "id": "DBZ-004", "title": "Cloudflare Access for /lab/*", "status": "manual" },
+        { "id": "DBZ-005", "title": "Mission Control Data Vault v2", "status": "backlog" }
+      ],
+      "note": "These are Focus-Board working IDs for the control-plane sequence; they are distinct from the historical BUILD_LEDGER DBZ-### entries (DBZ-001 there = Games Studio launch). Reconcile numbering on a separate docs lane.",
+      "links": [
+        { "label": "Mission Control guide", "href": "./README.md" },
+        { "label": "/lab 404 hardening", "href": "https://github.com/KudbeeZero/Devbiz/pull/30" },
+        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md", "pending": "PR #32" }
+      ]
+    }
+  ],
+  "brain": {
+    "repo": "devbiz-memory",
+    "role": "institutional memory / agent brain",
+    "status": "needs confirmation",
+    "label": "external / candidate canonical agent brain",
+    "nextAction": "locate / verify repo",
+    "note": "Not directly available in this repo. Do not sync automatically yet — this is a candidate, recorded for visibility only."
+  }
+}
