@@ -456,6 +456,7 @@ function renderTL() {
     const si = Math.min(STAGES.length - 1, Math.floor(tlProgress * STAGES.length));
     tlStage.textContent = STAGES[si].name; tlDay.textContent = STAGES[si].days;
     tlScrub.value = Math.round(tlProgress * 1000);
+    if (tlScrub.kbdRefresh) tlScrub.kbdRefresh();  // keep the shared-slider fill/bubble in sync during auto-play
 }
 function tlFrame(now) {
     if (!tlPlaying) return;

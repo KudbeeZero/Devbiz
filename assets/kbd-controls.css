@@ -44,8 +44,10 @@
 .kbd-slider:active::-moz-range-thumb, .kbd-slider.dragging::-moz-range-thumb { transform: scale(1.14); }
 .kbd-slider::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
 
-/* ----- Focus ring ----- */
+/* ----- Focus ring (with a plain :focus fallback for older WebKit) ----- */
+.kbd-slider:focus::-webkit-slider-thumb,
 .kbd-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px var(--kbd-ring), 0 0 0 2px var(--accent, #6f5bff), 0 0 16px 4px var(--accent-glow, rgba(111,91,255,0.45)); }
+.kbd-slider:focus::-moz-range-thumb,
 .kbd-slider:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px var(--kbd-ring), 0 0 0 2px var(--accent, #6f5bff); }
 
 /* ----- "Throb" — a gentle breathing glow while focused or dragging ----- */
@@ -54,8 +56,8 @@
   .kbd-slider.dragging::-webkit-slider-thumb { animation: kbdThrob 1.5s ease-in-out infinite; }
   .kbd-slider:focus-visible::-moz-range-thumb,
   .kbd-slider.dragging::-moz-range-thumb { animation: kbdThrob 1.5s ease-in-out infinite; }
-  /* A faint gradient sheen travelling along the filled portion. */
-  .kbd-field.active .kbd-slider { background-image: var(--grad, linear-gradient(90deg, #39e6ff, #6f5bff)), linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); background-size: var(--val, 0%) 100%, 60px 100%; background-position: 0 0, var(--sheen, -60px) 0; animation: kbdSheen 1.4s linear infinite; }
+  /* A faint gradient sheen travelling along the fill — only while actively dragging. */
+  .kbd-slider.dragging { background-image: var(--grad, linear-gradient(90deg, #39e6ff, #6f5bff)), linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); background-size: var(--val, 0%) 100%, 60px 100%; background-position: 0 0, -60px 0; animation: kbdSheen 1.4s linear infinite; }
 }
 @keyframes kbdThrob {
   0%, 100% { box-shadow: 0 0 0 4px var(--kbd-ring), 0 0 10px 2px var(--accent-glow, rgba(111,91,255,0.4)); }
@@ -80,4 +82,9 @@
 .kbd-bubble::after {
   content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
   border: 4px solid transparent; border-top-color: var(--border, rgba(255, 255, 255, 0.14));
+}
+
+/* Reduced motion: no throb/sheen, no fill tween, no thumb transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .kbd-slider, .kbd-slider::-webkit-slider-thumb, .kbd-slider::-moz-range-thumb { transition: none !important; animation: none !important; }
 }

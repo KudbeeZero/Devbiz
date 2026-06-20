@@ -20,7 +20,7 @@
     if (!field) { field = slider.parentNode; field.classList.add('kbd-field'); }
 
     var bubble = field.querySelector('.kbd-bubble');
-    if (!bubble) { bubble = document.createElement('span'); bubble.className = 'kbd-bubble'; field.appendChild(bubble); }
+    if (!bubble) { bubble = document.createElement('span'); bubble.className = 'kbd-bubble'; bubble.setAttribute('aria-hidden', 'true'); field.appendChild(bubble); }
 
     var dp = parseInt(slider.getAttribute('data-dp') || '0', 10);
     var unit = slider.getAttribute('data-unit') || '';
@@ -53,21 +53,33 @@
       slider.setAttribute('aria-valuetext', txt);
     }
 
-    function down() { field.classList.add('active'); slider.classList.add('dragging'); }
-    function up() { field.classList.remove('active'); slider.classList.remove('dragging'); }
-
     slider.addEventListener('input', update);
-    slider.addEventListener('pointerdown', down);
-    window.addEventListener('pointerup', up);
+    // Lets a page refresh the fill/bubble after a *programmatic* value change
+    // (e.g. an auto-playing scrubber) WITHOUT firing the page's own 'input' handler.
+    slider.kbdRefresh = update;
+    slider.addEventListener('kbd:refresh', update);
+    slider.addEventListener('pointerdown', function () { field.classList.add('active'); slider.classList.add('dragging'); });
     slider.addEventListener('focus', function () { field.classList.add('active'); });
-    slider.addEventListener('blur', function () { field.classList.remove('active'); });
+    slider.addEventListener('blur', function () { if (!slider.classList.contains('dragging')) field.classList.remove('active'); });
 
     update();
+  }
+
+  // One delegated pointer-release handler clears drag state for whichever slider
+  // was being dragged (avoids a per-slider global listener).
+  function clearDrag() {
+    var dragging = document.querySelectorAll('.kbd-slider.dragging');
+    for (var i = 0; i < dragging.length; i++) {
+      var s = dragging[i]; s.classList.remove('dragging');
+      var f = s.closest('.kbd-field'); if (f && document.activeElement !== s) f.classList.remove('active');
+    }
   }
 
   function init() {
     var els = document.querySelectorAll('input[type="range"].kbd-slider');
     for (var i = 0; i < els.length; i++) enhance(els[i]);
+    document.addEventListener('pointerup', clearDrag);
+    document.addEventListener('pointercancel', clearDrag);
   }
 
   if (document.readyState !== 'loading') init();
