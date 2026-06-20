@@ -414,7 +414,7 @@ function render() {
         var ok = typeof val === 'number' && typeof t === 'number' ? val >= t : true;
         html += '<div class="stat-card ' + (ok ? 'ok' : 'bad') + '">'
             + '<div class="stat-label">' + METRIC_LABEL[m] + '</div>'
-            + '<div class="stat-value">' + (typeof val === 'number' ? val.toFixed(1) : '—') + '<span class="pct">%</span></div>'
+            + '<div class="stat-value">' + (typeof val === 'number' ? val.toFixed(2) : '—') + '<span class="pct">%</span></div>'
             + '<div class="stat-sub"><span class="pill">' + (ok ? 'Pass' : 'Below') + '</span>'
             + '<span class="thr">min ' + (typeof t === 'number' ? t + '%' : 'n/a') + '</span></div>'
             + '</div>';
@@ -533,7 +533,7 @@ function drawBars() {
 
         ctx.fillStyle = below ? red : muted;
         ctx.font = '700 12px "Space Grotesk", sans-serif';
-        ctx.fillText(v.toFixed(0) + '%', x + bw / 2, y - 7);
+        ctx.fillText(v.toFixed(1) + '%', x + bw / 2, y - 7);
 
         ctx.fillStyle = dim;
         ctx.font = '500 10px ui-monospace, monospace';

@@ -1,0 +1,90 @@
+/* ============================================================================
+ * Kudbee Controls — shared, zero-build control styling.
+ * Reuses each page's palette vars (--grad / --cyan / --accent / --accent-glow /
+ * --bg-elevated / --text-primary / --border). Drop-in: add class="kbd-slider"
+ * to an <input type="range">, wrap it in <span class="kbd-field">, and load
+ * kbd-controls.js to get the gradient fill, value bubble, and "throb" glow.
+ * ========================================================================== */
+
+.kbd-field { position: relative; display: flex; align-items: center; }
+.kbd-field > .kbd-slider { flex: 1 1 auto; }
+
+/* ----- Track + gradient fill (fills cyan→accent up to --val, set by JS) ----- */
+.kbd-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 999px; outline: none; cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.14);
+  background-image: var(--grad, linear-gradient(90deg, #39e6ff, #6f5bff));
+  background-repeat: no-repeat;
+  background-size: var(--val, 0%) 100%;
+  transition: background-size 0.08s linear;
+  --kbd-ring: rgba(57, 230, 255, 0.25);
+  --kbd-ring-soft: rgba(57, 230, 255, 0.12);
+}
+/* A larger invisible hit area for comfortable touch without a fat visual track. */
+.kbd-slider { padding: 11px 0; background-clip: content-box; }
+
+/* ----- Thumb (WebKit) ----- */
+.kbd-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; border: none;
+  box-shadow: 0 0 0 4px var(--kbd-ring), 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.kbd-slider:hover::-webkit-slider-thumb { box-shadow: 0 0 0 5px var(--kbd-ring), 0 0 14px 3px var(--accent-glow, rgba(111,91,255,0.4)); }
+.kbd-slider:active::-webkit-slider-thumb,
+.kbd-slider.dragging::-webkit-slider-thumb { transform: scale(1.14); }
+
+/* ----- Thumb + native progress (Firefox) ----- */
+.kbd-slider::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; border: none; cursor: pointer;
+  box-shadow: 0 0 0 4px var(--kbd-ring), 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.kbd-slider:active::-moz-range-thumb, .kbd-slider.dragging::-moz-range-thumb { transform: scale(1.14); }
+.kbd-slider::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
+
+/* ----- Focus ring (with a plain :focus fallback for older WebKit) ----- */
+.kbd-slider:focus::-webkit-slider-thumb,
+.kbd-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px var(--kbd-ring), 0 0 0 2px var(--accent, #6f5bff), 0 0 16px 4px var(--accent-glow, rgba(111,91,255,0.45)); }
+.kbd-slider:focus::-moz-range-thumb,
+.kbd-slider:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px var(--kbd-ring), 0 0 0 2px var(--accent, #6f5bff); }
+
+/* ----- "Throb" — a gentle breathing glow while focused or dragging ----- */
+@media (prefers-reduced-motion: no-preference) {
+  .kbd-slider:focus-visible::-webkit-slider-thumb,
+  .kbd-slider.dragging::-webkit-slider-thumb { animation: kbdThrob 1.5s ease-in-out infinite; }
+  .kbd-slider:focus-visible::-moz-range-thumb,
+  .kbd-slider.dragging::-moz-range-thumb { animation: kbdThrob 1.5s ease-in-out infinite; }
+  /* A faint gradient sheen travelling along the fill — only while actively dragging. */
+  .kbd-slider.dragging { background-image: var(--grad, linear-gradient(90deg, #39e6ff, #6f5bff)), linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); background-size: var(--val, 0%) 100%, 60px 100%; background-position: 0 0, -60px 0; animation: kbdSheen 1.4s linear infinite; }
+}
+@keyframes kbdThrob {
+  0%, 100% { box-shadow: 0 0 0 4px var(--kbd-ring), 0 0 10px 2px var(--accent-glow, rgba(111,91,255,0.4)); }
+  50%      { box-shadow: 0 0 0 7px var(--kbd-ring-soft), 0 0 22px 6px var(--accent-glow, rgba(111,91,255,0.4)); }
+}
+@keyframes kbdSheen {
+  from { background-position: 0 0, -60px 0; }
+  to   { background-position: 0 0, calc(var(--val, 0%) + 60px) 0; }
+}
+
+/* ----- Live value bubble (positioned + filled by JS) ----- */
+.kbd-bubble {
+  position: absolute; bottom: calc(100% + 6px); left: 0; transform: translateX(-50%);
+  padding: 3px 8px; border-radius: 7px; font-size: 11px; font-weight: 600; line-height: 1.2;
+  background: var(--bg-elevated, #0b0b16); color: var(--text-primary, #fff);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.18s ease;
+  font-variant-numeric: tabular-nums; z-index: 5;
+}
+.kbd-field:hover .kbd-bubble, .kbd-field.active .kbd-bubble, .kbd-slider:focus-visible ~ .kbd-bubble { opacity: 1; }
+.kbd-bubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: var(--border, rgba(255, 255, 255, 0.14));
+}
+
+/* Reduced motion: no throb/sheen, no fill tween, no thumb transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .kbd-slider, .kbd-slider::-webkit-slider-thumb, .kbd-slider::-moz-range-thumb { transition: none !important; animation: none !important; }
+}
