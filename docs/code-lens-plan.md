@@ -296,6 +296,6 @@ All four open items were decided by the owner when PR #20 was approved direction
 4. **Score grading** — ✅ **advisory bands** 90–100 / 75–89 / <75 (§7), not
    merge-blocking until baseline data exists.
 
-**Next step:** with these locked, PR #20 is **ready for review**. After it is
-reviewed/merged, **Phase 2** (the deterministic read-only scaffold, §9.1) opens as a
-**separate PR** — no auto-merge, additive and safe.
+**Next step:** PR #20 is **merged** (2026-06-20, ledger DBZ-018). **Phase 2** (the
+deterministic read-only scaffold, §9.1) now opens as the next **separate PR** — no
+auto-merge, additive and safe.

@@ -79,13 +79,13 @@
         "Later: build the Stage 1 GitHub Agent Feed check"
       ],
       "backlog": [
-        { "id": "DBZ-001", "title": "Block /lab from public Vercel", "status": "merged" },
-        { "id": "DBZ-002", "title": "Agent Feed Inbox", "status": "merged" },
-        { "id": "DBZ-003", "title": "GitHub Agent Feed Check", "status": "planned" },
-        { "id": "DBZ-004", "title": "Cloudflare Access for /lab/*", "status": "manual" },
-        { "id": "DBZ-005", "title": "Mission Control Data Vault v2", "status": "backlog" }
+        { "id": "CP-001", "title": "Block /lab from public Vercel", "status": "merged" },
+        { "id": "CP-002", "title": "Agent Feed Inbox", "status": "merged" },
+        { "id": "CP-003", "title": "GitHub Agent Feed Check", "status": "planned" },
+        { "id": "CP-004", "title": "Cloudflare Access for /lab/*", "status": "manual" },
+        { "id": "CP-005", "title": "Mission Control Data Vault v2", "status": "backlog" }
       ],
-      "note": "These are Focus-Board working IDs for the control-plane sequence; they are distinct from the historical BUILD_LEDGER DBZ-### entries (DBZ-001 there = Games Studio launch). Reconcile numbering on a separate docs lane.",
+      "note": "CP-### = Focus-Board control-plane working IDs, deliberately distinct from the BUILD_LEDGER DBZ-### scheme (renamed 2026-06-20 to end the DBZ collision, where ledger DBZ-001 = Games Studio launch). Merged ones map to the ledger: CP-001 -> DBZ-021 (#30), CP-002 -> DBZ-023 (#32).",
       "links": [
         { "label": "Mission Control guide", "href": "./README.md" },
         { "label": "/lab 404 hardening (PR #30, merged)", "href": "https://github.com/KudbeeZero/Devbiz/pull/30" },

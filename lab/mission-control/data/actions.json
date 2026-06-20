@@ -24,7 +24,7 @@
       "title": "Verify / configure Cloudflare Access for /lab/*",
       "where": "Cloudflare Zero Trust → Access → Applications (not configured in this repo)",
       "action": "Open /lab/mission-control/ in a private window. EXPECTED: a Cloudflare Access sign-in appears first. If the dashboard loads with NO prompt, Access is not configured — add /lab and /lab/* to an Access app with Allow = your email(s). There is no app-level login or basic-auth in the repo; the gate lives only in Cloudflare. See docs/PRIVATE_TESTING_GATE.md.",
-      "blocks": "DBZ-004 — safe sharing of any deployed /lab link"
+      "blocks": "CP-004 — safe sharing of any deployed /lab link"
     },
     {
       "priority": "medium",

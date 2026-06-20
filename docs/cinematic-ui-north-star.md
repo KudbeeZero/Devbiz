@@ -12,7 +12,7 @@
 |---|---|
 | Visual direction | **Deep Lab / bioluminescent (primary)**; **Space / observatory (secondary)** for proof/system moments; **Architectural gallery deferred** |
 | Museum strategy | **Prototype one premium exhibit first** → graduate to a net-new `/museum` section only if it hits the quality bar. Keep the Work page for browsing/filtering. |
-| First implementation unit | **Phase A — Foundation** (motion engine + data model + guardrails), greenlit **after PR #20 merges**. Then the exhibit prototype. |
+| First implementation unit | **Phase A — Foundation** (motion engine + data model + guardrails), greenlit (PR #20 merged 2026-06-20). Then the exhibit prototype. |
 | Blockchain/proof | **Read-only / simulated** only — no wallet, mint, payments, or chain writes in any UI-polish PR. |
 | Build constraint | **Zero-build, additive, reversible.** Never break the current marketing site; everything works with animations disabled. |
 
@@ -173,7 +173,7 @@ and core navigation. Cinematic work concentrates in the **new exhibit** and the
 
 ## 10. Three-phase roadmap
 
-### Phase A — Foundation (first unit, after PR #20 merges)
+### Phase A — Foundation (first unit, PR #20 merged)
 The reusable **design engine** — makes future pages easy to make cinematic, not
 just one page look cool. **No visual overhaul.** Deliverables:
 - reusable cinematic **motion tokens** (durations / easings / stagger scales),
@@ -203,7 +203,7 @@ motion design language**.
    (Code Lens, BOOMSKI / proof agents, a game, …)?
 2. **Domain** — the real production domain, so SEO/OG placeholders can be fixed
    before any public-facing push.
-3. **Phase A start** — confirm kickoff timing (gated on PR #20 merging first).
+3. **Phase A start** — confirm kickoff timing. (PR #20 merged 2026-06-20; the gating condition is cleared.)
 
 > Owner-only gates still apply (CLAUDE.md §11): no new lanes, deploys, or any
 > blockchain/payment enablement without explicit authorization. This doc enables
