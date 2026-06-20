@@ -1,0 +1,52 @@
+# Cloudflare Pages headers.
+# NOTE: No Content-Security-Policy here on purpose — the site uses intentional inline
+# <style>/<script> + Google Fonts, which would force CSP 'unsafe-inline'. CSP is tracked
+# as a separate hardening PR.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), browsing-topics=()
+
+# HTML: always revalidate so content updates ship immediately.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Long-cache immutable game asset files (images / audio / media), not the game HTML.
+/games/*/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Private testing surfaces — keep out of search indexes. The real access control
+# is Cloudflare Access (see docs/PRIVATE_TESTING_GATE.md); this header is hygiene
+# so the gated hub/game routes are never indexed even before Access is configured.
+/lab/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# SEO / discovery files.
+/robots.txt
+  Cache-Control: public, max-age=86400
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+/llms.txt
+  Cache-Control: public, max-age=86400
+
+# ---------------------------------------------------------------------------
+# Recording It sub-app — cross-origin isolation (merged from #21, main).
+#
+# These headers are SCOPED to /recording-it/* on purpose: the Recording It sub-app needs
+# cross-origin isolation (COOP + COEP) so it can use SharedArrayBuffer and multi-threaded
+# ffmpeg.wasm. The rest of the Kudbee marketing site is intentionally left untouched and stays
+# non-isolated, so nothing about the existing site's behavior changes.
+#
+# CORP: cross-origin lets the app's own assets be embedded by the isolated document. Cross-origin
+# CDN assets (unpkg / jsdelivr / huggingface / opencv.org) must send their own CORP/CORS headers
+# to load under COEP:require-corp — those CDNs do.
+
+/recording-it/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin

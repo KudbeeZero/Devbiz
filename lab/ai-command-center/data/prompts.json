@@ -1,0 +1,77 @@
+{
+  "_comment": "Prompt Launcher templates. Each template has fields (variables) and a body with {{key}} placeholders. The launcher renders a form from fields, live-fills the body, and copies it. category groups them in the UI. Manual-first: the launcher only composes text you copy — it does NOT send anything anywhere.",
+  "updated": "2026-06-19",
+  "templates": [
+    {
+      "id": "lane-kickoff",
+      "title": "Lane kickoff (Mission Control–registered)",
+      "category": "Lanes",
+      "purpose": "Start a new work lane the right way — register it in Mission Control first, then build.",
+      "fields": [
+        { "key": "lane", "label": "Lane / feature name", "placeholder": "AI Command Center v2", "type": "text" },
+        { "key": "repo", "label": "Repo", "placeholder": "KudbeeZero/devbiz", "type": "text" },
+        { "key": "scope", "label": "Scope (one purpose)", "placeholder": "Add a saved-prompts library to the launcher", "type": "textarea" },
+        { "key": "constraints", "label": "Constraints", "placeholder": "static/manual-first, no backend, no secrets, no live control", "type": "textarea" }
+      ],
+      "template": "Start a new lane: {{lane}} in {{repo}}.\n\nFIRST register the lane in Mission Control (add to lab/mission-control/data/projects.json + agents.json, and any owner action to actions.json), THEN proceed.\n\nScope (one PR = one purpose):\n{{scope}}\n\nConstraints:\n{{constraints}}\n\nDeliver one PR lane, verify before claiming done, and end with the Agent Closeout (Asked/Done/Needs you + Repo/Branch/PR/CI/Preview/Files/Verification/Owner action now/Next/Agent state). Do not auto-merge."
+    },
+    {
+      "id": "agent-closeout",
+      "title": "Agent closeout report",
+      "category": "Reporting",
+      "purpose": "The required closeout every agent ends with.",
+      "fields": [
+        { "key": "asked", "label": "Asked", "placeholder": "What the owner requested", "type": "textarea" },
+        { "key": "done", "label": "Done", "placeholder": "What actually shipped (verified)", "type": "textarea" },
+        { "key": "needs", "label": "Needs you", "placeholder": "Exact owner action, or 'No owner action right now'", "type": "textarea" },
+        { "key": "repo", "label": "Repo", "placeholder": "KudbeeZero/devbiz", "type": "text" },
+        { "key": "branch", "label": "Branch", "placeholder": "claude/ai-command-center-v1", "type": "text" },
+        { "key": "pr", "label": "PR", "placeholder": "#28", "type": "text" },
+        { "key": "ci", "label": "CI status", "placeholder": "CI green | local passed, CI pending | no CI configured", "type": "text" },
+        { "key": "preview", "label": "Preview/dev route", "placeholder": "/lab/ai-command-center/", "type": "text" },
+        { "key": "files", "label": "Files changed", "placeholder": "lab/ai-command-center/** + MC data", "type": "textarea" },
+        { "key": "verification", "label": "Verification performed", "placeholder": "JSON parse, node --check, routes 200, preview deploy", "type": "textarea" },
+        { "key": "next", "label": "Next recommended unit", "placeholder": "Owner phone browser-check, then merge", "type": "text" },
+        { "key": "state", "label": "Agent state", "placeholder": "active / parked / subscribed / complete / unknown", "type": "text" }
+      ],
+      "template": "Asked:\n{{asked}}\n\nDone:\n{{done}}\n\nNeeds you:\n{{needs}}\n\nRepo: {{repo}}\nBranch: {{branch}}\nPR: {{pr}}\nCI status: {{ci}}\nPreview/dev route: {{preview}}\nFiles changed: {{files}}\nVerification performed: {{verification}}\nNext recommended unit: {{next}}\nAgent state: {{state}}"
+    },
+    {
+      "id": "mc-register",
+      "title": "Mission Control lane registration",
+      "category": "Lanes",
+      "purpose": "Register (or update) a lane in the Mission Control data files.",
+      "fields": [
+        { "key": "lane", "label": "Lane name", "placeholder": "AI Command Center", "type": "text" },
+        { "key": "phase", "label": "Phase", "placeholder": "v1 build", "type": "text" },
+        { "key": "state", "label": "State", "placeholder": "active / frozen / parked / merged / blocked", "type": "text" },
+        { "key": "next", "label": "Next action", "placeholder": "Phone browser-check, then merge", "type": "text" }
+      ],
+      "template": "Update Mission Control to register this lane (do not change the UI — edit the data only):\n\n- lab/mission-control/data/projects.json: add { name: \"{{lane}}\", phase: \"{{phase}}\", state: \"{{state}}\", nextAction: \"{{next}}\" } (fill repo/activePR/lastOwnerAction/notes honestly).\n- lab/mission-control/data/agents.json: add the agent row (reported status only).\n- lab/mission-control/data/actions.json: add any owner action this lane needs.\n\nKeep labels honest (reported/manual/unknown). Validate the JSON parses."
+    },
+    {
+      "id": "pr-verify",
+      "title": "PR pre-merge verification",
+      "category": "Review",
+      "purpose": "Ask an agent to verify a PR against the owner's pre-merge checklist (no merge).",
+      "fields": [
+        { "key": "pr", "label": "PR number", "placeholder": "#28", "type": "text" },
+        { "key": "repo", "label": "Repo", "placeholder": "KudbeeZero/devbiz", "type": "text" }
+      ],
+      "template": "Verify {{repo}} {{pr}} against this checklist and report — do NOT merge:\n- CI is green (name the exact checks)\n- No merge conflict (mergeable_state)\n- No unresolved review comments\n- Scope matches the stated lane\n- No unrelated files changed\n- No secrets or auth changes\n- No runtime behavior changed beyond intent\n\nState the exact merge readiness and what (if anything) needs the owner. Merge is owner-only."
+    },
+    {
+      "id": "general-task",
+      "title": "General agent task",
+      "category": "General",
+      "purpose": "A clean, honest task prompt with guardrails.",
+      "fields": [
+        { "key": "task", "label": "Task", "placeholder": "What you want done", "type": "textarea" },
+        { "key": "repo", "label": "Repo", "placeholder": "KudbeeZero/devbiz", "type": "text" },
+        { "key": "guardrails", "label": "Guardrails", "placeholder": "no backend, no secrets, no live control, one PR lane", "type": "textarea" },
+        { "key": "model", "label": "Preferred model (optional)", "placeholder": "latest Claude (see model reference)", "type": "text" }
+      ],
+      "template": "Task ({{repo}}):\n{{task}}\n\nGuardrails:\n{{guardrails}}\n\nModel: {{model}}\n\nVerify before claiming done (don't say it renders/passes/deploys unless you ran the exact check). End with the Agent Closeout. Do not auto-merge; surface owner actions explicitly."
+    }
+  ]
+}

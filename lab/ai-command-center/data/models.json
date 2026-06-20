@@ -1,0 +1,11 @@
+{
+  "_comment": "Model reference for composing prompts. REFERENCE ONLY — verify current model IDs in the official Claude docs before relying on them. The console does not call any model; this is a lookup table. Update 'updated' when you refresh it.",
+  "updated": "2026-06-19",
+  "note": "Default to the latest, most capable Claude model for new AI work unless a smaller/faster model is a deliberate cost choice.",
+  "items": [
+    { "family": "Claude Opus 4.8", "id": "claude-opus-4-8", "bestFor": "Hardest reasoning, long agentic coding, deepest tasks", "tier": "most capable" },
+    { "family": "Claude Sonnet 4.6", "id": "claude-sonnet-4-6", "bestFor": "Balanced quality/speed for most coding + agent work", "tier": "balanced" },
+    { "family": "Claude Haiku 4.5", "id": "claude-haiku-4-5-20251001", "bestFor": "Fast, cheap, high-volume or latency-sensitive tasks", "tier": "fast" },
+    { "family": "Claude Fable 5", "id": "claude-fable-5", "bestFor": "Creative / narrative-leaning generation", "tier": "creative" }
+  ]
+}

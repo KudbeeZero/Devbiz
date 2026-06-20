@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="FRONTIER: Aether Wing — arcade space dogfighter in development at Kudbee Games Studio. Private preview.">
+    <title>FRONTIER: Aether Wing · In Build · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #04040a;
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.08);
+        --border-hover: rgba(255,255,255,0.18);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1080px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .logo-txt { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* Starfield canvas hero backdrop */
+    #stars { position: fixed; inset: 0; z-index: 0; display: block; }
+    .nebula { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .nebula::before, .nebula::after { content: ''; position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.5; }
+    .nebula::before { width: 720px; height: 720px; top: -180px; left: -160px; background: radial-gradient(circle, rgba(57,230,255,0.22), transparent 64%); }
+    .nebula::after  { width: 820px; height: 820px; bottom: -260px; right: -200px; background: radial-gradient(circle, rgba(196,107,255,0.22), transparent 64%); }
+
+    .content { position: relative; z-index: 2; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px; background: rgba(4,4,10,0.7);
+        backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+    }
+    .nav-left { display: flex; align-items: center; gap: 16px; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; transition: color 0.2s; }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+    .logo-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #04040a; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 80px 28px 90px; }
+
+    /* HERO */
+    .hero { text-align: center; max-width: 760px; margin: 0 auto; }
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); background: rgba(255,211,77,0.06);
+    }
+    .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .hero .frontier { display: block; font-size: 14px; font-weight: 600; letter-spacing: 0.34em; text-transform: uppercase; color: var(--cyan); margin: 26px 0 10px; }
+    .hero h1 { font-size: clamp(42px, 8vw, 78px); line-height: 1; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+    .hero .tagline { margin-top: 20px; font-size: 18px; color: var(--text-muted); }
+    .hero .ship { margin-top: 10px; font-size: 13px; color: var(--text-dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; }
+
+    /* Spec strip */
+    .specs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 34px auto 0; max-width: 640px; }
+    .spec { font-size: 12.5px; color: var(--text-secondary); padding: 7px 14px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border); }
+
+    /* Roadmap */
+    .section-label { display: flex; align-items: center; gap: 12px; margin: 64px 2px 26px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .phases { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+    .phase { padding: 22px; border-radius: var(--radius); background: var(--bg-card); border: 1px solid var(--border); }
+    .phase-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .phase-num { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--bg-primary); background: var(--grad); }
+    .phase h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .phase ul { list-style: none; margin-top: 4px; }
+    .phase li { font-size: 13.5px; color: var(--text-muted); padding-left: 18px; position: relative; margin-top: 5px; }
+    .phase li::before { content: '›'; position: absolute; left: 2px; color: var(--cyan); }
+    .phase.next { border-color: rgba(57,230,255,0.3); box-shadow: 0 14px 44px -24px rgba(57,230,255,0.5); }
+    .phase .tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px; margin-left: auto; }
+
+    .note { margin-top: 44px; padding: 18px 22px; border-radius: 14px; background: rgba(57,230,255,0.04); border: 1px solid rgba(57,230,255,0.18); color: var(--text-muted); font-size: 13.5px; }
+    .note strong { color: var(--text-secondary); }
+
+    .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
+    .foot a { color: var(--text-muted); text-decoration: none; }
+    .foot a:hover { color: var(--cyan); }
+
+    @media (max-width: 600px) { .main { padding: 56px 18px 70px; } .nav-bar { padding: 12px 16px; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="nebula" aria-hidden="true"></div>
+<div class="content">
+
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Lab
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <span class="nav-title">Aether Wing</span>
+    </div>
+</nav>
+
+<main class="main">
+
+    <section class="hero">
+        <span class="status-pill"><span class="dot"></span> In Build</span>
+        <span class="frontier">FRONTIER</span>
+        <h1><span class="gradient-text">Aether Wing</span></h1>
+        <p class="tagline">An arcade space dogfighter — carve through debris fields, hostile drone swarms, broken orbital gates, and ASCEND energy anomalies.</p>
+        <p class="ship">// PILOT: Aether-class fighter · Aether Wing Mk-I</p>
+
+        <div class="specs">
+            <span class="spec">Third-person flight</span>
+            <span class="spec">Boost &amp; shields</span>
+            <span class="spec">Blasters + missiles</span>
+            <span class="spec">Wave survival</span>
+            <span class="spec">Score &amp; multiplier</span>
+            <span class="spec">Desktop + mobile</span>
+        </div>
+    </section>
+
+    <div class="section-label">Build roadmap</div>
+    <div class="phases">
+        <div class="phase next">
+            <div class="phase-head"><span class="phase-num">1</span><h3>Playable slice</h3><span class="tag">Next PR</span></div>
+            <ul>
+                <li>Third-person ship + follow camera</li>
+                <li>Keyboard, mouse &amp; touch controls</li>
+                <li>Boost meter, shield, hull</li>
+                <li>Blasters, missiles, enemy drones</li>
+                <li>Asteroid collisions, waves, score</li>
+                <li>Pause &amp; restart loop</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <div class="phase-head"><span class="phase-num">2</span><h3>Premium visuals</h3></div>
+            <ul>
+                <li>Volumetric nebula &amp; deep starfield</li>
+                <li>Instanced asteroid fields</li>
+                <li>Shield bubble, engine trails, explosions</li>
+                <li>Targeting brackets, radar, bloom</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <div class="phase-head"><span class="phase-num">3</span><h3>Menus &amp; mobile</h3></div>
+            <ul>
+                <li>Start, pause, settings, tutorial</li>
+                <li>Touch controls + safe-area handling</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <div class="phase-head"><span class="phase-num">4</span><h3>Audio &amp; feel</h3></div>
+            <ul>
+                <li>Engine hum, boost surge, hit feedback</li>
+                <li>Missile lock, explosions, screen shake</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <div class="phase-head"><span class="phase-num">5</span><h3>Site integration</h3></div>
+            <ul>
+                <li>Flight Lab entry &amp; loading screen</li>
+                <li>SEO/preview polish</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <div class="phase-head"><span class="phase-num">6</span><h3>Proof layer (optional)</h3></div>
+            <ul>
+                <li>Score receipts, leaderboard, cosmetics</li>
+                <li>Only after the arcade loop is stable</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>Status note:</strong> This is a private placeholder route reserving the home for the game. No gameplay ships here yet — the Three.js playable slice (Phase&nbsp;1) lands in a dedicated follow-up PR so it can be verified with active-play screenshots before going on the site.
+    </div>
+
+</main>
+
+<footer class="foot">
+    FRONTIER: Aether Wing — Kudbee Games Studio · <a href="../index.html">Back to Studio Lab</a>
+</footer>
+
+</div>
+
+<script>
+/* Lightweight parallax starfield — rAF, DPR-aware, pauses when tab hidden,
+ * and renders a single static frame under prefers-reduced-motion. */
+(function () {
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let w, h, dpr, stars, raf, running = false;
+
+    function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = canvas.width = Math.floor(innerWidth * dpr);
+        h = canvas.height = Math.floor(innerHeight * dpr);
+        canvas.style.width = innerWidth + 'px';
+        canvas.style.height = innerHeight + 'px';
+        const count = Math.min(220, Math.floor((innerWidth * innerHeight) / 7000));
+        stars = Array.from({ length: count }, () => ({
+            x: Math.random() * w, y: Math.random() * h,
+            z: Math.random() * 0.8 + 0.2,           // depth → size + speed
+            tw: Math.random() * Math.PI * 2
+        }));
+    }
+
+    function draw(animate) {
+        ctx.clearRect(0, 0, w, h);
+        for (const s of stars) {
+            if (animate) {
+                s.y += s.z * 0.35 * dpr;
+                if (s.y > h) { s.y = 0; s.x = Math.random() * w; }
+                s.tw += 0.04;
+            }
+            const r = s.z * 1.6 * dpr;
+            const a = 0.45 + Math.sin(s.tw) * 0.3 * s.z;
+            ctx.globalAlpha = Math.max(0.1, a);
+            ctx.fillStyle = s.z > 0.7 ? '#9fdcff' : '#cdd6ff';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function loop() { draw(true); raf = requestAnimationFrame(loop); }
+    function start() { if (running || reduce) return; running = true; loop(); }
+    function stop() { running = false; cancelAnimationFrame(raf); }
+
+    resize();
+    window.addEventListener('resize', () => { resize(); if (reduce) draw(false); });
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+
+    if (reduce) { draw(false); } else { start(); }
+})();
+</script>
+</body>
+</html>

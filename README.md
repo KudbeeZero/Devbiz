@@ -13,7 +13,19 @@ games/                  Kudbee Games Studio
   kudbee-darts/         Predictive flick-throw darts game (501 + Cricket, AI leagues)
 tools/                  Kudbee developer utilities (standalone HTML, no build step)
   token-analyzer/       Token Price Analyzer — track AI model costs across sessions
+  coverage-dashboard/   Coverage Breakdown — read-only view of the scoped coverage
+                        gate (leaderboard/shared/ only; NOT whole-repo coverage)
 ```
+
+## Test coverage gate
+
+A **scoped, quantitative coverage gate** runs in CI over `leaderboard/shared/` —
+the deterministic leaderboard logic where a percentage is meaningful. It is
+deliberately **not** a whole-repo coverage gate (games and the marketing site
+aren't meaningfully coverable). Thresholds live in `leaderboard/.c8rc.json`; the
+read-only `tools/coverage-dashboard/` visualizes the exact gated data. See
+[`leaderboard/README.md`](leaderboard/README.md#coverage-gate-scoped-to-shared)
+for details.
 
 ## Run locally
 

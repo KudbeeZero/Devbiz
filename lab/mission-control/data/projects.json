@@ -1,0 +1,83 @@
+{
+  "_comment": "Active Project Lanes. state: active | frozen | parked | merged | blocked. Keep one entry per major project/repo. statusLabel is free text shown as a chip.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "name": "AI Command Center",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "v1 build — static/manual-first prompt + agent console",
+      "activePR": "this PR (draft)",
+      "state": "active",
+      "statusLabel": "building",
+      "lastOwnerAction": "Greenlit AI Command Center v1 from fresh main (static/manual-first, no backend)",
+      "nextAction": "Phone browser-check /lab/ai-command-center/ on the preview, then approve/merge",
+      "notes": "Gated /lab/ai-command-center — manual-first Prompt Launcher + reported agent/session roster + model reference + reporting protocol. No backend, no D1/R2, no secrets, no live control. Registered in Mission Control before build per the lane-kickoff rule."
+    },
+    {
+      "name": "Devbiz /lab hub foundation",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "Foundation merged · Access config pending",
+      "activePR": "#24 (merged)",
+      "state": "active",
+      "statusLabel": "merged + live",
+      "lastOwnerAction": "Merged PR #24 (Studio Lab hub + Aether Wing placeholder)",
+      "nextAction": "Configure Cloudflare Access for /lab/* before sharing any deployed link",
+      "notes": "Private gated /lab hub with Coverage, Token Analyzer, Scribe cards. Cloudflare Access gates externally; local dev open."
+    },
+    {
+      "name": "Mission Control (this dashboard)",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "v1 build — operations/control-plane lane",
+      "activePR": "this PR (draft)",
+      "state": "active",
+      "statusLabel": "building",
+      "lastOwnerAction": "Owner froze all new feature/game lanes until Mission Control v1 exists",
+      "nextAction": "Review /lab/mission-control, then merge",
+      "notes": "Data-driven dashboard at /lab/mission-control. Renders from data/*.json so future agents update the registry, not the UI."
+    },
+    {
+      "name": "FRONTIER: Aether Wing",
+      "repo": "frontier-al (TBD — folder/repo not confirmed)",
+      "phase": "Phase 1 not started",
+      "activePR": "none",
+      "state": "frozen",
+      "statusLabel": "frozen — awaiting repo confirm",
+      "lastOwnerAction": "Decided Aether Wing is NOT built in Devbiz; goes in the frontier-al Vite/TS/Three.js scaffold",
+      "nextAction": "Owner confirms the correct frontier-al folder/repo before any gameplay build",
+      "notes": "No wallet/blockchain/account systems in Phase 1. Devbiz only holds the gated placeholder route, not the game."
+    },
+    {
+      "name": "GrowVerse plant review panel",
+      "repo": "GrowVerse (cross-repo — not in devbiz scope)",
+      "phase": "Review",
+      "activePR": "#27 (reported)",
+      "state": "active",
+      "statusLabel": "reported — pending CI/visual",
+      "lastOwnerAction": "Reported: PR #27 opened for the plant review panel",
+      "nextAction": "Owner reviews CI + visual on PR #27 (cross-repo; status here is reported, not verified from devbiz)",
+      "notes": "Tracked here for visibility only. Mission Control cannot read the GrowVerse repo from this session — treat as reported status."
+    },
+    {
+      "name": "Frontier / frontier-al scaffold",
+      "repo": "frontier-al (TBD)",
+      "phase": "Pre-scaffold",
+      "activePR": "none",
+      "state": "blocked",
+      "statusLabel": "blocked — needs repo confirm",
+      "lastOwnerAction": "Decided frontier-al uses Vite/TypeScript/Three.js",
+      "nextAction": "Owner confirms folder/repo location before scaffold work begins",
+      "notes": "Blocking dependency for Aether Wing Phase 1. No work starts until the folder/repo is confirmed."
+    },
+    {
+      "name": "Studio Lab tools (Coverage · Token Analyzer · Scribe)",
+      "repo": "KudbeeZero/devbiz",
+      "phase": "Live in /lab",
+      "activePR": "#12, #4, #9 (merged)",
+      "state": "merged",
+      "statusLabel": "live",
+      "lastOwnerAction": "Merged the three tools; surfaced as cards in /lab",
+      "nextAction": "None — maintenance only",
+      "notes": "Coverage Dashboard (read-only), Token Analyzer (local), Kudbee Scribe (client-side default). All reachable from the /lab hub."
+    }
+  ]
+}

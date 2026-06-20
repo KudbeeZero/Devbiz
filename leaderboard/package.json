@@ -6,7 +6,12 @@
   "description": "Self-contained online leaderboard + accounts service for Kudbee games (Clerk auth, Cloudflare Worker + D1 in production, a portable Node dev server for local/any host).",
   "scripts": {
     "dev": "node server/dev-server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "coverage": "c8 node --test",
+    "coverage:snapshot": "node scripts/coverage-snapshot.mjs"
+  },
+  "devDependencies": {
+    "c8": "^10.1.3"
   },
   "engines": { "node": ">=18.17.0" }
 }

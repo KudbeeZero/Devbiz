@@ -1,0 +1,29 @@
+{
+  "name": "kudbee-recording-it",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Kudbee Recording It — a privacy-first, 100% client-side, mobile-first browser screen recorder. This package holds the typed Web Worker / WASM infrastructure (ffmpeg.wasm, Whisper, MediaPipe, Tesseract OCR, OpenCV.js) that powers the recorder's post-capture pipeline. Builds with Vite, scoped to /recording-it/; the rest of the Kudbee site remains zero-build.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
+    "@xenova/transformers": "^2.17.2",
+    "@mediapipe/face_detection": "^0.4.1646425229",
+    "@mediapipe/selfie_segmentation": "^0.1.1675465747",
+    "tesseract.js": "^5.1.1",
+    "uuid": "^9.0.1",
+    "qrcode": "^1.5.4",
+    "jsqr": "^1.4.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/c8rc.json",
+  "_comment": "Scoped coverage gate. This intentionally measures ONLY leaderboard/shared/ — the deterministic, framework-free leaderboard logic where a coverage percentage is meaningful. It is NOT a whole-repo coverage gate. Thresholds below are the authoritative, code-reviewed source of truth; the read-only dashboard at tools/coverage-dashboard/ only visualizes this data.",
+  "include": ["shared/**"],
+  "exclude": [
+    "test/**",
+    "server/**",
+    "worker/**",
+    "client/**",
+    "public/**",
+    "scripts/**"
+  ],
+  "all": false,
+  "reporter": ["text", "json-summary", "json"],
+  "reports-dir": "coverage",
+  "check-coverage": true,
+  "lines": 88,
+  "branches": 60,
+  "functions": 88,
+  "statements": 88
+}

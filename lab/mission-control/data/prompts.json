@@ -1,0 +1,42 @@
+{
+  "_comment": "Prompt Ledger. Store or link major reusable prompts. Use 'body' for an inline copyable prompt, or 'link' for a path/URL. Keep bodies short; link out to docs for long ones.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "title": "AI Command Center v1 kickoff (placeholder — next clean PR)",
+      "purpose": "The next build lane after Mission Control v1. Scope to be defined by the owner; this is a placeholder, not a finished spec.",
+      "link": "../ROADMAP.md",
+      "body": "PLACEHOLDER — owner to define scope. Build AI Command Center v1 as its own clean PR (one lane), after the merged Mission Control v1 static foundation and before the D1/R2 operations database + document vault. Keep honest labels; no faked live control; no secrets committed. Standing up any backend (Worker/D1/R2/API keys) is an owner-only infra decision requiring explicit OWNER-OK."
+    },
+    {
+      "title": "Mission Control v1 kickoff",
+      "purpose": "The prompt that created this dashboard — reuse to extend or rebuild Mission Control.",
+      "link": "",
+      "body": "Build a gated /lab/mission-control operations dashboard for Devbiz. Sections: Owner Action Queue (first), Active Project Lanes, Active PR Board, Agent Registry (reported status only), Decision Log, Prompt Ledger, Agent Reporting Protocol. Render from data/*.json so future agents update the registry, not the UI. Keep zero-build/static, dark-theme, mobile-usable, honest labels (reported/manual/unknown). One PR lane only."
+    },
+    {
+      "title": "Aether Wing Phase 1 kickoff",
+      "purpose": "Start the first playable slice once the frontier-al folder/repo is confirmed.",
+      "link": "",
+      "body": "PRECONDITION: owner has confirmed the frontier-al folder/repo. Build Aether Wing Phase 1 as a playable slice in the frontier-al Vite/TypeScript/Three.js scaffold (NOT in Devbiz). No wallet/blockchain/account systems. Deliver: one PR lane, a verifiable slice with active-play screenshots, and a closeout (Asked/Done/Needs you). Devbiz only keeps the gated placeholder route."
+    },
+    {
+      "title": "Agent Reporting Template",
+      "purpose": "The required reporting block every future agent ends with. Full copyable version is in the Agent Reporting Protocol section and in lab/mission-control/README.md.",
+      "link": "#protocol",
+      "body": "Asked:\nDone:\nNeeds you:\n\nRepo:\nBranch:\nPR:\nCI status:\nPreview/dev route:\nFiles changed:\nVerification performed:\nOwner action now:\nNext recommended unit:\nAgent state: active / parked / subscribed / complete / unknown\n\nRules: never say \"standing by\" when owner action is required; say \"Owner action now:\" when the owner must click/test/approve/merge/configure; say \"No owner action right now\" when nothing is needed; always report agent state."
+    },
+    {
+      "title": "Environment setup",
+      "purpose": "How to set local env values without committing secrets.",
+      "link": "../../.env.example",
+      "body": "Copy .env.example to .env.local and fill in private values locally. Never commit real secrets. .env, .env.local, .env.*.local are gitignored. .env.example / .env.local.example hold placeholder keys only — no real values. Mission Control itself needs NO secrets (static, client-side); this template exists for future lanes that do."
+    },
+    {
+      "title": "Future lane kickoff rule",
+      "purpose": "The standing rule before any new lane begins.",
+      "link": "",
+      "body": "First update Mission Control with this lane (add it to data/projects.json + data/agents.json, and any owner action to data/actions.json), THEN proceed. No new lane starts unregistered. Report into Mission Control using the Agent Reporting Template on completion."
+    }
+  ]
+}

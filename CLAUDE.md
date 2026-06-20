@@ -177,6 +177,12 @@ Stop and ask before:
 - retargeting branches
 - opening a new PR lane
 
+Highest-stakes, hard-to-reverse actions (production deploy; security/permission/
+pricing changes; enabling payment or AI/API keys; token/credit or blockchain/proof
+behavior; production env vars) additionally require a confirmation token
+`OWNER-OK: <phrase>` in the instruction — even under full delegation. The phrase is
+agreed out-of-band and never committed. See `docs/PR_FLOW.md` §11a.
+
 ### 12. Closed Lane Rule
 
 When a PR is merged or closed:
@@ -197,3 +203,41 @@ When asked for current state, report compactly:
 - next owner action
 
 Do not restate the whole project history.
+
+## OUTPUT QUALITY DOCTRINE
+
+Kudbee is a design-and-games studio: the work has to *look* and *feel* next-level, not just
+function. These rules raise the bar for how agents work here. They are distilled from
+widely-circulated long-running-agent prompt patterns (the June 2026 "Fable 5" system-prompt
+discussion) — the durable lesson of which is that great agent output comes from **precise
+capability, output contracts, and verification — not persona or vibes**. Adapted for this repo:
+
+### A. Taste & visual ambition
+- Treat every visual surface (site, game, tool) as a portfolio piece. When asked for "a spec"
+  — a poster, a section, an animation — **build and verify the rendered result**, don't just
+  describe it. Reach for the more impressive, more polished version when effort allows.
+- Match the house style already in the codebase (zero-build, inline, vanilla, canvas vector
+  art, the existing palette/`fitCanvas` helpers) before inventing new patterns.
+- Performance is part of quality: 60fps target, `requestAnimationFrame`, pause work off-screen,
+  honor `prefers-reduced-motion`, and degrade gracefully on mobile/low-power.
+
+### B. Verify before claiming done
+- Reuse the §7 Green Status language. "Expected green" is not green. Don't say a thing renders,
+  passes, or deploys unless you actually ran the exact check and saw it.
+- Actually create/modify the files — never just print intended content. Confirm structure
+  (syntax-check JS, validate JSON-LD/XML, balance tags) before committing.
+
+### C. Honesty about what was and wasn't done
+- Own gaps and limitations plainly (use the §10 closeout `Needs you:` / `Risks` fields). If a
+  step was skipped, a placeholder was left, or a manual gate remains, say so — don't paper over it.
+- Don't fabricate data in code or markup (e.g. no schema.org `SearchAction` with no real search,
+  no sitemap entries for URLs that don't exist).
+
+### D. No laziness / no silent truncation
+- Read the relevant file/skill/doc before editing it; don't guess at structure you can cheaply check.
+- Don't truncate or "...rest unchanged" real deliverables. Ship the whole thing.
+
+### E. Act decisively vs over-asking
+- When the request and the codebase make the answer clear, act — then report. Reserve questions
+  for genuine owner-only decisions (§11) or true ambiguity, and batch them.
+- Keep replies tight: lead with the result, minimal formatting, no narration of internal machinery.
