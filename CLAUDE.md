@@ -177,11 +177,15 @@ Stop and ask before:
 - retargeting branches
 - opening a new PR lane
 
-Highest-stakes, hard-to-reverse actions (production deploy; security/permission/
-pricing changes; enabling payment or AI/API keys; token/credit or blockchain/proof
-behavior; production env vars) additionally require a confirmation token
-`OWNER-OK: <phrase>` in the instruction — even under full delegation. The phrase is
-agreed out-of-band and never committed. See `docs/PR_FLOW.md` §11a.
+A **narrow set of irreversible / costly actions** additionally require a
+confirmation token `OWNER-OK: <phrase>` in the instruction — even under full
+delegation: enabling payment; enabling AI/API keys; changing token/credit or
+blockchain/proof behavior; changing production environment variables. The phrase
+is agreed out-of-band and never committed. See `docs/PR_FLOW.md` §11a.
+
+Everything else above — including reversible security/permission/routing changes
+(e.g. a config that 404s a private surface) and ordinary production merges/deploys
+— needs only explicit owner authorization for that specific action, not the token.
 
 ### 12. Closed Lane Rule
 
