@@ -13,7 +13,7 @@ window.KD_LB_CONFIG = {
   API_BASE: '',
   CLERK_PUBLISHABLE_KEY: '',
   GAME: 'darts',
-  // Where the "Play Kudbee Darts" link points. Default suits the dev server;
-  // on the studio site use e.g. '/games/kudbee-darts/'.
-  GAME_URL: '/game/',
+  // Where the "Play Kudbee Darts" link points. On the studio site the game lives
+  // at the repo-root path below; app.js applies this to the .back link.
+  GAME_URL: '/games/kudbee-darts/',
 };
