@@ -143,17 +143,22 @@ Stop and ask before:
 
 ### 11a. Confirmation token for highest-stakes actions
 
-Routine actions (ordinary merges, opening normal lanes, docs) may be delegated to
-a trusted coordinator. But the **highest-stakes, hard-to-reverse subset** below
-must include a confirmation token of the form `OWNER-OK: <phrase>` in the
-authorizing instruction:
+Routine actions (ordinary merges and production deploys, opening normal lanes,
+docs, and **reversible** security/permission/routing changes) may be delegated to
+a trusted coordinator on the owner's explicit go-ahead for that action. Only the
+**narrow, irreversible / costly subset** below must include a confirmation token
+of the form `OWNER-OK: <phrase>` in the authorizing instruction:
 
-- production deploy
-- changing permissions/security policy
-- changing pricing, or enabling payment
+- enabling payment (or changing pricing)
 - enabling AI/API keys
 - changing token/credit or blockchain/proof behavior
 - changing production environment variables
+
+> Rationale (2026-06-20, owner): the token tier was too broad — it gated cheap,
+> reversible config (e.g. 404ing a private surface) behind the same ceremony as
+> moving money or keys. Narrowed to the truly hard-to-undo / costly set. Reversible
+> security/permission changes still require explicit owner approval (§11), just not
+> the token.
 
 The agreed `<phrase>` is shared **out-of-band** and is **never stored in the repo,
 PR bodies, or comments** — committing it would defeat the tripwire. If a
