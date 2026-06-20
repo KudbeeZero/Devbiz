@@ -1,6 +1,6 @@
 {
   "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide | provide. Use honest 'if still open / if still active' wording for conditional items. Mission Control tracks these; it does not execute them.",
-  "updated": "2026-06-19",
+  "updated": "2026-06-20",
   "items": [
     {
       "priority": "high",
@@ -12,11 +12,11 @@
     },
     {
       "priority": "high",
-      "kind": "merge",
-      "title": "Merge PR #30 — 404 /lab on the Vercel deploy",
-      "where": "KudbeeZero/devbiz · PR #30 (draft, CI green)",
-      "action": "Closes the public /lab exposure on devbiz.vercel.app (one-line vercel.json). Owner-only, no auto-merge. After Vercel redeploys, re-check devbiz.vercel.app/lab/ → should be 404 while / still loads.",
-      "blocks": "DBZ-001 — /lab staying private on the Vercel mirror"
+      "kind": "test",
+      "title": "Verify /lab now 404s on the Vercel mirror (PR #30 merged)",
+      "where": "https://devbiz.vercel.app/lab/ — after Vercel redeploys main",
+      "action": "PR #30 merged 2026-06-20 (vercel.json). Once Vercel rebuilds from main, confirm devbiz.vercel.app/lab/ → 404 while devbiz.vercel.app/ still loads. Can't be checked from Mission Control — owner eyeball on the live Vercel URL.",
+      "blocks": "Confirming /lab is private on the Vercel mirror"
     },
     {
       "priority": "high",
@@ -25,14 +25,6 @@
       "where": "Cloudflare Zero Trust → Access → Applications (not configured in this repo)",
       "action": "Open /lab/mission-control/ in a private window. EXPECTED: a Cloudflare Access sign-in appears first. If the dashboard loads with NO prompt, Access is not configured — add /lab and /lab/* to an Access app with Allow = your email(s). There is no app-level login or basic-auth in the repo; the gate lives only in Cloudflare. See docs/PRIVATE_TESTING_GATE.md.",
       "blocks": "DBZ-004 — safe sharing of any deployed /lab link"
-    },
-    {
-      "priority": "medium",
-      "kind": "decide",
-      "title": "Review the open GrowVerse + Agent-Feed drafts",
-      "where": "KudbeeZero/devbiz · PR #29 (Vercel readiness), #31 (living-plant audit), #32 (Agent Feed Inbox)",
-      "action": "Docs/audit lanes that feed GrowVerse Launch #1 and the Agent Feed Inbox. Each is a draft awaiting a merge/hold decision. Merging them also turns the Focus Board's 'pending' doc links live.",
-      "blocks": "Focus Board doc links going live; GV/DBZ context being canonical on main"
     },
     {
       "priority": "medium",
@@ -45,17 +37,17 @@
     {
       "priority": "low",
       "kind": "test",
-      "title": "Browser-check the Focus Board on this PR's preview, then merge",
-      "where": "This PR's branch preview · /lab/mission-control/ (Focus Board section near the top)",
-      "action": "Open the dashboard on your phone: confirm the Focus Board renders the three project cards (GrowVerse / FRONTIER / Devbiz) with status chips, blocker, owner action, expandable next-actions + backlog, the 'pending PR' doc pills, and the devbiz-memory brain note. Then merge (owner-only).",
-      "blocks": "DBZ-005 area — Mission Control v2 Focus Board"
+      "title": "Browser-check the Focus Board on main (now merged)",
+      "where": "/lab/mission-control/ (Focus Board section near the top)",
+      "action": "The Focus Board is merged to main. On your phone, confirm it renders the three project cards (GrowVerse / FRONTIER / Devbiz) with status chips, blocker, owner action, expandable next-actions + backlog, the doc-link pills, and the devbiz-memory brain note.",
+      "blocks": "Nothing — confidence check on the merged Focus Board"
     },
     {
       "priority": "low",
       "kind": "decide",
-      "title": "Decide on the older Devbiz draft PRs",
-      "where": "KudbeeZero/devbiz · PR #6 (AI concierge), #20 (Code Lens spec), #14 (ledger reconcile)",
-      "action": "Each is a draft awaiting an owner decision (merge, hold, or close). None block the active launch sequence.",
+      "title": "Decide on PR #6 (AI concierge) — the last older Devbiz draft",
+      "where": "KudbeeZero/devbiz · PR #6 (AI concierge)",
+      "action": "PR #20 (Code Lens) and #14 (ledger reconcile) merged 2026-06-20. PR #6 remains a draft awaiting a decision (merge keyless UI, hold, or close). Its backend/AI-key path still needs explicit OWNER-OK. Doesn't block the launch sequence.",
       "blocks": "Nothing — housekeeping"
     }
   ]

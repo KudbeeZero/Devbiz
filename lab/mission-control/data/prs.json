@@ -1,6 +1,6 @@
 {
   "_comment": "Active PR Board. state: draft | open | merged | blocked | queued | closed. ci: green | pending | failing | none | unknown. mergeReadiness: free text. url optional. Cross-repo PRs are labeled 'reported' because this dashboard cannot verify them from the devbiz session.",
-  "updated": "2026-06-19",
+  "updated": "2026-06-20",
   "items": [
     {
       "number": "this PR",
@@ -54,24 +54,24 @@
       "number": "#20",
       "repo": "KudbeeZero/devbiz",
       "title": "docs: Code Lens — Phase 1 spec",
-      "state": "draft",
+      "state": "merged",
       "ci": "none",
-      "preview": "—",
-      "ownerAction": "Review concept; greenlight or hold Phase 2",
-      "lastUpdate": "2026-06-18",
-      "mergeReadiness": "Docs/spec only, fully reversible. Awaiting owner concept sign-off.",
+      "preview": "merged to main",
+      "ownerAction": "Greenlight Phase 2 scaffold (separate PR) when ready",
+      "lastUpdate": "2026-06-20",
+      "mergeReadiness": "Merged 2026-06-20 (DBZ-018). Phase 2 = deterministic read-only scaffold opens as the next separate PR.",
       "url": "https://github.com/KudbeeZero/Devbiz/pull/20"
     },
     {
       "number": "#14",
       "repo": "KudbeeZero/devbiz",
       "title": "docs: reconcile build ledger (close out DBZ-013)",
-      "state": "draft",
+      "state": "merged",
       "ci": "none",
-      "preview": "—",
-      "ownerAction": "Review + merge or close",
-      "lastUpdate": "2026-06-18",
-      "mergeReadiness": "Docs-only, one-file diff. May be superseded by later ledger edits — verify before merge.",
+      "preview": "merged to main",
+      "ownerAction": "None",
+      "lastUpdate": "2026-06-20",
+      "mergeReadiness": "Merged 2026-06-20 (DBZ-017). Ledger row IDs renumbered on merge (DBZ-014 was already taken → DBZ-017/DBZ-018).",
       "url": "https://github.com/KudbeeZero/Devbiz/pull/14"
     }
   ]

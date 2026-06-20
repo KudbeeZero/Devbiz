@@ -2,7 +2,7 @@
   "_comment": "Focus Board — the three active projects and one launch sequence. UI/data/docs only; Mission Control tracks state, it does NOT execute any of these actions. Honest labels: active | live | parked | blocked | manual | reported | not wired. Link objects may carry a 'pending' field naming the PR that must merge before the target exists on main.",
   "title": "Focus Board",
   "subtitle": "Three active projects. One launch sequence.",
-  "updated": "2026-06-19",
+  "updated": "2026-06-20",
   "note": "Tracked, not automated. Mission Control cannot deploy, set env vars, hit a database, or run Fly/Vercel from here — every \"next safe action\" and \"owner action\" below is a human/terminal step. Status words are colour-coded: green = active/live, amber = manual/parked, red = blocked.",
   "projects": [
     {
@@ -34,9 +34,9 @@
         { "id": "GV-006", "title": "Durable Workflow / Inngest POC", "status": "backlog" }
       ],
       "links": [
-        { "label": "Living-plant audit + backend runbook", "href": "../ai-command-center/lanes/growverse-living-plant-audit.md", "pending": "PR #31" },
-        { "label": "Vercel readiness + domain", "href": "../ai-command-center/lanes/growverse-vercel-readiness.md", "pending": "PR #29" },
-        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md", "pending": "PR #32" }
+        { "label": "Living-plant audit + backend runbook", "href": "../ai-command-center/lanes/growverse-living-plant-audit.md" },
+        { "label": "Vercel readiness + domain", "href": "../ai-command-center/lanes/growverse-vercel-readiness.md" },
+        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md" }
       ]
     },
     {
@@ -70,17 +70,17 @@
       "stateLabel": "live · ongoing control plane",
       "labels": ["live", "active"],
       "blocker": "/lab must stay protected on every public surface; the Agent Feed Inbox should be normalized; devbiz-memory should become the canonical brain only if confirmed.",
-      "ownerAction": "Merge PR #30 (404 /lab on Vercel) and configure Cloudflare Access for /lab/*.",
+      "ownerAction": "Verify /lab now 404s on Vercel (PR #30 merged), then configure Cloudflare Access for /lab/*.",
       "nextSafeActions": [
-        "Ensure the Vercel public mirror blocks /lab (PR #30)",
+        "Verify the Vercel public mirror now 404s /lab (PR #30 merged)",
         "Verify the Cloudflare Access plan for /lab/*",
-        "Link the Agent Feed Inbox (PR #32)",
+        "Agent Feed Inbox linked (PR #32 merged)",
         "Document devbiz-memory as the brain repo (needs confirmation)",
         "Later: build the Stage 1 GitHub Agent Feed check"
       ],
       "backlog": [
-        { "id": "DBZ-001", "title": "Block /lab from public Vercel", "status": "in review" },
-        { "id": "DBZ-002", "title": "Agent Feed Inbox", "status": "in review" },
+        { "id": "DBZ-001", "title": "Block /lab from public Vercel", "status": "merged" },
+        { "id": "DBZ-002", "title": "Agent Feed Inbox", "status": "merged" },
         { "id": "DBZ-003", "title": "GitHub Agent Feed Check", "status": "planned" },
         { "id": "DBZ-004", "title": "Cloudflare Access for /lab/*", "status": "manual" },
         { "id": "DBZ-005", "title": "Mission Control Data Vault v2", "status": "backlog" }
@@ -88,8 +88,8 @@
       "note": "These are Focus-Board working IDs for the control-plane sequence; they are distinct from the historical BUILD_LEDGER DBZ-### entries (DBZ-001 there = Games Studio launch). Reconcile numbering on a separate docs lane.",
       "links": [
         { "label": "Mission Control guide", "href": "./README.md" },
-        { "label": "/lab 404 hardening", "href": "https://github.com/KudbeeZero/Devbiz/pull/30" },
-        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md", "pending": "PR #32" }
+        { "label": "/lab 404 hardening (PR #30, merged)", "href": "https://github.com/KudbeeZero/Devbiz/pull/30" },
+        { "label": "Agent Feed Inbox", "href": "../../docs/agent-feed/inbox/README.md" }
       ]
     }
   ],
