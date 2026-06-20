@@ -293,6 +293,21 @@
     }
     .err code { font-family: ui-monospace, monospace; color: var(--amber); }
 
+    /* Focus Board */
+    .fb-card .fb-order {
+        flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;
+        background: var(--grad); color: #06060c; box-shadow: var(--shadow-glow);
+    }
+    .fb-labels { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .fb-h { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin: 12px 0 6px; }
+    .fb-list, .fb-backlog { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px; }
+    .fb-bid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--violet); font-weight: 600; }
+    .fb-links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fb-link { font-size: 12.5px; text-decoration: none; color: var(--cyan); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; transition: border-color 0.2s; }
+    .fb-link:hover { border-color: var(--cyan); }
+    .fb-link.muted { color: var(--text-dim); cursor: default; }
+
     /* Footer */
     .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
     .foot a { color: var(--text-muted); text-decoration: none; }
@@ -350,6 +365,7 @@
     <!-- Jump nav -->
     <nav class="jump" aria-label="Section jump">
         <a href="#owner-actions">⚡ Owner Actions</a>
+        <a href="#focus-board">🎯 Focus Board</a>
         <a href="#projects">Projects</a>
         <a href="#prs">PR Board</a>
         <a href="#agents">Agents</a>
@@ -367,7 +383,21 @@
         </div>
     </section>
 
-    <!-- 2. PROJECTS -->
+    <!-- 2. FOCUS BOARD -->
+    <section class="section" id="focus-board">
+        <div class="section-head">
+            <h2><span class="sec-icon">🎯</span> Focus Board <span class="count" id="fbCount">–</span></h2>
+            <span class="desc">Three active projects. One launch sequence.</span>
+        </div>
+        <div class="note-banner" id="fbNote">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div>Loading focus board…</div>
+        </div>
+        <div class="grid wide" id="fbGrid" style="margin-top:16px"></div>
+        <div id="fbBrain"></div>
+    </section>
+
+    <!-- 3. PROJECTS -->
     <section class="section" id="projects">
         <div class="section-head">
             <h2><span class="sec-icon">🗂️</span> Active Project Lanes <span class="count" id="projCount">–</span></h2>
@@ -376,7 +406,7 @@
         <div class="grid" id="projGrid"></div>
     </section>
 
-    <!-- 3. PR BOARD -->
+    <!-- 4. PR BOARD -->
     <section class="section" id="prs">
         <div class="section-head">
             <h2><span class="sec-icon">🔀</span> Active PR Board <span class="count" id="prCount">–</span></h2>
@@ -385,7 +415,7 @@
         <div class="grid wide" id="prGrid"></div>
     </section>
 
-    <!-- 4. AGENT REGISTRY -->
+    <!-- 5. AGENT REGISTRY -->
     <section class="section" id="agents">
         <div class="section-head">
             <h2><span class="sec-icon">🛰️</span> Agent Registry <span class="count" id="agentCount">–</span></h2>
@@ -398,7 +428,7 @@
         <div class="grid" id="agentGrid" style="margin-top:14px"></div>
     </section>
 
-    <!-- 5. DECISION LOG -->
+    <!-- 6. DECISION LOG -->
     <section class="section" id="decisions">
         <div class="section-head">
             <h2><span class="sec-icon">📜</span> Decision Log <span class="count" id="decCount">–</span></h2>
@@ -407,7 +437,7 @@
         <div id="decList"></div>
     </section>
 
-    <!-- 6. PROMPT LEDGER -->
+    <!-- 7. PROMPT LEDGER -->
     <section class="section" id="prompts">
         <div class="section-head">
             <h2><span class="sec-icon">💬</span> Prompt Ledger <span class="count" id="promptCount">–</span></h2>
@@ -416,7 +446,7 @@
         <div id="promptList"></div>
     </section>
 
-    <!-- 7. AGENT REPORTING PROTOCOL -->
+    <!-- 8. AGENT REPORTING PROTOCOL -->
     <section class="section" id="protocol">
         <div class="section-head">
             <h2><span class="sec-icon">📋</span> Agent Reporting Protocol</h2>
@@ -530,7 +560,64 @@ async function renderActions() {
     } catch (e) { fail('oaqList', e); }
 }
 
-/* 2 — Projects */
+/* 2 — Focus Board (three active projects, one launch sequence) */
+async function renderFocusBoard() {
+    try {
+        const d = await loadJSON('./data/focus-board.json');
+        const projects = d.projects || [];
+        document.getElementById('fbCount').textContent = projects.length;
+        document.getElementById('fbNote').innerHTML = `
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><strong>Tracked, not automated.</strong> ${esc(d.note)}</div>`;
+        document.getElementById('fbGrid').innerHTML = projects.map(p => {
+            const labels = (p.labels || []).map(l => chip(l, 'plain')).join('');
+            const steps = (p.nextSafeActions || []).map(s => `<li>${esc(s)}</li>`).join('');
+            const backlog = (p.backlog || []).map(b =>
+                `<li><span class="fb-bid">${esc(b.id)}</span> ${esc(b.title)} ${b.status ? chip(b.status, 'plain') : ''}</li>`).join('');
+            const links = (p.links || []).map(l => l.pending
+                ? `<span class="fb-link muted" title="Lands when ${esc(l.pending)} merges">${esc(l.label)} · pending ${esc(l.pending)}</span>`
+                : `<a class="fb-link" href="${esc(l.href)}"${/^https?:/.test(l.href || '') ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label)}</a>`).join('');
+            return `
+            <div class="item fb-card">
+                <div class="item-top">
+                    <div style="display:flex;gap:12px;align-items:flex-start;min-width:0">
+                        <div class="fb-order">${esc(p.order)}</div>
+                        <div style="min-width:0">
+                            <div class="item-title">${esc(p.name)}</div>
+                            <div class="item-sub">${esc(p.repo)}</div>
+                        </div>
+                    </div>
+                    ${chip(p.state)}
+                </div>
+                <div class="fb-labels">${chip(p.priorityLabel, 'plain violet')}${labels}</div>
+                <dl class="kv">
+                    <dt>Blocker</dt><dd>${esc(p.blocker)}</dd>
+                    <dt>Owner</dt><dd class="next">${esc(p.ownerAction)}</dd>
+                    <dt>Backlog</dt><dd>${(p.backlog || []).length} items</dd>
+                </dl>
+                <details class="row" style="margin-top:10px;background:transparent;border:none">
+                    <summary style="padding:6px 0"><span class="row-meta">Next safe actions · backlog · linked docs</span></summary>
+                    <div class="row-body" style="padding:0">
+                        ${steps ? `<div class="fb-h">Next safe actions</div><ol class="fb-list">${steps}</ol>` : ''}
+                        ${backlog ? `<div class="fb-h">Backlog</div><ul class="fb-backlog">${backlog}</ul>` : ''}
+                        ${p.note ? `<div class="fb-h">Note</div><div style="font-size:12.5px;color:var(--text-dim)">${esc(p.note)}</div>` : ''}
+                        ${links ? `<div class="fb-h">Linked docs / data</div><div class="fb-links">${links}</div>` : ''}
+                    </div>
+                </details>
+            </div>`;
+        }).join('');
+        const b = d.brain;
+        document.getElementById('fbBrain').innerHTML = b ? `
+            <div class="note-banner" style="margin-top:16px">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v1a3 3 0 0 0-1 5.83V14a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4v-1.17A3 3 0 0 0 16 7V6a4 4 0 0 0-4-4z"/></svg>
+                <div><strong>Agent Brain — ${esc(b.repo)}</strong> &nbsp;${chip(b.label, 'plain muted')}<br>
+                    Role: ${esc(b.role)} · Status: ${chip(b.status, 'plain')} · Next: <span style="color:var(--cyan)">${esc(b.nextAction)}</span><br>
+                    <span style="color:var(--text-dim)">${esc(b.note)}</span></div>
+            </div>` : '';
+    } catch (e) { fail('fbGrid', e); }
+}
+
+/* 3 — Projects */
 async function renderProjects() {
     try {
         const d = await loadJSON('./data/projects.json');
@@ -557,7 +644,7 @@ async function renderProjects() {
     } catch (e) { fail('projGrid', e); }
 }
 
-/* 3 — PR Board */
+/* 4 — PR Board */
 async function renderPRs() {
     try {
         const d = await loadJSON('./data/prs.json');
@@ -588,7 +675,7 @@ async function renderPRs() {
     } catch (e) { fail('prGrid', e); }
 }
 
-/* 4 — Agent Registry */
+/* 5 — Agent Registry */
 async function renderAgents() {
     try {
         const d = await loadJSON('./data/agents.json');
@@ -616,7 +703,7 @@ async function renderAgents() {
     } catch (e) { fail('agentGrid', e); }
 }
 
-/* 5 — Decision Log */
+/* 6 — Decision Log */
 async function renderDecisions() {
     try {
         const d = await loadJSON('./data/decisions.json');
@@ -639,7 +726,7 @@ async function renderDecisions() {
     } catch (e) { fail('decList', e); }
 }
 
-/* 6 — Prompt Ledger */
+/* 7 — Prompt Ledger */
 async function renderPrompts() {
     try {
         const d = await loadJSON('./data/prompts.json');
@@ -692,7 +779,7 @@ themeBtn.addEventListener('click', () => {
 });
 
 /* Render all */
-renderActions(); renderProjects(); renderPRs(); renderAgents(); renderDecisions(); renderPrompts();
+renderActions(); renderFocusBoard(); renderProjects(); renderPRs(); renderAgents(); renderDecisions(); renderPrompts();
 </script>
 </body>
 </html>
