@@ -1050,7 +1050,7 @@
     ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
     ctx.fillText('YOUR CAREER', sx + 20, sy + 32);
     const x01 = d.stats.x01, cri = d.stats.cricket;
-    const pct = (w, p) => p ? Math.round(w / p * 100) + '%' : '—';
+    const pct = (w, p) => p ? (w / p * 100).toFixed(1) + '%' : '—';
     const lines = [
       ['Level', 'LV ' + d.level],
       ['Win streak', d.streak + '  (best ' + d.bestStreak + ')'],
