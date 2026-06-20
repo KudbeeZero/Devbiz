@@ -3,16 +3,16 @@
   "updated": "2026-06-20",
   "items": [
     {
-      "number": "this PR",
+      "number": "#25",
       "repo": "KudbeeZero/devbiz",
       "title": "Mission Control v1 — gated /lab/mission-control dashboard",
-      "state": "draft",
+      "state": "merged",
       "ci": "none",
-      "preview": "Cloudflare branch preview (after push)",
-      "ownerAction": "Review + merge",
-      "lastUpdate": "2026-06-19",
-      "mergeReadiness": "Static, additive, zero-build. Local render check pending owner browser pass.",
-      "url": ""
+      "preview": "merged to main",
+      "ownerAction": "Cloudflare Access for /lab/* (follow-up, CP-004)",
+      "lastUpdate": "2026-06-20",
+      "mergeReadiness": "Merged (PR #25). Static, additive, zero-build. Cloudflare Access for /lab/* remains the owner gate.",
+      "url": "https://github.com/KudbeeZero/Devbiz/pull/25"
     },
     {
       "number": "#27",
