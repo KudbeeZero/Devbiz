@@ -610,6 +610,16 @@
     .mt-ring { width: 86px; height: 86px; box-shadow: 0 0 28px rgba(111,91,255,0.4) inset; }
     .mt-ring::after { content: ''; width: 150%; height: 150%; border-color: rgba(196,107,255,0.30); }
 
+    /* falling-gem highway (Kudbee Riff rhythm game) */
+    .mt-frets { position: absolute; inset: 0; overflow: hidden; }
+    .mt-frets .lane { position: absolute; top: 6%; bottom: 0; width: 1px;
+        background: linear-gradient(rgba(255,255,255,0.14), rgba(255,255,255,0)); }
+    .mt-frets b { position: absolute; top: 0; width: 13px; height: 13px; border-radius: 4px;
+        transform: rotate(45deg); color: var(--cyan); background: currentColor;
+        box-shadow: 0 0 12px currentColor; opacity: 0; }
+    .mt-frets .strike { position: absolute; left: 14%; right: 14%; bottom: 16%; height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); }
+
     .mt-badge { position: absolute; top: 12px; left: 12px; z-index: 2; font-size: 10px; font-weight: 700;
         letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); background: rgba(7,7,15,0.6);
         border: 1px solid rgba(57,230,255,0.3); padding: 4px 9px; border-radius: 7px; backdrop-filter: blur(6px); }
@@ -995,6 +1005,8 @@
         @keyframes mtBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         .mt-ring { animation: mtPulse 3s ease-in-out infinite; }
         @keyframes mtPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.85; } 50% { transform: translate(-50%,-50%) scale(1.12); opacity: 1; } }
+        .mt-frets b { animation: mtFall 2.4s linear infinite; }
+        @keyframes mtFall { 0% { transform: translateY(-16px) rotate(45deg); opacity: 0; } 12% { opacity: 1; } 84% { opacity: 1; } 100% { transform: translateY(150px) rotate(45deg); opacity: 0; } }
     }
 
     /* ===== RESPONSIVE ===== */
@@ -1226,6 +1238,26 @@
         <div class="media-marquee" data-tilt-scope>
             <div class="media-track">
                 <!-- Tile set (duplicated below for a seamless loop) -->
+                <a class="media-tile" data-tilt href="games/kudbee-riff/index.html" aria-label="Kudbee Riff — rhythm game charted to the studio track">
+                    <div class="mt-art">
+                        <span class="mt-badge" style="color:var(--amber);border-color:rgba(255,211,77,0.35)">Game</span>
+                        <div class="mt-frets" aria-hidden="true">
+                            <span class="lane" style="left:30%"></span><span class="lane" style="left:43%"></span><span class="lane" style="left:57%"></span><span class="lane" style="left:70%"></span>
+                            <b style="left:29%;color:var(--cyan);animation-delay:0s"></b>
+                            <b style="left:42%;color:var(--violet);animation-delay:.7s"></b>
+                            <b style="left:56%;color:var(--green);animation-delay:1.3s"></b>
+                            <b style="left:69%;color:var(--amber);animation-delay:.4s"></b>
+                            <span class="strike"></span>
+                        </div>
+                        <div class="mt-glow"></div>
+                        <span class="mt-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+                    </div>
+                    <div class="mt-meta">
+                        <div class="mt-kicker">Games · Rhythm</div>
+                        <div class="mt-title">Kudbee Riff — Fret Rush</div>
+                        <div class="mt-sub">Hit the notes as they fall — charted to the real beats of the track.</div>
+                    </div>
+                </a>
                 <a class="media-tile" data-tilt href="lab/music-video-2/index.html" aria-label="Particle Drone Show — audio-reactive music video">
                     <div class="mt-art mt-art-grad-v">
                         <span class="mt-badge">New</span>
@@ -1292,6 +1324,26 @@
                     </div>
                 </a>
                 <!-- Duplicate set (decorative; hidden from a11y + tab order) -->
+                <a class="media-tile" data-tilt href="games/kudbee-riff/index.html" aria-hidden="true" tabindex="-1">
+                    <div class="mt-art">
+                        <span class="mt-badge" style="color:var(--amber);border-color:rgba(255,211,77,0.35)">Game</span>
+                        <div class="mt-frets" aria-hidden="true">
+                            <span class="lane" style="left:30%"></span><span class="lane" style="left:43%"></span><span class="lane" style="left:57%"></span><span class="lane" style="left:70%"></span>
+                            <b style="left:29%;color:var(--cyan);animation-delay:0s"></b>
+                            <b style="left:42%;color:var(--violet);animation-delay:.7s"></b>
+                            <b style="left:56%;color:var(--green);animation-delay:1.3s"></b>
+                            <b style="left:69%;color:var(--amber);animation-delay:.4s"></b>
+                            <span class="strike"></span>
+                        </div>
+                        <div class="mt-glow"></div>
+                        <span class="mt-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+                    </div>
+                    <div class="mt-meta">
+                        <div class="mt-kicker">Games · Rhythm</div>
+                        <div class="mt-title">Kudbee Riff — Fret Rush</div>
+                        <div class="mt-sub">Hit the notes as they fall — charted to the real beats of the track.</div>
+                    </div>
+                </a>
                 <a class="media-tile" data-tilt href="lab/music-video-2/index.html" aria-hidden="true" tabindex="-1">
                     <div class="mt-art mt-art-grad-v">
                         <span class="mt-badge">New</span>
