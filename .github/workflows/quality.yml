@@ -1,0 +1,108 @@
+# Quality guardrails — link checking + HTML sanity for the zero-build static site.
+#
+# WHY: this repo is hand-written vanilla HTML/CSS/JS deployed on Cloudflare Pages.
+# The bugs we keep hitting are (a) our OWN broken local links — e.g. an old `/game/`
+# href that 404'd — and (b) basic structural HTML mistakes (duplicate ids, unclosed
+# tags). This workflow catches those on every PR.
+#
+# ADVISORY / NON-BLOCKING (on purpose, for now):
+#   Both checks run with `continue-on-error: true`, so this workflow SURFACES problems
+#   in the PR's Checks tab but never blocks a merge. It is intentionally NOT a required
+#   status check yet — these tools run on their own introductory PR too, and we don't
+#   want to hard-gate everything before we've watched a few real runs and confirmed the
+#   repo is clean. Once it has been green on a few PRs, promote it to required by:
+#     1. removing `continue-on-error: true` from the steps below, and
+#     2. adding "Quality guardrails / *" to the branch protection required checks.
+#   (Empirically, against the current repo, both checks already pass — see the PR body.)
+#
+# Scope note: only the site's own HTML is linted. `.agents/skills/**` holds third-party
+# React/Vue auth scaffolding templates we don't author, so it is excluded.
+
+name: Quality guardrails
+
+on:
+  pull_request:
+    paths:
+      - "**/*.html"
+      - ".github/workflows/quality.yml"
+      - ".htmlhintrc"
+      - ".lycheeignore"
+  push:
+    branches: [main]
+    paths:
+      - "**/*.html"
+      - ".github/workflows/quality.yml"
+      - ".htmlhintrc"
+      - ".lycheeignore"
+
+# Avoid piling up redundant runs on rapid pushes to the same PR/branch.
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  link-check:
+    name: Link check (internal links)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Lint only the site's own HTML, skipping vendored skill templates.
+      - name: Collect tracked HTML (excluding .agents/)
+        id: collect
+        run: |
+          {
+            echo 'files<<EOF'
+            git ls-files '*.html' | grep -v '^\.agents/'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # Internal link checker. We verify ONLY file-scheme (local/relative + root-
+      # relative) links: `--scheme file` plus `--root-dir` resolves "/foo" the same
+      # way Cloudflare Pages does (repo root = site root). External http(s) URLs are
+      # excluded via `.lycheeignore` and are NOT failed on. We also don't fail on
+      # transient network conditions (timeouts / 429s) for any link that is checked.
+      #
+      # `fail: true` makes lychee-action surface broken INTERNAL links as a failed
+      # step; the surrounding `continue-on-error: true` keeps that advisory for now.
+      - name: Check internal links (lychee)
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --scheme file
+            --root-dir "$GITHUB_WORKSPACE"
+            --exclude-path .agents
+            --accept 200..=299,403,429
+            --max-retries 1
+            ${{ steps.collect.outputs.files }}
+          fail: true
+          # Don't fail the action on lychee's own emptiness/format edge cases.
+          failIfEmpty: false
+
+  html-sanity:
+    name: HTML sanity (htmlhint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Structural HTML check with a deliberately PRAGMATIC ruleset (see .htmlhintrc):
+      # we fail on real errors (duplicate ids, unclosed/mismatched tags, missing
+      # doctype/title, empty src) but NOT on opinionated style rules (inline styles,
+      # inline scripts, single-quoted attrs) that the current hand-written files use.
+      # Verified locally: htmlhint passes clean on all current site HTML.
+      # `continue-on-error: true` keeps this advisory for now (see header).
+      - name: Lint tracked HTML (htmlhint)
+        continue-on-error: true
+        run: |
+          mapfile -t files < <(git ls-files '*.html' | grep -v '^\.agents/')
+          echo "Linting ${#files[@]} HTML files"
+          npx --yes htmlhint@1 --config .htmlhintrc "${files[@]}"
