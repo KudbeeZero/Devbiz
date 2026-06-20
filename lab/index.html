@@ -185,6 +185,7 @@
     .badge.tool { color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); }
     .badge.game { color: var(--violet); border: 1px solid rgba(196,107,255,0.4); }
     .badge.ops { color: var(--green); border: 1px solid rgba(124,255,178,0.4); }
+    .badge.media { color: var(--violet); border: 1px solid rgba(196,107,255,0.4); }
     .badge.soon { color: var(--amber); border: 1px solid rgba(255,211,77,0.4); }
 
     .card h3 { font-size: 19px; font-weight: 600; color: var(--text-primary); }
@@ -258,6 +259,9 @@
     <div class="section-label">Operations · Control Plane</div>
     <div class="grid" id="opsGrid"></div>
 
+    <div class="section-label">Studio · Media</div>
+    <div class="grid" id="mediaGrid"></div>
+
     <div class="section-label">Tools</div>
     <div class="grid" id="toolsGrid"></div>
 
@@ -291,6 +295,14 @@ const OPS = [
     }
 ];
 
+const MEDIA = [
+    {
+        icon: '🎬', kind: 'media', title: 'Music Video — Original Track',
+        desc: 'An original recording rendered as a real-time, audio-reactive canvas visual — spectrum ring, beat-driven particle bursts, and section-synced scene changes. Drawn live from the audio, no pre-baked footage. Headphones on.',
+        href: './music-video/index.html', status: 'live'
+    }
+];
+
 const TOOLS = [
     {
         icon: '📊', kind: 'tool', title: 'Coverage Dashboard',
@@ -319,7 +331,7 @@ const GAMES = [
 
 function cardHTML(item) {
     const live = item.status === 'live';
-    const tag = item.kind === 'game' ? 'game' : item.kind === 'ops' ? 'ops' : 'tool';
+    const tag = item.kind === 'game' ? 'game' : item.kind === 'ops' ? 'ops' : item.kind === 'media' ? 'media' : 'tool';
     const badge = live
         ? `<span class="badge ${tag}">${tag}</span>`
         : `<span class="badge soon">In build</span>`;
@@ -338,6 +350,7 @@ function cardHTML(item) {
 }
 
 document.getElementById('opsGrid').innerHTML = OPS.map(cardHTML).join('');
+document.getElementById('mediaGrid').innerHTML = MEDIA.map(cardHTML).join('');
 document.getElementById('toolsGrid').innerHTML = TOOLS.map(cardHTML).join('');
 document.getElementById('gamesGrid').innerHTML = GAMES.map(cardHTML).join('');
 

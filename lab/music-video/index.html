@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Kudbee Studio — audio-reactive music video. An original recording rendered as a real-time canvas visual. Private preview.">
+    <title>Music Video · Studio Media · Kudbee (Private)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #04040a;
+        --bg-card: rgba(255,255,255,0.04);
+        --border: rgba(255,255,255,0.08);
+        --border-hover: rgba(255,255,255,0.18);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: #03030a; color: var(--text-secondary);
+        overflow: hidden; -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .logo-txt { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* Stage */
+    .stage { position: fixed; inset: 0; overflow: hidden; background:
+        radial-gradient(1200px 800px at 50% 42%, #0a0a1c 0%, #050510 55%, #020207 100%); }
+    #viz { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+    /* Top-left brand chrome (auto-hides) */
+    .chrome { position: absolute; inset: 0; pointer-events: none; z-index: 5; transition: opacity 0.5s ease; }
+    .chrome.idle { opacity: 0; }
+
+    .topbar {
+        position: absolute; top: 0; left: 0; right: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 24px; pointer-events: auto;
+        background: linear-gradient(180deg, rgba(2,2,8,0.65), transparent);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: inline-flex; align-items: center; gap: 5px; transition: color 0.2s; margin-right: 6px;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary);
+        font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+    .logo-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative; }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #04040a; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); padding: 2px 7px; border-radius: 5px; margin-left: 4px; }
+
+    /* Lower-third title card */
+    .lower-third {
+        position: absolute; left: 30px; bottom: 96px; pointer-events: none;
+        opacity: 0; transform: translateY(14px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .lower-third.show { opacity: 1; transform: translateY(0); }
+    .lt-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--cyan); display: flex; align-items: center; gap: 8px; }
+    .lt-kicker::before { content: ''; width: 26px; height: 2px; background: var(--grad); border-radius: 2px; }
+    .lt-title { font-size: clamp(30px, 6vw, 60px); font-weight: 700; line-height: 1.02; letter-spacing: -0.02em;
+        color: #fff; margin-top: 10px; text-shadow: 0 4px 40px rgba(57,230,255,0.35); }
+    .lt-sub { margin-top: 8px; font-size: 14px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
+
+    /* Transport bar */
+    .transport {
+        position: absolute; left: 0; right: 0; bottom: 0; pointer-events: auto;
+        padding: 14px 24px 18px;
+        background: linear-gradient(0deg, rgba(2,2,8,0.78), rgba(2,2,8,0.0));
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .scrub { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.12);
+        cursor: pointer; overflow: visible; }
+    .scrub-buf { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,0.06); width: 0%; }
+    .scrub-fill { position: absolute; top: 0; left: 0; bottom: 0; border-radius: 999px; width: 0%;
+        background: var(--grad); box-shadow: 0 0 14px rgba(111,91,255,0.6); }
+    .scrub-knob { position: absolute; top: 50%; left: 0%; width: 14px; height: 14px; border-radius: 50%;
+        background: #fff; transform: translate(-50%, -50%); box-shadow: 0 0 0 4px rgba(57,230,255,0.25), 0 2px 8px rgba(0,0,0,0.5);
+        opacity: 0; transition: opacity 0.2s; }
+    .scrub:hover .scrub-knob, .scrub.dragging .scrub-knob { opacity: 1; }
+
+    .controls { display: flex; align-items: center; gap: 16px; }
+    .ctrl-btn { pointer-events: auto; background: none; border: none; color: var(--text-secondary); cursor: pointer;
+        width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; transition: background 0.2s, color 0.2s; }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .ctrl-btn svg { width: 20px; height: 20px; }
+    .ctrl-btn.play { width: 48px; height: 48px; background: var(--grad); color: #04040a; box-shadow: var(--shadow-glow); }
+    .ctrl-btn.play:hover { filter: brightness(1.08); background: var(--grad); color: #04040a; }
+    .ctrl-btn.play svg { width: 22px; height: 22px; }
+    .ctrl-btn.fx { width: 36px; height: 36px; }
+    .ctrl-btn.fx svg { width: 18px; height: 18px; }
+    .ctrl-btn.active { color: var(--cyan); background: rgba(57,230,255,0.14); box-shadow: 0 0 0 1px rgba(57,230,255,0.3) inset; }
+    #partyBtn.active { color: var(--violet); background: rgba(196,107,255,0.16); box-shadow: 0 0 0 1px rgba(196,107,255,0.34) inset; }
+    .fx-group { display: flex; align-items: center; gap: 4px; }
+    .time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--text-muted); font-weight: 500; min-width: 102px; }
+    .time .sep { color: var(--text-dim); margin: 0 4px; }
+    .spacer { flex: 1; }
+    .track-name { font-size: 13px; color: var(--text-dim); font-weight: 500; max-width: 40vw; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap; }
+    .vol-wrap { display: flex; align-items: center; gap: 8px; }
+    .vol { width: 84px; height: 4px; -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.16);
+        border-radius: 999px; cursor: pointer; outline: none; }
+    .vol::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff;
+        box-shadow: 0 0 0 3px rgba(57,230,255,0.25); cursor: pointer; }
+    .vol::-moz-range-thumb { width: 13px; height: 13px; border: none; border-radius: 50%; background: #fff; cursor: pointer; }
+
+    /* Big play overlay (pre-start) */
+    .gate { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; text-align: center;
+        background: radial-gradient(900px 600px at 50% 45%, rgba(10,10,28,0.55), rgba(3,3,10,0.88));
+        backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); transition: opacity 0.6s ease; }
+    .gate.hidden { opacity: 0; pointer-events: none; }
+    .gate-inner { max-width: 540px; padding: 0 28px; }
+    .gate .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+        color: var(--cyan); }
+    .gate h1 { font-size: clamp(34px, 7vw, 64px); line-height: 1.04; font-weight: 700; letter-spacing: -0.02em;
+        color: #fff; margin: 14px 0 10px; }
+    .gate p { color: var(--text-muted); font-size: 15px; max-width: 420px; margin: 0 auto; }
+    .play-big { margin-top: 30px; pointer-events: auto; display: inline-flex; align-items: center; gap: 12px;
+        padding: 16px 30px; border: none; border-radius: 999px; cursor: pointer;
+        background: var(--grad); color: #04040a; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px;
+        box-shadow: 0 16px 50px -12px rgba(111,91,255,0.7); transition: transform 0.18s ease, filter 0.18s ease; }
+    .play-big:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.06); }
+    .play-big svg { width: 22px; height: 22px; }
+    .gate-foot { margin-top: 22px; font-size: 12px; color: var(--text-dim); }
+
+    .hint { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%); z-index: 6;
+        font-size: 12px; color: var(--text-dim); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+
+    @media (max-width: 640px) {
+        .topbar { padding: 12px 14px; }
+        .lower-third { left: 18px; bottom: 104px; }
+        .transport { padding: 12px 14px 14px; }
+        .track-name { display: none; }
+        .vol-wrap { display: none; }
+        .nav-badge { display: none; }
+        .time { min-width: 92px; font-size: 12px; }
+        .hint { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .play-big, .lower-third, .gate { transition: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="stage">
+    <canvas id="viz"></canvas>
+
+    <!-- Pre-start gate -->
+    <div class="gate" id="gate">
+        <div class="gate-inner">
+            <div class="kicker">⬡ Kudbee Studio · Media</div>
+            <h1>An original track,<br><span class="gradient-text">rendered live.</span></h1>
+            <p>Press play. Every particle, pulse, and ribbon below is drawn in real time from the audio — no pre-baked footage.</p>
+            <button class="play-big" id="playBig" aria-label="Play the music video">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Play the video
+            </button>
+            <div class="gate-foot">Headphones recommended · 2:45</div>
+        </div>
+    </div>
+
+    <!-- Chrome / overlay -->
+    <div class="chrome" id="chrome">
+        <div class="topbar">
+            <div class="brand">
+                <a href="../index.html" class="back-link" title="Studio Lab">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    Lab
+                </a>
+                <a href="../../index.html" class="logo-link">
+                    <span class="logo-mark"></span>
+                    <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+                </a>
+                <span class="nav-badge">Private</span>
+            </div>
+        </div>
+
+        <div class="lower-third" id="lowerThird">
+            <div class="lt-kicker">Now Playing</div>
+            <div class="lt-title" id="ltTitle">Untitled Track</div>
+            <div class="lt-sub" id="ltSub">Original recording · Kudbee Studio · 2026</div>
+        </div>
+
+        <div class="hint" id="hint">Space play/pause · F fullscreen · P party mode · D replay the drop · X reduced FX</div>
+
+        <div class="transport" id="transport">
+            <div class="scrub" id="scrub" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                <div class="scrub-buf" id="scrubBuf"></div>
+                <div class="scrub-fill" id="scrubFill"></div>
+                <div class="scrub-knob" id="scrubKnob"></div>
+            </div>
+            <div class="controls">
+                <button class="ctrl-btn play" id="playBtn" aria-label="Play / pause">
+                    <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <div class="time"><span id="tCur">0:00</span><span class="sep">/</span><span id="tDur">0:00</span></div>
+                <div class="spacer"></div>
+                <span class="track-name" id="trackName">Original Recording · Jun 2026</span>
+                <div class="vol-wrap">
+                    <button class="ctrl-btn" id="muteBtn" aria-label="Mute">
+                        <svg id="volIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4h4l5 5V5L7 10H3z"/><path d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    </button>
+                    <input type="range" class="vol" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                </div>
+                <div class="fx-group">
+                    <button class="ctrl-btn fx" id="partyBtn" aria-pressed="true" aria-label="Party mode" title="Party mode (P)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
+                    </button>
+                    <button class="ctrl-btn fx" id="dropBtn" aria-label="Replay the drop" title="Replay the drop (D)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 2l-2.5 2.5M12 2l2.5 2.5"/><path d="M4 14l3 7M20 14l-3 7M12 11l0 10M8 13l-2 8M16 13l2 8"/></svg>
+                    </button>
+                    <button class="ctrl-btn fx" id="fxBtn" aria-pressed="false" aria-label="Reduced effects" title="Reduced effects (X)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6M15 12h6M12 3v6M12 15v6"/><circle cx="12" cy="12" r="2.4"/></svg>
+                    </button>
+                </div>
+                <button class="ctrl-btn" id="fsBtn" aria-label="Fullscreen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="audio" preload="auto" crossorigin="anonymous" src="./assets/song.mp3"></audio>
+
+<script>
+/* ===========================================================================
+ * Kudbee Studio — Audio-reactive music video
+ * ---------------------------------------------------------------------------
+ * Renders an original recording as a real-time canvas visual. Macro
+ * choreography (scene/palette changes, beat flashes) is driven by a pre-baked
+ * analysis pass (assets/analysis.json: per-frame band energy, beat onsets,
+ * section markers). Fine detail (spectrum shapes, bass pulse) is driven live
+ * by a Web Audio AnalyserNode. Honors prefers-reduced-motion, pauses work when
+ * hidden, caps DPR, and degrades gracefully where Web Audio is unavailable.
+ *
+ * To set the on-screen title, edit TRACK below.
+ * ========================================================================= */
+const TRACK = {
+    title: 'I Found Somebody to Love',
+    sub:   'Original recording · Kudbee Studio · 2026',
+    short: 'I Found Somebody to Love'
+};
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const audio   = document.getElementById('audio');
+const canvas  = document.getElementById('viz');
+const ctx     = canvas.getContext('2d', { alpha: false });
+
+// ---- Palettes per song section (hue-driven, house colors) -----------------
+// [bg accent rgb], [bar low], [bar high], particle hue
+const SCENES = [
+    { name: 'genesis', a: [57,230,255],  b: [111,91,255],  c: [196,107,255], hue: 188 },
+    { name: 'rise',    a: [255,211,77],  b: [196,107,255], c: [255,120,200], hue: 320 },
+    { name: 'pulse',   a: [124,255,178], b: [57,230,255],  c: [111,91,255],  hue: 150 },
+    { name: 'finale',  a: [196,107,255], b: [111,91,255],  c: [255,120,200], hue: 285 }
+];
+
+let A = null;            // baked analysis
+let sectionBounds = [0]; // seconds
+let beatTimes = [];
+let beatPtr = 0;
+
+// ---- Live Web Audio -------------------------------------------------------
+let audioCtx = null, analyser = null, freqData = null, timeData = null, srcNode = null;
+let audioReady = false;
+
+function initAudioGraph() {
+    if (audioReady) return;
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        srcNode = audioCtx.createMediaElementSource(audio);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.78;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.fftSize);
+        srcNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        audioReady = true;
+    } catch (e) {
+        // Web Audio blocked — visuals fall back to baked analysis only.
+        audioReady = false;
+    }
+}
+
+// ---- Canvas sizing --------------------------------------------------------
+let W = 0, H = 0, CX = 0, CY = 0, DPR = 1;
+function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, reduceMotion ? 1.5 : 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    CX = W / 2; CY = H / 2;
+}
+window.addEventListener('resize', resize);
+
+// ---- Starfield ------------------------------------------------------------
+let stars = [];
+function seedStars() {
+    const n = reduceMotion ? 90 : Math.min(260, Math.round((W * H) / 9000));
+    stars = [];
+    for (let i = 0; i < n; i++) {
+        stars.push({
+            x: (Math.random() - 0.5) * W * 1.3,
+            y: (Math.random() - 0.5) * H * 1.3,
+            z: Math.random() * 0.9 + 0.1,
+            tw: Math.random() * Math.PI * 2
+        });
+    }
+}
+
+// ===========================================================================
+// FX ENGINE — pooled particles, rings, speaker kicks, earned celebrations.
+// Every system is hard-capped and adaptive. CLARITY: additive alpha is capped,
+// flashes are capped + rate-limited (no strobe), and the per-frame trail clear
+// prevents brightness from accumulating into a white blur. PERF: nothing is
+// allocated inside the frame loop — particles/rings live in fixed pools.
+// ===========================================================================
+const TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a);
+
+// --- User FX state (persisted) ---
+const isMobile = window.matchMedia('(pointer: coarse)').matches
+                 || Math.min(window.screen.width, window.screen.height) < 560;
+let reducedFX = localStorage.getItem('kudbee-mv-reducedfx') === '1';
+let partyMode = localStorage.getItem('kudbee-mv-party');
+partyMode = (partyMode === null) ? true : (partyMode === '1');
+function fxOff() { return reduceMotion || reducedFX; }   // hard-minimal mode
+
+// --- Adaptive quality (auto-protects mobile / weak GPUs) ---
+let quality = isMobile ? 0.72 : 1;       // 0.4 .. 1 scalar applied to budgets
+let fpsEMA = 60, qHold = 0;
+
+// --- Section / beat intelligence (derived from baked analysis) ---
+let beatStrength = [];     // per-beat 0..1 from baked bass + energy
+let sectionInfo = [];      // per-section visual language
+function prepareAnalysis() {
+    beatStrength = beatTimes.map(bt => {
+        const b = baked(A && A.bass, bt), e = baked(A && A.energy, bt);
+        return Math.min(1, Math.max(b, e * 0.85));
+    });
+    const secs = sectionBounds, dur = (A && A.duration) || audio.duration || 165;
+    const means = secs.map((s, i) => {
+        const e0 = (secs[i + 1] != null) ? secs[i + 1] : dur; let sum = 0, c = 0;
+        for (let tt = s; tt < e0; tt += 0.5) { sum += baked(A && A.energy, tt); c++; }
+        return c ? sum / c : 0;
+    });
+    const lo = Math.min.apply(null, means), hi = Math.max.apply(null, means) || 1;
+    sectionInfo = secs.map((s, i) => {
+        const m = (means[i] - lo) / ((hi - lo) || 1);   // 0..1 relative energy
+        return {
+            start: s, end: (secs[i + 1] != null) ? secs[i + 1] : dur, m,
+            intro: i === 0,
+            dust: lerp(0.4, 1.15, m),     // floating-dust density
+            glitter: m > 0.62,            // glitter trails during hooks
+            confetti: m > 0.55,           // confetti on strong beats
+            dark: m < 0.33 && i !== 0     // bridge: darker, floating
+        };
+    });
+}
+function sectionAt(t) {
+    let idx = 0;
+    for (let i = 0; i < sectionBounds.length; i++) if (t >= sectionBounds[i]) idx = i;
+    return idx;
+}
+
+// --- Particle pool (pre-allocated; round-robin; never allocates in frame) ---
+const POOL_SIZE = 700;
+const P = new Array(POOL_SIZE);
+for (let i = 0; i < POOL_SIZE; i++) P[i] = { active:false, x:0, y:0, vx:0, vy:0, life:0, fade:0.02, size:1, hue:200, sat:90, lum:62, grav:0, drag:0.985, rot:0, vr:0, shape:0, add:true };
+let pHead = 0, pActive = 0;
+function budget() { return Math.round((isMobile ? 300 : 620) * quality * (partyMode ? 1 : 0.7)); }
+function alloc(important) {
+    if (!important && pActive >= budget()) return null;       // ambient FX respect the cap
+    for (let k = 0; k < POOL_SIZE; k++) {
+        const idx = (pHead + k) % POOL_SIZE;
+        if (!P[idx].active) { pHead = (idx + 1) % POOL_SIZE; P[idx].active = true; pActive++; return P[idx]; }
+    }
+    const s = P[pHead]; pHead = (pHead + 1) % POOL_SIZE; return s;  // all busy: recycle oldest
+}
+
+function spawnDust(n, hue) {            // slow floating neon dust
+    for (let i = 0; i < n; i++) {
+        const p = alloc(false); if (!p) return;
+        const ang = rnd(0, TAU), rad = rnd(0, Math.min(W, H) * 0.5);
+        p.x = CX + Math.cos(ang) * rad; p.y = CY + Math.sin(ang) * rad;
+        p.vx = rnd(-0.15, 0.15); p.vy = rnd(-0.25, -0.05);
+        p.life = 1; p.fade = rnd(0.002, 0.006); p.size = rnd(0.6, 2.0);
+        p.hue = hue + rnd(-30, 30); p.sat = 80; p.lum = 60; p.grav = 0; p.drag = 0.995; p.shape = 0; p.add = true;
+    }
+}
+function spawnSparks(n, hue, spread) {  // treble sparkles / side push
+    for (let i = 0; i < n; i++) {
+        const p = alloc(false); if (!p) return;
+        const ang = rnd(0, TAU), sp = rnd(0.5, 2.2) * (spread || 1);
+        p.x = CX + Math.cos(ang) * rnd(8, 44); p.y = CY + Math.sin(ang) * rnd(8, 44);
+        p.vx = Math.cos(ang) * sp; p.vy = Math.sin(ang) * sp;
+        p.life = 1; p.fade = rnd(0.03, 0.06); p.size = rnd(0.5, 1.4);
+        p.hue = hue + rnd(-20, 20); p.sat = 95; p.lum = 74; p.grav = 0.01; p.drag = 0.96; p.shape = 0; p.add = true;
+    }
+}
+function spawnConfetti(n, hue) {        // earned: confetti cannon (non-additive)
+    for (let i = 0; i < n; i++) {
+        const p = alloc(true);
+        const ang = rnd(-Math.PI * 0.85, -Math.PI * 0.15), sp = rnd(3.5, 9);
+        p.x = CX + rnd(-30, 30); p.y = CY + rnd(-10, 10);
+        p.vx = Math.cos(ang) * sp + rnd(-1.5, 1.5); p.vy = Math.sin(ang) * sp;
+        p.life = 1; p.fade = rnd(0.006, 0.012); p.size = rnd(2.5, 5);
+        p.hue = (Math.random() < 0.3) ? rnd(0, 360) : hue + rnd(-40, 40);
+        p.sat = 90; p.lum = 60; p.grav = 0.14; p.drag = 0.99; p.rot = rnd(0, TAU); p.vr = rnd(-0.3, 0.3); p.shape = 1; p.add = false;
+    }
+}
+function spawnEmbers(n, hue) {          // firecracker sparks on big moments
+    for (let i = 0; i < n; i++) {
+        const p = alloc(true);
+        const ang = rnd(0, TAU), sp = rnd(2, 7);
+        p.x = CX; p.y = CY;
+        p.vx = Math.cos(ang) * sp; p.vy = Math.sin(ang) * sp;
+        p.life = 1; p.fade = rnd(0.02, 0.04); p.size = rnd(1, 2.4);
+        p.hue = hue + rnd(-30, 50); p.sat = 100; p.lum = 70; p.grav = 0.06; p.drag = 0.94; p.shape = 0; p.add = true;
+    }
+}
+function spawnGlitter(n, hue) {         // shimmering rise during hooks
+    for (let i = 0; i < n; i++) {
+        const p = alloc(false); if (!p) return;
+        const ang = rnd(0, TAU), rad = rnd(20, Math.min(W, H) * 0.32);
+        p.x = CX + Math.cos(ang) * rad; p.y = CY + Math.sin(ang) * rad;
+        p.vx = rnd(-0.3, 0.3); p.vy = rnd(-0.6, 0.2);
+        p.life = 1; p.fade = rnd(0.012, 0.025); p.size = rnd(0.7, 1.8);
+        p.hue = hue + rnd(-25, 25); p.sat = 90; p.lum = 82; p.grav = -0.005; p.drag = 0.97; p.shape = 0; p.add = true;
+    }
+}
+
+// --- Expanding rings: burst / shockwave / speaker wave (fixed pool) ---
+const RING_SIZE = 44;
+const RINGS = new Array(RING_SIZE);
+for (let i = 0; i < RING_SIZE; i++) RINGS[i] = { active:false, r:0, mr:120, life:0, fade:0.02, w:2, hue:200, sat:90, add:true };
+let rHead = 0;
+function ring(r0, mr, w, hue, fade, add) {
+    const o = RINGS[rHead]; rHead = (rHead + 1) % RING_SIZE;
+    o.active = true; o.r = r0; o.mr = mr; o.w = w; o.hue = hue; o.fade = fade; o.life = 1; o.sat = 90; o.add = add !== false;
+    return o;
+}
+
+// --- Flash bloom: capped + rate-limited so it can never strobe or whiteout ---
+let flash = 0, lastFlash = -9;
+function triggerFlash(t, amt) { if (t - lastFlash > 0.45) { flash = Math.min(0.13, amt); lastFlash = t; } }
+
+// --- Earned celebration (drop / section change / Replay Drop button) ---
+let lastDrop = -9, lastSection = -1;
+function celebrate(t, power, hue) {
+    if (fxOff()) return;
+    const big = 0.6 + power;
+    spawnConfetti(Math.round((isMobile ? 26 : 46) * big * (partyMode ? 1 : 0.6)), hue);
+    spawnEmbers(Math.round((isMobile ? 16 : 28) * big), hue);
+    spawnGlitter(Math.round(14 * big), hue);
+    ring(40, Math.min(W, H) * 0.62, 4 + power * 3, hue, 0.012, true);
+    ring(20, Math.min(W, H) * 0.5, 8 + power * 4, hue + 30, 0.02, false);   // shockwave
+    triggerFlash(t, 0.08 + power * 0.05);
+}
+
+// ---- Helpers --------------------------------------------------------------
+const lerp = (a, b, t) => a + (b - a) * t;
+function mix(c1, c2, t) { return [lerp(c1[0],c2[0],t), lerp(c1[1],c2[1],t), lerp(c1[2],c2[2],t)]; }
+const rgba = (c, a) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+function fmt(t) { t = Math.max(0, t|0); const m = (t/60)|0, s = t%60; return m + ':' + (s<10?'0':'') + s; }
+
+// Sample baked band at a given time (0..1)
+function baked(arr, t) {
+    if (!A || !arr) return 0;
+    const i = Math.min(arr.length - 1, Math.max(0, Math.round(t * A.fps)));
+    return arr[i] / 255;
+}
+
+// Current section index by time
+function sceneAt(t) {
+    let idx = 0;
+    for (let i = 0; i < sectionBounds.length; i++) if (t >= sectionBounds[i]) idx = i;
+    return idx % SCENES.length;
+}
+
+// ---- Smoothed reactive values ---------------------------------------------
+let sBass = 0, sMid = 0, sTreb = 0, sLevel = 0, beatPulse = 0, rot = 0, sceneMixT = 1;
+let curScene = 0, prevScene = 0;
+let prevBass = 0, lastKick = -9, kickGlow = 0;     // speaker kick state
+let dustAcc = 0, glitterAcc = 0;                    // fractional spawn accumulators
+
+// ---- Main render loop -----------------------------------------------------
+let running = false, rafId = 0, lastT = performance.now();
+
+function frame(now) {
+    if (!running) return;
+    rafId = requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+
+    // --- Adaptive quality: protect framerate on weak devices ---
+    const inst = dt > 0 ? 1 / dt : 60;
+    fpsEMA += (inst - fpsEMA) * 0.08;
+    qHold += dt;
+    if (qHold > 1.2) {
+        qHold = 0;
+        const qMax = isMobile ? 0.85 : 1;
+        if (fpsEMA < 46 && quality > 0.4) quality = Math.max(0.4, quality - 0.12);
+        else if (fpsEMA > 57 && quality < qMax) quality = Math.min(qMax, quality + 0.06);
+    }
+    const off = fxOff();
+    const t = audio.currentTime || 0;
+
+    // --- Gather reactive bands (live preferred, baked fallback) ---
+    let bass = 0, mid = 0, treb = 0, level = 0;
+    if (audioReady && !audio.paused) {
+        analyser.getByteFrequencyData(freqData);
+        const bins = freqData.length;            // 512 bins over ~22kHz
+        const sum = (lo, hi) => { let s = 0; for (let i = lo; i < hi; i++) s += freqData[i]; return s / ((hi-lo)*255); };
+        bass  = sum(1, Math.round(bins*0.06));
+        mid   = sum(Math.round(bins*0.06), Math.round(bins*0.30));
+        treb  = sum(Math.round(bins*0.30), Math.round(bins*0.72));
+        level = (bass*1.2 + mid + treb*0.8) / 3;
+    } else {
+        bass = baked(A && A.bass, t); mid = baked(A && A.mid, t);
+        treb = baked(A && A.treble, t); level = baked(A && A.energy, t);
+    }
+    // Smooth (attack fast, release slow)
+    const sm = (cur, tgt) => tgt > cur ? lerp(cur, tgt, 0.5) : lerp(cur, tgt, 0.12);
+    sBass = sm(sBass, bass); sMid = sm(sMid, mid); sTreb = sm(sTreb, treb); sLevel = sm(sLevel, level);
+
+    const baseR = Math.min(W, H) * 0.17;
+
+    // --- Section / scene tracking ---
+    const secIdx = sectionAt(t);
+    const sceneIdx = secIdx % SCENES.length;
+    if (sceneIdx !== curScene) { prevScene = curScene; curScene = sceneIdx; sceneMixT = 0; }
+    const sec = sectionInfo[secIdx] || { dust: 0.6, glitter: false, confetti: false, dark: false };
+    const hue = SCENES[curScene].hue;
+    // Firecracker/flash on section change (earned, once per section)
+    if (secIdx !== lastSection) {
+        if (lastSection !== -1 && !off) {
+            spawnEmbers(Math.round(20 * quality), hue);
+            ring(baseR, Math.min(W, H) * 0.55, 4, hue, 0.018, true);
+            triggerFlash(t, 0.07);
+        }
+        lastSection = secIdx;
+    }
+
+    // --- Speaker kick detection (bass transient) ---
+    if (sBass - prevBass > 0.11 && sBass > 0.42 && t - lastKick > 0.12) {
+        lastKick = t; kickGlow = Math.min(1, 0.5 + sBass * 0.6);
+        if (!off) {
+            ring(baseR * 1.05, baseR + Math.min(W, H) * 0.18, 2.4, hue, 0.03, true); // wave emission
+            spawnSparks(Math.round(6 * quality), hue, 1.4);                           // side particles pushed out
+        }
+    }
+    prevBass = sBass; kickGlow *= Math.pow(0.0008, dt);
+
+    // --- Beats from baked onsets: rings, sparkles, earned confetti/drops ---
+    while (beatPtr < beatTimes.length && beatTimes[beatPtr] <= t) {
+        const str = beatStrength[beatPtr] != null ? beatStrength[beatPtr] : 0.5;
+        beatPulse = Math.max(beatPulse, 0.7 + str * 0.6);
+        if (!off) {
+            ring(baseR, baseR + Math.min(W, H) * (0.10 + str * 0.14), 1.6 + str * 2, hue, 0.03, true);
+            spawnSparks(Math.round((2 + str * 5) * quality), hue, 1);
+            if (str > 0.62 && (partyMode || sec.confetti)) spawnConfetti(Math.round((6 + str * 10) * quality), hue);
+            if (str > 0.80 && t - lastDrop > 2.6) { lastDrop = t; celebrate(t, str, hue); } // big = earned
+        }
+        beatPtr++;
+    }
+    if (t < (beatTimes[beatPtr-1] || 0) - 0.5) { // user seeked backward
+        beatPtr = beatTimes.findIndex(b => b > t); if (beatPtr < 0) beatPtr = beatTimes.length;
+    }
+    beatPulse *= Math.pow(0.0001, dt); // fast decay
+
+    // --- Ambient spawns (dust / treble sparkles / hook glitter), budget-guarded ---
+    if (!off) {
+        dustAcc += dt * (6 * sec.dust) * quality;
+        while (dustAcc >= 1) { spawnDust(1, hue); dustAcc--; }
+        if (sTreb > 0.28) spawnSparks(Math.round(sTreb * 3 * quality), hue, 0.8);
+        if (sec.glitter) { glitterAcc += dt * 8 * quality; while (glitterAcc >= 1) { spawnGlitter(1, hue); glitterAcc--; } }
+    }
+
+    // --- Scene color crossfade ---
+    sceneMixT = Math.min(1, sceneMixT + dt * 0.6);
+    const SP = SCENES[prevScene], SN = SCENES[curScene];
+    const colA = mix(SP.a, SN.a, sceneMixT);
+    const colB = mix(SP.b, SN.b, sceneMixT);
+    const colC = mix(SP.c, SN.c, sceneMixT);
+
+    // ============================ DRAW ============================
+    // Motion-trail clear. Solid for minimal mode; slightly stronger clear at low
+    // quality so trails never smear into an unreadable fog. (CLARITY)
+    if (off) { ctx.fillStyle = '#04040a'; ctx.fillRect(0, 0, W, H); }
+    else { ctx.fillStyle = 'rgba(4,4,12,' + (0.30 - quality * 0.05).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
+
+    const beatGlow = beatPulse;
+    rot += dt * (0.06 + sMid * 0.5);
+    const useShadow = quality > 0.75 && !isMobile;   // shadowBlur is costly — gate it
+
+    // 1) Background bloom that breathes with bass + kick
+    const bloomR = Math.max(W, H) * (0.30 + sBass * 0.30 + (beatGlow + kickGlow) * 0.05);
+    const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, bloomR);
+    g.addColorStop(0, rgba(colB, sec.dark ? 0.10 + sBass * 0.14 : 0.16 + sBass * 0.20));
+    g.addColorStop(0.5, rgba(colA, 0.06 + sLevel * 0.06));
+    g.addColorStop(1, 'rgba(4,4,12,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // 2) Starfield (parallax + twinkle)
+    ctx.save(); ctx.translate(CX, CY);
+    const drift = rot * 6;
+    for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        const px = s.x + Math.cos(drift * s.z) * 8 * s.z;
+        const py = s.y + Math.sin(drift * s.z) * 8 * s.z;
+        const tw = 0.4 + 0.6 * Math.abs(Math.sin(s.tw + now * 0.001 * (0.5 + s.z)));
+        const a = (0.18 + 0.55 * s.z) * tw * (0.7 + sTreb * 0.6);
+        ctx.fillStyle = rgba(colA, Math.min(0.9, a));
+        const sz = (s.z * 1.6 + 0.3) * (1 + beatGlow * 0.4);
+        ctx.fillRect(px, py, sz, sz);
+    }
+    ctx.restore();
+
+    // 3) Expanding rings (speaker waves / beat bursts / shockwaves)
+    for (let i = 0; i < RING_SIZE; i++) {
+        const o = RINGS[i]; if (!o.active) continue;
+        o.r += (o.mr - o.r) * 0.06 + 2; o.life -= o.fade;
+        if (o.life <= 0 || o.r >= o.mr) { o.active = false; continue; }
+        ctx.globalCompositeOperation = o.add ? 'lighter' : 'source-over';
+        ctx.strokeStyle = 'hsla(' + o.hue + ',' + o.sat + '%,62%,' + (o.life * 0.5).toFixed(3) + ')';
+        ctx.lineWidth = o.w * o.life + 0.4;
+        ctx.beginPath(); ctx.arc(CX, CY, o.r, 0, TAU); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 4) Radial spectrum ring
+    const bars = Math.round(64 + 32 * quality);
+    const maxLen = Math.min(W, H) * 0.20;
+    ctx.save(); ctx.translate(CX, CY); ctx.rotate(rot);
+    ctx.lineCap = 'round';
+    const liveBins = (audioReady && !audio.paused) ? freqData : null;
+    if (useShadow) ctx.shadowColor = rgba(colB, 0.7);
+    for (let i = 0; i < bars; i++) {
+        let v;
+        if (liveBins) {
+            const idx = 2 + Math.floor((i / bars) * (liveBins.length * 0.55));
+            v = liveBins[idx] / 255;
+        } else {
+            const f = i / bars;
+            v = f < 0.4 ? baked(A&&A.bass,t) : f < 0.75 ? baked(A&&A.mid,t) : baked(A&&A.treble,t);
+            v *= 0.6 + 0.4 * Math.sin(i * 0.7 + now * 0.004);
+        }
+        v = Math.pow(v, 1.25);
+        const len = 4 + v * maxLen + beatGlow * 8;
+        const ang = (i / bars) * Math.PI * 2;
+        const t2 = i / bars;
+        const col = t2 < 0.5 ? mix(colA, colB, t2 * 2) : mix(colB, colC, (t2 - 0.5) * 2);
+        ctx.strokeStyle = rgba(col, 0.85);
+        ctx.lineWidth = 2.4;
+        if (useShadow) ctx.shadowBlur = 8 + v * 16;
+        for (const dir of [1, -1]) {
+            const aa = dir === 1 ? ang : -ang;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(aa) * baseR, Math.sin(aa) * baseR);
+            ctx.lineTo(Math.cos(aa) * (baseR + len), Math.sin(aa) * (baseR + len));
+            ctx.stroke();
+        }
+    }
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // 5) Waveform ribbon ring (live time-domain), else a smooth pulsing circle
+    ctx.save(); ctx.translate(CX, CY);
+    const wr = baseR * 0.86;
+    ctx.beginPath();
+    if (audioReady && !audio.paused) {
+        analyser.getByteTimeDomainData(timeData);
+        const step = Math.max(1, Math.floor(timeData.length / 180));
+        let first = true;
+        for (let i = 0; i <= timeData.length; i += step) {
+            const idx = i % timeData.length;
+            const amp = (timeData[idx] - 128) / 128;
+            const ang = (i / timeData.length) * Math.PI * 2 + rot * 0.5;
+            const r = wr + amp * (18 + sLevel * 30);
+            const x = Math.cos(ang) * r, y = Math.sin(ang) * r;
+            if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+        }
+    } else {
+        const r = wr + sLevel * 16;
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = rgba(colC, 0.7);
+    ctx.lineWidth = 1.6 + beatGlow * 1.5;
+    if (useShadow) { ctx.shadowColor = rgba(colC, 0.9); ctx.shadowBlur = 12; }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // 6) Speaker core — concentric cone rings pulse on bass, orb glows on kick,
+    //    plus a subtle low-frequency rumble wobble (kept very small).
+    ctx.save(); ctx.translate(CX, CY);
+    for (let r = 1; r <= 3; r++) {
+        const rr = baseR * (0.5 + r * 0.16) * (1 + sBass * 0.10 + kickGlow * 0.07);
+        ctx.strokeStyle = rgba(colB, 0.05 + 0.05 * (4 - r));
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+    }
+    const wob = 1 + Math.sin(now * 0.02) * 0.012 * sBass;
+    const orbR = baseR * (0.46 + sBass * 0.24 + beatGlow * 0.10 + kickGlow * 0.08) * wob;
+    const og = ctx.createRadialGradient(0, 0, 0, 0, 0, orbR);
+    og.addColorStop(0, rgba([255,255,255], Math.min(1, 0.85 + kickGlow * 0.15)));
+    og.addColorStop(0.25, rgba(colA, 0.85));
+    og.addColorStop(0.7, rgba(colB, 0.5));
+    og.addColorStop(1, rgba(colB, 0));
+    ctx.fillStyle = og;
+    ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.fill();
+    ctx.restore();
+
+    // 7) Particles — additive group (dust/sparks/embers/glitter) then confetti
+    if (!off) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const p = P[i]; if (!p.active || !p.add) continue;
+            p.x += p.vx; p.y += p.vy; p.vy += p.grav; p.vx *= p.drag; p.vy *= p.drag;
+            p.life -= p.fade;
+            if (p.life <= 0) { p.active = false; pActive = Math.max(0, pActive - 1); continue; }
+            ctx.fillStyle = 'hsla(' + (p.hue|0) + ',' + p.sat + '%,' + p.lum + '%,' + Math.min(0.8, p.life * 0.8).toFixed(3) + ')';
+            const s = p.size * (0.4 + p.life);
+            ctx.beginPath(); ctx.arc(p.x, p.y, s, 0, TAU); ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const p = P[i]; if (!p.active || p.add) continue;   // confetti
+            p.x += p.vx; p.y += p.vy; p.vy += p.grav; p.vx *= p.drag; p.vy *= p.drag; p.rot += p.vr;
+            p.life -= p.fade;
+            if (p.life <= 0) { p.active = false; pActive = Math.max(0, pActive - 1); continue; }
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+            ctx.fillStyle = 'hsla(' + (p.hue|0) + ',' + p.sat + '%,' + p.lum + '%,' + Math.min(0.95, p.life + 0.15).toFixed(3) + ')';
+            ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            ctx.restore();
+        }
+    }
+
+    // 8) Flash bloom — radial, capped at 0.13 alpha, decays fast (no whiteout/strobe)
+    flash *= Math.pow(0.0006, dt);
+    if (flash > 0.003 && !off) {
+        const fg = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.7);
+        fg.addColorStop(0, 'rgba(255,255,255,' + Math.min(0.13, flash).toFixed(3) + ')');
+        fg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
+    }
+
+    // --- UI sync ---
+    updateScrub();
+}
+
+// ---- UI -------------------------------------------------------------------
+const gate = document.getElementById('gate');
+const chromeEl = document.getElementById('chrome');
+const lowerThird = document.getElementById('lowerThird');
+const playBtn = document.getElementById('playBtn');
+const playIcon = document.getElementById('playIcon');
+const scrub = document.getElementById('scrub');
+const scrubFill = document.getElementById('scrubFill');
+const scrubBuf = document.getElementById('scrubBuf');
+const scrubKnob = document.getElementById('scrubKnob');
+const tCur = document.getElementById('tCur');
+const tDur = document.getElementById('tDur');
+const hint = document.getElementById('hint');
+
+const PLAY_PATH = 'M8 5v14l11-7z';
+const PAUSE_PATH = 'M7 5h3v14H7zM14 5h3v14h-3z';
+
+function start() {
+    initAudioGraph();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    audio.play().then(() => {
+        gate.classList.add('hidden');
+        lowerThird.classList.add('show');
+        setTimeout(() => lowerThird.classList.remove('show'), 7000);
+        kickLoop();
+    }).catch(() => {/* autoplay rejected; gate stays */});
+}
+function kickLoop() {
+    if (!running) { running = true; lastT = performance.now(); rafId = requestAnimationFrame(frame); }
+}
+function stopLoop() { running = false; if (rafId) cancelAnimationFrame(rafId); }
+
+function togglePlay() {
+    if (audio.paused) {
+        if (!audioReady) { start(); return; }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        audio.play(); kickLoop();
+    } else { audio.pause(); }
+}
+
+audio.addEventListener('play', () => { playIcon.setAttribute('d', PAUSE_PATH); kickLoop(); });
+audio.addEventListener('pause', () => {
+    playIcon.setAttribute('d', PLAY_PATH);
+    // keep rendering a few frames so trails settle, then idle
+    setTimeout(() => { if (audio.paused) stopLoop(); }, 600);
+});
+audio.addEventListener('ended', () => {
+    playIcon.setAttribute('d', PLAY_PATH);
+    lowerThird.classList.add('show');
+    setTimeout(() => stopLoop(), 800);
+});
+audio.addEventListener('loadedmetadata', () => { tDur.textContent = fmt(audio.duration); });
+
+document.getElementById('playBig').addEventListener('click', start);
+playBtn.addEventListener('click', togglePlay);
+
+// Scrubbing
+let dragging = false;
+function seekFromEvent(e) {
+    const r = scrub.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const ratio = Math.min(1, Math.max(0, x / r.width));
+    if (isFinite(audio.duration)) audio.currentTime = ratio * audio.duration;
+    // resync beat pointer
+    beatPtr = beatTimes.findIndex(b => b > audio.currentTime); if (beatPtr < 0) beatPtr = beatTimes.length;
+}
+scrub.addEventListener('pointerdown', e => { dragging = true; scrub.classList.add('dragging'); scrub.setPointerCapture(e.pointerId); seekFromEvent(e); });
+scrub.addEventListener('pointermove', e => { if (dragging) seekFromEvent(e); });
+scrub.addEventListener('pointerup', e => { dragging = false; scrub.classList.remove('dragging'); });
+scrub.addEventListener('keydown', e => {
+    if (!isFinite(audio.duration)) return;
+    if (e.key === 'ArrowRight') { audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { audio.currentTime = Math.max(0, audio.currentTime - 5); e.preventDefault(); }
+});
+
+function updateScrub() {
+    if (!isFinite(audio.duration) || audio.duration === 0) return;
+    const ratio = audio.currentTime / audio.duration;
+    const pct = (ratio * 100).toFixed(2) + '%';
+    scrubFill.style.width = pct; scrubKnob.style.left = pct;
+    tCur.textContent = fmt(audio.currentTime);
+    scrub.setAttribute('aria-valuenow', Math.round(ratio * 100));
+    if (audio.buffered.length) {
+        scrubBuf.style.width = ((audio.buffered.end(audio.buffered.length - 1) / audio.duration) * 100) + '%';
+    }
+}
+
+// Volume / mute
+const vol = document.getElementById('vol');
+const muteBtn = document.getElementById('muteBtn');
+const volIcon = document.getElementById('volIcon');
+vol.addEventListener('input', () => { audio.volume = parseFloat(vol.value); audio.muted = audio.volume === 0; updateVolIcon(); });
+muteBtn.addEventListener('click', () => { audio.muted = !audio.muted; updateVolIcon(); });
+function updateVolIcon() {
+    volIcon.innerHTML = (audio.muted || audio.volume === 0)
+        ? '<path d="M3 10v4h4l5 5V5L7 10H3z"/><path d="M16 9l4 6M20 9l-4 6" stroke="currentColor" stroke-width="2" fill="none"/>'
+        : '<path d="M3 10v4h4l5 5V5L7 10H3z"/><path d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2"/>';
+}
+
+// Fullscreen
+document.getElementById('fsBtn').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+});
+
+// FX toggles: Party mode, Reduced FX, Replay drop
+const partyBtn = document.getElementById('partyBtn');
+const fxBtn = document.getElementById('fxBtn');
+const dropBtn = document.getElementById('dropBtn');
+function syncFxButtons() {
+    partyBtn.classList.toggle('active', partyMode);
+    partyBtn.setAttribute('aria-pressed', partyMode ? 'true' : 'false');
+    fxBtn.classList.toggle('active', reducedFX);
+    fxBtn.setAttribute('aria-pressed', reducedFX ? 'true' : 'false');
+    dropBtn.disabled = reducedFX || reduceMotion;
+    dropBtn.style.opacity = (reducedFX || reduceMotion) ? '0.4' : '';
+}
+function clearFx() {                       // wipe live particles/rings when going minimal
+    for (let i = 0; i < POOL_SIZE; i++) P[i].active = false;
+    pActive = 0;
+    for (let i = 0; i < RING_SIZE; i++) RINGS[i].active = false;
+    flash = 0;
+}
+partyBtn.addEventListener('click', () => {
+    partyMode = !partyMode;
+    localStorage.setItem('kudbee-mv-party', partyMode ? '1' : '0');
+    syncFxButtons();
+});
+fxBtn.addEventListener('click', () => {
+    reducedFX = !reducedFX;
+    localStorage.setItem('kudbee-mv-reducedfx', reducedFX ? '1' : '0');
+    if (reducedFX) clearFx();
+    syncFxButtons();
+});
+dropBtn.addEventListener('click', () => {
+    if (fxOff()) return;
+    celebrate(audio.currentTime || 0, 1, SCENES[curScene].hue);
+});
+syncFxButtons();
+
+// Keyboard
+window.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); if (gate.classList.contains('hidden')) togglePlay(); else start(); }
+    else if (e.key === 'f' || e.key === 'F') { document.getElementById('fsBtn').click(); }
+    else if (e.key === 'm' || e.key === 'M') { muteBtn.click(); }
+    else if (e.key === 'p' || e.key === 'P') { partyBtn.click(); }
+    else if (e.key === 'x' || e.key === 'X') { fxBtn.click(); }
+    else if (e.key === 'd' || e.key === 'D') { dropBtn.click(); }
+});
+
+// Auto-hide chrome on inactivity (only while playing)
+let idleTimer = null;
+function poke() {
+    chromeEl.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (!audio.paused) chromeEl.classList.add('idle'); }, 2800);
+}
+['pointermove', 'pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, poke));
+
+// Pause render when tab hidden (saves battery; resume on return if playing)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopLoop();
+    else if (!audio.paused) kickLoop();
+});
+
+// Hint flash
+setTimeout(() => { hint.style.opacity = '0.7'; setTimeout(() => hint.style.opacity = '0', 4500); }, 1200);
+
+// ---- Boot -----------------------------------------------------------------
+function applyTrackText() {
+    document.getElementById('ltTitle').textContent = TRACK.title;
+    document.getElementById('ltSub').textContent = TRACK.sub;
+    document.getElementById('trackName').textContent = TRACK.short;
+    document.title = TRACK.title + ' · Music Video · Kudbee (Private)';
+}
+applyTrackText();
+resize();
+seedStars();
+window.addEventListener('resize', () => { resize(); seedStars(); });
+
+// Render one calm idle frame on load so the stage isn't black before play
+function idleFrame() {
+    ctx.fillStyle = '#04040a'; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.4);
+    g.addColorStop(0, 'rgba(111,91,255,0.10)'); g.addColorStop(1, 'rgba(4,4,12,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(CX, CY);
+    for (const s of stars) { ctx.fillStyle = 'rgba(57,230,255,' + (0.1 + 0.4 * s.z) + ')'; ctx.fillRect(s.x, s.y, s.z * 1.4, s.z * 1.4); }
+    ctx.restore();
+}
+idleFrame();
+
+// Load baked analysis
+fetch('./assets/analysis.json').then(r => r.json()).then(j => {
+    A = j;
+    beatTimes = j.beats || [];
+    sectionBounds = (j.sections || [0]).slice().sort((a, b) => a - b);
+    prepareAnalysis();
+}).catch(() => { A = null; });
+</script>
+</body>
+</html>
