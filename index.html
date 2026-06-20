@@ -167,6 +167,7 @@
         --text-muted: #9aa3b8;
         --text-dim: #646c82;
         --cyan: #39e6ff;
+        --cyan-ink: #39e6ff; /* cyan used as TEXT — overridden darker in light theme for AA contrast */
         --violet: #c46bff;
         --green: #7CFFb2;
         --accent: #6f5bff;
@@ -192,7 +193,8 @@
         --text-primary: #0b1020;
         --text-secondary: #28304a;
         --text-muted: #5a6480;
-        --text-dim: #8b93a9;
+        --text-dim: #6b7488;
+        --cyan-ink: #0a7d9e; /* darker teal so cyan-as-text passes AA on light backgrounds */
         --nav-bg: rgba(246, 247, 251, 0.8);
         --accent-glow: rgba(111, 91, 255, 0.22);
     }
@@ -336,15 +338,133 @@
     #mobile-menu-toggle:checked ~ .theme-wrapper .hamburger span:nth-child(2) { opacity: 0; }
     #mobile-menu-toggle:checked ~ .theme-wrapper .hamburger span:nth-child(3) { top: 8px; transform: rotate(-45deg); }
 
-    .mobile-nav {
-        position: fixed; top: 58px; left: 0; width: 100%;
-        background: var(--nav-bg); backdrop-filter: blur(22px); padding: 16px 24px; z-index: 99;
-        flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border);
-        transform: translateY(-130%); opacity: 0; transition: transform 0.35s ease, opacity 0.35s; display: flex;
+    /* ===== MOBILE DRAWER — frosted-glass slide-out ===== */
+    .mobile-scrim {
+        position: fixed; inset: 0; z-index: 101; cursor: pointer;
+        background: rgba(4,4,12,0.55);
+        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+        opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0.4s;
     }
-    #mobile-menu-toggle:checked ~ .theme-wrapper .mobile-nav { transform: translateY(0); opacity: 1; }
-    .mobile-nav label, .mobile-nav a { display: block; padding: 13px 16px; color: var(--text-muted); font-size: 15px; cursor: pointer; border-radius: 9px; transition: all 0.2s; text-decoration: none; }
-    .mobile-nav label:hover, .mobile-nav a:hover { color: var(--text-primary); background: var(--bg-card); }
+    #mobile-menu-toggle:checked ~ .theme-wrapper .mobile-scrim { opacity: 1; visibility: visible; }
+
+    .mobile-nav {
+        position: fixed; top: 0; right: 0; height: 100dvh; z-index: 102;
+        width: min(87vw, 352px);
+        display: flex; flex-direction: column; gap: 4px;
+        padding: 18px 16px calc(20px + env(safe-area-inset-bottom)) 16px;
+        background: var(--bg-glass);
+        -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+        border-left: 1px solid var(--border-hover);
+        box-shadow: -36px 0 70px -24px rgba(0,0,0,0.65);
+        transform: translateX(106%); visibility: hidden;
+        transition: transform 0.46s cubic-bezier(0.52,0.02,0.16,1), visibility 0.46s;
+        overflow-y: auto; overscroll-behavior: contain;
+    }
+    .mobile-nav::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 2px; background: var(--grad); }
+    #mobile-menu-toggle:checked ~ .theme-wrapper .mobile-nav { transform: translateX(0); visibility: visible; }
+
+    .m-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 2px; margin-bottom: 4px; }
+    .m-head .logo { font-size: 18px; }
+    .m-close {
+        width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; cursor: pointer;
+        color: var(--text-muted); border: 1px solid var(--border); background: var(--bg-secondary);
+        font-size: 17px; line-height: 1; transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.3s;
+    }
+    .m-close:hover, .m-close:focus-visible { color: var(--text-primary); border-color: var(--border-hover); background: var(--bg-card); transform: rotate(90deg); }
+
+    .m-group { margin-top: 10px; opacity: 0; transform: translateX(18px); }
+    .m-group > span { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); padding: 0 12px 5px; }
+
+    .mobile-nav label, .mobile-nav a {
+        display: flex; align-items: center; gap: 12px; padding: 13px 12px; min-height: 44px;
+        color: var(--text-secondary); font-size: 15px; font-weight: 500; cursor: pointer;
+        border-radius: 11px; text-decoration: none; border: 1px solid transparent;
+        transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .mobile-nav label:hover, .mobile-nav a:hover, .mobile-nav label:focus-visible, .mobile-nav a:focus-visible { color: var(--text-primary); background: var(--bg-card); border-color: var(--border); transform: translateX(3px); }
+    .mobile-nav .m-link svg { flex: none; opacity: 0.85; transition: color 0.2s, opacity 0.2s; }
+    .mobile-nav .m-tag { margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: var(--cyan-ink); background: rgba(57,230,255,0.12); padding: 2px 6px; border-radius: 5px; }
+
+    /* current page highlight inside the drawer */
+    #page-home:checked ~ .theme-wrapper .mobile-nav label[for="page-home"],
+    #page-services:checked ~ .theme-wrapper .mobile-nav label[for="page-services"],
+    #page-agents:checked ~ .theme-wrapper .mobile-nav label[for="page-agents"],
+    #page-games:checked ~ .theme-wrapper .mobile-nav label[for="page-games"],
+    #page-work:checked ~ .theme-wrapper .mobile-nav label[for="page-work"],
+    #page-contact:checked ~ .theme-wrapper .mobile-nav label[for="page-contact"],
+    #page-tools:checked ~ .theme-wrapper .mobile-nav label[for="page-tools"],
+    #page-scribe:checked ~ .theme-wrapper .mobile-nav label[for="page-scribe"],
+    #page-doctrine:checked ~ .theme-wrapper .mobile-nav label[for="page-doctrine"] {
+        background: linear-gradient(135deg, rgba(57,230,255,0.13), rgba(111,91,255,0.13));
+        border-color: var(--border-hover); color: var(--text-primary);
+        box-shadow: inset 3px 0 0 0 var(--cyan);
+    }
+    #page-home:checked ~ .theme-wrapper .mobile-nav label[for="page-home"] svg,
+    #page-services:checked ~ .theme-wrapper .mobile-nav label[for="page-services"] svg,
+    #page-agents:checked ~ .theme-wrapper .mobile-nav label[for="page-agents"] svg,
+    #page-games:checked ~ .theme-wrapper .mobile-nav label[for="page-games"] svg,
+    #page-work:checked ~ .theme-wrapper .mobile-nav label[for="page-work"] svg,
+    #page-contact:checked ~ .theme-wrapper .mobile-nav label[for="page-contact"] svg,
+    #page-tools:checked ~ .theme-wrapper .mobile-nav label[for="page-tools"] svg,
+    #page-scribe:checked ~ .theme-wrapper .mobile-nav label[for="page-scribe"] svg,
+    #page-doctrine:checked ~ .theme-wrapper .mobile-nav label[for="page-doctrine"] svg { color: var(--cyan); opacity: 1; }
+
+    .m-foot { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateX(18px); }
+    .m-foot .m-cta { justify-content: center; background: var(--grad); color: #fff; border: none; box-shadow: var(--shadow-glow); font-weight: 600; }
+    .m-foot .m-cta:hover { color: #fff; }
+    .m-theme-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; color: var(--text-muted); font-size: 13px; }
+
+    /* staggered entrance (delay supplied per-block via --d) */
+    #mobile-menu-toggle:checked ~ .theme-wrapper .m-group,
+    #mobile-menu-toggle:checked ~ .theme-wrapper .m-foot {
+        opacity: 1; transform: none;
+        transition: opacity 0.45s ease var(--d, 0s), transform 0.45s cubic-bezier(0.2,0.7,0.2,1) var(--d, 0s);
+    }
+
+    /* ===== BREADCRUMBS — slim CSS-routed sub-header ===== */
+    .crumb-bar {
+        position: fixed; top: 58px; left: 0; width: 100%; z-index: 90;
+        background: var(--nav-bg);
+        -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+    }
+    .crumbs { max-width: var(--maxw); margin: 0 auto; padding: 7px 28px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-muted); }
+    .crumbs .crumb-home { color: var(--text-muted); cursor: pointer; text-decoration: none; padding: 6px 9px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; transition: color 0.18s, background 0.18s; }
+    .crumbs .crumb-home:focus-visible { color: var(--text-primary); background: var(--bg-card); outline: 2px solid var(--accent); outline-offset: 1px; }
+    .crumbs .crumb-home:hover { color: var(--text-primary); background: var(--bg-card); }
+    .crumbs .crumb-sep { display: inline-flex; opacity: 0.45; }
+    .crumbs .crumb-here { display: none; color: var(--text-secondary); font-weight: 600; animation: crumbIn 0.45s cubic-bezier(0.2,0.7,0.2,1) both; }
+    @keyframes crumbIn { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: none; } }
+    #page-home:checked ~ .theme-wrapper .crumb-bar { display: none; }
+    #page-services:checked ~ .theme-wrapper .crumb-here[data-page="services"],
+    #page-agents:checked ~ .theme-wrapper .crumb-here[data-page="agents"],
+    #page-games:checked ~ .theme-wrapper .crumb-here[data-page="games"],
+    #page-work:checked ~ .theme-wrapper .crumb-here[data-page="work"],
+    #page-contact:checked ~ .theme-wrapper .crumb-here[data-page="contact"],
+    #page-tools:checked ~ .theme-wrapper .crumb-here[data-page="tools"],
+    #page-scribe:checked ~ .theme-wrapper .crumb-here[data-page="scribe"],
+    #page-doctrine:checked ~ .theme-wrapper .crumb-here[data-page="doctrine"] { display: inline; }
+
+    /* Scroll progress line — thin gradient fill across the very top edge */
+    .scroll-progress { position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 101; pointer-events: none; background: transparent; }
+    .scroll-progress span { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: var(--grad); box-shadow: 0 0 12px var(--accent-glow); will-change: transform; }
+    body.menu-open { overflow: hidden; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mobile-nav, .mobile-scrim, .m-close { transition: none !important; }
+        .m-group, .m-foot { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .crumbs .crumb-here { animation: none !important; }
+        .portfolio-thumb canvas, a.portfolio-item.cat-game .portfolio-thumb::after { transition: none !important; }
+        .portfolio-item:hover .portfolio-thumb canvas { transform: none !important; }
+        .port-go { transition: none !important; }
+    }
+
+    /* Opaque fallback where backdrop-filter is unsupported (no see-through menu). */
+    @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+        .mobile-nav { background: var(--bg-elevated); }
+        .mobile-scrim { background: rgba(4,4,12,0.8); }
+        .crumb-bar { background: var(--bg-elevated); }
+    }
 
     /* ===== PAGES ===== */
     .page { display: none; animation: pageIn 0.5s ease both; }
@@ -648,12 +768,27 @@
     #filter-game:checked ~ .theme-wrapper .portfolio-filters label[for="filter-game"] { background: var(--grad); color: #fff; }
     .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
     .portfolio-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform 0.3s, border-color 0.3s; }
-    .portfolio-item:hover { transform: translateY(-5px); border-color: var(--border-hover); }
+    .portfolio-item:hover { transform: translateY(-5px); border-color: var(--border-hover); box-shadow: 0 20px 46px -20px var(--accent-glow); }
     .portfolio-thumb { height: 190px; position: relative; overflow: hidden; }
-    .portfolio-thumb canvas { width: 100%; height: 100%; display: block; }
+    .portfolio-thumb canvas { width: 100%; height: 100%; display: block; transition: transform 0.55s cubic-bezier(0.2,0.7,0.2,1); }
+    .portfolio-item:hover .portfolio-thumb canvas { transform: scale(1.07); }
+    /* glass play button on linked game cards */
+    a.portfolio-item.cat-game .portfolio-thumb::after {
+        content: '▶'; position: absolute; inset: 0; margin: auto; width: 54px; height: 54px;
+        display: grid; place-items: center; border-radius: 50%; padding-left: 3px;
+        background: rgba(8,8,18,0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,0.32); color: #fff; font-size: 16px;
+        opacity: 0; transform: scale(0.6); transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2,0.9,0.3,1.2);
+        pointer-events: none; box-shadow: 0 8px 24px -6px rgba(0,0,0,0.5);
+    }
+    a.portfolio-item.cat-game:hover .portfolio-thumb::after { opacity: 1; transform: scale(1); }
     .portfolio-info { padding: 20px; }
     .portfolio-info h4 { font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
     .portfolio-info span { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+    a.portfolio-item, label.portfolio-item { text-decoration: none; color: inherit; display: block; cursor: pointer; }
+    .portfolio-info .port-go { display: block; margin-top: 8px; color: var(--cyan-ink); font-size: 12px; font-weight: 600;
+        text-transform: none; letter-spacing: 0; opacity: 0; transform: translateY(4px); transition: opacity 0.25s, transform 0.25s; }
+    .portfolio-item:hover .port-go, .portfolio-item:focus-visible .port-go { opacity: 1; transform: none; }
     #filter-web:checked ~ .theme-wrapper .portfolio-item:not(.cat-web),
     #filter-ai:checked ~ .theme-wrapper .portfolio-item:not(.cat-ai),
     #filter-game:checked ~ .theme-wrapper .portfolio-item:not(.cat-game) { display: none; }
@@ -848,6 +983,9 @@
 <div class="mesh"></div>
 <div class="content">
 
+<!-- Scroll progress indicator (JS-driven; harmless if JS is off) -->
+<div class="scroll-progress" aria-hidden="true"><span id="scrollProgress"></span></div>
+
 <!-- Navigation -->
 <nav class="nav-bar" aria-label="Primary">
     <label for="page-home" class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></label>
@@ -870,17 +1008,56 @@
     </div>
 </nav>
 
-<div class="mobile-nav" role="navigation" aria-label="Mobile">
-    <label for="page-home">Home</label>
-    <label for="page-services">Services</label>
-    <label for="page-agents">Agents — NEW</label>
-    <label for="page-games">Games — NEW</label>
-    <label for="page-work">Work</label>
-    <label for="page-contact">Contact</label>
-    <label for="page-tools">Tools — NEW</label>
-    <label for="page-scribe">Scribe — NEW</label>
-    <label for="page-doctrine">Doctrine — NEW</label>
-    <a href="leaderboard/public/leaderboard.html">🏆 League — NEW</a>
+<!-- Mobile drawer: scrim (tap to close) + frosted-glass slide-out panel -->
+<label for="mobile-menu-toggle" class="mobile-scrim" aria-hidden="true"></label>
+<aside class="mobile-nav" id="mobileDrawer" role="dialog" aria-label="Menu">
+    <div class="m-head">
+        <label for="page-home" class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></label>
+        <label for="mobile-menu-toggle" class="m-close" aria-label="Close menu" title="Close">✕</label>
+    </div>
+
+    <div class="m-group" style="--d:0.06s"><span>Explore</span>
+        <label for="page-home" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg> Home</label>
+        <label for="page-services" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Services</label>
+        <label for="page-work" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Work</label>
+        <label for="page-contact" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> Contact</label>
+    </div>
+
+    <div class="m-group" style="--d:0.12s"><span>Build with us</span>
+        <label for="page-agents" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 8V4M9 13h.01M15 13h.01"/></svg> Agents <span class="m-tag">NEW</span></label>
+        <label for="page-tools" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-1.4-1.4 2.6-2.6Z"/></svg> Tools <span class="m-tag">NEW</span></label>
+        <label for="page-scribe" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Scribe <span class="m-tag">NEW</span></label>
+    </div>
+
+    <div class="m-group" style="--d:0.18s"><span>Play</span>
+        <label for="page-games" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 11.5h.01M18 13.5h.01"/></svg> Games <span class="m-tag">NEW</span></label>
+        <a href="leaderboard/public/leaderboard.html" class="m-link">🏆 League <span class="m-tag">NEW</span></a>
+    </div>
+
+    <div class="m-group" style="--d:0.24s"><span>Read</span>
+        <label for="page-doctrine" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19V5"/></svg> Doctrine <span class="m-tag">NEW</span></label>
+    </div>
+
+    <div class="m-foot" style="--d:0.3s">
+        <label for="page-contact" class="m-link m-cta">Start a Project</label>
+        <div class="m-theme-row"><span>Appearance</span><label for="theme-toggle" class="theme-switch" title="Toggle theme"></label></div>
+    </div>
+</aside>
+
+<!-- Breadcrumb sub-header (CSS-routed; hidden on Home) -->
+<div class="crumb-bar">
+    <nav class="crumbs" aria-label="Breadcrumb">
+        <label for="page-home" class="crumb-home"><svg aria-hidden="true" focusable="false" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg> Home</label>
+        <svg class="crumb-sep" aria-hidden="true" focusable="false" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+        <span class="crumb-here" data-page="services" aria-current="page">Services</span>
+        <span class="crumb-here" data-page="agents" aria-current="page">Support Agents</span>
+        <span class="crumb-here" data-page="games" aria-current="page">Games</span>
+        <span class="crumb-here" data-page="work" aria-current="page">Work</span>
+        <span class="crumb-here" data-page="contact" aria-current="page">Contact</span>
+        <span class="crumb-here" data-page="tools" aria-current="page">Tools</span>
+        <span class="crumb-here" data-page="scribe" aria-current="page">Kudbee Scribe</span>
+        <span class="crumb-here" data-page="doctrine" aria-current="page">Doctrine</span>
+    </nav>
 </div>
 
 <!-- Primary content (CSS-routed views; an intermediate <main> is safe — selectors use a descendant combinator) -->
@@ -1626,12 +1803,13 @@
             <label for="filter-game">Games</label>
         </div>
         <div class="portfolio-grid">
-            <div class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="jungle"></canvas></div><div class="portfolio-info"><h4>Kudbee Contra</h4><span>Game · 2.5D Run-and-Gun</span></div></div>
+            <a href="games/kudbee-contra/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="jungle"></canvas></div><div class="portfolio-info"><h4>Kudbee Contra</h4><span>Game · 2.5D Run-and-Gun</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
+            <a href="games/kudbee-darts/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="darts"></canvas></div><div class="portfolio-info"><h4>Kudbee Darts</h4><span>Game · 501, Cricket &amp; Online League</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
             <div class="portfolio-item cat-web"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="web1"></canvas></div><div class="portfolio-info"><h4>ScaleUp Agency</h4><span>Web · Marketing Site</span></div></div>
             <div class="portfolio-item cat-ai"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai1"></canvas></div><div class="portfolio-info"><h4>TechCorp Enablement</h4><span>AI · Team Training</span></div></div>
             <div class="portfolio-item cat-web"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="web2"></canvas></div><div class="portfolio-info"><h4>InnovateCo Platform</h4><span>Web · SaaS Dashboard</span></div></div>
-            <label for="page-agents" class="portfolio-item cat-ai" style="cursor:pointer;"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai2"></canvas></div><div class="portfolio-info"><h4>Support Agent Suite</h4><span>AI · Custom Agents</span></div></label>
-            <div class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="boss"></canvas></div><div class="portfolio-info"><h4>Hive Sentinel</h4><span>Game · Boss Design</span></div></div>
+            <label for="page-agents" class="portfolio-item cat-ai" style="cursor:pointer;"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="ai2"></canvas></div><div class="portfolio-info"><h4>Support Agent Suite</h4><span>AI · Custom Agents</span><span class="port-go">View suite <span aria-hidden="true">→</span></span></div></label>
+            <a href="games/kudbee-contra/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="boss"></canvas></div><div class="portfolio-info"><h4>Hive Sentinel</h4><span>Game · Kudbee Contra Boss</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
         </div>
     </section>
 </div>
@@ -1956,11 +2134,61 @@
     'use strict';
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Close mobile menu after a nav choice.
+    // Close the mobile drawer after a nav choice (labels route, anchors leave the page).
     var mobileToggle = document.getElementById('mobile-menu-toggle');
-    document.querySelectorAll('.mobile-nav label').forEach(function (l) {
+    document.querySelectorAll('.mobile-nav label[for^="page-"], .mobile-nav a').forEach(function (l) {
         l.addEventListener('click', function () { mobileToggle.checked = false; });
     });
+    // Close on Escape for keyboard users.
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && mobileToggle.checked) mobileToggle.checked = false;
+    });
+
+    // Deep-link routing: #work, #games, #tools… (or #page-work) activate the matching
+    // CSS-routed page, so inbound links from sub-pages land on the right view.
+    function routeFromHash() {
+        var id = (location.hash || '').replace(/^#/, '');
+        if (!id) return;
+        var r = document.getElementById(id.indexOf('page-') === 0 ? id : 'page-' + id);
+        if (r && r.name === 'page') { r.checked = true; window.scrollTo(0, 0); }
+    }
+    routeFromHash();
+    window.addEventListener('hashchange', routeFromHash);
+
+    // Lock background scroll while the drawer is open.
+    mobileToggle.addEventListener('change', function () {
+        document.body.classList.toggle('menu-open', mobileToggle.checked);
+    });
+
+    // Scroll progress line — composite-only (scaleX), with the layout-flushing
+    // scrollHeight read cached off the scroll frame (recomputed on resize/route).
+    var progress = document.getElementById('scrollProgress');
+    if (progress) {
+        var ticking = false, scrollMax = 0;
+        function recalcMax() {
+            var doc = document.documentElement;
+            scrollMax = doc.scrollHeight - doc.clientHeight;
+            updateProgress();
+        }
+        function updateProgress() {
+            var st = document.documentElement.scrollTop || document.body.scrollTop;
+            // Self-heal if the page grew since the last measure (fonts/images/canvas
+            // settling) without firing resize — cheap because it only reads when past max.
+            if (st > scrollMax) { var d = document.documentElement; scrollMax = d.scrollHeight - d.clientHeight; }
+            progress.style.transform = 'scaleX(' + (scrollMax > 0 ? Math.min(1, st / scrollMax) : 0) + ')';
+            ticking = false;
+        }
+        window.addEventListener('scroll', function () {
+            if (!ticking) { ticking = true; requestAnimationFrame(updateProgress); }
+        }, { passive: true });
+        window.addEventListener('resize', recalcMax, { passive: true });
+        window.addEventListener('load', recalcMax);
+        // Route changes (CSS-routed pages) change document height — recompute.
+        document.querySelectorAll('input[name="page"]').forEach(function (r) {
+            r.addEventListener('change', function () { setTimeout(recalcMax, 60); });
+        });
+        recalcMax();
+    }
 
     // Scroll reveal.
     if ('IntersectionObserver' in window) {
