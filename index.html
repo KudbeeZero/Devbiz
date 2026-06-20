@@ -377,10 +377,10 @@
         display: flex; align-items: center; gap: 12px; padding: 11px 12px;
         color: var(--text-secondary); font-size: 15px; font-weight: 500; cursor: pointer;
         border-radius: 11px; text-decoration: none; border: 1px solid transparent;
-        transition: background 0.2s, color 0.2s, border-color 0.2s;
+        transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
     }
-    .mobile-nav label:hover, .mobile-nav a:hover { color: var(--text-primary); background: var(--bg-card); border-color: var(--border); }
-    .mobile-nav .m-link svg { flex: none; opacity: 0.85; }
+    .mobile-nav label:hover, .mobile-nav a:hover { color: var(--text-primary); background: var(--bg-card); border-color: var(--border); transform: translateX(3px); }
+    .mobile-nav .m-link svg { flex: none; opacity: 0.85; transition: color 0.2s, opacity 0.2s; }
     .mobile-nav .m-tag { margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: var(--cyan); background: rgba(57,230,255,0.12); padding: 2px 6px; border-radius: 5px; }
 
     /* current page highlight inside the drawer */
@@ -395,7 +395,17 @@
     #page-doctrine:checked ~ .theme-wrapper .mobile-nav label[for="page-doctrine"] {
         background: linear-gradient(135deg, rgba(57,230,255,0.13), rgba(111,91,255,0.13));
         border-color: var(--border-hover); color: var(--text-primary);
+        box-shadow: inset 3px 0 0 0 var(--cyan);
     }
+    #page-home:checked ~ .theme-wrapper .mobile-nav label[for="page-home"] svg,
+    #page-services:checked ~ .theme-wrapper .mobile-nav label[for="page-services"] svg,
+    #page-agents:checked ~ .theme-wrapper .mobile-nav label[for="page-agents"] svg,
+    #page-games:checked ~ .theme-wrapper .mobile-nav label[for="page-games"] svg,
+    #page-work:checked ~ .theme-wrapper .mobile-nav label[for="page-work"] svg,
+    #page-contact:checked ~ .theme-wrapper .mobile-nav label[for="page-contact"] svg,
+    #page-tools:checked ~ .theme-wrapper .mobile-nav label[for="page-tools"] svg,
+    #page-scribe:checked ~ .theme-wrapper .mobile-nav label[for="page-scribe"] svg,
+    #page-doctrine:checked ~ .theme-wrapper .mobile-nav label[for="page-doctrine"] svg { color: var(--cyan); opacity: 1; }
 
     .m-foot { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateX(18px); }
     .m-foot .m-cta { justify-content: center; background: var(--grad); color: #fff; border: none; box-shadow: var(--shadow-glow); font-weight: 600; }
@@ -420,7 +430,8 @@
     .crumbs .crumb-home { color: var(--text-muted); cursor: pointer; text-decoration: none; padding: 2px 7px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; transition: color 0.18s, background 0.18s; }
     .crumbs .crumb-home:hover { color: var(--text-primary); background: var(--bg-card); }
     .crumbs .crumb-sep { display: inline-flex; opacity: 0.45; }
-    .crumbs .crumb-here { display: none; color: var(--text-secondary); font-weight: 600; }
+    .crumbs .crumb-here { display: none; color: var(--text-secondary); font-weight: 600; animation: crumbIn 0.45s cubic-bezier(0.2,0.7,0.2,1) both; }
+    @keyframes crumbIn { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: none; } }
     #page-home:checked ~ .theme-wrapper .crumb-bar { display: none; }
     #page-services:checked ~ .theme-wrapper .crumb-here[data-page="services"],
     #page-agents:checked ~ .theme-wrapper .crumb-here[data-page="agents"],
@@ -431,9 +442,17 @@
     #page-scribe:checked ~ .theme-wrapper .crumb-here[data-page="scribe"],
     #page-doctrine:checked ~ .theme-wrapper .crumb-here[data-page="doctrine"] { display: inline; }
 
+    /* Scroll progress line — thin gradient fill across the very top edge */
+    .scroll-progress { position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 101; pointer-events: none; background: transparent; }
+    .scroll-progress span { display: block; height: 100%; width: 0; background: var(--grad); box-shadow: 0 0 12px var(--accent-glow); transition: width 0.1s linear; }
+    body.menu-open { overflow: hidden; }
+
     @media (prefers-reduced-motion: reduce) {
         .mobile-nav, .mobile-scrim, .m-close { transition: none !important; }
         .m-group, .m-foot { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .crumbs .crumb-here { animation: none !important; }
+        .portfolio-thumb canvas, a.portfolio-item.cat-game .portfolio-thumb::after { transition: none !important; }
+        .portfolio-item:hover .portfolio-thumb canvas { transform: none !important; }
     }
 
     /* ===== PAGES ===== */
@@ -738,9 +757,20 @@
     #filter-game:checked ~ .theme-wrapper .portfolio-filters label[for="filter-game"] { background: var(--grad); color: #fff; }
     .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
     .portfolio-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform 0.3s, border-color 0.3s; }
-    .portfolio-item:hover { transform: translateY(-5px); border-color: var(--border-hover); }
+    .portfolio-item:hover { transform: translateY(-5px); border-color: var(--border-hover); box-shadow: 0 20px 46px -20px var(--accent-glow); }
     .portfolio-thumb { height: 190px; position: relative; overflow: hidden; }
-    .portfolio-thumb canvas { width: 100%; height: 100%; display: block; }
+    .portfolio-thumb canvas { width: 100%; height: 100%; display: block; transition: transform 0.55s cubic-bezier(0.2,0.7,0.2,1); }
+    .portfolio-item:hover .portfolio-thumb canvas { transform: scale(1.07); }
+    /* glass play button on linked game cards */
+    a.portfolio-item.cat-game .portfolio-thumb::after {
+        content: '▶'; position: absolute; inset: 0; margin: auto; width: 54px; height: 54px;
+        display: grid; place-items: center; border-radius: 50%; padding-left: 3px;
+        background: rgba(8,8,18,0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,0.32); color: #fff; font-size: 16px;
+        opacity: 0; transform: scale(0.6); transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2,0.9,0.3,1.2);
+        pointer-events: none; box-shadow: 0 8px 24px -6px rgba(0,0,0,0.5);
+    }
+    a.portfolio-item.cat-game:hover .portfolio-thumb::after { opacity: 1; transform: scale(1); }
     .portfolio-info { padding: 20px; }
     .portfolio-info h4 { font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
     .portfolio-info span { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
@@ -941,6 +971,9 @@
 <div class="theme-wrapper">
 <div class="mesh"></div>
 <div class="content">
+
+<!-- Scroll progress indicator (JS-driven; harmless if JS is off) -->
+<div class="scroll-progress" aria-hidden="true"><span id="scrollProgress"></span></div>
 
 <!-- Navigation -->
 <nav class="nav-bar" aria-label="Primary">
@@ -2110,6 +2143,27 @@
     }
     routeFromHash();
     window.addEventListener('hashchange', routeFromHash);
+
+    // Lock background scroll while the drawer is open.
+    mobileToggle.addEventListener('change', function () {
+        document.body.classList.toggle('menu-open', mobileToggle.checked);
+    });
+
+    // Scroll progress line.
+    var progress = document.getElementById('scrollProgress');
+    if (progress) {
+        var ticking = false;
+        function updateProgress() {
+            var doc = document.documentElement;
+            var max = doc.scrollHeight - doc.clientHeight;
+            progress.style.width = (max > 0 ? (doc.scrollTop / max) * 100 : 0) + '%';
+            ticking = false;
+        }
+        window.addEventListener('scroll', function () {
+            if (!ticking) { ticking = true; requestAnimationFrame(updateProgress); }
+        }, { passive: true });
+        updateProgress();
+    }
 
     // Scroll reveal.
     if ('IntersectionObserver' in window) {
