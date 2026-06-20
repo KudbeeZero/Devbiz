@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kudbee Controls — a live gallery of the shared zero-build slider, rotary knob, and stepper components used across the Kudbee site.">
+    <title>Controls · Kudbee Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/kbd-controls.css">
+    <script src="/assets/kbd-controls.js" defer></script>
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --grad-green: linear-gradient(90deg, #7CFFb2, #39e6ff);
+        --grad-amber: linear-gradient(90deg, #ffd34d, #ff9054);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .panel-title, .demo-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -140px; left: -100px;
+        background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 30%; right: -140px;
+        background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+    @media (prefers-reduced-motion: reduce) {
+        .mesh::before, .mesh::after { animation: none !important; }
+        html { scroll-behavior: auto; }
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 28px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 18px; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 40px; height: 22px; background: var(--border); border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+    }
+    .theme-btn::after {
+        content: '🌙'; font-size: 10px; position: absolute; top: 2px; left: 2px;
+        width: 16px; height: 16px; border-radius: 50%; background: var(--grad);
+        display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+    }
+    .light .theme-btn::after { transform: translateX(18px); content: '☀️'; }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 96px; }
+
+    .page-header { margin-bottom: 44px; }
+    .page-header .kicker {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
+        color: var(--cyan); font-weight: 600; margin-bottom: 12px; display: block;
+    }
+    .page-header h1 { font-size: clamp(32px, 5vw, 52px); color: var(--text-primary); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 12px; }
+    .page-header p { font-size: 16px; color: var(--text-muted); max-width: 640px; }
+
+    /* DEMO GRID */
+    .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 28px; }
+    .demo-card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 20px; padding: 32px; position: relative; overflow: hidden;
+        transition: border-color 0.3s, transform 0.2s;
+    }
+    .demo-card:hover { border-color: var(--border-hover); }
+    .demo-card::before {
+        content: ''; position: absolute; top: 0; right: 0; width: 280px; height: 240px;
+        background: radial-gradient(circle at 100% 0%, rgba(111,91,255,0.10), transparent 65%); pointer-events: none;
+    }
+    .demo-head { margin-bottom: 26px; }
+    .demo-kicker {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--cyan);
+        font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .demo-kicker::before { content: ''; width: 24px; height: 2px; background: var(--grad); border-radius: 2px; }
+    .demo-title { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 6px; }
+    .demo-desc { font-size: 13px; color: var(--text-muted); }
+
+    .demo-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+    .demo-row:last-child { margin-bottom: 0; }
+    .demo-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .demo-val { color: var(--cyan); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+
+    /* Knob layout */
+    .knob-bank { display: flex; flex-wrap: wrap; gap: 30px 36px; align-items: flex-start; }
+    .knob-cell { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .knob-cell .cap { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+    /* Linked demo (slider + stepper + knob all bound) */
+    .linked-card { grid-column: 1 / -1; }
+    .linked-layout { display: grid; grid-template-columns: 1fr auto; gap: 36px; align-items: center; }
+    .linked-left { display: flex; flex-direction: column; gap: 20px; }
+    .stepper-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .linked-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+    .readout {
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; color: var(--text-muted);
+        background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 9px;
+        padding: 8px 12px; font-variant-numeric: tabular-nums;
+    }
+    .light .readout { background: var(--bg-secondary); }
+    .readout strong { color: var(--cyan); }
+
+    /* A11y / usage footnote */
+    .usage {
+        margin-top: 8px; background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 18px; padding: 28px;
+    }
+    .usage h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 9px; }
+    .usage ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; }
+    .usage li { font-size: 13px; color: var(--text-muted); display: flex; gap: 8px; }
+    .usage li::before { content: '▸'; color: var(--cyan); flex-shrink: 0; }
+    .usage code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 4px; }
+    .light .usage code { background: rgba(0,0,0,0.05); }
+
+    .page-foot { margin-top: 40px; text-align: center; font-size: 12px; color: var(--text-dim); }
+    .page-foot a { color: var(--text-muted); text-decoration: none; }
+    .page-foot a:hover { color: var(--cyan); }
+
+    @media (max-width: 720px) {
+        .linked-layout { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+<div class="content">
+
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../../index.html" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+        </a>
+        <a href="../../index.html" class="logo-link">
+            <div class="logo-mark"></div>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">Controls</span>
+            <span class="nav-badge">TOOL</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬡ Kudbee Controls</span>
+        <h1>The Kudbee <span class="gradient-text">Controls</span> kit</h1>
+        <p>One shared, zero-build layer — <code>assets/kbd-controls.css</code> + <code>assets/kbd-controls.js</code> —
+        that powers every interactive control on the site. Gradient sliders, drag-to-turn rotary knobs, and
+        −/+ steppers, all themeable from each page's palette, keyboard-accessible, and reduced-motion safe.
+        Every control below is live — drag, scroll, tab into them.</p>
+    </header>
+
+    <div class="demo-grid">
+
+        <!-- SLIDERS -->
+        <section class="demo-card" aria-labelledby="d-sliders">
+            <div class="demo-head">
+                <div class="demo-kicker">Range</div>
+                <h2 class="demo-title" id="d-sliders">.kbd-slider</h2>
+                <p class="demo-desc">A native <code>&lt;input type="range"&gt;</code> with a gradient fill, value bubble, and focus throb.</p>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Master volume <span class="demo-val" id="v-vol">72%</span></span>
+                <span class="kbd-field">
+                    <input type="range" class="kbd-slider" id="s-vol" min="0" max="100" value="72"
+                           aria-label="Master volume" data-unit="%" data-dp="0">
+                </span>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Warmth <span class="demo-val" id="v-warm">+2.4</span></span>
+                <span class="kbd-field" style="--grad: var(--grad-amber); --kbd-ring: rgba(255,211,77,0.28); --kbd-ring-soft: rgba(255,211,77,0.12); --accent-glow: rgba(255,211,77,0.4);">
+                    <input type="range" class="kbd-slider" id="s-warm" min="-50" max="50" value="24"
+                           aria-label="Warmth" data-unit="" data-dp="1" data-display-min="-5" data-display-max="5">
+                </span>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Growth rate <span class="demo-val" id="v-grow">3.6×</span></span>
+                <span class="kbd-field" style="--grad: var(--grad-green); --kbd-ring: rgba(124,255,178,0.28); --kbd-ring-soft: rgba(124,255,178,0.12); --accent-glow: rgba(124,255,178,0.4);">
+                    <input type="range" class="kbd-slider" id="s-grow" min="0" max="100" value="36"
+                           aria-label="Growth rate" data-unit="×" data-dp="1" data-display-min="0" data-display-max="10">
+                </span>
+            </div>
+        </section>
+
+        <!-- KNOBS -->
+        <section class="demo-card" aria-labelledby="d-knobs">
+            <div class="demo-head">
+                <div class="demo-kicker">Rotary</div>
+                <h2 class="demo-title" id="d-knobs">.kbd-knob</h2>
+                <p class="demo-desc">Drag vertically, scroll, or use arrow keys / Home / End. The arc fills as you turn.</p>
+            </div>
+
+            <div class="knob-bank">
+                <div class="knob-cell">
+                    <div class="kbd-knob" id="k-drive" data-min="0" data-max="100" data-value="64"
+                         data-step="1" data-unit="%" data-dp="0" data-label="Drive"></div>
+                    <span class="cap">Cyan → Violet</span>
+                </div>
+                <div class="knob-cell">
+                    <div class="kbd-knob" id="k-tone" data-min="-12" data-max="12" data-value="3"
+                         data-step="0.5" data-unit="dB" data-dp="1" data-label="Tone"
+                         style="--cyan: var(--green); --accent: #39e6ff; --accent-glow: rgba(124,255,178,0.4);"></div>
+                    <span class="cap">Green theme</span>
+                </div>
+                <div class="knob-cell">
+                    <div class="kbd-knob" id="k-mix" data-min="0" data-max="100" data-value="40"
+                         data-step="5" data-unit="%" data-dp="0" data-label="Mix"
+                         style="--kbd-knob-size: 76px; --cyan: var(--amber); --accent: #ff9054; --accent-glow: rgba(255,211,77,0.4);"></div>
+                    <span class="cap">Amber · 76px</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEPPERS -->
+        <section class="demo-card" aria-labelledby="d-steppers">
+            <div class="demo-head">
+                <div class="demo-kicker">Number</div>
+                <h2 class="demo-title" id="d-steppers">.kbd-stepper</h2>
+                <p class="demo-desc">A number input with −/+ buttons. Type a value, click, or arrow up/down. Min/max disable the ends.</p>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Quantity</span>
+                <div class="stepper-row">
+                    <div class="kbd-stepper" id="st-qty" data-min="1" data-max="99" data-step="1"
+                         data-value="4" data-label="Quantity"></div>
+                    <span class="readout">value: <strong id="v-qty">4</strong></span>
+                </div>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Opacity</span>
+                <div class="stepper-row">
+                    <div class="kbd-stepper" id="st-op" data-min="0" data-max="100" data-step="5"
+                         data-value="80" data-unit="%" data-dp="0" data-label="Opacity"></div>
+                    <span class="readout">value: <strong id="v-op">80%</strong></span>
+                </div>
+            </div>
+
+            <div class="demo-row">
+                <span class="demo-label">Gain</span>
+                <div class="stepper-row">
+                    <div class="kbd-stepper" id="st-gain" data-min="-6" data-max="6" data-step="0.1"
+                         data-value="0" data-unit=" dB" data-dp="1" data-label="Gain"></div>
+                    <span class="readout">value: <strong id="v-gain">0.0 dB</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- LINKED -->
+        <section class="demo-card linked-card" aria-labelledby="d-linked">
+            <div class="demo-head">
+                <div class="demo-kicker">Bound together</div>
+                <h2 class="demo-title" id="d-linked">One value, three controls</h2>
+                <p class="demo-desc">A slider, a knob, and a stepper sharing <code>data-kbd-name="bpm"</code>.
+                   Move any one and the others follow — no page JS required, the shared layer handles the round-trip.</p>
+            </div>
+            <div class="linked-layout">
+                <div class="linked-left">
+                    <div class="demo-row">
+                        <span class="demo-label">Tempo (slider) <span class="demo-val" id="v-bpm">120 BPM</span></span>
+                        <span class="kbd-field">
+                            <input type="range" class="kbd-slider" id="lnk-slider" min="40" max="220" value="120"
+                                   aria-label="Tempo" data-unit=" BPM" data-dp="0" data-kbd-name="bpm">
+                        </span>
+                    </div>
+                    <div class="stepper-row">
+                        <span class="demo-label" style="margin:0;">Tempo (stepper)</span>
+                        <div class="kbd-stepper" id="lnk-stepper" data-min="40" data-max="220" data-step="1"
+                             data-value="120" data-unit=" BPM" data-dp="0" data-label="Tempo" data-kbd-name="bpm"></div>
+                    </div>
+                    <p class="linked-note">Try keyboard too: tab to the knob and press Home / End / arrows.</p>
+                </div>
+                <div class="knob-cell">
+                    <div class="kbd-knob" id="lnk-knob" data-min="40" data-max="220" data-value="120"
+                         data-step="1" data-unit="" data-dp="0" data-label="BPM" data-kbd-name="bpm"
+                         style="--kbd-knob-size: 120px;"></div>
+                    <span class="cap">Tempo (knob)</span>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <section class="usage" aria-labelledby="u-title">
+        <h3 id="u-title">⬡ Built for accessibility &amp; performance</h3>
+        <ul>
+            <li>Every control is keyboard-operable: arrows, Home/End, PageUp/Down, type-to-set.</li>
+            <li>Proper ARIA: knobs are <code>role="slider"</code> with live <code>aria-valuetext</code>.</li>
+            <li><code>:focus-visible</code> rings; no focus ring on mouse clicks.</li>
+            <li>Honors <code>prefers-reduced-motion</code> — no throb, sheen, or tweens.</li>
+            <li>Themeable from each page's palette via <code>--grad</code> / <code>--cyan</code> / <code>--accent</code>.</li>
+            <li>Zero-build, no framework, progressive-enhancement — markup works without JS.</li>
+        </ul>
+    </section>
+
+    <p class="page-foot">
+        Shared layer: <code>/assets/kbd-controls.css</code> + <code>/assets/kbd-controls.js</code> ·
+        <a href="../../index.html">Kudbee home</a>
+    </p>
+
+</main>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* THEME — same pattern as the other tools pages. */
+    var isLight = localStorage.getItem('kudbee_theme') === 'light';
+    function applyTheme() {
+        document.body.classList.toggle('light', isLight);
+        var btn = document.getElementById('themeBtn');
+        btn.title = isLight ? 'Switch to dark' : 'Switch to light';
+    }
+    applyTheme();
+    document.getElementById('themeBtn').addEventListener('click', function () {
+        isLight = !isLight;
+        localStorage.setItem('kudbee_theme', isLight ? 'light' : 'dark');
+        applyTheme();
+    });
+
+    /* Wire the slider readouts (these mirror what the shared bubble shows). */
+    function mirror(sliderId, outId, dp, unit, dispMin, dispMax) {
+        var s = document.getElementById(sliderId), out = document.getElementById(outId);
+        function upd() {
+            var v = parseFloat(s.value);
+            if (dispMin !== undefined) {
+                var min = parseFloat(s.min), max = parseFloat(s.max), span = (max - min) || 1;
+                v = dispMin + ((v - min) / span) * (dispMax - dispMin);
+            }
+            out.textContent = v.toFixed(dp) + unit;
+        }
+        s.addEventListener('input', upd); upd();
+    }
+    mirror('s-vol', 'v-vol', 0, '%');
+    mirror('s-warm', 'v-warm', 1, '', -5, 5);
+    mirror('s-grow', 'v-grow', 1, '×', 0, 10);
+
+    /* Stepper readouts: read the input each time it changes. */
+    function stepperMirror(stepperId, outId) {
+        var st = document.getElementById(stepperId), out = document.getElementById(outId);
+        var input = st.querySelector('.kbd-stepper__input');
+        function upd() { if (input) out.textContent = input.value; }
+        // The input value updates synchronously on click/keys; listen broadly.
+        st.addEventListener('click', function () { setTimeout(upd, 0); });
+        st.addEventListener('input', upd);
+        st.addEventListener('change', upd);
+        st.addEventListener('keyup', upd);
+        setTimeout(upd, 0);
+    }
+    stepperMirror('st-qty', 'v-qty');
+    stepperMirror('st-op', 'v-op');
+    stepperMirror('st-gain', 'v-gain');
+
+    /* Linked group readout — the slider already broadcasts; just mirror it. */
+    var lnk = document.getElementById('lnk-slider'), bpmOut = document.getElementById('v-bpm');
+    function bpmUpd() { bpmOut.textContent = lnk.value + ' BPM'; }
+    lnk.addEventListener('input', bpmUpd); bpmUpd();
+})();
+</script>
+</body>
+</html>

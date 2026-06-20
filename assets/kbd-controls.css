@@ -88,3 +88,109 @@
 @media (prefers-reduced-motion: reduce) {
   .kbd-slider, .kbd-slider::-webkit-slider-thumb, .kbd-slider::-moz-range-thumb { transition: none !important; animation: none !important; }
 }
+
+/* ============================================================================
+ * .kbd-knob — circular drag-to-turn rotary control.
+ * Markup:  <div class="kbd-knob" data-min="0" data-max="100" data-value="40"
+ *               data-step="1" data-unit="%" data-dp="0" aria-label="Drive"></div>
+ * JS (kbd-controls.js) enhances it into role="slider" with an SVG arc that fills
+ * as you turn. Themeable via the same vars: --grad / --cyan / --accent /
+ * --accent-glow. Pointer drag (vertical or angular), wheel, and keyboard.
+ * ========================================================================== */
+.kbd-knob {
+  --kbd-knob-size: 96px;
+  --kbd-ring: rgba(57, 230, 255, 0.25);
+  --kbd-ring-soft: rgba(57, 230, 255, 0.12);
+  position: relative; display: inline-grid; place-items: center;
+  width: var(--kbd-knob-size); height: var(--kbd-knob-size);
+  border-radius: 50%; outline: none; cursor: grab;
+  touch-action: none; -webkit-user-select: none; user-select: none;
+  color: var(--text-primary, #fff);
+}
+.kbd-knob.dragging { cursor: grabbing; }
+/* The SVG arc + track live behind the centred readout. */
+.kbd-knob__svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; pointer-events: none; }
+.kbd-knob__track { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 7; stroke-linecap: round; }
+.light .kbd-knob__track { stroke: rgba(15, 23, 42, 0.14); }
+.kbd-knob__arc {
+  fill: none; stroke: url(#kbdKnobGrad); stroke-width: 7; stroke-linecap: round;
+  transition: stroke-dashoffset 0.08s linear;
+}
+/* The inset "cap" disc, with a pointer notch drawn by ::before. */
+.kbd-knob__cap {
+  position: relative; display: grid; place-items: center;
+  width: calc(var(--kbd-knob-size) - 26px); height: calc(var(--kbd-knob-size) - 26px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,0.10), transparent 60%),
+    var(--bg-elevated, #0b0b16);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), 0 4px 14px -6px rgba(0,0,0,0.6);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+/* Pointer notch — rotates with --kbd-angle so the disc visibly "turns". */
+.kbd-knob__cap::before {
+  content: ''; position: absolute; top: 8px; left: 50%;
+  width: 3px; height: 22%; border-radius: 999px;
+  background: var(--cyan, #39e6ff);
+  box-shadow: 0 0 8px 1px var(--accent-glow, rgba(111,91,255,0.45));
+  transform-origin: 50% calc(var(--kbd-knob-size) / 2 - 9px);
+  transform: translateX(-50%) rotate(var(--kbd-angle, 0deg));
+  transition: transform 0.08s linear;
+}
+.kbd-knob__val { position: relative; z-index: 1; font-size: 18px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; line-height: 1; }
+.kbd-knob__label { position: relative; z-index: 1; margin-top: 3px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim, #646c82); font-weight: 600; }
+.kbd-knob:hover .kbd-knob__cap { box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), 0 0 16px 2px var(--accent-glow, rgba(111,91,255,0.4)); }
+.kbd-knob:focus-visible { box-shadow: 0 0 0 3px var(--accent, #6f5bff), 0 0 18px 4px var(--accent-glow, rgba(111,91,255,0.45)); border-radius: 50%; }
+.kbd-knob:focus-visible .kbd-knob__cap { transform: scale(1.03); }
+.kbd-knob.dragging .kbd-knob__cap { transform: scale(1.04); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .kbd-knob:focus-visible .kbd-knob__cap,
+  .kbd-knob.dragging .kbd-knob__cap { animation: kbdThrob 1.5s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kbd-knob__arc, .kbd-knob__cap, .kbd-knob__cap::before { transition: none !important; animation: none !important; }
+}
+
+/* ============================================================================
+ * .kbd-stepper — number input flanked by −/+ buttons.
+ * Markup:  <div class="kbd-stepper" data-min="0" data-max="100" data-step="1"
+ *               data-value="20" data-unit="%" data-dp="0"
+ *               data-label="Quantity"></div>
+ * JS builds the −/+ buttons and input; pair with a slider/knob via a shared
+ * data-kbd-name (see kbd-controls.js). Degrades to a labelled number input.
+ * ========================================================================== */
+.kbd-stepper {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 11px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.light .kbd-stepper { background: var(--bg-elevated, #fff); }
+.kbd-stepper:focus-within { border-color: var(--cyan, #39e6ff); box-shadow: 0 0 0 3px rgba(57, 230, 255, 0.14); }
+.kbd-stepper__btn {
+  flex: 0 0 auto; width: 40px; border: none; cursor: pointer;
+  background: transparent; color: var(--text-secondary, #e6e8f0);
+  font-size: 20px; font-weight: 600; line-height: 1; font-family: inherit;
+  display: grid; place-items: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.kbd-stepper__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); color: var(--cyan, #39e6ff); }
+.kbd-stepper__btn:active:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.kbd-stepper__btn:focus-visible { outline: 2px solid var(--accent, #6f5bff); outline-offset: -2px; }
+.kbd-stepper__btn:disabled { opacity: 0.32; cursor: not-allowed; }
+.kbd-stepper__input {
+  flex: 1 1 auto; width: 64px; min-width: 0; text-align: center;
+  border: none; outline: none; background: transparent;
+  color: var(--text-primary, #fff); font-family: inherit; font-size: 14px; font-weight: 600;
+  padding: 9px 4px; font-variant-numeric: tabular-nums;
+  border-left: 1px solid var(--border, rgba(255,255,255,0.10));
+  border-right: 1px solid var(--border, rgba(255,255,255,0.10));
+}
+.kbd-stepper__input::-webkit-outer-spin-button,
+.kbd-stepper__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .kbd-stepper, .kbd-stepper__btn { transition: none !important; }
+}
