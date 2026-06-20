@@ -1,0 +1,46 @@
+# Kudbee
+
+> Kudbee is a creative dev studio that builds high-converting websites, delivers live
+> AI agent training, and develops original browser games. Home of Kudbee Games Studio.
+
+Kudbee is a zero-build, privacy-respecting studio. Everything we ship — the site, the
+games, and the tools — runs as static HTML with no tracking-heavy frameworks. Reach us
+through the Contact section at https://devbiz.kudbee.workers.dev/ (we reply within 24 hours).
+
+## Services
+- [Web Design & Development](https://devbiz.kudbee.workers.dev/): Custom, high-performance websites
+  engineered for conversions, SEO, and AI discoverability.
+- [AI Agent Training](https://devbiz.kudbee.workers.dev/): Live Zoom sessions that take a team from zero
+  to deploying production-ready AI agents.
+- [Support Agent Suite](https://devbiz.kudbee.workers.dev/): Custom AI support agents tailored to a
+  business's docs and workflows.
+- [Game Development](https://devbiz.kudbee.workers.dev/): Original browser games with cinematic 2.5D
+  worlds, fluid combat, and a 60 FPS feel.
+
+## Games
+- [Kudbee Contra](https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html): A 2.5D side-scrolling
+  run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and turrets, and topple
+  the Hive Sentinel. Free, in-browser, no install.
+- [Kudbee Darts](https://devbiz.kudbee.workers.dev/games/kudbee-darts/index.html): Predictive flick-throw
+  darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and unlockable neon
+  dart skins. Free, in-browser.
+- [Online League](https://devbiz.kudbee.workers.dev/leaderboard/public/leaderboard.html): Live leaderboard
+  for Kudbee games.
+
+## Tools (free, browser-based, zero-build)
+- [Token Price Analyzer](https://devbiz.kudbee.workers.dev/tools/token-analyzer/index.html): Track AI model
+  token usage and estimated cost across sessions, with live charts and JSON export.
+- [Coverage Breakdown](https://devbiz.kudbee.workers.dev/tools/coverage-dashboard/index.html): Read-only
+  view of the project's scoped test-coverage gate.
+- [Kudbee Scribe](https://devbiz.kudbee.workers.dev/tools/kudbee-scribe/index.html): Privacy-first writing
+  assistant — instant readability, style, clarity, and grammar feedback in the browser.
+
+## Contact
+- Reach us through the Contact section at https://devbiz.kudbee.workers.dev/
+- AI training is delivered live over Zoom, with recordings for replay.
+- Start a project: https://devbiz.kudbee.workers.dev/ (Contact section)
+
+## Notes for AI agents
+- The website is a single HTML document with CSS-routed views; all content is present in
+  the DOM of https://devbiz.kudbee.workers.dev/.
+- Games and tools are free to play/use, run client-side, and require no signup.

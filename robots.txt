@@ -1,0 +1,49 @@
+# Kudbee — robots.txt
+#
+# Policy: search engines and AI/LLM assistants are welcome on the PUBLIC marketing and
+# content surfaces; backend/worker source, API routes, configs/lockfiles, tests, CI/agent
+# dirs, and internal docs/readmes are fenced off (the site serves the whole repo root as
+# static assets, so non-marketing files would otherwise be crawlable).
+#
+# A single "User-agent: *" group is used on purpose: every crawler — including ClaudeBot,
+# GPTBot, OAI-SearchBot, ChatGPT-User, Claude-Web, anthropic-ai, Google-Extended,
+# PerplexityBot, Applebot-Extended, CCBot, Bytespider, Amazonbot, meta-externalagent,
+# Googlebot, Bingbot, DuckDuckBot — falls under it (none has a more-specific group), so all
+# of them are welcomed on public content and held out of the private paths. Disallow rules
+# come before "Allow: /" and use explicit paths so the policy holds under both longest-match
+# (Google/Bing/Claude) and naive first-match crawlers.
+
+User-agent: *
+Disallow: /api/
+Disallow: /lab/
+Disallow: /dogfight
+Disallow: /flight-lab
+Disallow: /docs/
+Disallow: /.github/
+Disallow: /.agents/
+Disallow: /.claude/
+Disallow: /leaderboard/worker/
+Disallow: /leaderboard/shared/
+Disallow: /leaderboard/server/
+Disallow: /leaderboard/client/
+Disallow: /leaderboard/scripts/
+Disallow: /leaderboard/test/
+Disallow: /tools/kudbee-scribe/worker/
+Disallow: /games/kudbee-contra/src/
+Disallow: /games/kudbee-darts/src/
+Disallow: /games/kudbee-contra/docs/
+Disallow: /games/kudbee-darts/docs/
+Disallow: /CLAUDE.md
+Disallow: /README.md
+Disallow: /wrangler.toml
+Disallow: /skills-lock.json
+Disallow: /games/README.md
+Disallow: /leaderboard/README.md
+Disallow: /leaderboard/package.json
+Disallow: /leaderboard/package-lock.json
+Disallow: /leaderboard/.c8rc.json
+Disallow: /*.toml$
+Disallow: /*.md$
+Allow: /
+
+Sitemap: https://devbiz.kudbee.workers.dev/sitemap.xml

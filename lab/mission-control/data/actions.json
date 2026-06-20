@@ -1,0 +1,62 @@
+{
+  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide | provide. Use honest 'if still open / if still active' wording for conditional items. Mission Control tracks these; it does not execute them.",
+  "updated": "2026-06-19",
+  "items": [
+    {
+      "priority": "high",
+      "kind": "provide",
+      "title": "GrowVerse backend / login recovery (Launch #1) — bring growverse-api up",
+      "where": "Your authenticated machine → Fly (growverse-api) + Vercel (GrowVerse project). Not runnable from Mission Control.",
+      "action": "growverse.dev login still 404s because no healthy backend is wired. From your terminal: set the correct DATABASE_URL → deploy growverse-api → confirm /health = 200 → verify POST /api/game/players → only then set Vercel BACKEND_URL to that healthy backend → redeploy Vercel → test login on growverse.dev. The correct backend is the growpod Python API, NOT frontiernext.",
+      "blocks": "GV-001 and everything downstream — login on growverse.dev"
+    },
+    {
+      "priority": "high",
+      "kind": "merge",
+      "title": "Merge PR #30 — 404 /lab on the Vercel deploy",
+      "where": "KudbeeZero/devbiz · PR #30 (draft, CI green)",
+      "action": "Closes the public /lab exposure on devbiz.vercel.app (one-line vercel.json). Owner-only, no auto-merge. After Vercel redeploys, re-check devbiz.vercel.app/lab/ → should be 404 while / still loads.",
+      "blocks": "DBZ-001 — /lab staying private on the Vercel mirror"
+    },
+    {
+      "priority": "high",
+      "kind": "configure",
+      "title": "Verify / configure Cloudflare Access for /lab/*",
+      "where": "Cloudflare Zero Trust → Access → Applications (not configured in this repo)",
+      "action": "Open /lab/mission-control/ in a private window. EXPECTED: a Cloudflare Access sign-in appears first. If the dashboard loads with NO prompt, Access is not configured — add /lab and /lab/* to an Access app with Allow = your email(s). There is no app-level login or basic-auth in the repo; the gate lives only in Cloudflare. See docs/PRIVATE_TESTING_GATE.md.",
+      "blocks": "DBZ-004 — safe sharing of any deployed /lab link"
+    },
+    {
+      "priority": "medium",
+      "kind": "decide",
+      "title": "Review the open GrowVerse + Agent-Feed drafts",
+      "where": "KudbeeZero/devbiz · PR #29 (Vercel readiness), #31 (living-plant audit), #32 (Agent Feed Inbox)",
+      "action": "Docs/audit lanes that feed GrowVerse Launch #1 and the Agent Feed Inbox. Each is a draft awaiting a merge/hold decision. Merging them also turns the Focus Board's 'pending' doc links live.",
+      "blocks": "Focus Board doc links going live; GV/DBZ context being canonical on main"
+    },
+    {
+      "priority": "medium",
+      "kind": "confirm",
+      "title": "Confirm the correct frontier-al folder/repo before Aether Wing Phase 1 (Launch #2)",
+      "where": "frontier-al (Vite/TypeScript/Three.js) — exact repo/folder TBD",
+      "action": "Tell the next agent exactly where Aether Wing should be built. No FRONTIER / Aether Wing gameplay starts until this is confirmed.",
+      "blocks": "FR-001 — FRONTIER: Aether Wing Phase 1"
+    },
+    {
+      "priority": "low",
+      "kind": "test",
+      "title": "Browser-check the Focus Board on this PR's preview, then merge",
+      "where": "This PR's branch preview · /lab/mission-control/ (Focus Board section near the top)",
+      "action": "Open the dashboard on your phone: confirm the Focus Board renders the three project cards (GrowVerse / FRONTIER / Devbiz) with status chips, blocker, owner action, expandable next-actions + backlog, the 'pending PR' doc pills, and the devbiz-memory brain note. Then merge (owner-only).",
+      "blocks": "DBZ-005 area — Mission Control v2 Focus Board"
+    },
+    {
+      "priority": "low",
+      "kind": "decide",
+      "title": "Decide on the older Devbiz draft PRs",
+      "where": "KudbeeZero/devbiz · PR #6 (AI concierge), #20 (Code Lens spec), #14 (ledger reconcile)",
+      "action": "Each is a draft awaiting an owner decision (merge, hold, or close). None block the active launch sequence.",
+      "blocks": "Nothing — housekeeping"
+    }
+  ]
+}

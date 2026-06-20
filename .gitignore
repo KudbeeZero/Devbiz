@@ -8,12 +8,19 @@
 .vscode/
 .idea/
 
-# Local environment files
+# Local environment files (real secrets — never commit).
+# The committed *.example files are placeholder-only templates.
 .env
 .env.local
+.env.*.local
+!.env.example
+!.env.local.example
 
 # Dependencies
 node_modules/
+
+# Build output (recording-it/ Vite app)
+dist/
 
 # Test coverage output
 coverage/
