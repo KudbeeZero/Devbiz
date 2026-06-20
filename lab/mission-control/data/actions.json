@@ -1,93 +1,61 @@
 {
-  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide | provide. Use honest 'if still open / if still active' wording for conditional items.",
+  "_comment": "Owner Action Queue — the single most important list. Only what needs the OWNER right now. Ordered by priority (high first). priority: high | medium | low. kind: confirm | configure | review | merge | test | decide | provide. Use honest 'if still open / if still active' wording for conditional items. Mission Control tracks these; it does not execute them.",
   "updated": "2026-06-19",
   "items": [
     {
       "priority": "high",
-      "kind": "configure",
-      "title": "Fix www.growverse.dev (returns 503) — add it to the Vercel project as a redirect to growverse.dev",
-      "where": "Vercel → Project → Settings → Domains (NOT a Cloudflare/DNS change)",
-      "action": "www.growverse.dev resolves but returns HTTP 503 (pointed at Vercel but not attached). Add www.growverse.dev to the project and set it to redirect to the apex growverse.dev (Vercel handles the redirect). Apex is healthy (200, Vercel, HSTS+CSP); /dev/plant-review correctly 404s in prod.",
-      "blocks": "www → apex redirect working"
-    },
-    {
-      "priority": "high",
-      "kind": "decide",
-      "title": "Review the GrowVerse Vercel-readiness report and approve the next safe step",
-      "where": "KudbeeZero/mainnet-growverse-v2.0 · lab/ai-command-center/lanes/growverse-vercel-readiness.md",
-      "action": "AUDIT DONE + BUILD VERIFIED. Decide: (1) approve a no-secret Vercel preview of growpod/web (Root Dir = growpod/web, npm install, next build), and (2) approve an additive gated /review/plant-review route in the GrowVerse repo so the canonical GrowChamber board can be previewed without exposing /dev/* (it 404s in prod). No secrets/wallet needed. Any GrowVerse code change needs a session with write access to that repo.",
-      "blocks": "A protected Vercel preview of the plant review board"
-    },
-    {
-      "priority": "high",
-      "kind": "configure",
-      "title": "Configure Cloudflare Access for /lab/* before sharing links widely",
-      "where": "Cloudflare Zero Trust → Access → Applications → Self-hosted",
-      "action": "The control room (Mission Control + AI Command Center) is now real — protect it. Add your-domain/lab + /lab/* to an Access app, Allow policy = your email(s), One-time PIN. See docs/PRIVATE_TESTING_GATE.md. Verify in incognito (Access screen should appear before the page).",
-      "blocks": "Safely sharing any /lab link"
-    },
-    {
-      "priority": "high",
-      "kind": "test",
-      "title": "Browser-check /lab/mission-control on the PR #25 preview",
-      "where": "Branch preview: /lab/mission-control/ (and /lab/ for the Mission Control card)",
-      "action": "When you're home: open the dashboard, confirm it renders, Owner Action Queue is on top, all 7 sections populate, theme toggle + copy buttons work, mobile is usable, console is clean. This is the only remaining gate I cannot do (no browser in my environment).",
-      "blocks": "Marking PR #25 ready / merge"
+      "kind": "provide",
+      "title": "GrowVerse backend / login recovery (Launch #1) — bring growverse-api up",
+      "where": "Your authenticated machine → Fly (growverse-api) + Vercel (GrowVerse project). Not runnable from Mission Control.",
+      "action": "growverse.dev login still 404s because no healthy backend is wired. From your terminal: set the correct DATABASE_URL → deploy growverse-api → confirm /health = 200 → verify POST /api/game/players → only then set Vercel BACKEND_URL to that healthy backend → redeploy Vercel → test login on growverse.dev. The correct backend is the growpod Python API, NOT frontiernext.",
+      "blocks": "GV-001 and everything downstream — login on growverse.dev"
     },
     {
       "priority": "high",
       "kind": "merge",
-      "title": "If the browser check passes, approve / merge PR #25",
-      "where": "KudbeeZero/devbiz · PR #25 (draft)",
-      "action": "Owner-only. No auto-merge. Merge only after the browser gate passes and you're satisfied with scope.",
-      "blocks": "Resuming any new lanes (owner froze new work until Mission Control v1 lands)"
+      "title": "Merge PR #30 — 404 /lab on the Vercel deploy",
+      "where": "KudbeeZero/devbiz · PR #30 (draft, CI green)",
+      "action": "Closes the public /lab exposure on devbiz.vercel.app (one-line vercel.json). Owner-only, no auto-merge. After Vercel redeploys, re-check devbiz.vercel.app/lab/ → should be 404 while / still loads.",
+      "blocks": "DBZ-001 — /lab staying private on the Vercel mirror"
     },
     {
       "priority": "high",
-      "kind": "confirm",
-      "title": "Confirm the correct frontier-al folder/repo before Aether Wing Phase 1",
-      "where": "frontier-al (Vite/TypeScript/Three.js) — exact repo/Linux folder TBD",
-      "action": "Tell the next agent exactly where Aether Wing should be built. No Frontier / Aether Wing gameplay starts until this is confirmed.",
-      "blocks": "FRONTIER: Aether Wing Phase 1, frontier-al scaffold"
-    },
-    {
-      "priority": "medium",
-      "kind": "test",
-      "title": "Browser-check GrowVerse /dev/plant-review before merging that lane — if PR #27 is still open",
-      "where": "GrowVerse repo · /dev/plant-review · PR #27 (cross-repo — reported, not verifiable from devbiz)",
-      "action": "If PR #27 is still open: do the visual review at /dev/plant-review and check CI, then decide merge/hold. Status here is reported / needs verification.",
-      "blocks": "GrowVerse plant review panel merge"
-    },
-    {
-      "priority": "high",
-      "kind": "test",
-      "title": "Verify Cloudflare Access is live for /lab/*",
-      "where": "Manual / external — Cloudflare Zero Trust (not configured in this repo)",
-      "action": "Open /lab/mission-control/ in an incognito/private browser window. EXPECTED: a Cloudflare Access screen appears before the page loads — if so, sign in with the allowed owner email + one-time PIN. IF the dashboard loads with NO prompt: Access is NOT configured yet — do not share the link publicly; configure Cloudflare Zero Trust Access for /lab and /lab/* (see docs/PRIVATE_TESTING_GATE.md). Note: there is no Mission Control password, no app-level login, and no basic-auth in the repo — Access lives in Cloudflare Zero Trust, not in committed code.",
-      "blocks": "Safe sharing of any deployed /lab link"
-    },
-    {
-      "priority": "medium",
       "kind": "configure",
-      "title": "Configure Cloudflare Access for /lab/* (now also covers /lab/mission-control)",
-      "where": "Cloudflare Zero Trust → Access → Applications → Self-hosted",
-      "action": "Add your-domain/lab and /lab/* to an Access app with an Allow policy = your email(s). Until then, /lab and /lab/mission-control are reachable by URL in production. See docs/PRIVATE_TESTING_GATE.md.",
-      "blocks": "Safe sharing of any deployed /lab link"
+      "title": "Verify / configure Cloudflare Access for /lab/*",
+      "where": "Cloudflare Zero Trust → Access → Applications (not configured in this repo)",
+      "action": "Open /lab/mission-control/ in a private window. EXPECTED: a Cloudflare Access sign-in appears first. If the dashboard loads with NO prompt, Access is not configured — add /lab and /lab/* to an Access app with Allow = your email(s). There is no app-level login or basic-auth in the repo; the gate lives only in Cloudflare. See docs/PRIVATE_TESTING_GATE.md.",
+      "blocks": "DBZ-004 — safe sharing of any deployed /lab link"
+    },
+    {
+      "priority": "medium",
+      "kind": "decide",
+      "title": "Review the open GrowVerse + Agent-Feed drafts",
+      "where": "KudbeeZero/devbiz · PR #29 (Vercel readiness), #31 (living-plant audit), #32 (Agent Feed Inbox)",
+      "action": "Docs/audit lanes that feed GrowVerse Launch #1 and the Agent Feed Inbox. Each is a draft awaiting a merge/hold decision. Merging them also turns the Focus Board's 'pending' doc links live.",
+      "blocks": "Focus Board doc links going live; GV/DBZ context being canonical on main"
+    },
+    {
+      "priority": "medium",
+      "kind": "confirm",
+      "title": "Confirm the correct frontier-al folder/repo before Aether Wing Phase 1 (Launch #2)",
+      "where": "frontier-al (Vite/TypeScript/Three.js) — exact repo/folder TBD",
+      "action": "Tell the next agent exactly where Aether Wing should be built. No FRONTIER / Aether Wing gameplay starts until this is confirmed.",
+      "blocks": "FR-001 — FRONTIER: Aether Wing Phase 1"
     },
     {
       "priority": "low",
-      "kind": "provide",
-      "title": "Provide the exact Fly CLI path — only if the Fly diagnostic is still active",
-      "where": "Fly.io (flyctl)",
-      "action": "If the Fly/Flyctl diagnostic lane is still relevant, give the exact flyctl path so it can resume read-only. If it's no longer relevant, say so and the agent row can be retired.",
-      "blocks": "Nothing — conditional / housekeeping"
+      "kind": "test",
+      "title": "Browser-check the Focus Board on this PR's preview, then merge",
+      "where": "This PR's branch preview · /lab/mission-control/ (Focus Board section near the top)",
+      "action": "Open the dashboard on your phone: confirm the Focus Board renders the three project cards (GrowVerse / FRONTIER / Devbiz) with status chips, blocker, owner action, expandable next-actions + backlog, the 'pending PR' doc pills, and the devbiz-memory brain note. Then merge (owner-only).",
+      "blocks": "DBZ-005 area — Mission Control v2 Focus Board"
     },
     {
       "priority": "low",
       "kind": "decide",
-      "title": "Decide on the three open Devbiz draft PRs",
+      "title": "Decide on the older Devbiz draft PRs",
       "where": "KudbeeZero/devbiz · PR #6 (AI concierge), #20 (Code Lens spec), #14 (ledger reconcile)",
-      "action": "Each is a draft awaiting an owner decision (merge, hold, or close). None are blocking Mission Control.",
+      "action": "Each is a draft awaiting an owner decision (merge, hold, or close). None block the active launch sequence.",
       "blocks": "Nothing — housekeeping"
     }
   ]
