@@ -1,274 +1,781 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="FRONTIER: Aether Wing — arcade space dogfighter in development at Kudbee Games Studio. Private preview.">
-    <title>FRONTIER: Aether Wing · In Build · Kudbee (Private)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#04040a">
+<meta name="description" content="FRONTIER: Aether Wing — arcade space dogfighter by Kudbee Games Studio. Fly the Aether Wing Mk-I through drone swarms and asteroid fields. Private preview.">
+<title>FRONTIER: Aether Wing — Flight Slice · Kudbee (Private)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --bg-primary: #04040a;
-        --bg-card: rgba(255,255,255,0.035);
-        --border: rgba(255,255,255,0.08);
-        --border-hover: rgba(255,255,255,0.18);
-        --text-primary: #ffffff;
-        --text-secondary: #e6e8f0;
-        --text-muted: #9aa3b8;
-        --text-dim: #646c82;
-        --cyan: #39e6ff;
-        --violet: #c46bff;
-        --green: #7CFFb2;
-        --amber: #ffd34d;
-        --accent: #6f5bff;
-        --accent-glow: rgba(111,91,255,0.35);
-        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
-        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
-        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
-        --radius: 16px;
-        --maxw: 1080px;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        line-height: 1.6; overflow-x: hidden;
-        background: var(--bg-primary); color: var(--text-secondary);
-        min-height: 100vh; -webkit-font-smoothing: antialiased;
-    }
-    h1, h2, h3, .logo-txt { font-family: 'Space Grotesk', 'Inter', sans-serif; }
-    .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  :root {
+    --cyan: #39e6ff; --violet: #c46bff; --green: #7CFFb2; --amber: #ffd34d;
+    --red: #ff5c7a; --accent: #6f5bff; --ink: #04040a;
+    --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+    --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--ink); color: #cfe9ff; overflow: hidden;
+    font-family: "Inter", system-ui, -apple-system, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  h1, h2, h3, .tt { font-family: "Space Grotesk", "Inter", system-ui, sans-serif; }
+  .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  #stage { position: fixed; inset: 0; }
+  canvas#view { display: block; width: 100%; height: 100%; touch-action: none; }
 
-    /* Starfield canvas hero backdrop */
-    #stars { position: fixed; inset: 0; z-index: 0; display: block; }
-    .nebula { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-    .nebula::before, .nebula::after { content: ''; position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.5; }
-    .nebula::before { width: 720px; height: 720px; top: -180px; left: -160px; background: radial-gradient(circle, rgba(57,230,255,0.22), transparent 64%); }
-    .nebula::after  { width: 820px; height: 820px; bottom: -260px; right: -200px; background: radial-gradient(circle, rgba(196,107,255,0.22), transparent 64%); }
+  /* ---- HUD (DOM overlay; crisp text over the 3D canvas) ---- */
+  .hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; font-variant-numeric: tabular-nums; }
+  .hud.dim { opacity: 0; }
+  .back-link { position: absolute; top: 12px; left: 14px; pointer-events: auto; font-size: 12px;
+    letter-spacing: 0.06em; text-transform: uppercase; color: #9fb6c8; text-decoration: none; padding: 6px 10px;
+    border: 1px solid rgba(159,182,200,0.25); border-radius: 6px; background: rgba(5,5,15,0.5); backdrop-filter: blur(6px); transition: all .2s; }
+  .back-link:hover { color: #fff; border-color: var(--cyan); }
 
-    .content { position: relative; z-index: 2; }
+  .gauges { position: absolute; left: 16px; bottom: 16px; width: min(38vw, 230px); display: flex; flex-direction: column; gap: 9px; }
+  .gauge { }
+  .gauge .lab { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a93a8; margin-bottom: 3px; }
+  .bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); }
+  .bar > i { display: block; height: 100%; width: 100%; border-radius: 4px; transition: width .12s linear; }
+  .bar.hull > i { background: linear-gradient(90deg, #ff5c7a, #ffd34d); }
+  .bar.shield > i { background: linear-gradient(90deg, #39e6ff, #6f5bff); }
+  .bar.boost > i { background: linear-gradient(90deg, #7CFFb2, #39e6ff); }
 
-    /* NAV */
-    .nav-bar {
-        position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
-        padding: 14px 28px; background: rgba(4,4,10,0.7);
-        backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
-        border-bottom: 1px solid var(--border); z-index: 100;
-    }
-    .nav-left { display: flex; align-items: center; gap: 16px; }
-    .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; transition: color 0.2s; }
-    .back-link:hover { color: var(--cyan); }
-    .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
-    .logo-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); }
-    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #04040a; display: block; }
-    .logo-dot { color: var(--cyan); }
-    .nav-divider { color: var(--border-hover); font-size: 18px; }
-    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .topright { position: absolute; right: 16px; top: 14px; text-align: right; }
+  .score { font-family: "Space Grotesk"; font-weight: 700; font-size: clamp(24px, 4.4vw, 40px); color: #fff; line-height: 1; }
+  .score-lab { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a93a8; margin-top: 3px; }
+  .topleft { position: absolute; left: 16px; top: 14px; }
+  .wave { font-family: "Space Grotesk"; font-weight: 700; font-size: 18px; color: var(--cyan); }
+  .mult { font-size: 12px; color: #8a93a8; margin-top: 2px; }
+  .mult b { color: var(--amber); }
+  .ammo { position: absolute; right: 16px; bottom: 16px; text-align: right; font-size: 12px; color: #9aa3b8; }
+  .ammo b { font-family: "Space Grotesk"; color: #fff; font-size: 16px; }
 
-    .main { max-width: var(--maxw); margin: 0 auto; padding: 80px 28px 90px; }
+  /* Reticle */
+  .reticle { position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; z-index: 9; pointer-events: none;
+    transition: opacity .2s; }
+  .reticle::before, .reticle::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    border: 1.5px solid rgba(57,230,255,0.8); border-radius: 50%; }
+  .reticle::before { width: 100%; height: 100%; }
+  .reticle::after { width: 5px; height: 5px; background: var(--cyan); border: none; box-shadow: 0 0 8px var(--cyan); }
+  .reticle.lock::before { border-color: var(--amber); box-shadow: 0 0 12px rgba(255,211,77,0.6); }
 
-    /* HERO */
-    .hero { text-align: center; max-width: 760px; margin: 0 auto; }
-    .status-pill {
-        display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
-        font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); background: rgba(255,211,77,0.06);
-    }
-    .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-    .hero .frontier { display: block; font-size: 14px; font-weight: 600; letter-spacing: 0.34em; text-transform: uppercase; color: var(--cyan); margin: 26px 0 10px; }
-    .hero h1 { font-size: clamp(42px, 8vw, 78px); line-height: 1; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
-    .hero .tagline { margin-top: 20px; font-size: 18px; color: var(--text-muted); }
-    .hero .ship { margin-top: 10px; font-size: 13px; color: var(--text-dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; }
+  /* Damage vignette */
+  .vignette { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+    box-shadow: inset 0 0 120px 30px rgba(255,92,122,0.55); transition: opacity .12s; }
 
-    /* Spec strip */
-    .specs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 34px auto 0; max-width: 640px; }
-    .spec { font-size: 12.5px; color: var(--text-secondary); padding: 7px 14px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border); }
+  /* ---- Overlays ---- */
+  .overlay { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(900px 600px at 50% 38%, rgba(10,10,28,0.5), rgba(3,3,10,0.9)); backdrop-filter: blur(3px); transition: opacity .4s; }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .ov-inner { max-width: 480px; }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: var(--cyan); }
+  .frontier { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.34em; text-transform: uppercase; color: var(--cyan); margin: 10px 0 6px; }
+  .ov-inner h1 { font-size: clamp(34px, 8vw, 62px); line-height: 1; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+  .ov-inner p { color: #9aa3b8; font-size: 14px; line-height: 1.55; max-width: 400px; margin: 14px auto 0; }
+  .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; max-width: 360px; margin: 22px auto 0; text-align: left; font-size: 12.5px; color: #b6c0d4; }
+  .controls-grid span { color: #6f7a90; }
+  .controls-grid b { color: #fff; font-family: "Space Grotesk"; font-weight: 600; }
+  .btn { margin-top: 26px; display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border: none; border-radius: 999px;
+    cursor: pointer; background: var(--grad); color: #04040a; font-family: "Space Grotesk"; font-weight: 700; font-size: 16px;
+    box-shadow: 0 16px 40px -12px rgba(111,91,255,0.7); transition: transform .16s, filter .16s; pointer-events: auto; }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+  .btn.ghost { background: none; color: #cfe9ff; border: 1px solid rgba(159,182,200,0.3); box-shadow: none; text-decoration: none; }
+  .btn.ghost:hover { border-color: var(--cyan); color: #fff; }
+  .ov-foot { margin-top: 16px; font-size: 11px; color: #5a6276; }
+  .results-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0 4px; }
+  .rstat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; }
+  .rstat b { display: block; font-family: "Space Grotesk"; font-size: 24px; color: #fff; }
+  .rstat span { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7a8398; }
 
-    /* Roadmap */
-    .section-label { display: flex; align-items: center; gap: 12px; margin: 64px 2px 26px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
-    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  /* Touch controls */
+  #touch { position: absolute; inset: 0; z-index: 15; display: none; }
+  @media (pointer: coarse) { #touch { display: block; } .controls-grid { display: none; } }
+  .tbtn { position: absolute; pointer-events: auto; border-radius: 50%; border: 1px solid rgba(159,182,200,0.3);
+    background: rgba(14,20,30,0.32); color: #cfe9ff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    display: grid; place-items: center; backdrop-filter: blur(3px); user-select: none; }
+  .tbtn.fire { right: 5%; bottom: 16%; width: 84px; height: 84px; background: rgba(57,230,255,0.16); border-color: rgba(57,230,255,0.5); }
+  .tbtn.msl  { right: 22%; bottom: 10%; width: 58px; height: 58px; background: rgba(255,211,77,0.13); border-color: rgba(255,211,77,0.45); color: var(--amber); }
+  .tbtn.boost{ left: 5%; bottom: 16%; width: 70px; height: 70px; background: rgba(124,255,178,0.13); border-color: rgba(124,255,178,0.45); color: var(--green); }
+  .tbtn.pressed { filter: brightness(1.5); }
 
-    .phases { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-    .phase { padding: 22px; border-radius: var(--radius); background: var(--bg-card); border: 1px solid var(--border); }
-    .phase-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .phase-num { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--bg-primary); background: var(--grad); }
-    .phase h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-    .phase ul { list-style: none; margin-top: 4px; }
-    .phase li { font-size: 13.5px; color: var(--text-muted); padding-left: 18px; position: relative; margin-top: 5px; }
-    .phase li::before { content: '›'; position: absolute; left: 2px; color: var(--cyan); }
-    .phase.next { border-color: rgba(57,230,255,0.3); box-shadow: 0 14px 44px -24px rgba(57,230,255,0.5); }
-    .phase .tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px; margin-left: auto; }
-
-    .note { margin-top: 44px; padding: 18px 22px; border-radius: 14px; background: rgba(57,230,255,0.04); border: 1px solid rgba(57,230,255,0.18); color: var(--text-muted); font-size: 13.5px; }
-    .note strong { color: var(--text-secondary); }
-
-    .foot { max-width: var(--maxw); margin: 0 auto; padding: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 13px; }
-    .foot a { color: var(--text-muted); text-decoration: none; }
-    .foot a:hover { color: var(--cyan); }
-
-    @media (max-width: 600px) { .main { padding: 56px 18px 70px; } .nav-bar { padding: 12px 16px; } }
-    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+  .hint { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); z-index: 9; font-size: 11px; color: #45586a; pointer-events: none; }
+  @media (pointer: coarse) { .hint { display: none; } }
 </style>
 </head>
 <body>
+<div id="stage">
+  <canvas id="view"></canvas>
 
-<canvas id="stars" aria-hidden="true"></canvas>
-<div class="nebula" aria-hidden="true"></div>
-<div class="content">
-
-<nav class="nav-bar">
-    <div class="nav-left">
-        <a href="../index.html" class="back-link">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-            Lab
-        </a>
-        <a href="../../index.html" class="logo-link">
-            <div class="logo-mark"></div>
-            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
-        </a>
-        <span class="nav-divider">›</span>
-        <span class="nav-title">Aether Wing</span>
+  <!-- HUD -->
+  <div class="hud" id="hud">
+    <a class="back-link" href="../index.html">&larr; Lab</a>
+    <div class="topleft">
+      <div class="wave" id="hudWave">Wave 1</div>
+      <div class="mult" id="hudMult">x1</div>
     </div>
-</nav>
-
-<main class="main">
-
-    <section class="hero">
-        <span class="status-pill"><span class="dot"></span> In Build</span>
-        <span class="frontier">FRONTIER</span>
-        <h1><span class="gradient-text">Aether Wing</span></h1>
-        <p class="tagline">An arcade space dogfighter — carve through debris fields, hostile drone swarms, broken orbital gates, and ASCEND energy anomalies.</p>
-        <p class="ship">// PILOT: Aether-class fighter · Aether Wing Mk-I</p>
-
-        <div class="specs">
-            <span class="spec">Third-person flight</span>
-            <span class="spec">Boost &amp; shields</span>
-            <span class="spec">Blasters + missiles</span>
-            <span class="spec">Wave survival</span>
-            <span class="spec">Score &amp; multiplier</span>
-            <span class="spec">Desktop + mobile</span>
-        </div>
-    </section>
-
-    <div class="section-label">Build roadmap</div>
-    <div class="phases">
-        <div class="phase next">
-            <div class="phase-head"><span class="phase-num">1</span><h3>Playable slice</h3><span class="tag">Next PR</span></div>
-            <ul>
-                <li>Third-person ship + follow camera</li>
-                <li>Keyboard, mouse &amp; touch controls</li>
-                <li>Boost meter, shield, hull</li>
-                <li>Blasters, missiles, enemy drones</li>
-                <li>Asteroid collisions, waves, score</li>
-                <li>Pause &amp; restart loop</li>
-            </ul>
-        </div>
-        <div class="phase">
-            <div class="phase-head"><span class="phase-num">2</span><h3>Premium visuals</h3></div>
-            <ul>
-                <li>Volumetric nebula &amp; deep starfield</li>
-                <li>Instanced asteroid fields</li>
-                <li>Shield bubble, engine trails, explosions</li>
-                <li>Targeting brackets, radar, bloom</li>
-            </ul>
-        </div>
-        <div class="phase">
-            <div class="phase-head"><span class="phase-num">3</span><h3>Menus &amp; mobile</h3></div>
-            <ul>
-                <li>Start, pause, settings, tutorial</li>
-                <li>Touch controls + safe-area handling</li>
-            </ul>
-        </div>
-        <div class="phase">
-            <div class="phase-head"><span class="phase-num">4</span><h3>Audio &amp; feel</h3></div>
-            <ul>
-                <li>Engine hum, boost surge, hit feedback</li>
-                <li>Missile lock, explosions, screen shake</li>
-            </ul>
-        </div>
-        <div class="phase">
-            <div class="phase-head"><span class="phase-num">5</span><h3>Site integration</h3></div>
-            <ul>
-                <li>Flight Lab entry &amp; loading screen</li>
-                <li>SEO/preview polish</li>
-            </ul>
-        </div>
-        <div class="phase">
-            <div class="phase-head"><span class="phase-num">6</span><h3>Proof layer (optional)</h3></div>
-            <ul>
-                <li>Score receipts, leaderboard, cosmetics</li>
-                <li>Only after the arcade loop is stable</li>
-            </ul>
-        </div>
+    <div class="topright">
+      <div class="score" id="hudScore">0</div>
+      <div class="score-lab">Score</div>
     </div>
-
-    <div class="note">
-        <strong>Status note:</strong> This is a private placeholder route reserving the home for the game. No gameplay ships here yet — the Three.js playable slice (Phase&nbsp;1) lands in a dedicated follow-up PR so it can be verified with active-play screenshots before going on the site.
+    <div class="gauges">
+      <div class="gauge"><div class="lab"><span>Hull</span><span id="hudHullN">100</span></div><div class="bar hull"><i id="hudHull"></i></div></div>
+      <div class="gauge"><div class="lab"><span>Shield</span><span id="hudShieldN">100</span></div><div class="bar shield"><i id="hudShield"></i></div></div>
+      <div class="gauge"><div class="lab"><span>Boost</span><span id="hudBoostN">100</span></div><div class="bar boost"><i id="hudBoost"></i></div></div>
     </div>
+    <div class="ammo"><b id="hudMsl">3</b> missiles</div>
+  </div>
+  <div class="reticle" id="reticle"></div>
+  <div class="vignette" id="vignette"></div>
 
-</main>
+  <!-- Touch -->
+  <div id="touch">
+    <div class="tbtn boost" data-act="boost">Boost</div>
+    <div class="tbtn msl" data-act="missile">MSL</div>
+    <div class="tbtn fire" data-act="fire">Fire</div>
+  </div>
 
-<footer class="foot">
-    FRONTIER: Aether Wing — Kudbee Games Studio · <a href="../index.html">Back to Studio Lab</a>
-</footer>
+  <!-- Start gate -->
+  <div class="overlay" id="gate">
+    <div class="ov-inner">
+      <div class="kicker">⬡ Kudbee Games Studio</div>
+      <span class="frontier">FRONTIER</span>
+      <h1 class="gradient-text">Aether Wing</h1>
+      <p>Pilot the Aether Wing Mk-I through drone swarms and asteroid fields. Steer to line up your guns, lock missiles on the nearest threat, and burn through the waves.</p>
+      <div class="controls-grid">
+        <span>Steer / aim</span><b>Mouse · WASD</b>
+        <span>Blasters</span><b>Click · Space</b>
+        <span>Missile (lock)</span><b>Right-click · X</b>
+        <span>Boost</span><b>Shift</b>
+        <span>Pause</span><b>P · Esc</b>
+        <span>Mute</span><b>M</b>
+      </div>
+      <button class="btn" id="startBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Launch</button>
+      <div class="ov-foot">Playable slice · Phase 1 · Kudbee Games Studio</div>
+    </div>
+  </div>
 
+  <!-- Pause -->
+  <div class="overlay hidden" id="pause">
+    <div class="ov-inner">
+      <div class="kicker">Paused</div>
+      <h1>Holding position.</h1>
+      <button class="btn" id="resumeBtn">Resume</button>
+      <button class="btn ghost" id="restartBtn">Restart</button>
+      <div class="ov-foot">P resume · R restart · M mute</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="overlay hidden" id="results">
+    <div class="ov-inner">
+      <div class="kicker" id="rRank">Run complete</div>
+      <h1 class="gradient-text" id="rScore">0</h1>
+      <div class="results-grid">
+        <div class="rstat"><b id="rWave">1</b><span>Wave reached</span></div>
+        <div class="rstat"><b id="rKills">0</b><span>Kills</span></div>
+        <div class="rstat"><b id="rAcc">0%</b><span>Accuracy</span></div>
+        <div class="rstat"><b id="rBest">0</b><span>Best</span></div>
+      </div>
+      <button class="btn" id="againBtn">Fly again</button>
+      <a class="btn ghost" href="../index.html">Back to Lab</a>
+    </div>
+  </div>
+
+  <div class="hint">Mouse/WASD steer · Click/Space fire · X missile · Shift boost · P pause</div>
 </div>
 
+<script src="vendor/three.min.js"></script>
 <script>
-/* Lightweight parallax starfield — rAF, DPR-aware, pauses when tab hidden,
- * and renders a single static frame under prefers-reduced-motion. */
+/* ===========================================================================
+ * FRONTIER: Aether Wing — Phase 1 playable slice (Three.js, vendored).
+ * ---------------------------------------------------------------------------
+ * 2.5D-feel arcade rail dogfighter rendered in true 3D. The ship holds near
+ * the origin and steers in X/Y; the world (asteroids, drones, their fire,
+ * starfield) streams toward the camera along +Z. Blasters fire straight down
+ * the ship's nose; missiles lock the nearest forward threat. Hull/shield/boost,
+ * waves, score + multiplier, pause/restart, results. Pooled meshes + particles,
+ * honors prefers-reduced-motion, pauses when hidden, DPR-capped.
+ *
+ * A tiny window.AW debug hook is exposed for automated verification.
+ * ========================================================================= */
 (function () {
-    const canvas = document.getElementById('stars');
-    const ctx = canvas.getContext('2d');
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let w, h, dpr, stars, raf, running = false;
+  'use strict';
+  var T = window.THREE;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
-    function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        w = canvas.width = Math.floor(innerWidth * dpr);
-        h = canvas.height = Math.floor(innerHeight * dpr);
-        canvas.style.width = innerWidth + 'px';
-        canvas.style.height = innerHeight + 'px';
-        const count = Math.min(220, Math.floor((innerWidth * innerHeight) / 7000));
-        stars = Array.from({ length: count }, () => ({
-            x: Math.random() * w, y: Math.random() * h,
-            z: Math.random() * 0.8 + 0.2,           // depth → size + speed
-            tw: Math.random() * Math.PI * 2
-        }));
+  // ---- Tunables ----
+  var FORWARD = -1;                 // forward is -Z
+  var SHIP_BOUND_X = 11, SHIP_BOUND_Y = 6.5;
+  var FLY_SPEED = 46, BOOST_MUL = 1.85;
+  var SPAWN_Z = -170, PASS_Z = 12;  // objects spawn far, despawn past the camera
+  var BOLT_SPEED = 240;
+
+  // ---- Renderer / scene ----
+  var canvas = document.getElementById('view');
+  var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: !reduce, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x04040a, 1);
+  if ('outputColorSpace' in renderer) renderer.outputColorSpace = T.SRGBColorSpace;
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+
+  var scene = new T.Scene();
+  scene.fog = new T.FogExp2(0x05040f, 0.0085);
+  var camera = new T.PerspectiveCamera(72, 1, 0.1, 600);
+  camera.position.set(0, 2.7, 8.6);
+
+  // Lights — tuned for r160 physical lighting.
+  scene.add(new T.AmbientLight(0x33405e, 2.2));
+  var key = new T.DirectionalLight(0xbcd6ff, 2.4); key.position.set(-6, 10, 8); scene.add(key);
+  var rim = new T.DirectionalLight(0xc46bff, 1.6); rim.position.set(8, -4, -10); scene.add(rim);
+  var fillP = new T.PointLight(0x39e6ff, 40, 60); fillP.position.set(0, 3, 12); scene.add(fillP);
+
+  // ---- Nebula sprites (premium backdrop hint) ----
+  function radialTexture(hex) {
+    var c = document.createElement('canvas'); c.width = c.height = 128;
+    var x = c.getContext('2d'); var g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, hex + 'cc'); g.addColorStop(0.4, hex + '55'); g.addColorStop(1, hex + '00');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+    var tex = new T.CanvasTexture(c); if ('colorSpace' in tex) tex.colorSpace = T.SRGBColorSpace; return tex;
+  }
+  function nebula(hex, x, y, z, s) {
+    var m = new T.Sprite(new T.SpriteMaterial({ map: radialTexture(hex), transparent: true, opacity: 0.5, depthWrite: false, blending: T.AdditiveBlending }));
+    m.position.set(x, y, z); m.scale.set(s, s, 1); scene.add(m); return m;
+  }
+  nebula('#39e6ff', -60, 26, -260, 150);
+  nebula('#c46bff', 70, -34, -300, 200);
+  nebula('#6f5bff', 10, 50, -340, 240);
+
+  // ---- Starfield (Points; streams toward camera) ----
+  var STAR_N = reduce ? 320 : 900;
+  var starGeo = new T.BufferGeometry();
+  var starPos = new Float32Array(STAR_N * 3);
+  function seedStar(i, far) {
+    starPos[i*3]   = (Math.random() - 0.5) * 260;
+    starPos[i*3+1] = (Math.random() - 0.5) * 160;
+    starPos[i*3+2] = far ? -Math.random() * 400 : (-400 + Math.random() * 20);
+  }
+  for (var si = 0; si < STAR_N; si++) seedStar(si, true);
+  starGeo.setAttribute('position', new T.BufferAttribute(starPos, 3));
+  var stars = new T.Points(starGeo, new T.PointsMaterial({ color: 0xaec8ff, size: 0.7, sizeAttenuation: true, transparent: true, opacity: 0.9, depthWrite: false }));
+  scene.add(stars);
+
+  // ---- Player ship ----
+  function buildShip() {
+    var g = new T.Group();
+    var hull = new T.MeshStandardMaterial({ color: 0x53658e, metalness: 0.55, roughness: 0.42, flatShading: true });
+    var accent = new T.MeshStandardMaterial({ color: 0x39e6ff, emissive: 0x39e6ff, emissiveIntensity: 1.3, metalness: 0.4, roughness: 0.3 });
+    var glow = new T.MeshStandardMaterial({ color: 0xc46bff, emissive: 0x9b6bff, emissiveIntensity: 1.6, metalness: 0.2, roughness: 0.5 });
+    var body = new T.Mesh(new T.ConeGeometry(0.62, 2.1, 6), hull); body.rotation.x = -Math.PI / 2; g.add(body);
+    var spine = new T.Mesh(new T.BoxGeometry(0.18, 0.16, 1.3), accent); spine.position.set(0, 0.18, 0.1); g.add(spine);
+    var wingGeo = new T.BoxGeometry(2.7, 0.12, 0.9);
+    var wL = new T.Mesh(wingGeo, hull); wL.position.set(0, -0.05, 0.45); wL.rotation.z = 0.06; g.add(wL);
+    var finGeo = new T.BoxGeometry(0.12, 0.7, 0.7);
+    var fin = new T.Mesh(finGeo, hull); fin.position.set(0, 0.32, 0.7); g.add(fin);
+    var cockpit = new T.Mesh(new T.SphereGeometry(0.3, 12, 10), accent); cockpit.position.set(0, 0.18, -0.35); cockpit.scale.set(1, 0.7, 1.4); g.add(cockpit);
+    var eGeo = new T.CylinderGeometry(0.2, 0.26, 0.5, 10);
+    [-0.95, 0.95].forEach(function (x) { var e = new T.Mesh(eGeo, glow); e.rotation.x = Math.PI / 2; e.position.set(x, -0.02, 0.85); g.add(e); });
+    // engine glow sprites
+    var et = radialTexture('#8a7bff');
+    var coreMat = new T.MeshBasicMaterial({ color: 0xcfe0ff });
+    [-0.95, 0.95].forEach(function (x) {
+      var s = new T.Sprite(new T.SpriteMaterial({ map: et, color: 0x9b8cff, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending }));
+      s.position.set(x, -0.02, 1.2); s.scale.set(0.95, 0.95, 1); g.add(s); g.userData['eng' + x] = s;
+      var core = new T.Mesh(new T.SphereGeometry(0.14, 8, 8), coreMat); core.position.set(x, -0.02, 1.02); g.add(core);
+    });
+    return g;
+  }
+  var ship = buildShip(); scene.add(ship);
+  var muzzle = new T.Vector3();
+
+  // ---- Object pools (asteroids, drones, bolts, enemy bolts, particles) ----
+  function pool(n, make) { var a = []; for (var i = 0; i < n; i++) { var o = make(); o.visible = false; o.userData.alive = false; scene.add(o); a.push(o); } return a; }
+  function take(arr) { for (var i = 0; i < arr.length; i++) if (!arr[i].userData.alive) return arr[i]; return null; }
+
+  var rockMat = new T.MeshStandardMaterial({ color: 0x6b6378, metalness: 0.2, roughness: 0.9, flatShading: true });
+  var asteroids = pool(reduce ? 10 : 18, function () { return new T.Mesh(new T.IcosahedronGeometry(1, 0), rockMat); });
+
+  var droneBody = new T.MeshStandardMaterial({ color: 0x3a2330, metalness: 0.6, roughness: 0.4, flatShading: true });
+  var droneEye = new T.MeshStandardMaterial({ color: 0xff5c7a, emissive: 0xff3b63, emissiveIntensity: 1.6 });
+  var drones = pool(reduce ? 8 : 14, function () {
+    var g = new T.Group();
+    var core = new T.Mesh(new T.OctahedronGeometry(0.8, 0), droneBody); g.add(core);
+    var ring = new T.Mesh(new T.TorusGeometry(0.95, 0.12, 6, 12), droneBody); ring.rotation.x = Math.PI / 2; g.add(ring);
+    var eye = new T.Mesh(new T.SphereGeometry(0.26, 10, 8), droneEye); eye.position.z = -0.6; g.add(eye);
+    g.userData.core = core; g.userData.ring = ring; return g;
+  });
+
+  var boltMat = new T.MeshBasicMaterial({ color: 0x9ff4ff });
+  var boltGeo = new T.CylinderGeometry(0.07, 0.07, 1.6, 6); boltGeo.rotateX(Math.PI / 2);
+  var bolts = pool(40, function () { return new T.Mesh(boltGeo, boltMat); });
+  var eBoltMat = new T.MeshBasicMaterial({ color: 0xff6b88 });
+  var eBolts = pool(40, function () { return new T.Mesh(new T.SphereGeometry(0.28, 8, 6), eBoltMat); });
+
+  var mslMat = new T.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffb04d, emissiveIntensity: 1.2 });
+  var missiles = pool(8, function () { var m = new T.Mesh(new T.ConeGeometry(0.18, 0.8, 8), mslMat); m.rotation.x = -Math.PI / 2; return m; });
+
+  // particle explosion pool (Points clusters reused)
+  var PARTS = reduce ? 120 : 320, pIdx = 0;
+  var partGeo = new T.BufferGeometry();
+  var partPos = new Float32Array(PARTS * 3);
+  var partVel = new Float32Array(PARTS * 3);
+  var partLife = new Float32Array(PARTS);
+  for (var k = 0; k < PARTS; k++) { partPos[k*3+2] = 9999; }
+  partGeo.setAttribute('position', new T.BufferAttribute(partPos, 3));
+  var parts = new T.Points(partGeo, new T.PointsMaterial({ color: 0xffd9a0, size: 0.5, transparent: true, opacity: 1, depthWrite: false, blending: T.AdditiveBlending }));
+  scene.add(parts);
+  function explode(pos, col, n) {
+    for (var i = 0; i < n; i++) {
+      var j = pIdx; pIdx = (pIdx + 1) % PARTS;
+      partPos[j*3] = pos.x; partPos[j*3+1] = pos.y; partPos[j*3+2] = pos.z;
+      var a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI - Math.PI/2, sp = 6 + Math.random() * 16;
+      partVel[j*3] = Math.cos(a)*Math.cos(b)*sp; partVel[j*3+1] = Math.sin(b)*sp; partVel[j*3+2] = Math.sin(a)*Math.cos(b)*sp + 10;
+      partLife[j] = 0.5 + Math.random() * 0.4;
+    }
+  }
+
+  // ---- Input ----
+  var steer = { x: 0, y: 0 };            // target ship pos (normalized -1..1 → bounds)
+  var held = { fire: false, boost: false };
+  var keys = {};
+  function setSteerFromClient(cx, cy) {
+    var r = canvas.getBoundingClientRect();
+    steer.x = ((cx - r.left) / r.width * 2 - 1);
+    steer.y = -((cy - r.top) / r.height * 2 - 1);
+  }
+  canvas.addEventListener('pointermove', function (e) { if (state === 'play' && e.pointerType !== 'touch') setSteerFromClient(e.clientX, e.clientY); });
+  canvas.addEventListener('pointerdown', function (e) {
+    if (state !== 'play') return;
+    if (e.pointerType === 'touch') { setSteerFromClient(e.clientX, e.clientY); return; }
+    if (e.button === 2) fireMissile(); else held.fire = true;
+  });
+  window.addEventListener('pointerup', function () { held.fire = false; });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  // touch drag to steer
+  canvas.addEventListener('pointermove', function (e) { if (state === 'play' && e.pointerType === 'touch') setSteerFromClient(e.clientX, e.clientY); });
+
+  window.addEventListener('keydown', function (e) {
+    var k = e.key.toLowerCase();
+    keys[k] = true;
+    if (k === ' ' || k === 'enter') { if (state === 'gate') { e.preventDefault(); startGame(); return; } }
+    if (k === 'p' || k === 'escape') { if (state === 'play') pause(); else if (state === 'pause') resume(); return; }
+    if (k === 'm') { muted = !muted; return; }
+    if (k === 'r') { if (state === 'pause' || state === 'over') restart(); return; }
+    if (k === ' ') { if (state === 'play') { e.preventDefault(); held.fire = true; } }
+    if (k === 'x') { if (state === 'play') fireMissile(); }
+    if (k === 'shift') held.boost = true;
+  });
+  window.addEventListener('keyup', function (e) {
+    var k = e.key.toLowerCase(); keys[k] = false;
+    if (k === ' ') held.fire = false;
+    if (k === 'shift') held.boost = false;
+  });
+  // touch buttons
+  document.querySelectorAll('#touch .tbtn').forEach(function (b) {
+    var act = b.getAttribute('data-act');
+    b.addEventListener('pointerdown', function (e) { e.preventDefault(); b.classList.add('pressed');
+      if (act === 'fire') held.fire = true; else if (act === 'boost') held.boost = true; else if (act === 'missile') fireMissile(); });
+    b.addEventListener('pointerup', function () { b.classList.remove('pressed'); if (act === 'fire') held.fire = false; if (act === 'boost') held.boost = false; });
+    b.addEventListener('pointerleave', function () { b.classList.remove('pressed'); if (act === 'fire') held.fire = false; if (act === 'boost') held.boost = false; });
+  });
+
+  // ---- Game state ----
+  var state = 'gate', muted = false;
+  var hull, shield, boost, score, wave, mult, kills, shotsFired, shotsHit;
+  var shieldRegenT, boostRegenLock, mslCount, mslRegenT, fireCd, spawnT, waveActive, waveSpawned, waveKillTarget, mslMax = 3;
+  var shake = 0, best = +(localStorage.getItem('aw-best') || 0);
+
+  function resetGame() {
+    hull = 100; shield = 100; boost = 100; score = 0; wave = 1; mult = 1; kills = 0; shotsFired = 0; shotsHit = 0;
+    shieldRegenT = 0; mslCount = mslMax; mslRegenT = 0; fireCd = 0; spawnT = 0; shake = 0;
+    waveActive = false; waveSpawned = 0; waveKillTarget = 0;
+    [asteroids, drones, bolts, eBolts, missiles].forEach(function (arr) { arr.forEach(function (o) { o.visible = false; o.userData.alive = false; }); });
+    for (var k2 = 0; k2 < PARTS; k2++) { partLife[k2] = 0; partPos[k2*3+2] = 9999; }
+    ship.position.set(0, 0, 0); steer.x = 0; steer.y = 0;
+    startWave(1);
+  }
+
+  function startWave(w) {
+    wave = w; waveActive = true; waveSpawned = 0;
+    waveKillTarget = 3 + Math.floor(w * 1.6);       // drones to clear this wave
+    waveDroneBudget = waveKillTarget;
+    spawnT = 0;
+  }
+  var waveDroneBudget = 0;
+
+  // ---- Spawning ----
+  function spawnAsteroid() {
+    var o = take(asteroids); if (!o) return;
+    o.position.set((Math.random()-0.5)*40, (Math.random()-0.5)*24, SPAWN_Z - Math.random()*40);
+    var s = 0.7 + Math.random() * 2.2; o.scale.set(s, s*0.9, s*1.1);
+    o.userData.alive = true; o.visible = true; o.userData.hp = Math.ceil(s); o.userData.r = s * 1.05;
+    o.userData.spin = new T.Vector3((Math.random()-0.5)*1.6, (Math.random()-0.5)*1.6, (Math.random()-0.5)*1.6);
+    o.userData.vx = (Math.random()-0.5)*3; o.userData.vy = (Math.random()-0.5)*2;
+  }
+  function spawnDrone(x, y, z) {
+    var o = take(drones); if (!o) return null;
+    o.position.set(x != null ? x : (Math.random()-0.5)*30, y != null ? y : (Math.random()-0.5)*16, z != null ? z : SPAWN_Z - Math.random()*30);
+    o.scale.set(1,1,1); o.userData.alive = true; o.visible = true; o.userData.hp = 3; o.userData.r = 1.1;
+    o.userData.fireT = 1.2 + Math.random() * 1.4; o.userData.phase = Math.random() * Math.PI * 2;
+    waveSpawned++;
+    return o;
+  }
+
+  // ---- Weapons ----
+  function fireBlaster() {
+    var o = take(bolts); if (!o) return;
+    ship.getWorldPosition(muzzle);
+    o.position.set(ship.position.x, ship.position.y + 0.1, ship.position.z - 1.2);
+    o.userData.alive = true; o.visible = true; o.userData.r = 0.5;
+    o.userData.vx = ship.position.x * -0.6;        // slight convergence to center-forward
+    o.userData.vy = (0.2 - ship.position.y) * 0.6;
+    shotsFired++;
+  }
+  function fireMissile() {
+    if (mslCount <= 0) return;
+    var tgt = nearestForward(60, 0.6); if (!tgt) return;
+    var o = take(missiles); if (!o) return;
+    mslCount--; mslRegenT = 0;
+    o.position.set(ship.position.x + (Math.random()-0.5), ship.position.y, ship.position.z - 1);
+    o.userData.alive = true; o.visible = true; o.userData.r = 0.6; o.userData.target = tgt; o.userData.life = 3;
+  }
+  function nearestForward(maxDist, cosTol) {
+    var best = null, bestD = maxDist, sp = ship.position;
+    drones.forEach(function (d) {
+      if (!d.userData.alive) return;
+      var dz = sp.z - d.position.z; if (dz <= 0) return;        // must be ahead (more negative z)
+      var dx = d.position.x - sp.x, dy = d.position.y - sp.y, dist = Math.hypot(dx, dy, dz);
+      var fwd = dz / dist;                                       // alignment with forward
+      if (fwd > cosTol && dist < bestD) { bestD = dist; best = d; }
+    });
+    return best;
+  }
+
+  // ---- Damage ----
+  function damage(amount) {
+    if (state !== 'play') return;
+    mult = 1; shieldRegenT = 0; shake = Math.min(1, shake + amount / 60); flashVignette();
+    if (shield > 0) { shield -= amount; if (shield < 0) { hull += shield; shield = 0; } }
+    else hull -= amount;
+    if (hull <= 0) { hull = 0; gameOver(); }
+  }
+  var vignette = document.getElementById('vignette');
+  function flashVignette() { vignette.style.opacity = '0.85'; setTimeout(function () { vignette.style.opacity = '0'; }, 130); }
+
+  function addScore(n) { score += Math.round(n * mult); }
+  function onKill(pos, col) {
+    kills++; explode(pos, col, reduce ? 10 : 26); addScore(100);
+    if (kills % 4 === 0) mult = Math.min(8, mult + 1);
+    if (waveActive && kills >= cumKillTargetForWave()) { /* handled in update */ }
+  }
+  var killsAtWaveStart = 0;
+  function cumKillTargetForWave() { return killsAtWaveStart + waveKillTarget; }
+
+  // ---- Flow ----
+  function show(which) {
+    document.getElementById('gate').classList.toggle('hidden', which !== 'gate');
+    document.getElementById('pause').classList.toggle('hidden', which !== 'pause');
+    document.getElementById('results').classList.toggle('hidden', which !== 'over');
+    document.getElementById('hud').classList.toggle('dim', which === 'gate' || which === 'over');
+    document.getElementById('reticle').style.opacity = (which === null) ? '1' : '0';
+  }
+  function startGame() { resetGame(); killsAtWaveStart = 0; state = 'play'; show(null); kick(); }
+  function restart() { state = 'play'; resetGame(); killsAtWaveStart = 0; show(null); kick(); }
+  function pause() { if (state !== 'play') return; state = 'pause'; show('pause'); }
+  function resume() { if (state !== 'pause') return; state = 'play'; show(null); kick(); }
+  function gameOver() {
+    state = 'over';
+    if (score > best) { best = score; localStorage.setItem('aw-best', String(best)); }
+    var acc = shotsFired ? Math.round(shotsHit / shotsFired * 100) : 0;
+    document.getElementById('rScore').textContent = score.toLocaleString();
+    document.getElementById('rWave').textContent = wave;
+    document.getElementById('rKills').textContent = kills;
+    document.getElementById('rAcc').textContent = acc + '%';
+    document.getElementById('rBest').textContent = best.toLocaleString();
+    var rank = wave >= 10 ? 'Ace' : wave >= 7 ? 'Veteran' : wave >= 4 ? 'Wingman' : 'Rookie';
+    document.getElementById('rRank').textContent = 'Run complete · ' + rank;
+    show('over');
+  }
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('resumeBtn').addEventListener('click', resume);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('againBtn').addEventListener('click', restart);
+  document.addEventListener('visibilitychange', function () { if (document.hidden && state === 'play') pause(); });
+
+  // ---- Resize ----
+  function resize() {
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- Reticle projection ----
+  var reticleEl = document.getElementById('reticle');
+  var _v = new T.Vector3();
+  function updateReticle() {
+    _v.set(ship.position.x * 0.4, ship.position.y * 0.4 + 0.2, ship.position.z - 60).project(camera);
+    var r = canvas.getBoundingClientRect();
+    reticleEl.style.left = (r.left + (_v.x * 0.5 + 0.5) * r.width) + 'px';
+    reticleEl.style.top = (r.top + (-_v.y * 0.5 + 0.5) * r.height) + 'px';
+    reticleEl.classList.toggle('lock', !!nearestForward(70, 0.7));
+  }
+
+  // ---- Main loop ----
+  var running = false, rafId = 0, lastT = performance.now();
+  function kick() { if (!running) { running = true; lastT = performance.now(); rafId = requestAnimationFrame(frame); } }
+  function stopLoop() { running = false; if (rafId) cancelAnimationFrame(rafId); }
+
+  function frame(now) {
+    if (!running) return;
+    rafId = requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    if (state === 'play') update(dt, now);
+    render(now);
+    if (state !== 'play') stopLoop();
+  }
+
+  function update(dt, now) {
+    // keyboard steering (adds to pointer steer)
+    var ks = 1.7 * dt;
+    if (keys['a'] || keys['arrowleft']) steer.x -= ks;
+    if (keys['d'] || keys['arrowright']) steer.x += ks;
+    if (keys['w'] || keys['arrowup']) steer.y += ks;
+    if (keys['s'] || keys['arrowdown']) steer.y -= ks;
+    steer.x = Math.max(-1, Math.min(1, steer.x)); steer.y = Math.max(-1, Math.min(1, steer.y));
+
+    // ship easing + banking
+    var tx = steer.x * SHIP_BOUND_X, ty = steer.y * SHIP_BOUND_Y;
+    ship.position.x += (tx - ship.position.x) * Math.min(1, dt * 7);
+    ship.position.y += (ty - ship.position.y) * Math.min(1, dt * 7);
+    ship.rotation.z = (ship.position.x - tx) * 0.16 + (tx) * -0.04;
+    ship.rotation.x = (ty - ship.position.y) * 0.12 + 0.02;
+    ship.rotation.y = (tx - ship.position.x) * 0.04;
+    var engPulse = 1 + Math.sin(now * 0.02) * 0.15 + (held.boost ? 0.6 : 0);
+    if (ship.userData['eng-0.95']) ship.userData['eng-0.95'].scale.setScalar(0.95 * engPulse);
+    if (ship.userData['eng0.95']) ship.userData['eng0.95'].scale.setScalar(0.95 * engPulse);
+
+    // boost
+    var boosting = held.boost && boost > 1;
+    if (boosting) { boost = Math.max(0, boost - 34 * dt); } else { boost = Math.min(100, boost + 16 * dt); }
+    var speed = FLY_SPEED * (boosting ? BOOST_MUL : 1);
+    camera.fov += ((boosting ? 82 : 72) - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
+
+    // camera chase + shake
+    var camTX = ship.position.x * 0.5, camTY = 2.7 + ship.position.y * 0.4;
+    camera.position.x += (camTX - camera.position.x) * Math.min(1, dt * 4);
+    camera.position.y += (camTY - camera.position.y) * Math.min(1, dt * 4);
+    if (shake > 0.001 && !reduce) {
+      camera.position.x += (Math.random()-0.5) * shake; camera.position.y += (Math.random()-0.5) * shake;
+      shake *= Math.pow(0.001, dt);
+    }
+    camera.lookAt(ship.position.x * 0.3, ship.position.y * 0.3 - 0.9, ship.position.z - 30);
+
+    // starfield stream
+    var sp = stars.geometry.attributes.position.array;
+    for (var i = 0; i < STAR_N; i++) {
+      sp[i*3+2] += speed * dt;
+      if (sp[i*3+2] > PASS_Z) { sp[i*3] = (Math.random()-0.5)*260; sp[i*3+1] = (Math.random()-0.5)*160; sp[i*3+2] = -400; }
+    }
+    stars.geometry.attributes.position.needsUpdate = true;
+    stars.material.size = 0.7 + (boosting ? 0.9 : 0);
+
+    // ---- spawns ----
+    spawnT -= dt;
+    if (spawnT <= 0) {
+      spawnT = Math.max(0.5, 1.5 - wave * 0.06);
+      if (Math.random() < 0.7) spawnAsteroid();
+      if (waveActive && waveSpawned < waveDroneBudget) spawnDrone();
     }
 
-    function draw(animate) {
-        ctx.clearRect(0, 0, w, h);
-        for (const s of stars) {
-            if (animate) {
-                s.y += s.z * 0.35 * dpr;
-                if (s.y > h) { s.y = 0; s.x = Math.random() * w; }
-                s.tw += 0.04;
-            }
-            const r = s.z * 1.6 * dpr;
-            const a = 0.45 + Math.sin(s.tw) * 0.3 * s.z;
-            ctx.globalAlpha = Math.max(0.1, a);
-            ctx.fillStyle = s.z > 0.7 ? '#9fdcff' : '#cdd6ff';
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-            ctx.fill();
+    // ---- asteroids ----
+    asteroids.forEach(function (o) {
+      if (!o.userData.alive) return;
+      o.position.z += speed * dt; o.position.x += o.userData.vx * dt; o.position.y += o.userData.vy * dt;
+      o.rotation.x += o.userData.spin.x * dt; o.rotation.y += o.userData.spin.y * dt;
+      if (o.position.z > PASS_Z) {
+        if (Math.abs(o.position.x - ship.position.x) < o.userData.r + 1.2 && Math.abs(o.position.y - ship.position.y) < o.userData.r + 1.0)
+          damage(18);
+        o.userData.alive = false; o.visible = false;
+      }
+    });
+
+    // ---- drones ----
+    drones.forEach(function (o) {
+      if (!o.userData.alive) return;
+      o.position.z += speed * 0.85 * dt;
+      o.userData.phase += dt;
+      o.position.x += Math.cos(o.userData.phase * 1.3) * 3 * dt;
+      o.position.y += Math.sin(o.userData.phase) * 1.8 * dt;
+      o.userData.ring.rotation.z += dt * 2;
+      o.lookAt(ship.position.x, ship.position.y, ship.position.z);
+      // fire at player
+      o.userData.fireT -= dt;
+      if (o.userData.fireT <= 0 && o.position.z < ship.position.z - 14) {
+        o.userData.fireT = 1.6 + Math.random() * 1.6;
+        var eb = take(eBolts);
+        if (eb) {
+          eb.position.copy(o.position); eb.userData.alive = true; eb.visible = true; eb.userData.r = 0.5;
+          var dx = ship.position.x - o.position.x, dy = ship.position.y - o.position.y, dz = ship.position.z - o.position.z;
+          var d = Math.hypot(dx, dy, dz), es = 70;
+          eb.userData.v = new T.Vector3(dx/d*es, dy/d*es, dz/d*es);
         }
-        ctx.globalAlpha = 1;
+      }
+      if (o.position.z > PASS_Z) {
+        if (Math.abs(o.position.x - ship.position.x) < 2 && Math.abs(o.position.y - ship.position.y) < 1.6) damage(14);
+        o.userData.alive = false; o.visible = false;
+      }
+    });
+
+    // ---- player bolts ----
+    bolts.forEach(function (o) {
+      if (!o.userData.alive) return;
+      var prevZ = o.position.z;
+      o.position.z -= BOLT_SPEED * dt; o.position.x += o.userData.vx * dt; o.position.y += o.userData.vy * dt;
+      if (o.position.z < SPAWN_Z - 20) { o.userData.alive = false; o.visible = false; return; }
+      // swept hit test (bolts move far per frame — test the whole Z segment so they can't tunnel)
+      var hitObj = collideSwept(o, prevZ, drones) || collideSwept(o, prevZ, asteroids);
+      if (hitObj) {
+        o.userData.alive = false; o.visible = false; shotsHit++;
+        hitObj.userData.hp -= 1;
+        explode(o.position, 0x9ff4ff, 5);
+        if (hitObj.userData.hp <= 0) {
+          var isDrone = drones.indexOf(hitObj) >= 0;
+          hitObj.userData.alive = false; hitObj.visible = false;
+          if (isDrone) onKill(hitObj.position, 0xff8aa0); else { explode(hitObj.position, 0xffd9a0, 12); addScore(25); }
+        }
+      }
+    });
+
+    // ---- enemy bolts ----
+    eBolts.forEach(function (o) {
+      if (!o.userData.alive) return;
+      o.position.addScaledVector(o.userData.v, dt);
+      if (o.position.z > PASS_Z + 4) { o.userData.alive = false; o.visible = false; return; }
+      if (Math.abs(o.position.z - ship.position.z) < 1.4 &&
+          Math.abs(o.position.x - ship.position.x) < 1.3 && Math.abs(o.position.y - ship.position.y) < 1.1) {
+        o.userData.alive = false; o.visible = false; damage(10);
+      }
+    });
+
+    // ---- missiles (homing) ----
+    missiles.forEach(function (o) {
+      if (!o.userData.alive) return;
+      o.userData.life -= dt;
+      var tg = o.userData.target;
+      if (!tg || !tg.userData.alive) { tg = nearestForward(120, 0.2); o.userData.target = tg; }
+      var dir;
+      if (tg) { dir = new T.Vector3().subVectors(tg.position, o.position).normalize(); }
+      else { dir = new T.Vector3(0, 0, -1); }
+      o.position.addScaledVector(dir, 150 * dt);
+      o.lookAt(o.position.x + dir.x, o.position.y + dir.y, o.position.z + dir.z);
+      if ((tg && o.position.distanceTo(tg.position) < tg.userData.r + 0.8) || o.userData.life <= 0) {
+        o.userData.alive = false; o.visible = false; explode(o.position, 0xffb04d, reduce ? 14 : 34);
+        // splash: kill nearby drones
+        drones.forEach(function (d) { if (d.userData.alive && d.position.distanceTo(o.position) < 5) { d.userData.alive = false; d.visible = false; onKill(d.position, 0xff8aa0); } });
+      }
+    });
+
+    // ---- particles ----
+    var pa = parts.geometry.attributes.position.array, anyP = false;
+    for (var p = 0; p < PARTS; p++) {
+      if (partLife[p] <= 0) { if (pa[p*3+2] !== 9999) { pa[p*3+2] = 9999; } continue; }
+      anyP = true; partLife[p] -= dt;
+      pa[p*3] += partVel[p*3]*dt; pa[p*3+1] += partVel[p*3+1]*dt; pa[p*3+2] += partVel[p*3+2]*dt;
+      partVel[p*3] *= 0.94; partVel[p*3+1] *= 0.94; partVel[p*3+2] *= 0.94;
+    }
+    parts.geometry.attributes.position.needsUpdate = true;
+
+    // ---- wave progression ----
+    if (waveActive && waveSpawned >= waveDroneBudget) {
+      var anyDrone = false; for (var di = 0; di < drones.length; di++) if (drones[di].userData.alive) { anyDrone = true; break; }
+      if (!anyDrone) { waveActive = false; killsAtWaveStart = kills; setTimeout(function () { if (state === 'play') startWave(wave + 1); }, 1400); }
     }
 
-    function loop() { draw(true); raf = requestAnimationFrame(loop); }
-    function start() { if (running || reduce) return; running = true; loop(); }
-    function stop() { running = false; cancelAnimationFrame(raf); }
+    // ---- missile regen ----
+    if (mslCount < mslMax) { mslRegenT += dt; if (mslRegenT > 7) { mslCount++; mslRegenT = 0; } }
 
-    resize();
-    window.addEventListener('resize', () => { resize(); if (reduce) draw(false); });
-    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    // ---- fire cadence ----
+    fireCd -= dt;
+    if (held.fire && fireCd <= 0) { fireCd = 0.12; fireBlaster(); }
 
-    if (reduce) { draw(false); } else { start(); }
+    // ---- shield regen ----
+    shieldRegenT += dt; if (shieldRegenT > 3 && shield < 100) shield = Math.min(100, shield + 14 * dt);
+
+    updateReticle();
+    syncHUD();
+  }
+
+  // Swept collision: a fast bolt travels several units of Z per frame, so a
+  // point-sphere test tunnels. Test lateral distance + whether the target's Z
+  // lies anywhere on the segment the bolt covered this frame (prevZ → curZ).
+  function collideSwept(bolt, prevZ, arr) {
+    var bx = bolt.position.x, by = bolt.position.y, curZ = bolt.position.z;
+    var zLo = Math.min(curZ, prevZ), zHi = Math.max(curZ, prevZ);
+    for (var i = 0; i < arr.length; i++) {
+      var o = arr[i]; if (!o.userData.alive) continue;
+      var rr = o.userData.r + bolt.userData.r;
+      var dx = o.position.x - bx, dy = o.position.y - by;
+      if (dx*dx + dy*dy > rr*rr) continue;
+      if (o.position.z >= zLo - rr && o.position.z <= zHi + rr) return o;
+    }
+    return null;
+  }
+
+  // ---- HUD sync ----
+  var hudHull = document.getElementById('hudHull'), hudShield = document.getElementById('hudShield'), hudBoost = document.getElementById('hudBoost');
+  function syncHUD() {
+    hudHull.style.width = hull + '%'; hudShield.style.width = shield + '%'; hudBoost.style.width = boost + '%';
+    document.getElementById('hudHullN').textContent = Math.round(hull);
+    document.getElementById('hudShieldN').textContent = Math.round(shield);
+    document.getElementById('hudBoostN').textContent = Math.round(boost);
+    document.getElementById('hudScore').textContent = score.toLocaleString();
+    document.getElementById('hudWave').textContent = 'Wave ' + wave;
+    document.getElementById('hudMult').innerHTML = 'Multiplier <b>x' + mult + '</b>';
+    document.getElementById('hudMsl').textContent = mslCount;
+  }
+
+  function render(now) { renderer.render(scene, camera); }
+
+  // ---- Idle backdrop frame (so the gate isn't black) ----
+  function idle() {
+    var t0 = performance.now();
+    (function spin(now) {
+      if (state !== 'gate') return;
+      var dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
+      ship.rotation.y += dt * 0.4; ship.rotation.z = Math.sin(now * 0.0008) * 0.1;
+      ship.position.y = Math.sin(now * 0.001) * 0.4;
+      var spp = stars.geometry.attributes.position.array;
+      for (var i = 0; i < STAR_N; i++) { spp[i*3+2] += 18 * dt; if (spp[i*3+2] > PASS_Z) spp[i*3+2] = -400; }
+      stars.geometry.attributes.position.needsUpdate = true;
+      camera.lookAt(0, -0.7, -30);
+      renderer.render(scene, camera);
+      requestAnimationFrame(spin);
+    })(performance.now());
+  }
+
+  // ---- Boot ----
+  resize(); resetGame(); state = 'gate'; show('gate');
+  // place ship forward-facing for the menu beauty shot
+  ship.position.set(0, 0, 0);
+  idle();
+
+  // ---- Debug hook for automated verification ----
+  window.AW = {
+    get state() { return state; },
+    get stats() { return { hull: Math.round(hull), shield: Math.round(shield), score: score, wave: wave, kills: kills, mult: mult,
+      drones: drones.filter(function (d) { return d.userData.alive; }).length,
+      asteroids: asteroids.filter(function (a) { return a.userData.alive; }).length,
+      bolts: bolts.filter(function (b) { return b.userData.alive; }).length }; },
+    start: startGame,
+    spawnDroneAhead: function () { return spawnDrone(ship.position.x, ship.position.y, ship.position.z - 40); },
+    fire: function () { fireBlaster(); },
+    hold: function (on) { held.fire = !!on; },
+    hurt: function (n) { damage(n || 30); }
+  };
 })();
 </script>
 </body>
