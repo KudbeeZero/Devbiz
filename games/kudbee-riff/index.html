@@ -134,7 +134,7 @@
   </div>
 </div>
 
-<audio id="audio" preload="auto" crossorigin="anonymous" src="../../lab/music-video-2/assets/song.mp3"></audio>
+<audio id="audio" preload="auto" crossorigin="anonymous" src="./assets/song.mp3"></audio>
 
 <script>
 /* ===========================================================================
@@ -704,12 +704,12 @@
   idleFrame();
   window.addEventListener('resize', function () { if (state === 'gate' || state === 'paused' || state === 'results') idleFrame(); });
 
-  fetch('../../lab/music-video-2/assets/analysis.json')
+  fetch('./assets/analysis.json')
     .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function (A) { buildChart(A); idleFrame(); })
     .catch(function (err) {
       loadErr.hidden = false;
-      loadErr.textContent = 'Could not load the beat chart (' + err.message + '). The track lives in lab/music-video-2/assets/.';
+      loadErr.textContent = 'Could not load the beat chart (' + err.message + '). Expected at games/kudbee-riff/assets/analysis.json.';
       startBtn.disabled = true; startBtn.style.opacity = '0.5';
     });
 
