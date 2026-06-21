@@ -96,7 +96,7 @@
         <h1>Kudbee <span class="gradient-text">Riff</span></h1>
         <p>Notes fall to the <b>real beats</b> of the studio track. Hit each one as it crosses the strike line. Build a streak, keep the multiplier alive.</p>
         <div class="keycaps" id="gateKeys"></div>
-        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; or tap the lanes on touch</p>
+        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; tap lanes on touch &nbsp;·&nbsp; <b>hit two-note chords together for a SLAM</b></p>
         <button class="btn" id="startBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Start the song</button>
         <div class="ov-foot">Headphones recommended · ~4:14 · <span id="noteCount">…</span> notes</div>
         <div class="loaderr" id="loadErr" hidden></div>
@@ -130,7 +130,7 @@
       </div>
     </div>
 
-    <div class="hint">D F J K to strike · P pause · M mute</div>
+    <div class="hint">D F J K to strike · chords = SLAM · P pause · M mute</div>
   </div>
 </div>
 
@@ -251,6 +251,8 @@
   var laneFlash = [0, 0, 0, 0];     // glow when a lane key is active/hit
   var laneHeld = [false, false, false, false];
   var scanPtr = 0;                  // first un-judged note index (notes are time-sorted)
+  var shake = 0, flash = 0;         // impact feedback: screen shake + white flash
+  var nSlam = 0;                    // chord slams landed this run
 
   function resetGame() {
     score = 0; combo = 0; maxCombo = 0; mult = 1;
@@ -259,6 +261,7 @@
     for (var i = 0; i < notes.length; i++) { notes[i].judged = false; notes[i].hit = false; notes[i].missAt = 0; }
     for (var l = 0; l < LANES; l++) { laneFlash[l] = 0; laneHeld[l] = false; }
     pop.length = 0; for (var p = 0; p < PMAX; p++) P[p].life = 0;
+    shake = 0; flash = 0; nSlam = 0; rings.length = 0; recentHits.length = 0;
   }
 
   function multFor(c) { return c >= 24 ? 4 : c >= 16 ? 3 : c >= 8 ? 2 : 1; }
@@ -266,17 +269,90 @@
   // ---- Hit popups + particle pool ----
   var pop = [];   // { x, y, txt, col, life }
   function addPop(x, y, txt, col) { if (pop.length < 24) pop.push({ x: x, y: y, txt: txt, col: col, life: 1 }); }
-  var PMAX = 160, P = new Array(PMAX);
+  var PMAX = reduceMotion ? 90 : 260, P = new Array(PMAX);
   for (var pi = 0; pi < PMAX; pi++) P[pi] = { x: 0, y: 0, vx: 0, vy: 0, life: 0, size: 2, col: [255,255,255] };
   var pHead = 0;
-  function burst(x, y, rgb, n) {
-    if (reduceMotion) n = Math.min(n, 4);
+  function burst(x, y, rgb, n, speed) {
+    speed = speed || 1;
+    if (reduceMotion) n = Math.min(n, 6);
     for (var i = 0; i < n; i++) {
       var p = P[pHead]; pHead = (pHead + 1) % PMAX;
-      var a = Math.random() * TAU, sp = 1 + Math.random() * 4;
+      var a = Math.random() * TAU, sp = (1 + Math.random() * 4) * speed;
       p.x = x; p.y = y; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp - 1.5;
-      p.life = 1; p.size = 1.5 + Math.random() * 2.5; p.col = rgb;
+      p.life = 1; p.size = (1.5 + Math.random() * 2.5) * (speed > 1 ? 1.25 : 1); p.col = rgb;
     }
+  }
+
+  // ---- Impact feel: shockwave rings, screen shake/flash, SFX, haptics ----
+  var rings = [];                 // { x, y, r, vr, life, rgb, w }
+  var recentHits = [];            // { noteT, x, y, rgb, wall, slammed }
+  function buzz(pattern) { if (!reduceMotion && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} } }
+  var audioCtx = null;
+  function ensureAudioCtx() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function thud(strength) {                       // low impact hit layered over the music
+    if (audio.muted) return; var ac = ensureAudioCtx(); if (!ac) return;
+    var t0 = ac.currentTime, o = ac.createOscillator(), gn = ac.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150 * (0.7 + 0.5 * strength), t0);
+    o.frequency.exponentialRampToValueAtTime(42, t0 + 0.18);
+    gn.gain.setValueAtTime(0.0001, t0);
+    gn.gain.exponentialRampToValueAtTime(Math.min(0.6, 0.4 * strength), t0 + 0.008);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+    o.connect(gn).connect(ac.destination); o.start(t0); o.stop(t0 + 0.32);
+  }
+  function multUp() {                              // flourish when the multiplier steps up
+    flash = Math.max(flash, 0.4); shake = Math.max(shake, 0.3);
+    var gm = geom();
+    addPop(gm.cx, gm.hitY - gm.botW * 0.24, '×' + mult, LANE_COL[Math.min(3, mult - 1)]);
+    thud(0.55); buzz([0, 14, 10, 14]);
+  }
+  // Record a landed hit; if two+ land on the same beat → CHORD SLAM.
+  function recordHit(noteT, x, y, rgb, perfect) {
+    var wall = performance.now();
+    recentHits.push({ noteT: noteT, x: x, y: y, rgb: rgb, wall: wall, slammed: false });
+    while (recentHits.length && wall - recentHits[0].wall > 220) recentHits.shift();
+    var group = [];
+    for (var i = 0; i < recentHits.length; i++) {
+      var h = recentHits[i];
+      if (!h.slammed && Math.abs(h.noteT - noteT) < 0.045) group.push(h);
+    }
+    if (group.length >= 2) {
+      var cx = 0, cy = 0;
+      for (var j = 0; j < group.length; j++) { group[j].slammed = true; cx += group[j].x; cy += group[j].y; }
+      chordSlam(cx / group.length, cy / group.length, group.length, group);
+    } else if (perfect) {
+      shake = Math.max(shake, 0.13); buzz(7);     // every perfect gets a little weight
+    }
+  }
+  function chordSlam(x, y, count, group) {
+    nSlam++;
+    score += 50 * mult * count;                    // small reward — the feel is the point
+    var n = reduceMotion ? 10 : (28 + count * 14);
+    burst(x, y, [255, 255, 255], Math.round(n * 0.55), 2.3);
+    for (var i = 0; i < group.length; i++) burst(group[i].x, group[i].y, group[i].rgb, Math.round(n * 0.5 / group.length), 2.0);
+    rings.push({ x: x, y: y, r: 6, vr: 7 + count * 1.6, life: 1, rgb: [255, 255, 255], w: 5 });
+    rings.push({ x: x, y: y, r: 2, vr: 4.6, life: 1, rgb: [111, 150, 255], w: 3 });
+    flash = Math.min(1, 0.5 + count * 0.16);
+    shake = Math.min(1.5, 0.62 + count * 0.24);
+    addPop(x, y - 18, count >= 3 ? 'TRIPLE SLAM!' : 'CHORD SLAM', '#ffffff');
+    thud(Math.min(1.4, 0.85 + count * 0.25));
+    buzz([0, 24, 16, 34]);
+  }
+  function drawRings() {
+    if (!rings.length) return;
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = rings.length - 1; i >= 0; i--) {
+      var r = rings[i]; r.r += r.vr; r.vr *= 0.96; r.life -= 0.045;
+      if (r.life <= 0) { rings.splice(i, 1); continue; }
+      ctx.strokeStyle = 'rgba(' + r.rgb[0] + ',' + r.rgb[1] + ',' + r.rgb[2] + ',' + (r.life * 0.6).toFixed(3) + ')';
+      ctx.lineWidth = r.w * r.life + 0.5;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   // ---- Judgement ----
@@ -298,10 +374,14 @@
     note.judged = true; note.hit = true;
     var g = geom(), x = laneX(g, lane, 1), y = g.hitY;
     nTotal++;
-    if (bestDt <= W_PERFECT) { nPerfect++; score += 100 * mult; addPop(x, y, 'PERFECT', LANE_COL[lane]); burst(x, y, LANE_RGB[lane], 16); }
+    var perfect = bestDt <= W_PERFECT;
+    if (perfect) { nPerfect++; score += 100 * mult; addPop(x, y, 'PERFECT', LANE_COL[lane]); burst(x, y, LANE_RGB[lane], 18); }
     else { nGood++; score += 50 * mult; addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], 8); }
+    var prevMult = mult;
     combo++; if (combo > maxCombo) maxCombo = combo; mult = multFor(combo);
+    if (mult > prevMult) multUp();
     laneFlash[lane] = 1.4;
+    recordHit(note.t, x, y, LANE_RGB[lane], perfect);
   }
   function releaseLane(lane) { laneHeld[lane] = false; }
 
@@ -356,6 +436,7 @@
   function start() {
     if (!chartReady) return;
     resetGame();
+    ensureAudioCtx();
     showOverlay(null);
     state = 'playing';
     audio.currentTime = 0;
@@ -374,7 +455,7 @@
     document.getElementById('rPerfect').textContent = nPerfect;
     document.getElementById('rMiss').textContent = nMiss;
     var rank = acc >= 95 ? 'S · Virtuoso' : acc >= 85 ? 'A · Headliner' : acc >= 70 ? 'B · In the pocket' : acc >= 50 ? 'C · Warming up' : 'D · Keep at it';
-    document.getElementById('rRank').textContent = 'Set complete · ' + rank;
+    document.getElementById('rRank').textContent = 'Set complete · ' + rank + (nSlam ? ' · ' + nSlam + ' slams' : '');
     showOverlay('results');
   }
   audio.addEventListener('ended', function () { if (state === 'playing') finish(); });
@@ -402,6 +483,8 @@
       if (t >= songDur - 0.05 || (audio.ended)) { finish(); }
     }
     for (var l = 0; l < LANES; l++) { laneFlash[l] *= Math.pow(0.0009, dt); if (laneHeld[l]) laneFlash[l] = Math.max(laneFlash[l], 0.55); }
+    shake *= Math.pow(0.0012, dt); if (shake < 0.002) shake = 0;
+    flash *= Math.pow(0.0009, dt); if (flash < 0.004) flash = 0;
 
     draw(now, t);
     if (state === 'paused' || state === 'results' || state === 'gate') { if (state !== 'gate') stop(); }
@@ -410,17 +493,39 @@
   var g; // reused geometry
   function draw(now, t) {
     g = geom();
-    // backdrop
-    ctx.fillStyle = '#04040c'; ctx.fillRect(0, 0, W, H);
+    var sx = 0, sy = 0;
+    if (shake > 0.002 && !reduceMotion) { var m = shake * 16; sx = (Math.random() - 0.5) * m; sy = (Math.random() - 0.5) * m; }
+    ctx.save(); ctx.translate(sx, sy);
+    // backdrop (overscanned so the shake never reveals an edge)
+    ctx.fillStyle = '#04040c'; ctx.fillRect(-28, -28, W + 56, H + 56);
     var bg = ctx.createRadialGradient(g.cx, g.hitY, 0, g.cx, g.hitY, Math.max(W, H) * 0.8);
     bg.addColorStop(0, 'rgba(111,91,255,0.12)'); bg.addColorStop(1, 'rgba(4,4,12,0)');
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = bg; ctx.fillRect(-28, -28, W + 56, H + 56);
 
     drawHighway(now, t);
     drawNotes(t);
     drawHitLine(now);
+    drawRings();
     drawParticles();
     drawPopups();
+    // "on fire" warm glow at max multiplier
+    if (mult >= 4 && !reduceMotion) {
+      var pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
+      ctx.globalCompositeOperation = 'lighter';
+      var fg = ctx.createLinearGradient(0, H, 0, H * 0.45);
+      fg.addColorStop(0, 'rgba(255,120,60,' + (0.08 + pulse * 0.10).toFixed(3) + ')');
+      fg.addColorStop(1, 'rgba(255,120,60,0)');
+      ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+    // white flash (full-frame, steady) — chord slams + multiplier ups
+    if (flash > 0.004) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,255,255,' + (flash * 0.32).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
     drawHUD(t);
   }
 
@@ -607,6 +712,20 @@
       loadErr.textContent = 'Could not load the beat chart (' + err.message + '). The track lives in lab/music-video-2/assets/.';
       startBtn.disabled = true; startBtn.style.opacity = '0.5';
     });
+
+  // ---- Tiny debug hook for automated verification ----
+  window.RIFF = {
+    get state() { return state; },
+    get stats() { return { score: score, combo: combo, mult: mult, slams: nSlam, perfect: nPerfect, good: nGood, miss: nMiss }; },
+    start: start,
+    slam: function () {
+      var gg = geom();
+      chordSlam(gg.cx, gg.hitY, 2, [
+        { x: gg.cx - gg.botW * 0.18, y: gg.hitY, rgb: LANE_RGB[0] },
+        { x: gg.cx + gg.botW * 0.18, y: gg.hitY, rgb: LANE_RGB[2] }
+      ]);
+    }
+  };
 })();
 </script>
 </body>
