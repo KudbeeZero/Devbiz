@@ -27,6 +27,15 @@ export const GAMES = {
       bestStreak:   { label: 'Best streak',   dir: 'max', min: 0, max: 1e6,  rank: true },
     },
   },
+  riff: {
+    label: 'Kudbee Riff',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      bestCombo: { label: 'Max streak', dir: 'max', min: 0, max: 1e6, rank: true },
+      accuracy:  { label: 'Accuracy',   dir: 'max', min: 0, max: 100, rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }

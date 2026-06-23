@@ -113,6 +113,19 @@
   .credit { margin-top: 12px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #5a6276; }
   @media (min-width: 1200px) and (min-height: 540px) { .side { display: flex; } }
 
+  /* Online leaderboard lists (results overlay + right rail) */
+  .lb-block { margin: 16px auto 2px; max-width: 360px; text-align: left;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,211,77,0.18); border-radius: 14px; padding: 14px 16px; }
+  .lb-head { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+  .lb-status { float: right; font-weight: 500; letter-spacing: 0; text-transform: none; color: #7a8398; font-size: 11px; }
+  .lb-list { list-style: none; counter-reset: lb; display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; }
+  .lb-list li { counter-increment: lb; display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: #cfe9ff; padding: 3px 0; }
+  .lb-list li::before { content: counter(lb); width: 18px; color: #7a8398; font-family: "Space Grotesk"; font-weight: 700; text-align: right; flex: none; }
+  .lb-list li .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-list li .lb-val { font-family: "Space Grotesk"; font-weight: 700; color: #fff; }
+  .lb-list li.lb-you { color: var(--green); } .lb-list li.lb-you .lb-val { color: var(--green); }
+  .lb-list li.lb-empty { color: #5a6276; } .lb-list li.lb-empty::before { content: ""; }
+
   .hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10;
     font-size: 11px; color: #45586a; letter-spacing: 0.05em; pointer-events: none; }
   @media (pointer: coarse) { .hint { display: none; } }
@@ -150,12 +163,9 @@
       </ul>
     </div>
     <div class="panel">
-      <div class="phead"><span class="dot g"></span> Now playing</div>
-      <div class="np">
-        <div class="np-title">Kudbee — Studio Track</div>
-        <div class="np-sub">Neon Fret Rush · chart built from the live beat analysis</div>
-      </div>
-      <div class="credit">Kudbee Games Studio</div>
+      <div class="phead"><span class="dot g"></span> Online Top 10</div>
+      <ol id="lbRailList" class="lb-list"><li class="lb-empty">connecting…</li></ol>
+      <div class="credit" id="lbRailNote">Studio Track · Kudbee Games</div>
     </div>
   </aside>
   <div id="frame">
@@ -201,6 +211,11 @@
           <div class="rstat"><b id="rOd">0</b><span>Overdrives</span></div>
           <div class="rstat"><b id="rCharged">0</b><span>Charged hit</span></div>
         </div>
+        <div class="lb-block">
+          <div class="lb-head">🏆 Online leaderboard <span id="lbStatus" class="lb-status"></span></div>
+          <ol id="lbResultsList" class="lb-list"><li class="lb-empty">connecting…</li></ol>
+          <button class="btn ghost" id="lbPostBtn" style="margin-top:12px">🏆 Post my score</button>
+        </div>
         <button class="btn" id="againBtn">Play again</button>
         <a class="btn ghost" href="../../index.html#games" style="text-decoration:none">Back to Studio</a>
       </div>
@@ -211,6 +226,15 @@
 </div>
 
 <audio id="audio" preload="auto" crossorigin="anonymous" src="./assets/song.mp3"></audio>
+
+<!-- Online leaderboard — reuses the repo's Kudbee Leaderboard service. Runs in
+     keyless DEMO mode (players type a display name and post). It records online
+     once the leaderboard Worker is deployed and reachable: set API_BASE to that
+     Worker URL (e.g. https://kudbee-leaderboard.<acct>.workers.dev) or route
+     /api to it. Until then the game just shows your local best and posts fail
+     quietly. See leaderboard/README.md. -->
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'riff' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 
 <script>
 /* ===========================================================================
@@ -695,6 +719,7 @@
   function finish() {
     state = 'results'; audio.pause();
     var acc = nTotal ? Math.round((nPerfect + nGood * 0.5) / nTotal * 100) : 0;
+    lastAcc = acc;
     document.getElementById('rScore').textContent = score.toLocaleString();
     document.getElementById('rAcc').textContent = acc + '%';
     document.getElementById('rCombo').textContent = maxCombo;
@@ -716,6 +741,7 @@
     setText('rBest', career.bestScore.toLocaleString());
     var nb = document.getElementById('rNewBest'); if (nb) nb.style.display = isBest ? 'inline-block' : 'none';
     renderPanels();
+    setText('lbStatus', ''); lbLoadTop();        // refresh the board for this results screen
     showOverlay('results');
   }
   audio.addEventListener('ended', function () { if (state === 'playing') finish(); });
@@ -1227,6 +1253,60 @@
     setText('gPlays', career.plays);
   }
 
+  // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
+  var lb = null, lastAcc = 0, lbBusy = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard) return;            // SDK absent → stay offline
+    try {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { lb = c; lbLoadTop(); })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  function lbLoadTop() {
+    if (!lb) return;
+    lb.leaderboard('score', 10).then(function (d) {
+      lbRender('lbRailList', d.entries, 10);
+      lbRender('lbResultsList', d.entries, 6);
+    }).catch(function () {
+      lbEmpty('lbRailList', 'leaderboard offline'); lbEmpty('lbResultsList', 'leaderboard offline');
+    });
+  }
+  function lbRender(id, entries, max) {
+    var el = document.getElementById(id); if (!el) return;
+    if (!entries || !entries.length) { lbEmpty(id, 'be the first to post'); return; }
+    el.innerHTML = '';
+    for (var i = 0; i < Math.min(max, entries.length); i++) {
+      var e = entries[i], li = document.createElement('li');
+      if (e.you) li.className = 'lb-you';
+      var nm = document.createElement('span'); nm.className = 'lb-name'; nm.textContent = e.name;
+      var vl = document.createElement('span'); vl.className = 'lb-val'; vl.textContent = (e.value || 0).toLocaleString();
+      li.appendChild(nm); li.appendChild(vl); el.appendChild(li);
+    }
+  }
+  function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty">' + msg + '</li>'; }
+  function lbPost() {
+    var status = function (m) { setText('lbStatus', m); };
+    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (lbBusy) return;
+    var submit = function () {
+      lbBusy = true; status('posting…');
+      var nm = (lb.user() && lb.user().name) || 'Player';
+      lb.submit(nm, { score: score, bestCombo: maxCombo, accuracy: lastAcc }).then(function (res) {
+        lbBusy = false;
+        var rk = res && res.ranks && res.ranks.score;
+        status(rk ? 'posted — you’re #' + rk + '!' : 'posted!');
+        lbLoadTop();
+      }).catch(function (err) {
+        lbBusy = false;
+        status(err && err.status === 401 ? 'pick a name to post' : 'could not post (offline)');
+      });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn().then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); });
+    } else submit();
+  }
+
   // ---- Idle frame for the gate (so the stage isn't black behind the overlay) ----
   function idleFrame() { resize(); g = geom(); draw(performance.now(), 0); }
 
@@ -1243,6 +1323,9 @@
 
   resize();
   renderPanels();
+  lbBoot();
+  var lbPostBtn = document.getElementById('lbPostBtn');
+  if (lbPostBtn) lbPostBtn.addEventListener('click', lbPost);
   idleFrame();
   kick();   // run the loop on the gate too, so the ambient sky animates behind it
   window.addEventListener('resize', function () { if (state === 'gate' || state === 'paused' || state === 'results') idleFrame(); });

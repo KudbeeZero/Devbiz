@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-06-18T08:49:31.115Z",
-  "commit": "a97282b",
+  "generatedAt": "2026-06-23T17:38:07.595Z",
+  "commit": "54861d9",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -22,27 +22,27 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 90.67,
-    "branches": 64.88,
+    "lines": 90.9,
+    "branches": 65.9,
     "functions": 90.9,
-    "statements": 90.67
+    "statements": 90.9
   },
   "totalCounts": {
     "lines": {
-      "covered": 321,
-      "total": 354
+      "covered": 330,
+      "total": 363
     },
     "branches": {
-      "covered": 85,
-      "total": 131
+      "covered": 87,
+      "total": 132
     },
     "functions": {
       "covered": 20,
       "total": 22
     },
     "statements": {
-      "covered": 321,
-      "total": 354
+      "covered": 330,
+      "total": 363
     }
   },
   "files": [
@@ -77,7 +77,7 @@
       "path": "shared/auth.js",
       "metrics": {
         "lines": 93.58,
-        "branches": 68.25,
+        "branches": 68.75,
         "functions": 90.9,
         "statements": 93.58
       },
@@ -87,8 +87,8 @@
           "total": 156
         },
         "branches": {
-          "covered": 43,
-          "total": 63
+          "covered": 44,
+          "total": 64
         },
         "functions": {
           "covered": 10,
@@ -103,18 +103,18 @@
     {
       "path": "shared/core.js",
       "metrics": {
-        "lines": 97.41,
-        "branches": 60.65,
+        "lines": 97.56,
+        "branches": 62.29,
         "functions": 100,
-        "statements": 97.41
+        "statements": 97.56
       },
       "counts": {
         "lines": {
-          "covered": 151,
-          "total": 155
+          "covered": 160,
+          "total": 164
         },
         "branches": {
-          "covered": 37,
+          "covered": 38,
           "total": 61
         },
         "functions": {
@@ -122,8 +122,8 @@
           "total": 9
         },
         "statements": {
-          "covered": 151,
-          "total": 155
+          "covered": 160,
+          "total": 164
         }
       }
     }
