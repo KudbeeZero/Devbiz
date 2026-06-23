@@ -99,6 +99,8 @@ See `docs/BOARD_MATH.md` for the dartboard geometry and hit-test derivation, and
 Original code-synthesized Web Audio SFX, pooled particles, trauma-based screen shake,
 slow-mo on big hits, confetti on wins. The throw has Darts-of-Fury feel: the board **lunges**
 in and snaps back on release, the dart **lofts and barrel-rolls** in flight, and the scoring
-**explosion scales with the score** (radial spray + shockwave rings, gold on big hits). Darts
-stick with their **tip exactly on the scoring pixel**. No external assets required — the
-dartboard and darts are drawn procedurally so hit detection is pixel-exact. All original IP.
+**explosion scales with the score** (radial spray + shockwave rings, gold on big hits). The
+**exact segment you hit lights up** on the board, a quick **flick read-out** (PERFECT / TOO
+SOFT / TOO HARD) coaches the swipe, and supported phones get a **haptic thump**. Darts stick
+with their **tip exactly on the scoring pixel**. No external assets required — the dartboard
+and darts are drawn procedurally so hit detection is pixel-exact. All original IP.

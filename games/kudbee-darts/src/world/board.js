@@ -228,5 +228,48 @@
     ctx.drawImage(this._baked, this.cx - this._bakeCx, this.cy - this._bakeCy);
   };
 
+  /* Light up the exact segment a dart just hit — the wedge band (single /
+   * treble / double) or the bull — as a glowing overlay that fades out.
+   * `k` is 1 -> 0 over the flash's life; `color` matches the ring. */
+  Board.prototype.drawHitFlash = function (ctx, res, k, color) {
+    if (!res || res.ring === 'miss') return;
+    const Rpx = this.Rpx, cx = this.cx, cy = this.cy;
+    const a = Math.max(0, Math.min(1, k));
+    color = color || COL.ringCyan;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = a * 0.55;
+    ctx.shadowColor = color; ctx.shadowBlur = Rpx * 0.06;
+    const half = 9 * D2R;
+
+    if (res.ring === 'inbull') {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(cx, cy, R.inBull * Rpx, 0, TAU); ctx.fill();
+    } else if (res.ring === 'outbull') {
+      sector(ctx, cx, cy, R.inBull * Rpx, R.outBull * Rpx, 0, TAU, color);
+    } else {
+      const idx = WEDGES.indexOf(res.value);
+      const cAng = wedgeCanvasAngle(idx), aS = cAng - half, aE = cAng + half;
+      if (res.ring === 'treble') {
+        sector(ctx, cx, cy, R.trbInner * Rpx, R.trbOuter * Rpx, aS, aE, color);
+      } else if (res.ring === 'double') {
+        sector(ctx, cx, cy, R.dblInner * Rpx, R.dblOuter * Rpx, aS, aE, color);
+      } else { // single: both single bands of the wedge
+        sector(ctx, cx, cy, R.outBull * Rpx, R.trbInner * Rpx, aS, aE, color);
+        sector(ctx, cx, cy, R.trbOuter * Rpx, R.dblInner * Rpx, aS, aE, color);
+      }
+      // crisp outline so the wedge pops on the brightest part of the flash.
+      ctx.globalAlpha = a * 0.9; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, Rpx * 0.01);
+      const ro = res.ring === 'double' ? R.dblOuter : res.ring === 'treble' ? R.trbOuter : R.dblInner;
+      const ri = res.ring === 'double' ? R.dblInner : res.ring === 'treble' ? R.trbInner : R.outBull;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ro * Rpx, aS, aE, false);
+      ctx.arc(cx, cy, ri * Rpx, aE, aS, true);
+      ctx.closePath(); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
   KD.Board = Board;
 })(window.KD = window.KD || {});

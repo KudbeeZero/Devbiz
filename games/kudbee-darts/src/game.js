@@ -65,6 +65,8 @@
     this.toasts = [];
     this.turnEndTimer = 0;
     this.matchResult = null;
+    this.hitFlash = null;       // { res, life, col } — lit segment on the board
+    this.flickFb = null;        // { text, col, life } — swipe coaching read-out
 
     this.progression.onToast = (text, sub) => {
       this.toasts.push({ text: text, sub: sub, life: 2.4 });
@@ -127,6 +129,8 @@
     if (this.dart.state === 'flying') { if (this.dart.update(adt)) this._onDartLand(); }
 
     if (this.callout) { this.callout.life -= dt; if (this.callout.life <= 0) this.callout = null; }
+    if (this.hitFlash) { this.hitFlash.life -= dt * 1.7; if (this.hitFlash.life <= 0) this.hitFlash = null; }
+    if (this.flickFb) { this.flickFb.life -= dt * 0.9; if (this.flickFb.life <= 0) this.flickFb = null; }
     for (let i = this.toasts.length - 1; i >= 0; i--) {
       this.toasts[i].life -= dt;
       if (this.toasts[i].life <= 0) this.toasts.splice(i, 1);
@@ -233,6 +237,8 @@
     this.mode.beginTurn(this.players[0]);
     this.matchResult = null;
     this.banner = '';
+    this.hitFlash = null;
+    this.flickFb = null;
     this.state = 'play';
   };
 
@@ -300,8 +306,14 @@
         { speed: big ? 300 : 220, size: big ? 9 : 7 });
       // Flag the active scoreboard to pop + shed its own digital bricks.
       cur._scorePop = 1; cur._popCol = burstCol;
+      // Light up the exact segment that was hit.
+      this.hitFlash = { res: res, life: 1, col: burstCol };
     } else {
       this.particles.impact(lx, ly, skinCol);  // a miss still throws splinters
+    }
+    // Haptic thump on phones that support it (denser for the big hits).
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(big ? [0, 16, 30, 22] : res.score > 0 ? 14 : 8); } catch (_) {}
     }
     this.camera.shake(big ? 0.22 : 0.12);
     this.particles.scorePop(lx, ly - 6, out.text, big,
@@ -436,6 +448,7 @@
       ctx.translate(-this.board.cx, -this.board.cy);
     }
     this.board.draw(ctx);
+    if (this.hitFlash) this.board.drawHitFlash(ctx, this.hitFlash.res, this.hitFlash.life, this.hitFlash.col);
     if (this.state === 'play') this._drawCheckoutGuide(ctx);
     for (let i = 0; i < this.stuckDarts.length; i++) {
       const d = this.stuckDarts[i];
@@ -576,6 +589,21 @@
     ctx.fillText((cur.isAI ? cur.name + ' is throwing…' : 'DRAG TO AIM · FLICK TO THROW'), VIEW_W / 2, VIEW_H - 40);
     ctx.restore();
     ctx.textAlign = 'left';
+    if (this.flickFb) this._drawFlickFb(ctx);
+  };
+
+  // Brief swipe-coaching read-out after a throw (teaches the flick power band).
+  Game.prototype._drawFlickFb = function (ctx) {
+    const f = this.flickFb;
+    const a = Math.min(1, f.life * 1.5);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = f.col; ctx.shadowColor = f.col; ctx.shadowBlur = 14;
+    ctx.font = 'bold 22px "Space Grotesk", sans-serif';
+    ctx.fillText(f.text, VIEW_W / 2, VIEW_H - 66 - (1 - f.life) * 14);
+    ctx.restore();
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
 
   // A polished scoreboard card (left or right). Returns nothing; draws name,
