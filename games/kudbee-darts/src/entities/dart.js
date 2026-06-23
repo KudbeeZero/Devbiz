@@ -154,6 +154,13 @@
       + Math.max(0, (90 - Math.min(90, pt.swipeLen)) / 90) * 0.4);
     const sigma = this.sigma * (1 + wildness);
 
+    // Coaching read-out so the flick power band is learnable.
+    const fb = powf < 0.82 ? { text: 'TOO SOFT', col: '#39e6ff' }
+      : powf > 1.30 ? { text: 'TOO HARD', col: '#ff5d3c' }
+      : (Math.abs(powf - 1) < 0.12 && Math.abs(lateral) < 0.3) ? { text: 'PERFECT FLICK', col: '#7CFFb2' }
+      : { text: 'CLEAN FLICK', col: '#cfe9ff' };
+    this.game.flickFb = { text: fb.text, col: fb.col, life: 1.15 };
+
     return this._releaseAt(lx, ly, sigma);
   };
 
