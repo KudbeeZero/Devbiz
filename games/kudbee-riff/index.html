@@ -243,7 +243,7 @@
   var LANE_RGB = [[57,230,255],[196,107,255],[124,255,178],[255,211,77]];
 
   // Timing windows (seconds) and travel time.
-  var W_PERFECT = 0.060, W_GOOD = 0.135, W_MISS = 0.190;
+  var W_PERFECT = 0.072, W_GOOD = 0.135, W_MISS = 0.190;  // perfect widened a hair: a near-on-time hit "snaps" in
   var LEAD = reduceMotion ? 1.5 : 1.85;        // seconds a note is visible before the line
 
   // ---- Heat / Overdrive (Star-Power-style) ----------------------------------
@@ -374,6 +374,8 @@
   var scanPtr = 0;                  // first un-judged note index (notes are time-sorted)
   var shake = 0, flash = 0;         // impact feedback: screen shake + white flash
   var nSlam = 0;                    // chord slams landed this run
+  var stringWig = [0, 0, 0, 0, 0];  // per-boundary "guitar string" pluck amplitude (LANES+1)
+  var pulse = 0;                    // ever-present breathing pulse (grows with heat)
 
   // Heat / overdrive + juice
   var heat = 0;                     // overdrive meter, 0..1
@@ -415,6 +417,14 @@
     for (var p = 0; p < PMAX; p++) P[p].life = 0;
     for (var e = 0; e < EMAX; e++) EM[e].life = 0;
     flash = 0; nSlam = 0; rings.length = 0; recentHits.length = 0;
+    for (var w = 0; w < stringWig.length; w++) stringWig[w] = 0; pulse = 0;
+  }
+  // Bonus-within-the-bonus: a per-hit reward that compounds with both your
+  // streak AND your heat tier, and evaporates the instant you miss.
+  function streakBonusFor(perfect) {
+    if (!perfect || combo < 4) return 0;
+    var tierK = 1 + Math.max(0, heatTier) * 0.6 + (overdrive ? 1 : 0);
+    return Math.min(2000, Math.round(combo * tierK));
   }
 
   // Base streak multiplier (x1..x4); overdrive doubles the *effective* multiplier.
@@ -550,18 +560,31 @@
     nTotal++;
     var em = effMult();
     var perfect = bestDt <= W_PERFECT;
-    var gain;
+    var hotK = 1 + (heatTier + 1) * 0.35 + (overdrive ? 0.8 : 0);  // effects swell with heat
+    var col = note.charged ? [255,211,77] : LANE_RGB[lane];
+    var gain, bonus = 0;
     if (perfect) {
       nPerfect++; gain = 100 * em;
+      bonus = streakBonusFor(true); gain += bonus;
       addPop(x, y, note.charged ? 'CHARGED!' : 'PERFECT', note.charged ? '#ffd34d' : LANE_COL[lane]);
-      burst(x, y, note.charged ? [255,211,77] : LANE_RGB[lane], note.charged ? 22 : 18);
+      // a small explosion at the strike line — denser the hotter you are
+      burst(x, y, col, Math.round((note.charged ? 24 : 18) * hotK), 1.8 + hotK * 0.3);
+      burst(x, y, [255,255,255], Math.round(6 * hotK), 2.4);
+      // a quick shock-ring per hit (lighter than a chord slam, grows with heat)
+      rings.push({ x: x, y: y, r: 4, vr: 4.5 + hotK * 2.2, life: 1, rgb: col, w: 2 + hotK });
+      if (heatTier >= 1 || overdrive) rings.push({ x: x, y: y, r: 2, vr: 3 + hotK, life: 1, rgb: [255,255,255], w: 1.5 });
     } else {
       nGood++; gain = 50 * em;
-      addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], 8);
+      addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], Math.round(8 * hotK));
     }
     score += gain;
     scorePulse = 1;
-    addScore(x, y - g.hitY * 0.06, gain, overdrive ? '#fff3c4' : (note.charged ? '#ffd34d' : LANE_COL[lane]), overdrive || note.charged);
+    // The floating number grows with the hit and shows the streak bonus inline.
+    addScore(x, y - g.hitY * 0.06, gain, overdrive ? '#fff3c4' : (note.charged ? '#ffd34d' : LANE_COL[lane]), perfect || overdrive || note.charged);
+    if (bonus > 0 && (combo % 5 === 0 || bonus >= 400)) addPop(x - g.botW * 0.06, y - 26, '+' + bonus + ' BONUS', '#ffd34d');
+    // Pluck the two "guitar strings" bordering this lane.
+    stringWig[lane] = Math.min(1.4, stringWig[lane] + 1.0);
+    stringWig[lane + 1] = Math.min(1.4, stringWig[lane + 1] + 1.0);
     // Heat: fill while not in overdrive; charged gems are the fast lane.
     if (!overdrive) {
       heat = Math.min(1, heat + (perfect ? 0.020 : 0.009) + (note.charged ? 0.11 : 0));
@@ -730,6 +753,10 @@
     // Juice decays + animated score roll-up.
     odFlash = Math.max(0, odFlash - dt * 1.6);
     scorePulse = Math.max(0, scorePulse - dt * 4);
+    for (var sw = 0; sw < stringWig.length; sw++) stringWig[sw] *= Math.pow(0.0009, dt);
+    // Ever-present breathing pulse — always building, stronger the hotter you are.
+    var heatK = overdrive ? 1 : Math.max(0, heatTier + 1) / HEAT_TIERS.length;
+    pulse = 0.5 + 0.5 * Math.sin((audio.currentTime || performance.now() / 1000) * 6.2) * (0.4 + heatK * 0.6);
     if (callout.life > 0) callout.life = Math.max(0, callout.life - dt * 0.5);
     displayScore += (score - displayScore) * Math.min(1, dt * 14);
     if (Math.abs(score - displayScore) < 0.6) displayScore = score;
@@ -867,15 +894,29 @@
     var hf = overdrive ? 1 : (heatTier + 1) / HEAT_TIERS.length;
     var railR = Math.round(57 + (255 - 57) * hf), railG = Math.round(230 - 90 * hf), railB = Math.round(255 - 175 * hf);
     var railA = 0.30 + hf * 0.35 + (overdrive ? 0.15 : 0);
-    // outer rails
-    ctx.lineWidth = 2 + hf * 1.5;
+    // outer rails as vibrating "guitar strings": each boundary line bows with a
+    // standing-wave wiggle — plucked hard on a hit, swaying gently with the
+    // heat pulse the rest of the time.
+    var lw = 2 + hf * 1.5, SEG = reduceMotion ? 1 : 18;
     for (var s = 0; s <= LANES; s++) {
-      var pTop = 0, pBot = 1;
-      var xTop = g.cx + (s - LANES / 2) * (widthAt(g, pTop) / LANES);
-      var xBot = g.cx + (s - LANES / 2) * (widthAt(g, pBot) / LANES);
+      var xTop = g.cx + (s - LANES / 2) * (widthAt(g, 0) / LANES);
+      var xBot = g.cx + (s - LANES / 2) * (widthAt(g, 1) / LANES);
       var edge = (s === 0 || s === LANES);
+      var amp = reduceMotion ? 0 : (stringWig[s] * 16 + (pulse - 0.5) * (1.4 + hf * 6));
+      ctx.beginPath();
+      for (var si = 0; si <= SEG; si++) {
+        var pr = si / SEG;
+        var bx = xTop + (xBot - xTop) * pr, by = g.topY + (g.hitY - g.topY) * pr;
+        var dx = Math.sin(pr * Math.PI) * amp * Math.sin(pr * Math.PI * 2.3 + now * 0.018 + s * 1.3);
+        if (si === 0) ctx.moveTo(bx + dx, by); else ctx.lineTo(bx + dx, by);
+      }
+      if (!reduceMotion && (stringWig[s] > 0.12 || hf > 0.35)) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(' + railR + ',' + railG + ',' + railB + ',' + Math.min(0.55, stringWig[s] * 0.5 + hf * 0.14).toFixed(3) + ')';
+        ctx.lineWidth = lw + 3; ctx.stroke(); ctx.restore();
+      }
       ctx.strokeStyle = edge ? 'rgba(' + railR + ',' + railG + ',' + railB + ',' + railA.toFixed(3) + ')' : 'rgba(255,255,255,' + (0.07 + hf * 0.05).toFixed(3) + ')';
-      ctx.beginPath(); ctx.moveTo(xTop, g.topY); ctx.lineTo(xBot, g.hitY); ctx.stroke();
+      ctx.lineWidth = lw; ctx.stroke();
     }
     // lane fills (tinted; brighten on flash)
     for (var l = 0; l < LANES; l++) {
@@ -1151,6 +1192,13 @@
       var label = (overdrive ? '🔥 ' : '') + 'STREAK · x' + em;
       ctx.fillStyle = overdrive ? '#ffd34d' : '#8a93a8';
       ctx.fillText(label, pad, pad + Math.round(base * 0.048));
+      // Bonus-within-the-bonus: a live per-hit bonus that compounds with heat.
+      if (combo >= 4) {
+        var bf = 1 + Math.max(0, heatTier) * 0.6 + (overdrive ? 1 : 0);
+        ctx.fillStyle = heatTier >= 0 ? rgbStr(HEAT_TIERS[Math.min(heatTier, HEAT_TIERS.length - 1)].col) : '#7CFFb2';
+        ctx.font = '700 ' + Math.round(base * 0.02) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText('BONUS ×' + bf.toFixed(1) + '  +' + streakBonusFor(true) + '/hit', pad, pad + Math.round(base * 0.072));
+      }
     } else {
       ctx.fillStyle = '#8a93a8';
       ctx.font = '600 ' + Math.round(base * 0.02) + 'px Inter, sans-serif';
