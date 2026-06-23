@@ -129,6 +129,14 @@ test('riff: score metrics validate + rank by score', async () => {
   assert.equal(lb.body.entries[1].you, true);
 });
 
+test('demo name: percent-encoded unicode round-trips (emoji/accent safe)', async () => {
+  const auth = await resolveAuth({ 'x-demo-user': 'u1', 'x-demo-name': encodeURIComponent('José 🎸') }, {});
+  assert.equal(auth.demo, true);
+  assert.equal(auth.name, 'José 🎸');            // decoded server-side
+  const ascii = await resolveAuth({ 'x-demo-user': 'u2', 'x-demo-name': 'Alice' }, {});
+  assert.equal(ascii.name, 'Alice');             // plain ASCII (no %) unaffected
+});
+
 test('auth required without identity', async () => {
   const store = memStore();
   const r = await runApi(store, {}, {

@@ -141,7 +141,8 @@ export async function resolveAuth(headers, env) {
     if (demo) {
       const id = String(demo).slice(0, 64).replace(/[^a-zA-Z0-9_-]/g, '');
       if (id) {
-        const name = header(headers, 'x-demo-name');
+        let name = header(headers, 'x-demo-name');
+        if (name) { try { name = decodeURIComponent(name); } catch (e) { /* keep raw on bad encoding */ } }
         return { userId: 'demo:' + id, name: name || null, demo: true };
       }
     }

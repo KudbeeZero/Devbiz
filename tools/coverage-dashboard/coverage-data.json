@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-06-23T17:38:07.595Z",
-  "commit": "54861d9",
+  "generatedAt": "2026-06-23T21:56:02.753Z",
+  "commit": "6326bec",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -22,27 +22,27 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 90.9,
-    "branches": 65.9,
+    "lines": 90.93,
+    "branches": 65.41,
     "functions": 90.9,
-    "statements": 90.9
+    "statements": 90.93
   },
   "totalCounts": {
     "lines": {
-      "covered": 330,
-      "total": 363
+      "covered": 331,
+      "total": 364
     },
     "branches": {
       "covered": 87,
-      "total": 132
+      "total": 133
     },
     "functions": {
       "covered": 20,
       "total": 22
     },
     "statements": {
-      "covered": 330,
-      "total": 363
+      "covered": 331,
+      "total": 364
     }
   },
   "files": [
@@ -76,27 +76,27 @@
     {
       "path": "shared/auth.js",
       "metrics": {
-        "lines": 93.58,
-        "branches": 68.75,
+        "lines": 93.63,
+        "branches": 67.69,
         "functions": 90.9,
-        "statements": 93.58
+        "statements": 93.63
       },
       "counts": {
         "lines": {
-          "covered": 146,
-          "total": 156
+          "covered": 147,
+          "total": 157
         },
         "branches": {
           "covered": 44,
-          "total": 64
+          "total": 65
         },
         "functions": {
           "covered": 10,
           "total": 11
         },
         "statements": {
-          "covered": 146,
-          "total": 156
+          "covered": 147,
+          "total": 157
         }
       }
     },

@@ -441,14 +441,15 @@
     for (var p = 0; p < PMAX; p++) P[p].life = 0;
     for (var e = 0; e < EMAX; e++) EM[e].life = 0;
     flash = 0; nSlam = 0; rings.length = 0; recentHits.length = 0;
-    for (var w = 0; w < stringWig.length; w++) stringWig[w] = 0; pulse = 0;
+    for (var w = 0; w < stringWig.length; w++) stringWig[w] = 0;
+    pulse = 0;
   }
   // Bonus-within-the-bonus: a per-hit reward that compounds with both your
   // streak AND your heat tier, and evaporates the instant you miss.
+  function bonusTierK() { return 1 + Math.max(0, heatTier) * 0.6 + (overdrive ? 1 : 0); }
   function streakBonusFor(perfect) {
     if (!perfect || combo < 4) return 0;
-    var tierK = 1 + Math.max(0, heatTier) * 0.6 + (overdrive ? 1 : 0);
-    return Math.min(2000, Math.round(combo * tierK));
+    return Math.min(2000, Math.round(combo * bonusTierK()));
   }
 
   // Base streak multiplier (x1..x4); overdrive doubles the *effective* multiplier.
@@ -782,7 +783,8 @@
     for (var sw = 0; sw < stringWig.length; sw++) stringWig[sw] *= Math.pow(0.0009, dt);
     // Ever-present breathing pulse — always building, stronger the hotter you are.
     var heatK = overdrive ? 1 : Math.max(0, heatTier + 1) / HEAT_TIERS.length;
-    pulse = 0.5 + 0.5 * Math.sin((audio.currentTime || performance.now() / 1000) * 6.2) * (0.4 + heatK * 0.6);
+    // One clock (the audio time `t`), held steady for reduced-motion users.
+    pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 6.2) * (0.4 + heatK * 0.6);
     if (callout.life > 0) callout.life = Math.max(0, callout.life - dt * 0.5);
     displayScore += (score - displayScore) * Math.min(1, dt * 14);
     if (Math.abs(score - displayScore) < 0.6) displayScore = score;
@@ -894,10 +896,10 @@
     drawScoreFx();
     // "on fire" warm glow at max multiplier
     if (mult >= 4 && !reduceMotion) {
-      var pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
+      var glowPulse = 0.5 + 0.5 * Math.sin(now * 0.012);   // local to draw(); distinct from the module `pulse`
       ctx.globalCompositeOperation = 'lighter';
       var fg = ctx.createLinearGradient(0, H, 0, H * 0.45);
-      fg.addColorStop(0, 'rgba(255,120,60,' + (0.08 + pulse * 0.10).toFixed(3) + ')');
+      fg.addColorStop(0, 'rgba(255,120,60,' + (0.08 + glowPulse * 0.10).toFixed(3) + ')');
       fg.addColorStop(1, 'rgba(255,120,60,0)');
       ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
@@ -1220,7 +1222,7 @@
       ctx.fillText(label, pad, pad + Math.round(base * 0.048));
       // Bonus-within-the-bonus: a live per-hit bonus that compounds with heat.
       if (combo >= 4) {
-        var bf = 1 + Math.max(0, heatTier) * 0.6 + (overdrive ? 1 : 0);
+        var bf = bonusTierK();
         ctx.fillStyle = heatTier >= 0 ? rgbStr(HEAT_TIERS[Math.min(heatTier, HEAT_TIERS.length - 1)].col) : '#7CFFb2';
         ctx.font = '700 ' + Math.round(base * 0.02) + 'px "Space Grotesk", sans-serif';
         ctx.fillText('BONUS ×' + bf.toFixed(1) + '  +' + streakBonusFor(true) + '/hit', pad, pad + Math.round(base * 0.072));
@@ -1256,7 +1258,10 @@
   // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
   var lb = null, lastAcc = 0, lbBusy = false;
   function lbBoot() {
-    if (!window.KDLeaderboard) return;            // SDK absent → stay offline
+    if (!window.KDLeaderboard) {                   // SDK script missing/blocked
+      lbEmpty('lbRailList', 'leaderboard offline'); lbEmpty('lbResultsList', 'leaderboard offline');
+      return;
+    }
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
         .then(function (c) { lb = c; lbLoadTop(); })
@@ -1303,7 +1308,9 @@
       });
     };
     if (!lb.isSignedIn()) {
-      lb.signIn().then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); });
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); })
+        .catch(function () { status('could not post — try again'); });
     } else submit();
   }
 

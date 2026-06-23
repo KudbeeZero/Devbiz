@@ -90,7 +90,9 @@
     }
     var d = demoIdentity();
     var h = { 'x-demo-user': d.id };
-    if (d.name) h['x-demo-name'] = d.name;
+    // Percent-encode: HTTP header values are ByteString (Latin-1), so a raw
+    // name with an emoji/accent would make fetch() throw. The server decodes it.
+    if (d.name) h['x-demo-name'] = encodeURIComponent(d.name);
     return Promise.resolve(h);
   };
 
