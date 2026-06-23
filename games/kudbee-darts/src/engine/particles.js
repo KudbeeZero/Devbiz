@@ -26,6 +26,7 @@
         p.spin = cfg.spin || 0;
         p.rot = cfg.rot || 0;
         p.rect = cfg.rect || false;
+        p.square = cfg.square || false;
         p.ring = cfg.ring || false;
         p.r0 = cfg.r0 || 0;
         p.r1 = cfg.r1 || 0;
@@ -102,6 +103,27 @@
 
   Particles.prototype.spark = function (x, y, color) {
     this.burst(x, y, color || '#9fefff', 8, 200, { glow: true, life: 0.3, size: 2 });
+  };
+
+  /* Tumbling square "bricks" knocked off the board/segment on a hit — the
+   * chunky, physical pop the digital scoreboards echo. */
+  Particles.prototype.bricks = function (x, y, color, count, opts) {
+    opts = opts || {};
+    count = count || 12;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = (opts.speed || 200) * (0.35 + Math.random() * 0.8);
+      this.emit({
+        x: x + Util.rand(-6, 6), y: y + Util.rand(-6, 6),
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - (opts.lift || 40),
+        life: opts.life || (0.5 + Math.random() * 0.45),
+        size: opts.size || Util.rand(4, 9),
+        color: color || '#39e6ff',
+        gravity: opts.gravity != null ? opts.gravity : 760,
+        drag: 0.8, shrink: false, glow: true,
+        rect: true, square: true, rot: Util.rand(0, 6.28), spin: Util.rand(-14, 14),
+      });
+    }
   };
 
   /* Celebratory confetti rain from a point, in studio palette colours. */
@@ -195,7 +217,9 @@
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        const sq = p.square ? p.size * (0.35 + k * 0.65) : p.size;
+        if (p.square) ctx.fillRect(-sq / 2, -sq / 2, sq, sq);
+        else ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
         ctx.restore();
       } else {
         const s = p.shrink ? p.size * (0.3 + k * 0.7) : p.size;

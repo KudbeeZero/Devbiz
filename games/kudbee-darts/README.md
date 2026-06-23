@@ -4,9 +4,11 @@
 > Predictive flick-throw darts in your browser. Original IP, zero install, 60 FPS.
 
 Play **501** and **Cricket** against a friend (pass-and-play) or a league of smart AI
-rivals. Drag to aim with a **live predictive reticle** that shows exactly where the dart
-will land before you let go, climb the **league ladder**, earn **XP**, and unlock **neon
-dart skins**.
+rivals. **Drag to aim, then swipe-release to throw** — a true flick whose speed sets the
+power and curl (a tap won't throw). Watch the score land on a **digital seven-segment
+scoreboard** that pops and sheds bricks, follow the **on-board checkout guide** that lights
+up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, and unlock
+**neon dart skins**.
 
 ## Play
 
@@ -19,21 +21,25 @@ dart skins**.
 | Action            | Mouse / Touch                              | Keyboard |
 |-------------------|--------------------------------------------|----------|
 | Aim               | Press on the board and drag the reticle    | —        |
-| Throw             | Release                                    | —        |
+| Throw             | **Swipe-release** (flick) — a tap won't throw | —     |
 | Menu select       | Tap a button                               | Enter    |
 | Pause             | `P` (tap upper area resume / lower quit)   | `P`      |
 | Mute              | `M`                                        | `M`      |
 | Debug FPS         | `` ` ``                                    | `` ` ``  |
 
-The longer you hover while aiming, the more the reticle **wobbles** — a quick, committed
-throw groups tighter. Where the reticle sits at release (plus a little scatter) is what
-scores, so the prediction is honest.
+**The flick is the throw.** Drag to line up the reticle, then swipe and let go: the
+release **speed** sets the power (too soft drops low and short; too hard sails high and
+out), the sideways flick adds **curl**, and harder **pressure** (pen / 3D-touch) sinks the
+dart with extra weight. A live **power gauge** beside the reticle shows the committed-flick
+sweet spot. Where the dart lands (plus a little scatter) is what scores, so the read is
+honest. A wild, rushed flick scatters more than a smooth, committed one.
 
 ## Modes
 
 - **501** — race from 501 to exactly zero. You must **finish on a double** (the bull
   counts as D25). Bust (going below 0, landing on 1, or hitting 0 without a double) reverts
-  the whole turn. A live **checkout hint** suggests your finishing route.
+  the whole turn. A live **checkout hint** plus an **on-board guide** light up your
+  finishing route — the next dart brightest — doubling as a built-in training aid.
 - **Cricket** — close `20·19·18·17·16·15` and the **bull** by hitting each three times
   (single = 1 mark, double = 2, treble = 3). Once you've closed a number, extra hits
   **score** its value — until your opponent closes it too. Win by closing everything with
@@ -77,7 +83,7 @@ src/
   engine/   util · loop (fixed 60Hz) · input (pointer drag) · camera · audio · particles
   art/      sprites (procedural darts + manifest swap-in)
   world/    board (dartboard geometry, exact polar hit-test, baked neon render)
-  entities/ dart (predictive throw physics) · players (human + AI strategy)
+  entities/ dart (swipe-flick throw physics + curl) · players (human + AI strategy)
   modes/    x01 (501 + checkout solver) · cricket
   progression.js (XP / ladder / skins / stats, localStorage)
   game.js   (state machine, turn director, HUD, juice)
