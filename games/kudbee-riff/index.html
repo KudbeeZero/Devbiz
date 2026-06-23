@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#05050f">
-<meta name="description" content="Kudbee Riff — a neon fret-rush rhythm game. Notes fall to the real beats of an original Kudbee track; hit them in time. A playable browser game by Kudbee Games Studio.">
+<meta name="description" content="Kudbee Riff — a neon fret-rush rhythm game. Notes fall to the real beats of an original Kudbee track; hit them in time, climb the heat tiers, and ignite Overdrive. A playable browser game by Kudbee Games Studio.">
 <title>Kudbee Riff — Neon Fret Rush</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,9 +94,9 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Rhythm</div>
         <h1>Kudbee <span class="gradient-text">Riff</span></h1>
-        <p>Notes fall to the <b>real beats</b> of the studio track. Hit each one as it crosses the strike line. Build a streak, keep the multiplier alive.</p>
+        <p>Notes fall to the <b>real beats</b> of the studio track. Hit each one as it crosses the strike line. Build a streak to climb the heat tiers, catch the <b style="color:#ffd34d">gold</b> notes to charge your meter, then <b>ignite OVERDRIVE</b> for double points.</p>
         <div class="keycaps" id="gateKeys"></div>
-        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; tap lanes on touch &nbsp;·&nbsp; <b>hit two-note chords together for a SLAM</b></p>
+        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; <b>Space</b> overdrive &nbsp;·&nbsp; tap lanes / heat bar on touch &nbsp;·&nbsp; <b>chords together = SLAM</b></p>
         <button class="btn" id="startBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Start the song</button>
         <div class="ov-foot">Headphones recommended · ~4:14 · <span id="noteCount">…</span> notes</div>
         <div class="loaderr" id="loadErr" hidden></div>
@@ -124,13 +124,15 @@
           <div class="rstat"><b id="rCombo">0</b><span>Max streak</span></div>
           <div class="rstat"><b id="rPerfect">0</b><span>Perfect</span></div>
           <div class="rstat"><b id="rMiss">0</b><span>Missed</span></div>
+          <div class="rstat"><b id="rOd">0</b><span>Overdrives</span></div>
+          <div class="rstat"><b id="rCharged">0</b><span>Charged hit</span></div>
         </div>
         <button class="btn" id="againBtn">Play again</button>
         <a class="btn ghost" href="../../index.html#games" style="text-decoration:none">Back to Studio</a>
       </div>
     </div>
 
-    <div class="hint">D F J K to strike · chords = SLAM · P pause · M mute</div>
+    <div class="hint">D F J K to strike · chords = SLAM · Space overdrive · P pause · M mute</div>
   </div>
 </div>
 
@@ -147,6 +149,13 @@
  * Everything is driven by the audio clock (audio.currentTime) so the chart
  * stays locked to the music regardless of frame rate. Pooled particles, capped
  * effects, honors prefers-reduced-motion, pauses when hidden, scales to DPR.
+ *
+ * Scoring "juice" (Guitar-Hero-style): a HEAT meter fills as you play — gold
+ * "charged" gems top it up fastest — and at half-full it can be IGNITED (Space
+ * or tap the bar) for a timed OVERDRIVE burst that doubles the multiplier and
+ * sends the highway white-hot. Combo milestones light escalating heat tiers
+ * (HEATING UP → ON FIRE → BLAZING → INFERNO → GODLIKE) with banner callouts,
+ * rising embers, screen-shake, a rolling/popping score and floating +points.
  * ========================================================================= */
 (function () {
   'use strict';
@@ -162,6 +171,21 @@
   // Timing windows (seconds) and travel time.
   var W_PERFECT = 0.060, W_GOOD = 0.135, W_MISS = 0.190;
   var LEAD = reduceMotion ? 1.5 : 1.85;        // seconds a note is visible before the line
+
+  // ---- Heat / Overdrive (Star-Power-style) ----------------------------------
+  // A meter that fills as you play. At >= OD_READY it can be IGNITED (Space / tap
+  // the bar) for a burst of OVERDRIVE: the multiplier doubles, the highway goes
+  // white-hot, and the meter drains as fuel. Charged notes (gold rings) top it
+  // up fastest. Combo milestones light escalating "heat tiers" along the way.
+  var OD_READY = 0.5;                          // meter fraction needed to ignite
+  var OD_DRAIN = 0.135;                        // fuel burned per second in overdrive
+  var HEAT_TIERS = [                           // combo milestones → named heat stages
+    { combo: 8,   name: 'HEATING UP', col: [255,211,77]  },
+    { combo: 20,  name: 'ON FIRE',    col: [255,157,61]  },
+    { combo: 40,  name: 'BLAZING',    col: [255,94,58]   },
+    { combo: 75,  name: 'INFERNO',    col: [255,58,107]  },
+    { combo: 120, name: 'GODLIKE',    col: [196,107,255] }
+  ];
 
   var audio = document.getElementById('audio');
   var canvas = document.getElementById('game');
@@ -209,6 +233,14 @@
     var e = p * p;                          // easeInQuad (e(1)=1 keeps the line exact)
     return g.topY + e * (g.hitY - g.topY);
   }
+  // Vertical heat/overdrive bar in the wide upper-left gutter (clear of the
+  // perspective trapezoid, which leaves almost no room down by the strike line).
+  function heatRect() {
+    var w = Math.max(7, Math.min(W, H) * 0.020);
+    var x = Math.max(7, W * 0.035);
+    var top = H * 0.14, bot = H * 0.60;
+    return { x: x, y: top, w: w, h: bot - top };
+  }
 
   // ---- Chart (built from analysis.json) ----
   var notes = [];        // { t, lane, judged, hit, missAt }
@@ -220,7 +252,7 @@
     var fps = (A && A.fps) || 30;
     songDur = (A && A.duration) || 254;
     function band(arr, t) { if (!arr) return 0; var i = Math.max(0, Math.min(arr.length - 1, Math.round(t * fps))); return arr[i] / 255; }
-    var prevLane = -1;
+    var prevLane = -1, gem = 0;
     for (var i = 0; i < beats.length; i++) {
       var t = beats[i];
       if (t < 1.2) continue;                          // small lead-in
@@ -232,11 +264,15 @@
       else lane = (i & 1) ? 1 : 2;
       if (lane === prevLane) lane = (lane + 1) % LANES;  // avoid long same-lane runs
       prevLane = lane;
-      notes.push({ t: t, lane: lane, judged: false, hit: false, missAt: 0 });
+      // Charged "star-power phrase" notes: a steady scatter of gold gems that
+      // top up the heat meter fastest when struck cleanly.
+      var charged = (gem % 13 === 6);
+      notes.push({ t: t, lane: lane, judged: false, hit: false, missAt: 0, charged: charged });
+      gem++;
       // chord on the strongest beats
       if (e > 0.82 && Math.max(b, m, tr) > 0.7) {
         var l2 = (lane + 2) % LANES;
-        notes.push({ t: t, lane: l2, judged: false, hit: false, missAt: 0 });
+        notes.push({ t: t, lane: l2, judged: false, hit: false, missAt: 0, charged: false });
       }
     }
     notes.sort(function (a, b) { return a.t - b.t; });
@@ -254,21 +290,47 @@
   var shake = 0, flash = 0;         // impact feedback: screen shake + white flash
   var nSlam = 0;                    // chord slams landed this run
 
+  // Heat / overdrive + juice
+  var heat = 0;                     // overdrive meter, 0..1
+  var overdrive = false;            // overdrive burst active
+  var odFlash = 0;                  // ignite shockwave 1..0
+  var heatTier = -1;                // highest HEAT_TIERS index reached this streak
+  var nOverdrives = 0, nCharged = 0;
+  var displayScore = 0;             // animated score that rolls toward `score`
+  var scorePulse = 0;               // score-readout pop 1..0
+  var emberCD = 0;                  // ember-spawn cooldown
+
   function resetGame() {
     score = 0; combo = 0; maxCombo = 0; mult = 1;
     nPerfect = nGood = nMiss = nTotal = 0;
     scanPtr = 0;
+    heat = 0; overdrive = false; odFlash = 0; heatTier = -1; nOverdrives = nCharged = 0;
+    displayScore = 0; scorePulse = 0; shake = 0; emberCD = 0;
+    callout.life = 0;
     for (var i = 0; i < notes.length; i++) { notes[i].judged = false; notes[i].hit = false; notes[i].missAt = 0; }
     for (var l = 0; l < LANES; l++) { laneFlash[l] = 0; laneHeld[l] = false; }
-    pop.length = 0; for (var p = 0; p < PMAX; p++) P[p].life = 0;
-    shake = 0; flash = 0; nSlam = 0; rings.length = 0; recentHits.length = 0;
+    pop.length = 0; sfx.length = 0;
+    for (var p = 0; p < PMAX; p++) P[p].life = 0;
+    for (var e = 0; e < EMAX; e++) EM[e].life = 0;
+    flash = 0; nSlam = 0; rings.length = 0; recentHits.length = 0;
   }
 
+  // Base streak multiplier (x1..x4); overdrive doubles the *effective* multiplier.
   function multFor(c) { return c >= 24 ? 4 : c >= 16 ? 3 : c >= 8 ? 2 : 1; }
+  function effMult() { return mult * (overdrive ? 2 : 1); }
 
   // ---- Hit popups + particle pool ----
-  var pop = [];   // { x, y, txt, col, life }
+  var pop = [];   // judgement text { x, y, txt, col, life }
   function addPop(x, y, txt, col) { if (pop.length < 24) pop.push({ x: x, y: y, txt: txt, col: col, life: 1 }); }
+  var sfx = [];   // floating score numbers { x, y, txt, col, life, vy, sz }
+  function addScore(x, y, amt, col, big) {
+    if (sfx.length > 28) return;
+    sfx.push({ x: x, y: y, txt: '+' + amt, col: col, life: 1, vy: -(0.8 + (big ? 0.7 : 0)), sz: big ? 0.040 : 0.028 });
+  }
+  // Big centered milestone banner (heat tiers / overdrive).
+  var callout = { txt: '', sub: '', col: [255,255,255], life: 0 };
+  function fireCallout(txt, sub, col) { callout.txt = txt; callout.sub = sub || ''; callout.col = col; callout.life = 1; }
+
   var PMAX = reduceMotion ? 90 : 260, P = new Array(PMAX);
   for (var pi = 0; pi < PMAX; pi++) P[pi] = { x: 0, y: 0, vx: 0, vy: 0, life: 0, size: 2, col: [255,255,255] };
   var pHead = 0;
@@ -281,6 +343,16 @@
       p.x = x; p.y = y; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp - 1.5;
       p.life = 1; p.size = (1.5 + Math.random() * 2.5) * (speed > 1 ? 1.25 : 1); p.col = rgb;
     }
+  }
+  // ---- Rising-ember pool (ambient heat) ----
+  var EMAX = 56, EM = new Array(EMAX);
+  for (var ei = 0; ei < EMAX; ei++) EM[ei] = { x: 0, y: 0, vx: 0, vy: 0, life: 0, size: 1, col: [255,180,80] };
+  var emHead = 0;
+  function ember(x, y, rgb) {
+    var e = EM[emHead]; emHead = (emHead + 1) % EMAX;
+    e.x = x + (Math.random() - 0.5) * 30; e.y = y;
+    e.vx = (Math.random() - 0.5) * 0.5; e.vy = -(0.6 + Math.random() * 1.4);
+    e.life = 1; e.size = 1 + Math.random() * 2; e.col = rgb;
   }
 
   // ---- Impact feel: shockwave rings, screen shake/flash, SFX, haptics ----
@@ -374,14 +446,53 @@
     note.judged = true; note.hit = true;
     var g = geom(), x = laneX(g, lane, 1), y = g.hitY;
     nTotal++;
+    var em = effMult();
     var perfect = bestDt <= W_PERFECT;
-    if (perfect) { nPerfect++; score += 100 * mult; addPop(x, y, 'PERFECT', LANE_COL[lane]); burst(x, y, LANE_RGB[lane], 18); }
-    else { nGood++; score += 50 * mult; addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], 8); }
+    var gain;
+    if (perfect) {
+      nPerfect++; gain = 100 * em;
+      addPop(x, y, note.charged ? 'CHARGED!' : 'PERFECT', note.charged ? '#ffd34d' : LANE_COL[lane]);
+      burst(x, y, note.charged ? [255,211,77] : LANE_RGB[lane], note.charged ? 22 : 18);
+    } else {
+      nGood++; gain = 50 * em;
+      addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], 8);
+    }
+    score += gain;
+    scorePulse = 1;
+    addScore(x, y - g.hitY * 0.06, gain, overdrive ? '#fff3c4' : (note.charged ? '#ffd34d' : LANE_COL[lane]), overdrive || note.charged);
+    // Heat: fill while not in overdrive; charged gems are the fast lane.
+    if (!overdrive) {
+      heat = Math.min(1, heat + (perfect ? 0.020 : 0.009) + (note.charged ? 0.11 : 0));
+    }
+    if (note.charged) nCharged++;
     var prevMult = mult;
     combo++; if (combo > maxCombo) maxCombo = combo; mult = multFor(combo);
     if (mult > prevMult) multUp();
+    checkHeatTier();
     laneFlash[lane] = 1.4;
     recordHit(note.t, x, y, LANE_RGB[lane], perfect);
+  }
+
+  // Combo-milestone heat stages: escalate the highway and fire a banner.
+  function checkHeatTier() {
+    var idx = -1;
+    for (var i = 0; i < HEAT_TIERS.length; i++) { if (combo >= HEAT_TIERS[i].combo) idx = i; }
+    if (idx > heatTier) {
+      heatTier = idx;
+      var T = HEAT_TIERS[idx];
+      fireCallout(T.name, combo + ' STREAK', T.col);
+      shake = Math.max(shake, 0.7);     // (main's shake scale: small value, rendered ×16)
+    }
+  }
+
+  // Ignite overdrive: doubles the multiplier, goes white-hot, drains the meter.
+  function ignite() {
+    if (state !== 'playing' || overdrive || heat < OD_READY) return;
+    overdrive = true; odFlash = 1; nOverdrives++;
+    fireCallout('OVERDRIVE', 'MULTIPLIER x2', [255,243,196]);
+    shake = Math.max(shake, 1.0);
+    var g = geom();
+    for (var l = 0; l < LANES; l++) burst(laneX(g, l, 1), g.hitY, [255,230,150], 14);
   }
   function releaseLane(lane) { laneHeld[lane] = false; }
 
@@ -392,7 +503,7 @@
       if (nt.t - now > 0) break;                       // not reached yet
       if (!nt.judged && now - nt.t > W_MISS) {
         nt.judged = true; nt.missAt = now; nTotal++; nMiss++;
-        combo = 0; mult = 1;
+        combo = 0; mult = 1; heatTier = -1;        // streak broken → heat stages reset
       }
     }
   }
@@ -400,7 +511,11 @@
   // ---- Input ----
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase();
-    if (k === ' ' || k === 'enter') { if (state === 'gate') { e.preventDefault(); start(); } return; }
+    if (k === ' ' || k === 'enter') {
+      if (state === 'gate') { e.preventDefault(); start(); }
+      else if (state === 'playing') { e.preventDefault(); ignite(); }
+      return;
+    }
     if (k === 'p') { if (state === 'playing') doPause(); else if (state === 'paused') resume(); return; }
     if (k === 'm') { audio.muted = !audio.muted; return; }
     if (k === 'r') { if (state === 'paused' || state === 'results') restart(); return; }
@@ -423,7 +538,13 @@
   canvas.addEventListener('pointerdown', function (e) {
     if (state === 'gate' || state === 'results' || state === 'paused') return;
     var r = canvas.getBoundingClientRect();
-    var lane = laneFromPoint(e.clientX - r.left, e.clientY - r.top);
+    var px = e.clientX - r.left, py = e.clientY - r.top;
+    // Tap the heat bar (when ready) to ignite overdrive.
+    var hr = heatRect();
+    if (heat >= OD_READY && !overdrive && px >= hr.x - 14 && px <= hr.x + hr.w + 18 && py >= hr.y - 14 && py <= hr.y + hr.h + 14) {
+      ignite(); return;
+    }
+    var lane = laneFromPoint(px, py);
     if (lane >= 0) { pressLane(lane); setTimeout(function () { releaseLane(lane); }, 90); }
   }, { passive: true });
 
@@ -454,6 +575,8 @@
     document.getElementById('rCombo').textContent = maxCombo;
     document.getElementById('rPerfect').textContent = nPerfect;
     document.getElementById('rMiss').textContent = nMiss;
+    document.getElementById('rOd').textContent = nOverdrives;
+    document.getElementById('rCharged').textContent = nCharged;
     var rank = acc >= 95 ? 'S · Virtuoso' : acc >= 85 ? 'A · Headliner' : acc >= 70 ? 'B · In the pocket' : acc >= 50 ? 'C · Warming up' : 'D · Keep at it';
     document.getElementById('rRank').textContent = 'Set complete · ' + rank + (nSlam ? ' · ' + nSlam + ' slams' : '');
     showOverlay('results');
@@ -480,11 +603,32 @@
     if (state === 'playing') {
       updateMisses(t);
       mult = multFor(combo);
+      // Overdrive burns the meter as fuel; empties → ends.
+      if (overdrive) { heat -= OD_DRAIN * dt; if (heat <= 0) { heat = 0; overdrive = false; } }
       if (t >= songDur - 0.05 || (audio.ended)) { finish(); }
     }
     for (var l = 0; l < LANES; l++) { laneFlash[l] *= Math.pow(0.0009, dt); if (laneHeld[l]) laneFlash[l] = Math.max(laneFlash[l], 0.55); }
     shake *= Math.pow(0.0012, dt); if (shake < 0.002) shake = 0;
     flash *= Math.pow(0.0009, dt); if (flash < 0.004) flash = 0;
+
+    // Juice decays + animated score roll-up.
+    odFlash = Math.max(0, odFlash - dt * 1.6);
+    scorePulse = Math.max(0, scorePulse - dt * 4);
+    if (callout.life > 0) callout.life = Math.max(0, callout.life - dt * 0.5);
+    displayScore += (score - displayScore) * Math.min(1, dt * 14);
+    if (Math.abs(score - displayScore) < 0.6) displayScore = score;
+
+    // Ambient embers when the highway is hot (heat tier reached or overdrive).
+    if (!reduceMotion && state === 'playing') {
+      emberCD -= dt;
+      var hot = overdrive ? 4 : (heatTier + 1);
+      if (hot > 0 && emberCD <= 0) {
+        emberCD = 0.09 / hot;
+        var gg = geom(), lane = (Math.random() * LANES) | 0;
+        var tier = overdrive ? [255,236,170] : HEAT_TIERS[Math.min(heatTier, HEAT_TIERS.length - 1)].col;
+        ember(laneX(gg, lane, 1), gg.hitY, tier);
+      }
+    }
 
     draw(now, t);
     if (state === 'paused' || state === 'results' || state === 'gate') { if (state !== 'gate') stop(); }
@@ -493,21 +637,31 @@
   var g; // reused geometry
   function draw(now, t) {
     g = geom();
-    var sx = 0, sy = 0;
-    if (shake > 0.002 && !reduceMotion) { var m = shake * 16; sx = (Math.random() - 0.5) * m; sy = (Math.random() - 0.5) * m; }
-    ctx.save(); ctx.translate(sx, sy);
-    // backdrop (overscanned so the shake never reveals an edge)
-    ctx.fillStyle = '#04040c'; ctx.fillRect(-28, -28, W + 56, H + 56);
+    // backdrop — warms up as the highway heats / ignites (drawn unshaken and
+    // full-frame; the shake transform below moves only the playfield over it)
+    ctx.fillStyle = '#04040c'; ctx.fillRect(0, 0, W, H);
     var bg = ctx.createRadialGradient(g.cx, g.hitY, 0, g.cx, g.hitY, Math.max(W, H) * 0.8);
-    bg.addColorStop(0, 'rgba(111,91,255,0.12)'); bg.addColorStop(1, 'rgba(4,4,12,0)');
-    ctx.fillStyle = bg; ctx.fillRect(-28, -28, W + 56, H + 56);
+    if (overdrive) { bg.addColorStop(0, 'rgba(255,150,60,0.20)'); bg.addColorStop(1, 'rgba(4,4,12,0)'); }
+    else if (heatTier >= 0) {
+      var hc = HEAT_TIERS[heatTier].col;
+      bg.addColorStop(0, 'rgba(' + hc[0] + ',' + hc[1] + ',' + hc[2] + ',' + (0.10 + heatTier * 0.025).toFixed(3) + ')');
+      bg.addColorStop(1, 'rgba(4,4,12,0)');
+    } else { bg.addColorStop(0, 'rgba(111,91,255,0.12)'); bg.addColorStop(1, 'rgba(4,4,12,0)'); }
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
+    // Screen-shake the playfield (not the HUD/meter). main's shake scale is a
+    // small value rendered ×16 (slams + multiplier-ups + heat tiers + ignite).
+    var ox = 0, oy = 0;
+    if (shake > 0.002 && !reduceMotion) { var sm = shake * 16; ox = (Math.random() - 0.5) * sm; oy = (Math.random() - 0.5) * sm; }
+    ctx.save(); ctx.translate(ox, oy);
     drawHighway(now, t);
     drawNotes(t);
     drawHitLine(now);
     drawRings();
+    drawEmbers();
     drawParticles();
     drawPopups();
+    drawScoreFx();
     // "on fire" warm glow at max multiplier
     if (mult >= 4 && !reduceMotion) {
       var pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
@@ -526,18 +680,24 @@
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
     }
+    drawHeatMeter();
+    drawCallout();
     drawHUD(t);
   }
 
   function drawHighway(now, t) {
+    // heat tint factor for rails (0 cool .. 1 inferno), overdrive forces hot.
+    var hf = overdrive ? 1 : (heatTier + 1) / HEAT_TIERS.length;
+    var railR = Math.round(57 + (255 - 57) * hf), railG = Math.round(230 - 90 * hf), railB = Math.round(255 - 175 * hf);
+    var railA = 0.30 + hf * 0.35 + (overdrive ? 0.15 : 0);
     // outer rails
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 + hf * 1.5;
     for (var s = 0; s <= LANES; s++) {
       var pTop = 0, pBot = 1;
       var xTop = g.cx + (s - LANES / 2) * (widthAt(g, pTop) / LANES);
       var xBot = g.cx + (s - LANES / 2) * (widthAt(g, pBot) / LANES);
       var edge = (s === 0 || s === LANES);
-      ctx.strokeStyle = edge ? 'rgba(57,230,255,0.30)' : 'rgba(255,255,255,0.07)';
+      ctx.strokeStyle = edge ? 'rgba(' + railR + ',' + railG + ',' + railB + ',' + railA.toFixed(3) + ')' : 'rgba(255,255,255,' + (0.07 + hf * 0.05).toFixed(3) + ')';
       ctx.beginPath(); ctx.moveTo(xTop, g.topY); ctx.lineTo(xBot, g.hitY); ctx.stroke();
     }
     // lane fills (tinted; brighten on flash)
@@ -566,9 +726,18 @@
 
   function drawHitLine(now) {
     var y = g.hitY, w = widthAt(g, 1);
-    // strike bar
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
+    // strike bar — turns white-hot in overdrive
+    ctx.strokeStyle = overdrive ? 'rgba(255,240,200,' + (0.6 + 0.3 * Math.sin(now * 0.02)).toFixed(2) + ')' : 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = overdrive ? 5 : 3;
     ctx.beginPath(); ctx.moveTo(g.cx - w / 2 - 6, y); ctx.lineTo(g.cx + w / 2 + 6, y); ctx.stroke();
+    // ignite shockwave
+    if (odFlash > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      var r = (1 - odFlash) * w * 0.9;
+      ctx.strokeStyle = 'rgba(255,230,160,' + (odFlash * 0.8).toFixed(3) + ')'; ctx.lineWidth = 3 + odFlash * 6;
+      ctx.beginPath(); ctx.arc(g.cx, y, r + 8, 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+    }
     // per-lane strike pads
     for (var l = 0; l < LANES; l++) {
       var x = laneX(g, l, 1), rgb = LANE_RGB[l], fl = Math.min(1.4, laneFlash[l]);
@@ -600,15 +769,25 @@
       if (p > 1) { if (!missing) continue; if (p > 1.35) continue; }
       var y = yAt(g, Math.min(p, 1)) + (p > 1 ? (p - 1) * (H * 0.16) : 0);
       var x = laneX(g, n.lane, Math.min(p, 1));
-      var rgb = LANE_RGB[n.lane];
+      var rgb = n.charged ? [255,211,77] : LANE_RGB[n.lane];   // charged gems read gold
       var sz = (g.botW / LANES) * (0.16 + p * 0.20);   // grows with perspective
       var alpha = missing ? Math.max(0, 1 - (p - 1) / 0.35) : Math.min(1, 0.35 + p * 0.9);
+      // overdrive comet-trail behind the gem
+      if (overdrive && !missing && p > 0.05) {
+        ctx.globalCompositeOperation = 'lighter';
+        var ty = yAt(g, Math.max(0, Math.min(p, 1) - 0.10));
+        var tg = ctx.createLinearGradient(x, ty, x, y);
+        tg.addColorStop(0, 'rgba(255,180,80,0)'); tg.addColorStop(1, 'rgba(255,210,120,' + (0.5 * alpha).toFixed(3) + ')');
+        ctx.fillStyle = tg; ctx.beginPath(); ctx.moveTo(x - sz * 0.5, y); ctx.lineTo(x + sz * 0.5, y); ctx.lineTo(x, ty); ctx.closePath(); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+      }
       // glow
       ctx.globalCompositeOperation = 'lighter';
-      var gl = ctx.createRadialGradient(x, y, 0, x, y, sz * 1.9);
-      gl.addColorStop(0, 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + (0.55 * alpha).toFixed(3) + ')');
+      var glo = (n.charged ? 0.8 : 0.55) * alpha;
+      var gl = ctx.createRadialGradient(x, y, 0, x, y, sz * (n.charged ? 2.3 : 1.9));
+      gl.addColorStop(0, 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + glo.toFixed(3) + ')');
       gl.addColorStop(1, 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0)');
-      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, sz * 1.9, 0, TAU); ctx.fill();
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, sz * (n.charged ? 2.3 : 1.9), 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
       // gem body (rounded diamond)
       ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
@@ -618,8 +797,14 @@
       ctx.fillStyle = 'rgba(255,255,255,' + (0.65 * alpha).toFixed(3) + ')';
       roundRect(ctx, -s / 2 + s * 0.16, -s / 2 + s * 0.16, s * 0.32, s * 0.32, s * 0.1); ctx.fill();
       ctx.restore();
+      // charged ring + sparkle
+      if (n.charged && !missing) {
+        ctx.strokeStyle = 'rgba(255,236,150,' + (0.85 * alpha).toFixed(3) + ')';
+        ctx.lineWidth = 1.5 + p; ctx.beginPath(); ctx.arc(x, y, sz * 1.25, 0, TAU); ctx.stroke();
+      }
     }
   }
+  function rgbStr(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
   function roundRect(c, x, y, w, h, r) {
     c.beginPath();
     c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
@@ -638,6 +823,31 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  function drawEmbers() {
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < EMAX; i++) {
+      var e = EM[i]; if (e.life <= 0) continue;
+      e.x += e.vx; e.y += e.vy; e.vy *= 0.99; e.life -= 0.012;
+      if (e.life <= 0) continue;
+      ctx.fillStyle = 'rgba(' + e.col[0] + ',' + e.col[1] + ',' + e.col[2] + ',' + (e.life * 0.8).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.size * (0.4 + e.life * 0.6), 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawScoreFx() {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = sfx.length - 1; i >= 0; i--) {
+      var q = sfx[i]; q.life -= 0.018; q.y += q.vy; q.vy *= 0.96;
+      if (q.life <= 0) { sfx.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.min(1, q.life * 1.6);
+      ctx.fillStyle = q.col;
+      ctx.font = '700 ' + Math.round(Math.min(W, H) * q.sz * (0.7 + q.life * 0.3)) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(q.txt, q.x, q.y);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function drawPopups() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (var i = pop.length - 1; i >= 0; i--) {
@@ -651,30 +861,123 @@
     }
   }
 
+  function drawHeatMeter() {
+    var R = heatRect();
+    var ready = heat >= OD_READY && !overdrive;
+    var pulse = ready ? 0.5 + 0.5 * Math.sin(performance.now() * 0.006) : 0;
+    // track
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    roundRect(ctx, R.x, R.y, R.w, R.h, R.w * 0.5); ctx.fill();
+    ctx.strokeStyle = ready ? 'rgba(255,221,120,' + (0.4 + pulse * 0.5).toFixed(2) + ')' : 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 1.5; roundRect(ctx, R.x, R.y, R.w, R.h, R.w * 0.5); ctx.stroke();
+    // fill (bottom-up)
+    var fh = R.h * Math.max(0, Math.min(1, heat));
+    if (fh > 1) {
+      var fy = R.y + R.h - fh;
+      var lg = ctx.createLinearGradient(0, R.y + R.h, 0, R.y);
+      if (overdrive) { lg.addColorStop(0, '#fff3c4'); lg.addColorStop(1, '#ff7a3d'); }
+      else { lg.addColorStop(0, '#ffd34d'); lg.addColorStop(0.6, '#ff7a3d'); lg.addColorStop(1, '#ff3a6b'); }
+      ctx.save();
+      roundRect(ctx, R.x, R.y, R.w, R.h, R.w * 0.5); ctx.clip();
+      ctx.fillStyle = lg; ctx.fillRect(R.x, fy, R.w, fh);
+      // moving glints
+      if (!reduceMotion) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (var k = 0; k < 3; k++) {
+          var yy = R.y + R.h - ((performance.now() * 0.04 + k * R.h / 3) % R.h);
+          if (yy < fy) continue;
+          ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(R.x, yy, R.w, 2);
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.restore();
+    }
+    // ready glow + halfway marker
+    var my = R.y + R.h * (1 - OD_READY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(R.x, my); ctx.lineTo(R.x + R.w, my); ctx.stroke();
+    if (ready) {
+      ctx.globalCompositeOperation = 'lighter';
+      var gg = ctx.createRadialGradient(R.x + R.w / 2, R.y + R.h, 0, R.x + R.w / 2, R.y + R.h, R.h * 0.7);
+      gg.addColorStop(0, 'rgba(255,200,90,' + (0.25 + pulse * 0.25).toFixed(2) + ')'); gg.addColorStop(1, 'rgba(255,200,90,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(R.x + R.w / 2, R.y + R.h, R.h * 0.7, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // label
+    ctx.save();
+    ctx.translate(R.x + R.w / 2, R.y - Math.min(W, H) * 0.012);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    if (overdrive) { ctx.fillStyle = '#fff3c4'; ctx.fillText('OVERDRIVE', 0, 0); }
+    else if (ready) { ctx.fillStyle = 'rgba(255,221,120,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; ctx.fillText(isCoarse ? 'TAP' : 'SPACE', 0, 0); }
+    else { ctx.fillStyle = '#6a7488'; ctx.fillText('HEAT', 0, 0); }
+    ctx.restore();
+  }
+
+  function drawCallout() {
+    if (callout.life <= 0) return;
+    var L = callout.life, c = callout.col;
+    var up = 1 - Math.pow(1 - Math.min(1, (1 - L) * 3), 2);    // quick ease-in pop
+    var sc = 0.7 + up * 0.3 + (L > 0.92 ? (L - 0.92) * 4 : 0);
+    var alpha = L > 0.85 ? (1 - L) / 0.15 : Math.min(1, L / 0.3);
+    var cy = H * 0.40;
+    ctx.save();
+    ctx.translate(g ? g.cx : W / 2, cy); ctx.scale(sc, sc);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.shadowColor = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.9)'; ctx.shadowBlur = 24;
+    ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',1)';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.072) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(callout.txt, 0, 0);
+    ctx.shadowBlur = 0;
+    if (callout.sub) {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.022) + 'px Inter, sans-serif';
+      ctx.fillText(callout.sub, 0, Math.min(W, H) * 0.058);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   function drawHUD(t) {
     var pad = Math.round(Math.min(W, H) * 0.03);
-    // score (top-right)
+    var base = Math.min(W, H);
+    // score (top-right) — rolls toward the target and pops on every gain
+    var sPop = 1 + scorePulse * 0.16;
+    ctx.save();
+    ctx.translate(W - pad, pad); ctx.scale(sPop, sPop);
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#fff';
-    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.05) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText(score.toLocaleString(), W - pad, pad);
+    if (scorePulse > 0.01) { ctx.shadowColor = overdrive ? 'rgba(255,220,140,0.9)' : 'rgba(120,180,255,0.7)'; ctx.shadowBlur = 18 * scorePulse; }
+    ctx.fillStyle = overdrive ? '#fff3c4' : '#fff';
+    ctx.font = '700 ' + Math.round(base * 0.05) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(Math.round(displayScore).toLocaleString(), 0, 0);
+    ctx.restore();
     ctx.fillStyle = '#8a93a8';
-    ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-    ctx.fillText('SCORE', W - pad, pad + Math.round(Math.min(W, H) * 0.052));
+    ctx.font = '600 ' + Math.round(base * 0.018) + 'px Inter, sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillText('SCORE', W - pad, pad + Math.round(base * 0.052));
 
     // combo + multiplier (top-left)
-    ctx.textAlign = 'left';
+    var em = effMult();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     if (combo > 0) {
-      ctx.fillStyle = LANE_COL[Math.min(3, mult - 1)];
-      ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.045) + 'px "Space Grotesk", sans-serif';
-      ctx.fillText(combo + '', pad, pad);
+      var ccol = overdrive ? '#ffd34d' : (heatTier >= 0 ? rgbStr(HEAT_TIERS[heatTier].col) : LANE_COL[Math.min(3, mult - 1)]);
+      // a little throb on the streak number, livelier the hotter you are
+      var cPop = 1 + (overdrive ? 0.06 + 0.04 * Math.sin(performance.now() * 0.02) : Math.min(0.08, combo * 0.0006));
+      ctx.save(); ctx.translate(pad, pad); ctx.scale(cPop, cPop);
+      ctx.fillStyle = ccol;
+      ctx.font = '700 ' + Math.round(base * 0.045) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(combo + '', 0, 0);
+      ctx.restore();
       ctx.fillStyle = '#8a93a8';
-      ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-      ctx.fillText('STREAK · x' + mult, pad, pad + Math.round(Math.min(W, H) * 0.048));
+      ctx.font = '600 ' + Math.round(base * 0.018) + 'px Inter, sans-serif';
+      var label = (overdrive ? '🔥 ' : '') + 'STREAK · x' + em;
+      ctx.fillStyle = overdrive ? '#ffd34d' : '#8a93a8';
+      ctx.fillText(label, pad, pad + Math.round(base * 0.048));
     } else {
       ctx.fillStyle = '#8a93a8';
-      ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.02) + 'px Inter, sans-serif';
-      ctx.fillText('x' + mult, pad, pad);
+      ctx.font = '600 ' + Math.round(base * 0.02) + 'px Inter, sans-serif';
+      ctx.fillText('x' + em, pad, pad);
     }
 
     // progress bar (very bottom)
