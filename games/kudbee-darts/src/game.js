@@ -132,6 +132,24 @@
       if (this.toasts[i].life <= 0) this.toasts.splice(i, 1);
     }
 
+    // Digital scoreboard: pop decay + shed-brick physics (HUD space).
+    for (let i = 0; i < this.players.length; i++) {
+      const pl = this.players[i];
+      if (pl._scorePop > 0) {
+        if (!pl._shedFired && pl._digX != null) { this._shedDigits(pl); pl._shedFired = true; }
+        pl._scorePop = Math.max(0, pl._scorePop - dt * 2.2);
+        if (pl._scorePop === 0) pl._shedFired = false;
+      }
+      const sh = pl._shed;
+      if (sh && sh.length) {
+        for (let j = sh.length - 1; j >= 0; j--) {
+          const b = sh[j];
+          b.life -= dt; if (b.life <= 0) { sh.splice(j, 1); continue; }
+          b.vy += 900 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.spin * dt;
+        }
+      }
+    }
+
     this.input.endFrame();
   };
 
@@ -205,6 +223,8 @@
     this.players.forEach((pl) => {
       this.mode.initPlayer(pl);
       pl.dartsThrown = 0; pl.totalScored = 0; pl.t180 = 0; pl.legs = 0;
+      // Digital-scoreboard juice state.
+      pl._scorePop = 0; pl._shed = []; pl._shedFired = false; pl._digX = null; pl._digY = 0; pl._digH = 0; pl._popCol = '#39e6ff';
     });
     this.current = 0;
     this.dartsThisTurn = 0;
@@ -237,12 +257,15 @@
       return;
     }
 
-    // Human.
+    // Human — drag to aim, then SWIPE-RELEASE to throw (a tap won't throw).
     if (this.dart.state === 'ready') {
       if (p.justDown) { this.dart.skin = cur.skin(); this.dart.parts = cur.dartParts || null; this.dart.beginAim(p.x, p.y); this.dart.sigma = this.humanSigma; }
     } else if (this.dart.state === 'aiming') {
       if (p.down) this.dart.updateAim(p.x, p.y, dt);
-      if (p.justUp) this.dart.release();
+      if (p.justUp) {
+        const r = this.dart.release();
+        if (!r) this.dart.reset();      // rejected tap → back to ready, no throw
+      }
     }
   };
 
@@ -272,6 +295,11 @@
       : (res.ring === 'inbull' || res.ring === 'outbull') ? C.ember : skinCol;
     if (res.score > 0 || big) {
       this.particles.scoreBurst(lx, ly, burstCol, res.score, big);
+      // Chunky "bricks" knocked off the segment — denser on the big hits.
+      this.particles.bricks(lx, ly, burstCol, big ? 16 : Math.min(14, 6 + Math.round(res.score / 8)),
+        { speed: big ? 300 : 220, size: big ? 9 : 7 });
+      // Flag the active scoreboard to pop + shed its own digital bricks.
+      cur._scorePop = 1; cur._popCol = burstCol;
     } else {
       this.particles.impact(lx, ly, skinCol);  // a miss still throws splinters
     }
@@ -408,6 +436,7 @@
       ctx.translate(-this.board.cx, -this.board.cy);
     }
     this.board.draw(ctx);
+    if (this.state === 'play') this._drawCheckoutGuide(ctx);
     for (let i = 0; i < this.stuckDarts.length; i++) {
       const d = this.stuckDarts[i];
       this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, d.ang, d.parts);
@@ -525,7 +554,7 @@
     ctx.fillStyle = C.dim; ctx.font = '11px monospace';
     ctx.fillText(d.xp + ' / ' + d.xpToNext + ' XP', VIEW_W / 2, 652);
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText('Drag from the board to aim · release to throw · the reticle shows where it lands', VIEW_W / 2, 686);
+    ctx.fillText('Drag to aim, then SWIPE-RELEASE to throw — flick speed sets power & curl. The checkout guide lights up your finish.', VIEW_W / 2, 686);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -544,7 +573,7 @@
       ctx.beginPath(); ctx.arc(VIEW_W / 2 - 26 + i * 26, VIEW_H - 22, 6, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText((cur.isAI ? cur.name + ' is throwing…' : 'YOUR THROW'), VIEW_W / 2, VIEW_H - 40);
+    ctx.fillText((cur.isAI ? cur.name + ' is throwing…' : 'DRAG TO AIM · FLICK TO THROW'), VIEW_W / 2, VIEW_H - 40);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -598,14 +627,23 @@
       ctx.closePath(); ctx.fill();
     }
 
-    // Big primary readout (remaining / points), big and unmissable.
-    ctx.textAlign = side === 'left' ? 'right' : 'left';
-    const bx = side === 'left' ? x + W - 16 : x + 16;
-    ctx.fillStyle = active ? col : C.text;
-    if (active) { ctx.shadowColor = col; ctx.shadowBlur = 14; }
-    ctx.font = 'bold 44px "Space Grotesk", sans-serif';
-    ctx.fillText(big, bx, y + 84);
-    ctx.shadowBlur = 0;
+    // Big primary readout as a glowing seven-segment display. Each side gets
+    // its own digital tint — left BLUE, right cool GREEN — and pops + sheds
+    // little square "bricks" on every score.
+    const digCol = side === 'left' ? C.cyan : C.green;
+    const str = String(big);
+    const dh = 44;
+    const sc = 1 + (pl._scorePop || 0) * 0.14;
+    const digW = str.length * (dh * 0.56 * sc + dh * 0.16 * sc);
+    const rightX = side === 'left' ? x + W - 16 : x + 16 + digW;
+    const topY = y + 40;
+    ctx.save();
+    ctx.globalAlpha = active ? 1 : 0.72;
+    this._sevenSeg(ctx, rightX, topY, str, dh, digCol, sc);
+    ctx.restore();
+    // Remember the digit centre (HUD space) for the shed-brick spawn.
+    pl._digX = rightX - digW / 2; pl._digY = topY + dh / 2; pl._digH = dh;
+    this._drawShed(ctx, pl);
     if (sub) {
       ctx.textAlign = side === 'left' ? 'left' : 'right';
       ctx.fillStyle = C.green; ctx.font = '12px "Space Grotesk", monospace';
@@ -720,6 +758,69 @@
     return m >= 3 ? '⊗' : m === 2 ? '✕' : m === 1 ? '╱' : '·';
   };
 
+  // ---- On-board checkout guide ------------------------------------------
+  // When the human is on a finish (≤170 with a route in the darts remaining),
+  // light up exactly what to hit — the next dart brightest. Doubles as a
+  // built-in training aid, and is unmissable on the final dart of a checkout.
+  Game.prototype._drawCheckoutGuide = function (ctx) {
+    if (!this.mode || this.mode.id !== 'x01' || !KD.Mode_X01.checkoutRoute) return;
+    const cur = this.players[this.current];
+    if (!cur || cur.isAI || this.dart.state === 'flying') return;
+    const left = this.mode.dartsPerTurn - this.dartsThisTurn;
+    const route = KD.Mode_X01.checkoutRoute(cur.scoreState.remaining, left);
+    if (!route) return;
+    const t = this.time;
+    const pts = route.map((lbl) => ({ lbl: lbl, p: this.board.targetPoint(lbl) }));
+
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // Dashed route line in throw order.
+    if (pts.length > 1) {
+      ctx.setLineDash([6, 9]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(124,255,178,0.35)';
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i++) { const q = pts[i].p; i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[i].p, isNext = i === 0;
+      const col = isNext ? '#7CFFb2' : '#c46bff';
+      const pulse = isNext ? 0.55 + 0.45 * Math.sin(t * 7) : 0.7;
+      const rad = isNext ? 21 : 15;
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = col; ctx.lineWidth = isNext ? 3 : 2;
+      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2); ctx.stroke();
+      if (isNext) {
+        const ir = rad * (0.45 + 0.25 * (1 + Math.sin(t * 7)));
+        ctx.globalAlpha = pulse * 0.6;
+        ctx.beginPath(); ctx.arc(q.x, q.y, ir, 0, Math.PI * 2); ctx.stroke();
+      }
+      // Label badge sitting just outside the marker, toward the rim.
+      const odx = q.x - this.board.cx, ody = q.y - this.board.cy;
+      const ol = Math.sqrt(odx * odx + ody * ody) || 1;
+      const bx = q.x + (odx / ol) * (rad + 16), by = q.y + (ody / ol) * (rad + 16);
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      const lbl = (pts.length > 1 ? (i + 1) + '· ' : '') + pts[i].lbl;
+      ctx.font = 'bold 14px "Space Grotesk", sans-serif';
+      const tw = ctx.measureText(lbl).width + 12;
+      ctx.fillStyle = 'rgba(5,8,16,0.82)';
+      this._roundRect(ctx, bx - tw / 2, by - 11, tw, 22, 7); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.9;
+      this._roundRect(ctx, bx - tw / 2, by - 11, tw, 22, 7); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.fillStyle = isNext ? '#eafff4' : '#f0e2ff';
+      ctx.fillText(lbl, bx, by + 1);
+    }
+    // "CHECKOUT" tag at the top of the board on the final dart of a 1-dart finish.
+    if (left === 1 && pts.length === 1) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 7);
+      ctx.fillStyle = '#7CFFb2'; ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 14;
+      ctx.font = 'bold 16px "Space Grotesk", sans-serif';
+      ctx.fillText('CHECKOUT — HIT ' + pts[0].lbl, this.board.cx, this.board.cy - this.board.Rpx - 6);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  };
+
   // ---- Overlays ----------------------------------------------------------
   Game.prototype._drawCallout = function (ctx) {
     const a = Math.min(1, this.callout.life * 1.4);
@@ -811,6 +912,89 @@
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
+  };
+
+  // ---- Digital seven-segment readout ------------------------------------
+  // Segment table a,b,c,d,e,f,g for 0-9 (a=top, b=tr, c=br, d=bottom, e=bl,
+  // f=tl, g=mid).
+  Game._SEG = {
+    '0': [1,1,1,1,1,1,0], '1': [0,1,1,0,0,0,0], '2': [1,1,0,1,1,0,1],
+    '3': [1,1,1,1,0,0,1], '4': [0,1,1,0,0,1,1], '5': [1,0,1,1,0,1,1],
+    '6': [1,0,1,1,1,1,1], '7': [1,1,1,0,0,0,0], '8': [1,1,1,1,1,1,1],
+    '9': [1,1,1,1,0,1,1],
+  };
+
+  Game.prototype._segDigit = function (ctx, x, y, w, h, on, color) {
+    const t = Math.max(2, h * 0.13);              // segment thickness
+    const m = t * 0.7;                            // inset margin
+    const x0 = x + m, x1 = x + w - m, my = y + h / 2;
+    const y0 = y + m, y1 = y + h - m;
+    const segs = [
+      [x0, y0, x1, y0],          // a top
+      [x1, y0, x1, my],          // b top-right
+      [x1, my, x1, y1],          // c bottom-right
+      [x0, y1, x1, y1],          // d bottom
+      [x0, my, x0, y1],          // e bottom-left
+      [x0, y0, x0, my],          // f top-left
+      [x0, my, x1, my],          // g mid
+    ];
+    ctx.lineWidth = t; ctx.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const lit = on[i];
+      ctx.strokeStyle = lit ? color : 'rgba(255,255,255,0.05)';
+      if (lit) { ctx.shadowColor = color; ctx.shadowBlur = h * 0.18; } else ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(segs[i][0], segs[i][1]); ctx.lineTo(segs[i][2], segs[i][3]);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  };
+
+  // Draw `str` as glowing seven-seg digits. `rightX` is the right edge for
+  // right-aligned numbers (scoreboards). Returns the left x used.
+  Game.prototype._sevenSeg = function (ctx, rightX, topY, str, h, color, popScale) {
+    const sc = popScale || 1;
+    const w = h * 0.56 * sc, hh = h * sc, gap = h * 0.16 * sc;
+    const cw = w + gap;
+    let x = rightX - str.length * cw + gap * 0.5;
+    const yy = topY - (hh - h) / 2;               // keep baseline as the number grows
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      const on = Game._SEG[ch] || [0,0,0,0,0,0,0];
+      this._segDigit(ctx, x, yy, w, hh, on, color);
+      x += cw;
+    }
+    return rightX - str.length * cw;
+  };
+
+  // Spawn the "squares coming off" the digital readout when it ticks.
+  Game.prototype._shedDigits = function (pl) {
+    const n = 10, col = pl._popCol || '#39e6ff';
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 180;
+      pl._shed.push({
+        x: pl._digX + (Math.random() * 2 - 1) * pl._digH * 1.2,
+        y: pl._digY + (Math.random() * 2 - 1) * pl._digH * 0.5,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80,
+        life: 0.45 + Math.random() * 0.4, rot: Math.random() * 6.28,
+        spin: (Math.random() * 2 - 1) * 12, size: 4 + Math.random() * 6, col: col,
+      });
+    }
+  };
+
+  Game.prototype._drawShed = function (ctx, pl) {
+    const sh = pl._shed; if (!sh || !sh.length) return;
+    ctx.save();
+    for (let i = 0; i < sh.length; i++) {
+      const b = sh[i];
+      ctx.globalAlpha = Math.max(0, Math.min(1, b.life * 2));
+      ctx.fillStyle = b.col; ctx.shadowColor = b.col; ctx.shadowBlur = 8;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot);
+      ctx.fillRect(-b.size / 2, -b.size / 2, b.size, b.size);
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
   };
 
   // ====================================================================
