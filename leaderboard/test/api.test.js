@@ -95,6 +95,40 @@ test('demo: submit -> leaderboard -> me -> ranking', async () => {
   assert.equal(me.body.record.bestCheckout, 150); // improved
 });
 
+test('riff: score metrics validate + rank by score', async () => {
+  // Validation: unknown dropped, accuracy clamped to 0..100, strings coerced.
+  const m = sanitizeMetrics('riff', { score: 123456, bestCombo: 240, accuracy: '97', junk: 1 });
+  assert.equal(m.score, 123456);
+  assert.equal(m.bestCombo, 240);
+  assert.equal(m.accuracy, 97);
+  assert.equal(m.junk, undefined);
+  assert.equal(sanitizeMetrics('riff', { accuracy: 250 }).accuracy, 100);
+
+  const store = memStore();
+  await runApi(store, {}, {
+    method: 'POST', path: '/api/scores', query: new URLSearchParams(),
+    headers: demoHeaders('nova', 'Nova'),
+    body: { game: 'riff', metrics: { score: 50000, bestCombo: 120, accuracy: 88 } },
+  });
+  const r = await runApi(store, {}, {
+    method: 'POST', path: '/api/scores', query: new URLSearchParams(),
+    headers: demoHeaders('echo', 'Echo'),
+    body: { game: 'riff', metrics: { score: 161545, bestCombo: 177, accuracy: 99 } },
+  });
+  assert.equal(r.body.ranks.score, 1);                 // Echo tops the board
+
+  const lb = await runApi(store, {}, {
+    method: 'GET', path: '/api/leaderboard',
+    query: new URLSearchParams({ game: 'riff' }),       // primary metric defaults to score
+    headers: demoHeaders('nova', 'Nova'),
+  });
+  assert.equal(lb.body.metric, 'score');
+  assert.equal(lb.body.entries[0].name, 'Echo');
+  assert.equal(lb.body.entries[0].value, 161545);
+  assert.equal(lb.body.entries[1].name, 'Nova');
+  assert.equal(lb.body.entries[1].you, true);
+});
+
 test('auth required without identity', async () => {
   const store = memStore();
   const r = await runApi(store, {}, {

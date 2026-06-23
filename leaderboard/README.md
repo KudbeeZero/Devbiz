@@ -73,10 +73,25 @@ no test was backfilled to inflate a number, and there is no fake "80%" claim.
 
 ## Metrics
 
-Defined once in `shared/core.js` (`GAMES.darts`): **rating, bestCheckout,
-total180s, wins, bestStreak**. The server keeps each player's *best-ever* value
-and clamps inputs to sane bounds (e.g. checkout ≤ 170). Add a metric there +
-a column in `schema.sql` to extend. Add another game by adding a `GAMES` entry.
+Defined once in `shared/core.js`. Per game:
+- **`GAMES.darts`** — rating, bestCheckout, total180s, wins, bestStreak.
+- **`GAMES.riff`** — score (primary), bestCombo, accuracy.
+
+The server keeps each player's *best-ever* value and clamps inputs to sane
+bounds (e.g. checkout ≤ 170, accuracy ≤ 100). Add a metric there + a column in
+`schema.sql` to extend. Add another game by adding a `GAMES` entry.
+
+**Kudbee Riff is wired in** (`games/kudbee-riff/` posts on the results screen and
+shows a Top-10). To make Riff scores record online:
+1. Deploy the Worker (see *Deploy to Cloudflare* below) and apply `schema.sql`.
+   On an **already-deployed** D1, also run the one-time migration at the bottom
+   of `schema.sql` (three `ALTER TABLE … ADD COLUMN` lines for score/bestCombo/
+   accuracy), then the new indexes.
+2. Point the game at the API: in `games/kudbee-riff/index.html` set
+   `KD_LB_CONFIG.API_BASE` to your Worker URL (e.g.
+   `https://kudbee-leaderboard.<acct>.workers.dev`) **or** route `/api` on the
+   studio origin to the Worker (then `API_BASE: ''` works same-origin).
+Until then the game degrades gracefully — local best only, posts fail quietly.
 
 `rating` mirrors the in-game formula so the page and the game agree:
 `1180 + level*38 + ladderRank*150 + bestStreak*22 + wins*6`.
