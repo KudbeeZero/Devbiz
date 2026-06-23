@@ -77,6 +77,41 @@
   .rstat b { display: block; font-family: "Space Grotesk"; font-size: 24px; color: #fff; }
   .rstat span { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7a8398; }
   .loaderr { color: #ffb4b4; font-size: 13px; margin-top: 14px; }
+  .rbest { margin: 2px 0 4px; font-size: 13px; color: #9aa3b8; }
+  .rbest b { color: #cfe9ff; font-family: "Space Grotesk"; font-weight: 700; }
+  .newbest { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    color: #04040c; background: var(--amber); padding: 2px 8px; border-radius: 999px; vertical-align: middle;
+    box-shadow: 0 0 18px -2px var(--amber); animation: nbpop 0.5s ease; }
+  @keyframes nbpop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* Desktop hub side rails */
+  .side { position: absolute; top: 50%; transform: translateY(-50%); width: 246px; z-index: 5;
+    display: none; flex-direction: column; gap: 14px; }
+  .side.left { left: 26px; } .side.right { right: 26px; }
+  .panel { background: linear-gradient(180deg, rgba(14,16,34,0.72), rgba(7,8,18,0.72));
+    border: 1px solid rgba(120,150,220,0.16); border-radius: 14px; padding: 16px 16px 14px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 18px 50px -24px rgba(0,0,0,0.8); }
+  .panel.live { border-color: rgba(57,230,255,0.22); }
+  .phead { font-family: "Space Grotesk"; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #9fb6c8; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .dot.v { background: var(--violet); box-shadow: 0 0 10px var(--violet); }
+  .dot.g { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .live-dot { background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .srow { display: flex; align-items: baseline; justify-content: space-between; padding: 5px 0;
+    font-size: 12.5px; color: #8a93a8; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .srow:last-child { border-bottom: none; }
+  .srow b { font-family: "Space Grotesk"; font-weight: 700; color: #eaf3ff; font-size: 14px; }
+  .srow.big b { font-size: 22px; background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .howto { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .howto li { font-size: 12.5px; color: #9aa3b8; line-height: 1.35; padding-left: 14px; position: relative; }
+  .howto li::before { content: "▸"; position: absolute; left: 0; color: var(--cyan); }
+  .howto b { color: #cfe9ff; }
+  .np-title { font-family: "Space Grotesk"; font-weight: 700; color: #fff; font-size: 15px; }
+  .np-sub { font-size: 11.5px; color: #7a8398; margin-top: 3px; line-height: 1.4; }
+  .credit { margin-top: 12px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #5a6276; }
+  @media (min-width: 1200px) and (min-height: 540px) { .side { display: flex; } }
 
   .hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10;
     font-size: 11px; color: #45586a; letter-spacing: 0.05em; pointer-events: none; }
@@ -85,6 +120,44 @@
 </head>
 <body>
 <div id="stage">
+  <!-- Desktop hub rails: career stats (left) + how-to / now-playing (right).
+       Hidden on narrow screens so the game owns the whole viewport on mobile. -->
+  <aside class="side left" aria-hidden="true">
+    <div class="panel">
+      <div class="phead"><span class="dot"></span> Career</div>
+      <div class="srow big"><span>Best score</span><b id="sBestScore">0</b></div>
+      <div class="srow"><span>Best streak</span><b id="sBestCombo">0</b></div>
+      <div class="srow"><span>Best accuracy</span><b id="sBestAcc">0%</b></div>
+      <div class="srow"><span>Plays</span><b id="sPlays">0</b></div>
+      <div class="srow"><span>Overdrives</span><b id="sOverdrives">0</b></div>
+      <div class="srow"><span>Slams</span><b id="sSlams">0</b></div>
+    </div>
+    <div class="panel live">
+      <div class="phead"><span class="dot live-dot"></span> This run</div>
+      <div class="srow big"><span>Score</span><b id="sRunScore">—</b></div>
+      <div class="srow"><span>Streak</span><b id="sRunCombo">—</b></div>
+    </div>
+  </aside>
+  <aside class="side right" aria-hidden="true">
+    <div class="panel">
+      <div class="phead"><span class="dot v"></span> How to play</div>
+      <ul class="howto">
+        <li><b>D F J K</b> strike the four lanes (or tap)</li>
+        <li>Land them <b>on the beat</b> for PERFECT</li>
+        <li><b style="color:#ffd34d">Gold</b> notes charge your meter fast</li>
+        <li><b>OVERDRIVE auto-fires</b> at full — ×2 score</li>
+        <li>Two-note <b>chords together = SLAM</b></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="phead"><span class="dot g"></span> Now playing</div>
+      <div class="np">
+        <div class="np-title">Kudbee — Studio Track</div>
+        <div class="np-sub">Neon Fret Rush · chart built from the live beat analysis</div>
+      </div>
+      <div class="credit">Kudbee Games Studio</div>
+    </div>
+  </aside>
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <canvas id="game"></canvas>
@@ -94,11 +167,11 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Rhythm</div>
         <h1>Kudbee <span class="gradient-text">Riff</span></h1>
-        <p>Notes fall to the <b>real beats</b> of the studio track. Hit each one as it crosses the strike line. Build a streak to climb the heat tiers, catch the <b style="color:#ffd34d">gold</b> notes to charge your meter, then <b>ignite OVERDRIVE</b> for double points.</p>
+        <p>Notes fall to the <b>real beats</b> of the studio track. Hit each one as it crosses the strike line. Build a streak to climb the heat tiers, catch the <b style="color:#ffd34d">gold</b> notes to charge your meter — <b>OVERDRIVE auto-fires when it's full</b> (or pop it early). Hit two-note chords together for a <b>SLAM</b>.</p>
         <div class="keycaps" id="gateKeys"></div>
-        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; <b>Space</b> overdrive &nbsp;·&nbsp; tap lanes / heat bar on touch &nbsp;·&nbsp; <b>chords together = SLAM</b></p>
+        <p style="font-size:12px;margin-top:4px">Keys <b>D F J K</b> &nbsp;·&nbsp; <b>Space</b> overdrive &nbsp;·&nbsp; tap lanes / heat bar on touch</p>
         <button class="btn" id="startBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Start the song</button>
-        <div class="ov-foot">Headphones recommended · ~4:14 · <span id="noteCount">…</span> notes</div>
+        <div class="ov-foot">Headphones recommended · ~4:14 · <span id="noteCount">…</span> notes · best <b id="gBest" style="color:#cfe9ff">0</b> over <span id="gPlays">0</span> plays</div>
         <div class="loaderr" id="loadErr" hidden></div>
       </div>
     </div>
@@ -119,6 +192,7 @@
       <div class="ov-inner">
         <div class="kicker" id="rRank">Set complete</div>
         <h1 class="gradient-text" id="rScore">0</h1>
+        <div class="rbest">Personal best <b id="rBest">0</b> <span id="rNewBest" class="newbest" style="display:none">★ NEW BEST</span></div>
         <div class="results-grid">
           <div class="rstat"><b id="rAcc">0%</b><span>Accuracy</span></div>
           <div class="rstat"><b id="rCombo">0</b><span>Max streak</span></div>
@@ -210,6 +284,17 @@
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buildStars();
+  }
+  // Parallax star layer, regenerated for the current canvas size.
+  function buildStars() {
+    stars.length = 0;
+    var n = Math.min(reduceMotion ? 60 : 150, Math.round(W * H / 5000));
+    for (var i = 0; i < n; i++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H * 0.94,
+        r: 0.4 + Math.random() * 1.5, tw: Math.random() * TAU,
+        sp: 0.5 + Math.random() * 2.0, dpt: Math.random() });
+    }
   }
   window.addEventListener('resize', resize);
 
@@ -299,6 +384,23 @@
   var displayScore = 0;             // animated score that rolls toward `score`
   var scorePulse = 0;               // score-readout pop 1..0
   var emberCD = 0;                  // ember-spawn cooldown
+  var frameCount = 0;               // for throttled side-panel updates
+
+  // ---- Ambient sky: parallax starfield + shooting stars ----
+  var stars = [];                   // built on resize
+  var METMAX = reduceMotion ? 3 : 8, MET = new Array(METMAX);
+  for (var mei = 0; mei < METMAX; mei++) MET[mei] = { life: 0, maxLife: 1 };
+  var metHead = 0, meteorCD = 2.0;
+
+  // ---- Persistent career stats (localStorage) ----
+  var STORE_KEY = 'kudbee.riff.career.v1';
+  function loadCareer() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } }
+  function saveCareer() { try { localStorage.setItem(STORE_KEY, JSON.stringify(career)); } catch (e) {} }
+  var career = loadCareer();
+  career.plays = career.plays || 0; career.bestScore = career.bestScore || 0;
+  career.bestCombo = career.bestCombo || 0; career.bestAcc = career.bestAcc || 0;
+  career.overdrives = career.overdrives || 0; career.slams = career.slams || 0;
+  career.perfect = career.perfect || 0;
 
   function resetGame() {
     score = 0; combo = 0; maxCombo = 0; mult = 1;
@@ -486,10 +588,10 @@
   }
 
   // Ignite overdrive: doubles the multiplier, goes white-hot, drains the meter.
-  function ignite() {
+  function ignite(auto) {
     if (state !== 'playing' || overdrive || heat < OD_READY) return;
     overdrive = true; odFlash = 1; nOverdrives++;
-    fireCallout('OVERDRIVE', 'MULTIPLIER x2', [255,243,196]);
+    fireCallout('OVERDRIVE', (auto ? 'AUTO · ' : '') + 'MULTIPLIER x2', [255,243,196]);
     shake = Math.max(shake, 1.0);
     var g = geom();
     for (var l = 0; l < LANES; l++) burst(laneX(g, l, 1), g.hitY, [255,230,150], 14);
@@ -579,6 +681,18 @@
     document.getElementById('rCharged').textContent = nCharged;
     var rank = acc >= 95 ? 'S · Virtuoso' : acc >= 85 ? 'A · Headliner' : acc >= 70 ? 'B · In the pocket' : acc >= 50 ? 'C · Warming up' : 'D · Keep at it';
     document.getElementById('rRank').textContent = 'Set complete · ' + rank + (nSlam ? ' · ' + nSlam + ' slams' : '');
+
+    // Roll the run into the persistent career record + flag a new best.
+    var isBest = score > career.bestScore;
+    career.plays++;
+    career.bestScore = Math.max(career.bestScore, score);
+    career.bestCombo = Math.max(career.bestCombo, maxCombo);
+    career.bestAcc = Math.max(career.bestAcc, acc);
+    career.overdrives += nOverdrives; career.slams += nSlam; career.perfect += nPerfect;
+    saveCareer();
+    setText('rBest', career.bestScore.toLocaleString());
+    var nb = document.getElementById('rNewBest'); if (nb) nb.style.display = isBest ? 'inline-block' : 'none';
+    renderPanels();
     showOverlay('results');
   }
   audio.addEventListener('ended', function () { if (state === 'playing') finish(); });
@@ -605,6 +719,8 @@
       mult = multFor(combo);
       // Overdrive burns the meter as fuel; empties → ends.
       if (overdrive) { heat -= OD_DRAIN * dt; if (heat <= 0) { heat = 0; overdrive = false; } }
+      // Auto-fire: a full meter ignites itself — no button needed.
+      if (!overdrive && heat >= 1) ignite(true);
       if (t >= songDur - 0.05 || (audio.ended)) { finish(); }
     }
     for (var l = 0; l < LANES; l++) { laneFlash[l] *= Math.pow(0.0009, dt); if (laneHeld[l]) laneFlash[l] = Math.max(laneFlash[l], 0.55); }
@@ -630,8 +746,68 @@
       }
     }
 
+    // Shooting stars — ambient on every screen, denser the hotter you are.
+    meteorCD -= dt;
+    if (meteorCD <= 0) {
+      var rate = overdrive ? 3.0 : 1 + Math.max(0, heatTier) * 0.5;
+      meteorCD = (1.5 + Math.random() * 2.4) / rate;
+      if (METMAX > 0) spawnMeteor();
+    }
+    for (var mu = 0; mu < METMAX; mu++) {
+      var me = MET[mu]; if (me.life <= 0) continue;
+      me.x += me.vx * dt; me.y += me.vy * dt; me.life -= dt;
+    }
+
+    // Throttled live feed for the side panels (desktop hub).
+    if (state === 'playing' && (frameCount++ & 7) === 0) {
+      setText('sRunScore', Math.round(displayScore).toLocaleString());
+      setText('sRunCombo', combo > 0 ? combo + '  ·  x' + effMult() : '—');
+    }
+
     draw(now, t);
     if (state === 'paused' || state === 'results' || state === 'gate') { if (state !== 'gate') stop(); }
+  }
+
+  // A shooting star streaks across the sky; colour + frequency follow the heat.
+  function spawnMeteor() {
+    var m = MET[metHead]; metHead = (metHead + 1) % METMAX;
+    var fromLeft = Math.random() < 0.5;
+    m.x = fromLeft ? -50 : W + 50;
+    m.y = Math.random() * H * 0.55;
+    var sp = 360 + Math.random() * 460;
+    var ang = (fromLeft ? 0.42 : Math.PI - 0.42) + (Math.random() - 0.5) * 0.28;
+    m.vx = Math.cos(ang) * sp; m.vy = Math.abs(Math.sin(ang)) * sp * 0.7 + 70;
+    m.len = 70 + Math.random() * 150;
+    m.maxLife = m.life = 1.1 + Math.random() * 0.7;
+    m.col = overdrive ? [255,230,170]
+      : (heatTier >= 0 ? HEAT_TIERS[Math.min(heatTier, HEAT_TIERS.length - 1)].col : [180,210,255]);
+  }
+
+  function drawStarfield(now) {
+    // twinkling parallax stars
+    var sc = overdrive ? '255,235,200' : '200,220,255';
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var a = (0.22 + 0.5 * (0.5 + 0.5 * Math.sin(now * 0.001 * s.sp + s.tw))) * (0.5 + s.dpt * 0.5);
+      ctx.fillStyle = 'rgba(' + sc + ',' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
+    }
+    // shooting stars (additive glow)
+    ctx.globalCompositeOperation = 'lighter';
+    for (var m = 0; m < METMAX; m++) {
+      var mm = MET[m]; if (mm.life <= 0) continue;
+      var k = Math.max(0, mm.life / mm.maxLife);
+      var ul = Math.sqrt(mm.vx * mm.vx + mm.vy * mm.vy) || 1;
+      var tx = mm.x - mm.vx / ul * mm.len, ty = mm.y - mm.vy / ul * mm.len;
+      var grd = ctx.createLinearGradient(mm.x, mm.y, tx, ty);
+      grd.addColorStop(0, 'rgba(' + mm.col[0] + ',' + mm.col[1] + ',' + mm.col[2] + ',' + (0.9 * k).toFixed(3) + ')');
+      grd.addColorStop(1, 'rgba(' + mm.col[0] + ',' + mm.col[1] + ',' + mm.col[2] + ',0)');
+      ctx.strokeStyle = grd; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mm.x, mm.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * k).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(mm.x, mm.y, 1.9, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   var g; // reused geometry
@@ -640,6 +816,7 @@
     // backdrop — warms up as the highway heats / ignites (drawn unshaken and
     // full-frame; the shake transform below moves only the playfield over it)
     ctx.fillStyle = '#04040c'; ctx.fillRect(0, 0, W, H);
+    drawStarfield(now);
     var bg = ctx.createRadialGradient(g.cx, g.hitY, 0, g.cx, g.hitY, Math.max(W, H) * 0.8);
     if (overdrive) { bg.addColorStop(0, 'rgba(255,150,60,0.20)'); bg.addColorStop(1, 'rgba(4,4,12,0)'); }
     else if (heatTier >= 0) {
@@ -909,7 +1086,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     if (overdrive) { ctx.fillStyle = '#fff3c4'; ctx.fillText('OVERDRIVE', 0, 0); }
-    else if (ready) { ctx.fillStyle = 'rgba(255,221,120,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; ctx.fillText(isCoarse ? 'TAP' : 'SPACE', 0, 0); }
+    else if (ready) { ctx.fillStyle = 'rgba(255,221,120,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; ctx.fillText((isCoarse ? 'TAP' : 'SPACE') + ' / AUTO', 0, 0); }
     else { ctx.fillStyle = '#6a7488'; ctx.fillText('HEAT', 0, 0); }
     ctx.restore();
   }
@@ -989,6 +1166,19 @@
     ctx.fillStyle = pgrad; ctx.fillRect(0, by, W * prog, 4);
   }
 
+  // ---- Career panels (gate foot + desktop side rails) ----
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  function renderPanels() {
+    setText('sBestScore', career.bestScore.toLocaleString());
+    setText('sBestCombo', career.bestCombo);
+    setText('sBestAcc', career.bestAcc + '%');
+    setText('sPlays', career.plays);
+    setText('sOverdrives', career.overdrives);
+    setText('sSlams', career.slams);
+    setText('gBest', career.bestScore.toLocaleString());
+    setText('gPlays', career.plays);
+  }
+
   // ---- Idle frame for the gate (so the stage isn't black behind the overlay) ----
   function idleFrame() { resize(); g = geom(); draw(performance.now(), 0); }
 
@@ -1004,7 +1194,9 @@
   })();
 
   resize();
+  renderPanels();
   idleFrame();
+  kick();   // run the loop on the gate too, so the ambient sky animates behind it
   window.addEventListener('resize', function () { if (state === 'gate' || state === 'paused' || state === 'results') idleFrame(); });
 
   fetch('./assets/analysis.json')
