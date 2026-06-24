@@ -213,6 +213,31 @@
       r: 32, hp: 2, alive: true, fireT: rand(0.8, 1.8), phase: Math.random() * TAU, col: '#ff7a5d' };
   }
   function spawnEnemy() { enemies.push(makeEnemy()); }
+
+  // ===== boss: a capital ship that holds at engage range, weaves, and unloads volleys =====
+  function spawnBoss() {
+    boss = { x: 0, y: -40, z: FAR, r: 150, hp: 34 + Math.floor(dist / 700) + wave * 8, maxHp: 1, fireT: 1.8, phase: 0, hitFlash: 0, alive: true };
+    boss.maxHp = boss.hp;
+    callout('CAPITAL SHIP', 'blast the core', '#ff5d3c'); shake = Math.min(shake + 0.6, 1.7);
+  }
+  function bossVolley() {
+    var sp = project(boss.x, boss.y, boss.z);
+    var n = 3 + Math.min(3, Math.floor(dist / 2500));
+    for (var i = 0; i < n; i++) ebullets.push({ x: boss.x + (i - (n - 1) / 2) * 46, y: boss.y + 40, z: boss.z, life: 1 });
+    burst(sp.sx, sp.sy, '#ff9a7a', 6, 200);
+  }
+  function hitBoss() {
+    boss.hp--; boss.hitFlash = 0.12; score += 20;
+    var sp = project(boss.x, boss.y, boss.z); burst(sp.sx, sp.sy, '#ffb07a', 6, 220);
+    if (boss.hp <= 0) bossDefeated();
+  }
+  function bossDefeated() {
+    var sp = project(boss.x, boss.y, boss.z);
+    for (var i = 0; i < 7; i++) burst(sp.sx + rand(-70, 70), sp.sy + rand(-70, 70), ['#ff5d3c', '#ffd34d', '#fff'][i % 3], 24, 560);
+    score += 6000; shake = Math.min(shake + 1.7, 1.9); combo = 0;
+    flash(6000, sp.sx, sp.sy); callout('CAPITAL SHIP DOWN', '+6,000', '#ffd34d');
+    wave++; nextBossDist = dist + 1600 + wave * 400; boss = null;
+  }
   function enemyFire(en) {
     ebullets.push({ x: en.x, y: en.y, z: en.z, life: 1 });   // travels toward the player plane, mildly homing
     burst(project(en.x, en.y, en.z).sx, project(en.x, en.y, en.z).sy, '#ff9a7a', 4, 160);
@@ -246,6 +271,7 @@
   // ===== game state =====
   var state = 'gate';
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0;
+  var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
   var keys = {};
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
@@ -254,6 +280,7 @@
 
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0;
+    boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -308,9 +335,21 @@
       }
     }
 
-    // enemy fighters approach + weave + fire
+    // boss encounter: warn at a depth milestone, then a capital ship descends to engage
+    if (!boss) {
+      if (bossPending) { bossWarn -= dt; if (bossWarn <= 0) { bossPending = false; spawnBoss(); } }
+      else if (dist >= nextBossDist) { bossPending = true; bossWarn = 2.2; callout('⚠ WARNING', 'capital ship inbound', '#ff5d3c'); shake = Math.min(shake + 0.4, 1.4); }
+    } else {
+      boss.z += (460 - boss.z) * Math.min(1, dt * 0.9);        // descend to engage range and hold
+      boss.phase += dt * 0.7;
+      boss.x = Math.cos(boss.phase) * 210; boss.y = -40 + Math.sin(boss.phase * 0.85) * 80;
+      if (boss.hitFlash > 0) boss.hitFlash -= dt;
+      boss.fireT -= dt; if (boss.fireT <= 0 && boss.z < 700) { boss.fireT = Math.max(0.85, 1.6 - wave * 0.15); bossVolley(); }
+    }
+
+    // enemy fighters approach + weave + fire (paused during a boss fight)
     enemyT -= dt;
-    if (dist > 220 && enemyT <= 0) { enemyT = Math.max(1.5, 3.6 - dist * 0.0009); spawnEnemy(); }
+    if (dist > 220 && enemyT <= 0 && !boss) { enemyT = Math.max(1.5, 3.6 - dist * 0.0009); spawnEnemy(); }
     for (var ei = enemies.length - 1; ei >= 0; ei--) {
       var en = enemies[ei]; en.z -= (speed * 0.55) * dt; en.phase += dt * 2;
       var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
@@ -353,6 +392,10 @@
           if (e1 * e1 + e2 * e2 < ter * ter) { hitEnemy(te); consumed = true; }
         }
       }
+      if (!consumed && boss && boss.alive && Math.abs(boss.z - bu.z) < 150) {
+        var bbx = boss.x - bu.x, bby = boss.y - bu.y, bbr = boss.r * 0.8 + 18;
+        if (bbx * bbx + bby * bby < bbr * bbr) { hitBoss(); consumed = true; }
+      }
       if (consumed) bullets.splice(b, 1);
     }
 
@@ -384,6 +427,9 @@
   // little floating score popups
   var pops = [];
   function flash(n, x, y) { pops.push({ n: n, x: x, y: y, life: 1 }); if (pops.length > 24) pops.shift(); }
+  // centered callout banner (boss warnings / big events)
+  var co = { life: 0, text: '', sub: '', col: '#ffd34d' };
+  function callout(t, s, c) { co.text = t; co.sub = s || ''; co.col = c || '#ffd34d'; co.life = 1.9; }
 
   function gameOver() {
     state = 'over';
@@ -412,6 +458,7 @@
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     if (state === 'play') { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
     for (var i = 0; i < pops.length; i++) pops[i].life -= dt * 0.9;
+    if (co.life > 0) co.life -= dt;
     while (pops.length && pops[0].life <= 0) pops.shift();
     draw(now);
   }
@@ -431,6 +478,7 @@
 
     drawStars();
     drawRocks();
+    drawBoss();
     drawEnemies();
     drawBullets();
     drawEbullets();
@@ -441,6 +489,17 @@
 
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
+    drawCallout(now);
+  }
+  function drawCallout(now) {
+    if (co.life <= 0) return;
+    var a = clamp(co.life / 1.9, 0, 1), yy = H * 0.30 - (1 - a) * 26;
+    ctx.globalAlpha = a; ctx.textAlign = 'center';
+    ctx.fillStyle = co.col; ctx.shadowColor = co.col; ctx.shadowBlur = reduceMotion ? 0 : 22;
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.066) + 'px "Space Grotesk", sans-serif'; ctx.fillText(co.text, W / 2, yy);
+    ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.026) + 'px Inter, sans-serif';
+    ctx.fillText(co.sub, W / 2, yy + Math.round(Math.min(W, H) * 0.06));
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
   }
 
   function drawStars() {
@@ -497,6 +556,37 @@
     }
   }
 
+  function drawBoss() {
+    if (!boss) return;
+    var p = project(boss.x, boss.y, boss.z), R = Math.min(MINSCALE, boss.r * p.sc);
+    if (R < 2) return;
+    ctx.save(); ctx.translate(p.sx, p.sy);
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.6);
+    g.addColorStop(0, 'rgba(255,93,60,' + (0.16 + Math.min(0.6, boss.hitFlash * 3)).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,93,60,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.6, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // wide angular dreadnought hull
+    ctx.beginPath();
+    ctx.moveTo(-R, -R * 0.2); ctx.lineTo(-R * 0.5, -R * 0.58); ctx.lineTo(R * 0.5, -R * 0.58); ctx.lineTo(R, -R * 0.2);
+    ctx.lineTo(R * 0.62, R * 0.46); ctx.lineTo(-R * 0.62, R * 0.46); ctx.closePath();
+    ctx.fillStyle = boss.hitFlash > 0 ? '#5a2a26' : 'rgba(24,15,19,0.96)'; ctx.fill();
+    ctx.lineWidth = Math.max(2, R * 0.035); ctx.strokeStyle = '#ff7a5d'; ctx.stroke();
+    // armor ribs
+    ctx.strokeStyle = 'rgba(255,122,93,0.4)'; ctx.lineWidth = Math.max(1, R * 0.02);
+    for (var rib = -2; rib <= 2; rib++) { ctx.beginPath(); ctx.moveTo(rib * R * 0.3, -R * 0.5); ctx.lineTo(rib * R * 0.34, R * 0.4); ctx.stroke(); }
+    // cannon pods
+    ctx.fillStyle = 'rgba(40,22,26,0.96)';
+    ctx.fillRect(-R * 0.98, -R * 0.16, R * 0.3, R * 0.42); ctx.fillRect(R * 0.68, -R * 0.16, R * 0.3, R * 0.42);
+    // glowing core (the weak point)
+    ctx.globalCompositeOperation = 'lighter';
+    var cpulse = 0.6 + 0.4 * Math.sin(performance.now() / 170);
+    var cg = ctx.createRadialGradient(0, -R * 0.04, 0, 0, -R * 0.04, R * 0.42);
+    cg.addColorStop(0, 'rgba(255,214,96,' + cpulse.toFixed(2) + ')'); cg.addColorStop(0.55, 'rgba(255,120,60,0.5)'); cg.addColorStop(1, 'rgba(255,93,60,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.04, R * 0.42, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
   function drawEnemies() {
     var order = enemies.slice().sort(function (a, b) { return b.z - a.z; });
     for (var i = 0; i < order.length; i++) {
@@ -651,6 +741,15 @@
     ctx.fillText(Math.round(dist).toLocaleString() + ' km', W - pad, pad);
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
     ctx.fillText('DEPTH', W - pad, pad + Math.round(Math.min(W, H) * 0.034));
+    // boss health bar (top-center)
+    if (boss && boss.alive) {
+      var bw = Math.min(W * 0.6, 360), bbx = (W - bw) / 2, bby = pad + Math.round(Math.min(W, H) * 0.018);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bbx, bby, bw, 8);
+      ctx.fillStyle = '#ff5d3c'; ctx.fillRect(bbx, bby, bw * Math.max(0, boss.hp / boss.maxHp), 8);
+      ctx.fillStyle = '#ff9a7a'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px Inter, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText('⚠ CAPITAL SHIP', W / 2, bby - 4);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    }
     // shields (hearts as chevrons), bottom-left
     var sR = Math.max(7, Math.min(W, H) * 0.016), sy = H - pad, gapx = sR * 3;
     for (var i = 0; i < 3; i++) {
@@ -746,6 +845,8 @@
     rocks: function () { return rocks; }, bullets: function () { return bullets; },
     enemies: function () { return enemies; }, ebullets: function () { return ebullets; },
     ship: function () { return { camX: camX, camY: camY }; },
+    get bossActive() { return !!boss; }, get bossHp() { return boss ? boss.hp : 0; }, get wave() { return wave; },
+    forceBoss: function () { bossPending = false; bossWarn = 0; nextBossDist = dist; spawnBoss(); boss.z = 480; },
     get introDone() { return introDone; }, get introStarted() { return introStarted; }, triggerIntro: function () { runIntro(); }, endIntro: function () { endIntro(); },
     start: start, fire: fire, update: function (dt) { update(dt); },
     setKey: function (name, on) { keys[name] = on; },
