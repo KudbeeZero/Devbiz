@@ -57,8 +57,8 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge into the <b>lit lane</b> for a Skill Shot, keep the ball alive, and rack up a score.</p>
-        <div class="badge">Skill-shot plunger</div>
+        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip the center <b>loop</b> — every combo climbs your <b>multiplier</b>.</p>
+        <div class="badge">Skill shot · ramps · multiball-ready</div>
         <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — meter shows which lane) · on touch, tap the left/right half</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <div class="ov-foot">Desktop &amp; mobile · physics sandbox — table art &amp; modes come next</div>
@@ -149,8 +149,13 @@
   // ===== table geometry =====
   // segments: {ax,ay,bx,by,r,rest,fric,kick} (kick = extra normal impulse for slings)
   // circles : {x,y,r,rest,kick,kind,flash} (bumpers/posts)
-  var segs = [], bumpers = [];
+  var segs = [], bumpers = [], targets = [], rollovers = [], lamps = [];
+  var ramp = null;                           // center loop-ramp trigger
   function seg(ax, ay, bx, by, o) { o = o || {}; segs.push({ ax: ax, ay: ay, bx: bx, by: by, r: o.r || 0, rest: o.rest == null ? WALL_REST : o.rest, fric: o.fric == null ? WALL_FRIC : o.fric, kick: o.kick || 0, sling: o.sling || false }); }
+  // standup / drop targets (circle colliders that score + light up). grp groups them into a bank.
+  function target(x, y, kind, color, grp) { targets.push({ x: x, y: y, r: 17, rest: 0.55, kind: kind, color: color, grp: grp, down: false, lit: false, flash: 0 }); }
+  // rollover lights (no collision; lit when the ball passes over). Completing the set bumps the multiplier.
+  function rollover(x, y, label, color) { rollovers.push({ x: x, y: y, r: 30, label: label, color: color, lit: false, flash: 0 }); }
 
   // Flippers (rotating capsules). side: -1 left, +1 right.
   function Flipper(px, py, length, side, restA, upA) {
@@ -169,7 +174,7 @@
   var flipL, flipR;
 
   function buildTable() {
-    segs.length = 0; bumpers.length = 0;
+    segs.length = 0; bumpers.length = 0; targets.length = 0; rollovers.length = 0; lamps.length = 0;
     var L = 60, T = 110, LIN = 800, CAB = 862;             // left, top, lane-inner (= playfield right), cabinet-right
     // outer cabinet
     seg(L, T, L, 1180);                                     // left wall
@@ -196,6 +201,43 @@
     // a couple of round posts to bank off
     bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
     bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
+    //      Light a side's pair for a multiplier step. ----
+    target(210, 640, 'standup', '#39e6ff', 'L');
+    target(190, 860, 'standup', '#7CFFb2', 'L');
+    target(690, 640, 'standup', '#ffd34d', 'R');
+    target(710, 860, 'standup', '#c46bff', 'R');
+
+    // ---- round posts to bank off + fill the mid-field (circles never wedge) ----
+    bumpers.push({ x: 250, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0 });
+    bumpers.push({ x: 650, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0 });
+    bumpers.push({ x: 320, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    bumpers.push({ x: 580, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+
+    // ---- drop-target bank: clear all four for BANK BONUS + a multiplier step ----
+    var dropY = 690;
+    target(372, dropY, 'drop', '#ff8a3c', 'D');            // bank offset from center so a lane-B drop can't sit on the gap
+    target(428, dropY, 'drop', '#ffd34d', 'D');
+    target(484, dropY, 'drop', '#7CFFb2', 'D');
+    target(540, dropY, 'drop', '#39e6ff', 'D');
+
+    // ---- top lane rollovers: light K-U-D for a multiplier step ----
+    rollover(250, 330, 'K', '#39e6ff');
+    rollover(450, 330, 'U', '#c46bff');
+    rollover(650, 330, 'D', '#7CFFb2');
+
+    // ---- center loop-ramp: a hard upward shot through the gate loops over the top ----
+    ramp = { x: 450, y0: 560, y1: 624, hw: 36 };
+
+    // ---- decorative colored light inserts (fill the open regions, pure render) ----
+    var lampSpec = [
+      [150, 670, '#39e6ff'], [150, 840, '#7CFFb2'], [720, 670, '#ffd34d'], [720, 840, '#c46bff'],
+      [300, 440, '#7CFFb2'], [600, 440, '#ffd34d'], [360, 560, '#39e6ff'], [540, 560, '#c46bff'],
+      [450, 860, '#39e6ff'], [450, 1060, '#c46bff'], [200, 1090, '#ffd34d'], [700, 1090, '#39e6ff'],
+      [180, 560, '#c46bff'], [720, 560, '#7CFFb2'], [450, 1180, '#7CFFb2']
+    ];
+    for (var li = 0; li < lampSpec.length; li++) lamps.push({ x: lampSpec[li][0], y: lampSpec[li][1], col: lampSpec[li][2], ph: li * 0.6 });
+
     // flippers
     flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);   // angles in radians (down-right rest → up)
     flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
@@ -208,7 +250,8 @@
   var balls = [];
   function spawnBallInLane() {
     skillLit = Math.floor(Math.random() * 3);                 // light a fresh lane each serve
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, trail: [] });
+    mult = 1;                                                 // playfield multiplier resets with each new ball
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, trail: [] });
   }
 
   // floating score callout (skill shot / big events)
@@ -229,10 +272,12 @@
   // ===== game state =====
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
+  var mult = 1, multFlash = 0, rampShots = 0;       // playfield multiplier (resets each ball) + loop counter
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   function resetGame() {
     score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
+    mult = 1; multFlash = 0; rampShots = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -272,6 +317,19 @@
     }
     return true;
   }
+  function resolveTarget(b, t) {
+    if (t.down) return false;                      // a dropped target is out of play until its bank resets
+    var dx = b.x - t.x, dy = b.y - t.y, d = len(dx, dy), rr = b.r + t.r;
+    if (d >= rr) return false;
+    var nx = d > 0.0001 ? dx / d : 0, ny = d > 0.0001 ? dy / d : -1;
+    b.x += nx * (rr - d); b.y += ny * (rr - d);
+    var vn = b.vx * nx + b.vy * ny;
+    if (vn < 0) {
+      b.vx -= (1 + t.rest) * vn * nx; b.vy -= (1 + t.rest) * vn * ny;
+      if ((t.cd || 0) <= 0) { t.cd = 0.3; onTarget(t); }   // score once per contact (debounced across sub-steps)
+    }
+    return true;
+  }
   function flipperPointVel(f, qx, qy) {
     // v = ω × r  (2D): perpendicular of (q - pivot) scaled by angular velocity
     var rx = qx - f.px, ry = qy - f.py;
@@ -291,6 +349,7 @@
     for (var k = 0; k < 3; k++) {            // a few iterations to settle stacked contacts
       for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling); }
       for (var j = 0; j < bumpers.length; j++) resolveCircle(b, bumpers[j]);
+      for (var ti = 0; ti < targets.length; ti++) resolveTarget(b, targets[ti]);
       resolveFlipper(b, flipL); resolveFlipper(b, flipR);
     }
   }
@@ -308,9 +367,48 @@
     }
   }
 
-  // ===== scoring events =====
-  function onBumper(c) { if (c.kind === 'bumper') { score += 100; c.flash = 1; shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
-  function onSling(x, y) { score += 25; shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
+  // ===== scoring events (all points scale by the playfield multiplier) =====
+  function addScore(n) { score += n * mult; }
+  function bumpMult(reason, x, y) {
+    if (mult >= 6) { addScore(2500); }                  // already maxed → consolation
+    else { mult++; multFlash = 1; }
+    callout(reason, mult + '×  MULTIPLIER', '#ffd34d');
+    shake = Math.min(shake + 0.4, 1.5);
+    if (x != null) burst(x, y, '#ffd34d', 22, 460);
+  }
+  function bankComplete(grp) {
+    for (var i = 0; i < targets.length; i++) { var t = targets[i]; if (t.grp === grp && !(t.down || t.lit)) return false; }
+    return true;
+  }
+  function resetBank(grp, drop) {
+    for (var i = 0; i < targets.length; i++) if (targets[i].grp === grp) { if (drop) targets[i].down = false; else targets[i].lit = false; }
+  }
+  function onTarget(t) {
+    t.flash = 1; shake = Math.min(shake + 0.12, 1.1);
+    addScore(t.kind === 'drop' ? 500 : 250);
+    burst(t.x, t.y, t.color, 12, 360);
+    if (t.kind === 'drop') {
+      t.down = true;
+      if (bankComplete('D')) { addScore(5000); bumpMult('DROP BANK!', t.x, t.y); resetBank('D', true); }
+    } else {
+      t.lit = true;
+      if (bankComplete(t.grp)) { addScore(2500); bumpMult(t.grp === 'L' ? 'LEFT BANK!' : 'RIGHT BANK!', t.x, t.y); resetBank(t.grp, false); }
+    }
+  }
+  function onRollover(r) {
+    r.lit = true; r.flash = 1; addScore(150); burst(r.x, r.y, r.color, 8, 280);
+    var all = true; for (var i = 0; i < rollovers.length; i++) if (!rollovers[i].lit) all = false;
+    if (all) { addScore(3000); bumpMult('K · U · D', r.x, r.y); for (var j = 0; j < rollovers.length; j++) rollovers[j].lit = false; }
+  }
+  function onRamp(b) {
+    addScore(1000); rampShots++;
+    burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
+    b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
+    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220);
+    else callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
+  }
+  function onBumper(c) { if (c.kind === 'bumper') { addScore(100); c.flash = 1; shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
+  function onSling(x, y) { addScore(25); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
 
   // ===== physics step =====
   function physStep(h) {
@@ -341,6 +439,9 @@
         if (b.y > DRAIN_Y) break;
       }
       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
+      // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
+      for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
+      if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
@@ -363,13 +464,14 @@
     var f = clamp((b.launchPow - 0.45) / 0.55, 0, 1);          // 0 = just cleared .. 1 = max plunge
     var lane = clamp(2 - Math.min(2, Math.floor(f * 3)), 0, 2); // equal thirds → matches the meter bands (strong→A)
     var L = SKILL_LANES[lane];
-    b.x = L.x; b.y = 200; b.vx = 0; b.vy = 130; b.trail.length = 0;
+    // nudge horizontally so a clean vertical drop can never balance on a rail tip / target gap
+    b.x = L.x; b.y = 200; b.vx = lane === 0 ? 70 : lane === 2 ? -70 : 45; b.vy = 130; b.trail.length = 0;
     if (lane === skillLit) {
-      score += SKILL_VALUE; callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
+      addScore(SKILL_VALUE); callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
       shake = Math.min(shake + 0.55, 1.6);
       burst(L.x, 210, '#ffd34d', 28, 520); burst(L.x, 210, '#ffffff', 14, 300);
     } else {
-      score += SKILL_MISS; callout('LANE ' + L.label, '+' + SKILL_MISS, '#39e6ff');
+      addScore(SKILL_MISS); callout('LANE ' + L.label, '+' + SKILL_MISS, '#39e6ff');
       burst(L.x, 210, '#39e6ff', 10, 340);
     }
   }
@@ -407,6 +509,10 @@
     shake *= Math.pow(0.0009, dt);
     if (co.life > 0) co.life -= dt;
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
+    for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
+    for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
+    for (var bk = 0; bk < balls.length; bk++) if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
+    if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 900 * dt; q.life -= dt * 1.6; } }
     draw(now);
   }
@@ -430,6 +536,8 @@
     // playfield panel
     ctx.fillStyle = 'rgba(10,14,30,0.55)';
     roundRect(ctx, 40, 90, 830, 1340, 24); ctx.fill();
+
+    drawLamps();
 
     // segments (neon)
     ctx.lineCap = 'round';
@@ -457,6 +565,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
+    drawRamp(); drawTargets(); drawRollovers();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
 
@@ -509,6 +618,67 @@
     ctx.fillText(co.sub, VW / 2, yy + 46);
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   }
+  function hexToRgb(h) { var n = parseInt(h.slice(1), 16); return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255); }
+  function drawLamps() {
+    var t = performance.now();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < lamps.length; i++) {
+      var lp = lamps[i], rgb = hexToRgb(lp.col);
+      var pu = reduceMotion ? 0.5 : 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t / 600 + lp.ph));
+      var g = ctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, 26);
+      g.addColorStop(0, 'rgba(' + rgb + ',' + (0.28 * pu).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lp.x, lp.y, 26, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (0.5 * pu + 0.2).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(lp.x, lp.y, 5, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function drawTargets() {
+    for (var i = 0; i < targets.length; i++) {
+      var g = targets[i], rgb = hexToRgb(g.color);
+      if (g.kind === 'drop' && g.down) {                 // dropped → faint empty slot
+        ctx.strokeStyle = 'rgba(' + rgb + ',0.16)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.stroke(); continue;
+      }
+      var glow = g.flash * 0.6 + (g.kind === 'standup' && g.lit ? 0.3 : 0);
+      ctx.globalCompositeOperation = 'lighter';
+      var gg = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r * (1.6 + g.flash));
+      gg.addColorStop(0, 'rgba(' + rgb + ',' + (0.22 + glow * 0.6).toFixed(2) + ')'); gg.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(g.x, g.y, g.r * (1.6 + g.flash), 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (g.kind === 'drop' ? 0.45 : (g.lit ? 0.5 : 0.18)).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(' + rgb + ',0.95)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.stroke();
+    }
+  }
+  function drawRollovers() {
+    var t = performance.now();
+    for (var i = 0; i < rollovers.length; i++) {
+      var r = rollovers[i], rgb = hexToRgb(r.color), lit = r.lit || r.flash > 0.01;
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.r * 1.4);
+      g.addColorStop(0, 'rgba(' + rgb + ',' + (0.10 + (lit ? 0.25 : 0) + r.flash * 0.4).toFixed(2) + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * 1.4, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(' + rgb + ',' + (lit ? 0.95 : 0.4) + ')'; ctx.lineWidth = lit ? 3 : 1.5;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = lit ? '#fff' : 'rgba(' + rgb + ',0.7)';
+      ctx.font = '700 24px "Space Grotesk", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(r.label, r.x, r.y + 1);
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+  function drawRamp() {
+    if (!ramp) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 300));
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (var k = 0; k < 3; k++) {                          // up-chevrons = "shoot here to loop"
+      var yy = ramp.y1 - k * 26, a = (0.5 - k * 0.12) * pulse;
+      ctx.strokeStyle = 'rgba(57,230,255,' + a.toFixed(2) + ')'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(ramp.x - ramp.hw, yy); ctx.lineTo(ramp.x, yy - 20); ctx.lineTo(ramp.x + ramp.hw, yy); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
   function drawFlipper(f) {
     var tip = f.tip();
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
@@ -540,6 +710,18 @@
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.02) + 'px Inter, sans-serif';
     ctx.fillText('BALL ' + (4 - ballsLeft) + ' / 3', W - pad, pad);
+    // playfield multiplier (top-center)
+    if (state === 'play') {
+      var mx = W / 2, my = pad, ms = 1 + multFlash * 0.45;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = mult > 1 ? '#ffd34d' : '#5a6276';
+      if (mult > 1 && !reduceMotion) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10 + multFlash * 18; }
+      ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.05 * ms) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px Inter, sans-serif';
+      ctx.fillText('MULTIPLIER', mx, my + Math.round(Math.min(W, H) * 0.052));
+      ctx.textAlign = 'left';
+    }
     // charge meter — banded by the lane each power range drops into (lit band highlighted)
     if (state === 'play' && balls.length && balls[0].inLane) {
       var cw = Math.min(W, H) * 0.32, cx = W - pad - cw, cy = H - pad - 12, chh = 11;
@@ -612,6 +794,8 @@
     get state() { return state; }, get score() { return score; }, get balls() { return balls; },
     get flipL() { return flipL; }, get flipR() { return flipR; },
     get skillLit() { return skillLit; }, get lastCallout() { return co.text; },
+    get mult() { return mult; }, get targets() { return targets; }, get rollovers() { return rollovers; }, get ramp() { return ramp; },
+    onRamp: function () { if (balls[0]) onRamp(balls[0]); },
     start: start, physStep: physStep, launch: launch,
     press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
     bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y }; }
