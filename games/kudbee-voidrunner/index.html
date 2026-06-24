@@ -245,7 +245,7 @@
 
   // ===== game state =====
   var state = 'gate';
-  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0;
+  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0;
   var keys = {};
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
@@ -253,7 +253,7 @@
   function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620; }
 
   function resetGame() {
-    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3;
+    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0;
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -267,13 +267,13 @@
     // two converging bolts from the wingtips, aimed straight down the barrel
     bullets.push({ x: camX - 26, y: camY + 36, z: NEAR + 26, life: 1 });
     bullets.push({ x: camX + 26, y: camY + 36, z: NEAR + 26, life: 1 });
-    shake = Math.min(shake + 0.05, 0.5);
+    shake = Math.min(shake + 0.05, 0.5); muzzle = 0.09;
   }
 
   // ===== update =====
   function update(dt) {
     speed = curSpeed();
-    fireCd -= dt; iframes -= dt; comboT -= dt; if (comboT <= 0) combo = 0;
+    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; if (comboT <= 0) combo = 0;
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
 
     // steering
@@ -549,28 +549,77 @@
   }
 
   function drawShip() {
-    // ship sits at the focus (cx, ship base), banking with steering
-    var bx = cx, by = cy + Math.min(W, H) * 0.30;
-    var blink = iframes > 0 && (Math.floor(performance.now() / 90) % 2 === 0);
-    ctx.save(); ctx.translate(bx, by); ctx.rotate(bank);
+    var now = performance.now();
+    var bx = cx, by = cy + Math.min(W, H) * 0.30 + Math.sin(now / 900) * 3;   // subtle idle bob
+    var S = Math.min(W, H) / 840;                                             // scale ship to viewport
+    var blink = iframes > 0 && (Math.floor(now / 90) % 2 === 0);
+    var roll = clamp(bank * 2.2, -0.5, 0.5);                                  // exaggerated banking roll
+    ctx.save(); ctx.translate(bx, by); ctx.rotate(bank); ctx.scale(S, S);
+
+    // ---- twin engine exhaust (always, behind hull) ----
+    var flick = 0.8 + 0.2 * Math.sin(now / 40) + Math.random() * 0.12;
+    var thrust = (0.55 + boost * 0.7) * flick;
+    ctx.globalCompositeOperation = 'lighter';
+    for (var e = -1; e <= 1; e += 2) {
+      var ex = e * 15;
+      var eg = ctx.createRadialGradient(ex, 24, 0, ex, 24, 30 + boost * 46);
+      eg.addColorStop(0, 'rgba(120,255,200,' + (0.55 + boost * 0.4).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(120,255,200,0)');
+      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, 24, 30 + boost * 46, 0, TAU); ctx.fill();
+      // flame tongue
+      ctx.fillStyle = 'rgba(180,255,225,' + (0.7 * flick).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(ex - 6, 20); ctx.quadraticCurveTo(ex, 30 + thrust * 60, ex + 6, 20); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(57,230,255,' + (0.5 * flick).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 40, ex + 3, 22); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
     if (!blink) {
-      // engine glow
-      ctx.globalCompositeOperation = 'lighter';
-      var eg = ctx.createRadialGradient(0, 26, 0, 0, 26, 46 + boost * 60);
-      eg.addColorStop(0, 'rgba(120,255,200,' + (0.5 + boost * 0.4).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(120,255,200,0)');
-      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, 26, 46 + boost * 60, 0, TAU); ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-      // hull (sleek arrow)
+      // ---- swept wings (tilt with bank for a 3D feel) ----
+      ctx.save(); ctx.transform(1, 0, roll * 0.5, 1, 0, 0);
+      var wg = ctx.createLinearGradient(0, 0, 0, 22);
+      wg.addColorStop(0, '#5a7bc0'); wg.addColorStop(1, '#2c3e6e');
+      ctx.fillStyle = wg; ctx.strokeStyle = 'rgba(57,230,255,0.7)'; ctx.lineWidth = 1.6;
+      // left wing
+      ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-44, 22); ctx.lineTo(-30, 26); ctx.lineTo(-4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // right wing
+      ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(44, 22); ctx.lineTo(30, 26); ctx.lineTo(4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // wingtip cannon lights
+      ctx.fillStyle = muzzle > 0 ? '#eafff5' : 'rgba(124,255,178,0.85)';
+      ctx.beginPath(); ctx.arc(-40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.arc(40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.fill();
+      ctx.restore();
+
+      // ---- central fuselage ----
       ctx.beginPath();
-      ctx.moveTo(0, -34); ctx.lineTo(34, 26); ctx.lineTo(12, 16); ctx.lineTo(0, 30); ctx.lineTo(-12, 16); ctx.lineTo(-34, 26); ctx.closePath();
-      var hg = ctx.createLinearGradient(0, -34, 0, 30);
-      hg.addColorStop(0, '#dff6ff'); hg.addColorStop(1, '#5f7fc8');
+      ctx.moveTo(0, -36); ctx.lineTo(10, -6); ctx.lineTo(14, 22); ctx.lineTo(6, 28); ctx.lineTo(0, 24);
+      ctx.lineTo(-6, 28); ctx.lineTo(-14, 22); ctx.lineTo(-10, -6); ctx.closePath();
+      var hg = ctx.createLinearGradient(0, -36, 0, 28);
+      hg.addColorStop(0, '#eaf7ff'); hg.addColorStop(0.5, '#aac6ee'); hg.addColorStop(1, '#46689f');
       ctx.fillStyle = hg; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = '#39e6ff'; ctx.stroke();
-      // cockpit
-      ctx.fillStyle = 'rgba(57,230,255,0.9)'; ctx.beginPath(); ctx.ellipse(0, -6, 6, 12, 0, 0, TAU); ctx.fill();
+      // spine highlight
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, 18); ctx.stroke();
+      // ---- glowing cockpit canopy ----
+      ctx.globalCompositeOperation = 'lighter';
+      var cg = ctx.createRadialGradient(0, -8, 0, 0, -8, 12);
+      cg.addColorStop(0, 'rgba(120,240,255,0.95)'); cg.addColorStop(1, 'rgba(57,160,255,0)');
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -8, 7, 14, 0, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#0a1c3a'; ctx.beginPath(); ctx.ellipse(0, -10, 4, 9, 0, 0, TAU); ctx.fill();
+    }
+
+    // ---- shield bubble while invulnerable ----
+    if (iframes > 0) {
+      var sa = 0.25 + 0.2 * Math.sin(now / 70);
+      ctx.strokeStyle = 'rgba(57,230,255,' + sa.toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, -2, 46, 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+      var sg = ctx.createRadialGradient(0, -2, 30, 0, -2, 50);
+      sg.addColorStop(0, 'rgba(57,230,255,0)'); sg.addColorStop(1, 'rgba(57,230,255,' + (sa * 0.6).toFixed(2) + ')');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, -2, 50, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
     }
     ctx.restore();
+
     // aiming reticle at the vanishing point of fire
     var rp = project(camX, camY, 240);
     ctx.strokeStyle = 'rgba(124,255,178,0.5)'; ctx.lineWidth = 1.5;
