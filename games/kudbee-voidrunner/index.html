@@ -51,7 +51,7 @@
     <div class="ov-inner">
       <div class="kicker">⬡ Kudbee Games · Flyer</div>
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
-      <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Steer, dodge the rocks, and blast a path deeper into the void — the further you fall, the faster it gets.</p>
+      <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and blast a path deeper into the void — the further you fall, the faster it gets.</p>
       <div class="badge">Outer-space flyer</div>
       <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost · on touch, <b>drag</b> to steer &amp; <b>tap</b> to fire</p>
       <button class="btn" id="startBtn">▶ Launch</button>
@@ -123,7 +123,7 @@
   var STEER = 1500, STEER_DAMP = 0.86, CAM_LIM = WORLD * 0.92;
 
   // ===== entities (pooled-ish) =====
-  var stars = [], rocks = [], bullets = [];
+  var stars = [], rocks = [], bullets = [], enemies = [], ebullets = [];
   var PMAX = reduceMotion ? 70 : 260, P = new Array(PMAX), pHead = 0;
   for (var i = 0; i < PMAX; i++) P[i] = { life: 0, x: 0, y: 0, vx: 0, vy: 0, col: '#fff', sz: 2 };
 
@@ -144,6 +144,33 @@
   }
   function spawnRock() { var rk = makeRock(FAR + rand(0, 260)); rk.hp = rk.r > 70 ? 2 : 1; rocks.push(rk); }
 
+  // enemy fighters: approach, weave around the player, and fire homing-ish bolts
+  function makeEnemy() {
+    return { x: rand(-WORLD * 0.8, WORLD * 0.8), y: rand(-WORLD * 0.6, WORLD * 0.6), z: FAR + rand(0, 200),
+      r: 32, hp: 2, alive: true, fireT: rand(0.8, 1.8), phase: Math.random() * TAU, col: '#ff7a5d' };
+  }
+  function spawnEnemy() { enemies.push(makeEnemy()); }
+  function enemyFire(en) {
+    ebullets.push({ x: en.x, y: en.y, z: en.z, life: 1 });   // travels toward the player plane, mildly homing
+    burst(project(en.x, en.y, en.z).sx, project(en.x, en.y, en.z).sy, '#ff9a7a', 4, 160);
+  }
+  function hitEnemy(en) {
+    en.hp--; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, '#ffb07a', 9, 280);
+    if (en.hp <= 0) {
+      en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
+      combo++; comboT = 2.2; var gain = 250 * Math.max(1, combo); score += gain;
+      shake = Math.min(shake + 0.4, 1.4);
+      burst(sp.sx, sp.sy, '#ff5d3c', 26, 520); burst(sp.sx, sp.sy, '#fff', 12, 320);
+      flash(gain, sp.sx, sp.sy);
+    }
+  }
+  function playerHit(x, y) {
+    if (iframes > 0) return;
+    shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8);
+    var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
+    if (shields <= 0) gameOver();
+  }
+
   function burst(x, y, col, n, sp) {
     if (reduceMotion) n = Math.min(n, 8);
     for (var i = 0; i < n; i++) {
@@ -155,7 +182,7 @@
 
   // ===== game state =====
   var state = 'gate';
-  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0;
+  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0;
   var keys = {};
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
@@ -163,9 +190,9 @@
   function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620; }
 
   function resetGame() {
-    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0;
+    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3;
     camX = camY = camVX = camVY = bank = 0;
-    rocks.length = 0; bullets.length = 0;
+    rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     initStars();
     for (var k = 0; k < 7; k++) { var rk = makeRock(rand(NEAR + 400, FAR)); rk.hp = rk.r > 70 ? 2 : 1; rocks.push(rk); }
@@ -218,17 +245,52 @@
       }
     }
 
-    // bullets travel forward
+    // enemy fighters approach + weave + fire
+    enemyT -= dt;
+    if (dist > 220 && enemyT <= 0) { enemyT = Math.max(1.5, 3.6 - dist * 0.0009); spawnEnemy(); }
+    for (var ei = enemies.length - 1; ei >= 0; ei--) {
+      var en = enemies[ei]; en.z -= (speed * 0.55) * dt; en.phase += dt * 2;
+      var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
+      en.x += clamp((tgX - en.x) / 60, -1, 1) * 110 * dt; en.y += clamp((tgY - en.y) / 60, -1, 1) * 90 * dt;
+      if (en.z < NEAR - 30) { enemies.splice(ei, 1); continue; }
+      if (en.z > 120 && en.z < 950) { en.fireT -= dt; if (en.fireT <= 0) { en.fireT = rand(1.1, 2.2); enemyFire(en); } }
+      if (en.alive && en.z < 64 && iframes <= 0) {
+        var edx = en.x - camX, edy = en.y - camY, err = en.r + 40;
+        if (edx * edx + edy * edy < err * err) { playerHit(en.x, en.y); enemies.splice(ei, 1); }
+      }
+    }
+
+    // enemy bolts travel toward the player plane (mildly homing), hit at the plane
+    for (var fb = ebullets.length - 1; fb >= 0; fb--) {
+      var eb = ebullets[fb]; eb.z -= (760 + speed * 0.4) * dt;
+      eb.x += (camX - eb.x) * Math.min(1, dt * 1.1); eb.y += (camY - eb.y) * Math.min(1, dt * 1.1);
+      if (eb.z < NEAR - 20) { ebullets.splice(fb, 1); continue; }
+      if (eb.z < 58 && iframes <= 0) {
+        var bx = eb.x - camX, by = eb.y - camY;
+        if (bx * bx + by * by < 44 * 44) { ebullets.splice(fb, 1); playerHit(eb.x, eb.y); }
+      }
+    }
+
+    // player bullets travel forward, hitting rocks then enemies
     for (var b = bullets.length - 1; b >= 0; b--) {
       var bu = bullets[b]; bu.z += (speed + 1700) * dt;
       if (bu.z > FAR) { bullets.splice(b, 1); continue; }
-      for (var k = 0; k < rocks.length; k++) {
+      var consumed = false;
+      for (var k = 0; k < rocks.length && !consumed; k++) {
         var t = rocks[k]; if (!t.alive) continue;
         if (Math.abs(t.z - bu.z) < 70) {
           var ddx = t.x - bu.x, ddy = t.y - bu.y, tr = t.r + 14;
-          if (ddx * ddx + ddy * ddy < tr * tr) { hitRock(t); bullets.splice(b, 1); break; }
+          if (ddx * ddx + ddy * ddy < tr * tr) { hitRock(t); consumed = true; }
         }
       }
+      for (var ke = 0; ke < enemies.length && !consumed; ke++) {
+        var te = enemies[ke]; if (!te.alive) continue;
+        if (Math.abs(te.z - bu.z) < 90) {
+          var e1 = te.x - bu.x, e2 = te.y - bu.y, ter = te.r + 16;
+          if (e1 * e1 + e2 * e2 < ter * ter) { hitEnemy(te); consumed = true; }
+        }
+      }
+      if (consumed) bullets.splice(b, 1);
     }
 
     // particles
@@ -306,7 +368,9 @@
 
     drawStars();
     drawRocks();
+    drawEnemies();
     drawBullets();
+    drawEbullets();
     drawParticles();
     if (state !== 'gate') drawShip();
     drawPops();
@@ -370,6 +434,39 @@
     }
   }
 
+  function drawEnemies() {
+    var order = enemies.slice().sort(function (a, b) { return b.z - a.z; });
+    for (var i = 0; i < order.length; i++) {
+      var en = order[i], p = project(en.x, en.y, en.z), R = Math.min(MINSCALE, en.r * p.sc);
+      if (R < 1 || p.sx < -R - 60 || p.sx > W + R + 60 || p.sy < -R - 60 || p.sy > H + R + 60) continue;
+      var depth = clamp((FAR - en.z) / FAR, 0, 1);
+      ctx.save(); ctx.translate(p.sx, p.sy);
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.8);
+      g.addColorStop(0, 'rgba(255,93,60,' + (0.14 + depth * 0.22).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,93,60,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.8, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // menacing arrowhead, pointing down toward you
+      ctx.beginPath();
+      ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.lineTo(R * 0.32, -R * 0.32);
+      ctx.lineTo(0, -R * 0.72); ctx.lineTo(-R * 0.32, -R * 0.32); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.closePath();
+      ctx.fillStyle = 'rgba(30,12,14,0.94)'; ctx.fill();
+      ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,150,90,0.95)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(2, R * 0.16), 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawEbullets() {
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < ebullets.length; i++) {
+      var eb = ebullets[i], p = project(eb.x, eb.y, eb.z), p2 = project(eb.x, eb.y, Math.min(FAR, eb.z + 55));
+      var w = Math.max(1.5, p.sc * 5);
+      ctx.strokeStyle = 'rgba(255,120,90,0.92)'; ctx.lineWidth = w; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p2.sx, p2.sy); ctx.lineTo(p.sx, p.sy); ctx.stroke();
+      ctx.fillStyle = '#ffd9c9'; ctx.beginPath(); ctx.arc(p.sx, p.sy, w * 0.6, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
   function drawBullets() {
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < bullets.length; i++) {
@@ -514,10 +611,14 @@
     get state() { return state; }, get score() { return score; }, get shields() { return shields; },
     get dist() { return dist; }, get combo() { return combo; },
     rocks: function () { return rocks; }, bullets: function () { return bullets; },
+    enemies: function () { return enemies; }, ebullets: function () { return ebullets; },
     ship: function () { return { camX: camX, camY: camY }; },
     start: start, fire: fire, update: function (dt) { update(dt); },
     setKey: function (name, on) { keys[name] = on; },
-    forceRockAtShip: function () { var rk = makeRock(70); rk.x = camX; rk.y = camY; rk.r = 60; rk.hp = 1; rocks.push(rk); return rk; }
+    forceRockAtShip: function () { var rk = makeRock(70); rk.x = camX; rk.y = camY; rk.r = 60; rk.hp = 1; rocks.push(rk); return rk; },
+    forceEnemyAtShip: function () { var en = makeEnemy(); en.z = 70; en.x = camX; en.y = camY; en.hp = 1; enemies.push(en); return en; },
+    spawnEnemyFar: function () { var en = makeEnemy(); en.z = 600; en.hp = 1; enemies.push(en); return en; },
+    enemyFireAll: function () { for (var i = 0; i < enemies.length; i++) enemyFire(enemies[i]); }
   };
 })();
 </script>
