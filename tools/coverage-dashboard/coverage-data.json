@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-06-23T21:56:02.753Z",
-  "commit": "6326bec",
+  "generatedAt": "2026-06-24T04:01:12.582Z",
+  "commit": "8042fdd",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -22,15 +22,15 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 90.93,
+    "lines": 91.15,
     "branches": 65.41,
     "functions": 90.9,
-    "statements": 90.93
+    "statements": 91.15
   },
   "totalCounts": {
     "lines": {
-      "covered": 331,
-      "total": 364
+      "covered": 340,
+      "total": 373
     },
     "branches": {
       "covered": 87,
@@ -41,8 +41,8 @@
       "total": 22
     },
     "statements": {
-      "covered": 331,
-      "total": 364
+      "covered": 340,
+      "total": 373
     }
   },
   "files": [
@@ -103,15 +103,15 @@
     {
       "path": "shared/core.js",
       "metrics": {
-        "lines": 97.56,
+        "lines": 97.68,
         "branches": 62.29,
         "functions": 100,
-        "statements": 97.56
+        "statements": 97.68
       },
       "counts": {
         "lines": {
-          "covered": 160,
-          "total": 164
+          "covered": 169,
+          "total": 173
         },
         "branches": {
           "covered": 38,
@@ -122,8 +122,8 @@
           "total": 9
         },
         "statements": {
-          "covered": 160,
-          "total": 164
+          "covered": 169,
+          "total": 173
         }
       }
     }
