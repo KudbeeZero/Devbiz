@@ -57,9 +57,9 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Keep the ball alive, light the bumpers, and rack up a score.</p>
-        <div class="badge">Phase-1 physics prototype</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · on touch, tap the left/right half</p>
+        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge into the <b>lit lane</b> for a Skill Shot, keep the ball alive, and rack up a score.</p>
+        <div class="badge">Skill-shot plunger</div>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — meter shows which lane) · on touch, tap the left/right half</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <div class="ov-foot">Desktop &amp; mobile · physics sandbox — table art &amp; modes come next</div>
       </div>
@@ -110,6 +110,18 @@
   var BALL_R = 14;
   var SPEED_CAP = 3200;         // px/s
   var WALL_REST = 0.35, WALL_FRIC = 0.018;
+
+  // ---- skill shot (plunger lanes) ----
+  // Three top rollover lanes. Plunge power selects which one the ball drops
+  // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
+  // lane scores the skill shot. A lighter gravity in the shooter lane makes the
+  // power→lane mapping clean and learnable.
+  var SKILL_LANES = [{ x: 250, label: 'A' }, { x: 450, label: 'B' }, { x: 650, label: 'C' }];
+  var SKILL_W = 64;                 // lane half-width (draw)
+  var SKILL_VALUE = 5000;           // lit-lane award
+  var SKILL_MISS = 500;             // any-lane consolation
+  var LANE_G = 800;                 // gravity while a launched ball climbs the shooter lane (tuned so charge≥0.45 clears)
+  var skillLit = 1;                 // lane lit this serve (chosen per serve)
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d', { alpha: false });
@@ -194,7 +206,14 @@
 
   // ===== balls + particles =====
   var balls = [];
-  function spawnBallInLane() { balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, trail: [] }); }
+  function spawnBallInLane() {
+    skillLit = Math.floor(Math.random() * 3);                 // light a fresh lane each serve
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, trail: [] });
+  }
+
+  // floating score callout (skill shot / big events)
+  var co = { life: 0, text: '', sub: '', col: '#ffd34d' };
+  function callout(t, s, c) { co.text = t; co.sub = s || ''; co.col = c || '#ffd34d'; co.life = 1.7; }
 
   var PMAX = reduceMotion ? 60 : 220, P = new Array(PMAX), pHead = 0;
   for (var i = 0; i < PMAX; i++) P[i] = { life: 0, x: 0, y: 0, vx: 0, vy: 0, col: '#fff', sz: 2 };
@@ -305,10 +324,11 @@
         b.x = 831;
         continue;
       }
-      b.vy += G * h;
-      // shooter-lane exit (wireform): a launched ball reaching the top of the lane
-      // is routed over into the upper playfield, exactly like a real table's wire guide.
-      if (b.x > 800 && b.y < 245 && b.vy < 0) { b.x = 720; b.y = 215; b.vx = -210; b.vy = 90; }
+      var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
+      b.vy += (climbing ? LANE_G : G) * h;              // lighter gravity in the lane so power maps cleanly
+      // shooter-lane exit: a launched ball that clears the lane is routed over the top and
+      // DROPPED through the skill lane its plunge power selected (see enterFromLane()).
+      if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
       // speed cap
       var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
       // micro sub-steps so the ball never moves > r/2 before resolving
@@ -322,7 +342,7 @@
       }
       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
       // a plunge that didn't clear falls back down the lane → re-serve for another go
-      if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
       if (!reduceMotion) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 10) b.trail.shift(); }
       // drain
@@ -333,7 +353,25 @@
 
   function launch() {
     if (!balls.length || !balls[0].inLane) return;
-    var b = balls[0]; b.inLane = false; b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;  // ~straight up the lane; the top deflector curves it into play
+    var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
+    b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+  }
+
+  // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
+  function enterFromLane(b) {
+    b.injected = true;
+    var f = clamp((b.launchPow - 0.45) / 0.55, 0, 1);          // 0 = just cleared .. 1 = max plunge
+    var lane = clamp(2 - Math.min(2, Math.floor(f * 3)), 0, 2); // equal thirds → matches the meter bands (strong→A)
+    var L = SKILL_LANES[lane];
+    b.x = L.x; b.y = 200; b.vx = 0; b.vy = 130; b.trail.length = 0;
+    if (lane === skillLit) {
+      score += SKILL_VALUE; callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
+      shake = Math.min(shake + 0.55, 1.6);
+      burst(L.x, 210, '#ffd34d', 28, 520); burst(L.x, 210, '#ffffff', 14, 300);
+    } else {
+      score += SKILL_MISS; callout('LANE ' + L.label, '+' + SKILL_MISS, '#39e6ff');
+      burst(L.x, 210, '#39e6ff', 10, 340);
+    }
   }
 
   function onDrain() {
@@ -367,6 +405,7 @@
     }
     // fx decay
     shake *= Math.pow(0.0009, dt);
+    if (co.life > 0) co.life -= dt;
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 900 * dt; q.life -= dt * 1.6; } }
     draw(now);
@@ -418,6 +457,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
+    drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
 
     // balls
@@ -428,10 +468,46 @@
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life <= 0) continue; ctx.fillStyle = q.col; ctx.globalAlpha = Math.max(0, q.life); ctx.beginPath(); ctx.arc(q.x, q.y, q.sz, 0, TAU); ctx.fill(); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 
+    drawCallout(now);
     if (debug) drawDebug();
     ctx.restore();
 
     drawHUD();
+  }
+  function drawSkill(now) {
+    if (state !== 'play') return;
+    var t = performance.now();
+    for (var i = 0; i < SKILL_LANES.length; i++) {
+      var L = SKILL_LANES[i], lit = (i === skillLit);
+      var pulse = lit && !reduceMotion ? 0.5 + 0.5 * Math.abs(Math.sin(t / 260)) : (lit ? 0.6 : 0);
+      var c = lit ? '255,211,77' : '57,230,255';
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createLinearGradient(0, 150, 0, 300);
+      g.addColorStop(0, 'rgba(' + c + ',' + (lit ? (0.05 + pulse * 0.10) : 0.04).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c + ',0)');
+      ctx.fillStyle = g; ctx.fillRect(L.x - SKILL_W, 150, SKILL_W * 2, 150);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(' + c + ',' + (lit ? 0.85 : 0.28) + ')'; ctx.lineWidth = lit ? 3 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(L.x - SKILL_W, 300); ctx.lineTo(L.x - SKILL_W, 158);
+      ctx.moveTo(L.x + SKILL_W, 300); ctx.lineTo(L.x + SKILL_W, 158); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = lit ? '#ffe79a' : 'rgba(120,170,230,0.6)';
+      ctx.font = '700 ' + (lit ? 30 : 20) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(lit ? SKILL_VALUE.toLocaleString() : L.label, L.x, 192);
+      if (lit) { ctx.fillStyle = 'rgba(255,211,77,0.85)'; ctx.font = '700 13px Inter, sans-serif'; ctx.fillText('SKILL', L.x, 168); }
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+  function drawCallout(now) {
+    if (co.life <= 0) return;
+    var a = clamp(co.life / 1.7, 0, 1), yy = 560 - (1 - a) * 44;
+    ctx.globalAlpha = a; ctx.textAlign = 'center';
+    ctx.fillStyle = co.col; ctx.shadowColor = co.col; ctx.shadowBlur = reduceMotion ? 0 : 26;
+    ctx.font = '700 60px "Space Grotesk", sans-serif'; ctx.fillText(co.text, VW / 2, yy);
+    ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff'; ctx.font = '700 30px Inter, sans-serif';
+    ctx.fillText(co.sub, VW / 2, yy + 46);
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
   }
   function drawFlipper(f) {
     var tip = f.tip();
@@ -464,12 +540,23 @@
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.02) + 'px Inter, sans-serif';
     ctx.fillText('BALL ' + (4 - ballsLeft) + ' / 3', W - pad, pad);
-    // charge meter
+    // charge meter — banded by the lane each power range drops into (lit band highlighted)
     if (state === 'play' && balls.length && balls[0].inLane) {
-      var cw = Math.min(W, H) * 0.22, cx = W - pad - cw, cy = H - pad - 10;
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(cx, cy, cw, 8);
-      ctx.fillStyle = '#ffd34d'; ctx.fillRect(cx, cy, cw * charge, 8);
-      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.fillText('HOLD SPACE TO LAUNCH', W - pad, cy - 18);
+      var cw = Math.min(W, H) * 0.32, cx = W - pad - cw, cy = H - pad - 12, chh = 11;
+      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(cx, cy, cw, chh);
+      var bands = [[0.45, 0.633, 2], [0.633, 0.817, 1], [0.817, 1.0, 0]];   // [from,to,laneIndex]
+      for (var bi2 = 0; bi2 < bands.length; bi2++) {
+        var bd = bands[bi2], x0 = cx + cw * bd[0], x1 = cx + cw * bd[1], isLit = (bd[2] === skillLit);
+        ctx.fillStyle = isLit ? 'rgba(255,211,77,0.9)' : 'rgba(57,230,255,0.20)';
+        ctx.fillRect(x0, cy, Math.max(1, x1 - x0 - 1), chh);
+        ctx.fillStyle = isLit ? '#04040a' : 'rgba(207,233,255,0.65)';
+        ctx.font = '700 ' + Math.round(chh * 0.9) + 'px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(SKILL_LANES[bd[2]].label, (x0 + x1) / 2, cy + chh / 2 + 0.5);
+      }
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#fff'; ctx.fillRect(cx + cw * clamp(charge, 0, 1) - 1.5, cy - 3, 3, chh + 6);   // live charge marker
+      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
+      ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
     }
     ctx.textAlign = 'left';
   }
@@ -524,6 +611,7 @@
   window.PINBALL = {
     get state() { return state; }, get score() { return score; }, get balls() { return balls; },
     get flipL() { return flipL; }, get flipR() { return flipR; },
+    get skillLit() { return skillLit; }, get lastCallout() { return co.text; },
     start: start, physStep: physStep, launch: launch,
     press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
     bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y }; }
