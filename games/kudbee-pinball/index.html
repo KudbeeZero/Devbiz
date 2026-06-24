@@ -59,7 +59,7 @@
         <h1>Kudbee <span class="grad">Pinball</span></h1>
         <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip the center <b>loop</b> — every combo climbs your <b>multiplier</b>.</p>
         <div class="badge">Skill shot · ramps · multiball-ready</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — meter shows which lane) · on touch, tap the left/right half</p>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · on touch, tap low to flip, tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <div class="ov-foot">Desktop &amp; mobile · physics sandbox — table art &amp; modes come next</div>
       </div>
@@ -251,7 +251,8 @@
   function spawnBallInLane() {
     skillLit = Math.floor(Math.random() * 3);                 // light a fresh lane each serve
     mult = 1;                                                 // playfield multiplier resets with each new ball
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, trail: [] });
+    tilt = 0; tilted = false;                                 // fresh tilt budget each ball
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lowT: 0, trail: [] });
   }
 
   // floating score callout (skill shot / big events)
@@ -273,11 +274,13 @@
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
   var mult = 1, multFlash = 0, rampShots = 0;       // playfield multiplier (resets each ball) + loop counter
+  var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
+  var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto ball-save
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   function resetGame() {
     score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
-    mult = 1; multFlash = 0; rampShots = 0;
+    mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -412,6 +415,7 @@
 
   // ===== physics step =====
   function physStep(h) {
+    if (tilted) { flipL.pressed = false; flipR.pressed = false; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h);
     if (charging && balls.length && balls[0].inLane) charge = Math.min(1, charge + h * 1.6);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
@@ -442,6 +446,10 @@
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
+      // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
+      // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
+      if (b.y > 700) b.lowT = 0; else b.lowT += h;
+      if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('BALL SAVED', 'freed the ball', '#7CFFb2'); }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
@@ -456,6 +464,22 @@
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
     b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+  }
+
+  // Nudge ("tilt") — shove the table to free a stuck ball. dir: -1 left, +1 right, 0 straight shake.
+  // Over-nudge and you TILT: flippers die for the rest of the ball (classic pinball penalty).
+  function nudge(dir) {
+    if (state !== 'play' || tilted) return;
+    var hit = false;
+    for (var i = 0; i < balls.length; i++) {
+      var b = balls[i]; if (b.inLane) continue;
+      b.vx += dir * 170 + (Math.random() - 0.5) * 120;        // sideways shove + jitter
+      b.vy += -90 + Math.random() * 220;                      // mostly downward so a top-stuck ball drops
+      hit = true;
+    }
+    if (!hit) return;
+    tilt += 1.4; tiltFlash = 1; shake = Math.min(shake + 0.5, 1.6);
+    if (tilt >= TILT_MAX) { tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); flipL.pressed = false; flipR.pressed = false; }
   }
 
   // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
@@ -513,6 +537,8 @@
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
     for (var bk = 0; bk < balls.length; bk++) if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
+    if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
+    if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 900 * dt; q.life -= dt * 1.6; } }
     draw(now);
   }
@@ -740,6 +766,20 @@
       ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
       ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
     }
+    // tilt / nudge meter (bottom-left): dots fill as you nudge; all red = TILT (flippers dead this ball)
+    if (state === 'play' && (tilt > 0.05 || tilted)) {
+      var tx = pad, ty = H - pad - 8, dotR = Math.max(4, Math.min(W, H) * 0.011), gap = dotR * 2.7;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = tilted ? '#ff5d3c' : '#ffd34d';
+      ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.017) + 'px Inter, sans-serif';
+      ctx.fillText(tilted ? 'TILT — FLIPPERS DEAD' : 'NUDGE', tx, ty - dotR - 6);
+      for (var di = 0; di < TILT_MAX; di++) {
+        var on = tilted || di < tilt;
+        ctx.beginPath(); ctx.arc(tx + dotR + di * gap, ty, dotR, 0, TAU);
+        ctx.fillStyle = on ? (tilted ? '#ff5d3c' : '#ffd34d') : 'rgba(255,255,255,0.14)'; ctx.fill();
+      }
+      ctx.textBaseline = 'top';
+    }
     ctx.textAlign = 'left';
   }
   function drawDebug() {
@@ -756,7 +796,13 @@
     if (state !== 'play') return;
     if (k === 'arrowleft' || k === 'z' || k === 'a') { setFlip(-1, true); e.preventDefault(); }
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') { setFlip(1, true); e.preventDefault(); }
-    else if (k === ' ') { charging = true; e.preventDefault(); }
+    else if (k === ' ') {                                   // plunge while in the lane; otherwise nudge
+      if (balls.length && balls[0].inLane) charging = true; else if (!e.repeat) nudge(0);
+      e.preventDefault();
+    }
+    else if (k === 'arrowdown' || k === 'n') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge (straight)
+    else if (k === 'x') { if (!e.repeat) nudge(-1); }       // nudge left
+    else if (k === 'c') { if (!e.repeat) nudge(1); }        // nudge right
     else if (k === '`') debug = !debug;
   });
   window.addEventListener('keyup', function (e) {
@@ -765,11 +811,12 @@
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
     else if (k === ' ') { charging = false; launch(); }
   });
-  // touch: left/right half = flippers; tap lower-right = launch
+  // touch: lower half left/right = flippers; tap up top = NUDGE (toward the tap side); tap lower-right in lane = launch
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
     var r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; e._launch = true; }
+    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; e._launch = true; return; }
+    if (py < H * 0.42) { nudge(px < W * 0.5 ? -1 : 1); return; }   // tap the upper playfield to shake a stuck ball loose
     if (px < W / 2) setFlip(-1, true); else setFlip(1, true);
   }, { passive: true });
   canvas.addEventListener('pointerup', function (e) {
@@ -795,6 +842,8 @@
     get flipL() { return flipL; }, get flipR() { return flipR; },
     get skillLit() { return skillLit; }, get lastCallout() { return co.text; },
     get mult() { return mult; }, get targets() { return targets; }, get rollovers() { return rollovers; }, get ramp() { return ramp; },
+    get tilt() { return tilt; }, get tilted() { return tilted; },
+    nudge: function (d) { nudge(d || 0); },
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
     start: start, physStep: physStep, launch: launch,
     press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
