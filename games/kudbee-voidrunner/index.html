@@ -39,6 +39,27 @@
     cursor:pointer; background:linear-gradient(135deg,#39e6ff,#6f5bff 50%,#c46bff); color:#04040a;
     font-family:"Space Grotesk"; font-weight:700; font-size:16px; box-shadow:0 16px 40px -12px rgba(111,91,255,0.7); }
   .btn:hover { filter:brightness(1.06); }
+  /* ===== leaderboard + initials entry (game-over) ===== */
+  .name-entry { margin-top:18px; }
+  .name-entry.hidden { display:none; }
+  .name-entry label { display:block; font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--amber); margin-bottom:9px; }
+  .name-entry input { width:118px; text-align:center; text-transform:uppercase; letter-spacing:0.42em; text-indent:0.42em;
+    font-family:"Space Grotesk"; font-weight:700; font-size:22px; color:#fff; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(57,230,255,0.4); border-radius:8px; padding:9px 0; outline:none; vertical-align:middle; }
+  .name-entry input:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(57,230,255,0.15); }
+  .btn-sm { margin-left:10px; vertical-align:middle; padding:11px 20px; border:none; border-radius:999px; cursor:pointer;
+    background:linear-gradient(135deg,#39e6ff,#6f5bff 55%,#c46bff); color:#04040a; font-family:"Space Grotesk"; font-weight:700; font-size:14px; }
+  .btn-sm:hover { filter:brightness(1.06); }
+  .board { margin:18px auto 4px; max-width:300px; text-align:left; }
+  .board.empty { display:none; }
+  .board h3 { font-family:"Space Grotesk"; font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:#7c8aa0; text-align:center; margin-bottom:10px; }
+  .board ol { list-style:none; margin:0; padding:0; }
+  .board li { display:flex; align-items:baseline; gap:10px; padding:4px 9px; border-radius:6px; font-size:14px; color:#cfe9ff; }
+  .board li.me { background:rgba(57,230,255,0.12); color:#fff; }
+  .board li .rk { width:22px; color:#5a6276; font-variant-numeric:tabular-nums; }
+  .board li .nm { flex:1; font-family:"Space Grotesk"; font-weight:600; letter-spacing:0.14em; }
+  .board li .sc { font-variant-numeric:tabular-nums; color:#9bb3c8; }
+  .board li.me .sc { color:#7CFFb2; }
   .ov-foot { margin-top:16px; font-size:11px; color:#5a6276; }
   .badge { display:inline-block; margin-top:10px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
@@ -132,6 +153,12 @@
       <div class="kicker" id="oKick">Ship destroyed</div>
       <h1 class="grad" id="oScore">0</h1>
       <p id="oSub">Good run.</p>
+      <div class="name-entry hidden" id="nameEntry">
+        <label for="initials">⬡ New high score — enter your initials</label>
+        <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Your initials" />
+        <button class="btn-sm" id="saveScore" type="button">Save</button>
+      </div>
+      <div class="board empty" id="board" aria-live="polite"></div>
       <button class="btn" id="againBtn">Fly again</button>
     </div>
   </div>
@@ -551,6 +578,42 @@
   var co = { life: 0, text: '', sub: '', col: '#ffd34d' };
   function callout(t, s, c) { co.text = t; co.sub = s || ''; co.col = c || '#ffd34d'; co.life = 1.9; }
 
+  // ===== local leaderboard — top-10, persisted to localStorage =====
+  var SCORES_KEY = 'kudbee.voidrunner.scores', INIT_KEY = 'kudbee.voidrunner.initials';
+  var pendingScore = -1, pendingDist = 0;
+  function loadScores() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
+      if (!Array.isArray(raw)) return [];
+      return raw.filter(function (e) { return e && typeof e.score === 'number' && isFinite(e.score); })
+        .map(function (e) { return { name: sanitizeInitials(e.name), score: Math.max(0, Math.round(e.score)), dist: Math.max(0, Math.round(e.dist || 0)) }; })
+        .sort(function (a, b) { return b.score - a.score; }).slice(0, 10);
+    } catch (e) { return []; }
+  }
+  function saveScores(list) { try { localStorage.setItem(SCORES_KEY, JSON.stringify(list)); } catch (e) {} }
+  function scoreQualifies(s, list) { return s > 0 && (list.length < 10 || s > list[list.length - 1].score); }
+  function sanitizeInitials(v) { var s = String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3); return s || 'YOU'; }
+  function commitScore(name) {
+    if (pendingScore < 0) return -1;
+    var entry = { name: sanitizeInitials(name), score: pendingScore, dist: pendingDist }, list = loadScores();
+    try { localStorage.setItem(INIT_KEY, entry.name); } catch (e) {}
+    list.push(entry); list.sort(function (a, b) { return b.score - a.score; }); list = list.slice(0, 10);
+    saveScores(list); pendingScore = -1;
+    return list.indexOf(entry);
+  }
+  function renderBoard(highlight) {
+    var board = document.getElementById('board'); if (!board) return;
+    var list = loadScores();
+    if (!list.length) { board.className = 'board empty'; board.innerHTML = ''; return; }
+    board.className = 'board';
+    var html = '<h3>Top Pilots</h3><ol>';
+    for (var i = 0; i < list.length; i++) {
+      html += '<li' + (i === highlight ? ' class="me"' : '') + '><span class="rk">' + (i + 1) +
+        '</span><span class="nm">' + list[i].name + '</span><span class="sc">' + list[i].score.toLocaleString() + '</span></li>';
+    }
+    board.innerHTML = html + '</ol>';
+  }
+
   function gameOver() {
     state = 'over'; SFX.over(); engineStop();
     score = Math.round(score);
@@ -558,6 +621,19 @@
     document.getElementById('oScore').textContent = score.toLocaleString();
     document.getElementById('oKick').textContent = 'Ship destroyed · ' + Math.round(dist) + ' km deep';
     document.getElementById('oSub').textContent = 'Score ' + score.toLocaleString() + ' · best ' + best.toLocaleString();
+    // leaderboard: offer initials entry when this run cracks the top 10
+    var list = loadScores(), entry = document.getElementById('nameEntry'), inp = document.getElementById('initials');
+    if (scoreQualifies(score, list)) {
+      pendingScore = score; pendingDist = Math.round(dist);
+      if (inp) { var last = ''; try { last = localStorage.getItem(INIT_KEY) || ''; } catch (e) {} inp.value = last; }
+      if (entry) entry.classList.remove('hidden');
+      renderBoard(-1);
+      if (inp) setTimeout(function () { try { inp.focus(); inp.select(); } catch (e) {} }, 60);
+    } else {
+      pendingScore = -1;
+      if (entry) entry.classList.add('hidden');
+      renderBoard(-1);
+    }
     overOv.classList.remove('hidden');
   }
 
@@ -571,6 +647,8 @@
   var running = false, rafId = 0, lastT = 0, acc = 0, PH = 1 / 120;
   function start() {
     audioInit(); audioResume(); engineStart();             // unlock + spin up audio on the launch gesture
+    if (pendingScore >= 0) commitScore(initialsInput ? initialsInput.value : '');  // don't lose an unsaved high score
+    if (nameEntryEl) nameEntryEl.classList.add('hidden');
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
   }
@@ -980,6 +1058,20 @@
   if (muteBtn) muteBtn.addEventListener('click', function (e) { e.stopPropagation(); audioInit(); audioResume(); setMuted(!muted); });
   setMuted(muted);   // sync the button glyph with the stored preference
 
+  // leaderboard initials entry wiring
+  var nameEntryEl = document.getElementById('nameEntry'), initialsInput = document.getElementById('initials'), saveBtn = document.getElementById('saveScore');
+  function doSaveScore() {
+    if (pendingScore < 0) return;
+    var idx = commitScore(initialsInput ? initialsInput.value : '');
+    if (nameEntryEl) nameEntryEl.classList.add('hidden');
+    renderBoard(idx);
+  }
+  if (saveBtn) saveBtn.addEventListener('click', doSaveScore);
+  if (initialsInput) {
+    initialsInput.addEventListener('input', function () { initialsInput.value = initialsInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3); });
+    initialsInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doSaveScore(); } e.stopPropagation(); });
+  }
+
   // ===== KUDBEE STUDIOS boot intro =====
   var intro = document.getElementById('intro'), introAudio = document.getElementById('introAudio');
   var introDone = false, introStarted = false, introTimer = 0;
@@ -1026,7 +1118,11 @@
     get rapidActive() { return rapidT > 0; }, get tripleActive() { return tripleT > 0; },
     forcePowerupAtShip: function (type) { var pw = { type: type || 'shield', x: camX, y: camY, z: 70, r: 30, rot: 0, alive: true }; powerups.push(pw); return pw; },
     spawnPowerupFar: function () { spawnPowerup(); return powerups[powerups.length - 1]; },
-    get muted() { return muted; }, get audioReady() { return !!AC; }, setMuted: setMuted, sfx: SFX
+    get muted() { return muted; }, get audioReady() { return !!AC; }, setMuted: setMuted, sfx: SFX,
+    getScores: function () { return loadScores(); },
+    clearScores: function () { try { localStorage.removeItem(SCORES_KEY); } catch (e) {} },
+    submitScore: function (name, s, d) { pendingScore = Math.max(0, Math.round(s)); pendingDist = Math.round(d || 0); return commitScore(name); },
+    scoreQualifies: function (s) { return scoreQualifies(s, loadScores()); }
   };
 })();
 </script>
