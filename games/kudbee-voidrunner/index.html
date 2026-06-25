@@ -114,7 +114,7 @@
     <div class="ov-inner">
       <div class="kicker">⬡ Kudbee Games · Flyer</div>
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
-      <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and blast a path deeper into the void — the further you fall, the faster it gets.</p>
+      <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and fly through the glowing pickups — <b style="color:#39e6ff">shields</b>, <b style="color:#ffd34d">rapid fire</b>, <b style="color:#7CFFb2">triple shot</b> — to blast deeper into the void.</p>
       <div class="badge">Outer-space flyer</div>
       <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost · on touch, <b>drag</b> to steer &amp; <b>tap</b> to fire</p>
       <button class="btn" id="startBtn">▶ Launch</button>
@@ -272,6 +272,9 @@
   var state = 'gate';
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0;
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
+  // power-ups: drifting pickups you fly into — shield repair, rapid fire, triple shot
+  var powerups = [], powerT = 11, rapidT = 0, tripleT = 0;
+  var MAXSHIELD = 5, RAPID_DUR = 7.5, TRIPLE_DUR = 7.5;
   var keys = {};
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
@@ -281,6 +284,7 @@
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
+    powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -290,17 +294,44 @@
 
   function fire() {
     if (state !== 'play' || fireCd > 0) return;
-    fireCd = 0.14;
+    fireCd = rapidT > 0 ? 0.075 : 0.14;                  // rapid-fire pickup halves the cooldown
     // two converging bolts from the wingtips, aimed straight down the barrel
     bullets.push({ x: camX - 26, y: camY + 36, z: NEAR + 26, life: 1 });
     bullets.push({ x: camX + 26, y: camY + 36, z: NEAR + 26, life: 1 });
+    if (tripleT > 0) bullets.push({ x: camX, y: camY + 30, z: NEAR + 26, life: 1 });  // triple-shot adds a centre bolt
     shake = Math.min(shake + 0.05, 0.5); muzzle = 0.09;
+  }
+
+  // ===== power-ups: collectible buffs that stream in like rocks =====
+  function spawnPowerup() {
+    // bias toward shields when you're hurting, otherwise even spread across the three
+    var roll = Math.random(), type;
+    if (shields <= 1) type = roll < 0.6 ? 'shield' : (roll < 0.8 ? 'rapid' : 'triple');
+    else type = roll < 0.34 ? 'shield' : (roll < 0.67 ? 'rapid' : 'triple');
+    powerups.push({ type: type, x: rand(-WORLD * 0.7, WORLD * 0.7), y: rand(-WORLD * 0.5, WORLD * 0.5),
+      z: FAR + rand(0, 160), r: 30, rot: 0, alive: true });
+  }
+  function collectPowerup(pu) {
+    var sp = project(pu.x, pu.y, pu.z);
+    if (pu.type === 'shield') {
+      if (shields < MAXSHIELD) { shields++; callout('SHIELD +1', 'integrity restored', '#39e6ff'); }
+      else { score += 500; flash(500, sp.sx, sp.sy); callout('SHIELD MAX', '+500', '#39e6ff'); }
+      burst(sp.sx, sp.sy, '#39e6ff', 22, 420);
+    } else if (pu.type === 'rapid') {
+      rapidT = RAPID_DUR; callout('RAPID FIRE', 'guns overcharged', '#ffd34d');
+      burst(sp.sx, sp.sy, '#ffd34d', 22, 420);
+    } else {
+      tripleT = TRIPLE_DUR; callout('TRIPLE SHOT', 'spread cannons online', '#7CFFb2');
+      burst(sp.sx, sp.sy, '#7CFFb2', 22, 420);
+    }
+    shake = Math.min(shake + 0.3, 1.2);
   }
 
   // ===== update =====
   function update(dt) {
     speed = curSpeed();
-    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; if (comboT <= 0) combo = 0;
+    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; if (comboT <= 0) combo = 0;
+    if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
 
     // steering
@@ -345,6 +376,16 @@
       boss.x = Math.cos(boss.phase) * 210; boss.y = -40 + Math.sin(boss.phase * 0.85) * 80;
       if (boss.hitFlash > 0) boss.hitFlash -= dt;
       boss.fireT -= dt; if (boss.fireT <= 0 && boss.z < 700) { boss.fireT = Math.max(0.85, 1.6 - wave * 0.15); bossVolley(); }
+    }
+
+    // power-ups drift in (held back during boss fights), gently home so they're catchable
+    powerT -= dt;
+    if (dist > 120 && powerT <= 0 && !boss) { powerT = rand(12, 18); spawnPowerup(); }
+    for (var pu = powerups.length - 1; pu >= 0; pu--) {
+      var pw = powerups[pu]; pw.z -= speed * dt * 0.92; pw.rot += dt * 1.4;
+      pw.x += (camX - pw.x) * Math.min(1, dt * 0.28); pw.y += (camY - pw.y) * Math.min(1, dt * 0.28);
+      if (pw.z < NEAR - 30) { powerups.splice(pu, 1); continue; }
+      if (pw.z < 72) { var pdx = pw.x - camX, pdy = pw.y - camY; if (pdx * pdx + pdy * pdy < 72 * 72) { collectPowerup(pw); powerups.splice(pu, 1); } }
     }
 
     // enemy fighters approach + weave + fire (paused during a boss fight)
@@ -480,6 +521,7 @@
     drawRocks();
     drawBoss();
     drawEnemies();
+    drawPowerups();
     drawBullets();
     drawEbullets();
     drawParticles();
@@ -606,6 +648,43 @@
       ctx.fillStyle = 'rgba(30,12,14,0.94)'; ctx.fill();
       ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(255,150,90,0.95)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(2, R * 0.16), 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : '#7CFFb2'; }
+  function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
+  function drawPowerups() {
+    var order = powerups.slice().sort(function (a, b) { return b.z - a.z; });
+    for (var i = 0; i < order.length; i++) {
+      var pw = order[i], p = project(pw.x, pw.y, pw.z), R = Math.min(MINSCALE, pw.r * p.sc);
+      if (R < 1 || p.sx < -R - 60 || p.sx > W + R + 60 || p.sy < -R - 60 || p.sy > H + R + 60) continue;
+      var col = puCol(pw.type), pulse = 0.6 + 0.4 * Math.sin(performance.now() / 180 + pw.x);
+      ctx.save(); ctx.translate(p.sx, p.sy);
+      // soft glow halo
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2);
+      g.addColorStop(0, puGlow(pw.type, (0.5 * pulse).toFixed(2))); g.addColorStop(1, puGlow(pw.type, '0'));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 2, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // slow-spinning diamond capsule
+      ctx.rotate(pw.rot);
+      ctx.beginPath(); ctx.moveTo(0, -R); ctx.lineTo(R, 0); ctx.lineTo(0, R); ctx.lineTo(-R, 0); ctx.closePath();
+      ctx.fillStyle = 'rgba(8,12,24,0.85)'; ctx.fill();
+      ctx.lineWidth = Math.max(1.6, R * 0.1); ctx.strokeStyle = col; ctx.stroke();
+      ctx.rotate(-pw.rot);
+      // glyph (drawn upright so it stays readable)
+      ctx.lineWidth = Math.max(1.5, R * 0.08); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff'; ctx.globalAlpha = 0.92;
+      if (pw.type === 'shield') {
+        ctx.beginPath(); ctx.moveTo(0, -R * 0.5); ctx.lineTo(R * 0.4, -R * 0.26); ctx.lineTo(R * 0.4, R * 0.14);
+        ctx.quadraticCurveTo(R * 0.4, R * 0.5, 0, R * 0.6); ctx.quadraticCurveTo(-R * 0.4, R * 0.5, -R * 0.4, R * 0.14);
+        ctx.lineTo(-R * 0.4, -R * 0.26); ctx.closePath(); ctx.stroke();
+      } else if (pw.type === 'rapid') {
+        ctx.beginPath(); ctx.moveTo(R * 0.16, -R * 0.55); ctx.lineTo(-R * 0.22, R * 0.06); ctx.lineTo(R * 0.0, R * 0.06);
+        ctx.lineTo(-R * 0.16, R * 0.55); ctx.lineTo(R * 0.26, -R * 0.12); ctx.lineTo(R * 0.02, -R * 0.12); ctx.closePath(); ctx.fill();
+      } else {
+        for (var k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * R * 0.34, -R * 0.42); ctx.lineTo(k * R * 0.34, R * 0.42); ctx.stroke(); }
+      }
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
   }
@@ -750,22 +829,26 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText('⚠ CAPITAL SHIP', W / 2, bby - 4);
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     }
-    // shields (hearts as chevrons), bottom-left
-    var sR = Math.max(7, Math.min(W, H) * 0.016), sy = H - pad, gapx = sR * 3;
-    for (var i = 0; i < 3; i++) {
+    // shields (chevrons), bottom-left — slots grow if a pickup overcharges you past 3
+    var sR = Math.max(7, Math.min(W, H) * 0.016), sy = H - pad, gapx = sR * 3, slots = Math.max(3, shields);
+    for (var i = 0; i < slots; i++) {
       var on = i < shields, x0 = pad + sR + i * gapx;
       ctx.beginPath(); ctx.moveTo(x0, sy - sR); ctx.lineTo(x0 + sR, sy); ctx.lineTo(x0, sy + sR * 0.4); ctx.lineTo(x0 - sR, sy); ctx.closePath();
       ctx.fillStyle = on ? '#39e6ff' : 'rgba(255,255,255,0.12)'; ctx.fill();
     }
     ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
     ctx.fillText('SHIELDS', pad, sy - sR - 6);
-    // boost meter bottom-right
-    if (boost > 0.02) {
-      var bw = Math.min(W, H) * 0.18, bx = W - pad - bw, byy = H - pad - 4;
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(bx, byy, bw, 7);
-      ctx.fillStyle = '#7CFFb2'; ctx.fillRect(bx, byy, bw * boost, 7);
-      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('BOOST', W - pad, byy - 6);
+    // boost + active power-up timers (bottom-right, stacked upward)
+    var meterW = Math.min(W, H) * 0.18, meterX = W - pad - meterW, my = H - pad - 4, step = Math.round(Math.min(W, H) * 0.044);
+    function meter(label, frac, col) {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(meterX, my, meterW, 7);
+      ctx.fillStyle = col; ctx.fillRect(meterX, my, meterW * clamp(frac, 0, 1), 7);
+      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
+      ctx.fillText(label, W - pad, my - 6); my -= step;
     }
+    if (boost > 0.02) meter('BOOST', boost, '#7CFFb2');
+    if (rapidT > 0) meter('RAPID', rapidT / RAPID_DUR, '#ffd34d');
+    if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   }
 
@@ -853,7 +936,11 @@
     forceRockAtShip: function () { var rk = makeRock(70); rk.x = camX; rk.y = camY; rk.r = 60; rk.hp = 1; rocks.push(rk); return rk; },
     forceEnemyAtShip: function () { var en = makeEnemy(); en.z = 70; en.x = camX; en.y = camY; en.hp = 1; enemies.push(en); return en; },
     spawnEnemyFar: function () { var en = makeEnemy(); en.z = 600; en.hp = 1; enemies.push(en); return en; },
-    enemyFireAll: function () { for (var i = 0; i < enemies.length; i++) enemyFire(enemies[i]); }
+    enemyFireAll: function () { for (var i = 0; i < enemies.length; i++) enemyFire(enemies[i]); },
+    powerups: function () { return powerups; }, get maxShield() { return MAXSHIELD; },
+    get rapidActive() { return rapidT > 0; }, get tripleActive() { return tripleT > 0; },
+    forcePowerupAtShip: function (type) { var pw = { type: type || 'shield', x: camX, y: camY, z: 70, r: 30, rot: 0, alive: true }; powerups.push(pw); return pw; },
+    spawnPowerupFar: function () { spawnPowerup(); return powerups[powerups.length - 1]; }
   };
 })();
 </script>
