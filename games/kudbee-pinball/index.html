@@ -185,10 +185,16 @@
     seg(LIN, 200, LIN, 1320);                              // lane inner / playfield-right — OPEN above y=200
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
-    // ---- lower funnel toward the flippers ----
-    seg(L, 1180, 295, 1360, { rest: 0.22 });              // left funnel wall
-    seg(LIN, 1180, 665, 1360, { rest: 0.22 });            // right funnel wall
-    // inlane/outlane guide posts
+    // ---- lower funnel + thin outlanes (real-machine drain geometry) ----
+    // Each side is a narrow ~34px outlane channel hugging the flipper instead of a wide
+    // open mouth; the ball drains down a tight side lane or the center, like a real table.
+    seg(L, 1180, 282, 1255, { rest: 0.22 });              // left funnel into the outlane mouth
+    seg(282, 1255, 282, 1440, { rest: 0.2 });             // left outlane OUTER wall (vertical)
+    seg(316, 1255, 316, 1440, { rest: 0.2 });             // left outlane INNER wall (just outside L flipper)
+    seg(LIN, 1180, 658, 1255, { rest: 0.22 });            // right funnel into the outlane mouth
+    seg(658, 1255, 658, 1440, { rest: 0.2 });             // right outlane OUTER wall (vertical)
+    seg(624, 1255, 624, 1440, { rest: 0.2 });             // right outlane INNER wall (just outside R flipper)
+    // inlane/outlane guide posts (feed a saved ball back onto the flipper)
     seg(330, 1250, 360, 1330, { rest: 0.2 });
     seg(630, 1250, 600, 1330, { rest: 0.2 });
     // slingshots (kickers above each flipper)
@@ -239,8 +245,9 @@
     for (var li = 0; li < lampSpec.length; li++) lamps.push({ x: lampSpec[li][0], y: lampSpec[li][1], col: lampSpec[li][2], ph: li * 0.6 });
 
     // flippers
-    flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);   // angles in radians (down-right rest → up)
-    flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
+    // length 120 (was 150): leaves a realistic center drain gap between the tips, like a real machine
+    flipL = new Flipper(330, 1300, 120, -1, 0.40, -0.18);   // angles in radians (down-right rest → up)
+    flipR = new Flipper(610, 1300, 120, 1, Math.PI - 0.40, Math.PI + 0.18);
   }
 
   // drain line (below flippers, between outlanes)
