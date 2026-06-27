@@ -1,0 +1,7 @@
+# Drop your Unity WebGL build output here.
+# Expected files (name your Unity build "kudbee-contra"):
+#   kudbee-contra.loader.js
+#   kudbee-contra.data
+#   kudbee-contra.framework.js
+#   kudbee-contra.wasm
+# See ../README.md for full instructions. This .gitkeep can be deleted once the build is in.

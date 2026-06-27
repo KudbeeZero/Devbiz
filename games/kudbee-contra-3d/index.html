@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- noindex until a real, playable engine build lands and is verified. See README.md go-live checklist. -->
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Kudbee Contra (3D) — engine-built edition by Kudbee Games Studio.">
+<meta name="theme-color" content="#05050f">
+<title>Kudbee Contra · 3D — Kudbee Games Studio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg:#05050f; --cyan:#39e6ff; --text:#cfe9ff; --dim:#9fb6c8; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(57,230,255,0.10), transparent 60%),
+      var(--bg);
+  }
+  #frame {
+    position: relative;
+    width: min(100vw, calc(100vh * 1.6));
+    height: min(100vh, calc(100vw / 1.6));
+    box-shadow: 0 0 60px rgba(57,230,255,0.18), inset 0 0 0 1px rgba(57,230,255,0.12);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  #unity-canvas { display: block; width: 100%; height: 100%; background: var(--bg); }
+
+  /* Top-left back link (matches the other game pages) */
+  .back-link {
+    position: absolute; top: 10px; left: 12px; z-index: 30;
+    font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--dim); text-decoration: none; padding: 6px 10px;
+    border: 1px solid rgba(159,182,200,0.25); border-radius: 6px;
+    background: rgba(5,5,15,0.5); backdrop-filter: blur(6px);
+    transition: all 0.2s;
+  }
+  .back-link:hover { color: #fff; border-color: var(--cyan); }
+
+  /* Fullscreen button */
+  .fs-btn {
+    position: absolute; top: 10px; right: 12px; z-index: 30;
+    font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--dim); cursor: pointer; padding: 6px 10px;
+    border: 1px solid rgba(159,182,200,0.25); border-radius: 6px;
+    background: rgba(5,5,15,0.5); backdrop-filter: blur(6px);
+    transition: all 0.2s; display: none;
+  }
+  .fs-btn:hover { color: #fff; border-color: var(--cyan); }
+
+  /* Loading + build-pending overlays */
+  .overlay {
+    position: absolute; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; gap: 18px;
+  }
+  .logo {
+    font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; font-size: 13px;
+    color: var(--cyan); text-shadow: 0 0 18px rgba(57,230,255,0.5);
+  }
+  .title { font-size: clamp(22px, 4vw, 38px); font-weight: 700; letter-spacing: -0.5px; }
+  .sub { color: var(--dim); font-size: 14px; max-width: 46ch; line-height: 1.55; }
+  .bar { width: min(60%, 320px); height: 6px; border-radius: 99px; background: rgba(159,182,200,0.18); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), #b06bff); transition: width .15s ease; }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: rgba(57,230,255,0.08); border: 1px solid rgba(57,230,255,0.2);
+    padding: 2px 7px; border-radius: 5px; color: var(--cyan); font-size: 13px;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <a class="back-link" href="/index.html">‹ Kudbee</a>
+    <div class="fs-btn" id="fs-btn" role="button" tabindex="0">⛶ Fullscreen</div>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+    <!-- Loading overlay (shown while a real build initializes) -->
+    <div class="overlay hidden" id="loading">
+      <div class="logo">Kudbee Games Studio</div>
+      <div class="title">Kudbee Contra · 3D</div>
+      <div class="bar"><i id="progress"></i></div>
+      <div class="sub" id="loading-sub">Loading engine build…</div>
+    </div>
+
+    <!-- Build-pending overlay (shown when no Unity build is installed yet) -->
+    <div class="overlay" id="pending">
+      <div class="logo">Kudbee Games Studio</div>
+      <div class="title">Kudbee Contra · 3D</div>
+      <div class="sub">
+        Engine build not installed yet. Drop your Unity WebGL export into
+        <code>./Build</code> (named <code>kudbee-contra.*</code>), then reload.
+        See <code>README.md</code> for the drop-in + go-live steps.
+      </div>
+      <div class="sub" style="opacity:.7">The playable canvas edition lives at <code>/games/kudbee-contra/</code>.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Standard Unity WebGL build filenames, expected under ./Build/ (name your build "kudbee-contra").
+  var buildUrl = "Build";
+  var loaderUrl = buildUrl + "/kudbee-contra.loader.js";
+  var config = {
+    dataUrl: buildUrl + "/kudbee-contra.data",
+    frameworkUrl: buildUrl + "/kudbee-contra.framework.js",
+    codeUrl: buildUrl + "/kudbee-contra.wasm",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "Kudbee Games Studio",
+    productName: "Kudbee Contra 3D",
+    productVersion: "0.1.0"
+  };
+
+  var canvas = document.querySelector("#unity-canvas");
+  var pending = document.querySelector("#pending");
+  var loading = document.querySelector("#loading");
+  var progress = document.querySelector("#progress");
+  var fsBtn = document.querySelector("#fs-btn");
+
+  // Try to load the Unity loader. If it's absent (no build committed yet), keep the
+  // graceful "build pending" panel and never throw a broken page.
+  var script = document.createElement("script");
+  script.src = loaderUrl;
+  script.onerror = function () {
+    // No build present — leave the pending overlay visible. Nothing else to do.
+  };
+  script.onload = function () {
+    if (typeof createUnityInstance !== "function") return; // loader malformed — keep pending panel
+    pending.classList.add("hidden");
+    loading.classList.remove("hidden");
+    createUnityInstance(canvas, config, function (p) {
+      progress.style.width = (100 * p) + "%";
+    }).then(function (instance) {
+      loading.classList.add("hidden");
+      fsBtn.style.display = "block";
+      fsBtn.onclick = function () { instance.SetFullscreen(1); };
+      fsBtn.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") instance.SetFullscreen(1); };
+    }).catch(function (err) {
+      document.querySelector("#loading-sub").textContent = "Build failed to load: " + err;
+    });
+  };
+  document.body.appendChild(script);
+</script>
+</body>
+</html>

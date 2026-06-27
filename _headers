@@ -19,6 +19,18 @@
 /games/*/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Kudbee Contra · 3D — Unity WebGL build payload. Long-cache the engine build files
+# (loader.js / .data / .framework.js / .wasm) but not the host index.html.
+/games/kudbee-contra-3d/Build/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cross-origin isolation for the engine edition — ONLY needed if you enable Unity wasm
+# threads (multithreading). Harmless when single-threaded. Mirrors the recording-it block.
+/games/kudbee-contra-3d/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+
 # Private testing surfaces — keep out of search indexes. The real access control
 # is Cloudflare Access (see docs/PRIVATE_TESTING_GATE.md); this header is hygiene
 # so the gated hub/game routes are never indexed even before Access is configured.
