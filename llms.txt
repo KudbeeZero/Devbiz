@@ -24,6 +24,14 @@ through the Contact section at https://devbiz.kudbee.workers.dev/ (we reply with
 - [Kudbee Darts](https://devbiz.kudbee.workers.dev/games/kudbee-darts/index.html): Predictive flick-throw
   darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and unlockable neon
   dart skins. Free, in-browser.
+- [Kudbee Riff](https://devbiz.kudbee.workers.dev/games/kudbee-riff/index.html): A neon fret-rush rhythm
+  game — notes fall to the real beats of an original Kudbee track; hit them in time, climb the
+  heat tiers, and ignite Overdrive. Playable browser game, free, no install.
+- [Kudbee Riff II](https://devbiz.kudbee.workers.dev/games/kudbee-riff-2/index.html): The second neon
+  fret-rush track — same rhythm engine, a brand-new original Kudbee song. Playable browser game,
+  free, no install.
+- [Kudbee Pinball — Starbreak](https://devbiz.kudbee.workers.dev/games/kudbee-pinball/index.html): A neon
+  space pinball table (Phase-1 physics prototype). Playable browser game, free, no install.
 - [Online League](https://devbiz.kudbee.workers.dev/leaderboard/public/leaderboard.html): Live leaderboard
   for Kudbee games.
 
