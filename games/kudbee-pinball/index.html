@@ -197,9 +197,15 @@
     // inlane/outlane guide posts (feed a saved ball back onto the flipper)
     seg(330, 1250, 360, 1330, { rest: 0.2 });
     seg(630, 1250, 600, 1330, { rest: 0.2 });
-    // slingshots (kickers above each flipper)
-    seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling
-    seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling
+    // slingshots — real triangular kicker BODIES above each flipper (not bare lines).
+    // The inner (center-facing) hypotenuse kicks; the outer + bottom edges are solid walls
+    // that fill the body so the ball can't pass through the sling area.
+    seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling — kicking face
+    seg(372, 1258, 300, 1258, { rest: 0.4 });                            // left sling — bottom wall
+    seg(300, 1258, 300, 1185, { rest: 0.4 });                            // left sling — outer wall
+    seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling — kicking face
+    seg(588, 1258, 660, 1258, { rest: 0.4 });                            // right sling — bottom wall
+    seg(660, 1258, 660, 1185, { rest: 0.4 });                            // right sling — outer wall
     // bumpers — "asteroid belt"
     bumpers.push({ x: 360, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0 });
     bumpers.push({ x: 540, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0 });

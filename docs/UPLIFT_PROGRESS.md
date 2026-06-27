@@ -28,6 +28,16 @@ API key/Worker, payments, domain, security policy) · no fabricated data.
   "98% Client Satisfaction", "1 Game Studio Launched". Unverifiable from the repo — left
   as-is (not fabricating up or down). Confirm or adjust these marketing numbers.
 
+## Pinball drain tuning (dynamic loop — self-paced)
+Goal: tune the pinball lower playfield toward real-machine feel. Each pass = one
+geometry-verified improvement; owner playtest feedback overrides the backlog.
+- Pass 1 (2026-06-27): **flipper-reach verification** — confirmed the 33px center drain is
+  catchable (raised flippers close it to 18px < 28px ball). No flipper change needed.
+  Shipped **slingshot bodies**: thin sling segments → real triangular kicker bodies (inner
+  kicking face + outer/bottom walls) above each flipper. Verified convex, no trap slivers.
+- NEXT: inlane/outlane separator + return lane.
+- MANUAL GATE: owner playtest of the branch preview drives priority on the next pass.
+
 ## Iteration log
 - 2026-06-27T15:48:48Z — iteration 1 started; ledger created; beginning accuracy pass.
 - 2026-06-27T15:48:48Z — iteration 1 DONE (accuracy): verified every internal link/route/
