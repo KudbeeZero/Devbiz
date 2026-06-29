@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Grange Park Fastpitch — youth fastpitch softball for ages 6–18. Rec & Travel divisions, certified coaching, and a community built around the game. Register for the Spring 2026 season.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a1430">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Grange Park Fastpitch">
+<meta property="og:title" content="Grange Park Fastpitch — Where the next generation finds its swing">
+<meta property="og:description" content="Youth fastpitch softball for ages 6–18. Rec & Travel divisions, certified coaching, real community. Spring 2026 registration is open.">
+<title>Grange Park Fastpitch — Youth Softball · Spring 2026 Registration</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23cdf24a'/%3E%3Cpath d='M7 9c5 4 5 10 0 14M25 9c-5 4-5 10 0 14' stroke='%23ff5a5f' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0a1430; --navy-2:#0c1c44; --ink:#060d1c; --panel:#0f1d3e;
+  --optic:#cdf24a; --optic-d:#a9d12f; --clay:#ff6a3d; --stitch:#ff5a5f;
+  --chalk:#f4f8ff; --muted:#9db0d2; --line:rgba(160,185,230,.14);
+  --r:18px; --maxw:1120px;
+  --shadow:0 24px 60px -24px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  font-family:Inter,system-ui,sans-serif;color:var(--chalk);background:var(--ink);
+  line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;line-height:1.05;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+section{position:relative}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+.eyebrow{font:600 12px/1 'Space Grotesk';letter-spacing:.22em;text-transform:uppercase;color:var(--optic-d)}
+.lead{color:var(--muted);font-size:clamp(15px,2.2vw,18px);max-width:60ch}
+:focus-visible{outline:3px solid var(--optic);outline-offset:3px;border-radius:6px}
+
+/* ---- buttons ---- */
+.btn{display:inline-flex;align-items:center;gap:.5em;font:600 15px/1 'Space Grotesk';
+  padding:14px 24px;border-radius:999px;cursor:pointer;border:1px solid transparent;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--optic),var(--optic-d));color:#0a1226;
+  box-shadow:0 12px 30px -8px rgba(205,242,74,.55)}
+.btn-ghost{background:rgba(255,255,255,.04);border-color:var(--line);color:var(--chalk)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+
+/* ---- demo banner ---- */
+.demo-bar{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;
+  background:repeating-linear-gradient(135deg,#13234d,#13234d 14px,#102043 14px,#102043 28px);
+  color:var(--muted);font-size:12.5px;padding:9px 16px;border-bottom:1px solid var(--line);text-align:center}
+.demo-bar strong{color:var(--optic)}
+.demo-bar button{background:none;border:1px solid var(--line);color:var(--muted);
+  border-radius:999px;font-size:11px;padding:3px 10px;cursor:pointer}
+
+/* ---- nav ---- */
+header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+  background:rgba(8,15,34,.72);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:18px;height:68px}
+.brand{display:flex;align-items:center;gap:11px;font:700 18px/1 'Space Grotesk';letter-spacing:-.01em}
+.brand .ball{width:30px;height:30px;flex:0 0 30px}
+.brand small{display:block;font:600 9.5px/1 'Space Grotesk';letter-spacing:.18em;color:var(--optic-d);margin-top:4px}
+.nav-links{display:flex;gap:6px;margin-left:auto;align-items:center}
+.nav-links a{padding:9px 13px;border-radius:10px;font-size:14px;color:var(--muted);transition:color .15s,background .15s}
+.nav-links a:hover{color:var(--chalk);background:rgba(255,255,255,.05)}
+.nav-cta{margin-left:6px}
+.burger{display:none;margin-left:auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.04);cursor:pointer;flex-direction:column;gap:5px;align-items:center;justify-content:center}
+.burger span{width:20px;height:2px;background:var(--chalk);border-radius:2px}
+
+/* ---- hero ---- */
+.hero{position:relative;min-height:clamp(620px,92vh,860px);display:flex;align-items:center;overflow:hidden}
+#fx{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 80% at 75% 20%,transparent,rgba(6,13,28,.55) 70%,var(--ink));}
+.hero-in{position:relative;z-index:2;padding:60px 0}
+.badge{display:inline-flex;align-items:center;gap:9px;background:rgba(205,242,74,.1);
+  border:1px solid rgba(205,242,74,.32);color:var(--optic);border-radius:999px;
+  padding:7px 15px;font:600 12.5px/1 'Space Grotesk';letter-spacing:.04em;margin-bottom:22px}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--optic);box-shadow:0 0 0 0 rgba(205,242,74,.6);animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(205,242,74,.55)}70%{box-shadow:0 0 0 10px rgba(205,242,74,0)}100%{box-shadow:0 0 0 0 rgba(205,242,74,0)}}
+@media (prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+.hero h1{font-size:clamp(40px,7vw,82px);font-weight:700}
+.hero h1 .hl{color:var(--optic)}
+.hero p.lead{margin:20px 0 30px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.hero-trust{display:flex;gap:22px;flex-wrap:wrap;margin-top:34px;color:var(--muted);font-size:13.5px}
+.hero-trust b{color:var(--chalk)}
+.hero-trust span{display:inline-flex;align-items:center;gap:8px}
+.hero-trust span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--clay)}
+
+/* ---- stat band ---- */
+.stats{background:linear-gradient(180deg,var(--ink),var(--navy));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:46px 0}
+.stat{text-align:center}
+.stat b{display:block;font:700 clamp(34px,5vw,54px)/1 'Space Grotesk';color:var(--optic);letter-spacing:-.03em}
+.stat span{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+
+/* ---- generic section ---- */
+.sec{padding:88px 0}
+.sec-head{max-width:640px;margin-bottom:46px}
+.sec-head h2{font-size:clamp(28px,4.4vw,46px);margin:14px 0 14px}
+.bg-navy{background:var(--navy)}
+.bg-panel{background:linear-gradient(180deg,var(--navy),var(--navy-2))}
+
+/* ---- pillar cards ---- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;
+  transition:transform .2s ease,border-color .2s ease}
+.card:hover{transform:translateY(-5px);border-color:rgba(205,242,74,.4)}
+.card .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:18px;
+  background:rgba(205,242,74,.12);border:1px solid rgba(205,242,74,.25)}
+.card h3{font-size:20px;margin-bottom:8px}
+.card p{color:var(--muted);font-size:14.5px}
+
+/* ---- divisions ---- */
+.divs{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px}
+.div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 18px;
+  position:relative;overflow:hidden;transition:transform .18s,border-color .18s}
+.div:hover{transform:translateY(-4px);border-color:var(--optic-d)}
+.div .age{font:700 30px/1 'Space Grotesk';color:var(--optic)}
+.div .nm{font:600 14px/1.2 'Space Grotesk';margin:8px 0 12px}
+.div ul{list-style:none;font-size:12.5px;color:var(--muted)}
+.div ul li{padding:3px 0;border-top:1px solid var(--line)}
+.div ul li:first-child{border-top:none}
+.div ul li b{color:var(--chalk);font-weight:600}
+
+/* ---- timeline ---- */
+.timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;margin-top:30px}
+.timeline::before{content:"";position:absolute;top:13px;left:6%;right:6%;height:2px;
+  background:linear-gradient(90deg,var(--optic),var(--clay))}
+.tl{position:relative;text-align:center;padding:0 8px}
+.tl .node{width:28px;height:28px;border-radius:50%;background:var(--navy);border:2px solid var(--optic);
+  margin:0 auto 16px;display:grid;place-items:center;position:relative;z-index:1;color:var(--optic);font:700 12px 'Space Grotesk'}
+.tl h4{font:600 15px 'Space Grotesk';margin-bottom:5px}
+.tl span{font-size:12.5px;color:var(--muted)}
+
+/* ---- features split ---- */
+.feat{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center}
+.feat ul{list-style:none;display:grid;gap:14px;margin-top:24px}
+.feat li{display:flex;gap:13px;align-items:flex-start}
+.feat li .ck{flex:0 0 24px;width:24px;height:24px;border-radius:7px;background:rgba(205,242,74,.14);
+  display:grid;place-items:center;color:var(--optic);font-weight:700;margin-top:2px}
+.feat li b{font-family:'Space Grotesk'}
+.feat li p{color:var(--muted);font-size:14px;margin-top:2px}
+.feat-art{aspect-ratio:1/1;border-radius:24px;border:1px solid var(--line);overflow:hidden;background:var(--ink)}
+
+/* ---- pricing ---- */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.tier{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:30px;position:relative}
+.tier.feature{border-color:var(--optic);box-shadow:0 0 0 1px rgba(205,242,74,.3),var(--shadow)}
+.tier .tag{position:absolute;top:-12px;left:30px;background:var(--optic);color:#0a1226;
+  font:700 11px 'Space Grotesk';letter-spacing:.08em;padding:5px 12px;border-radius:999px;text-transform:uppercase}
+.tier h3{font-size:21px}
+.tier .price{font:700 42px/1 'Space Grotesk';margin:12px 0 4px}
+.tier .price small{font-size:14px;color:var(--muted);font-weight:500}
+.tier .per{color:var(--muted);font-size:13px;margin-bottom:18px}
+.tier ul{list-style:none;display:grid;gap:10px;font-size:14px;color:var(--muted);margin-bottom:24px}
+.tier ul li::before{content:"✓";color:var(--optic);font-weight:700;margin-right:9px}
+.tier .btn{width:100%;justify-content:center}
+
+/* ---- sponsors ---- */
+.marquee{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.marquee-track{display:flex;gap:48px;width:max-content;animation:scroll 32s linear infinite}
+@keyframes scroll{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.marquee-track{animation:none;flex-wrap:wrap;justify-content:center}}
+.marquee:hover .marquee-track{animation-play-state:paused}
+.sponsor{font:700 22px 'Space Grotesk';color:var(--muted);opacity:.65;white-space:nowrap;letter-spacing:-.01em}
+
+/* ---- testimonials ---- */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.quote{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px}
+.quote p{font-size:16px;margin-bottom:18px}
+.quote .who{display:flex;align-items:center;gap:12px}
+.quote .av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--clay),var(--stitch));
+  display:grid;place-items:center;font:700 15px 'Space Grotesk';color:#0a1226}
+.quote .who b{display:block;font-family:'Space Grotesk';font-size:14px}
+.quote .who span{font-size:12.5px;color:var(--muted)}
+
+/* ---- faq ---- */
+.faq{max-width:760px;margin:0 auto}
+.faq details{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:var(--panel);overflow:hidden}
+.faq summary{cursor:pointer;padding:18px 22px;font:600 16px 'Space Grotesk';list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--optic);font-size:22px;transition:transform .2s;font-family:'Space Grotesk'}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 22px 20px;color:var(--muted);font-size:14.5px}
+
+/* ---- CTA band ---- */
+.cta-band{background:linear-gradient(135deg,var(--navy-2),#143063);border:1px solid rgba(205,242,74,.25);
+  border-radius:28px;padding:clamp(36px,6vw,64px);text-align:center;position:relative;overflow:hidden}
+.cta-band::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 120% at 50% -10%,rgba(205,242,74,.18),transparent 60%)}
+.cta-band>*{position:relative}
+.cta-band h2{font-size:clamp(28px,4.6vw,46px);margin-bottom:14px}
+.cta-band .hero-cta{justify-content:center;margin-top:26px}
+
+/* ---- footer ---- */
+footer{background:var(--ink);border-top:1px solid var(--line);padding:60px 0 30px}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;margin-bottom:40px}
+.foot-grid h5{font:600 13px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:var(--optic-d);margin-bottom:16px}
+.foot-grid a,.foot-grid p{color:var(--muted);font-size:14px;display:block;padding:4px 0}
+.foot-grid a:hover{color:var(--chalk)}
+.rainout{background:rgba(255,90,95,.1);border:1px solid rgba(255,90,95,.3);border-radius:12px;
+  padding:12px 16px;font-size:13px;color:#ffb4b6;margin-top:8px}
+.foot-bottom{border-top:1px solid var(--line);padding-top:24px;display:flex;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;align-items:center}
+.foot-bottom a{color:var(--optic)}
+.placeholder{border-bottom:1px dashed rgba(157,176,210,.45)}
+
+/* ---- reveal ---- */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* ---- mobile ---- */
+@media (max-width:860px){
+  .nav-links{position:fixed;inset:68px 0 auto 0;flex-direction:column;align-items:stretch;
+    background:rgba(8,15,34,.97);backdrop-filter:blur(16px);padding:16px;gap:4px;
+    border-bottom:1px solid var(--line);transform:translateY(-130%);transition:transform .3s ease;
+    box-shadow:var(--shadow);margin-left:0}
+  .nav-links.open{transform:none}
+  .nav-links a{padding:14px;font-size:16px}
+  .nav-cta{margin:6px 0 0}
+  .burger{display:flex}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:30px 16px}
+  .timeline{grid-template-columns:1fr;gap:22px}
+  .timeline::before{display:none}
+  .tl{text-align:left;display:flex;gap:14px;align-items:center}
+  .tl .node{margin:0}
+  .feat{grid-template-columns:1fr;gap:30px}
+  .feat-art{max-width:360px}
+  .foot-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){.foot-grid{grid-template-columns:1fr}.hero-trust{gap:12px}}
+</style>
+</head>
+<body>
+
+<div class="demo-bar" id="demoBar">
+  <span><strong>Concept demo</strong> — designed &amp; built by Kudbee. Not an official Grange Park site; content is placeholder for client review.</span>
+  <button onclick="document.getElementById('demoBar').remove()">Dismiss</button>
+</div>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Grange Park Fastpitch home">
+      <svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#cdf24a"/><path d="M7 9c5 4 5 10 0 14M25 9c-5 4-5 10 0 14" stroke="#ff5a5f" stroke-width="1.6" fill="none"/></svg>
+      <span>Grange Park<small>FASTPITCH SOFTBALL</small></span>
+    </a>
+    <nav class="nav-links" id="navLinks" aria-label="Primary">
+      <a href="#program">Program</a>
+      <a href="#divisions">Divisions</a>
+      <a href="#season">Season</a>
+      <a href="#why">Why Us</a>
+      <a href="#sponsors">Sponsors</a>
+      <a href="#register" class="btn btn-primary nav-cta">Register →</a>
+    </nav>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="wrap hero-in">
+    <div class="badge"><span class="dot"></span> Spring 2026 registration is open</div>
+    <h1>Where the next<br>generation finds<br>its <span class="hl">swing.</span></h1>
+    <p class="lead">Grange Park Fastpitch is youth softball done right — competitive, coached, and community-driven. From first-time players to travel-ready athletes, ages 6 to 18 find their team here.</p>
+    <div class="hero-cta">
+      <a href="#register" class="btn btn-primary">Register for Spring 2026</a>
+      <a href="#program" class="btn btn-ghost">Explore the program</a>
+    </div>
+    <div class="hero-trust">
+      <span><b>Ages 6–18</b></span>
+      <span><b>Rec &amp; Travel</b> divisions</span>
+      <span><b>USA Softball</b> sanctioned</span>
+      <span><b>18th</b> season</span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div class="stat reveal"><b data-count="480">0</b><span>Players each season</span></div>
+    <div class="stat reveal"><b data-count="32">0</b><span>Teams across divisions</span></div>
+    <div class="stat reveal"><b data-count="7">0</b><span>Age divisions</span></div>
+    <div class="stat reveal"><b data-count="60" data-suffix="+">0</b><span>Volunteer coaches</span></div>
+  </div>
+</section>
+
+<!-- PROGRAM -->
+<section class="sec bg-navy" id="program">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">The Program</span>
+      <h2>Two paths. One clubhouse.</h2>
+      <p class="lead">Whether your athlete is picking up a glove for the first time or chasing a college roster spot, there's a place for them at Grange Park.</p>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <div class="ico" aria-hidden="true">🥎</div>
+        <h3>Learn-to-Play (6U–8U)</h3>
+        <p>Tee-ball into coach-pitch. We teach the fundamentals — throwing, catching, and confidence — in a fun, pressure-free environment.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico" aria-hidden="true">⚾</div>
+        <h3>Recreation League</h3>
+        <p>Balanced teams, equal play time, and real games every week. Ideal for players who want to compete and grow without a travel commitment.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico" aria-hidden="true">🏆</div>
+        <h3>Travel / Select</h3>
+        <p>Evaluated rosters competing in regional tournaments. Advanced coaching, position development, and a path toward high-school and college ball.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico" aria-hidden="true">📋</div>
+        <h3>Coaching &amp; Dev</h3>
+        <p>Every coach is background-checked and clinic-trained. Off-season hitting and pitching clinics keep skills sharp year-round.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIVISIONS -->
+<section class="sec bg-panel" id="divisions">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Divisions</span>
+      <h2>Find your age group.</h2>
+      <p class="lead">Divisions are set by age as of December 31, 2025. Not sure where your athlete fits? Our registrar will help you place them.</p>
+    </div>
+    <div class="divs">
+      <div class="div reveal"><div class="age">6U</div><div class="nm">Tee-Ball</div><ul><li><b>Format</b> · Tee / soft toss</li><li><b>Ball</b> · 10"</li><li><b>Season</b> · Sat mornings</li></ul></div>
+      <div class="div reveal"><div class="age">8U</div><div class="nm">Coach Pitch</div><ul><li><b>Format</b> · Coach pitch</li><li><b>Ball</b> · 11"</li><li><b>Season</b> · Rec</li></ul></div>
+      <div class="div reveal"><div class="age">10U</div><div class="nm">Minors</div><ul><li><b>Format</b> · Player pitch</li><li><b>Ball</b> · 11"</li><li><b>Season</b> · Rec + Travel</li></ul></div>
+      <div class="div reveal"><div class="age">12U</div><div class="nm">Majors</div><ul><li><b>Format</b> · Full fastpitch</li><li><b>Ball</b> · 12"</li><li><b>Season</b> · Rec + Travel</li></ul></div>
+      <div class="div reveal"><div class="age">14U</div><div class="nm">Juniors</div><ul><li><b>Format</b> · Full fastpitch</li><li><b>Ball</b> · 12"</li><li><b>Season</b> · Rec + Travel</li></ul></div>
+      <div class="div reveal"><div class="age">16U</div><div class="nm">Seniors</div><ul><li><b>Format</b> · Travel focus</li><li><b>Ball</b> · 12"</li><li><b>Season</b> · Travel</li></ul></div>
+      <div class="div reveal"><div class="age">18U</div><div class="nm">Showcase</div><ul><li><b>Format</b> · Showcase</li><li><b>Ball</b> · 12"</li><li><b>Season</b> · Travel</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- SEASON TIMELINE -->
+<section class="sec bg-navy" id="season">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Season at a glance</span>
+      <h2>The road to Opening Day.</h2>
+      <p class="lead">Dates shown are illustrative for the Spring 2026 season — final calendar confirmed at registration.</p>
+    </div>
+    <div class="timeline">
+      <div class="tl reveal"><div class="node">1</div><h4>Registration</h4><span>Jan 6 – Feb 21</span></div>
+      <div class="tl reveal"><div class="node">2</div><h4>Evaluations</h4><span>Feb 28 – Mar 1</span></div>
+      <div class="tl reveal"><div class="node">3</div><h4>Opening Day</h4><span>Apr 4</span></div>
+      <div class="tl reveal"><div class="node">4</div><h4>All-Star Weekend</h4><span>Jun 13–14</span></div>
+      <div class="tl reveal"><div class="node">5</div><h4>Championships</h4><span>Jul 18–19</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY US -->
+<section class="sec bg-panel" id="why">
+  <div class="wrap feat">
+    <div class="reveal">
+      <span class="eyebrow">Why families choose us</span>
+      <h2 style="font-size:clamp(26px,4vw,40px);margin:14px 0">Built for players,<br>run for parents.</h2>
+      <p class="lead">We sweat the details off the field so your family can focus on the game.</p>
+      <ul>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>5-minute online registration</b><p>Sign up, pay, and pick your division from your phone — no paper forms.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Live schedules &amp; standings</b><p>Game times, field maps, and results sync straight to your calendar.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Safe &amp; inclusive</b><p>Background-checked coaches, SafeSport standards, and a zero-tolerance code of conduct.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Nobody sits out over cost</b><p>Need-based scholarships and equipment loans keep the game open to every kid.</p></div></li>
+      </ul>
+    </div>
+    <div class="feat-art reveal"><canvas id="fieldArt" width="520" height="520" aria-label="Stylized softball diamond"></canvas></div>
+  </div>
+</section>
+
+<!-- REGISTER / PRICING -->
+<section class="sec bg-navy" id="register">
+  <div class="wrap">
+    <div class="sec-head reveal" style="margin:0 auto 46px;text-align:center">
+      <span class="eyebrow">Registration</span>
+      <h2>Claim your spot for Spring 2026.</h2>
+      <p class="lead" style="margin:0 auto">Fees include jersey, cap, insurance, and a full season of games. Example pricing — confirm final fees at checkout.</p>
+    </div>
+    <div class="tiers">
+      <div class="tier reveal">
+        <h3>Learn-to-Play</h3>
+        <div class="price">$95<small></small></div>
+        <div class="per">6U–8U · per player / season</div>
+        <ul><li>8-week Saturday season</li><li>Jersey &amp; cap included</li><li>Equipment provided</li><li>Coach-led practices</li></ul>
+        <a href="#register" class="btn btn-ghost" onclick="alert('Demo only — wire this to your registration provider.');return false;">Register 6U–8U</a>
+      </div>
+      <div class="tier feature reveal">
+        <div class="tag">Most popular</div>
+        <h3>Recreation League</h3>
+        <div class="price">$165<small></small></div>
+        <div class="per">10U–14U · per player / season</div>
+        <ul><li>Weekly games + practices</li><li>Balanced teams, equal play</li><li>Uniform kit included</li><li>End-of-season tournament</li><li>Player &amp; team photos</li></ul>
+        <a href="#register" class="btn btn-primary" onclick="alert('Demo only — wire this to your registration provider.');return false;">Register Rec League</a>
+      </div>
+      <div class="tier reveal">
+        <h3>Travel / Select</h3>
+        <div class="price">$340<small></small></div>
+        <div class="per">10U–18U · per player / season</div>
+        <ul><li>Evaluated competitive roster</li><li>Regional tournament schedule</li><li>Advanced position coaching</li><li>Off-season clinics included</li></ul>
+        <a href="#register" class="btn btn-ghost" onclick="alert('Demo only — try-out required. Wire to your provider.');return false;">Request a tryout</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="sec bg-panel">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="eyebrow">From our families</span><h2>The Grange Park difference.</h2></div>
+    <div class="quotes">
+      <div class="quote reveal"><p>“My daughter showed up shy and left captain of her team. The coaches actually <em>coach</em> — and they make it fun.”</p><div class="who"><div class="av" aria-hidden="true">RM</div><div><b>Rachel M.</b><span>Parent · 12U Majors</span></div></div></div>
+      <div class="quote reveal"><p>“Registration took five minutes and the schedule landed on my phone. As a working parent, that's everything.”</p><div class="who"><div class="av" aria-hidden="true">DK</div><div><b>David K.</b><span>Parent · 10U Minors</span></div></div></div>
+      <div class="quote reveal"><p>“The travel program got my kid recruit-ready. Real competition, real development, real community.”</p><div class="who"><div class="av" aria-hidden="true">AT</div><div><b>Alicia T.</b><span>Parent · 16U Travel</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPONSORS -->
+<section class="sec bg-navy" id="sponsors">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 36px">
+      <span class="eyebrow">Proudly supported by</span>
+      <h2>Our community sponsors.</h2>
+    </div>
+  </div>
+  <div class="marquee" aria-label="Sponsor names">
+    <div class="marquee-track">
+      <span class="sponsor">Park Diner</span><span class="sponsor">Riverside Auto</span><span class="sponsor">Hometown Bank</span><span class="sponsor">Ace Hardware</span><span class="sponsor">Bella's Pizza</span><span class="sponsor">Grange Dental</span><span class="sponsor">North Star Realty</span>
+      <span class="sponsor">Park Diner</span><span class="sponsor">Riverside Auto</span><span class="sponsor">Hometown Bank</span><span class="sponsor">Ace Hardware</span><span class="sponsor">Bella's Pizza</span><span class="sponsor">Grange Dental</span><span class="sponsor">North Star Realty</span>
+    </div>
+  </div>
+  <div class="wrap" style="text-align:center;margin-top:40px">
+    <a href="#register" class="btn btn-ghost reveal" onclick="alert('Demo only — link to your sponsorship form.');return false;">Become a sponsor →</a>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec bg-panel">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 40px"><span class="eyebrow">Questions</span><h2>Good to know.</h2></div>
+    <div class="faq">
+      <details class="reveal"><summary>How is my child's age division decided?</summary><p>Divisions are set by your athlete's age as of December 31, 2025. If they fall between groups or you'd like them to "play up," contact our registrar and we'll help place them.</p></details>
+      <details class="reveal"><summary>What equipment do we need to provide?</summary><p>Players bring their own glove and cleats. Bats and helmets can be shared or loaned, and we provide every player's jersey and cap. New to the sport? Our equipment closet can get you started at no cost.</p></details>
+      <details class="reveal"><summary>What's the difference between Rec and Travel?</summary><p>Recreation League is balanced, local, and built around equal play time and fun. Travel/Select is an evaluated, competitive roster that practices more and plays regional tournaments. Many players start in Rec and move up.</p></details>
+      <details class="reveal"><summary>Do you offer financial assistance?</summary><p>Yes. No child is turned away over cost — we offer need-based scholarships and equipment loans. Just note it during registration or reach out privately to our board.</p></details>
+      <details class="reveal"><summary>What's your refund and rainout policy?</summary><p>Full refunds are available up to one week before Opening Day. Rainouts are posted to the rainout line and rescheduled when fields allow.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="sec bg-navy">
+  <div class="wrap">
+    <div class="cta-band reveal">
+      <span class="eyebrow" style="color:var(--optic)">Spots fill fast</span>
+      <h2>Let's play ball.</h2>
+      <p class="lead" style="margin:0 auto;color:#cdd9f2">Spring 2026 registration is open now. Lock in your athlete's spot before evaluations begin.</p>
+      <div class="hero-cta">
+        <a href="#register" class="btn btn-primary">Register for Spring 2026</a>
+        <a href="#program" class="btn btn-ghost">See the program</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:16px">
+          <svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#cdf24a"/><path d="M7 9c5 4 5 10 0 14M25 9c-5 4-5 10 0 14" stroke="#ff5a5f" stroke-width="1.6" fill="none"/></svg>
+          <span>Grange Park<small>FASTPITCH SOFTBALL</small></span>
+        </a>
+        <p style="color:var(--muted);font-size:14px;max-width:32ch">Youth fastpitch softball for ages 6–18 — competitive, coached, and community-driven.</p>
+        <div class="rainout">☎ Rainout line: <span class="placeholder">(555) 555-0143</span> — updated by 4:00 PM on game days.</div>
+      </div>
+      <div>
+        <h5>Program</h5>
+        <a href="#divisions">Divisions</a><a href="#season">Season calendar</a><a href="#register">Register</a><a href="#why">Scholarships</a>
+      </div>
+      <div>
+        <h5>Get involved</h5>
+        <a href="#register">Coach / volunteer</a><a href="#sponsors">Sponsor a team</a><a href="#program">Clinics</a><a href="#top">Code of conduct</a>
+      </div>
+      <div>
+        <h5>Contact</h5>
+        <p>Grange Park Fields<br><span class="placeholder">123 Park Ave, Your City</span></p>
+        <a href="mailto:info@example.org" class="placeholder">info@grangeparkfastpitch.org</a>
+        <a href="#top" class="placeholder">@grangeparkfastpitch</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="yr">2026</span> Grange Park Fastpitch. All rights reserved. <span class="placeholder">Placeholder text for client review.</span></span>
+      <span>Concept site designed &amp; built by <a href="https://kudbee.dev">Kudbee</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ---- mobile nav ---- */
+  var burger = document.getElementById('burger'),
+      links  = document.getElementById('navLinks');
+  burger.addEventListener('click', function(){
+    var open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  links.addEventListener('click', function(e){
+    if(e.target.tagName === 'A'){ links.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }
+  });
+
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  /* ---- scroll reveal + count-up ---- */
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      en.target.classList.add('in');
+      var nums = en.target.querySelectorAll('[data-count]');
+      nums.forEach(countUp);
+      io.unobserve(en.target);
+    });
+  }, {threshold:.18, rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  function countUp(el){
+    var target = +el.getAttribute('data-count'),
+        suffix = el.getAttribute('data-suffix') || '',
+        dur = 1400, start = null;
+    if(reduce){ el.textContent = target + suffix; return; }
+    function step(ts){
+      if(!start) start = ts;
+      var p = Math.min((ts - start)/dur, 1),
+          e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * e) + suffix;
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---- hero canvas: night-stadium particle field ---- */
+  var c = document.getElementById('fx'), ctx = c.getContext('2d'),
+      W=0, H=0, dpr = Math.min(window.devicePixelRatio||1, 2), motes=[], raf=null, visible=true;
+
+  function resize(){
+    W = c.clientWidth; H = c.clientHeight;
+    c.width = W*dpr; c.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    var n = Math.round(Math.min(90, W*H/14000));
+    motes = []; for(var i=0;i<n;i++) motes.push(mote());
+  }
+  function mote(){
+    return {x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.8+.4,
+      vx:(Math.random()-.5)*.18, vy:-(Math.random()*.25+.05),
+      a:Math.random()*.5+.15, hue:Math.random()<.25?'255,90,95':'205,242,74'};
+  }
+  function paintBg(){
+    var g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,'#0a1430'); g.addColorStop(.55,'#0b1838'); g.addColorStop(1,'#08122c');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // stadium light cones
+    ['rgba(205,242,74,.05)','rgba(120,170,255,.045)'].forEach(function(col,i){
+      ctx.save(); ctx.beginPath();
+      var ox = i? W*0.86 : W*0.14;
+      ctx.moveTo(ox,-20); ctx.lineTo(ox + (i?-W*0.5:W*0.5), H); ctx.lineTo(ox + (i?-W*0.18:W*0.18), H);
+      ctx.closePath(); ctx.fillStyle=col; ctx.fill(); ctx.restore();
+    });
+    // faint diamond baseline
+    ctx.strokeStyle='rgba(160,185,230,.10)'; ctx.lineWidth=1.5;
+    var cx=W*0.5, by=H*0.96, span=Math.min(W*0.42,360);
+    ctx.beginPath();
+    ctx.moveTo(cx, by-span*0.62); ctx.lineTo(cx+span, by); ctx.lineTo(cx, by+span*0.62); ctx.lineTo(cx-span, by); ctx.closePath();
+    ctx.stroke();
+  }
+  function frame(){
+    paintBg();
+    for(var i=0;i<motes.length;i++){
+      var m=motes[i]; m.x+=m.vx; m.y+=m.vy;
+      if(m.y < -6 || m.x < -6 || m.x > W+6){ motes[i]=mote(); motes[i].y=H+5; }
+      ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,6.283);
+      ctx.fillStyle='rgba('+m.hue+','+m.a+')'; ctx.fill();
+    }
+    if(visible) raf = requestAnimationFrame(frame);
+  }
+  function start(){ if(reduce){ paintBg(); return; } if(!raf){ visible=true; raf=requestAnimationFrame(frame); } }
+  function stop(){ visible=false; if(raf){ cancelAnimationFrame(raf); raf=null; } }
+
+  resize(); start();
+  window.addEventListener('resize', function(){ resize(); if(reduce) paintBg(); });
+  // pause when hero scrolls off-screen (perf)
+  var heroIO = new IntersectionObserver(function(e){ e[0].isIntersecting ? start() : stop(); }, {threshold:0});
+  heroIO.observe(c);
+  document.addEventListener('visibilitychange', function(){ document.hidden ? stop() : start(); });
+
+  /* ---- feature-card diamond art (static vector) ---- */
+  var fa = document.getElementById('fieldArt');
+  if(fa){
+    var f = fa.getContext('2d'), S=520;
+    var bg = f.createRadialGradient(S/2,S*0.4,40,S/2,S/2,S*0.7);
+    bg.addColorStop(0,'#11244e'); bg.addColorStop(1,'#0a1430');
+    f.fillStyle=bg; f.fillRect(0,0,S,S);
+    // outfield arc
+    f.fillStyle='rgba(205,242,74,.06)';
+    f.beginPath(); f.moveTo(S/2,S*0.82); f.arc(S/2,S*0.82,S*0.55,Math.PI*1.18,Math.PI*1.82); f.closePath(); f.fill();
+    // infield diamond
+    var cx=S/2, by=S*0.82, sp=S*0.30;
+    f.fillStyle='rgba(255,106,61,.16)'; f.strokeStyle='rgba(244,248,255,.5)'; f.lineWidth=3;
+    f.beginPath(); f.moveTo(cx,by-sp); f.lineTo(cx+sp,by); f.lineTo(cx,by+sp); f.lineTo(cx-sp,by); f.closePath(); f.fill(); f.stroke();
+    // bases
+    f.fillStyle='#f4f8ff';
+    [[cx,by-sp],[cx+sp,by],[cx,by+sp],[cx-sp,by]].forEach(function(p){ f.fillRect(p[0]-7,p[1]-7,14,14); });
+    // big stitched softball
+    f.save(); f.translate(S*0.66,S*0.30);
+    f.beginPath(); f.arc(0,0,58,0,6.283); f.fillStyle='#cdf24a'; f.fill();
+    f.strokeStyle='#ff5a5f'; f.lineWidth=3; f.lineCap='round';
+    f.beginPath(); f.arc(-46,0,70,-0.7,0.7); f.stroke();
+    f.beginPath(); f.arc(46,0,70,Math.PI-0.7,Math.PI+0.7); f.stroke();
+    for(var k=-3;k<=3;k++){ f.beginPath(); f.moveTo(-26,k*9); f.lineTo(-18,k*9-3); f.moveTo(26,k*9); f.lineTo(18,k*9-3); f.stroke(); }
+    f.restore();
+  }
+})();
+</script>
+</body>
+</html>
