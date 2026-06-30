@@ -29,7 +29,7 @@ fully caught-up, green repo.
 | 4 | DBZ-040 | **I3** Storefront demand capture — real "notify me / join the list" on the tiny-apps store (measures demand before Gumroad) | feature | ☑ done — "Notify me at launch" opens an email form in the terminal; saves per-app to localStorage `kudbee.waitlist`, POSTs to `WAITLIST_ENDPOINT` if set else mailto |
 | 5 | DBZ-041 | **W3** Demo↔production path source-of-truth — documented base-path convention + launch checklist so client-site links never 404 again | docs/infra | ☑ done — `docs/CLIENT_SITES.md`: two-homes model, the intra-site link rule (`./` not `../`), per-client launch checklist, and the link-audit method |
 | 6 | DBZ-042 | **I1** Domain readiness — `docs/DOMAIN_LAUNCH.md`: availability checked (kudbee.com taken, **kudbee.dev free** → recommended), mapped all 133 host strings across 11 files, one-command flip + verify steps. **HOLD** the flip until owner points DNS | infra | ☑ prepped (flip owner-gated) |
-| 7 | DBZ-043 | **D1** "Ship-it" self-serve studio — Phase 1: scaffold the page + intake form | feature | ☐ todo |
+| 7 | DBZ-043 | **D1** "Ship-it" self-serve studio — Phase 1: scaffold the page + intake form | feature | ☑ done — `/ship-it/`: hero, intake (type/name/location/vibe/accent), browser-style preview frame that renders a live project brief + saves to localStorage; wired into homepage nav + sitemap. Live render = Phase 3 |
 | 8 | DBZ-044 | **D1** Phase 2: house-style template system (a few industries) | feature | ☐ todo |
 | 9 | DBZ-045 | **D1** Phase 3: live preview generator (describe business → assembled preview) | feature | ☐ todo |
 | 10 | DBZ-046 | **D1** Phase 4: convert (book-a-call / export) + agent hand-off + polish | feature | ☐ todo |
