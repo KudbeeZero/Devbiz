@@ -96,9 +96,11 @@
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{font-family:Inter,system-ui,sans-serif;color:var(--ivory);background:var(--ink);
-  line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;
-  -webkit-tap-highlight-color:transparent;text-size-adjust:100%;-webkit-text-size-adjust:100%}
-h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;line-height:1.08;letter-spacing:-.01em}
+  line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;text-size-adjust:100%;-webkit-text-size-adjust:100%;
+  text-rendering:optimizeLegibility;overflow-wrap:break-word}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;line-height:1.08;letter-spacing:-.01em;text-wrap:balance}
+.lead,p{text-wrap:pretty}
 a{color:inherit;text-decoration:none}
 svg{display:block}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
@@ -124,7 +126,7 @@ svg{display:block}
 .demo-bar button{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:999px;font-size:11px;padding:3px 10px;cursor:pointer}
 
 /* nav */
-header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+header.nav{position:sticky;top:0;z-index:60;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   background:rgba(11,23,19,.78);border-bottom:1px solid var(--line-2);
   padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
   transition:box-shadow .3s ease,background .3s ease}
@@ -141,8 +143,37 @@ header.nav.scrolled{box-shadow:0 12px 34px -18px rgba(0,0,0,.7);background:rgba(
 .nav-call svg{width:15px;height:15px;stroke:var(--gold)}
 .burger{display:none;margin-left:auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--line-2);
   background:rgba(244,241,234,.04);cursor:pointer;flex-direction:column;gap:5px;align-items:center;justify-content:center}
-.burger span{width:20px;height:2px;background:var(--ivory);border-radius:2px}
-.nav-drawer{display:none}
+.burger{position:relative;z-index:61}
+.burger span{width:20px;height:2px;background:var(--ivory);border-radius:2px;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+.burger.x span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.burger.x span:nth-child(2){opacity:0}
+.burger.x span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+/* premium full-screen mobile menu */
+.nav-menu{display:flex;flex-direction:column;position:fixed;inset:0;z-index:56;
+  padding:calc(104px + env(safe-area-inset-top)) 30px calc(34px + env(safe-area-inset-bottom));overflow-y:auto;
+  background:radial-gradient(120% 75% at 82% 0%,rgba(20,52,41,.55),transparent 55%),#0a1410;
+  opacity:0;visibility:hidden;transform:translateY(-10px);transition:opacity .35s ease,transform .5s cubic-bezier(.2,.8,.2,1),visibility .35s}
+.nav-menu.open{opacity:1;visibility:visible;transform:none}
+body.menu-open header.nav{position:fixed;top:0;left:0;right:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom-color:transparent}
+.nav-menu .ml{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font:500 clamp(27px,8.5vw,42px) Fraunces;color:var(--ivory);padding:15px 2px;border-bottom:1px solid var(--line-2);
+  opacity:0;transform:translateY(18px);transition:opacity .45s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
+.nav-menu .ml::after{content:"→";color:var(--gold);font-size:.5em;opacity:.5;transition:transform .25s ease}
+.nav-menu .ml:hover::after{transform:translateX(6px)}
+.nav-menu.open .ml{opacity:1;transform:none}
+.nav-menu.open .ml:nth-child(1){transition-delay:.06s}
+.nav-menu.open .ml:nth-child(2){transition-delay:.11s}
+.nav-menu.open .ml:nth-child(3){transition-delay:.16s}
+.nav-menu.open .ml:nth-child(4){transition-delay:.21s}
+.nav-menu.open .ml:nth-child(5){transition-delay:.26s}
+.nav-menu.open .ml:nth-child(6){transition-delay:.31s}
+.nav-menu.open .ml:nth-child(7){transition-delay:.36s}
+.nav-menu .ml-foot{margin-top:auto;display:grid;gap:13px;padding-top:26px;opacity:0;transform:translateY(18px);transition:opacity .45s ease .42s,transform .55s cubic-bezier(.2,.8,.2,1) .42s}
+.nav-menu.open .ml-foot{opacity:1;transform:none}
+.nav-menu .ml-foot .btn{justify-content:center;font-size:16px;padding:16px}
+.nav-menu .ml-call{text-align:center;color:var(--sage);font-size:15px}
+@media (min-width:781px){.nav-menu{display:none}}
+@media (prefers-reduced-motion:reduce){.nav-menu,.nav-menu .ml,.nav-menu .ml-foot,.burger span{transition:none}.nav-menu.open .ml,.nav-menu.open .ml-foot{opacity:1;transform:none}}
 
 /* hero */
 .hero{position:relative;overflow:hidden}
@@ -323,10 +354,6 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
 @media (max-width:780px){
   .nav-links,.nav-call.desk,.nav-in>.btn-gold{display:none}
   .burger{display:flex}
-  .nav-drawer{position:fixed;inset:72px 0 auto 0;background:rgba(9,19,15,.98);backdrop-filter:blur(16px);
-    border-bottom:1px solid var(--line-2);padding:14px;display:none;flex-direction:column;gap:4px;box-shadow:var(--shadow)}
-  .nav-drawer.open{display:flex}
-  .nav-drawer a{padding:14px;font-size:16px;color:var(--ivory);border-radius:10px}
   .foot-grid{grid-template-columns:1fr 1fr}
 }
 @media (max-width:520px){.foot-grid{grid-template-columns:1fr}}
@@ -473,14 +500,22 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
     </nav>
     <a class="nav-call desk" href="tel:+18474236800" aria-label="Call ModernMed at 847-423-6800"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012 4.2 2 2 0 014 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.6a2 2 0 01-.5 2.1L8 9.6a16 16 0 006 6l1.2-1.1a2 2 0 012.1-.5c.8.3 1.7.5 2.6.6a2 2 0 011.7 2z"/></svg>847.423.6800</a>
     <a href="#consult" class="btn btn-gold" style="padding:11px 18px">Book Consult</a>
-    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="navDrawer"><span></span><span></span><span></span></button>
-  </div>
-  <div class="nav-drawer" id="navDrawer">
-    <a href="#recovery">Recovery</a><a href="#concierge">Optimization</a><a href="#first72">First 72 Hours</a>
-    <a href="#doctor">Dr. Oyasu</a><a href="#location">Location</a><a href="tel:+18474236800">Call 847.423.6800</a>
-    <a href="#consult" class="btn btn-gold" style="justify-content:center;margin-top:8px">Book a Confidential Consult</a>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu"><span></span><span></span><span></span></button>
   </div>
 </header>
+<nav class="nav-menu" id="navMenu" aria-label="Mobile menu">
+  <a class="ml" href="#recovery">Recovery</a>
+  <a class="ml" href="#concierge">Optimization</a>
+  <a class="ml" href="#first72">First 72 Hours</a>
+  <a class="ml" href="#assess">60-second check</a>
+  <a class="ml" href="#doctor">Dr. Oyasu</a>
+  <a class="ml" href="#location">Location</a>
+  <a class="ml" href="blog/">Articles</a>
+  <div class="ml-foot">
+    <a href="#consult" class="btn btn-gold">Book a Confidential Consult</a>
+    <a href="tel:+18474236800" class="ml-call">or call 847.423.6800</a>
+  </div>
+</nav>
 
 <main id="top">
 
@@ -751,7 +786,7 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
       </div>
       <div>
         <h3>Care</h3>
-        <a href="recovery-suboxone.html">Medication-Assisted Recovery</a><a href="#concierge">Hormone &amp; Men's Health</a><a href="#concierge">Medical Weight Loss</a><a href="#doctor">Mental Health &amp; SPRAVATO</a>
+        <a href="recovery-suboxone.html">Medication-Assisted Recovery</a><a href="testosterone-mens-health.html">Hormone &amp; Men's Health</a><a href="medical-weight-loss.html">Medical Weight Loss</a><a href="mental-health-spravato.html">Mental Health &amp; SPRAVATO</a>
       </div>
       <div>
         <h3>Practice</h3>
@@ -851,12 +886,16 @@ try{(function(){
   "use strict";
   var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-  var burger=document.getElementById('burger'), drawer=document.getElementById('navDrawer');
-  burger.addEventListener('click',function(){
-    var open=drawer.classList.toggle('open');
-    burger.setAttribute('aria-expanded',open?'true':'false');
-  });
-  drawer.addEventListener('click',function(e){ if(e.target.tagName==='A'){drawer.classList.remove('open');burger.setAttribute('aria-expanded','false');} });
+  var burger=document.getElementById('burger'), menu=document.getElementById('navMenu');
+  function setMenu(open){
+    menu.classList.toggle('open',open);burger.classList.toggle('x',open);
+    document.body.classList.toggle('menu-open',open);
+    burger.setAttribute('aria-expanded',open?'true':'false');burger.setAttribute('aria-label',open?'Close menu':'Open menu');
+    document.body.style.overflow=open?'hidden':'';
+  }
+  burger.addEventListener('click',function(){setMenu(!menu.classList.contains('open'));});
+  menu.addEventListener('click',function(e){if(e.target.closest('a'))setMenu(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&menu.classList.contains('open'))setMenu(false);});
   document.getElementById('yr').textContent=new Date().getFullYear();
 
   var form=document.getElementById('consultForm');
