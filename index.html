@@ -3322,6 +3322,16 @@
     }
     function gotoContact() { var r = document.getElementById('page-contact'); if (r) { r.checked = true; window.scrollTo(0, 0); } }
 
+    // Checkout via Gumroad. Flip PAYMENT_LIVE to true once the products exist.
+    // TODO(owner): set GUMROAD to your real store ("https://<handle>.gumroad.com/l/")
+    // and PAYMENT_LIVE = true after creating a $5 product per app slug.
+    var GUMROAD = 'https://kudbee.gumroad.com/l/';
+    var PAYMENT_LIVE = false;
+    function buyOnGumroad(slug) {
+        if (PAYMENT_LIVE) { window.open(GUMROAD + slug, '_blank', 'noopener'); line('<span class="ok">→ opening Gumroad checkout…</span>'); }
+        else { line('<span class="warn">→ checkout opens on Gumroad — $5</span> <span class="dim">(store goes live once the owner publishes the product)</span>'); }
+    }
+
     async function install(slug, name, isLive, url) {
         if (busy) return; busy = true;
         if (live) { live.textContent = 'installing'; live.style.color = 'var(--violet)'; }
@@ -3343,15 +3353,12 @@
         line('<span class="ok">✓ ' + name + ' installed.</span> <span class="dim">ready in this browser — private, no signup.</span>');
         var cta = document.createElement('div'); cta.className = 'term-cta';
         if (isLive && url) {
-            cta.innerHTML = '<a class="buy" href="' + url + '" target="_blank" rel="noopener">Open ' + name + ' →</a><button class="ghost" type="button" data-book>Talk to us</button>';
+            cta.innerHTML = '<a class="buy" href="' + url + '" target="_blank" rel="noopener">Open ' + name + ' →</a><button class="ghost" type="button" data-buy>Get the download — $5</button>';
         } else {
             cta.innerHTML = '<button class="buy" type="button" data-buy>Get it — $5 →</button><button class="ghost" type="button" data-book>Notify me at launch</button>';
         }
         term.appendChild(cta); term.scrollTop = term.scrollHeight;
-        var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () {
-            // TODO(owner): wire a real Stripe Payment Link per app to enable checkout.
-            line('<span class="warn">→ opening secure checkout…</span> <span class="dim">(preview — payment goes live once enabled)</span>');
-        });
+        var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () { buyOnGumroad(slug); });
         var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', gotoContact);
         if (live) { live.textContent = 'ready'; live.style.color = 'var(--green)'; }
         busy = false;
