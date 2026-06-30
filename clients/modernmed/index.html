@@ -262,6 +262,85 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
   .foot-grid{grid-template-columns:1fr 1fr}
 }
 @media (max-width:520px){.foot-grid{grid-template-columns:1fr}}
+
+/* ===== Concierge Connect ===== */
+.fab{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:60;
+  display:inline-flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;border-radius:999px;cursor:pointer;border:1px solid rgba(201,168,106,.5);
+  background:linear-gradient(135deg,var(--gold-l),var(--gold-d));color:#1a1206;font:600 14.5px Inter;
+  box-shadow:0 18px 40px -14px rgba(201,168,106,.6),0 4px 12px rgba(0,0,0,.4);transition:transform .2s ease,box-shadow .2s ease}
+.fab:hover{transform:translateY(-3px) scale(1.02)}
+.fab svg{width:20px;height:20px;stroke:#1a1206}
+.fab .ring{position:absolute;inset:0;border-radius:999px;border:2px solid var(--gold-l);animation:fabpulse 2.6s ease-out infinite;pointer-events:none}
+@keyframes fabpulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}
+.fab-tip{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:78px;z-index:60;max-width:230px;
+  background:var(--panel);color:var(--ivory);border:1px solid var(--line);border-radius:14px;padding:13px 15px;font-size:13px;
+  box-shadow:var(--shadow);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .4s,transform .4s}
+.fab-tip.show{opacity:1;transform:none;pointer-events:auto}
+.fab-tip b{display:block;font-family:Fraunces,serif;font-size:14px;margin-bottom:3px}
+.fab-tip button{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+@media (prefers-reduced-motion:reduce){.fab .ring{animation:none;display:none}}
+
+.cc-overlay{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:18px;
+  background:rgba(5,11,9,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .28s}
+.cc-overlay.open{opacity:1;visibility:visible}
+.cc-modal{width:100%;max-width:480px;max-height:92vh;overflow:auto;background:linear-gradient(180deg,var(--forest-2),var(--ink));
+  border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.cc-overlay.open .cc-modal{transform:none}
+.cc-head{display:flex;align-items:flex-start;gap:12px;padding:24px 24px 0}
+.cc-head .ci{width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:rgba(201,168,106,.12);border:1px solid var(--line);display:grid;place-items:center}
+.cc-head .ci svg{width:22px;height:22px;stroke:var(--gold)}
+.cc-head h3{font:500 21px Fraunces;margin-bottom:2px}
+.cc-head p{color:var(--sage);font-size:13px}
+.cc-close{margin-left:auto;background:rgba(244,241,234,.05);border:1px solid var(--line-2);color:var(--ivory);
+  width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;flex:0 0 34px}
+.cc-tabs{display:flex;gap:6px;padding:18px 24px 0;flex-wrap:wrap}
+.cc-tab{flex:1;min-width:84px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 6px;border-radius:12px;cursor:pointer;
+  background:rgba(244,241,234,.03);border:1px solid var(--line-2);color:var(--sage);font:600 11.5px Inter;transition:all .15s}
+.cc-tab svg{width:19px;height:19px;stroke:currentColor}
+.cc-tab:hover{color:var(--ivory);border-color:var(--line)}
+.cc-tab.active{background:rgba(201,168,106,.12);border-color:rgba(201,168,106,.5);color:var(--gold-l)}
+.cc-body{padding:20px 24px 24px}
+.cc-panel{display:none}.cc-panel.show{display:block;animation:ccfade .25s ease}
+@keyframes ccfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cc-panel h4{font:500 18px Fraunces;margin-bottom:6px}
+.cc-panel .px{color:var(--sage);font-size:13.5px;margin-bottom:16px}
+.cc-input{width:100%;background:rgba(11,23,19,.7);border:1px solid var(--line-2);color:var(--ivory);border-radius:12px;padding:13px 14px;font:500 16px Inter;outline:none;margin-bottom:12px;-webkit-appearance:none}
+.cc-input:focus{border-color:var(--gold)}
+.cc-btn{width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;font:600 15px Inter;padding:15px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--gold-l),var(--gold-d));color:#1a1206;transition:transform .15s}
+.cc-btn:hover{transform:translateY(-2px)}
+.cc-btn.alt{background:transparent;border:1px solid var(--line);color:var(--ivory)}
+.cc-or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0}
+.cc-or::before,.cc-or::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.cc-note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--muted);margin-top:14px;line-height:1.5}
+.cc-note svg{width:15px;height:15px;stroke:var(--gold);flex:0 0 15px;margin-top:1px}
+
+/* callback theater */
+.cc-ring-wrap{text-align:center;padding:10px 0 4px}
+.cc-ring{position:relative;width:128px;height:128px;margin:0 auto 14px}
+.cc-ring svg{transform:rotate(-90deg)}
+.cc-ring .num{position:absolute;inset:0;display:grid;place-items:center;font:500 34px Fraunces;color:var(--ivory)}
+.cc-ring .num small{display:block;font:600 10px Inter;letter-spacing:.12em;color:var(--sage);text-transform:uppercase;margin-top:2px}
+.cc-status{font-size:14px;color:var(--sage)}
+.cc-status b{color:var(--gold-l);font-family:Fraunces;font-size:18px;display:block;margin-bottom:4px}
+.cc-pulse-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:7px;animation:ccd 1.3s infinite}
+@keyframes ccd{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* chat */
+.cc-chat{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow:auto;padding:4px 2px 8px}
+.cc-msg{max-width:84%;padding:11px 14px;border-radius:15px;font-size:13.5px;line-height:1.5;animation:ccfade .25s ease}
+.cc-msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line-2);border-bottom-left-radius:4px}
+.cc-msg.bot b{color:var(--gold-l)}
+.cc-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--gold-l),var(--gold-d));color:#1a1206;border-bottom-right-radius:4px;font-weight:500}
+.cc-typing{align-self:flex-start;display:flex;gap:4px;padding:13px 14px;background:var(--panel);border:1px solid var(--line-2);border-radius:15px}
+.cc-typing i{width:7px;height:7px;border-radius:50%;background:var(--sage);animation:cct 1.2s infinite}
+.cc-typing i:nth-child(2){animation-delay:.2s}.cc-typing i:nth-child(3){animation-delay:.4s}
+@keyframes cct{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.cc-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.cc-chip{background:rgba(201,168,106,.08);border:1px solid var(--line);color:var(--ivory);border-radius:999px;padding:9px 15px;font-size:13px;cursor:pointer;transition:all .15s}
+.cc-chip:hover{background:rgba(201,168,106,.18);border-color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.cc-msg,.cc-panel,.cc-typing i,.cc-pulse-dot{animation:none}}
+@media (max-width:520px){.cc-tab{min-width:0}.cc-tab span{font-size:10.5px}}
 </style>
 </head>
 <body>
@@ -554,8 +633,78 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
   </div>
 </footer>
 
+<!-- ===== Concierge Connect ===== -->
+<button class="fab" id="ccFab" aria-haspopup="dialog" aria-expanded="false" aria-controls="ccOverlay">
+  <span class="ring" aria-hidden="true"></span>
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-3.9-.9L3 20l1.1-4.1A8.4 8.4 0 1121 11.5z"/></svg>
+  Concierge
+</button>
+<div class="fab-tip" id="ccTip" role="status">
+  <button aria-label="Dismiss" id="ccTipX">×</button>
+  <b>Questions? We're here.</b>
+  Reach a real care coordinator your way — discreetly, 24/7.
+</div>
+
+<div class="cc-overlay" id="ccOverlay" role="dialog" aria-modal="true" aria-labelledby="ccTitle" hidden>
+  <div class="cc-modal" role="document">
+    <div class="cc-head">
+      <span class="ci" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-3.9-.9L3 20l1.1-4.1A8.4 8.4 0 1121 11.5z"/></svg></span>
+      <div><h3 id="ccTitle">Concierge Connect</h3><p>Reach us the way you want — discreet &amp; 24/7.</p></div>
+      <button class="cc-close" id="ccClose" aria-label="Close">×</button>
+    </div>
+    <div class="cc-tabs" role="tablist" aria-label="Contact channels">
+      <button class="cc-tab active" role="tab" aria-selected="true" data-cc="callback"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg><span>Instant callback</span></button>
+      <button class="cc-tab" role="tab" aria-selected="false" data-cc="chat"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-3.9-.9L3 20l1.1-4.1A8.4 8.4 0 1121 11.5z"/></svg><span>Chat</span></button>
+      <button class="cc-tab" role="tab" aria-selected="false" data-cc="call"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2A19 19 0 013 5 2 2 0 015 3h3l1 5-2 1a14 14 0 006 6l1-2 5 1z"/></svg><span>Call</span></button>
+      <button class="cc-tab" role="tab" aria-selected="false" data-cc="text"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h16v12H7l-3 3z"/></svg><span>Text</span></button>
+    </div>
+    <div class="cc-body">
+      <!-- INSTANT CALLBACK -->
+      <div class="cc-panel show" id="cc-callback">
+        <div id="cb-form">
+          <h4>A coordinator calls you in under a minute.</h4>
+          <p class="px">Enter your number — we call you from a discreet, unmarked line. No name needed to start.</p>
+          <input class="cc-input" id="cb-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(___) ___-____" aria-label="Your phone number">
+          <button class="cc-btn" id="cb-go"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#1a1206" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Call me now</button>
+          <div class="cc-note"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>Private &amp; HIPAA-protected. This is a concept demo — no call is placed and nothing is sent.</span></div>
+        </div>
+        <div id="cb-live" style="display:none">
+          <div class="cc-ring-wrap">
+            <div class="cc-ring">
+              <svg width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="none" stroke="rgba(244,241,234,.08)" stroke-width="7"/><circle id="cb-arc" cx="64" cy="64" r="58" fill="none" stroke="#c9a86a" stroke-width="7" stroke-linecap="round" stroke-dasharray="364" stroke-dashoffset="0"/></svg>
+              <div class="num"><span id="cb-num">32</span><small>seconds</small></div>
+            </div>
+            <div class="cc-status" id="cb-status">Finding an available coordinator…</div>
+          </div>
+        </div>
+      </div>
+      <!-- CHAT -->
+      <div class="cc-panel" id="cc-chat">
+        <h4>Talk to our concierge</h4>
+        <p class="px">A guided, private conversation that routes you to the right care. (Demo assistant — a real coordinator always confirms.)</p>
+        <div class="cc-chat" id="chatLog" aria-live="polite"></div>
+        <div class="cc-chips" id="chatChips"></div>
+      </div>
+      <!-- CALL -->
+      <div class="cc-panel" id="cc-call">
+        <h4>Call us directly</h4>
+        <p class="px">Speak with a care coordinator now. Calls are private and judgment-free.</p>
+        <a class="cc-btn" href="tel:+18474236800"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#1a1206" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2A19 19 0 013 5 2 2 0 015 3h3l1 5-2 1a14 14 0 006 6l1-2 5 1z"/></svg>847.423.6800</a>
+        <div class="cc-note"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Live Mon–Fri 9–5; after-hours reaches our 24/7 line for established patients.</span></div>
+      </div>
+      <!-- TEXT -->
+      <div class="cc-panel" id="cc-text">
+        <h4>Prefer to text?</h4>
+        <p class="px">Send a discreet message and we'll reply privately. Great if you can't talk right now.</p>
+        <a class="cc-btn" href="sms:+18474236800"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#1a1206" stroke-width="2"><path d="M4 4h16v12H7l-3 3z"/></svg>Text 847.423.6800</a>
+        <div class="cc-note"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>We never identify the practice in unsolicited messages. Your privacy comes first.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-(function(){
+try{(function(){
   "use strict";
   var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
@@ -620,7 +769,106 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
   window.addEventListener('resize',function(){size();if(reduce)frame();});
   new IntersectionObserver(function(e){e[0].isIntersecting?start():stop();},{threshold:0}).observe(c);
   document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});
-})();
+})();}catch(_e1){if(window.console&&console.error)console.error('init block 1 error:',_e1);}
+
+try{(function(){
+  "use strict";
+  var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var fab=document.getElementById('ccFab'),ov=document.getElementById('ccOverlay'),closeBtn=document.getElementById('ccClose'),
+      tip=document.getElementById('ccTip'),tipX=document.getElementById('ccTipX'),lastFocus=null;
+
+  function focusables(){return Array.prototype.slice.call(ov.querySelectorAll('a[href],button:not([disabled]),input,[tabindex]:not([tabindex="-1"])')).filter(function(e){return e.offsetParent!==null;});}
+  function open(){
+    lastFocus=document.activeElement; ov.hidden=false; hideTip();
+    void ov.offsetWidth; ov.classList.add('open');
+    fab.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden';
+    setTab('callback'); setTimeout(function(){closeBtn.focus();},60);
+  }
+  function close(){
+    ov.classList.remove('open'); fab.setAttribute('aria-expanded','false'); document.body.style.overflow='';
+    setTimeout(function(){ov.hidden=true;},300); if(lastFocus)lastFocus.focus();
+  }
+  fab.addEventListener('click',open);
+  closeBtn.addEventListener('click',close);
+  ov.addEventListener('click',function(e){if(e.target===ov)close();});
+  document.addEventListener('keydown',function(e){
+    if(ov.hidden)return;
+    if(e.key==='Escape')close();
+    if(e.key==='Tab'){var f=focusables();if(!f.length)return;var first=f[0],last=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
+  });
+
+  /* tabs */
+  var tabs=ov.querySelectorAll('.cc-tab');
+  function setTab(name){
+    tabs.forEach(function(t){var on=t.getAttribute('data-cc')===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false');});
+    ov.querySelectorAll('.cc-panel').forEach(function(p){p.classList.toggle('show',p.id==='cc-'+name);});
+    if(name==='callback')resetCallback();
+    if(name==='chat'&&!chatStarted)startChat();
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){setTab(t.getAttribute('data-cc'));});});
+
+  /* instant callback theater */
+  var cbForm=document.getElementById('cb-form'),cbLive=document.getElementById('cb-live'),cbGo=document.getElementById('cb-go'),
+      cbNum=document.getElementById('cb-num'),cbArc=document.getElementById('cb-arc'),cbStatus=document.getElementById('cb-status'),cbTimer=null;
+  function resetCallback(){if(cbTimer){clearInterval(cbTimer);cbTimer=null;}cbForm.style.display='';cbLive.style.display='none';}
+  function connected(){
+    cbArc.setAttribute('stroke-dashoffset','0');cbArc.setAttribute('stroke','#5fbf8a');
+    document.querySelector('.cc-ring .num').innerHTML='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#5fbf8a" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2A19 19 0 013 5 2 2 0 015 3h3l1 5-2 1a14 14 0 006 6l1-2 5 1z"/></svg>';
+    cbStatus.innerHTML='<b><span class="cc-pulse-dot"></span>Calling you now</b>Answer when your phone rings — caller ID shows a discreet local number. <span style="color:var(--muted)">(Demo: no call placed.)</span>';
+  }
+  cbGo.addEventListener('click',function(){
+    var v=document.getElementById('cb-phone').value.replace(/\D/g,'');
+    if(v.length<7){document.getElementById('cb-phone').focus();return;}
+    cbForm.style.display='none';cbLive.style.display='';
+    if(reduce){connected();return;}
+    var n=32,total=364;cbNum.textContent=n;cbArc.setAttribute('stroke-dashoffset','0');cbArc.setAttribute('stroke','#c9a86a');
+    cbStatus.textContent='Finding an available coordinator…';
+    cbTimer=setInterval(function(){
+      n--;cbNum.textContent=Math.max(n,0);
+      cbArc.setAttribute('stroke-dashoffset',String(total*(32-n)/32));
+      if(n===28)cbStatus.textContent='Coordinator found — connecting your call…';
+      if(n<=24){clearInterval(cbTimer);cbTimer=null;connected();}
+    },130);
+  });
+
+  /* concierge chat */
+  var chatStarted=false,log=document.getElementById('chatLog'),chips=document.getElementById('chatChips');
+  var topics={
+    'Recovery / MAT':"You're in the right place. Dr. Oyasu leads our Medication-Assisted Recovery — including discreet Suboxone starts, with real support through the critical first 72 hours. How would you like to take the next step?",
+    'Hormone & men’s health':"Our concierge membership covers hormone optimization and men's health, with 24/7 access to your physician. Want to talk it through with a coordinator?",
+    'Weight loss':"We offer medically-supported weight loss, including GLP-1 programs, under physician care. Shall we set up a quick consult?",
+    'Mental health':"We provide medication management, psychotherapy, and SPRAVATO for treatment-resistant depression. How can we help you get started?",
+    'Just exploring':"Totally fine — we can answer questions privately, with no commitment at all. What's the easiest way to reach you?"
+  };
+  function bubble(cls,html){var d=document.createElement('div');d.className='cc-msg '+cls;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
+  function typing(cb){if(reduce){cb();return;}var t=document.createElement('div');t.className='cc-typing';t.innerHTML='<i></i><i></i><i></i>';log.appendChild(t);log.scrollTop=log.scrollHeight;setTimeout(function(){t.remove();cb();},700);}
+  function setChips(arr,fn){chips.innerHTML='';arr.forEach(function(label){var b=document.createElement('button');b.className='cc-chip';b.textContent=label;b.addEventListener('click',function(){fn(label);});chips.appendChild(b);});}
+  function startChat(){
+    chatStarted=true;log.innerHTML='';
+    bubble('bot',"<b>ModernMed Concierge</b><br>Hi — I'm here to help, privately. What brings you in today?");
+    setChips(Object.keys(topics),pickTopic);
+  }
+  function pickTopic(t){
+    bubble('user',t);chips.innerHTML='';
+    typing(function(){bubble('bot',topics[t]);setChips(['Request a callback','Book a consult','Text me instead'],pickAction);});
+  }
+  function pickAction(a){
+    bubble('user',a);chips.innerHTML='';
+    var msg=a==='Request a callback'?"Done — a coordinator will call you from a discreet line, usually within the hour.":
+            a==='Book a consult'?"I'll get you on Dr. Oyasu's consult list; a coordinator confirms your time.":
+            "Perfect — we'll text you privately so you can reply whenever you're ready.";
+    typing(function(){bubble('bot',msg+" <span style='color:var(--muted)'>(Demo — nothing was actually sent.)</span>");setChips(['Start over','Close'],function(c){c==='Close'?close():startChat();});});
+  }
+
+  /* one-time peek tooltip */
+  function hideTip(){tip.classList.remove('show');}
+  tipX.addEventListener('click',hideTip);
+  tip.addEventListener('click',function(e){if(e.target!==tipX){open();}});
+  setTimeout(function(){if(ov.hidden)tip.classList.add('show');},5200);
+  setTimeout(hideTip,14000);
+})();}catch(_e2){if(window.console&&console.error)console.error('concierge init error:',_e2);}
 </script>
 </body>
 </html>
