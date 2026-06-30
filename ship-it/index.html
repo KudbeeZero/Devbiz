@@ -76,6 +76,7 @@ a{color:inherit;text-decoration:none}
 .pv-bar .r{background:#ff5f57}.pv-bar .y{background:#febc2e}.pv-bar .g{background:#28c840}
 .pv-url{margin-left:10px;flex:1;font:12px ui-monospace,Menlo,monospace;color:var(--text-dim);background:var(--bg-primary);border:1px solid var(--border);border-radius:7px;padding:5px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pv-body{flex:1;display:grid;place-items:center;padding:30px;text-align:center}
+.pv-body.has-site{display:block;place-items:initial;padding:0;text-align:left;overflow:auto;max-height:600px}
 .pv-empty{color:var(--text-dim);max-width:330px}
 .pv-empty .ic{font-size:30px;margin-bottom:12px}
 /* brief result */
@@ -165,7 +166,7 @@ footer a{color:var(--text-muted)}
   <div class="preview" id="shipit-preview" aria-live="polite">
     <div class="pv-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="pv-url" id="pv-url">your-business.kudbee.dev</span></div>
     <div class="pv-body" id="pv-body">
-      <div class="pv-empty"><div class="ic">🖥️</div><b style="color:var(--text-secondary)">Your preview appears here.</b><div style="margin-top:6px;font-size:13px">Fill in the form and hit <b>Generate</b> — we'll assemble a brief now, and a live homepage preview is coming next.</div></div>
+      <div class="pv-empty"><div class="ic">🖥️</div><b style="color:var(--text-secondary)">Your preview appears here.</b><div style="margin-top:6px;font-size:13px">Fill in the form and hit <b>Generate</b> — we'll assemble a live homepage preview, right here, in seconds.</div></div>
     </div>
   </div>
 </section>
@@ -206,32 +207,78 @@ try{(function(){
     };
   }
   // Phase 1: render a project brief. Phase 3 swaps this for a live homepage preview.
-  function renderBrief(b){
-    var name=b.name||'Your business';
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  function hexToRgba(h,a){h=(h||'#6f5bff').replace('#','');if(h.length===3)h=h.replace(/(.)/g,'$1$1');var n=parseInt(h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+
+  // ---- Phase 2: house-style copy/template library keyed to business type ----
+  var COPY={
+    'med spa':{cta:'Book a treatment',hero:'Look refreshed. Feel like you.',sub:'Expert injectables, facials and skin treatments in a calm, modern space.',svc:[['Injectables','Tox and filler — natural results from licensed providers.'],['Facials & skin','Medical-grade facials and peels tailored to your skin.'],['Memberships','Save on the treatments you love with a monthly plan.']],band:'Ready to glow? Book your first visit.'},
+    'dental practice':{cta:'Request an appointment',hero:'Healthy smiles, gentle care.',sub:'Modern, comfortable dentistry for the whole family.',svc:[['Cleanings & checkups','Preventive care that keeps your smile bright.'],['Cosmetic','Whitening, veneers and clear aligners.'],['Emergency care','Same-day relief when you need it most.']],band:'New patients welcome — book today.'},
+    'law firm':{cta:'Schedule a consult',hero:'Trusted counsel when it matters.',sub:'Straight answers and strong representation, from a team that listens.',svc:[['Free consultation','Tell us your situation — we map the path.'],['Proven results','Decades of combined experience on your side.'],['Clear communication','No jargon. You always know where things stand.']],band:'Talk to an attorney today.'},
+    'restaurant / café':{cta:'View the menu',hero:'Fresh. Local. Made for you.',sub:'A neighborhood favorite for great food and a warm welcome.',svc:[['Our menu','Seasonal dishes made from scratch daily.'],['Order online','Pickup and delivery in a few taps.'],['Private events','Host your next gathering with us.']],band:'Hungry? Reserve a table.'},
+    'fitness / gym':{cta:'Start free trial',hero:'Stronger starts here.',sub:'Coaching, classes and a community that shows up for you.',svc:[['Group classes','High-energy sessions for every level.'],['Personal training','One-on-one plans built around your goals.'],['Open gym','Modern equipment, room to move.']],band:'Your first week is on us.'},
+    'real estate':{cta:'See listings',hero:'Find your place.',sub:'Local expertise that turns browsing into moving day.',svc:[['Buy','Hand-picked homes that fit your life and budget.'],['Sell','Pricing and marketing that move properties fast.'],['Local know-how','Neighborhood insight you wont get from an app.']],band:'Let us find your next home.'},
+    'salon / barber':{cta:'Book a chair',hero:'Look sharp. Feel great.',sub:'Cuts, color and care from stylists who get you.',svc:[['Cuts & styling','Fresh looks for every occasion.'],['Color','Balayage, highlights and full color.'],['Walk-ins','Stop by — we will fit you in.']],band:'Book your next appointment.'},
+    'home services / contractor':{cta:'Get a free quote',hero:'Done right, the first time.',sub:'Licensed, insured and on time — work you can count on.',svc:[['Free estimates','Know the cost before we start.'],['Licensed & insured','Peace of mind on every job.'],['On schedule','We show up when we say we will.']],band:'Get your free quote today.'},
+    'shop / e-commerce':{cta:'Shop now',hero:'Things you will love.',sub:'Curated goods, fast shipping, easy returns.',svc:[['New arrivals','The latest, refreshed weekly.'],['Fast shipping','On its way in 1–2 days.'],['Easy returns','Changed your mind? No problem.']],band:'Free shipping on your first order.'},
+    'nonprofit':{cta:'Donate',hero:'Together, we can do more.',sub:'Join us in making a real difference in our community.',svc:[['Our mission','The change we are working toward.'],['Get involved','Volunteer, give or spread the word.'],['Your impact','See exactly where your support goes.']],band:'Be part of the change — give today.'},
+    'saas / tech':{cta:'Start free',hero:'Work, simplified.',sub:'The tool your team will actually want to use.',svc:[['Fast setup','Up and running in minutes.'],['Built to scale','Grows with you, from day one.'],['Real support','Humans who actually help.']],band:'Try it free — no card required.'}
+  };
+  var GENERIC={cta:'Get in touch',hero:'Welcome.',sub:'Quality work and a team that cares.',svc:[['What we do','A clear overview of our services.'],['Why us','The reasons clients choose us.'],['Get started','Reach out and we will take it from here.']],band:'Let us work together.'};
+  var TONE={
+    'Clean & modern':{rad:'12px',hw:700,navUp:false,tint:0.06,heroText:'#0b0b16'},
+    'Luxury':{rad:'2px',hw:600,navUp:true,tint:0.05,heroText:'#15131a',ls:'0.05em'},
+    'Bold & playful':{rad:'18px',hw:800,navUp:false,tint:1,heroText:'#fff'},
+    'Warm & friendly':{rad:'22px',hw:700,navUp:false,tint:0.10,heroText:'#1c1410'},
+    'Minimal':{rad:'6px',hw:600,navUp:false,tint:0.0,heroText:'#111'}
+  };
+
+  // ---- Phase 3: render a live homepage preview from the brief ----
+  function renderPreview(b){
+    var name=b.name||(b.type||'Your Business');
+    var c=COPY[(b.type||'').toLowerCase()]||GENERIC;
+    var t=TONE[b.vibe]||TONE['Clean & modern'];
+    var color=b.color||'#6f5bff';
+    var heroBg=t.tint>=1?color:(t.tint>0?hexToRgba(color,t.tint):'#ffffff');
+    var heroFg=t.tint>=1?'#fff':t.heroText;
+    var nav=['Home','Services','About','Contact'].map(function(l){return '<span style="opacity:.7">'+l+'</span>';}).join('');
     document.getElementById('pv-url').textContent=slug(b.name)+'.kudbee.dev';
-    var esc=function(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');};
-    document.getElementById('pv-body').innerHTML=
-      '<div class="brief">'+
-        '<span class="badge">● Brief ready</span>'+
-        '<h3 style="border-bottom:3px solid '+esc(b.color)+';display:inline-block;padding-bottom:4px">'+esc(name)+'</h3>'+
-        '<div class="meta">'+esc(b.type||'Business')+(b.loc?' · '+esc(b.loc):'')+'</div>'+
-        '<div class="rows">'+
-          '<div class="row"><b>Type</b><span>'+esc(b.type||'—')+'</span></div>'+
-          '<div class="row"><b>Location</b><span>'+esc(b.loc||'—')+'</span></div>'+
-          '<div class="row"><b>Vibe</b><span>'+esc(b.vibe)+'</span></div>'+
-          '<div class="row"><b>Accent</b><span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:4px;background:'+esc(b.color)+';display:inline-block"></span>'+esc(b.color)+'</span></div>'+
-        '</div>'+
-        '<div class="cta">'+
-          '<a class="go" href="'+CAL+'" target="_blank" rel="noopener">Make it real — book a call</a>'+
-          '<a class="ghost" href="../">Talk to the Kudbee Agent</a>'+
-        '</div>'+
-        '<div class="note" style="text-align:left;margin-top:14px">Next: a live homepage preview rendered from this brief. (Phase 1 of Ship-it.)</div>'+
-      '</div>';
+    var site=
+    '<div style="position:sticky;top:0;z-index:3;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 12px;background:#05050b;border-bottom:1px solid rgba(255,255,255,.08)">'+
+      '<span style="font:700 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#7CFFb2">● Live preview</span>'+
+      '<span style="display:flex;gap:7px"><a href="'+CAL+'" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#39e6ff,#6f5bff,#c46bff);color:#06060c;font:700 12px \'Space Grotesk\',sans-serif;padding:8px 13px;border-radius:999px;text-decoration:none">Make it real — book a call</a>'+
+      '<button type="button" id="pv-edit" style="background:transparent;color:#cfd3df;border:1px solid rgba(255,255,255,.18);border-radius:999px;font:600 12px Inter;padding:8px 12px;cursor:pointer">Edit</button></span>'+
+    '</div>'+
+    '<div style="background:#fff;color:#15151c;font:15px/1.55 Inter,sans-serif">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid #eee;flex-wrap:wrap;gap:10px">'+
+        '<div style="font:'+t.hw+' 17px \'Space Grotesk\',sans-serif;color:'+color+';'+(t.navUp?'text-transform:uppercase;letter-spacing:.06em;':'')+'">'+esc(name)+'</div>'+
+        '<div style="display:flex;gap:14px;align-items:center;font-size:12.5px;color:#555">'+nav+
+          '<a href="'+CAL+'" target="_blank" rel="noopener" style="background:'+color+';color:#fff;padding:7px 13px;border-radius:'+t.rad+';font-weight:700;font-size:12px;text-decoration:none">'+esc(c.cta)+'</a></div>'+
+      '</div>'+
+      '<div style="padding:48px 24px;text-align:center;background:'+heroBg+';color:'+heroFg+'">'+
+        '<div style="font:700 11px Inter;letter-spacing:.14em;text-transform:uppercase;opacity:.65;margin-bottom:12px">'+esc(b.loc||'')+(b.loc&&b.type?' · ':'')+esc(b.type||'')+'</div>'+
+        '<div style="font:'+t.hw+' clamp(26px,5vw,40px)/1.05 \'Space Grotesk\',sans-serif;'+(t.ls?'letter-spacing:'+t.ls+';':'')+'margin-bottom:14px">'+esc(c.hero)+'</div>'+
+        '<div style="max-width:430px;margin:0 auto 22px;opacity:.85;font-size:16px">'+esc(c.sub)+'</div>'+
+        '<a href="'+CAL+'" target="_blank" rel="noopener" style="display:inline-block;background:'+(t.tint>=1?'#fff':color)+';color:'+(t.tint>=1?color:'#fff')+';padding:13px 24px;border-radius:'+t.rad+';font-weight:700;text-decoration:none">'+esc(c.cta)+' →</a>'+
+      '</div>'+
+      '<div style="padding:38px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;max-width:880px;margin:0 auto">'+
+        c.svc.map(function(s){return '<div style="background:#fafafb;border:1px solid #eee;border-radius:'+t.rad+';padding:18px"><div style="width:30px;height:30px;border-radius:8px;background:'+hexToRgba(color,0.15)+';display:grid;place-items:center;margin-bottom:11px"><span style="width:11px;height:11px;border-radius:3px;background:'+color+';display:block"></span></div><div style="font-weight:700;font-size:14.5px;margin-bottom:5px">'+esc(s[0])+'</div><div style="font-size:12.5px;color:#666;line-height:1.5">'+esc(s[1])+'</div></div>';}).join('')+
+      '</div>'+
+      '<div style="padding:34px 22px;text-align:center;background:'+color+';color:#fff">'+
+        '<div style="font:800 22px \'Space Grotesk\',sans-serif;margin-bottom:14px">'+esc(c.band)+'</div>'+
+        '<a href="'+CAL+'" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:'+color+';padding:12px 22px;border-radius:'+t.rad+';font-weight:700;text-decoration:none">'+esc(c.cta)+'</a>'+
+      '</div>'+
+      '<div style="padding:18px;text-align:center;font-size:12px;background:#0f0f17;color:#8a8fa0">© 2026 '+esc(name)+(b.loc?' · '+esc(b.loc):'')+' · website by Kudbee</div>'+
+    '</div>';
+    var pv=document.getElementById('pv-body');
+    pv.className='pv-body has-site'; pv.innerHTML=site; pv.scrollTop=0;
+    var ed=document.getElementById('pv-edit');
+    if(ed)ed.addEventListener('click',function(){document.getElementById('biz-type').focus();document.getElementById('shipit-form').scrollIntoView({block:'center'});});
     try{var a=JSON.parse(localStorage.getItem('kudbee.shipit')||'[]');a.push({brief:b,at:new Date().toISOString()});localStorage.setItem('kudbee.shipit',JSON.stringify(a.slice(-30)));}catch(e){}
   }
   form.addEventListener('submit',function(e){
     e.preventDefault();
-    renderBrief(collect());
+    renderPreview(collect());
     document.getElementById('shipit-preview').scrollIntoView({block:'nearest'});
   });
 })();}catch(e){}
