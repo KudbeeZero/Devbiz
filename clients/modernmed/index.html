@@ -415,6 +415,40 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
 .cc-ask button:hover{background:rgba(201,168,106,.2)}
 @media (prefers-reduced-motion:reduce){.cc-msg,.cc-panel,.cc-typing i,.cc-pulse-dot{animation:none}}
 @media (max-width:520px){.cc-tab{min-width:0}.cc-tab span{font-size:10.5px}}
+
+/* ===== Feature: "Am I a candidate?" self-assessment ===== */
+.assess-sec{padding:20px 0 92px}
+.assess{max-width:680px;margin:0 auto;background:linear-gradient(160deg,var(--panel),var(--forest-2));border:1px solid var(--line);border-radius:22px;padding:clamp(26px,4vw,38px);box-shadow:var(--shadow)}
+.as-dots{display:flex;gap:7px;margin-bottom:20px}
+.as-dot{width:26px;height:5px;border-radius:3px;background:rgba(244,241,234,.13);transition:background .25s}
+.as-dot.on{background:var(--gold)}
+.as-step{display:none}.as-step.show{display:block;animation:ccfade .3s ease}
+.as-q{font:500 clamp(20px,3.2vw,26px) Fraunces;margin-bottom:6px}
+.as-sub{color:var(--sage);font-size:14px;margin-bottom:20px}
+.as-opts{display:flex;flex-wrap:wrap;gap:10px}
+.as-opt{background:rgba(201,168,106,.08);border:1px solid var(--line);color:var(--ivory);border-radius:12px;padding:13px 18px;font:500 15px Inter;cursor:pointer;transition:transform .12s,background .15s,border-color .15s}
+.as-opt:hover{background:rgba(201,168,106,.18);border-color:var(--gold);transform:translateY(-2px)}
+.as-result{text-align:center}
+.as-result .ic{width:58px;height:58px;margin:0 auto 14px;border-radius:50%;background:rgba(95,191,138,.14);display:grid;place-items:center}
+.as-result .ic svg{width:30px;height:30px;stroke:var(--green)}
+.as-result h3{font:500 24px Fraunces;margin-bottom:8px}
+.as-result p{color:var(--sage);font-size:15px;max-width:46ch;margin:0 auto 22px}
+.as-result .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.as-restart{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-top:16px;text-decoration:underline;text-underline-offset:3px}
+.as-priv{display:flex;gap:8px;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-top:18px}
+.as-priv svg{width:14px;height:14px;stroke:var(--gold)}
+
+/* ===== Feature: sticky mobile conversion bar ===== */
+.mbar{display:none}
+@media (max-width:760px){
+  .mbar{display:grid;grid-template-columns:auto 1.5fr auto;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:55;
+    padding:9px 12px calc(9px + env(safe-area-inset-bottom));background:rgba(8,15,12,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+  .mbar a,.mbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:600 14px Inter;border-radius:12px;padding:13px 12px;border:1px solid var(--line-2);background:rgba(244,241,234,.05);color:var(--ivory);cursor:pointer}
+  .mbar .book{background:linear-gradient(135deg,var(--gold-l),var(--gold-d));color:#1a1206;border-color:transparent}
+  .mbar svg{width:18px;height:18px;stroke:currentColor;fill:none}
+  .fab,.fab-tip{display:none!important}
+  body{padding-bottom:70px}
+}
 </style>
 </head>
 <body>
@@ -521,7 +555,7 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Treatment navigation &amp; case management</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Insurance, Medicare &amp; self-pay options</li>
         </ul>
-        <a href="#consult" class="btn btn-out">Start privately →</a>
+        <a href="recovery-suboxone.html" class="btn btn-out">Learn about MAT →</a>
       </div>
       <div class="pillar reveal" id="concierge">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#c9a86a" stroke-width="1.5" aria-hidden="true"><path d="M12 2v20M5 9l7-5 7 5M5 15l7 5 7-5"/></svg>
@@ -577,6 +611,30 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
       <div class="value reveal"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div><h3>Fast starts</h3><p>Same-week appointments when clinically appropriate. When you're ready, you shouldn't have to wait weeks.</p></div>
       <div class="value reveal"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>24/7 access</h3><p>A direct line to your provider between visits — not a call center, not a queue.</p></div>
       <div class="value reveal"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="4"/></svg></div><h3>Whole-person care</h3><p>A 360° approach — recovery, hormones, mental health, and weight — coordinated under one physician.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SELF-ASSESSMENT -->
+<section class="sec bg-grad assess-sec" id="assess">
+  <div class="wrap">
+    <div class="sec-head center reveal"><span class="eyebrow">Not sure where to start?</span><h2>Take the 60-second check.</h2></div>
+    <div class="assess reveal">
+      <div class="as-dots"><span class="as-dot on" id="asd1"></span><span class="as-dot" id="asd2"></span><span class="as-dot" id="asd3"></span></div>
+      <div class="as-step show" id="as1">
+        <div class="as-q">What brings you in today?</div>
+        <div class="as-sub">Private and anonymous — nothing is sent, and there are no wrong answers.</div>
+        <div class="as-opts">
+          <button class="as-opt" type="button" data-path="recovery">Recovery / substance use</button>
+          <button class="as-opt" type="button" data-path="trt">Testosterone / men's health</button>
+          <button class="as-opt" type="button" data-path="weight">Weight loss</button>
+          <button class="as-opt" type="button" data-path="mental">Mental health</button>
+          <button class="as-opt" type="button" data-path="unsure">I'm not sure yet</button>
+        </div>
+      </div>
+      <div class="as-step" id="as2"></div>
+      <div class="as-step" id="as3"></div>
+      <div class="as-priv"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>100% private — this check runs entirely on your device.</div>
     </div>
   </div>
 </section>
@@ -673,6 +731,13 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
 
 </main>
 
+<!-- Sticky mobile conversion bar -->
+<nav class="mbar" id="mbar" aria-label="Quick actions">
+  <a href="tel:+18474236800" aria-label="Call ModernMed"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2A19 19 0 013 5 2 2 0 015 3h3l1 5-2 1a14 14 0 006 6l1-2 5 1z"/></svg>Call</a>
+  <a class="book" href="#consult">Book a consult</a>
+  <button id="mbarCc" type="button" aria-label="Open concierge"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-3.9-.9L3 20l1.1-4.1A8.4 8.4 0 1121 11.5z"/></svg></button>
+</nav>
+
 <footer>
   <div class="wrap">
     <div class="foot-grid">
@@ -686,7 +751,7 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
       </div>
       <div>
         <h3>Care</h3>
-        <a href="#recovery">Medication-Assisted Recovery</a><a href="#concierge">Hormone &amp; Men's Health</a><a href="#concierge">Medical Weight Loss</a><a href="#doctor">Mental Health &amp; SPRAVATO</a>
+        <a href="recovery-suboxone.html">Medication-Assisted Recovery</a><a href="#concierge">Hormone &amp; Men's Health</a><a href="#concierge">Medical Weight Loss</a><a href="#doctor">Mental Health &amp; SPRAVATO</a>
       </div>
       <div>
         <h3>Practice</h3>
@@ -870,6 +935,7 @@ try{(function(){
     setTimeout(function(){ov.hidden=true;},300); if(lastFocus)lastFocus.focus();
   }
   fab.addEventListener('click',open);
+  var mbarCc=document.getElementById('mbarCc');if(mbarCc)mbarCc.addEventListener('click',open);
   closeBtn.addEventListener('click',close);
   ov.addEventListener('click',function(e){if(e.target===ov)close();});
   document.addEventListener('keydown',function(e){
@@ -995,6 +1061,37 @@ try{(function(){
   /* PWA: installable + offline shell */
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
 })();}catch(_e2){if(window.console&&console.error)console.error('concierge init error:',_e2);}
+
+/* ===== Feature: "Am I a candidate?" self-assessment (private, on-device) ===== */
+try{(function(){
+  "use strict";
+  var s1=document.getElementById('as1'),s2=document.getElementById('as2'),s3=document.getElementById('as3'),
+      d2=document.getElementById('asd2'),d3=document.getElementById('asd3');
+  if(!s1||!s2||!s3)return;
+  var Q={
+    recovery:{q:"How are you feeling about a first step?",opts:["I'm ready now","Still considering it","Helping someone else"],h:"Medication-Assisted Recovery is a strong fit.",p:"Dr. Oyasu offers discreet Suboxone/MAT with real support through the first 72 hours. A confidential consult is private and no-obligation."},
+    trt:{q:"Noticing low energy, drive, or focus?",opts:["Yes, several","A little","Just curious"],h:"Our men's health & hormone program fits.",p:"A concierge membership covers testosterone optimization with 24/7 physician access. The next step is a quick consult."},
+    weight:{q:"Have other approaches fallen short?",opts:["Yes","Somewhat","This is my first attempt"],h:"Medically-supported weight loss can help.",p:"Physician-supervised programs, including GLP-1 options. A consult maps the right plan for you."},
+    mental:{q:"Has depression been hard to shift?",opts:["Yes — treatment-resistant","Looking for support","Not sure"],h:"We can help — including SPRAVATO.",p:"Medication management, therapy, and SPRAVATO for treatment-resistant depression. A consult is a confidential first step."},
+    unsure:{q:"What matters most right now?",opts:["Privacy","Fast access","Just some answers"],h:"Let's figure it out together.",p:"A no-pressure consult points you to the right care — privately, with no obligation."}
+  };
+  function show(el){[s1,s2,s3].forEach(function(s){s.classList.remove('show');});el.classList.add('show');}
+  s1.querySelectorAll('.as-opt').forEach(function(b){b.addEventListener('click',function(){
+    var cfg=Q[b.getAttribute('data-path')];if(!cfg)return;d2.classList.add('on');
+    s2.innerHTML='<div class="as-q">'+cfg.q+'</div><div class="as-sub">Almost there — one more.</div><div class="as-opts" id="o2"></div>';
+    var wrap=s2.querySelector('#o2');
+    cfg.opts.forEach(function(opt){var ob=document.createElement('button');ob.className='as-opt';ob.type='button';ob.textContent=opt;ob.addEventListener('click',function(){result(cfg);});wrap.appendChild(ob);});
+    show(s2);
+  });});
+  function result(cfg){d3.classList.add('on');
+    s3.innerHTML='<div class="as-result"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#5fbf8a" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>'+
+      '<h3>'+cfg.h+'</h3><p>'+cfg.p+'</p>'+
+      '<div class="cta"><a class="btn btn-gold" href="#consult">Book a confidential consult</a><a class="btn btn-out" href="tel:+18474236800">Call 847.423.6800</a></div>'+
+      '<button class="as-restart" type="button">Start over</button></div>';
+    var rb=s3.querySelector('.as-restart');if(rb)rb.addEventListener('click',function(){d2.classList.remove('on');d3.classList.remove('on');show(s1);});
+    show(s3);
+  }
+})();}catch(_e3){if(window.console&&console.error)console.error('assess init error:',_e3);}
 </script>
 </body>
 </html>
