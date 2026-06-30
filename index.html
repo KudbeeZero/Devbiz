@@ -166,7 +166,7 @@
         --text-primary: #ffffff;
         --text-secondary: #e6e8f0;
         --text-muted: #9aa3b8;
-        --text-dim: #646c82;
+        --text-dim: #7c84a0;
         --cyan: #39e6ff;
         --cyan-ink: #39e6ff; /* cyan used as TEXT — overridden darker in light theme for AA contrast */
         --violet: #c46bff;
@@ -908,11 +908,12 @@
     .carousel-slide blockquote { font-size: 19px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 22px; font-weight: 500; max-width: 640px; margin-inline: auto; }
     .carousel-slide .author { font-size: 14px; color: var(--text-primary); font-weight: 600; }
     .carousel-slide .role { font-size: 12px; color: var(--text-dim); }
-    .carousel-dots { display: flex; justify-content: center; gap: 8px; }
-    .carousel-dots label { width: 9px; height: 9px; border-radius: 50%; background: var(--border-hover); cursor: pointer; transition: all 0.3s; }
-    #test-1:checked ~ .theme-wrapper .carousel-dots label[for="test-1"],
-    #test-2:checked ~ .theme-wrapper .carousel-dots label[for="test-2"],
-    #test-3:checked ~ .theme-wrapper .carousel-dots label[for="test-3"] { background: var(--grad); transform: scale(1.35); }
+    .carousel-dots { display: flex; justify-content: center; gap: 4px; }
+    .carousel-dots label { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .carousel-dots label::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--border-hover); transition: all 0.3s; }
+    #test-1:checked ~ .theme-wrapper .carousel-dots label[for="test-1"]::before,
+    #test-2:checked ~ .theme-wrapper .carousel-dots label[for="test-2"]::before,
+    #test-3:checked ~ .theme-wrapper .carousel-dots label[for="test-3"]::before { background: var(--grad); transform: scale(1.35); }
 
     /* ===== PORTFOLIO ===== */
     .portfolio-filters { display: flex; gap: 4px; margin: 0 auto 36px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 4px; width: fit-content; }
@@ -953,7 +954,7 @@
     .process-step { text-align: center; padding: 28px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); transition: transform 0.2s, border-color 0.2s; }
     .process-step:hover { transform: translateY(-4px); border-color: var(--border-hover); }
     .step-number { width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg, rgba(57,230,255,0.16), rgba(196,107,255,0.12)); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 17px; font-weight: 700; color: var(--cyan); font-family: 'Space Grotesk', sans-serif; }
-    .process-step h4 { font-size: 15px; color: var(--text-primary); margin-bottom: 8px; }
+    .process-step h3 { font-size: 15px; color: var(--text-primary); margin-bottom: 8px; }
     .process-step p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
 
     /* ===== FAQ ===== */
@@ -1003,7 +1004,7 @@
     footer { border-top: 1px solid var(--border); padding: 60px 24px 32px; max-width: var(--maxw); margin: 0 auto; }
     .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
     .footer-brand p { font-size: 13px; color: var(--text-dim); line-height: 1.7; max-width: 280px; margin-top: 14px; }
-    .footer-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 16px; }
+    .footer-col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 16px; }
     .footer-col label, .footer-col a { display: block; font-size: 13px; color: var(--text-dim); padding: 6px 0; cursor: pointer; transition: color 0.15s; text-decoration: none; }
     .footer-col label:hover, .footer-col a:hover { color: var(--text-primary); }
     .footer-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; gap: 12px; }
@@ -1306,7 +1307,7 @@
         <div class="media-marquee" data-tilt-scope>
             <div class="media-track">
                 <!-- Tile set (duplicated below for a seamless loop) -->
-                <a class="media-tile" data-tilt href="games/kudbee-riff/index.html" aria-label="Kudbee Riff — rhythm game charted to the studio track">
+                <a class="media-tile" data-tilt href="games/kudbee-riff/index.html">
                     <div class="mt-art">
                         <span class="mt-badge" style="color:var(--amber);border-color:rgba(255,211,77,0.35)">Game</span>
                         <div class="mt-frets" aria-hidden="true">
@@ -1326,7 +1327,7 @@
                         <div class="mt-sub">Hit the notes as they fall — charted to the real beats of the track.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="games/kudbee-riff-2/index.html" aria-label="Kudbee Riff II — new track, beat-aligned rhythm game">
+                <a class="media-tile" data-tilt href="games/kudbee-riff-2/index.html">
                     <div class="mt-art">
                         <span class="mt-badge" style="color:var(--green);border-color:rgba(124,255,178,0.35)">New</span>
                         <div class="mt-frets" aria-hidden="true">
@@ -1346,7 +1347,7 @@
                         <div class="mt-sub">A brand-new studio track, charted to its real beat &amp; bass. Fresh leaderboard.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="games/kudbee-pinball/index.html" aria-label="Kudbee Pinball — neon space pinball table">
+                <a class="media-tile" data-tilt href="games/kudbee-pinball/index.html">
                     <div class="mt-art mt-art-grad-v">
                         <span class="mt-badge" style="color:var(--violet);border-color:rgba(196,107,255,0.35)">New Game</span>
                         <div class="mt-ring" aria-hidden="true"></div>
@@ -1359,7 +1360,7 @@
                         <div class="mt-sub">Neon space table — plunge the lit lane for a Skill Shot, then keep the ball alive.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="games/kudbee-voidrunner/index.html" aria-label="Kudbee Voidrunner — outer-space asteroid-dive flyer">
+                <a class="media-tile" data-tilt href="games/kudbee-voidrunner/index.html">
                     <div class="mt-art">
                         <span class="mt-badge" style="color:var(--cyan);border-color:rgba(57,230,255,0.35)">New Game</span>
                         <div class="mt-swarm" aria-hidden="true">
@@ -1378,7 +1379,7 @@
                         <div class="mt-sub">Warp through the asteroid belt — steer, dodge, and blast a path deeper into the void.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="lab/music-video-2/index.html" aria-label="Particle Drone Show — audio-reactive music video">
+                <a class="media-tile" data-tilt href="lab/music-video-2/index.html">
                     <div class="mt-art mt-art-grad-v">
                         <span class="mt-badge">New</span>
                         <div class="mt-swarm" aria-hidden="true">
@@ -1397,7 +1398,7 @@
                         <div class="mt-sub">A swarm of light spells the track mid-air, in the house colors.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="lab/music-video/index.html" aria-label="Music video — original track, audio-reactive visual">
+                <a class="media-tile" data-tilt href="lab/music-video/index.html">
                     <div class="mt-art">
                         <span class="mt-badge">Audio-reactive</span>
                         <div class="mt-bars" aria-hidden="true">
@@ -1413,7 +1414,7 @@
                         <div class="mt-sub">Spectrum ring, beat-driven bursts, section-synced scenes.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="lab/grow/index.html" aria-label="Grow Companion — animated plant time-lapse">
+                <a class="media-tile" data-tilt href="lab/grow/index.html">
                     <div class="mt-art mt-art-grad-g">
                         <span class="mt-badge" style="color:var(--green);border-color:rgba(124,255,178,0.35)">Interactive</span>
                         <div class="mt-swarm mt-swarm-g" aria-hidden="true">
@@ -1430,7 +1431,7 @@
                         <div class="mt-sub">Watch a plant grow in time-lapse, then plant your own seed.</div>
                     </div>
                 </a>
-                <a class="media-tile" data-tilt href="lab/index.html" aria-label="Studio Lab — all experiments and media">
+                <a class="media-tile" data-tilt href="lab/index.html">
                     <div class="mt-art">
                         <span class="mt-badge">Explore</span>
                         <div class="mt-ring" aria-hidden="true"></div>
@@ -1679,10 +1680,10 @@
             <h2 class="section-title">A simple, proven process</h2>
         </div>
         <div class="process-grid">
-            <div class="process-step reveal"><div class="step-number">01</div><h4>Discovery</h4><p>We learn your goals, audience, and vision.</p></div>
-            <div class="process-step reveal"><div class="step-number">02</div><h4>Strategy & Design</h4><p>Wireframes, curriculum, or game design docs.</p></div>
-            <div class="process-step reveal"><div class="step-number">03</div><h4>Build & Train</h4><p>We ship the work and deliver live sessions.</p></div>
-            <div class="process-step reveal"><div class="step-number">04</div><h4>Launch & Support</h4><p>Go live with ongoing optimization.</p></div>
+            <div class="process-step reveal"><div class="step-number">01</div><h3>Discovery</h3><p>We learn your goals, audience, and vision.</p></div>
+            <div class="process-step reveal"><div class="step-number">02</div><h3>Strategy & Design</h3><p>Wireframes, curriculum, or game design docs.</p></div>
+            <div class="process-step reveal"><div class="step-number">03</div><h3>Build & Train</h3><p>We ship the work and deliver live sessions.</p></div>
+            <div class="process-step reveal"><div class="step-number">04</div><h3>Launch & Support</h3><p>Go live with ongoing optimization.</p></div>
         </div>
     </section>
 
@@ -1699,7 +1700,7 @@
                 <div class="carousel-slide"><blockquote>"Six original browser games at 60 FPS, plus a set of privacy-first tools — all hand-built, zero-build, no bloat."</blockquote><div class="author">Kudbee Games &amp; Tools</div><div class="role">Play &amp; try them</div></div>
             </div>
         </div>
-        <div class="carousel-dots"><label for="test-1"></label><label for="test-2"></label><label for="test-3"></label></div>
+        <div class="carousel-dots"><label for="test-1" aria-label="Show testimonial 1"></label><label for="test-2" aria-label="Show testimonial 2"></label><label for="test-3" aria-label="Show testimonial 3"></label></div>
     </section>
 
     <!-- Tech marquee -->
@@ -2706,10 +2707,10 @@
             <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
-        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-agents">AI Agent Training</label><a href="brain/">Build Your Own Brain</a><label for="page-work">Work</label><a href="blog/">Articles</a><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
-        <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="games/kudbee-riff/index.html">Play Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Play Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Play Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Play Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
+        <div class="footer-col"><h3>Studio</h3><label for="page-services">Services</label><label for="page-agents">AI Agent Training</label><a href="brain/">Build Your Own Brain</a><label for="page-work">Work</label><a href="blog/">Articles</a><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
+        <div class="footer-col"><h3>Games</h3><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="games/kudbee-riff/index.html">Play Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Play Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Play Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Play Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
         <!-- TODO(owner): add real X / LinkedIn profile URLs and we'll re-add those links. -->
-        <div class="footer-col"><h4>Connect</h4><label for="page-contact">Book a call</label><a href="https://github.com/KudbeeZero" target="_blank" rel="noopener" aria-label="Kudbee on GitHub">GitHub</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
+        <div class="footer-col"><h3>Connect</h3><label for="page-contact">Book a call</label><a href="https://github.com/KudbeeZero" target="_blank" rel="noopener" aria-label="Kudbee on GitHub">GitHub</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
     </div>
     <div class="footer-bottom">
         <span>© <span id="year">2026</span> Kudbee. All rights reserved.</span>
