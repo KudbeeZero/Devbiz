@@ -22,8 +22,8 @@ fully caught-up, green repo.
 
 | # | ID | Item | Lane | Status |
 |---|----|------|------|--------|
-| 0 | DBZ-036 | This plan doc + ledger catch-up | docs | ☐ in progress |
-| 1 | DBZ-037 | **W1** Honest social proof — reframe unverified "150+/50+/98%" stats + named testimonials to defensible claims | content | ☐ todo |
+| 0 | DBZ-036 | This plan doc + ledger catch-up | docs | ☑ done (PR #86) |
+| 1 | DBZ-037 | **W1** Honest social proof — reframe unverified "150+/50+/98%" stats + named testimonials to defensible claims | content | ☑ done — true stats (6 games / 6 apps / 2 client builds / 100 Lighthouse), testimonials → real "Proof, not promises" case highlights, no fake names/stars |
 | 2 | DBZ-038 | **W2** Identity focus — tighten nav/IA so web-design reads as #1; demote/group secondary surfaces | feature/IA | ☐ todo |
 | 3 | DBZ-039 | **I2** Agent lead-capture — the Kudbee Agent captures an email/intent (no backend; form-endpoint + mailto fallback) | feature | ☐ todo |
 | 4 | DBZ-040 | **I3** Storefront demand capture — real "notify me / join the list" on the tiny-apps store (measures demand before Gumroad) | feature | ☐ todo |
