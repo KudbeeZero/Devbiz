@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ModernMed × Kudbee — practice performance dashboard (concept demo with sample data).">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b1713">
+<title>ModernMed · Performance Dashboard (Concept Demo)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f2a23'/%3E%3Cpath d='M6 18h4l2-6 3 11 3-13 2 8h6' fill='none' stroke='%23c9a86a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0b1713;--forest:#0f241d;--panel:#11261f;--panel-2:#0e201a;
+  --line:rgba(201,168,106,.16);--line-2:rgba(244,241,234,.09);
+  --gold:#c9a86a;--gold-l:#e2c690;--ivory:#f4f1ea;--sage:#9db4a8;--muted:#7e978a;
+  --green:#5fbf8a;--amber:#e0a24a;--red:#dd6a5a;--blue:#6aa6d6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--ink);color:var(--ivory);-webkit-font-smoothing:antialiased;line-height:1.5}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+.demo-bar{background:#0a1410;color:var(--muted);font-size:12px;text-align:center;padding:7px 14px;border-bottom:1px solid var(--line-2)}
+.demo-bar strong{color:var(--gold)}
+
+/* shell */
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+.side{background:var(--panel-2);border-right:1px solid var(--line-2);padding:22px 16px;display:flex;flex-direction:column;gap:6px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 20px}
+.brand .mk{width:34px;height:34px}
+.brand b{font:600 16px Fraunces}.brand small{display:block;font:600 8.5px Inter;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;margin-top:3px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:var(--sage);font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:background .15s,color .15s}
+.nav-item svg{width:18px;height:18px;stroke:currentColor;flex:0 0 18px}
+.nav-item:hover{background:rgba(244,241,234,.04);color:var(--ivory)}
+.nav-item.active{background:rgba(201,168,106,.12);color:var(--gold-l)}
+.side .spacer{flex:1}
+.side .who{display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--sage)}
+.side .who .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold-l),var(--gold));color:#1a1206;display:grid;place-items:center;font-weight:700;font-size:12px}
+
+.main{padding:26px 30px 60px;overflow:auto}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.top h1{font:600 24px Fraunces}
+.top .sub{color:var(--muted);font-size:13px}
+.top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line-2);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--sage)}
+.pill b{color:var(--ivory)}
+.pill.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(95,191,138,.5);animation:p 2s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,191,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,191,138,0)}100%{box-shadow:0 0 0 0 rgba(95,191,138,0)}}
+select.range{background:var(--panel);border:1px solid var(--line-2);color:var(--ivory);border-radius:10px;padding:9px 12px;font:500 13px Inter}
+
+.tab{display:none}.tab.show{display:block;animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:18px}
+.kpi .lab{font-size:12px;color:var(--muted);letter-spacing:.04em;display:flex;align-items:center;gap:7px}
+.kpi .lab svg{width:15px;height:15px;stroke:var(--gold)}
+.kpi .val{font:600 30px/1 Fraunces;margin:10px 0 6px}
+.kpi .chg{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.up{color:var(--green)}.down{color:var(--red)}
+.kpi .chg span{color:var(--muted);font-weight:400}
+
+/* panels */
+.grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-bottom:14px}
+.grid2.alt{grid-template-columns:1fr 1.55fr}
+.card{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:20px}
+.card h3{font:600 15px Inter;margin-bottom:3px}
+.card .cap{font-size:12px;color:var(--muted);margin-bottom:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--sage);margin-top:14px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+/* source bars */
+.bars{display:grid;gap:13px}
+.bar-row{display:grid;grid-template-columns:104px 1fr 46px;align-items:center;gap:12px;font-size:13px}
+.bar-track{height:9px;border-radius:6px;background:rgba(244,241,234,.06);overflow:hidden}
+.bar-fill{height:100%;border-radius:6px}
+.bar-row .n{text-align:right;color:var(--sage);font-variant-numeric:tabular-nums}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:500;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:0 10px 12px}
+td{padding:12px 10px;border-top:1px solid var(--line-2);vertical-align:middle}
+tr:hover td{background:rgba(244,241,234,.02)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px}
+.t-green{background:rgba(95,191,138,.13);color:var(--green)}
+.t-amber{background:rgba(224,162,74,.14);color:var(--amber)}
+.t-red{background:rgba(221,106,90,.14);color:var(--red)}
+.t-blue{background:rgba(106,166,214,.14);color:var(--blue)}
+.code{font-family:ui-monospace,Menlo,monospace;color:var(--gold-l);font-size:12.5px}
+.mini{font-size:11.5px;color:var(--muted)}
+
+/* induction notice */
+.notice{display:flex;gap:12px;align-items:flex-start;background:rgba(106,166,214,.08);border:1px solid rgba(106,166,214,.25);border-radius:12px;padding:13px 16px;font-size:12.5px;color:#bcd6ea;margin-bottom:18px}
+.notice svg{width:18px;height:18px;stroke:var(--blue);flex:0 0 18px;margin-top:1px}
+.notice b{color:#dcebf9 }
+
+.spark{width:100%;height:60px}
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-legend{display:grid;gap:9px;font-size:13px}
+.donut-legend div{display:flex;align-items:center;gap:8px;color:var(--sage)}
+.donut-legend b{color:var(--ivory);margin-left:auto;font-variant-numeric:tabular-nums}
+
+@media (max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid2.alt{grid-template-columns:1fr}}
+@media (max-width:760px){.app{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:5}.side .spacer,.side .who{display:none}.brand{padding:6px 8px}.nav-item{width:auto}}
+</style>
+</head>
+<body>
+<div class="demo-bar"><strong>Concept demo</strong> — ModernMed × Kudbee performance dashboard. All figures are illustrative sample data; no real patient or analytics data is shown.</div>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#0f2a23" stroke="#c9a86a" stroke-width="1"/><path d="M7 22h5l2.5-7 3.5 13L21 14l2.5 8H33" fill="none" stroke="#c9a86a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <span><b>ModernMed</b><small>Practice Console</small></span>
+    </div>
+    <button class="nav-item active" data-tab="marketing" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg>Growth &amp; Marketing</button>
+    <button class="nav-item" data-tab="induction" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Induction Ops</button>
+    <button class="nav-item" data-tab="marketing" style="opacity:.4;cursor:default" disabled><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Reviews <span class="mini" style="margin-left:auto">soon</span></button>
+    <div class="spacer"></div>
+    <div class="who"><span class="av">KO</span><div>Dr. Kenji Oyasu<br><span class="mini">Owner · admin</span></div></div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1 id="tabTitle">Growth &amp; Marketing</h1>
+        <div class="sub" id="tabSub">How the new site is turning visits into confidential consults.</div>
+      </div>
+      <div class="right">
+        <span class="pill live">Live <b>&nbsp;demo</b></span>
+        <select class="range" aria-label="Date range"><option>Last 30 days</option><option>Last 7 days</option><option>This quarter</option></select>
+      </div>
+    </div>
+
+    <!-- ============ MARKETING TAB ============ -->
+    <section class="tab show" id="tab-marketing">
+      <div class="kpis">
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>Site visitors</div><div class="val">3,148</div><div class="chg up">▲ 22%<span>&nbsp;vs prev 30d</span></div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h16v12H5.2L4 18z"/></svg>Consult requests</div><div class="val">86</div><div class="chg up">▲ 41%<span>&nbsp;vs prev 30d</span></div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2A19 19 0 013 5 2 2 0 015 3h3l1 5-2 1a14 14 0 006 6l1-2 5 1z"/></svg>Phone calls</div><div class="val">112</div><div class="chg up">▲ 18%<span>&nbsp;vs prev 30d</span></div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18"/><path d="M19 9l-5 5-3-3-4 4"/></svg>Visit→consult rate</div><div class="val">2.7%</div><div class="chg up">▲ 0.6pt<span>&nbsp;vs prev 30d</span></div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Consults &amp; calls over time</h3>
+          <div class="cap">Daily confidential-consult requests and phone calls, last 30 days</div>
+          <canvas id="trend" class="spark" style="height:200px" aria-label="Trend chart of consults and calls"></canvas>
+          <div class="legend"><span><i style="background:#c9a86a"></i>Consult requests</span><span><i style="background:#6aa6d6"></i>Phone calls</span></div>
+        </div>
+        <div class="card">
+          <h3>Where leads come from</h3>
+          <div class="cap">Attributed consult requests by channel</div>
+          <div class="bars">
+            <div class="bar-row"><span>Google Search</span><div class="bar-track"><div class="bar-fill" style="width:84%;background:linear-gradient(90deg,#c9a86a,#e2c690)"></div></div><span class="n">36</span></div>
+            <div class="bar-row"><span>Google Maps</span><div class="bar-track"><div class="bar-fill" style="width:58%;background:linear-gradient(90deg,#c9a86a,#e2c690)"></div></div><span class="n">21</span></div>
+            <div class="bar-row"><span>Paid social</span><div class="bar-track"><div class="bar-fill" style="width:40%;background:linear-gradient(90deg,#6aa6d6,#8fbfe0)"></div></div><span class="n">14</span></div>
+            <div class="bar-row"><span>Direct</span><div class="bar-track"><div class="bar-fill" style="width:26%;background:linear-gradient(90deg,#5fbf8a,#84d3a6)"></div></div><span class="n">9</span></div>
+            <div class="bar-row"><span>Referral</span><div class="bar-track"><div class="bar-fill" style="width:17%;background:rgba(244,241,234,.4)"></div></div><span class="n">6</span></div>
+          </div>
+          <div class="legend" style="margin-top:18px"><span class="mini">CPL (paid): <b style="color:var(--ivory)">$41</b> · best channel: organic search</span></div>
+        </div>
+      </div>
+
+      <div class="grid2 alt">
+        <div class="card">
+          <h3>Service interest</h3>
+          <div class="cap">Consults by requested service line</div>
+          <div class="donut-wrap" style="margin-top:6px">
+            <canvas id="donut" width="150" height="150" aria-label="Service mix donut"></canvas>
+            <div class="donut-legend">
+              <div><i style="width:10px;height:10px;border-radius:3px;background:#c9a86a;display:inline-block"></i>Recovery / MAT <b>38%</b></div>
+              <div><i style="width:10px;height:10px;border-radius:3px;background:#6aa6d6;display:inline-block"></i>Hormone / Men's <b>31%</b></div>
+              <div><i style="width:10px;height:10px;border-radius:3px;background:#5fbf8a;display:inline-block"></i>Weight loss <b>19%</b></div>
+              <div><i style="width:10px;height:10px;border-radius:3px;background:#e0a24a;display:inline-block"></i>Mental health <b>12%</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Top performing pages</h3>
+          <div class="cap">Pages driving the most consult requests</div>
+          <table>
+            <thead><tr><th>Page</th><th>Visitors</th><th>Consults</th><th>Conv.</th></tr></thead>
+            <tbody>
+              <tr><td>/ (home)</td><td>1,410</td><td>34</td><td><span class="tag t-green">2.4%</span></td></tr>
+              <tr><td>/first-72-hours</td><td>612</td><td>22</td><td><span class="tag t-green">3.6%</span></td></tr>
+              <tr><td>/recovery</td><td>498</td><td>16</td><td><span class="tag t-green">3.2%</span></td></tr>
+              <tr><td>/optimization</td><td>403</td><td>11</td><td><span class="tag t-amber">2.7%</span></td></tr>
+              <tr><td>/dr-oyasu</td><td>225</td><td>3</td><td><span class="tag t-amber">1.3%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INDUCTION TAB ============ -->
+    <section class="tab" id="tab-induction">
+      <div class="notice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><div><b>Privacy by design.</b> This view is fully de-identified — patients appear only as opaque codes. No names, contact details, or clinical records ever reach this dashboard. Identity stays in the practice's local system. (Sample data shown.)</div></div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Active inductions</div><div class="val">7</div><div class="chg"><span class="mini">3 in first 24h window</span></div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Median time to first contact</div><div class="val">38<span style="font-size:15px"> min</span></div><div class="chg up">▲ target &lt; 60 min</div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Check-in completion</div><div class="val">91%</div><div class="chg up">▲ 6%<span>&nbsp;vs prev</span></div></div>
+        <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Open escalations</div><div class="val" style="color:var(--amber)">2</div><div class="chg"><span class="mini">flagged for clinician call</span></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Induction board — first 72 hours</h3>
+        <div class="cap">Live triage of active starts, prioritized by who needs contact next. De-identified.</div>
+        <table>
+          <thead><tr><th>Patient</th><th>Stage</th><th>Last check-in</th><th>Latest symptom score</th><th>Status</th><th>Next action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="code">PT-4F9A</span><div class="mini">Started 6h ago</div></td><td>Pre-first-dose</td><td>22 min ago</td><td>COWS 9 · mild</td><td><span class="tag t-blue">On track</span></td><td>Auto check-in in 2h</td></tr>
+            <tr><td><span class="code">PT-1C72</span><div class="mini">Started 18h ago</div></td><td>First 24h</td><td>by now overdue</td><td>COWS 14 · moderate</td><td><span class="tag t-red">Escalated</span></td><td><b style="color:var(--gold-l)">Clinician call now</b></td></tr>
+            <tr><td><span class="code">PT-8B30</span><div class="mini">Started 14h ago</div></td><td>First 24h</td><td>9 min ago</td><td>COWS 7 · mild</td><td><span class="tag t-green">Stable</span></td><td>Reassurance sent</td></tr>
+            <tr><td><span class="code">PT-2E55</span><div class="mini">Started 26h ago</div></td><td>24–48h</td><td>40 min ago</td><td>COWS 11 · moderate</td><td><span class="tag t-amber">Watch</span></td><td>Check-in in 1h</td></tr>
+            <tr><td><span class="code">PT-7A18</span><div class="mini">Started 30h ago</div></td><td>24–48h</td><td>1h ago</td><td>COWS 6 · mild</td><td><span class="tag t-green">Stable</span></td><td>On schedule</td></tr>
+            <tr><td><span class="code">PT-9D04</span><div class="mini">Started 50h ago</div></td><td>48–72h</td><td>2h ago</td><td>COWS 4 · minimal</td><td><span class="tag t-green">Stabilizing</span></td><td>Transition to weekly</td></tr>
+            <tr><td><span class="code">PT-3F61</span><div class="mini">Started 64h ago</div></td><td>48–72h</td><td>3h ago</td><td>COWS 3 · minimal</td><td><span class="tag t-blue">Graduating</span></td><td>Set ongoing cadence</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Check-ins last 72 hours</h3>
+          <div class="cap">Completed patient check-ins by hour (de-identified counts)</div>
+          <canvas id="checkins" class="spark" style="height:160px" aria-label="Check-ins chart"></canvas>
+          <div class="legend"><span><i style="background:#5fbf8a"></i>Completed</span><span><i style="background:#e0a24a"></i>Escalated</span></div>
+        </div>
+        <div class="card">
+          <h3>Why this wins</h3>
+          <div class="cap">What the induction companion adds over status quo</div>
+          <table>
+            <tbody>
+              <tr><td><b>Time to first human contact</b></td><td><span class="tag t-green">38 min</span></td><td class="mini">vs. next business day</td></tr>
+              <tr><td><b>Drop-off in first 72h</b></td><td><span class="tag t-green">↓ lower</span></td><td class="mini">structured check-ins</td></tr>
+              <tr><td><b>Clinician time saved</b></td><td><span class="tag t-blue">triaged</span></td><td class="mini">only escalations call</td></tr>
+              <tr><td><b>PHI exposure</b></td><td><span class="tag t-green">none</span></td><td class="mini">de-identified by design</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var titles={marketing:['Growth & Marketing','How the new site is turning visits into confidential consults.'],
+              induction:['Induction Ops','De-identified support tracking for active Suboxone starts — the first 72 hours.']};
+  function activate(t){
+    if(!titles[t]) return;
+    document.querySelectorAll('.nav-item').forEach(function(n){var on=n.getAttribute('data-tab')===t&&!n.disabled;n.classList.toggle('active',on);n.setAttribute('aria-pressed',on?'true':'false');});
+    document.querySelectorAll('.tab').forEach(function(s){s.classList.remove('show');});
+    document.getElementById('tab-'+t).classList.add('show');
+    document.getElementById('tabTitle').innerHTML=titles[t][0];
+    document.getElementById('tabSub').textContent=titles[t][1];
+    if(location.hash.slice(1)!==t) history.replaceState(null,'','#'+t);
+    draw();
+  }
+  document.querySelectorAll('.nav-item[data-tab]').forEach(function(b){
+    if(b.disabled) return;
+    b.addEventListener('click',function(){ activate(b.getAttribute('data-tab')); });
+  });
+  if(location.hash && titles[location.hash.slice(1)]) activate(location.hash.slice(1));
+
+  function line(id,series,opts){
+    var c=document.getElementById(id);if(!c)return;var x=c.getContext('2d');
+    var W=c.clientWidth,H=c.clientHeight,dpr=Math.min(window.devicePixelRatio||1,2);
+    c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+    var pad=8,max=0;series.forEach(function(s){s.d.forEach(function(v){if(v>max)max=v;})});max*=1.2||1;
+    // grid
+    x.strokeStyle='rgba(244,241,234,.06)';x.lineWidth=1;
+    for(var g=0;g<4;g++){var gy=pad+(H-2*pad)*g/3;x.beginPath();x.moveTo(0,gy);x.lineTo(W,gy);x.stroke();}
+    series.forEach(function(s){
+      var n=s.d.length;
+      x.beginPath();
+      s.d.forEach(function(v,i){var px=i/(n-1)*W,py=H-pad-(v/max)*(H-2*pad);i?x.lineTo(px,py):x.moveTo(px,py);});
+      if(s.fill){var grd=x.createLinearGradient(0,0,0,H);grd.addColorStop(0,s.fill);grd.addColorStop(1,'rgba(0,0,0,0)');
+        x.lineTo(W,H-pad);x.lineTo(0,H-pad);x.closePath();x.fillStyle=grd;x.fill();
+        x.beginPath();s.d.forEach(function(v,i){var px=i/(n-1)*W,py=H-pad-(v/max)*(H-2*pad);i?x.lineTo(px,py):x.moveTo(px,py);});}
+      x.strokeStyle=s.c;x.lineWidth=2.2;x.lineJoin='round';x.stroke();
+      var lv=s.d[n-1],lx=W-1,ly=H-pad-(lv/max)*(H-2*pad);x.fillStyle=s.c;x.beginPath();x.arc(lx-2,ly,3,0,6.283);x.fill();
+    });
+  }
+  function bars(id,data){
+    var c=document.getElementById(id);if(!c)return;var x=c.getContext('2d');
+    var W=c.clientWidth,H=c.clientHeight,dpr=Math.min(window.devicePixelRatio||1,2);
+    c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+    var pad=8,max=0;data.forEach(function(d){if(d.a+d.b>max)max=d.a+d.b;});max*=1.15;
+    var bw=W/data.length*0.55,gap=W/data.length;
+    data.forEach(function(d,i){
+      var cx=gap*i+gap/2, total=d.a+d.b;
+      var hA=(d.a/max)*(H-2*pad), hB=(d.b/max)*(H-2*pad);
+      x.fillStyle='#5fbf8a';rr(x,cx-bw/2,H-pad-hA,bw,hA,3);
+      if(d.b){x.fillStyle='#e0a24a';rr(x,cx-bw/2,H-pad-hA-hB,bw,hB,3);}
+    });
+  }
+  function rr(x,px,py,w,h,r){r=Math.min(r,h/2,w/2);if(h<=0)return;x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();x.fill();}
+  function donut(id,segs){
+    var c=document.getElementById(id);if(!c)return;var x=c.getContext('2d');var S=150,dpr=Math.min(window.devicePixelRatio||1,2);
+    c.width=S*dpr;c.height=S*dpr;x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,S,S);
+    var cx=S/2,cy=S/2,r=60,ir=38,a=-Math.PI/2,tot=segs.reduce(function(s,v){return s+v.v;},0);
+    segs.forEach(function(sg){var ang=sg.v/tot*6.283;x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,r,a,a+ang);x.closePath();x.fillStyle=sg.c;x.fill();a+=ang;});
+    x.fillStyle='#11261f';x.beginPath();x.arc(cx,cy,ir,0,6.283);x.fill();
+    x.fillStyle='#f4f1ea';x.font='600 19px Fraunces, serif';x.textAlign='center';x.textBaseline='middle';x.fillText('86',cx,cy-6);
+    x.fillStyle='#7e978a';x.font='500 9px Inter';x.fillText('CONSULTS',cx,cy+11);
+  }
+
+  var drawn={};
+  function draw(){
+    if(document.getElementById('tab-marketing').classList.contains('show')&&!drawn.m){
+      line('trend',[
+        {d:[1,2,2,3,2,4,3,5,4,3,5,6,4,5,7,6,5,8,6,7,9,7,8,6,9,8,10,9,8,11],c:'#c9a86a',fill:'rgba(201,168,106,.18)'},
+        {d:[3,3,4,3,5,4,4,6,5,4,6,5,7,6,5,7,6,8,7,6,8,7,9,8,7,9,8,10,9,11],c:'#6aa6d6'}
+      ]);
+      donut('donut',[{v:33,c:'#c9a86a'},{v:27,c:'#6aa6d6'},{v:16,c:'#5fbf8a'},{v:10,c:'#e0a24a'}]);
+      drawn.m=true;
+    }
+    if(document.getElementById('tab-induction').classList.contains('show')&&!drawn.i){
+      var d=[];for(var h=0;h<24;h++){d.push({a:2+Math.round(Math.abs(Math.sin(h/3))*5),b:(h===9||h===17)?1:0});}
+      bars('checkins',d);drawn.i=true;
+    }
+  }
+  draw();
+  window.addEventListener('resize',function(){drawn={};draw();});
+})();
+</script>
+</body>
+</html>
