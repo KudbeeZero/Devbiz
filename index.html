@@ -1931,15 +1931,15 @@
                 <p>Branded QR codes with your logo &amp; colors — crisp PNG/SVG, no watermark, no account.</p>
                 <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
               </div>
-              <div class="store-card" data-app="utm-builder" data-name="UTM Campaign Builder" data-live="0">
-                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><h4>UTM Campaign Builder</h4><div class="sc-slug">kudbee add utm-builder</div></div></div>
+              <div class="store-card" data-app="utm-builder" data-name="UTM Campaign Builder" data-live="1" data-url="tools/utm-builder/index.html">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><h4>UTM Campaign Builder <span style="color:var(--green);font-size:10px;font-weight:700;">● LIVE</span></h4><div class="sc-slug">kudbee add utm-builder</div></div></div>
                 <p>Clean, consistent tracking links your whole team reuses — presets, validation, saved history.</p>
-                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+                <div class="sc-foot"><span class="price-tag" style="color:var(--cyan);">Free</span><button type="button" class="install-btn">Install →</button></div>
               </div>
-              <div class="store-card" data-app="invoice" data-name="Invoice Generator" data-live="0">
-                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V2z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><div><h4>Invoice Generator</h4><div class="sc-slug">kudbee add invoice</div></div></div>
+              <div class="store-card" data-app="invoice" data-name="Invoice Generator" data-live="1" data-url="tools/invoice-generator/index.html">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V2z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><div><h4>Invoice Generator <span style="color:var(--green);font-size:10px;font-weight:700;">● LIVE</span></h4><div class="sc-slug">kudbee add invoice</div></div></div>
                 <p>A polished invoice in 30 seconds, exported to PDF — nothing leaves your browser.</p>
-                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+                <div class="sc-foot"><span class="price-tag" style="color:var(--cyan);">Free</span><button type="button" class="install-btn">Install →</button></div>
               </div>
               <div class="store-card" data-app="palette" data-name="Palette Extractor" data-live="0">
                 <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-1.3-1-1.5-1-2.5a2 2 0 0 1 2-2h2a5 5 0 0 0 5-5c0-5-4.5-8.5-12-8.5z"/></svg></span><div><h4>Palette Extractor</h4><div class="sc-slug">kudbee add palette</div></div></div>
@@ -3322,6 +3322,16 @@
     }
     function gotoContact() { var r = document.getElementById('page-contact'); if (r) { r.checked = true; window.scrollTo(0, 0); } }
 
+    // Checkout via Gumroad. Flip PAYMENT_LIVE to true once the products exist.
+    // TODO(owner): set GUMROAD to your real store ("https://<handle>.gumroad.com/l/")
+    // and PAYMENT_LIVE = true after creating a $5 product per app slug.
+    var GUMROAD = 'https://kudbee.gumroad.com/l/';
+    var PAYMENT_LIVE = false;
+    function buyOnGumroad(slug) {
+        if (PAYMENT_LIVE) { window.open(GUMROAD + slug, '_blank', 'noopener'); line('<span class="ok">→ opening Gumroad checkout…</span>'); }
+        else { line('<span class="warn">→ checkout opens on Gumroad — $5</span> <span class="dim">(store goes live once the owner publishes the product)</span>'); }
+    }
+
     async function install(slug, name, isLive, url) {
         if (busy) return; busy = true;
         if (live) { live.textContent = 'installing'; live.style.color = 'var(--violet)'; }
@@ -3343,15 +3353,12 @@
         line('<span class="ok">✓ ' + name + ' installed.</span> <span class="dim">ready in this browser — private, no signup.</span>');
         var cta = document.createElement('div'); cta.className = 'term-cta';
         if (isLive && url) {
-            cta.innerHTML = '<a class="buy" href="' + url + '" target="_blank" rel="noopener">Open ' + name + ' →</a><button class="ghost" type="button" data-book>Talk to us</button>';
+            cta.innerHTML = '<a class="buy" href="' + url + '" target="_blank" rel="noopener">Open ' + name + ' →</a><button class="ghost" type="button" data-buy>Get the download — $5</button>';
         } else {
             cta.innerHTML = '<button class="buy" type="button" data-buy>Get it — $5 →</button><button class="ghost" type="button" data-book>Notify me at launch</button>';
         }
         term.appendChild(cta); term.scrollTop = term.scrollHeight;
-        var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () {
-            // TODO(owner): wire a real Stripe Payment Link per app to enable checkout.
-            line('<span class="warn">→ opening secure checkout…</span> <span class="dim">(preview — payment goes live once enabled)</span>');
-        });
+        var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () { buyOnGumroad(slug); });
         var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', gotoContact);
         if (live) { live.textContent = 'ready'; live.style.color = 'var(--green)'; }
         busy = false;
