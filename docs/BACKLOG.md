@@ -36,6 +36,19 @@ These make the site actually *transact / measure*. All the UI is built and waiti
 ## 🌟 Dream feature (north star)
 - [ ] 🌟 **Ship-it → real deployed draft → booked call** — after the teaser, the agent interviews for ~60s, generates an *actual multi-page* site (real pages/copy/schema, house style), deploys to a temporary `their-business.kudbee.dev`, and books the call with the draft attached. (Deploy step is owner-gated/backend.) Fuses agent + Ship-it + templates + real deploy into a top-of-funnel no template shop can match.
 
-## 🔍 Found problems (from the latest site scan)
-> Filled by the problem-scout agent; triage into the lists above as we take them.
-- _(pending the current scan — appended below on completion)_
+## 🔍 Found problems (site scan — 2026-06-30)
+Read-only scout swept the primary surfaces. **Clean:** no broken internal links or
+hash anchors, valid JSON-LD + canonicals everywhere, sitemap entries all resolve,
+images/inputs have alt/labels, no fabricated data slipped back in. Findings:
+
+**Actionable now (non-gated):**
+- [ ] 🟡 **Tools discoverability** — UTM Builder + Invoice Generator are in the store
+  but not linked from the homepage **Tools** page card-grid. Add them.
+- [ ] 🟢 **Invoice meta length** — `tools/invoice-generator/index.html` meta description
+  is 161 chars; trim to ≤160.
+- [ ] 🟢 **Ship-it "NEW" badge** — fine for now (launched today); revisit/remove in a few weeks.
+
+**Already tracked (owner-gated placeholders, re-confirmed by the scan):** the
+`cal.com/kudbee` link (32 instances), the capture endpoints (`LEAD_ENDPOINT` /
+`WAITLIST_ENDPOINT` / `SHIPIT_ENDPOINT`), `PAYMENT_LIVE=false` (store), and the
+greyed "Call or text — number coming soon" line. All covered under 🔒 above.
