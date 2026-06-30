@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b1713">
+<title>ModernMed — Local Visibility Kit (Concept)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f2a23'/%3E%3Cpath d='M6 18h4l2-6 3 11 3-13 2 8h6' fill='none' stroke='%23c9a86a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"></noscript>
+<style>
+:root{
+  --ink:#0b1713;--forest:#0f241d;--forest-2:#102b22;--panel:#11261f;
+  --line:rgba(201,168,106,.16);--line-2:rgba(244,241,234,.09);
+  --gold:#c9a86a;--gold-d:#a9854a;--gold-l:#e2c690;--ivory:#f4f1ea;--sage:#9db4a8;--muted:#88a093;
+  --green:#5fbf8a;--maxw:1060px;--shadow:0 30px 80px -40px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{font-family:Inter,system-ui,sans-serif;background:var(--ink);color:var(--ivory);line-height:1.6;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;line-height:1.1;letter-spacing:-.01em}
+a{color:var(--gold);text-decoration:none}svg{display:block}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+.eyebrow{font:600 12px/1 Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+.demo-bar{background:#0a1410;color:var(--muted);font-size:12px;text-align:center;padding:8px 14px;border-bottom:1px solid var(--line-2)}
+.demo-bar strong{color:var(--gold)}
+
+header.hd{padding:54px 0 30px;border-bottom:1px solid var(--line-2);background:linear-gradient(180deg,var(--forest),var(--ink))}
+.hd-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:40px;align-items:center}
+.hd h1{font-size:clamp(32px,5vw,52px);margin:14px 0 14px}
+.hd p{color:var(--sage);font-size:16px;max-width:52ch}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,106,.1);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font:600 12px Inter;color:var(--gold-l);margin-top:18px}
+
+/* completeness ring */
+.score-card{background:linear-gradient(160deg,var(--panel),var(--ink));border:1px solid var(--line);border-radius:22px;padding:26px;text-align:center;box-shadow:var(--shadow)}
+.ring{position:relative;width:170px;height:170px;margin:0 auto 8px}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;font:500 46px Fraunces;color:var(--ivory)}
+.ring .pct small{display:block;font:600 10px Inter;letter-spacing:.14em;color:var(--sage);text-transform:uppercase;margin-top:2px}
+.score-card .lbl{font:600 13px Inter;color:var(--sage)}
+
+.sec{padding:54px 0;border-bottom:1px solid var(--line-2)}
+.sec h2{font-size:clamp(24px,3.6vw,34px);margin-bottom:6px}
+.sec .sub{color:var(--sage);font-size:14.5px;margin-bottom:26px;max-width:60ch}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* checklist */
+.list{display:grid;gap:10px}
+.item{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line-2);border-radius:13px;padding:15px 17px;cursor:pointer;transition:border-color .2s,background .2s}
+.item:hover{border-color:var(--line)}
+.item.done{border-color:rgba(95,191,138,.4);background:rgba(95,191,138,.06)}
+.box{flex:0 0 24px;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;transition:all .2s;margin-top:1px}
+.item.done .box{background:var(--green);border-color:var(--green)}
+.box svg{width:14px;height:14px;stroke:#08130d;stroke-width:3;opacity:0;transform:scale(.5);transition:all .2s}
+.item.done .box svg{opacity:1;transform:scale(1)}
+.item .tx b{font:600 15px Inter;display:block}
+.item .tx span{color:var(--muted);font-size:13px}
+
+/* NAP card */
+.nap-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.nap{background:linear-gradient(160deg,var(--panel),var(--forest-2));border:1px solid var(--line);border-radius:18px;padding:24px}
+.nap h3{font-size:18px;margin-bottom:4px}
+.nap .note{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line-2)}
+.row:first-of-type{border-top:none}
+.row .k{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--sage);width:62px;flex:0 0 62px}
+.row .v{flex:1;font-size:14px;color:var(--ivory)}
+.copy{background:rgba(201,168,106,.1);border:1px solid var(--line);color:var(--gold-l);border-radius:8px;padding:6px 11px;font:600 11.5px Inter;cursor:pointer;white-space:nowrap;transition:all .15s}
+.copy:hover{background:rgba(201,168,106,.2)}
+.copy.ok{background:var(--green);color:#08130d;border-color:var(--green)}
+
+/* review */
+.rev-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:24px;align-items:start}
+.qr-card{background:linear-gradient(160deg,var(--panel),var(--forest-2));border:1px solid var(--line);border-radius:20px;padding:26px;text-align:center}
+.qr-box{width:160px;height:160px;margin:0 auto 16px;background:var(--ivory);border-radius:16px;padding:13px;box-shadow:0 12px 26px -12px rgba(0,0,0,.6)}
+.qr-box svg{width:100%;height:100%}
+.qr-card h3{font-size:19px;margin-bottom:6px}
+.qr-card p{color:var(--sage);font-size:13px}
+.qr-card .ph{color:var(--muted);font-size:11.5px;margin-top:10px;border-top:1px dashed var(--line-2);padding-top:10px}
+.tmpl{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:18px;margin-bottom:14px}
+.tmpl .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tmpl .top b{font:600 14px Inter}
+.tmpl .top .pill{font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-l);background:rgba(201,168,106,.1);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.tmpl .top .copy{margin-left:auto}
+.tmpl pre{white-space:pre-wrap;font-family:Inter;font-size:13.5px;color:var(--sage);line-height:1.55}
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:8px}
+.tip{background:var(--panel);border:1px solid var(--line-2);border-radius:13px;padding:16px}
+.tip b{font:600 14px Inter;display:block;margin-bottom:4px}
+.tip span{color:var(--muted);font-size:13px}
+.tip .ic{color:var(--gold);font-size:18px;margin-bottom:8px;display:block}
+
+footer{background:#091310;padding:36px 0;text-align:center;color:var(--muted);font-size:13px}
+footer a{color:var(--gold)}
+.placeholder{border-bottom:1px dashed rgba(136,160,147,.5)}
+
+@media (max-width:820px){.hd-grid,.rev-grid{grid-template-columns:1fr;gap:28px}.nap-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="demo-bar"><strong>Concept demo</strong> — ModernMed × Kudbee Local Visibility Kit. A working template; replace placeholders (Google review link, etc.) with the practice's real data.</div>
+
+<header class="hd">
+  <div class="wrap hd-grid">
+    <div>
+      <span class="eyebrow">Tier 1 · Local SEO Quick-Start</span>
+      <h1>Get found first<br>in Park Ridge.</h1>
+      <p>The fastest wins to outrank ModernMed locally: a fully-optimized Google profile, consistent listings everywhere, and a steady review engine. Tick items off below — your visibility score updates live.</p>
+      <div class="badge">⚡ Built to pair with the performance dashboard</div>
+    </div>
+    <div class="score-card reveal">
+      <div class="ring">
+        <svg width="170" height="170" viewBox="0 0 170 170">
+          <circle cx="85" cy="85" r="76" fill="none" stroke="rgba(244,241,234,.08)" stroke-width="11"/>
+          <circle id="ringArc" cx="85" cy="85" r="76" fill="none" stroke="#c9a86a" stroke-width="11" stroke-linecap="round" stroke-dasharray="477" stroke-dashoffset="477"/>
+        </svg>
+        <div class="pct"><span id="pctNum">0</span><small>Profile score</small></div>
+      </div>
+      <div class="lbl" id="scoreLbl">Check items to build your score</div>
+    </div>
+  </div>
+</header>
+
+<!-- GBP CHECKLIST -->
+<section class="sec">
+  <div class="wrap">
+    <h2 class="reveal">Google Business Profile checklist</h2>
+    <p class="sub reveal">GBP is the single biggest local-pack lever. Complete every item — each one lifts your score and your ranking signals.</p>
+    <div class="list" id="gbpList">
+      <!-- items injected -->
+    </div>
+  </div>
+</section>
+
+<!-- NAP + DIRECTORIES -->
+<section class="sec">
+  <div class="wrap">
+    <h2 class="reveal">One identity, everywhere</h2>
+    <p class="sub reveal">Search engines reward consistency. Use this exact Name / Address / Phone on every listing — copy it and paste it identically. Then sync each directory.</p>
+    <div class="nap-wrap">
+      <div class="nap reveal">
+        <h3>Canonical NAP</h3>
+        <div class="note">The single source of truth — paste verbatim everywhere.</div>
+        <div class="row"><span class="k">Name</span><span class="v" id="nap-name">ModernMed Chicago</span><button class="copy" data-copy="nap-name">Copy</button></div>
+        <div class="row"><span class="k">Address</span><span class="v" id="nap-addr">111 S Washington Ave, Suite 202, Park Ridge, IL 60068</span><button class="copy" data-copy="nap-addr">Copy</button></div>
+        <div class="row"><span class="k">Phone</span><span class="v" id="nap-phone">(847) 423-6800</span><button class="copy" data-copy="nap-phone">Copy</button></div>
+        <div class="row"><span class="k">Web</span><span class="v" id="nap-web">modernmedchicago.com</span><button class="copy" data-copy="nap-web">Copy</button></div>
+        <div style="margin-top:14px"><button class="copy" id="copyAll" style="width:100%;justify-content:center;padding:11px">Copy full NAP block</button></div>
+      </div>
+      <div class="nap reveal">
+        <h3>Directory sync</h3>
+        <div class="note">Claim + match your NAP on each. Remove any duplicate listings.</div>
+        <div class="list" id="dirList" style="gap:8px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEW ENGINE -->
+<section class="sec">
+  <div class="wrap">
+    <h2 class="reveal">The review engine</h2>
+    <p class="sub reveal">80%+ of patients read reviews before booking. Make leaving one a one-tap, discreet act — and ask everyone, steadily (never in spikes, never incentivized).</p>
+    <div class="rev-grid">
+      <div class="qr-card reveal">
+        <div class="qr-box" aria-hidden="true">
+          <svg viewBox="0 0 41 41"><path stroke="#0b1713" d="M2 2.5h7m1 0h2m1 0h3m2 0h2m1 0h2m1 0h2m1 0h3m2 0h7m-37 1h1m5 0h1m3 0h1m1 0h4m1 0h1m2 0h1m1 0h2m1 0h2m3 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h9m3 0h1m1 0h2m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m3 0h1m1 0h7m1 0h2m1 0h1m1 0h2m3 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m7 0h2m2 0h1m2 0h2m3 0h1m3 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h2m1 0h2m3 0h3m1 0h1m3 0h1m1 0h1m3 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h1m3 0h2m1 0h2m1 0h3m2 0h2m-29 1h1m1 0h1m3 0h2m1 0h1m2 0h1m2 0h1m1 0h1m1 0h4m1 0h2m5 0h1m2 0h1m1 0h1m-37 1h1m7 0h1m3 0h1m1 0h1m2 0h1m2 0h3m2 0h1m2 0h3m4 0h2m-34 1h2m1 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h1m2 0h2m2 0h1m1 0h6m1 0h1m-36 1h2m4 0h4m1 0h1m5 0h3m1 0h1m3 0h6m1 0h1m-34 1h1m1 0h6m2 0h2m1 0h1m1 0h2m6 0h2m3 0h1m1 0h1m2 0h1m2 0h1m-37 1h2m1 0h1m1 0h1m1 0h1m1 0h2m1 0h5m1 0h4m1 0h2m2 0h1m2 0h2m1 0h1m1 0h2m-36 1h1m1 0h1m2 0h3m4 0h1m1 0h1m1 0h3m3 0h1m1 0h4m4 0h2m1 0h1m-36 1h2m1 0h1m2 0h3m1 0h3m4 0h4m1 0h1m2 0h1m2 0h1m1 0h3m1 0h2m-37 1h1m1 0h1m2 0h2m2 0h1m1 0h2m3 0h3m2 0h1m1 0h3m4 0h2m-31 1h5m1 0h4m2 0h1m2 0h1m1 0h1m2 0h1m3 0h1m2 0h2m1 0h1m1 0h4m-37 1h1m2 0h7m3 0h1m2 0h2m1 0h1m1 0h1m1 0h2m2 0h2m1 0h1m1 0h3m1 0h1m-37 1h1m2 0h1m4 0h4m2 0h3m7 0h1m1 0h2m1 0h1m2 0h2m-31 1h1m2 0h1m5 0h1m1 0h1m1 0h1m2 0h2m2 0h2m2 0h2m1 0h2m1 0h1m1 0h1m-35 1h1m7 0h1m1 0h1m1 0h5m1 0h1m3 0h2m2 0h2m1 0h1m4 0h2m-36 1h1m1 0h2m1 0h1m1 0h1m3 0h1m2 0h2m2 0h6m1 0h2m1 0h1m3 0h4m-35 1h2m3 0h2m1 0h3m2 0h3m2 0h1m1 0h3m1 0h2m1 0h1m1 0h3m1 0h2m-35 1h5m3 0h2m1 0h1m1 0h1m1 0h1m2 0h3m1 0h2m1 0h1m2 0h2m4 0h1m-34 1h1m1 0h1m1 0h3m2 0h3m5 0h3m1 0h1m3 0h1m2 0h1m4 0h1m-37 1h3m1 0h4m1 0h1m2 0h4m1 0h1m2 0h1m2 0h1m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m-35 1h2m3 0h1m1 0h3m1 0h2m3 0h3m1 0h1m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m-36 1h2m1 0h4m2 0h1m1 0h3m1 0h1m4 0h1m3 0h1m2 0h7m1 0h2m-29 1h1m6 0h2m1 0h4m1 0h1m4 0h1m3 0h1m2 0h2m-37 1h7m1 0h8m1 0h3m3 0h1m1 0h1m2 0h1m1 0h1m1 0h1m3 0h1m-37 1h1m5 0h1m5 0h1m1 0h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h3m3 0h1m2 0h1m-36 1h1m1 0h3m1 0h1m4 0h1m2 0h6m1 0h1m1 0h3m1 0h6m3 0h1m-37 1h1m1 0h3m1 0h1m4 0h2m3 0h1m1 0h1m5 0h3m1 0h2m2 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h2m4 0h1m1 0h2m2 0h2m1 0h1m1 0h2m2 0h2m3 0h1m-37 1h1m5 0h1m3 0h1m1 0h5m5 0h3m2 0h1m1 0h2m1 0h2m-34 1h7m1 0h1m1 0h2m1 0h1m2 0h1m2 0h2m3 0h1m3 0h1m2 0h1m1 0h1m2 0h1"/></svg>
+        </div>
+        <h3>Scan to leave a review</h3>
+        <p>Put this on a counter card, receipt, or follow-up text.</p>
+        <div class="ph"><span class="placeholder">Swap with your Google review short-link / Place ID</span></div>
+      </div>
+      <div>
+        <div class="tmpl reveal">
+          <div class="top"><b>Text message</b><span class="pill">SMS</span><button class="copy" data-copy="sms-body">Copy</button></div>
+          <pre id="sms-body">Hi — thank you for trusting ModernMed. If you have a moment, a quick Google review helps other families find discreet, judgment-free care. It's one tap: [review link]. — The ModernMed team</pre>
+        </div>
+        <div class="tmpl reveal">
+          <div class="top"><b>Email</b><span class="pill">Email</span><button class="copy" data-copy="email-body">Copy</button></div>
+          <pre id="email-body">Subject: A quick favor?
+
+Thank you for being part of ModernMed. Your experience matters to us — and to the next person searching for help. If you're comfortable, would you share a short Google review? It takes about a minute: [review link]
+
+No pressure at all, and thank you. — Dr. Oyasu &amp; the ModernMed team</pre>
+        </div>
+        <div class="tips">
+          <div class="tip"><span class="ic">⏱️</span><b>Steady, not spikes</b><span>Ask every satisfied patient, a few each week — sudden bursts look unnatural.</span></div>
+          <div class="tip"><span class="ic">↩️</span><b>Reply to all</b><span>Respond to every review, good or bad — Google and patients both notice.</span></div>
+          <div class="tip"><span class="ic">🔒</span><b>Stay private</b><span>Never confirm someone is a patient or mention any treatment in a reply.</span></div>
+          <div class="tip"><span class="ic">🚫</span><b>Never incentivize</b><span>Don't offer anything for reviews — it violates Google &amp; can backfire.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Concept Local Visibility Kit · designed &amp; built by <a href="https://kudbee.dev">Kudbee</a> for ModernMed Chicago.<br>
+    <span style="color:var(--muted);font-size:12px">A template for client review — not legal/marketing-compliance advice. Pairs with the SEO battle plan &amp; performance dashboard.</span>
+  </div>
+</footer>
+
+<script>
+try{(function(){
+  "use strict";
+  var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  var GBP=[
+    ["Claim &amp; verify the profile","The non-negotiable first step — you can't rank without it."],
+    ["Set the right primary category","Pick the most accurate category; add relevant secondaries."],
+    ["List every service","Add all services (MAT, TRT, weight loss, mental health) with descriptions."],
+    ["Write a keyword-rich description","750 chars covering services + Park Ridge / Chicago suburbs."],
+    ["Confirm hours (incl. holidays)","Accurate hours + special hours prevent ranking &amp; trust hits."],
+    ["Upload 10+ real photos","Exterior, interior, team, logo — fresh photos lift engagement."],
+    ["Post weekly","Updates, offers, education — active profiles rank better."],
+    ["Seed &amp; answer Q&amp;A","Pre-answer common questions; monitor for new ones."],
+    ["Turn on messaging","Let patients reach you directly from the profile."],
+    ["Add attributes","\"LGBTQ+ friendly\", \"telehealth\", \"online care\" — match your reality."]
+  ];
+  var DIRS=["Google Business Profile","Apple Business Connect","Bing Places","Yelp","Healthgrades","Psychology Today","Doximity","Vitals","WebMD Provider","Facebook","Nextdoor","Local chamber"];
+
+  var gbpList=document.getElementById('gbpList'),dirList=document.getElementById('dirList');
+  function makeItem(title,sub,big){
+    var d=document.createElement('div');d.className='item';d.setAttribute('role','checkbox');d.setAttribute('aria-checked','false');d.tabIndex=0;
+    d.innerHTML='<span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5"/></svg></span>'+
+      '<span class="tx"><b>'+title+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</span>';
+    function toggle(){var on=d.classList.toggle('done');d.setAttribute('aria-checked',on?'true':'false');update();}
+    d.addEventListener('click',toggle);
+    d.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle();}});
+    return d;
+  }
+  GBP.forEach(function(it){gbpList.appendChild(makeItem(it[0],it[1]));});
+  DIRS.forEach(function(name){var d=makeItem(name,'',true);d.style.padding='11px 14px';dirList.appendChild(d);});
+
+  // score = GBP completion only (the ranking core); directories tracked separately
+  var arc=document.getElementById('ringArc'),pctNum=document.getElementById('pctNum'),lbl=document.getElementById('scoreLbl'),
+      CIRC=477,shown=0,raf=null;
+  function update(){
+    var items=gbpList.querySelectorAll('.item'),done=gbpList.querySelectorAll('.item.done').length;
+    var target=Math.round(done/items.length*100);
+    lbl.textContent=done===items.length?'Profile complete — you’re ahead of them.':(done+' of '+items.length+' done');
+    animateTo(target);
+  }
+  function animateTo(target){
+    if(reduce){shown=target;render(target);return;}
+    if(raf)cancelAnimationFrame(raf);
+    var from=shown,start=null,dur=600;
+    function step(ts){if(!start)start=ts;var p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,3),v=from+(target-from)*e;render(v);if(p<1)raf=requestAnimationFrame(step);else shown=target;}
+    raf=requestAnimationFrame(step);
+  }
+  function render(v){pctNum.textContent=Math.round(v);arc.setAttribute('stroke-dashoffset',String(CIRC*(1-v/100)));
+    arc.setAttribute('stroke',v>=100?'#5fbf8a':'#c9a86a');shown=v;}
+
+  /* copy buttons */
+  function flash(btn){var t=btn.textContent;btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent=t;btn.classList.remove('ok');},1400);}
+  function copy(text,btn){
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){flash(btn);},function(){legacy(text);flash(btn);});}
+    else{legacy(text);flash(btn);}
+  }
+  function legacy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+  document.querySelectorAll('.copy[data-copy]').forEach(function(b){
+    b.addEventListener('click',function(){var el=document.getElementById(b.getAttribute('data-copy'));copy(el.textContent.trim(),b);});
+  });
+  document.getElementById('copyAll').addEventListener('click',function(){
+    var block=['ModernMed Chicago','111 S Washington Ave, Suite 202','Park Ridge, IL 60068','(847) 423-6800','modernmedchicago.com'].join('\n');
+    copy(block,this);
+  });
+
+  /* reveal */
+  var io=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.14});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+})();}catch(_e){window.__kitErr=(_e&&(_e.stack||_e.message))||String(_e);if(window.console&&console.error)console.error('kit init error:',_e);}
+</script>
+</body>
+</html>

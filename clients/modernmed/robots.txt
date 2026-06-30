@@ -1,0 +1,22 @@
+# ModernMed Chicago — robots.txt (template for the LIVE domain)
+# The concept demo itself is noindex via <meta>; ship this on the production site.
+
+User-agent: *
+Allow: /
+
+# Welcome AI/answer engines (visibility in AI search & assistants)
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+
+# AI-readable summary for LLMs:
+# See /llms.txt
+
+Sitemap: https://modernmedchicago.com/sitemap.xml
