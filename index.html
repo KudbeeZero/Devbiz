@@ -3431,6 +3431,33 @@
         else { line('<span class="warn">→ checkout opens on Gumroad — $5</span> <span class="dim">(store goes live once the owner publishes the product)</span>'); }
     }
 
+    // Demand capture: per-app waitlist, saved locally; POSTs to endpoint if set, else mailto.
+    var WAITLIST_ENDPOINT = ''; // TODO(owner): paste a Formspree/Formsubmit URL to auto-collect store signups.
+    function mailtoWaitlist(slug, email) {
+        window.location.href = 'mailto:kudbeezero@gmail.com?subject=' + encodeURIComponent('Waitlist: ' + slug) + '&body=' + encodeURIComponent('Email: ' + email + '\nApp: ' + slug);
+    }
+    function joinWaitlist(slug, name) {
+        line('<span class="ok">→ join the waitlist for ' + name + '</span> <span class="dim">— drop your email, no spam.</span>');
+        var f = document.createElement('form'); f.className = 'term-cta'; f.style.marginTop = '8px';
+        var inp = document.createElement('input');
+        inp.type = 'email'; inp.required = true; inp.placeholder = 'you@email.com'; inp.setAttribute('aria-label', 'Your email for the ' + name + ' waitlist');
+        inp.style.cssText = 'flex:1;min-width:0;background:#05050b;border:1px solid var(--border-hover);border-radius:999px;padding:10px 14px;color:var(--text-primary);font:13px ui-monospace,monospace;outline:none;';
+        var sb = document.createElement('button'); sb.type = 'submit'; sb.className = 'buy'; sb.textContent = 'Notify me';
+        f.appendChild(inp); f.appendChild(sb); term.appendChild(f); term.scrollTop = term.scrollHeight; inp.focus();
+        f.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var email = inp.value.trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { inp.focus(); return; }
+            try { var a = JSON.parse(localStorage.getItem('kudbee.waitlist') || '[]'); a.push({ app: slug, email: email, at: new Date().toISOString() }); localStorage.setItem('kudbee.waitlist', JSON.stringify(a.slice(-100))); } catch (err) {}
+            f.remove();
+            function done() { line('<span class="ok">✓ you’re on the list for ' + name + '.</span> <span class="dim">we’ll email you at launch.</span>'); }
+            if (WAITLIST_ENDPOINT) {
+                fetch(WAITLIST_ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json', 'accept': 'application/json' }, body: JSON.stringify({ app: slug, email: email, source: 'kudbee-store' }) })
+                    .then(done).catch(function () { mailtoWaitlist(slug, email); done(); });
+            } else { mailtoWaitlist(slug, email); done(); }
+        });
+    }
+
     async function install(slug, name, isLive, url) {
         if (busy) return; busy = true;
         if (live) { live.textContent = 'installing'; live.style.color = 'var(--violet)'; }
@@ -3458,7 +3485,7 @@
         }
         term.appendChild(cta); term.scrollTop = term.scrollHeight;
         var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () { buyOnGumroad(slug); });
-        var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', gotoContact);
+        var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', function () { joinWaitlist(slug, name); });
         if (live) { live.textContent = 'ready'; live.style.color = 'var(--green)'; }
         busy = false;
     }
