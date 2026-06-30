@@ -27,7 +27,8 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
     <link rel="alternate" type="text/plain" href="https://devbiz.kudbee.workers.dev/llms.txt" title="llms.txt">
     <script type="application/ld+json">
     {
@@ -869,8 +870,8 @@
     .portfolio-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform 0.3s, border-color 0.3s; }
     .portfolio-item:hover { transform: translateY(-5px); border-color: var(--border-hover); box-shadow: 0 20px 46px -20px var(--accent-glow); }
     .portfolio-thumb { height: 190px; position: relative; overflow: hidden; }
-    .portfolio-thumb canvas { width: 100%; height: 100%; display: block; transition: transform 0.55s cubic-bezier(0.2,0.7,0.2,1); }
-    .portfolio-item:hover .portfolio-thumb canvas { transform: scale(1.07); }
+    .portfolio-thumb canvas, .portfolio-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: top center; transition: transform 0.55s cubic-bezier(0.2,0.7,0.2,1); }
+    .portfolio-item:hover .portfolio-thumb canvas, .portfolio-item:hover .portfolio-thumb img { transform: scale(1.07); }
     /* glass play button on linked game cards */
     a.portfolio-item.cat-game .portfolio-thumb::after {
         content: '▶'; position: absolute; inset: 0; margin: auto; width: 54px; height: 54px;
@@ -1104,14 +1105,14 @@
     <ul class="nav-center">
         <li><label for="page-home">Home</label></li>
         <li><label for="page-services">Services</label></li>
-        <li><label for="page-agents">Agents<span class="tag">NEW</span></label></li>
-        <li><label for="page-games">Games<span class="tag">NEW</span></label></li>
+        <li><label for="page-agents">Agents</label></li>
+        <li><label for="page-games">Games</label></li>
         <li><label for="page-work">Work</label></li>
         <li><label for="page-contact">Contact</label></li>
-        <li><label for="page-tools">Tools<span class="tag">NEW</span></label></li>
-        <li><label for="page-scribe">Scribe<span class="tag">NEW</span></label></li>
-        <li><label for="page-doctrine">Doctrine<span class="tag">NEW</span></label></li>
-        <li><a href="leaderboard/public/leaderboard.html">🏆 League<span class="tag">NEW</span></a></li>
+        <li><label for="page-tools">Tools</label></li>
+        <li><label for="page-scribe">Scribe</label></li>
+        <li><label for="page-doctrine">Doctrine</label></li>
+        <li><a href="leaderboard/public/leaderboard.html">🏆 League</a></li>
     </ul>
     <div class="nav-right">
         <label for="theme-toggle" class="theme-switch" title="Toggle theme"></label>
@@ -1136,18 +1137,18 @@
     </div>
 
     <div class="m-group" style="--d:0.12s"><span>Build with us</span>
-        <label for="page-agents" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 8V4M9 13h.01M15 13h.01"/></svg> Agents <span class="m-tag">NEW</span></label>
-        <label for="page-tools" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-1.4-1.4 2.6-2.6Z"/></svg> Tools <span class="m-tag">NEW</span></label>
-        <label for="page-scribe" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Scribe <span class="m-tag">NEW</span></label>
+        <label for="page-agents" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 8V4M9 13h.01M15 13h.01"/></svg> Agents</label>
+        <label for="page-tools" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-1.4-1.4 2.6-2.6Z"/></svg> Tools</label>
+        <label for="page-scribe" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Scribe</label>
     </div>
 
     <div class="m-group" style="--d:0.18s"><span>Play</span>
-        <label for="page-games" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 11.5h.01M18 13.5h.01"/></svg> Games <span class="m-tag">NEW</span></label>
-        <a href="leaderboard/public/leaderboard.html" class="m-link">🏆 League <span class="m-tag">NEW</span></a>
+        <label for="page-games" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 11.5h.01M18 13.5h.01"/></svg> Games</label>
+        <a href="leaderboard/public/leaderboard.html" class="m-link">🏆 League</a>
     </div>
 
     <div class="m-group" style="--d:0.24s"><span>Read</span>
-        <label for="page-doctrine" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19V5"/></svg> Doctrine <span class="m-tag">NEW</span></label>
+        <label for="page-doctrine" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19V5"/></svg> Doctrine</label>
     </div>
 
     <div class="m-foot" style="--d:0.3s">
@@ -1179,12 +1180,12 @@
 <div class="page page-home">
     <section class="hero">
         <div class="hero-grid"></div>
-        <div class="badge"><span class="pulse"></span> Now shipping original games &nbsp;·&nbsp; <span class="link"><label for="page-games">Play Kudbee Contra →</label></span></div>
-        <h2>We build <span class="gradient-text">websites</span>, train teams on <span class="gradient-text">AI</span>, and craft <span class="gradient-text">games</span>.</h2>
-        <p>Kudbee is a creative dev studio. We design high-converting websites, deliver live AI agent training, and now build original arcade games — starting with our flagship, Kudbee Contra.</p>
+        <div class="badge"><span class="pulse"></span> Now booking web design projects &nbsp;·&nbsp; <span class="link"><label for="page-work">See the work →</label></span></div>
+        <h2>We design <span class="gradient-text">websites</span> that convert — and teach teams to build their own <span class="gradient-text">AI</span>.</h2>
+        <p>Kudbee is a creative dev studio. We design high-converting websites and stand up AI agents &amp; infrastructure with you — hands-on training and consulting, not black boxes. We also craft original browser games, because the craft shows.</p>
         <div class="cta-group">
-            <label for="page-games" class="btn-primary">▶ Play the Demo</label>
-            <label for="page-contact" class="btn-secondary">Book a Discovery Call</label>
+            <label for="page-contact" class="btn-primary">Start a Project</label>
+            <label for="page-work" class="btn-secondary">See our work</label>
         </div>
         <div class="hero-pills">
             <span class="hero-pill"><b>150+</b> projects shipped</span>
@@ -2212,7 +2213,7 @@
         <div class="section-head reveal">
             <span class="section-label">Portfolio</span>
             <h2 class="section-title">Selected Work</h2>
-            <p class="section-subtitle">A mix of websites, AI engagements, and games.</p>
+            <p class="section-subtitle">Client websites first — plus the AI work and original games that prove the craft.</p>
         </div>
         <div class="portfolio-filters">
             <label for="filter-all">All</label>
@@ -2221,6 +2222,8 @@
             <label for="filter-game">Games</label>
         </div>
         <div class="portfolio-grid">
+            <a href="clients/modernmed/index.html" class="portfolio-item cat-web"><div class="portfolio-thumb"><img src="assets/work/modernmed.jpg" alt="ModernMed Chicago — concierge medical clinic website designed by Kudbee" loading="lazy" width="1200" height="600"></div><div class="portfolio-info"><h4>ModernMed Chicago</h4><span>Web · Concierge medical clinic</span><span class="port-go">View site <span aria-hidden="true">→</span></span></div></a>
+            <a href="clients/grange-park-fastpitch/index.html" class="portfolio-item cat-web"><div class="portfolio-thumb"><img src="assets/work/lagrange.jpg" alt="La Grange Park Fastpitch — youth softball league website designed by Kudbee" loading="lazy" width="1200" height="600"></div><div class="portfolio-info"><h4>La Grange Park Fastpitch</h4><span>Web · Youth softball league</span><span class="port-go">View site <span aria-hidden="true">→</span></span></div></a>
             <a href="games/kudbee-contra/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="jungle"></canvas></div><div class="portfolio-info"><h4>Kudbee Contra</h4><span>Game · 2.5D Run-and-Gun</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
             <a href="games/kudbee-darts/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="darts"></canvas></div><div class="portfolio-info"><h4>Kudbee Darts</h4><span>Game · 501, Cricket &amp; Online League</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
             <a href="games/kudbee-riff/index.html" class="portfolio-item cat-game"><div class="portfolio-thumb"><canvas class="shot-canvas" data-scene="riff"></canvas></div><div class="portfolio-info"><h4>Kudbee Riff</h4><span>Game · Rhythm / Fret Rush</span><span class="port-go"><span aria-hidden="true">▶</span> Play now</span></div></a>
@@ -2256,16 +2259,19 @@
             </form>
             <div>
                 <div class="contact-info">
-                    <h3>Prefer email?</h3>
-                    <p>Reach out directly and we'll get back to you fast.</p>
+                    <h3>Reach us — any way you like</h3>
+                    <p>Pick whatever's easiest. We reply fast, and the Kudbee Agent is awake 24/7 to answer questions and pull up anything on the site.</p>
+                    <!-- TODO(owner): replace cal.com/kudbee with the real Kudbee Cal.com link. -->
+                    <a href="https://cal.com/kudbee" target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex;justify-content:center;text-decoration:none;width:100%;padding:13px 20px;margin-bottom:18px;">📅 &nbsp; Book a discovery call →</a>
+                    <div class="contact-detail">🤖 &nbsp; <label for="page-home" style="color:var(--cyan);cursor:pointer;">Ask the Kudbee Agent — 24/7</label></div>
                     <div class="contact-detail">✉️ &nbsp; <a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
-                    <div class="contact-detail">💬 &nbsp; Live AI training via Zoom</div>
-                    <div class="contact-detail">🎮 &nbsp; Play our demo anytime</div>
-                    <!-- TODO(owner): swap "#" for the real Kudbee profile URLs once confirmed. -->
+                    <div class="contact-detail">💬 &nbsp; Live AI training &amp; infrastructure consulting via Zoom</div>
+                    <!-- TODO(owner): add a real phone/SMS/WhatsApp number to light up this channel. -->
+                    <div class="contact-detail" style="opacity:0.6;">📱 &nbsp; Call or text — number coming soon</div>
+                    <div class="contact-detail">⏱️ &nbsp; We reply within 24 hours</div>
+                    <!-- TODO(owner): add real X / LinkedIn profile URLs and we'll re-add those icons. -->
                     <div class="social-links">
-                        <a class="social-link" href="#" aria-label="Kudbee on X (Twitter)" title="X">𝕏</a>
-                        <a class="social-link" href="#" aria-label="Kudbee on GitHub" title="GitHub">⌨</a>
-                        <a class="social-link" href="#" aria-label="Kudbee on LinkedIn" title="LinkedIn">in</a>
+                        <a class="social-link" href="https://github.com/KudbeeZero" target="_blank" rel="noopener" aria-label="Kudbee on GitHub" title="GitHub">⌨</a>
                     </div>
                 </div>
                 <div class="faq-wrap" style="margin-top:24px;">
@@ -2537,8 +2543,8 @@
         </div>
         <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-agents">Support Agents</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-scribe">Scribe</label><label for="page-contact">Contact</label></div>
         <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="games/kudbee-riff/index.html">Play Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Play Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Play Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Play Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
-        <!-- TODO(owner): swap "#" for the real Kudbee profile URLs once confirmed. -->
-        <div class="footer-col"><h4>Connect</h4><a href="#" aria-label="Kudbee on X (Twitter)">X / Twitter</a><a href="#" aria-label="Kudbee on GitHub">GitHub</a><a href="#" aria-label="Kudbee on LinkedIn">LinkedIn</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
+        <!-- TODO(owner): add real X / LinkedIn profile URLs and we'll re-add those links. -->
+        <div class="footer-col"><h4>Connect</h4><label for="page-contact">Book a call</label><a href="https://github.com/KudbeeZero" target="_blank" rel="noopener" aria-label="Kudbee on GitHub">GitHub</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
     </div>
     <div class="footer-bottom">
         <span>© <span id="year">2026</span> Kudbee. All rights reserved.</span>
