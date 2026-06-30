@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="The Kudbee blog: practical, honest guides on high-converting web design, building your own memory layer, and teaching teams to build AI agents.">
+    <meta name="keywords" content="Kudbee blog, web design, memory layer, second brain, AI agents, conversion, SEO">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Kudbee">
+    <meta name="theme-color" content="#06060c">
+    <link rel="canonical" href="https://devbiz.kudbee.workers.dev/blog/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Kudbee">
+    <meta property="og:title" content="The Kudbee Blog — Web Design, AI Agents & Memory">
+    <meta property="og:description" content="Honest, practical guides on web design that converts, building a portable memory layer, and teaching teams to build AI agents.">
+    <meta property="og:url" content="https://devbiz.kudbee.workers.dev/blog/">
+    <meta property="og:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <meta property="og:image:alt" content="The Kudbee blog — guides on web design, AI agents, and personal memory layers.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://devbiz.kudbee.workers.dev/blog/">
+    <meta name="twitter:title" content="The Kudbee Blog — Web Design, AI Agents & Memory">
+    <meta name="twitter:description" content="Practical guides on web design that converts, building a memory layer, and teaching teams to build AI agents.">
+    <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <title>The Kudbee Blog — Web Design, AI Agents &amp; Memory</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "The Kudbee Blog",
+      "description": "Practical, honest guides on web design, AI agents, and personal memory layers from Kudbee, a creative dev studio.",
+      "url": "https://devbiz.kudbee.workers.dev/blog/",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kudbee",
+        "url": "https://devbiz.kudbee.workers.dev/"
+      },
+      "blogPost": [
+        {
+          "@type": "BlogPosting",
+          "headline": "How to Build Your Own Memory Layer (a Second Brain) That Works Across Every App",
+          "url": "https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html",
+          "datePublished": "2026-06-30",
+          "author": { "@type": "Organization", "name": "Kudbee" }
+        },
+        {
+          "@type": "BlogPosting",
+          "headline": "What Actually Makes a Website Convert: the things we build in",
+          "url": "https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html",
+          "datePublished": "2026-06-30",
+          "author": { "@type": "Organization", "name": "Kudbee" }
+        },
+        {
+          "@type": "BlogPosting",
+          "headline": "Teaching Your Team to Build AI Agents: Where to Start",
+          "url": "https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html",
+          "datePublished": "2026-06-30",
+          "author": { "@type": "Organization", "name": "Kudbee" }
+        }
+      ]
+    }
+    </script>
+    <style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --bg-glass: rgba(12,12,24,0.6);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111, 91, 255, 0.35);
+        --nav-bg: rgba(6, 6, 12, 0.72);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1180px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: var(--bg-primary); color: var(--text-secondary);
+        line-height: 1.6; min-height: 100vh; overflow-x: clip;
+        -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, .logo { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    p { text-wrap: pretty; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; }
+    .mesh::before { width: 620px; height: 620px; top: -160px; left: -120px; background: radial-gradient(circle, rgba(57,230,255,0.30), transparent 65%); animation: drift1 22s ease-in-out infinite; }
+    .mesh::after { width: 680px; height: 680px; top: 20%; right: -160px; background: radial-gradient(circle, rgba(196,107,255,0.26), transparent 65%); animation: drift2 26s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px,40px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-50px,30px); } }
+    .content { position: relative; z-index: 1; }
+
+    /* ===== NAV ===== */
+    .nav-bar { position: sticky; top: 0; width: 100%; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; background: var(--nav-bg); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 100; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative; overflow: hidden; }
+    .logo .mark::after { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 3px; background: #06060c; }
+    .logo .dot { color: var(--cyan); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-link { color: var(--text-muted); font-size: 13px; padding: 8px 14px; border-radius: 8px; transition: color 0.2s, background 0.2s; font-weight: 500; }
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-cta { padding: 9px 20px; background: var(--grad); color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); transition: transform 0.15s, box-shadow 0.15s; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 36px -6px var(--accent-glow); }
+    @media (max-width: 560px) { .nav-link.hide-sm { display: none; } .nav-bar { padding: 12px 18px; } }
+
+    /* ===== SHELL ===== */
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    .crumbs { font-size: 13px; color: var(--text-muted); padding: 26px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .crumbs a { color: var(--text-muted); padding: 4px 6px; border-radius: 7px; transition: color 0.18s, background 0.18s; }
+    .crumbs a:hover { color: var(--text-primary); background: var(--bg-card); }
+    .crumbs .sep { opacity: 0.45; }
+    .crumbs .here { color: var(--text-secondary); font-weight: 600; }
+
+    .hub-head { padding: 26px 0 48px; border-bottom: 1px solid var(--border); }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--cyan); font-weight: 600; }
+    .hub-head h1 { font-size: clamp(34px, 5.5vw, 60px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.04; color: var(--text-primary); margin: 14px 0 16px; }
+    .hub-head .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hub-head p { color: var(--text-muted); max-width: 62ch; font-size: clamp(15px, 2vw, 18px); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; padding: 44px 0 16px; }
+    .card { display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s; position: relative; overflow: hidden; min-height: 100%; }
+    .card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--grad); opacity: 0; transition: opacity 0.3s; }
+    .card:hover { transform: translateY(-6px); border-color: var(--border-hover); box-shadow: 0 24px 50px -20px rgba(0,0,0,0.5); }
+    .card:hover::before { opacity: 1; }
+    .card .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); }
+    .card h2 { font-size: 21px; color: var(--text-primary); margin: 12px 0 10px; line-height: 1.2; letter-spacing: -0.4px; }
+    .card p { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 18px; flex: 1; }
+    .card .meta { font-size: 12.5px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+    .card .read { margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--cyan); display: inline-flex; align-items: center; gap: 6px; transition: gap 0.25s; }
+    .card:hover .read { gap: 11px; }
+    .card:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+    /* ===== CTA BAND ===== */
+    .cta-band { margin: 30px 0 64px; border: 1px solid var(--border-hover); border-radius: 22px; padding: 44px 32px; text-align: center; background: linear-gradient(135deg, rgba(57,230,255,0.07), rgba(111,91,255,0.10) 55%, rgba(196,107,255,0.07)); position: relative; overflow: hidden; }
+    .cta-band h2 { font-size: clamp(24px, 3.5vw, 34px); color: var(--text-primary); letter-spacing: -0.8px; margin-bottom: 12px; }
+    .cta-band p { color: var(--text-muted); max-width: 56ch; margin: 0 auto 26px; font-size: 16px; }
+    .btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary { padding: 14px 30px; background: var(--grad); color: #fff; border: none; border-radius: 11px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); display: inline-flex; align-items: center; gap: 9px; min-height: 44px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -8px var(--accent-glow); }
+    .btn-secondary { padding: 14px 28px; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 11px; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--cyan); background: rgba(57,230,255,0.06); color: var(--text-primary); transform: translateY(-2px); }
+
+    /* ===== FOOTER ===== */
+    footer { border-top: 1px solid var(--border); padding: 48px 0 36px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; margin-bottom: 40px; }
+    .footer-brand p { color: var(--text-dim); font-size: 13px; margin-top: 12px; max-width: 40ch; }
+    .footer-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 16px; }
+    .footer-col a { display: block; font-size: 13px; color: var(--text-dim); padding: 6px 0; transition: color 0.15s; }
+    .footer-col a:hover { color: var(--text-primary); }
+    .footer-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; gap: 12px; }
+    @media (max-width: 760px) { .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; } }
+    @media (max-width: 460px) { .footer-grid { grid-template-columns: 1fr; } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mesh::before, .mesh::after { animation: none !important; }
+        * { scroll-behavior: auto !important; }
+        .card, .btn-primary, .btn-secondary, .card .read { transition: none !important; }
+    }
+    </style>
+</head>
+<body>
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+    <nav class="nav-bar">
+        <a class="logo" href="/" aria-label="Kudbee home"><span class="mark"></span> kudbee<span class="dot">.</span></a>
+        <div class="nav-right">
+            <a class="nav-link hide-sm" href="/">Home</a>
+            <a class="nav-link" href="/blog/">Blog</a>
+            <!-- TODO(owner): replace cal.com/kudbee -->
+            <a class="nav-cta" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a call</a>
+        </div>
+    </nav>
+
+    <main class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span class="sep">›</span>
+            <span class="here">Articles</span>
+        </nav>
+
+        <header class="hub-head">
+            <span class="eyebrow">The Kudbee Blog</span>
+            <h1>Field notes on <span class="gradient-text">building things that work</span>.</h1>
+            <p>We build premium websites, teach teams to ship their own AI agents, and make original browser games. These are the honest, practical write-ups behind that work — no fluff, no fabricated stats.</p>
+        </header>
+
+        <section class="grid" aria-label="Articles">
+            <a class="card" href="/blog/build-your-own-memory-layer.html">
+                <span class="tag">Personal Infrastructure</span>
+                <h2>How to Build Your Own Memory Layer (a Second Brain)</h2>
+                <p>Your context is scattered across a dozen apps. Here's how to design a portable memory layer that follows you everywhere — and a realistic path to start one this week.</p>
+                <div class="meta">Kudbee · Jun 30, 2026 · 7 min read</div>
+                <span class="read">Read the guide →</span>
+            </a>
+
+            <a class="card" href="/blog/what-makes-a-website-convert.html">
+                <span class="tag">Web Design</span>
+                <h2>What Actually Makes a Website Convert</h2>
+                <p>The concrete things we build into every site: real speed, one clear hero, a single primary CTA, honest proof, a frictionless booking path, and schema that AI search can read.</p>
+                <div class="meta">Kudbee · Jun 30, 2026 · 8 min read</div>
+                <span class="read">Read the guide →</span>
+            </a>
+
+            <a class="card" href="/blog/teach-your-team-to-build-ai-agents.html">
+                <span class="tag">AI Training</span>
+                <h2>Teaching Your Team to Build AI Agents: Where to Start</h2>
+                <p>A practical roadmap to take a team from "we use a chatbot" to shipping their own production agents — the order to learn things in, and the traps to skip.</p>
+                <div class="meta">Kudbee · Jun 30, 2026 · 8 min read</div>
+                <span class="read">Read the guide →</span>
+            </a>
+        </section>
+
+        <section class="cta-band">
+            <h2>Want this kind of thinking on your project?</h2>
+            <p>Whether it's a site that converts, a memory layer for your work, or training your team on AI agents — book a call and let's map it out.</p>
+            <div class="btn-row">
+                <!-- TODO(owner): replace cal.com/kudbee -->
+                <a class="btn-primary" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a discovery call →</a>
+                <a class="btn-secondary" href="/">See what we do</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
+                    <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Articles</h4>
+                    <a href="/blog/build-your-own-memory-layer.html">Build a memory layer</a>
+                    <a href="/blog/what-makes-a-website-convert.html">What makes a site convert</a>
+                    <a href="/blog/teach-your-team-to-build-ai-agents.html">Teach a team AI agents</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Connect</h4>
+                    <!-- TODO(owner): replace cal.com/kudbee -->
+                    <a href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a call</a>
+                    <a href="/">Home</a>
+                    <a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© <span id="year">2026</span> Kudbee. All rights reserved.</span>
+                <span>Built with ♥ — all original, no copyrighted assets.</span>
+            </div>
+        </div>
+    </footer>
+
+</div>
+<script>
+    (function () { var y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear(); })();
+</script>
+</body>
+</html>

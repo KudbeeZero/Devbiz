@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="A practical guide to building your own memory layer (a second brain) that works across every app — why context fragments, the architecture, and how to start.">
+    <meta name="keywords" content="build your own memory layer, second brain, personal knowledge layer, portable memory, AI memory, context fragmentation">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Kudbee">
+    <meta name="theme-color" content="#06060c">
+    <link rel="canonical" href="https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Kudbee">
+    <meta property="og:title" content="How to Build Your Own Memory Layer (a Second Brain)">
+    <meta property="og:description" content="Why your context fragments across tools, the architecture of a portable personal knowledge layer, and a realistic path to start one this week.">
+    <meta property="og:url" content="https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html">
+    <meta property="og:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <meta property="og:image:alt" content="Kudbee guide to building a portable personal memory layer.">
+    <meta property="article:published_time" content="2026-06-30">
+    <meta property="article:author" content="Kudbee">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html">
+    <meta name="twitter:title" content="How to Build Your Own Memory Layer (a Second Brain)">
+    <meta name="twitter:description" content="Why context fragments across tools, the architecture of a portable memory layer, and how to start one this week.">
+    <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <title>How to Build Your Own Memory Layer (a Second Brain)</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "How to Build Your Own Memory Layer (a Second Brain) That Works Across Every App",
+      "description": "Why your context fragments across tools, the architecture of a portable personal knowledge layer, and a practical path to start building your own memory layer.",
+      "datePublished": "2026-06-30",
+      "dateModified": "2026-06-30",
+      "author": { "@type": "Organization", "name": "Kudbee", "url": "https://devbiz.kudbee.workers.dev/" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kudbee",
+        "url": "https://devbiz.kudbee.workers.dev/",
+        "logo": { "@type": "ImageObject", "url": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" }
+      },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html" },
+      "image": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg",
+      "keywords": "build your own memory layer, second brain, personal knowledge layer, portable memory"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://devbiz.kudbee.workers.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Articles", "item": "https://devbiz.kudbee.workers.dev/blog/" },
+        { "@type": "ListItem", "position": 3, "name": "Build Your Own Memory Layer", "item": "https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html" }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is a personal memory layer or second brain?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A memory layer is a single, portable store of your notes, decisions, and context that sits underneath the apps you use, so the same knowledge is available everywhere instead of being locked inside one tool." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need AI to build a memory layer?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. You can start with plain text files and folders. AI and embeddings make retrieval better once you have enough content, but the foundation is durable, well-structured notes you own." }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I start building a second brain this week?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Pick one open format like Markdown, store everything in one folder you control, write a short daily note, and add lightweight tags. Add search and AI retrieval only after you have a steady habit and real content." }
+        }
+      ]
+    }
+    </script>
+    <style>
+    :root {
+        --bg-primary: #06060c; --bg-elevated: #0b0b16; --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035); --bg-glass: rgba(12,12,24,0.6);
+        --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff; --text-secondary: #e6e8f0; --text-muted: #9aa3b8; --text-dim: #646c82;
+        --cyan: #39e6ff; --violet: #c46bff; --green: #7CFFb2; --accent: #6f5bff;
+        --accent-glow: rgba(111, 91, 255, 0.35); --nav-bg: rgba(6, 6, 12, 0.72);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow); --radius: 16px; --maxw: 1180px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-secondary); line-height: 1.7; min-height: 100vh; overflow-x: clip; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4, .logo { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before { width: 560px; height: 560px; top: -180px; left: -140px; background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%); animation: drift1 22s ease-in-out infinite; }
+    .mesh::after { width: 620px; height: 620px; top: 30%; right: -180px; background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%); animation: drift2 26s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px,40px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px,30px); } }
+    .content { position: relative; z-index: 1; }
+
+    .nav-bar { position: sticky; top: 0; width: 100%; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; background: var(--nav-bg); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 100; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative; overflow: hidden; }
+    .logo .mark::after { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 3px; background: #06060c; }
+    .logo .dot { color: var(--cyan); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-link { color: var(--text-muted); font-size: 13px; padding: 8px 14px; border-radius: 8px; transition: color 0.2s, background 0.2s; font-weight: 500; }
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-cta { padding: 9px 20px; background: var(--grad); color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); transition: transform 0.15s, box-shadow 0.15s; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 36px -6px var(--accent-glow); }
+    @media (max-width: 560px) { .nav-link.hide-sm { display: none; } .nav-bar { padding: 12px 18px; } }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+    .crumbs { font-size: 13px; color: var(--text-muted); padding: 26px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .crumbs a { color: var(--text-muted); padding: 4px 6px; border-radius: 7px; transition: color 0.18s, background 0.18s; }
+    .crumbs a:hover { color: var(--text-primary); background: var(--bg-card); }
+    .crumbs .sep { opacity: 0.45; }
+    .crumbs .here { color: var(--text-secondary); font-weight: 600; }
+
+    article { padding: 22px 0 8px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--cyan); font-weight: 600; }
+    .post-h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 700; letter-spacing: -1.3px; line-height: 1.06; color: var(--text-primary); margin: 14px 0 16px; text-wrap: balance; }
+    .byline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--text-dim); font-size: 13.5px; padding-bottom: 26px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .byline .avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--grad); box-shadow: var(--shadow-glow); }
+    .byline b { color: var(--text-secondary); font-weight: 600; }
+    .byline .sep { opacity: 0.4; }
+
+    .prose { font-size: 17px; color: var(--text-secondary); }
+    .prose > p, .prose > ul, .prose > ol { max-width: 65ch; }
+    .prose p { margin: 18px 0; text-wrap: pretty; }
+    .prose h2 { font-size: clamp(23px, 3.4vw, 30px); color: var(--text-primary); letter-spacing: -0.6px; margin: 44px 0 6px; text-wrap: balance; }
+    .prose h3 { font-size: clamp(18px, 2.4vw, 21px); color: var(--text-primary); letter-spacing: -0.3px; margin: 30px 0 4px; text-wrap: balance; }
+    .prose ul, .prose ol { margin: 16px 0; padding-left: 22px; }
+    .prose li { margin: 9px 0; text-wrap: pretty; }
+    .prose li::marker { color: var(--cyan); }
+    .prose strong { color: var(--text-primary); font-weight: 600; }
+    .prose a.inline { color: var(--cyan); font-weight: 600; border-bottom: 1px solid rgba(57,230,255,0.35); transition: border-color 0.2s; }
+    .prose a.inline:hover { border-color: var(--cyan); }
+    .lead { font-size: 19px; color: var(--text-muted); }
+
+    .callout { margin: 30px 0; padding: 22px 24px; border: 1px solid var(--border-hover); border-radius: var(--radius); background: linear-gradient(135deg, rgba(57,230,255,0.06), rgba(111,91,255,0.08)); }
+    .callout h3 { margin: 0 0 8px; font-size: 18px; }
+    .callout p { margin: 0; color: var(--text-muted); font-size: 15px; }
+    .callout .btn-primary { margin-top: 16px; }
+
+    .faq { margin: 40px 0 8px; }
+    .faq h2 { font-size: clamp(23px, 3.4vw, 30px); color: var(--text-primary); letter-spacing: -0.6px; margin-bottom: 14px; }
+    .faq-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; margin: 12px 0; background: var(--bg-card); }
+    .faq-item h3 { font-size: 17px; color: var(--text-primary); margin-bottom: 6px; }
+    .faq-item p { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+    .cta-band { margin: 44px 0 10px; border: 1px solid var(--border-hover); border-radius: 22px; padding: 40px 30px; text-align: center; background: linear-gradient(135deg, rgba(57,230,255,0.07), rgba(111,91,255,0.10) 55%, rgba(196,107,255,0.07)); }
+    .cta-band h2 { font-size: clamp(23px, 3.4vw, 32px); color: var(--text-primary); letter-spacing: -0.7px; margin-bottom: 12px; }
+    .cta-band p { color: var(--text-muted); max-width: 54ch; margin: 0 auto 24px; font-size: 16px; }
+    .btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary { padding: 14px 28px; background: var(--grad); color: #fff; border: none; border-radius: 11px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); display: inline-flex; align-items: center; gap: 9px; min-height: 44px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -8px var(--accent-glow); }
+    .btn-secondary { padding: 14px 26px; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 11px; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--cyan); background: rgba(57,230,255,0.06); color: var(--text-primary); transform: translateY(-2px); }
+
+    .more { margin: 40px 0 0; padding-top: 28px; border-top: 1px solid var(--border); }
+    .more h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); margin-bottom: 14px; }
+    .more a { display: inline-flex; align-items: center; gap: 7px; color: var(--cyan); font-weight: 600; font-size: 15px; transition: gap 0.2s; }
+    .more a:hover { gap: 11px; }
+
+    footer { border-top: 1px solid var(--border); padding: 40px 0 36px; margin-top: 40px; }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; gap: 12px; }
+    .footer-bottom a { color: var(--text-muted); }
+    .footer-bottom a:hover { color: var(--text-primary); }
+
+    a:focus-visible, .btn-primary:focus-visible, .btn-secondary:focus-visible, .nav-cta:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 8px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mesh::before, .mesh::after { animation: none !important; }
+        * { scroll-behavior: auto !important; transition: none !important; }
+    }
+    </style>
+</head>
+<body>
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+    <nav class="nav-bar">
+        <a class="logo" href="/" aria-label="Kudbee home"><span class="mark"></span> kudbee<span class="dot">.</span></a>
+        <div class="nav-right">
+            <a class="nav-link hide-sm" href="/">Home</a>
+            <a class="nav-link" href="/blog/">Blog</a>
+            <!-- TODO(owner): replace cal.com/kudbee -->
+            <a class="nav-cta" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a call</a>
+        </div>
+    </nav>
+
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a><span class="sep">›</span>
+            <a href="/blog/">Articles</a><span class="sep">›</span>
+            <span class="here">Build Your Own Memory Layer</span>
+        </nav>
+
+        <article>
+            <span class="eyebrow">Personal Infrastructure</span>
+            <h1 class="post-h1">How to Build Your Own Memory Layer (a Second Brain) That Works Across Every App</h1>
+            <div class="byline">
+                <span class="avatar" aria-hidden="true"></span>
+                <b>Kudbee</b><span class="sep">·</span><span>June 30, 2026</span><span class="sep">·</span><span>7 min read</span>
+            </div>
+
+            <div class="prose">
+                <p class="lead">You already have a second brain. The problem is it's scattered across fifteen apps, none of which talk to each other. A memory layer is the fix: one durable, portable store of your context that every tool — and every AI — can draw from.</p>
+
+                <p>Think about where your knowledge actually lives right now. Decisions are buried in Slack threads. Research is in browser tabs you'll never reopen. Meeting notes are in one app, project specs in another, and the reasoning behind half your choices exists only in your head. Each tool holds a slice, and the slices never reconcile.</p>
+
+                <p>That fragmentation has a real cost. You re-research things you already figured out. You re-explain context to every new collaborator and every new AI chat. And the most valuable thing you own — the accumulated judgment of how <em>you</em> work — stays trapped and un-leverageable. A memory layer is the architecture that fixes this.</p>
+
+                <h2>What a memory layer actually is</h2>
+                <p>A memory layer is a single store of your notes, decisions, and context that sits <strong>underneath</strong> your apps rather than inside any one of them. Apps come and go; the layer persists. The defining trait is ownership and portability: you control the format and the storage, so the same knowledge is available in your editor, your AI assistant, your search bar, and whatever tool you adopt next year.</p>
+                <p>It is not a single product you buy. It's a pattern. A well-built layer has four jobs: <strong>capture</strong> (getting information in cheaply), <strong>structure</strong> (so it's findable later), <strong>retrieval</strong> (getting the right piece back at the right moment), and <strong>portability</strong> (so no vendor can hold it hostage).</p>
+
+                <h2>Why context fragments in the first place</h2>
+                <p>Fragmentation isn't an accident — it's the business model of most tools you use. Every app wants to be the place your data lives, because data lock-in is what keeps you subscribed. So each one builds a walled garden with its own format, its own search, and its own export friction.</p>
+                <p>The result is predictable:</p>
+                <ul>
+                    <li><strong>No shared substrate.</strong> Your CRM doesn't know what you wrote in your notes app, and your AI assistant knows neither.</li>
+                    <li><strong>Format lock-in.</strong> Proprietary formats mean leaving an app costs you your history, so you stay — and the silo deepens.</li>
+                    <li><strong>Retrieval gaps.</strong> Even when the information exists, you can't find it across tools, so functionally it doesn't exist.</li>
+                </ul>
+                <p>A memory layer inverts the model. Instead of your knowledge living inside apps, your apps become interchangeable windows onto knowledge you own.</p>
+
+                <h2>The architecture of a portable knowledge layer</h2>
+                <p>You don't need anything exotic to start. A good layer has a few clear parts, and you can adopt them in order.</p>
+
+                <h3>1. An open, durable storage format</h3>
+                <p>Start with plain text — Markdown is the practical default. It's readable in 2026 and will be readable in 2046, it diffs cleanly in version control, and every tool on earth can open it. Store the files in something you control: a synced folder, a private Git repository, or both. The rule is simple: if you can't export it to a flat file, it doesn't belong in your foundation.</p>
+
+                <h3>2. A capture habit with near-zero friction</h3>
+                <p>The best structure in the world fails if capture is annoying. Give yourself one default inbox — a single daily note or quick-capture file — where anything can land without a decision. Sorting is a separate, later step. The goal is to never lose a thought because filing it felt like work.</p>
+
+                <h3>3. Light structure, not a taxonomy</h3>
+                <p>Resist the urge to design an elaborate folder hierarchy up front; it ages badly. Instead lean on a few atomic notes linked to each other, plus a handful of tags for the categories you actually search by. Structure should emerge from use, not be imposed before you have content.</p>
+
+                <h3>4. A retrieval layer on top</h3>
+                <p>Once you have real volume, retrieval is where AI earns its place. Full-text search handles the obvious case. For the rest, embeddings let you ask in plain language — "what did I decide about pricing last spring?" — and pull back the relevant notes even when you don't remember the exact words. This is the step that turns a pile of files into a brain. Crucially, it sits <em>on top of</em> your owned files; it doesn't replace them.</p>
+
+                <div class="callout">
+                    <h3>This is exactly what /brain/ is for</h3>
+                    <p>We're building a portable memory layer that connects your notes, your tools, and your AI — owned by you, readable everywhere. It's the retrieval layer described above, without the assembly work.</p>
+                    <!-- TODO(owner): replace cal.com/kudbee -->
+                    <a class="btn-primary" href="/brain/">Explore the Brain →</a>
+                </div>
+
+                <h2>A practical starting path</h2>
+                <p>Don't try to build the whole architecture at once. Earn each layer:</p>
+                <ol>
+                    <li><strong>Week one — pick a format and a home.</strong> Choose Markdown and one folder you control. Move nothing yet; just decide where new things go.</li>
+                    <li><strong>Week two — build the capture habit.</strong> Write one short daily note every day. Dump links, decisions, and half-thoughts into it. Consistency beats completeness.</li>
+                    <li><strong>Week three — start linking and tagging.</strong> When a note connects to another, link them. Add a tag only when you reach for the same category twice.</li>
+                    <li><strong>Week four — add retrieval.</strong> Now that you have content, layer search and AI recall on top. This is where a memory layer becomes worth more than the sum of its notes.</li>
+                </ol>
+                <p>The honest truth: the hard part isn't the technology, it's the habit. The architecture is simple. What makes a second brain valuable is showing up to feed it until retrieval starts paying you back — and it will, faster than you expect, because the compounding is real even if we won't pretend to quote you a number.</p>
+
+                <h2>Where this goes next</h2>
+                <p>Once your memory layer exists, it stops being a notes app and becomes infrastructure. Your AI assistant can ground its answers in <em>your</em> context instead of the generic internet. New teammates onboard against a written record instead of your memory. And the judgment you've accumulated becomes an asset you can actually deploy. That's the whole point: a second brain isn't about storing more — it's about never losing what you already know.</p>
+            </div>
+
+            <section class="faq" aria-label="Frequently asked questions">
+                <h2>Frequently asked questions</h2>
+                <div class="faq-item">
+                    <h3>What is a personal memory layer or second brain?</h3>
+                    <p>A memory layer is a single, portable store of your notes, decisions, and context that sits underneath the apps you use, so the same knowledge is available everywhere instead of being locked inside one tool.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Do I need AI to build a memory layer?</h3>
+                    <p>No. You can start with plain text files and folders. AI and embeddings make retrieval better once you have enough content, but the foundation is durable, well-structured notes you own.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How do I start building a second brain this week?</h3>
+                    <p>Pick one open format like Markdown, store everything in one folder you control, write a short daily note, and add lightweight tags. Add search and AI retrieval only after you have a steady habit and real content.</p>
+                </div>
+            </section>
+
+            <section class="cta-band">
+                <h2>Want a memory layer without the assembly?</h2>
+                <p>We'll help you stand up a portable second brain that connects your notes, tools, and AI — and stays yours. Book a call and we'll map the first version.</p>
+                <div class="btn-row">
+                    <!-- TODO(owner): replace cal.com/kudbee -->
+                    <a class="btn-primary" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a discovery call →</a>
+                    <a class="btn-secondary" href="/brain/">Explore the Brain</a>
+                </div>
+            </section>
+
+            <div class="more">
+                <h4>More articles</h4>
+                <a href="/blog/">Back to all articles →</a>
+            </div>
+        </article>
+    </div>
+
+    <footer>
+        <div class="wrap">
+            <div class="footer-bottom">
+                <span>© <span id="year">2026</span> Kudbee · <a href="/">Home</a> · <a href="/blog/">Blog</a></span>
+                <span>Built with ♥ — all original.</span>
+            </div>
+        </div>
+    </footer>
+
+</div>
+<script>
+    (function () { var y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear(); })();
+</script>
+</body>
+</html>

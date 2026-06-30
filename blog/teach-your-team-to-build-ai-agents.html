@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="A practical roadmap for teaching your team to build AI agents: where to start, the order to learn things in, the traps to skip, and how to ship a first agent.">
+    <meta name="keywords" content="how to teach a team to build AI agents, AI agent training, AI upskilling, build AI agents, team training, AI infrastructure">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Kudbee">
+    <meta name="theme-color" content="#06060c">
+    <link rel="canonical" href="https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Kudbee">
+    <meta property="og:title" content="Teaching Your Team to Build AI Agents: Where to Start">
+    <meta property="og:description" content="A practical roadmap to take a team from using a chatbot to shipping their own production AI agents — the order to learn in and the traps to skip.">
+    <meta property="og:url" content="https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html">
+    <meta property="og:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <meta property="og:image:alt" content="Kudbee guide to teaching a team to build AI agents.">
+    <meta property="article:published_time" content="2026-06-30">
+    <meta property="article:author" content="Kudbee">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html">
+    <meta name="twitter:title" content="Teaching Your Team to Build AI Agents: Where to Start">
+    <meta name="twitter:description" content="A practical roadmap to take a team from using a chatbot to shipping their own production AI agents.">
+    <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <title>Teaching Your Team to Build AI Agents: Where to Start</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "Teaching Your Team to Build AI Agents: Where to Start",
+      "description": "A practical roadmap to take a team from using a chatbot to shipping their own production AI agents — the order to learn things in, the traps to skip, and how to ship a first agent.",
+      "datePublished": "2026-06-30",
+      "dateModified": "2026-06-30",
+      "author": { "@type": "Organization", "name": "Kudbee", "url": "https://devbiz.kudbee.workers.dev/" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kudbee",
+        "url": "https://devbiz.kudbee.workers.dev/",
+        "logo": { "@type": "ImageObject", "url": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" }
+      },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html" },
+      "image": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg",
+      "keywords": "how to teach a team to build AI agents, AI agent training, AI upskilling"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://devbiz.kudbee.workers.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Articles", "item": "https://devbiz.kudbee.workers.dev/blog/" },
+        { "@type": "ListItem", "position": 3, "name": "Teach Your Team to Build AI Agents", "item": "https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html" }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Do my team members need to be engineers to build AI agents?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not everyone. You need a few people comfortable with basic scripting and APIs to build, but the people who define the workflows, write the prompts, and judge the outputs often come from operations, support, and domain teams." }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the difference between a chatbot and an AI agent?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A chatbot answers questions in a conversation. An agent takes actions toward a goal — it can call tools, look things up, and complete multi-step tasks, with the model deciding which steps to take." }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does it take to train a team to build AI agents?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A motivated team can ship a useful first agent within a few weeks if they start narrow. Real fluency — evaluating, deploying, and maintaining agents responsibly — builds over a few months of hands-on work." }
+        }
+      ]
+    }
+    </script>
+    <style>
+    :root {
+        --bg-primary: #06060c; --bg-elevated: #0b0b16; --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035); --bg-glass: rgba(12,12,24,0.6);
+        --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff; --text-secondary: #e6e8f0; --text-muted: #9aa3b8; --text-dim: #646c82;
+        --cyan: #39e6ff; --violet: #c46bff; --green: #7CFFb2; --accent: #6f5bff;
+        --accent-glow: rgba(111, 91, 255, 0.35); --nav-bg: rgba(6, 6, 12, 0.72);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow); --radius: 16px; --maxw: 1180px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-secondary); line-height: 1.7; min-height: 100vh; overflow-x: clip; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4, .logo { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before { width: 560px; height: 560px; top: -180px; left: -140px; background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%); animation: drift1 22s ease-in-out infinite; }
+    .mesh::after { width: 620px; height: 620px; top: 30%; right: -180px; background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%); animation: drift2 26s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px,40px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px,30px); } }
+    .content { position: relative; z-index: 1; }
+
+    .nav-bar { position: sticky; top: 0; width: 100%; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; background: var(--nav-bg); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 100; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative; overflow: hidden; }
+    .logo .mark::after { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 3px; background: #06060c; }
+    .logo .dot { color: var(--cyan); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-link { color: var(--text-muted); font-size: 13px; padding: 8px 14px; border-radius: 8px; transition: color 0.2s, background 0.2s; font-weight: 500; }
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-cta { padding: 9px 20px; background: var(--grad); color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); transition: transform 0.15s, box-shadow 0.15s; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 36px -6px var(--accent-glow); }
+    @media (max-width: 560px) { .nav-link.hide-sm { display: none; } .nav-bar { padding: 12px 18px; } }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+    .crumbs { font-size: 13px; color: var(--text-muted); padding: 26px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .crumbs a { color: var(--text-muted); padding: 4px 6px; border-radius: 7px; transition: color 0.18s, background 0.18s; }
+    .crumbs a:hover { color: var(--text-primary); background: var(--bg-card); }
+    .crumbs .sep { opacity: 0.45; }
+    .crumbs .here { color: var(--text-secondary); font-weight: 600; }
+
+    article { padding: 22px 0 8px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--cyan); font-weight: 600; }
+    .post-h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 700; letter-spacing: -1.3px; line-height: 1.06; color: var(--text-primary); margin: 14px 0 16px; text-wrap: balance; }
+    .byline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--text-dim); font-size: 13.5px; padding-bottom: 26px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .byline .avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--grad); box-shadow: var(--shadow-glow); }
+    .byline b { color: var(--text-secondary); font-weight: 600; }
+    .byline .sep { opacity: 0.4; }
+
+    .prose { font-size: 17px; color: var(--text-secondary); }
+    .prose > p, .prose > ul, .prose > ol { max-width: 65ch; }
+    .prose p { margin: 18px 0; text-wrap: pretty; }
+    .prose h2 { font-size: clamp(23px, 3.4vw, 30px); color: var(--text-primary); letter-spacing: -0.6px; margin: 44px 0 6px; text-wrap: balance; }
+    .prose h3 { font-size: clamp(18px, 2.4vw, 21px); color: var(--text-primary); letter-spacing: -0.3px; margin: 30px 0 4px; text-wrap: balance; }
+    .prose ul, .prose ol { margin: 16px 0; padding-left: 22px; }
+    .prose li { margin: 9px 0; text-wrap: pretty; }
+    .prose li::marker { color: var(--cyan); }
+    .prose strong { color: var(--text-primary); font-weight: 600; }
+    .prose a.inline { color: var(--cyan); font-weight: 600; border-bottom: 1px solid rgba(57,230,255,0.35); transition: border-color 0.2s; }
+    .prose a.inline:hover { border-color: var(--cyan); }
+    .lead { font-size: 19px; color: var(--text-muted); }
+
+    .callout { margin: 30px 0; padding: 22px 24px; border: 1px solid var(--border-hover); border-radius: var(--radius); background: linear-gradient(135deg, rgba(57,230,255,0.06), rgba(111,91,255,0.08)); }
+    .callout h3 { margin: 0 0 8px; font-size: 18px; }
+    .callout p { margin: 0; color: var(--text-muted); font-size: 15px; }
+    .callout .btn-primary { margin-top: 16px; }
+
+    .faq { margin: 40px 0 8px; }
+    .faq h2 { font-size: clamp(23px, 3.4vw, 30px); color: var(--text-primary); letter-spacing: -0.6px; margin-bottom: 14px; }
+    .faq-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; margin: 12px 0; background: var(--bg-card); }
+    .faq-item h3 { font-size: 17px; color: var(--text-primary); margin-bottom: 6px; }
+    .faq-item p { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+    .cta-band { margin: 44px 0 10px; border: 1px solid var(--border-hover); border-radius: 22px; padding: 40px 30px; text-align: center; background: linear-gradient(135deg, rgba(57,230,255,0.07), rgba(111,91,255,0.10) 55%, rgba(196,107,255,0.07)); }
+    .cta-band h2 { font-size: clamp(23px, 3.4vw, 32px); color: var(--text-primary); letter-spacing: -0.7px; margin-bottom: 12px; }
+    .cta-band p { color: var(--text-muted); max-width: 54ch; margin: 0 auto 24px; font-size: 16px; }
+    .btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary { padding: 14px 28px; background: var(--grad); color: #fff; border: none; border-radius: 11px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); display: inline-flex; align-items: center; gap: 9px; min-height: 44px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -8px var(--accent-glow); }
+    .btn-secondary { padding: 14px 26px; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 11px; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--cyan); background: rgba(57,230,255,0.06); color: var(--text-primary); transform: translateY(-2px); }
+
+    .more { margin: 40px 0 0; padding-top: 28px; border-top: 1px solid var(--border); }
+    .more h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); margin-bottom: 14px; }
+    .more a { display: inline-flex; align-items: center; gap: 7px; color: var(--cyan); font-weight: 600; font-size: 15px; transition: gap 0.2s; }
+    .more a:hover { gap: 11px; }
+
+    footer { border-top: 1px solid var(--border); padding: 40px 0 36px; margin-top: 40px; }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; gap: 12px; }
+    .footer-bottom a { color: var(--text-muted); }
+    .footer-bottom a:hover { color: var(--text-primary); }
+
+    a:focus-visible, .btn-primary:focus-visible, .btn-secondary:focus-visible, .nav-cta:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 8px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mesh::before, .mesh::after { animation: none !important; }
+        * { scroll-behavior: auto !important; transition: none !important; }
+    }
+    </style>
+</head>
+<body>
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+    <nav class="nav-bar">
+        <a class="logo" href="/" aria-label="Kudbee home"><span class="mark"></span> kudbee<span class="dot">.</span></a>
+        <div class="nav-right">
+            <a class="nav-link hide-sm" href="/">Home</a>
+            <a class="nav-link" href="/blog/">Blog</a>
+            <!-- TODO(owner): replace cal.com/kudbee -->
+            <a class="nav-cta" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a call</a>
+        </div>
+    </nav>
+
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a><span class="sep">›</span>
+            <a href="/blog/">Articles</a><span class="sep">›</span>
+            <span class="here">Teach Your Team to Build AI Agents</span>
+        </nav>
+
+        <article>
+            <span class="eyebrow">AI Training</span>
+            <h1 class="post-h1">Teaching Your Team to Build AI Agents: Where to Start</h1>
+            <div class="byline">
+                <span class="avatar" aria-hidden="true"></span>
+                <b>Kudbee</b><span class="sep">·</span><span>June 30, 2026</span><span class="sep">·</span><span>8 min read</span>
+            </div>
+
+            <div class="prose">
+                <p class="lead">Most teams don't need another tool subscription. They need the skill to build their own agents — software that takes actions, not just answers questions. The good news: the on-ramp is shorter than it looks, if you start in the right order.</p>
+
+                <p>"AI agent" gets used loosely, so let's be precise. An agent is a system where a language model decides what to do next and uses tools to do it — look something up, call an API, update a record, send a message — looping until a goal is met. That's the leap from a chatbot that talks to software that acts. Teaching your team to build these is less about deep machine-learning theory and more about engineering discipline applied to a new kind of building block.</p>
+
+                <h2>Start with a real, narrow problem</h2>
+                <p>The single biggest mistake is starting with the technology instead of a problem. Teams that begin with "let's learn LangChain" stall; teams that begin with "our support team retypes the same triage steps forty times a day" ship something useful fast.</p>
+                <p>Pick a first target that is:</p>
+                <ul>
+                    <li><strong>Narrow</strong> — one workflow, not a platform.</li>
+                    <li><strong>Painful</strong> — annoying enough that people will actually adopt the fix.</li>
+                    <li><strong>Tolerant of imperfection</strong> — a human reviews the output, so an early mistake isn't catastrophic.</li>
+                </ul>
+                <p>That last point matters most. Your first agent should sit beside a person, not replace one. It earns trust by being checked, and that trust is what lets you widen its scope later.</p>
+
+                <h2>The order to learn things in</h2>
+                <p>Skills compound, and learning them out of order wastes weeks. Here's the sequence that works.</p>
+
+                <h3>1. Prompting and structured output</h3>
+                <p>Before anyone touches agent frameworks, the team needs to drive a model reliably: clear instructions, examples, and — critically — getting structured, parseable output (usually JSON) instead of prose. Almost every agent failure traces back to fuzzy prompting, so this is the foundation, not a footnote.</p>
+
+                <h3>2. Tool use (function calling)</h3>
+                <p>Next, give the model hands. Tool use — letting the model call a function you define — is the heart of every agent. Have the team wire up one or two simple tools (a lookup, a calculation) and watch the model choose when to call them. Once this clicks, the concept of an agent stops being mysterious.</p>
+
+                <h3>3. The agent loop and orchestration</h3>
+                <p>Now assemble the loop: model proposes an action, the action runs, the result feeds back, repeat until done. Frameworks help here, but build a tiny loop by hand first — twenty lines — so nobody treats the framework as magic. Understanding the loop is what separates people who can debug agents from people who can only assemble them.</p>
+
+                <h3>4. Memory, context, and grounding</h3>
+                <p>Useful agents need context — relevant company knowledge retrieved at the right moment rather than crammed into every prompt. This is where a portable knowledge base earns its keep, feeding the agent grounded, current information so its answers reflect your reality instead of the model's training data.</p>
+
+                <div class="callout">
+                    <h3>Agents are only as good as their memory</h3>
+                    <p>The grounding layer above is exactly what /brain/ provides: a portable, owned knowledge base your agents can retrieve from, so their answers reflect your context, not the generic internet.</p>
+                    <a class="btn-primary" href="/brain/">Explore the Brain →</a>
+                </div>
+
+                <h3>5. Evaluation and guardrails</h3>
+                <p>Finally — and this is what teams skip and regret — learn to measure. How do you know the agent is good? You build a small test set of real inputs and expected behavior, and you check changes against it. Add guardrails: limits on what tools can do, human approval for risky actions, and logging so you can see what happened. Shipping an agent without evaluation is shipping a liability.</p>
+
+                <h2>Traps to skip</h2>
+                <ul>
+                    <li><strong>Framework-first learning.</strong> Tools change every quarter; the underlying concepts don't. Teach the concepts.</li>
+                    <li><strong>Boiling the ocean.</strong> A "do-everything" agent fails at everything. Ship narrow, then expand.</li>
+                    <li><strong>No human in the loop early.</strong> Autonomy is earned through demonstrated reliability, not granted on day one.</li>
+                    <li><strong>Skipping evaluation.</strong> Without a test set you're guessing, and you'll find out it broke from an angry user.</li>
+                </ul>
+
+                <h2>How to actually run the training</h2>
+                <p>Reading about agents doesn't build the skill — building one does. The format that works is hands-on and project-anchored: a few live sessions where the team builds a real agent against a real problem of theirs, with someone experienced steering past the dead ends. People learn by shipping, then they own the result and can extend it without you. That's the whole goal: not a dependency, but a capability that stays in the building after the training ends.</p>
+
+                <p>This is exactly the work we do at Kudbee — live, hands-on AI agent training that takes a team from "we use a chatbot" to deploying their own agents and the infrastructure around them. It's our number-two craft for a reason: teaching the skill is more durable than selling the tool.</p>
+            </div>
+
+            <section class="faq" aria-label="Frequently asked questions">
+                <h2>Frequently asked questions</h2>
+                <div class="faq-item">
+                    <h3>Do my team members need to be engineers to build AI agents?</h3>
+                    <p>Not everyone. You need a few people comfortable with basic scripting and APIs to build, but the people who define the workflows, write the prompts, and judge the outputs often come from operations, support, and domain teams.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>What is the difference between a chatbot and an AI agent?</h3>
+                    <p>A chatbot answers questions in a conversation. An agent takes actions toward a goal — it can call tools, look things up, and complete multi-step tasks, with the model deciding which steps to take.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How long does it take to train a team to build AI agents?</h3>
+                    <p>A motivated team can ship a useful first agent within a few weeks if they start narrow. Real fluency — evaluating, deploying, and maintaining agents responsibly — builds over a few months of hands-on work.</p>
+                </div>
+            </section>
+
+            <section class="cta-band">
+                <h2>Train your team to build their own agents</h2>
+                <p>Live, hands-on sessions that take your team from zero to shipping production AI agents — and the infrastructure around them. Book a call and we'll design the curriculum to your stack.</p>
+                <div class="btn-row">
+                    <!-- TODO(owner): replace cal.com/kudbee -->
+                    <a class="btn-primary" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a discovery call →</a>
+                    <a class="btn-secondary" href="/">See our services</a>
+                </div>
+            </section>
+
+            <div class="more">
+                <h4>More articles</h4>
+                <a href="/blog/">Back to all articles →</a>
+            </div>
+        </article>
+    </div>
+
+    <footer>
+        <div class="wrap">
+            <div class="footer-bottom">
+                <span>© <span id="year">2026</span> Kudbee · <a href="/">Home</a> · <a href="/blog/">Blog</a></span>
+                <span>Built with ♥ — all original.</span>
+            </div>
+        </div>
+    </footer>
+
+</div>
+<script>
+    (function () { var y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear(); })();
+</script>
+</body>
+</html>

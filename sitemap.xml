@@ -10,6 +10,36 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://devbiz.kudbee.workers.dev/brain/</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://devbiz.kudbee.workers.dev/blog/</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://devbiz.kudbee.workers.dev/blog/build-your-own-memory-layer.html</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://devbiz.kudbee.workers.dev/blog/teach-your-team-to-build-ai-agents.html</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html</loc>
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
