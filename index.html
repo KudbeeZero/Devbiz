@@ -885,7 +885,7 @@
     .visual-label { font-size: 14px; color: var(--text-dim); text-align: center; }
 
     /* ===== PRICING ===== */
-    .packages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
+    .packages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 20px; }
     .package-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 36px; position: relative; overflow: hidden; transition: transform 0.3s, border-color 0.3s; }
     .package-card:hover { transform: translateY(-5px); border-color: var(--border-hover); }
     .package-card.featured { border-color: rgba(111,91,255,0.5); background: linear-gradient(180deg, rgba(111,91,255,0.07), var(--bg-card)); }
@@ -1799,25 +1799,32 @@
         </div>
         <div class="packages-grid">
             <div class="package-card">
+                <h3>Starter</h3>
+                <div class="price">$99</div>
+                <div class="price-note">one-page site</div>
+                <ul><li>1-page custom landing page</li><li>Mobile-first & responsive</li><li>Contact form or booking link</li><li>Deployed on Cloudflare</li><li>1 round of revisions</li></ul>
+                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Get Started</label>
+            </div>
+            <div class="package-card">
                 <h3>Launch</h3>
-                <div class="price">$2,000</div>
-                <div class="price-note">one-time project</div>
-                <ul><li>Up to 5-page custom website</li><li>Mobile-first, responsive build</li><li>SEO-ready — metadata, sitemap & schema</li><li>Cloudflare deployment</li><li>2 rounds of revisions</li></ul>
+                <div class="price">$199</div>
+                <div class="price-note">small site</div>
+                <ul><li>Everything in Starter</li><li>Up to 3 pages</li><li>SEO-ready — metadata & sitemap</li><li>Social & search preview cards</li><li>2 rounds of revisions</li></ul>
                 <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Get Started</label>
             </div>
             <div class="package-card featured">
                 <h3>Studio</h3>
-                <div class="price">$2,500</div>
-                <div class="price-note">one-time project</div>
-                <ul><li>Everything in Launch</li><li>Up to 8 pages + custom sections</li><li>Custom animation & interactions</li><li>Copywriting polish & on-page SEO</li><li>Priority delivery + 3 rounds of revisions</li></ul>
+                <div class="price">$349</div>
+                <div class="price-note">best value</div>
+                <ul><li>Everything in Launch</li><li>Up to 6 pages</li><li>Custom animation & interactions</li><li>Copywriting polish & on-page SEO</li><li>Priority delivery + 3 revisions</li></ul>
                 <label for="page-contact" class="btn-primary" style="width:100%; justify-content:center;">Get Started</label>
             </div>
             <div class="package-card">
-                <h3>Custom</h3>
-                <div class="price">Let's talk</div>
-                <div class="price-note">tailored scope</div>
-                <ul><li>Larger sites, web apps & e-commerce</li><li>AI agent training & infrastructure</li><li>Custom game / tool development</li><li>Ongoing support options</li></ul>
-                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Contact Us</label>
+                <h3>Pro</h3>
+                <div class="price">$550</div>
+                <div class="price-note">complete build</div>
+                <ul><li>Everything in Studio</li><li>Up to 10 pages + custom sections</li><li>Advanced SEO + structured data</li><li>Blog / CMS setup</li><li>Analytics + 30-day launch support</li></ul>
+                <label for="page-contact" class="btn-primary" style="width:100%; justify-content:center;">Get Started</label>
             </div>
         </div>
     </section>
