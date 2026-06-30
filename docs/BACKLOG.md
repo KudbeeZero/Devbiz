@@ -27,7 +27,7 @@ These make the site actually *transact / measure*. All the UI is built and waiti
 ## 🔴 Build — next phase
 - [ ] 🔴 **Measurement loop** — add privacy-friendly analytics (Cloudflare Web Analytics or Plausible) so we can see views + conversions; we're currently flying blind.
 - [ ] 🔴 **One real, end-to-end case study** — take ModernMed (or a real client) to production and write before → scope → outcome. Replaces self-referential proof.
-- [ ] 🟡 **Accessibility hardening** — homepage Lighthouse a11y ~87 (palette contrast, tap-target sizing, heading order). Its own lane; touches brand contrast, so confirm look.
+- [x] 🟡 **Accessibility hardening** — homepage Lighthouse a11y **87 → 100** (mobile): `--text-dim` contrast bump, 24px carousel-dot tap targets + labels, `h4`→`h3` heading order, removed redundant media-tile `aria-label`s (label-in-name). _(PR #101)_
 
 ## 🟢 Cleanup
 - [ ] 🟢 **Prune merged remote branches** — ~75 stale `origin/claude/*` branches (mostly other efforts: pinball/voidrunner/growverse/mission-control). Delete only the fully-merged ones; owner ok first since they span other work.
