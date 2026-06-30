@@ -677,6 +677,46 @@
     .feature-card p { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px; }
     .feature-card .more { font-size: 13px; color: var(--cyan); font-weight: 600; cursor: pointer; }
 
+    /* ===== AGENT STORE — installable tiny apps + futuristic terminal ===== */
+    .store-wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    .store-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 26px; align-items: start; }
+    .store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .store-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 9px; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s; position: relative; }
+    .store-card:hover { transform: translateY(-4px); border-color: var(--border-hover); box-shadow: 0 18px 40px -22px rgba(0,0,0,0.6); }
+    .store-card .sc-top { display: flex; align-items: center; gap: 10px; }
+    .store-card .sc-ic { width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(57,230,255,0.16), rgba(196,107,255,0.12)); border: 1px solid var(--border); }
+    .store-card .sc-ic svg { width: 18px; height: 18px; }
+    .store-card h4 { font-size: 14.5px; color: var(--text-primary); line-height: 1.2; }
+    .store-card .sc-slug { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-dim); margin-top: 3px; }
+    .store-card p { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; flex: 1; }
+    .store-card .sc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
+    .price-tag { font: 700 14px/1 'Space Grotesk', sans-serif; color: var(--green); }
+    .price-tag small { font-weight: 500; color: var(--text-dim); font-size: 11px; }
+    .install-btn { font: 600 12px/1 inherit; color: var(--bg-primary); background: var(--grad); border: none; border-radius: 999px; padding: 9px 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+    .install-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-glow); }
+    .install-btn.installed { background: rgba(124,255,178,0.14); color: var(--green); cursor: default; box-shadow: none; transform: none; }
+
+    .term { background: #05050b; border: 1px solid var(--border-hover); border-radius: 14px; overflow: hidden; box-shadow: 0 30px 70px -30px rgba(0,0,0,0.8); position: sticky; top: 86px; }
+    .term-bar { display: flex; align-items: center; gap: 8px; padding: 11px 14px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+    .term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .term-bar .r { background: #ff5f57; } .term-bar .y { background: #febc2e; } .term-bar .g { background: #28c840; }
+    .term-bar .term-title { margin-left: 8px; font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-dim); }
+    .term-bar .term-live { margin-left: auto; font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); display: flex; align-items: center; gap: 6px; }
+    .term-bar .term-live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: termPulse 1.6s ease-in-out infinite; }
+    @keyframes termPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .term-body { padding: 16px 16px 18px; min-height: 300px; max-height: 380px; overflow-y: auto; font: 13px/1.62 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .term-line { white-space: pre-wrap; word-break: break-word; }
+    .term-line .pr { color: var(--cyan); } .term-line .cmd { color: var(--text-primary); }
+    .term-line .ok { color: var(--green); } .term-line .dim { color: var(--text-dim); } .term-line .warn { color: #febc2e; } .term-line .vio { color: var(--violet); }
+    .term-cursor { display: inline-block; width: 8px; height: 15px; vertical-align: -2px; background: var(--cyan); margin-left: 2px; animation: termBlink 1s steps(1) infinite; }
+    @keyframes termBlink { 50% { opacity: 0; } }
+    .term-cta { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+    .term-cta .buy { font: 700 13px/1 inherit; color: var(--bg-primary); background: linear-gradient(135deg, var(--green), #46d8a0); border: none; border-radius: 999px; padding: 11px 18px; cursor: pointer; }
+    .term-cta .ghost { font: 600 13px/1 inherit; color: var(--text-secondary); background: transparent; border: 1px solid var(--border-hover); border-radius: 999px; padding: 10px 16px; cursor: pointer; text-decoration: none; }
+    @media (prefers-reduced-motion: reduce) { .term-bar .term-live::before, .term-cursor { animation: none; } }
+    @media (max-width: 860px) { .store-layout { grid-template-columns: 1fr; } .term { position: static; } .term-body { min-height: 220px; } }
+    @media (max-width: 460px) { .store-grid { grid-template-columns: 1fr; } }
+
     /* ===== FEATURED GAME BANNER (home) ===== */
     .game-banner {
         max-width: var(--maxw); margin: 0 auto; padding: 0 24px;
@@ -1873,6 +1913,71 @@
                 <h3>Summary Agent</h3>
                 <p>Condenses long back-and-forth threads into quick notes so anyone can pick up the context in seconds.</p>
             </div>
+        </div>
+    </section>
+
+    <!-- Tiny Apps Store + Terminal -->
+    <section class="section" id="agent-store">
+        <div class="section-head reveal">
+            <span class="section-label">Kudbee Tiny Apps</span>
+            <h2 class="section-title">Install in seconds. <span class="gradient-text">$5 each.</span></h2>
+            <p class="section-subtitle">Focused little apps and agents you can drop in instantly — AI-native, private (they run in your browser), and actually beautiful. Click <b>Install</b> and watch it spin up.</p>
+        </div>
+        <div class="store-wrap">
+          <div class="store-layout">
+            <div class="store-grid">
+              <div class="store-card" data-app="qr-studio" data-name="QR Code Studio" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20h.01M17 20h.01M20 17h.01"/></svg></span><div><h4>QR Code Studio</h4><div class="sc-slug">kudbee add qr-studio</div></div></div>
+                <p>Branded QR codes with your logo &amp; colors — crisp PNG/SVG, no watermark, no account.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="utm-builder" data-name="UTM Campaign Builder" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><h4>UTM Campaign Builder</h4><div class="sc-slug">kudbee add utm-builder</div></div></div>
+                <p>Clean, consistent tracking links your whole team reuses — presets, validation, saved history.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="invoice" data-name="Invoice Generator" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V2z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><div><h4>Invoice Generator</h4><div class="sc-slug">kudbee add invoice</div></div></div>
+                <p>A polished invoice in 30 seconds, exported to PDF — nothing leaves your browser.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="palette" data-name="Palette Extractor" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-1.3-1-1.5-1-2.5a2 2 0 0 1 2-2h2a5 5 0 0 0 5-5c0-5-4.5-8.5-12-8.5z"/></svg></span><div><h4>Palette Extractor</h4><div class="sc-slug">kudbee add palette</div></div></div>
+                <p>Pull a usable palette from any image — hex/HSL plus instant contrast checks.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="passphrase" data-name="Passphrase Generator" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><div><h4>Passphrase Generator</h4><div class="sc-slug">kudbee add passphrase</div></div></div>
+                <p>Strong, memorable passphrases generated locally — never sent anywhere, ever.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="og-preview" data-name="Meta &amp; OG Previewer" data-live="0">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M6 13h7"/></svg></span><div><h4>Meta &amp; OG Previewer</h4><div class="sc-slug">kudbee add og-preview</div></div></div>
+                <p>See exactly how your link looks on Google, X, and iMessage before you ship it.</p>
+                <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="token-tracker" data-name="Token Cost Tracker" data-live="1" data-url="tools/token-analyzer/index.html">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg></span><div><h4>Token Cost Tracker <span style="color:var(--green);font-size:10px;font-weight:700;">● LIVE</span></h4><div class="sc-slug">kudbee add token-tracker</div></div></div>
+                <p>Track AI token spend across Claude, GPT &amp; Gemini with live charts and JSON export.</p>
+                <div class="sc-foot"><span class="price-tag" style="color:var(--cyan);">Free</span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+              <div class="store-card" data-app="scribe" data-name="Scribe — Writing Cleanup" data-live="1" data-url="tools/kudbee-scribe/index.html">
+                <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><div><h4>Scribe — Writing Cleanup <span style="color:var(--green);font-size:10px;font-weight:700;">● LIVE</span></h4><div class="sc-slug">kudbee add scribe</div></div></div>
+                <p>Tighten any draft into clearer, more confident writing — fully in your browser.</p>
+                <div class="sc-foot"><span class="price-tag" style="color:var(--cyan);">Free</span><button type="button" class="install-btn">Install →</button></div>
+              </div>
+            </div>
+            <div class="term" id="agent-terminal" aria-label="Kudbee install terminal">
+              <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="term-title">kudbee — zsh</span><span class="term-live">ready</span></div>
+              <div class="term-body" id="term-body">
+                <div class="term-line"><span class="dim"># Kudbee tiny-app installer</span></div>
+                <div class="term-line"><span class="dim"># pick an app on the left, or run a command:</span></div>
+                <div class="term-line"><span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="cmd">kudbee list</span></div>
+                <div class="term-line"><span class="ok">8 apps available</span> <span class="dim">· installs in your browser · private by default</span></div>
+                <div class="term-line"><span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="term-cursor"></span></div>
+              </div>
+            </div>
+          </div>
         </div>
     </section>
 
@@ -3191,6 +3296,90 @@
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
     if (chips) chips.querySelectorAll('.agent-chip').forEach(function (b) {
         b.addEventListener('click', function () { ask(b.textContent); });
+    });
+})();
+
+/* --------------------------------------------------------------
+ * Kudbee tiny-app store — futuristic install terminal.
+ * Clicking Install (on a store card or a support-agent card) spins
+ * up a simulated `kudbee add <slug>` install in the terminal, then
+ * offers the live tool or a $5 checkout placeholder. No backend,
+ * no payment wired (owner-gated) — purely the storefront experience.
+ * ------------------------------------------------------------ */
+(function initStore() {
+    var term = document.getElementById('term-body');
+    var panel = document.getElementById('agent-terminal');
+    if (!term || !panel) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var live = panel.querySelector('.term-live');
+    var busy = false;
+
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, reduce ? 0 : ms); }); }
+    function line(html) { var d = document.createElement('div'); d.className = 'term-line'; d.innerHTML = html; term.appendChild(d); term.scrollTop = term.scrollHeight; return d; }
+    async function typeInto(el, text) {
+        if (reduce) { el.textContent = text; return; }
+        for (var i = 0; i < text.length; i++) { el.textContent += text[i]; term.scrollTop = term.scrollHeight; await sleep(20); }
+    }
+    function gotoContact() { var r = document.getElementById('page-contact'); if (r) { r.checked = true; window.scrollTo(0, 0); } }
+
+    async function install(slug, name, isLive, url) {
+        if (busy) return; busy = true;
+        if (live) { live.textContent = 'installing'; live.style.color = 'var(--violet)'; }
+        term.innerHTML = '';
+        var l1 = line('<span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="cmd"></span><span class="term-cursor"></span>');
+        await typeInto(l1.querySelector('.cmd'), 'npx kudbee add ' + slug);
+        var cur = l1.querySelector('.term-cursor'); if (cur) cur.remove();
+        await sleep(280);
+        var steps = [
+            ['dim', '· resolving registry…'],
+            ['dim', '· fetching ' + slug + '@latest'],
+            ['vio', '◇ verifying signature ✓'],
+            ['dim', '· installing dependencies'],
+            ['ok', '▸ building ' + name],
+            ['dim', '· optimizing for your browser (zero-build)']
+        ];
+        for (var i = 0; i < steps.length; i++) { await sleep(300); line('<span class="' + steps[i][0] + '">' + steps[i][1] + '</span>'); }
+        await sleep(320);
+        line('<span class="ok">✓ ' + name + ' installed.</span> <span class="dim">ready in this browser — private, no signup.</span>');
+        var cta = document.createElement('div'); cta.className = 'term-cta';
+        if (isLive && url) {
+            cta.innerHTML = '<a class="buy" href="' + url + '" target="_blank" rel="noopener">Open ' + name + ' →</a><button class="ghost" type="button" data-book>Talk to us</button>';
+        } else {
+            cta.innerHTML = '<button class="buy" type="button" data-buy>Get it — $5 →</button><button class="ghost" type="button" data-book>Notify me at launch</button>';
+        }
+        term.appendChild(cta); term.scrollTop = term.scrollHeight;
+        var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () {
+            // TODO(owner): wire a real Stripe Payment Link per app to enable checkout.
+            line('<span class="warn">→ opening secure checkout…</span> <span class="dim">(preview — payment goes live once enabled)</span>');
+        });
+        var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', gotoContact);
+        if (live) { live.textContent = 'ready'; live.style.color = 'var(--green)'; }
+        busy = false;
+    }
+
+    function slugify(s) { return s.toLowerCase().replace(/agent/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+
+    // Store cards
+    document.querySelectorAll('.store-card').forEach(function (card) {
+        var btn = card.querySelector('.install-btn');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            panel.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+            install(card.getAttribute('data-app'), card.getAttribute('data-name'),
+                    card.getAttribute('data-live') === '1', card.getAttribute('data-url') || '');
+        });
+    });
+
+    // Make the six support-agent capability cards installable too.
+    document.querySelectorAll('.page-agents #agent-capabilities .feature-card').forEach(function (card) {
+        var h = card.querySelector('h3'); if (!h) return;
+        var name = h.textContent.trim();
+        card.style.cursor = 'pointer';
+        if (!card.querySelector('.more')) { var hint = document.createElement('div'); hint.className = 'more'; hint.textContent = 'Install →'; card.appendChild(hint); }
+        card.addEventListener('click', function () {
+            panel.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+            install(slugify(name), name, false, '');
+        });
     });
 })();
 </script>
