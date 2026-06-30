@@ -32,7 +32,7 @@ fully caught-up, green repo.
 | 7 | DBZ-043 | **D1** "Ship-it" self-serve studio — Phase 1: scaffold the page + intake form | feature | ☑ done — `/ship-it/`: hero, intake (type/name/location/vibe/accent), browser-style preview frame that renders a live project brief + saves to localStorage; wired into homepage nav + sitemap. Live render = Phase 3 |
 | 8 | DBZ-044 | **D1** Phase 2: house-style template system (a few industries) | feature | ☑ done — COPY library for 11 business types + TONE presets per vibe (radius/weight/case/accent treatment) |
 | 9 | DBZ-045 | **D1** Phase 3: live preview generator (describe business → assembled preview) | feature | ☑ done — renderPreview() assembles a real mini-homepage (nav/hero/services/CTA band/footer) styled by accent+vibe, with a live-preview action bar (book/edit) |
-| 10 | DBZ-046 | **D1** Phase 4: convert (book-a-call / export) + agent hand-off + polish | feature | ☐ todo |
+| 10 | DBZ-046 | **D1** Phase 4: convert (book-a-call / export) + agent hand-off + polish | feature | ☑ done — preview action bar adds **📥 Download** (standalone HTML of the generated site) + **📨 Email me this** (email-at-delight → saves brief+email to localStorage `kudbee.shipit`, POSTs to `SHIPIT_ENDPOINT` else mailto). Program complete. |
 
 ## The dream feature — "Ship-it"
 A visitor describes their business ("med spa in Naperville") and watches Kudbee
