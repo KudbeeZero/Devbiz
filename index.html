@@ -3389,6 +3389,32 @@
         });
     });
 })();
+
+/* --------------------------------------------------------------
+ * Hash → page router. The site routes "pages" via hidden radios,
+ * so a cross-page link like /index.html#games or #contact would
+ * otherwise just land on the home view. This maps the URL hash to
+ * the matching page radio (and scrolls to a real section anchor if
+ * one exists), making every page deep-linkable.
+ * ------------------------------------------------------------ */
+(function initHashRouter() {
+    var MAP = {
+        home: 'page-home', services: 'page-services', agents: 'page-agents',
+        work: 'page-work', contact: 'page-contact', games: 'page-games',
+        tools: 'page-tools', scribe: 'page-scribe', doctrine: 'page-doctrine',
+        'agent-store': 'page-agents', 'agent-capabilities': 'page-agents', store: 'page-agents'
+    };
+    function apply() {
+        var h = (location.hash || '').replace('#', '').toLowerCase();
+        if (!h) return;
+        var id = MAP[h];
+        if (id) { var r = document.getElementById(id); if (r) r.checked = true; }
+        var el = document.getElementById(h);
+        if (el) { setTimeout(function () { el.scrollIntoView({ block: 'start' }); }, 40); }
+    }
+    window.addEventListener('hashchange', apply);
+    apply();
+})();
 </script>
 
 </body>
