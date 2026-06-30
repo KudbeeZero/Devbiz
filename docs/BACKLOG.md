@@ -42,10 +42,10 @@ hash anchors, valid JSON-LD + canonicals everywhere, sitemap entries all resolve
 images/inputs have alt/labels, no fabricated data slipped back in. Findings:
 
 **Actionable now (non-gated):**
-- [ ] 🟡 **Tools discoverability** — UTM Builder + Invoice Generator are in the store
-  but not linked from the homepage **Tools** page card-grid. Add them.
-- [ ] 🟢 **Invoice meta length** — `tools/invoice-generator/index.html` meta description
-  is 161 chars; trim to ≤160.
+- [x] 🟡 **Tools discoverability** — UTM Builder + Invoice Generator now have live
+  cards on the homepage **Tools** page card-grid + the site-search index. _(PR #97)_
+- [x] 🟢 **Invoice meta length** — `tools/invoice-generator/index.html` meta trimmed
+  to 156 chars (≤160). _(PR #97)_
 - [ ] 🟢 **Ship-it "NEW" badge** — fine for now (launched today); revisit/remove in a few weeks.
 
 **Already tracked (owner-gated placeholders, re-confirmed by the scan):** the
