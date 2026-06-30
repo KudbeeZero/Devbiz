@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free UTM Campaign Builder by Kudbee — clean, consistent tracking links with live encoding, channel presets, and saved history, all in your browser.">
+    <meta name="keywords" content="UTM builder, UTM campaign builder, tracking link generator, utm_source, utm_medium, marketing URL builder, Kudbee">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Kudbee">
+    <meta name="theme-color" content="#06060c">
+    <link rel="canonical" href="https://devbiz.kudbee.workers.dev/tools/utm-builder/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Kudbee">
+    <meta property="og:title" content="UTM Campaign Builder — Kudbee Tools">
+    <meta property="og:description" content="Build clean, consistent UTM tracking links in your browser. Channel presets, live encoding, saved history — nothing stored on a server.">
+    <meta property="og:url" content="https://devbiz.kudbee.workers.dev/tools/utm-builder/">
+    <meta property="og:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <meta property="og:image:alt" content="Kudbee — creative dev studio building web, AI, and games.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://devbiz.kudbee.workers.dev/tools/utm-builder/">
+    <meta name="twitter:title" content="UTM Campaign Builder — Kudbee Tools">
+    <meta name="twitter:description" content="Build clean, consistent UTM tracking links in your browser. Presets, live encoding, saved history — nothing leaves your device.">
+    <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <title>UTM Campaign Builder · Tracking Link Generator · Kudbee</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "UTM Campaign Builder",
+      "url": "https://devbiz.kudbee.workers.dev/tools/utm-builder/",
+      "description": "Build clean, consistent UTM tracking links in your browser. Channel presets, live URL encoding, validation, and saved history — fully client-side, nothing stored on a server.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kudbee",
+        "url": "https://devbiz.kudbee.workers.dev/"
+      }
+    }
+    </script>
+<style>
+    :root {
+        --bg-primary: #06060c;
+        --bg-elevated: #0b0b16;
+        --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035);
+        --bg-glass: rgba(12,12,24,0.6);
+        --border: rgba(255,255,255,0.07);
+        --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff;
+        --text-secondary: #e6e8f0;
+        --text-muted: #9aa3b8;
+        --text-dim: #646c82;
+        --cyan: #39e6ff;
+        --violet: #c46bff;
+        --green: #7CFFb2;
+        --amber: #ffd34d;
+        --red: #ff5d3c;
+        --accent: #6f5bff;
+        --accent-glow: rgba(111,91,255,0.35);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow);
+        --radius: 16px;
+        --maxw: 1080px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .light {
+        --bg-primary: #f6f7fb;
+        --bg-elevated: #ffffff;
+        --bg-secondary: rgba(0,0,0,0.025);
+        --bg-card: #ffffff;
+        --bg-glass: rgba(255,255,255,0.7);
+        --border: rgba(15,23,42,0.09);
+        --border-hover: rgba(15,23,42,0.18);
+        --text-primary: #0b1020;
+        --text-secondary: #28304a;
+        --text-muted: #5a6480;
+        --text-dim: #8b93a9;
+        --accent-glow: rgba(111,91,255,0.22);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.6; overflow-x: hidden;
+        background: var(--bg-primary); color: var(--text-secondary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+        transition: background 0.4s, color 0.4s;
+    }
+    h1, h2, h3, h4, .logo-txt, .url-out, .brand-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .gradient-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Ambient mesh */
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before {
+        width: 580px; height: 580px; top: -140px; left: -100px;
+        background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%);
+        animation: drift1 22s ease-in-out infinite;
+    }
+    .mesh::after {
+        width: 640px; height: 640px; top: 30%; right: -140px;
+        background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%);
+        animation: drift2 26s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(55px,35px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-45px,28px); } }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    .nav-bar {
+        position: sticky; top: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 12px 20px;
+        background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+        border-bottom: 1px solid var(--border); z-index: 100;
+        transition: background 0.4s;
+    }
+    .light .nav-bar { background: rgba(246,247,251,0.85); }
+    .nav-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: wrap; }
+    .back-link {
+        color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500;
+        display: inline-flex; align-items: center; gap: 5px; transition: color 0.2s;
+        min-height: 44px;
+    }
+    .back-link:hover, .back-link:focus-visible { color: var(--cyan); }
+    .logo-link {
+        text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+        color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+        min-height: 44px;
+    }
+    .logo-mark {
+        width: 24px; height: 24px; border-radius: 7px; background: var(--grad);
+        display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative;
+    }
+    .logo-mark::after { content: ''; width: 8px; height: 8px; border-radius: 2.5px; background: #06060c; display: block; }
+    .logo-dot { color: var(--cyan); }
+    .nav-divider { color: var(--border-hover); font-size: 18px; }
+    .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .nav-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .nav-badge {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--cyan); border: 1px solid rgba(57,230,255,0.35); padding: 2px 7px; border-radius: 5px;
+    }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .theme-btn {
+        width: 46px; height: 25px; background: var(--border); border-radius: 13px;
+        cursor: pointer; border: 1px solid var(--border-hover); position: relative; transition: background 0.3s;
+        flex-shrink: 0;
+    }
+    .theme-btn::after {
+        content: '🌙'; font-size: 11px; position: absolute; top: 2px; left: 2px;
+        width: 19px; height: 19px; border-radius: 50%; background: var(--grad);
+        display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+    }
+    .light .theme-btn::after { transform: translateX(21px); content: '☀️'; }
+
+    /* MAIN */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 36px 20px 80px; }
+
+    .page-header { margin-bottom: 26px; }
+    .page-header .kicker {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
+        color: var(--cyan); font-weight: 600; margin-bottom: 12px; display: block;
+    }
+    .page-header h1 { font-size: clamp(28px, 5vw, 46px); color: var(--text-primary); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 10px; line-height: 1.1; }
+    .page-header p { font-size: 15px; color: var(--text-muted); max-width: 620px; }
+
+    .layout { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; align-items: start; }
+    @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 20px;
+    }
+    .card + .card { margin-top: 20px; }
+    .card-title {
+        font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--text-muted); font-weight: 600; margin-bottom: 16px;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Presets */
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+    .preset-btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 13px; min-height: 44px;
+        background: var(--bg-secondary); border: 1px solid var(--border);
+        border-radius: 10px; color: var(--text-secondary); font-size: 13px; font-weight: 500;
+        font-family: inherit; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.12s;
+    }
+    .preset-btn:hover, .preset-btn:focus-visible { border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-card); transform: translateY(-1px); }
+    .preset-btn.active { border-color: var(--cyan); color: var(--text-primary); background: rgba(57,230,255,0.08); }
+    .preset-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Form */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+        display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+        margin-bottom: 6px; letter-spacing: 0.01em;
+    }
+    .field label .req { color: var(--cyan); margin-left: 2px; }
+    .field label .opt { color: var(--text-dim); font-weight: 500; font-size: 11px; margin-left: 4px; }
+    .field label .param-tag {
+        font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+        margin-left: 6px; font-weight: 500;
+    }
+    .field input {
+        width: 100%; padding: 11px 14px; min-height: 44px;
+        background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+        border-radius: 10px; color: var(--text-primary); font-size: 14px; font-family: inherit;
+        outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .light .field input { background: var(--bg-elevated); }
+    .field input::placeholder { color: var(--text-dim); }
+    .field input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(57,230,255,0.12); }
+    .field input.invalid { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,93,60,0.12); }
+    .field-hint { font-size: 11.5px; margin-top: 6px; min-height: 16px; line-height: 1.4; }
+    .field-hint.warn { color: var(--amber); }
+    .field-hint.error { color: var(--red); }
+    .field-hint.muted { color: var(--text-dim); }
+
+    .form-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .btn {
+        font-family: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+        border-radius: 10px; padding: 11px 18px; min-height: 44px;
+        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        transition: transform 0.12s, box-shadow 0.2s, border-color 0.2s, background 0.2s, color 0.2s;
+        border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--grad); color: #fff; box-shadow: var(--shadow-glow); position: relative; overflow: hidden; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -8px var(--accent-glow); }
+    .btn-ghost { background: var(--bg-secondary); border-color: var(--border); color: var(--text-secondary); }
+    .btn-ghost:hover, .btn-ghost:focus-visible { border-color: var(--cyan); color: var(--text-primary); background: rgba(57,230,255,0.06); transform: translateY(-1px); }
+
+    /* Output card */
+    .out-card {
+        background: linear-gradient(180deg, rgba(57,230,255,0.05), rgba(111,91,255,0.04));
+        border: 1px solid var(--border-hover); position: sticky; top: 76px;
+    }
+    .url-out {
+        font-family: var(--mono); font-size: 14px; line-height: 1.55; color: var(--text-primary);
+        background: rgba(0,0,0,0.28); border: 1px solid var(--border);
+        border-radius: 12px; padding: 16px; word-break: break-all; min-height: 70px;
+        user-select: all; -webkit-user-select: all;
+    }
+    .light .url-out { background: rgba(0,0,0,0.04); }
+    .url-out .u-base { color: var(--text-secondary); }
+    .url-out .u-key { color: var(--cyan); }
+    .url-out .u-val { color: var(--violet); }
+    .url-out .u-sep { color: var(--text-dim); }
+    .url-out .u-placeholder { color: var(--text-dim); font-family: 'Inter', sans-serif; font-style: italic; }
+
+    .out-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .out-actions .btn { flex: 1; }
+
+    /* Params preview table */
+    .params-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12.5px; }
+    .params-table th {
+        text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--text-dim); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border);
+    }
+    .params-table td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; word-break: break-word; }
+    .params-table tr:last-child td { border-bottom: none; }
+    .params-table .pk { font-family: var(--mono); color: var(--cyan); white-space: nowrap; }
+    .params-table .pv { font-family: var(--mono); color: var(--text-secondary); }
+    .params-table .pv.empty { color: var(--text-dim); font-family: 'Inter', sans-serif; font-style: italic; }
+    .params-empty { font-size: 12.5px; color: var(--text-dim); padding: 8px 0; }
+
+    /* Privacy pill */
+    .privacy-pill {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 12px; font-weight: 600; color: var(--green);
+        background: rgba(124,255,178,0.08); border: 1px solid rgba(124,255,178,0.25);
+        padding: 7px 13px; border-radius: 20px;
+    }
+
+    /* History */
+    .history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+    .history-head .card-title { margin-bottom: 0; }
+    .clear-all {
+        font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-muted);
+        background: none; border: 1px solid var(--border); border-radius: 8px;
+        padding: 7px 11px; min-height: 36px; cursor: pointer; transition: color 0.2s, border-color 0.2s;
+    }
+    .clear-all:hover, .clear-all:focus-visible { color: var(--red); border-color: rgba(255,93,60,0.4); }
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+    .history-item {
+        background: var(--bg-secondary); border: 1px solid var(--border);
+        border-radius: 12px; padding: 12px 14px;
+        display: flex; align-items: center; gap: 12px;
+    }
+    .history-item .h-main { min-width: 0; flex: 1; }
+    .history-item .h-url { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); word-break: break-all; line-height: 1.4; }
+    .history-item .h-meta { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+    .history-item .h-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .icon-btn {
+        width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center;
+        background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
+        cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .icon-btn:hover, .icon-btn:focus-visible { color: var(--text-primary); border-color: var(--border-hover); }
+    .icon-btn.danger:hover, .icon-btn.danger:focus-visible { color: var(--red); border-color: rgba(255,93,60,0.4); }
+    .history-empty { font-size: 13px; color: var(--text-dim); text-align: center; padding: 22px 0; }
+
+    /* Toast */
+    .toast {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: var(--bg-elevated); border: 1px solid var(--border-hover);
+        color: var(--text-primary); font-size: 13px; font-weight: 600;
+        padding: 12px 18px; border-radius: 12px; box-shadow: 0 16px 40px -10px rgba(0,0,0,0.5);
+        opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 200;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast .tick { color: var(--green); }
+
+    /* Focus visibility */
+    a:focus-visible, button:focus-visible, input:focus-visible, .theme-btn:focus-visible {
+        outline: 2px solid var(--cyan); outline-offset: 2px;
+    }
+
+    /* Footer */
+    .tool-footer {
+        border-top: 1px solid var(--border); margin-top: 8px;
+        padding: 28px 20px; text-align: center;
+        font-size: 12.5px; color: var(--text-dim);
+    }
+    .tool-footer a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+    .tool-footer a:hover { color: var(--cyan); }
+
+    @media (max-width: 880px) { .out-card { position: static; } }
+    @media (max-width: 480px) {
+        .nav-title-wrap { display: none; }
+        .nav-divider { display: none; }
+    }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+<div class="content">
+
+<!-- NAV -->
+<nav class="nav-bar">
+    <div class="nav-left">
+        <a href="../../#agent-store" class="back-link">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            All apps
+        </a>
+        <a href="../../" class="logo-link">
+            <span class="logo-mark"></span>
+            <span class="logo-txt">kudbee</span><span class="logo-dot">.</span>
+        </a>
+        <span class="nav-divider" aria-hidden="true">›</span>
+        <div class="nav-title-wrap">
+            <span class="nav-title">UTM Builder</span>
+            <span class="nav-badge">TOOL</span>
+        </div>
+    </div>
+    <div class="nav-right">
+        <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <header class="page-header">
+        <span class="kicker">⬡ Kudbee Tools</span>
+        <h1>UTM <span class="gradient-text">Campaign Builder</span></h1>
+        <p>Clean, consistent tracking links — built in your browser, nothing stored on a server.</p>
+    </header>
+
+    <div class="layout">
+        <!-- LEFT: builder -->
+        <div>
+            <section class="card" aria-labelledby="presets-title">
+                <div class="card-title" id="presets-title">Channel presets</div>
+                <div class="presets" id="presets"></div>
+            </section>
+
+            <section class="card" aria-labelledby="form-title">
+                <h2 class="card-title" id="form-title">Link details</h2>
+                <form id="utmForm" autocomplete="off" novalidate>
+                    <div class="field">
+                        <label for="f-base">Base URL <span class="req" aria-hidden="true">*</span></label>
+                        <input type="url" id="f-base" name="base" inputmode="url" placeholder="https://example.com/landing" aria-required="true" aria-describedby="h-base">
+                        <div class="field-hint muted" id="h-base">The page you're sending traffic to.</div>
+                    </div>
+                    <div class="field">
+                        <label for="f-source">Campaign Source <span class="req" aria-hidden="true">*</span><span class="param-tag">utm_source</span></label>
+                        <input type="text" id="f-source" name="source" placeholder="google, facebook, newsletter" aria-required="true" aria-describedby="h-source">
+                        <div class="field-hint muted" id="h-source">Where the traffic comes from.</div>
+                    </div>
+                    <div class="field">
+                        <label for="f-medium">Campaign Medium <span class="req" aria-hidden="true">*</span><span class="param-tag">utm_medium</span></label>
+                        <input type="text" id="f-medium" name="medium" placeholder="cpc, email, social" aria-required="true" aria-describedby="h-medium">
+                        <div class="field-hint muted" id="h-medium">The marketing channel or method.</div>
+                    </div>
+                    <div class="field">
+                        <label for="f-campaign">Campaign Name <span class="req" aria-hidden="true">*</span><span class="param-tag">utm_campaign</span></label>
+                        <input type="text" id="f-campaign" name="campaign" placeholder="spring-sale-2026" aria-required="true" aria-describedby="h-campaign">
+                        <div class="field-hint muted" id="h-campaign">Identifies the specific campaign.</div>
+                    </div>
+                    <div class="field">
+                        <label for="f-term">Campaign Term <span class="opt">optional</span><span class="param-tag">utm_term</span></label>
+                        <input type="text" id="f-term" name="term" placeholder="running+shoes" aria-describedby="h-term">
+                        <div class="field-hint muted" id="h-term">Paid keywords, for paid search.</div>
+                    </div>
+                    <div class="field">
+                        <label for="f-content">Campaign Content <span class="opt">optional</span><span class="param-tag">utm_content</span></label>
+                        <input type="text" id="f-content" name="content" placeholder="hero-cta, logo-link" aria-describedby="h-content">
+                        <div class="field-hint muted" id="h-content">Differentiate ads or links.</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save link
+                        </button>
+                        <button type="button" class="btn btn-ghost" id="resetBtn">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <!-- RIGHT: output + preview -->
+        <div>
+            <section class="card out-card" aria-labelledby="out-title">
+                <div class="card-title" id="out-title">Your tracking URL</div>
+                <div class="url-out" id="urlOut" role="textbox" aria-readonly="true" aria-live="polite" aria-label="Generated tracking URL"></div>
+                <div class="out-actions">
+                    <button type="button" class="btn btn-primary" id="copyBtn">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy URL
+                    </button>
+                </div>
+                <div style="margin-top:16px;">
+                    <span class="privacy-pill">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        100% in your browser — nothing leaves this device
+                    </span>
+                </div>
+            </section>
+
+            <section class="card" aria-labelledby="params-title">
+                <div class="card-title" id="params-title">Parameter preview</div>
+                <div id="paramsPreview"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- History -->
+    <section class="card" aria-labelledby="history-title" style="margin-top:20px;">
+        <div class="history-head">
+            <h2 class="card-title" id="history-title">Saved links <span style="color:var(--text-dim);font-weight:500;text-transform:none;letter-spacing:0;" id="historyCount"></span></h2>
+            <button type="button" class="clear-all" id="clearAllBtn" hidden>Clear all</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+    </section>
+
+</main>
+
+<footer class="tool-footer">
+    © <span id="year">2026</span> Kudbee · <a href="../../">kudbee.</a> — Built in your browser. No tracking, no server, no signup.
+</footer>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    "use strict";
+
+    var STORAGE_KEY = 'kudbee.utm.history';
+    var THEME_KEY = 'kudbee.utm.theme';
+    var MAX_HISTORY = 15;
+
+    var FIELDS = {
+        base: document.getElementById('f-base'),
+        source: document.getElementById('f-source'),
+        medium: document.getElementById('f-medium'),
+        campaign: document.getElementById('f-campaign'),
+        term: document.getElementById('f-term'),
+        content: document.getElementById('f-content')
+    };
+    var HINTS = {
+        base: document.getElementById('h-base'),
+        source: document.getElementById('h-source'),
+        medium: document.getElementById('h-medium'),
+        campaign: document.getElementById('h-campaign')
+    };
+    var urlOut = document.getElementById('urlOut');
+    var paramsPreview = document.getElementById('paramsPreview');
+    var copyBtn = document.getElementById('copyBtn');
+    var resetBtn = document.getElementById('resetBtn');
+    var form = document.getElementById('utmForm');
+    var historyList = document.getElementById('historyList');
+    var historyCount = document.getElementById('historyCount');
+    var clearAllBtn = document.getElementById('clearAllBtn');
+    var presetsEl = document.getElementById('presets');
+    var toast = document.getElementById('toast');
+    var themeBtn = document.getElementById('themeBtn');
+
+    var PRESETS = [
+        { id: 'google',    label: 'Google Ads',       source: 'google',    medium: 'cpc',      color: '#4285f4' },
+        { id: 'facebook',  label: 'Facebook',         source: 'facebook',  medium: 'social',   color: '#1877f2' },
+        { id: 'instagram', label: 'Instagram',        source: 'instagram', medium: 'social',   color: '#e1306c' },
+        { id: 'email',     label: 'Email / Newsletter', source: 'newsletter', medium: 'email', color: '#7CFFb2' },
+        { id: 'linkedin',  label: 'LinkedIn',         source: 'linkedin',  medium: 'social',   color: '#0a66c2' },
+        { id: 'twitter',   label: 'X / Twitter',      source: 'twitter',   medium: 'social',   color: '#39e6ff' }
+    ];
+
+    /* ---------- helpers ---------- */
+    function normalizeChannel(v) {
+        // lowercase + collapse whitespace to hyphens, trim leading/trailing hyphens
+        return v.toLowerCase().trim().replace(/\s+/g, '-').replace(/-+/g, '-');
+    }
+    function normalizeValue(v) {
+        // for campaign/term/content: keep case, just turn spaces into hyphens
+        return v.trim().replace(/\s+/g, '-');
+    }
+    function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function isValidBase(v) {
+        if (!v) return false;
+        try {
+            var u = new URL(v);
+            return u.protocol === 'http:' || u.protocol === 'https:';
+        } catch (e) { return false; }
+    }
+    function setHint(key, msg, cls) {
+        var el = HINTS[key];
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'field-hint ' + (cls || 'muted');
+    }
+    var DEFAULT_HINTS = {
+        base: "The page you're sending traffic to.",
+        source: 'Where the traffic comes from.',
+        medium: 'The marketing channel or method.',
+        campaign: 'Identifies the specific campaign.'
+    };
+
+    /* ---------- core: collect + build ---------- */
+    function collect() {
+        return {
+            base: FIELDS.base.value.trim(),
+            source: FIELDS.source.value,
+            medium: FIELDS.medium.value,
+            campaign: FIELDS.campaign.value,
+            term: FIELDS.term.value,
+            content: FIELDS.content.value
+        };
+    }
+
+    // returns { url, parts:[{key,val}], baseClean }
+    function buildURL(data) {
+        var params = [
+            { key: 'utm_source',   raw: data.source,   norm: normalizeChannel(data.source) },
+            { key: 'utm_medium',   raw: data.medium,   norm: normalizeChannel(data.medium) },
+            { key: 'utm_campaign', raw: data.campaign, norm: normalizeValue(data.campaign) },
+            { key: 'utm_term',     raw: data.term,     norm: normalizeValue(data.term) },
+            { key: 'utm_content',  raw: data.content,  norm: normalizeValue(data.content) }
+        ];
+
+        var parts = [];
+        for (var i = 0; i < params.length; i++) {
+            if (params[i].norm) parts.push({ key: params[i].key, val: params[i].norm });
+        }
+
+        var baseClean = data.base;
+        var query = parts.map(function (p) {
+            return p.key + '=' + encodeURIComponent(p.val);
+        }).join('&');
+
+        var url = '';
+        if (isValidBase(data.base)) {
+            try {
+                var u = new URL(data.base);
+                // strip any existing utm_* params so we don't double up, keep other params
+                var existing = u.searchParams;
+                var keys = [];
+                existing.forEach(function (_, k) { keys.push(k); });
+                keys.forEach(function (k) { if (/^utm_/i.test(k)) existing.delete(k); });
+                var basePath = u.origin + u.pathname + (existing.toString() ? '?' + existing.toString() : '');
+                var sep = existing.toString() ? '&' : '?';
+                url = basePath + (query ? sep + query : '') + u.hash;
+                baseClean = u.origin + u.pathname;
+            } catch (e) {
+                url = data.base + (query ? '?' + query : '');
+            }
+        } else {
+            url = data.base + (query ? (data.base.indexOf('?') >= 0 ? '&' : '?') + query : '');
+        }
+
+        return { url: url, parts: parts, baseClean: baseClean };
+    }
+
+    /* ---------- render ---------- */
+    function renderURL(built, data) {
+        if (!data.base && built.parts.length === 0) {
+            urlOut.innerHTML = '<span class="u-placeholder">Fill in the fields and your tracking URL appears here…</span>';
+            return;
+        }
+        var html = '<span class="u-base">' + escapeHtml(built.baseClean) + '</span>';
+        // include any preserved non-utm query in base display already; show utm parts colored
+        if (built.parts.length) {
+            // Detect if base already had a ? (preserved params) by re-checking the full url
+            var hasQ = built.url.indexOf('?') >= 0 && built.url.indexOf('?') < built.url.indexOf(built.parts[0].key);
+            for (var i = 0; i < built.parts.length; i++) {
+                var sep = (i === 0 && !preservedQuery(built)) ? '?' : '&';
+                html += '<span class="u-sep">' + sep + '</span>';
+                html += '<span class="u-key">' + escapeHtml(built.parts[i].key) + '</span>';
+                html += '<span class="u-sep">=</span>';
+                html += '<span class="u-val">' + escapeHtml(encodeURIComponent(built.parts[i].val)) + '</span>';
+            }
+        }
+        urlOut.innerHTML = html;
+    }
+    function preservedQuery(built) {
+        // true if baseClean differs because there were non-utm query params kept
+        return built.url.indexOf(built.baseClean + '?') === 0 &&
+               built.url.indexOf('utm_') > (built.baseClean.length + 1) &&
+               built.url.charAt(built.baseClean.length) === '?' &&
+               !/utm_/.test(built.url.substring(built.baseClean.length + 1, built.url.indexOf('utm_')));
+    }
+
+    function renderParams(data, built) {
+        var rows = [
+            { label: 'utm_source', val: built.parts.filter(byKey('utm_source'))[0], req: true },
+            { label: 'utm_medium', val: built.parts.filter(byKey('utm_medium'))[0], req: true },
+            { label: 'utm_campaign', val: built.parts.filter(byKey('utm_campaign'))[0], req: true },
+            { label: 'utm_term', val: built.parts.filter(byKey('utm_term'))[0], req: false },
+            { label: 'utm_content', val: built.parts.filter(byKey('utm_content'))[0], req: false }
+        ];
+        var any = built.parts.length > 0 || data.base;
+        if (!any) {
+            paramsPreview.innerHTML = '<div class="params-empty">No parameters yet.</div>';
+            return;
+        }
+        var html = '<table class="params-table"><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>';
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            var v = r.val ? escapeHtml(r.val.val) : (r.req ? '— required —' : '—');
+            var cls = r.val ? 'pv' : 'pv empty';
+            html += '<tr><td class="pk">' + r.label + '</td><td class="' + cls + '">' + v + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        paramsPreview.innerHTML = html;
+    }
+    function byKey(k) { return function (p) { return p.key === k; }; }
+
+    /* ---------- validation ---------- */
+    function validate(data) {
+        // base
+        if (FIELDS.base.value.trim() === '') {
+            setHint('base', "The page you're sending traffic to.", 'muted');
+            FIELDS.base.classList.remove('invalid');
+        } else if (!isValidBase(data.base)) {
+            setHint('base', 'Enter a full URL including http:// or https://', 'error');
+            FIELDS.base.classList.add('invalid');
+        } else {
+            setHint('base', 'Looks good.', 'muted');
+            FIELDS.base.classList.remove('invalid');
+        }
+        // source / medium / campaign required + space warnings
+        ['source', 'medium', 'campaign'].forEach(function (k) {
+            var raw = FIELDS[k].value;
+            if (raw.trim() === '') {
+                setHint(k, DEFAULT_HINTS[k], 'muted');
+            } else if (/\s/.test(raw.trim())) {
+                setHint(k, 'Spaces will be converted to hyphens.', 'warn');
+            } else if ((k === 'source' || k === 'medium') && raw.trim() !== raw.trim().toLowerCase()) {
+                setHint(k, 'Will be lowercased for consistency.', 'warn');
+            } else {
+                setHint(k, DEFAULT_HINTS[k], 'muted');
+            }
+        });
+    }
+
+    function readyToSave(data) {
+        return isValidBase(data.base) &&
+            normalizeChannel(data.source) !== '' &&
+            normalizeChannel(data.medium) !== '' &&
+            normalizeValue(data.campaign) !== '';
+    }
+
+    /* ---------- update loop ---------- */
+    function update() {
+        var data = collect();
+        var built = buildURL(data);
+        validate(data);
+        renderURL(built, data);
+        renderParams(data, built);
+        markActivePreset(data);
+        return built;
+    }
+
+    /* ---------- presets ---------- */
+    function renderPresets() {
+        var html = '';
+        for (var i = 0; i < PRESETS.length; i++) {
+            var p = PRESETS[i];
+            html += '<button type="button" class="preset-btn" data-id="' + p.id + '">' +
+                '<span class="preset-dot" style="background:' + p.color + '"></span>' +
+                escapeHtml(p.label) + '</button>';
+        }
+        presetsEl.innerHTML = html;
+        var btns = presetsEl.querySelectorAll('.preset-btn');
+        for (var j = 0; j < btns.length; j++) {
+            btns[j].addEventListener('click', function () {
+                var id = this.getAttribute('data-id');
+                var preset = PRESETS.filter(function (x) { return x.id === id; })[0];
+                if (!preset) return;
+                FIELDS.source.value = preset.source;
+                FIELDS.medium.value = preset.medium;
+                update();
+                FIELDS.campaign.focus();
+            });
+        }
+    }
+    function markActivePreset(data) {
+        var src = normalizeChannel(data.source);
+        var med = normalizeChannel(data.medium);
+        var btns = presetsEl.querySelectorAll('.preset-btn');
+        for (var i = 0; i < btns.length; i++) {
+            var id = btns[i].getAttribute('data-id');
+            var p = PRESETS.filter(function (x) { return x.id === id; })[0];
+            var on = p && p.source === src && p.medium === med;
+            btns[i].classList.toggle('active', !!on);
+        }
+    }
+
+    /* ---------- clipboard ---------- */
+    function copyText(text, okMsg) {
+        if (!text) { showToast('Nothing to copy yet', false); return; }
+        function fallback() {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                var ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast(ok ? okMsg : 'Copy failed — select and copy manually', ok);
+            } catch (e) {
+                showToast('Copy failed — select and copy manually', false);
+            }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                showToast(okMsg, true);
+            }).catch(fallback);
+        } else {
+            fallback();
+        }
+    }
+
+    var toastTimer;
+    function showToast(msg, ok) {
+        toast.innerHTML = (ok ? '<span class="tick">✓</span>' : '') + escapeHtml(msg);
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+    }
+
+    /* ---------- history (localStorage) ---------- */
+    function loadHistory() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return [];
+            var arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function saveHistory(arr) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(0, MAX_HISTORY)));
+        } catch (e) { /* storage unavailable / full — ignore silently */ }
+    }
+    function addToHistory(url, data) {
+        var arr = loadHistory();
+        // de-dupe identical URLs
+        arr = arr.filter(function (x) { return x.url !== url; });
+        arr.unshift({
+            url: url,
+            campaign: normalizeValue(data.campaign) || '(no campaign)',
+            source: normalizeChannel(data.source),
+            medium: normalizeChannel(data.medium),
+            ts: Date.now()
+        });
+        arr = arr.slice(0, MAX_HISTORY);
+        saveHistory(arr);
+        renderHistory();
+    }
+    function deleteHistory(idx) {
+        var arr = loadHistory();
+        arr.splice(idx, 1);
+        saveHistory(arr);
+        renderHistory();
+    }
+    function clearHistory() {
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+        renderHistory();
+    }
+    function timeAgo(ts) {
+        var s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return 'just now';
+        var m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+        var h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+        var d = Math.floor(h / 24); return d + 'd ago';
+    }
+    function renderHistory() {
+        var arr = loadHistory();
+        historyCount.textContent = arr.length ? '(' + arr.length + '/' + MAX_HISTORY + ')' : '';
+        clearAllBtn.hidden = arr.length === 0;
+        if (!arr.length) {
+            historyList.innerHTML = '<div class="history-empty">No saved links yet. Build a URL and hit “Save link”.</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < arr.length; i++) {
+            var it = arr[i];
+            var meta = [it.source, it.medium, it.campaign].filter(Boolean).join(' · ');
+            html += '<div class="history-item">' +
+                '<div class="h-main">' +
+                    '<div class="h-url">' + escapeHtml(it.url) + '</div>' +
+                    '<div class="h-meta">' + escapeHtml(meta) + ' — ' + timeAgo(it.ts) + '</div>' +
+                '</div>' +
+                '<div class="h-actions">' +
+                    '<button type="button" class="icon-btn" data-copy="' + i + '" title="Copy" aria-label="Copy this link">' +
+                        '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+                    '</button>' +
+                    '<button type="button" class="icon-btn danger" data-del="' + i + '" title="Delete" aria-label="Delete this link">' +
+                        '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        }
+        historyList.innerHTML = html;
+        var copyBtns = historyList.querySelectorAll('[data-copy]');
+        for (var c = 0; c < copyBtns.length; c++) {
+            copyBtns[c].addEventListener('click', function () {
+                var idx = parseInt(this.getAttribute('data-copy'), 10);
+                var list = loadHistory();
+                if (list[idx]) copyText(list[idx].url, 'Link copied');
+            });
+        }
+        var delBtns = historyList.querySelectorAll('[data-del]');
+        for (var d = 0; d < delBtns.length; d++) {
+            delBtns[d].addEventListener('click', function () {
+                deleteHistory(parseInt(this.getAttribute('data-del'), 10));
+            });
+        }
+    }
+
+    /* ---------- theme ---------- */
+    function applyTheme(light) {
+        document.body.classList.toggle('light', light);
+        try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+    }
+    (function initTheme() {
+        var saved = null;
+        try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+        if (saved === 'light') applyTheme(true);
+    })();
+    themeBtn.addEventListener('click', function () {
+        applyTheme(!document.body.classList.contains('light'));
+    });
+
+    /* ---------- wire up ---------- */
+    Object.keys(FIELDS).forEach(function (k) {
+        FIELDS[k].addEventListener('input', update);
+    });
+
+    copyBtn.addEventListener('click', function () {
+        var built = update();
+        copyText(built.url, 'URL copied to clipboard');
+    });
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var data = collect();
+        var built = buildURL(data);
+        if (!readyToSave(data)) {
+            // surface the issue
+            validate(data);
+            if (!isValidBase(data.base)) { FIELDS.base.focus(); showToast('Add a valid Base URL first', false); }
+            else if (!normalizeChannel(data.source)) { FIELDS.source.focus(); showToast('Source is required', false); }
+            else if (!normalizeChannel(data.medium)) { FIELDS.medium.focus(); showToast('Medium is required', false); }
+            else { FIELDS.campaign.focus(); showToast('Campaign name is required', false); }
+            return;
+        }
+        addToHistory(built.url, data);
+        showToast('Link saved', true);
+    });
+
+    resetBtn.addEventListener('click', function () {
+        form.reset();
+        Object.keys(FIELDS).forEach(function (k) { FIELDS[k].classList.remove('invalid'); });
+        update();
+        FIELDS.base.focus();
+    });
+
+    clearAllBtn.addEventListener('click', function () {
+        clearHistory();
+        showToast('History cleared', true);
+    });
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // init
+    renderPresets();
+    renderHistory();
+    update();
+})();
+</script>
+</body>
+</html>
