@@ -11,6 +11,73 @@
 <meta property="og:title" content="ModernMed Chicago — Discreet, Physician-Led Recovery & Optimization">
 <meta property="og:description" content="Medication-Assisted Recovery, hormone & men's health optimization, and mental health — led by Dr. Kenji Oyasu, MD. Discreet, concierge care in Park Ridge, IL.">
 <title>ModernMed Chicago — Discreet, Physician-Led Care · Dr. Kenji Oyasu, MD</title>
+<link rel="canonical" href="https://modernmedchicago.com/">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ModernMed">
+<!-- AI / structured data: machine-readable description of the practice, physician, services & FAQs -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["MedicalClinic","LocalBusiness"],
+      "@id": "https://modernmedchicago.com/#clinic",
+      "name": "ModernMed Chicago",
+      "description": "Discreet, physician-led concierge medical practice in Park Ridge, IL: Medication-Assisted Recovery (MAT/Suboxone), testosterone & men's health, medical weight loss, and mental health.",
+      "url": "https://modernmedchicago.com/",
+      "telephone": "+1-847-423-6800",
+      "email": "info@modernmedchicago.com",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "111 S Washington Ave, Suite 202",
+        "addressLocality": "Park Ridge",
+        "addressRegion": "IL",
+        "postalCode": "60068",
+        "addressCountry": "US"
+      },
+      "areaServed": ["Park Ridge","Chicago","Niles","Des Plaines","Edison Park","Morton Grove"],
+      "openingHoursSpecification": [{
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "opens": "09:00", "closes": "17:00"
+      }],
+      "medicalSpecialty": ["Addiction","PublicHealth"],
+      "availableService": [
+        {"@type":"MedicalTherapy","name":"Medication-Assisted Recovery (MAT / Suboxone)","relevantSpecialty":"Addiction"},
+        {"@type":"MedicalProcedure","name":"Testosterone & hormone optimization"},
+        {"@type":"MedicalProcedure","name":"Medically-supported weight loss (GLP-1)"},
+        {"@type":"MedicalTherapy","name":"SPRAVATO (esketamine) for treatment-resistant depression"}
+      ],
+      "physician": {"@id": "https://modernmedchicago.com/#oyasu"}
+    },
+    {
+      "@type": "Physician",
+      "@id": "https://modernmedchicago.com/#oyasu",
+      "name": "Kenji Oyasu, MD",
+      "jobTitle": "Founder & Executive Medical Director",
+      "worksFor": {"@id": "https://modernmedchicago.com/#clinic"},
+      "medicalSpecialty": ["Addiction","Emergency"],
+      "alumniOf": {"@type":"CollegeOrUniversity","name":"University of Illinois College of Medicine"},
+      "hasCredential": [
+        {"@type":"EducationalOccupationalCredential","credentialCategory":"Board Certification","name":"Board-Certified Emergency Medicine (ABEM)"},
+        {"@type":"EducationalOccupationalCredential","credentialCategory":"Board Certification","name":"Board-Certified Addiction Medicine (ABPM)"}
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://modernmedchicago.com/#faq",
+      "mainEntity": [
+        {"@type":"Question","name":"Is my care really confidential?","acceptedAnswer":{"@type":"Answer","text":"Yes. Intake is private, communication is discreet, and your information is protected under HIPAA."}},
+        {"@type":"Question","name":"How fast can I start Medication-Assisted Recovery?","acceptedAnswer":{"@type":"Answer","text":"Often within the same week when clinically appropriate, including home or in-office Suboxone inductions with close first-days support."}},
+        {"@type":"Question","name":"Do you take insurance?","acceptedAnswer":{"@type":"Answer","text":"The Recovery line works with insurance, Medicare, and self-pay; the concierge optimization membership is a subscription."}},
+        {"@type":"Question","name":"Can I be seen by telehealth?","acceptedAnswer":{"@type":"Answer","text":"Yes — much of our care is available virtually across Illinois, with in-person visits at our Park Ridge office when needed."}}
+      ]
+    }
+  ]
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f2a23'/%3E%3Cpath d='M6 18h4l2-6 3 11 3-13 2 8h6' fill='none' stroke='%23c9a86a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -340,6 +407,12 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
 .cc-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .cc-chip{background:rgba(201,168,106,.08);border:1px solid var(--line);color:var(--ivory);border-radius:999px;padding:9px 15px;font-size:13px;cursor:pointer;transition:all .15s}
 .cc-chip:hover{background:rgba(201,168,106,.18);border-color:var(--gold)}
+.cc-chip.go{background:linear-gradient(135deg,var(--gold-l),var(--gold-d));color:#1a1206;border-color:transparent;font-weight:600}
+.cc-ask{display:flex;gap:8px;margin-top:12px}
+.cc-ask input{flex:1;background:rgba(11,23,19,.7);border:1px solid var(--line-2);color:var(--ivory);border-radius:11px;padding:12px 13px;font:500 15px Inter;outline:none}
+.cc-ask input:focus{border-color:var(--gold)}
+.cc-ask button{flex:0 0 auto;background:rgba(201,168,106,.12);border:1px solid var(--line);color:var(--gold-l);border-radius:11px;padding:0 16px;font:600 13px Inter;cursor:pointer}
+.cc-ask button:hover{background:rgba(201,168,106,.2)}
 @media (prefers-reduced-motion:reduce){.cc-msg,.cc-panel,.cc-typing i,.cc-pulse-dot{animation:none}}
 @media (max-width:520px){.cc-tab{min-width:0}.cc-tab span{font-size:10.5px}}
 </style>
@@ -617,7 +690,7 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
       </div>
       <div>
         <h3>Practice</h3>
-        <a href="#doctor">Dr. Kenji Oyasu</a><a href="#first72">First 72 Hours</a><a href="#location">Location &amp; hours</a><a href="#consult">Book a consult</a>
+        <a href="#doctor">Dr. Kenji Oyasu</a><a href="#first72">First 72 Hours</a><a href="blog/">Articles</a><a href="#location">Location &amp; hours</a><a href="#consult">Book a consult</a>
       </div>
       <div>
         <h3>Contact</h3>
@@ -681,10 +754,14 @@ footer{background:#091310;border-top:1px solid var(--line-2);padding:60px 0 28px
       </div>
       <!-- CHAT -->
       <div class="cc-panel" id="cc-chat">
-        <h4>Talk to our concierge</h4>
-        <p class="px">A guided, private conversation that routes you to the right care. (Demo assistant — a real coordinator always confirms.)</p>
+        <h4>Ask the concierge anything</h4>
+        <p class="px">Knows the whole practice — type a question or tell us what you need, and it'll answer and take you there. (Demo assistant — a real coordinator always confirms.)</p>
         <div class="cc-chat" id="chatLog" aria-live="polite"></div>
         <div class="cc-chips" id="chatChips"></div>
+        <form class="cc-ask" id="ccAsk" autocomplete="off">
+          <input id="ccAskIn" type="text" aria-label="Ask the concierge" placeholder="e.g. how do I start Suboxone? where are you?">
+          <button type="submit">Ask</button>
+        </form>
       </div>
       <!-- CALL -->
       <div class="cc-panel" id="cc-call">
@@ -740,11 +817,14 @@ try{(function(){
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
 
   /* hero aurora canvas — calm drifting orbs + soft pulse line */
-  var c=document.getElementById('aura'),x=c.getContext('2d'),W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2),orbs=[],t=0,raf=null,vis=true;
+  var c=document.getElementById('aura'),x=c.getContext('2d'),W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2),orbs=[],t=0,raf=null,vis=true,skip=false,bgGrad=null;
   function size(){W=c.clientWidth;H=c.clientHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
+    bgGrad=x.createLinearGradient(0,0,0,H);bgGrad.addColorStop(0,'#0c1c16');bgGrad.addColorStop(1,'#0b1713');
     orbs=[{cx:.72,cy:.2,r:.42,col:'16,70,58'},{cx:.9,cy:.55,r:.34,col:'201,168,106'},{cx:.6,cy:.62,r:.3,col:'14,40,32'}];}
   function frame(){
-    var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0c1c16');g.addColorStop(1,'#0b1713');x.fillStyle=g;x.fillRect(0,0,W,H);
+    if(vis&&!reduce){raf=requestAnimationFrame(frame);}
+    skip=!skip; if(skip)return;   /* draw at ~30fps to cut main-thread cost */
+    x.fillStyle=bgGrad;x.fillRect(0,0,W,H);
     for(var i=0;i<orbs.length;i++){var o=orbs[i],
       px=(o.cx+Math.sin(t*0.0004+i)*0.03)*W, py=(o.cy+Math.cos(t*0.0005+i*2)*0.03)*H, rr=o.r*Math.min(W,H);
       var rg=x.createRadialGradient(px,py,0,px,py,rr);
@@ -762,7 +842,7 @@ try{(function(){
       px2===0?x.moveTo(px2,y):x.lineTo(px2,y);
     }
     x.stroke();
-    t+=16; if(vis&&!reduce) raf=requestAnimationFrame(frame);
+    t+=32;
   }
   function start(){if(reduce){frame();return;}if(!raf){vis=true;raf=requestAnimationFrame(frame);}}
   function stop(){vis=false;if(raf){cancelAnimationFrame(raf);raf=null;}}
@@ -843,6 +923,42 @@ try{(function(){
     'Mental health':"We provide medication management, psychotherapy, and SPRAVATO for treatment-resistant depression. How can we help you get started?",
     'Just exploring':"Totally fine — we can answer questions privately, with no commitment at all. What's the easiest way to reach you?"
   };
+  /* site knowledge — lets the concierge answer about, and navigate, the whole site */
+  var topicGo={'Recovery / MAT':'#recovery','Hormone & men’s health':'#concierge','Weight loss':'#concierge','Mental health':'#consult','Just exploring':''};
+  var SITE=[
+    {kw:['suboxone','mat','opioid','heroin','fentanyl','addiction','recovery','withdrawal','buprenorphine','naltrexone','vivitrol','sober','relapse'],t:'Medication-Assisted Recovery',go:'#recovery',a:"We treat opioid & alcohol use disorder with Suboxone/MAT — discreet, physician-led, and supported through the critical first 72 hours."},
+    {kw:['testosterone','trt','hormone','men','male','low t','libido','energy','muscle'],t:'Hormone & Men’s Health',go:'#concierge',a:"Our concierge membership covers testosterone & hormone optimization and men's health, with 24/7 access to your physician."},
+    {kw:['weight','glp','semaglutide','ozempic','wegovy','lose','obesity','diet'],t:'Medical Weight Loss',go:'#concierge',a:"We offer medically-supported weight loss, including GLP-1 programs, under physician supervision."},
+    {kw:['depression','spravato','esketamine','ketamine','mental','anxiety','mood','psychiatry'],t:'Mental Health & SPRAVATO',go:'#consult',a:"We provide medication management, psychotherapy, and SPRAVATO for treatment-resistant depression."},
+    {kw:['72','induction','first dose','begin','cows','day one','first day','home induction'],t:'The First 72 Hours',go:'#first72',a:"Starting Suboxone is the hardest window — we stay with you through the first 72 hours with guided check-ins and a direct line."},
+    {kw:['doctor','oyasu','physician','kenji','credential','board','certified','experience','trained'],t:'Dr. Kenji Oyasu',go:'#doctor',a:"Dr. Kenji Oyasu is the founder — dual board-certified in Emergency Medicine and Addiction Medicine, and University of Illinois–trained."},
+    {kw:['where','location','address','park ridge','directions','map','office','visit','parking'],t:'our location',go:'#location',a:"We're at 111 S Washington Ave, Suite 202, Park Ridge, IL 60068 — serving greater Chicago and the suburbs."},
+    {kw:['hours','open','time','when','today','weekend'],t:'hours',go:'#location',a:"Mon–Fri, 9am–5pm, plus telehealth by appointment and 24/7 access for established patients."},
+    {kw:['cost','price','pricing','insurance','pay','afford','fee','membership','expensive','cash','medicare'],t:'cost & insurance',go:'#consult',a:"Recovery works with insurance, Medicare, and self-pay; the concierge membership is a subscription. We'll walk through exact costs at your consult."},
+    {kw:['book','consult','appointment','schedule','sign up','register','get started','talk to someone'],t:'a consult',go:'#consult',a:"Let's get you a confidential consult — a coordinator responds the same business day."},
+    {kw:['private','privacy','confidential','discreet','hipaa','anonymous'],t:'how we protect privacy',go:'#consult',a:"Everything here is private and HIPAA-protected — discreet intake, unmarked communication, and zero judgment."},
+    {kw:['telehealth','online','virtual','video','remote'],t:'telehealth',go:'#location',a:"Much of our care is available by telehealth across Illinois, with in-person visits at our Park Ridge office when needed."},
+    {kw:['call','phone','number','speak'],t:'calling us',go:'tel:+18474236800',a:"You can reach a coordinator now at 847.423.6800 — or use Instant Callback and we'll call you."}
+  ];
+  function goTo(go){
+    if(!go)return;
+    if(go.charAt(0)==='#'){var el=document.querySelector(go);close();setTimeout(function(){if(el)el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});},340);}
+    else{window.location.href=go;}
+  }
+  function goChip(label,go){var b=document.createElement('button');b.className='cc-chip go';b.textContent='→ '+label;b.addEventListener('click',function(){goTo(go);});chips.appendChild(b);}
+  function respondTo(q){
+    var s=(q||'').toLowerCase();bubble('user',q.replace(/[<>&]/g,'').slice(0,140));chips.innerHTML='';
+    var best=null,score=0;
+    SITE.forEach(function(it){var n=0;it.kw.forEach(function(k){if(s.indexOf(k)>=0)n++;});if(n>score){score=n;best=it;}});
+    typing(function(){
+      if(best){bubble('bot',best.a);goChip('Take me to '+best.t,best.go);
+        var b2=document.createElement('button');b2.className='cc-chip';b2.textContent='Request a callback';b2.addEventListener('click',function(){pickAction('Request a callback');});chips.appendChild(b2);
+      } else {
+        bubble('bot',"I can help with recovery, testosterone & men's health, weight loss, mental health, costs, location, hours, or booking — what would you like?");
+        setChips(Object.keys(topics),pickTopic);
+      }
+    });
+  }
   function bubble(cls,html){var d=document.createElement('div');d.className='cc-msg '+cls;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
   function typing(cb){if(reduce){cb();return;}var t=document.createElement('div');t.className='cc-typing';t.innerHTML='<i></i><i></i><i></i>';log.appendChild(t);log.scrollTop=log.scrollHeight;setTimeout(function(){t.remove();cb();},700);}
   function setChips(arr,fn){chips.innerHTML='';arr.forEach(function(label){var b=document.createElement('button');b.className='cc-chip';b.textContent=label;b.addEventListener('click',function(){fn(label);});chips.appendChild(b);});}
@@ -853,7 +969,7 @@ try{(function(){
   }
   function pickTopic(t){
     bubble('user',t);chips.innerHTML='';
-    typing(function(){bubble('bot',topics[t]);setChips(['Request a callback','Book a consult','Text me instead'],pickAction);});
+    typing(function(){bubble('bot',topics[t]);setChips(['Request a callback','Book a consult','Text me instead'],pickAction);if(topicGo[t])goChip('See it on the page',topicGo[t]);});
   }
   function pickAction(a){
     bubble('user',a);chips.innerHTML='';
@@ -863,12 +979,21 @@ try{(function(){
     typing(function(){bubble('bot',msg+" <span style='color:var(--muted)'>(Demo — nothing was actually sent.)</span>");setChips(['Start over','Close'],function(c){c==='Close'?close():startChat();});});
   }
 
+  /* free-text "ask anything" — site-aware */
+  var askForm=document.getElementById('ccAsk');
+  if(askForm){askForm.addEventListener('submit',function(e){e.preventDefault();
+    var inp=document.getElementById('ccAskIn'),v=inp.value.trim();if(!v)return;inp.value='';
+    if(!chatStarted)startChat();respondTo(v);});}
+
   /* one-time peek tooltip */
   function hideTip(){tip.classList.remove('show');}
   tipX.addEventListener('click',hideTip);
   tip.addEventListener('click',function(e){if(e.target!==tipX){open();}});
   setTimeout(function(){if(ov.hidden)tip.classList.add('show');},5200);
   setTimeout(hideTip,14000);
+
+  /* PWA: installable + offline shell */
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
 })();}catch(_e2){if(window.console&&console.error)console.error('concierge init error:',_e2);}
 </script>
 </body>

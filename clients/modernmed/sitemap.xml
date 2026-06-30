@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ModernMed Chicago sitemap (template for the LIVE domain). The concept demo is noindex.
+     Replace the domain, set real <lastmod> dates, and add service pages as they ship (Tier 2). -->
+<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9">
+  <url><loc>https://modernmedchicago.com/</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://modernmedchicago.com/blog/</loc><lastmod>2026-06-30</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://modernmedchicago.com/blog/first-72-hours-suboxone/</loc><lastmod>2026-06-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <!-- Add as built (Tier 2): /recovery/ /testosterone-mens-health/ /medical-weight-loss/ /mental-health-spravato/ /park-ridge/ -->
+</urlset>
