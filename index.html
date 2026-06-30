@@ -143,9 +143,6 @@
 <input type="radio" name="service-tab" id="tab-ai" hidden>
 <input type="radio" name="service-tab" id="tab-game" hidden>
 
-<!-- Pricing Toggle -->
-<input type="checkbox" id="pricing-toggle" hidden>
-
 <!-- Testimonial Carousel -->
 <input type="radio" name="testimonial" id="test-1" checked hidden>
 <input type="radio" name="testimonial" id="test-2" hidden>
@@ -888,19 +885,6 @@
     .visual-label { font-size: 14px; color: var(--text-dim); text-align: center; }
 
     /* ===== PRICING ===== */
-    .pricing-toggle-wrapper { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 44px; }
-    .pricing-toggle-wrapper span { font-size: 14px; color: var(--text-dim); transition: color 0.2s; }
-    .toggle-switch { width: 50px; height: 27px; background: var(--border); border-radius: 14px; cursor: pointer; position: relative; transition: background 0.3s; }
-    .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; background: #fff; border-radius: 50%; transition: transform 0.3s; }
-    #pricing-toggle:checked ~ .theme-wrapper .toggle-switch { background: var(--accent); }
-    #pricing-toggle:checked ~ .theme-wrapper .toggle-switch::after { transform: translateX(23px); }
-    #pricing-toggle:checked ~ .theme-wrapper .price-monthly { display: none; }
-    #pricing-toggle:checked ~ .theme-wrapper .price-annual { display: block; }
-    .price-annual { display: none; }
-    #pricing-toggle:not(:checked) ~ .theme-wrapper .label-monthly { color: var(--text-primary); }
-    #pricing-toggle:checked ~ .theme-wrapper .label-annual { color: var(--text-primary); }
-    .save-badge { font-size: 11px; background: rgba(124,255,178,0.15); color: var(--green); padding: 2px 8px; border-radius: 5px; }
-
     .packages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
     .package-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 36px; position: relative; overflow: hidden; transition: transform 0.3s, border-color 0.3s; }
     .package-card:hover { transform: translateY(-5px); border-color: var(--border-hover); }
@@ -1810,34 +1794,30 @@
     <section class="section">
         <div class="section-head reveal">
             <span class="section-label">Pricing</span>
-            <h2 class="section-title">Simple, transparent plans</h2>
-        </div>
-        <div class="pricing-toggle-wrapper">
-            <span class="label-monthly">Monthly</span>
-            <label for="pricing-toggle" class="toggle-switch"></label>
-            <span class="label-annual">Annual <span class="save-badge">Save 20%</span></span>
+            <h2 class="section-title">Simple, transparent pricing</h2>
+            <p class="section-subtitle">Flat, one-time project pricing — no retainers, no surprises. Your site ships on Cloudflare and it's yours to keep.</p>
         </div>
         <div class="packages-grid">
             <div class="package-card">
                 <h3>Launch</h3>
-                <div class="price"><span class="price-monthly">$2.5k</span><span class="price-annual">$2k</span></div>
+                <div class="price">$2,000</div>
                 <div class="price-note">one-time project</div>
-                <ul><li>5-page custom website</li><li>Responsive & SEO-ready</li><li>Cloudflare deployment</li><li>2 rounds of revisions</li></ul>
+                <ul><li>Up to 5-page custom website</li><li>Mobile-first, responsive build</li><li>SEO-ready — metadata, sitemap & schema</li><li>Cloudflare deployment</li><li>2 rounds of revisions</li></ul>
                 <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Get Started</label>
             </div>
             <div class="package-card featured">
                 <h3>Studio</h3>
-                <div class="price"><span class="price-monthly">$1.2k</span><span class="price-annual">$960</span></div>
-                <div class="price-note">per month</div>
-                <ul><li>Everything in Launch</li><li>Monthly AI training session</li><li>Ongoing optimization</li><li>Priority support</li></ul>
+                <div class="price">$2,500</div>
+                <div class="price-note">one-time project</div>
+                <ul><li>Everything in Launch</li><li>Up to 8 pages + custom sections</li><li>Custom animation & interactions</li><li>Copywriting polish & on-page SEO</li><li>Priority delivery + 3 rounds of revisions</li></ul>
                 <label for="page-contact" class="btn-primary" style="width:100%; justify-content:center;">Get Started</label>
             </div>
             <div class="package-card">
-                <h3>Enterprise</h3>
-                <div class="price">Custom</div>
+                <h3>Custom</h3>
+                <div class="price">Let's talk</div>
                 <div class="price-note">tailored scope</div>
-                <ul><li>Custom curriculum & builds</li><li>Unlimited team members</li><li>Dedicated account manager</li><li>Custom game / tool dev</li></ul>
-                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Contact Sales</label>
+                <ul><li>Larger sites, web apps & e-commerce</li><li>AI agent training & infrastructure</li><li>Custom game / tool development</li><li>Ongoing support options</li></ul>
+                <label for="page-contact" class="btn-secondary" style="width:100%; justify-content:center;">Contact Us</label>
             </div>
         </div>
     </section>
