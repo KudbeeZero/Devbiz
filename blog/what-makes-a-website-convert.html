@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="A concrete, opinionated guide to high-converting website design: speed and Core Web Vitals, a clear hero, one primary CTA, trust, mobile, booking, and schema.">
+    <meta name="keywords" content="high-converting website design, website conversion, Core Web Vitals, CTA, conversion rate, web design, SEO schema">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Kudbee">
+    <meta name="theme-color" content="#06060c">
+    <link rel="canonical" href="https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Kudbee">
+    <meta property="og:title" content="What Actually Makes a Website Convert">
+    <meta property="og:description" content="The concrete things we build into every site: speed, a clear hero, one primary CTA, real proof, mobile, a frictionless booking path, and schema.">
+    <meta property="og:url" content="https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html">
+    <meta property="og:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <meta property="og:image:alt" content="Kudbee guide to high-converting website design.">
+    <meta property="article:published_time" content="2026-06-30">
+    <meta property="article:author" content="Kudbee">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html">
+    <meta name="twitter:title" content="What Actually Makes a Website Convert">
+    <meta name="twitter:description" content="The concrete things we build into every high-converting site: speed, a clear hero, one CTA, proof, mobile, booking, and schema.">
+    <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg">
+    <title>What Actually Makes a Website Convert — Kudbee</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "What Actually Makes a Website Convert: the things we build in",
+      "description": "A concrete, opinionated guide to high-converting website design — speed, a clear hero, one primary CTA, trust and proof, mobile, a real booking path, and SEO schema.",
+      "datePublished": "2026-06-30",
+      "dateModified": "2026-06-30",
+      "author": { "@type": "Organization", "name": "Kudbee", "url": "https://devbiz.kudbee.workers.dev/" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kudbee",
+        "url": "https://devbiz.kudbee.workers.dev/",
+        "logo": { "@type": "ImageObject", "url": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" }
+      },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html" },
+      "image": "https://devbiz.kudbee.workers.dev/games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg",
+      "keywords": "high-converting website design, website conversion, Core Web Vitals, CTA, SEO schema"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://devbiz.kudbee.workers.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Articles", "item": "https://devbiz.kudbee.workers.dev/blog/" },
+        { "@type": "ListItem", "position": 3, "name": "What Makes a Website Convert", "item": "https://devbiz.kudbee.workers.dev/blog/what-makes-a-website-convert.html" }
+      ]
+    }
+    </script>
+    <style>
+    :root {
+        --bg-primary: #06060c; --bg-elevated: #0b0b16; --bg-secondary: rgba(255,255,255,0.025);
+        --bg-card: rgba(255,255,255,0.035); --bg-glass: rgba(12,12,24,0.6);
+        --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.16);
+        --text-primary: #ffffff; --text-secondary: #e6e8f0; --text-muted: #9aa3b8; --text-dim: #646c82;
+        --cyan: #39e6ff; --violet: #c46bff; --green: #7CFFb2; --accent: #6f5bff;
+        --accent-glow: rgba(111, 91, 255, 0.35); --nav-bg: rgba(6, 6, 12, 0.72);
+        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
+        --shadow-glow: 0 10px 40px -8px var(--accent-glow); --radius: 16px; --maxw: 1180px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-secondary); line-height: 1.7; min-height: 100vh; overflow-x: clip; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4, .logo { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .mesh::before, .mesh::after { content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; }
+    .mesh::before { width: 560px; height: 560px; top: -180px; left: -140px; background: radial-gradient(circle, rgba(57,230,255,0.28), transparent 65%); animation: drift1 22s ease-in-out infinite; }
+    .mesh::after { width: 620px; height: 620px; top: 30%; right: -180px; background: radial-gradient(circle, rgba(196,107,255,0.24), transparent 65%); animation: drift2 26s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px,40px); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px,30px); } }
+    .content { position: relative; z-index: 1; }
+
+    .nav-bar { position: sticky; top: 0; width: 100%; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; background: var(--nav-bg); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 100; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--shadow-glow); position: relative; overflow: hidden; }
+    .logo .mark::after { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 3px; background: #06060c; }
+    .logo .dot { color: var(--cyan); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-link { color: var(--text-muted); font-size: 13px; padding: 8px 14px; border-radius: 8px; transition: color 0.2s, background 0.2s; font-weight: 500; }
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-cta { padding: 9px 20px; background: var(--grad); color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); transition: transform 0.15s, box-shadow 0.15s; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 36px -6px var(--accent-glow); }
+    @media (max-width: 560px) { .nav-link.hide-sm { display: none; } .nav-bar { padding: 12px 18px; } }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+    .crumbs { font-size: 13px; color: var(--text-muted); padding: 26px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .crumbs a { color: var(--text-muted); padding: 4px 6px; border-radius: 7px; transition: color 0.18s, background 0.18s; }
+    .crumbs a:hover { color: var(--text-primary); background: var(--bg-card); }
+    .crumbs .sep { opacity: 0.45; }
+    .crumbs .here { color: var(--text-secondary); font-weight: 600; }
+
+    article { padding: 22px 0 8px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--cyan); font-weight: 600; }
+    .post-h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 700; letter-spacing: -1.3px; line-height: 1.06; color: var(--text-primary); margin: 14px 0 16px; text-wrap: balance; }
+    .byline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--text-dim); font-size: 13.5px; padding-bottom: 26px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .byline .avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--grad); box-shadow: var(--shadow-glow); }
+    .byline b { color: var(--text-secondary); font-weight: 600; }
+    .byline .sep { opacity: 0.4; }
+
+    .prose { font-size: 17px; color: var(--text-secondary); }
+    .prose > p, .prose > ul, .prose > ol { max-width: 65ch; }
+    .prose p { margin: 18px 0; text-wrap: pretty; }
+    .prose h2 { font-size: clamp(23px, 3.4vw, 30px); color: var(--text-primary); letter-spacing: -0.6px; margin: 44px 0 6px; text-wrap: balance; }
+    .prose h3 { font-size: clamp(18px, 2.4vw, 21px); color: var(--text-primary); letter-spacing: -0.3px; margin: 30px 0 4px; text-wrap: balance; }
+    .prose ul, .prose ol { margin: 16px 0; padding-left: 22px; }
+    .prose li { margin: 9px 0; text-wrap: pretty; }
+    .prose li::marker { color: var(--cyan); }
+    .prose strong { color: var(--text-primary); font-weight: 600; }
+    .prose a.inline { color: var(--cyan); font-weight: 600; border-bottom: 1px solid rgba(57,230,255,0.35); transition: border-color 0.2s; }
+    .prose a.inline:hover { border-color: var(--cyan); }
+    .lead { font-size: 19px; color: var(--text-muted); }
+
+    .cta-band { margin: 44px 0 10px; border: 1px solid var(--border-hover); border-radius: 22px; padding: 40px 30px; text-align: center; background: linear-gradient(135deg, rgba(57,230,255,0.07), rgba(111,91,255,0.10) 55%, rgba(196,107,255,0.07)); }
+    .cta-band h2 { font-size: clamp(23px, 3.4vw, 32px); color: var(--text-primary); letter-spacing: -0.7px; margin-bottom: 12px; }
+    .cta-band p { color: var(--text-muted); max-width: 54ch; margin: 0 auto 24px; font-size: 16px; }
+    .btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary { padding: 14px 28px; background: var(--grad); color: #fff; border: none; border-radius: 11px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow); display: inline-flex; align-items: center; gap: 9px; min-height: 44px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -8px var(--accent-glow); }
+    .btn-secondary { padding: 14px 26px; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 11px; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--cyan); background: rgba(57,230,255,0.06); color: var(--text-primary); transform: translateY(-2px); }
+
+    .more { margin: 40px 0 0; padding-top: 28px; border-top: 1px solid var(--border); }
+    .more h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); margin-bottom: 14px; }
+    .more a { display: inline-flex; align-items: center; gap: 7px; color: var(--cyan); font-weight: 600; font-size: 15px; transition: gap 0.2s; }
+    .more a:hover { gap: 11px; }
+
+    footer { border-top: 1px solid var(--border); padding: 40px 0 36px; margin-top: 40px; }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; gap: 12px; }
+    .footer-bottom a { color: var(--text-muted); }
+    .footer-bottom a:hover { color: var(--text-primary); }
+
+    a:focus-visible, .btn-primary:focus-visible, .btn-secondary:focus-visible, .nav-cta:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 8px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mesh::before, .mesh::after { animation: none !important; }
+        * { scroll-behavior: auto !important; transition: none !important; }
+    }
+    </style>
+</head>
+<body>
+<div class="mesh" aria-hidden="true"></div>
+<div class="content">
+
+    <nav class="nav-bar">
+        <a class="logo" href="/" aria-label="Kudbee home"><span class="mark"></span> kudbee<span class="dot">.</span></a>
+        <div class="nav-right">
+            <a class="nav-link hide-sm" href="/">Home</a>
+            <a class="nav-link" href="/blog/">Blog</a>
+            <!-- TODO(owner): replace cal.com/kudbee -->
+            <a class="nav-cta" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a call</a>
+        </div>
+    </nav>
+
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a><span class="sep">›</span>
+            <a href="/blog/">Articles</a><span class="sep">›</span>
+            <span class="here">What Makes a Website Convert</span>
+        </nav>
+
+        <article>
+            <span class="eyebrow">Web Design</span>
+            <h1 class="post-h1">What Actually Makes a Website Convert: the things we build in</h1>
+            <div class="byline">
+                <span class="avatar" aria-hidden="true"></span>
+                <b>Kudbee</b><span class="sep">·</span><span>June 30, 2026</span><span class="sep">·</span><span>8 min read</span>
+            </div>
+
+            <div class="prose">
+                <p class="lead">A high-converting website isn't a prettier website. It's a site that loads fast, says one clear thing, earns trust, and makes the next step obvious. Here's the concrete list we build into every project — and why each one moves the needle.</p>
+
+                <p>"Conversion" gets treated like a dark art, but most of it is unglamorous engineering and ruthless editing. A visitor lands with a question — <em>can these people solve my problem, and what do I do next?</em> — and either gets a fast, confident answer or leaves. Everything below exists to answer that question faster. We won't quote you invented percentages; we'll tell you what consistently works.</p>
+
+                <h2>1. Speed, and Core Web Vitals you can actually pass</h2>
+                <p>Speed is the foundation everything else sits on. A visitor forms an impression before a single word is read, and a slow page erases good design before anyone sees it. It also affects ranking — Core Web Vitals are a real input to Google's results.</p>
+                <p>The three that matter:</p>
+                <ul>
+                    <li><strong>LCP (Largest Contentful Paint)</strong> — how fast the main content appears. We keep the hero light, compress images hard, and avoid render-blocking resources.</li>
+                    <li><strong>INP (Interaction to Next Paint)</strong> — how quickly the page responds when tapped. We keep JavaScript minimal so the main thread stays free.</li>
+                    <li><strong>CLS (Cumulative Layout Shift)</strong> — whether things jump around as the page loads. We reserve space for images and fonts so nothing reflows under the user's thumb.</li>
+                </ul>
+                <p>Our default is a near-zero-build static site: inline critical CSS, non-render-blocking fonts, and no framework tax. Fast isn't a feature you add at the end — it's a constraint you design under.</p>
+
+                <h2>2. A hero that says one clear thing</h2>
+                <p>The top of the page has one job: tell visitors what you do, who it's for, and why it's worth their attention — in a glance. Clever headlines that hide the offer behind a pun convert worse than a plain sentence that's instantly understood.</p>
+                <p>A hero that works names the outcome, not the mechanism. "We build websites that book you more calls" beats "Full-stack digital experiences." If a stranger can't restate your value after three seconds on the page, the hero has failed, no matter how nice it looks.</p>
+
+                <h2>3. One primary CTA, repeated</h2>
+                <p>Every page should have a single most-important action. When you offer five equally-weighted buttons, you've made the visitor do the prioritizing — and most won't bother. Pick the one action that matters (for us, it's "book a call") and make it the visually dominant element, then repeat it down the page so the decision is always one tap away.</p>
+                <p>Secondary actions can exist, but they should look secondary. Hierarchy is a kindness: it tells people what to do next.</p>
+
+                <h2>4. Trust and proof, shown not claimed</h2>
+                <p>Visitors arrive skeptical, and rightly so. The job is to lower perceived risk before you ask for anything. That means specific, verifiable proof rather than adjectives:</p>
+                <ul>
+                    <li>Real testimonials with a name and a face, tied to a concrete result.</li>
+                    <li>Actual work — screenshots, live links, a portfolio you can click into.</li>
+                    <li>Honest specifics about process, timeline, and what's included.</li>
+                </ul>
+                <p>We never fabricate stats or invent five-star reviews — it's dishonest and it backfires. Earned proof beats inflated proof every time, because people can smell the difference.</p>
+
+                <h2>5. Mobile-first, not mobile-tolerated</h2>
+                <p>Most of your traffic is on a phone, so the phone layout is the real layout — the desktop version is the variant. That means tap targets large enough for a thumb (at least 44px), text readable without zoom, no horizontal scroll, and a primary CTA reachable without hunting. A site that's merely "responsive" often still treats mobile as an afterthought; we design it first.</p>
+
+                <h2>6. A real booking path with no dead ends</h2>
+                <p>The fastest way to lose a ready-to-buy visitor is friction at the finish line. A "Contact us" form that vanishes into an inbox is a dead end. We wire the primary CTA straight to a real booking flow — pick a time, confirm, done — so intent converts in the moment it peaks instead of cooling off in a queue.</p>
+
+                <h2>7. SEO and schema that AI search can read</h2>
+                <p>Conversion starts with being found, and being found now means being legible to both search engines and AI answer engines. That's structured data — JSON-LD schema describing your organization, services, articles, and FAQs — plus clean semantic HTML, unique titles and descriptions, and fast indexable pages. Done right, your site doesn't just rank; it becomes a source AI assistants cite when someone asks for what you offer.</p>
+
+                <h2>The short version</h2>
+                <p>A site converts when it's fast, clear, trustworthy, and frictionless — and when the machines that route traffic can read it. None of these are tricks. They're the boring fundamentals, executed without compromise. That's the whole game, and it's exactly the standard we hold our own work to.</p>
+            </div>
+
+            <section class="cta-band">
+                <h2>Want a site that's built this way?</h2>
+                <p>Premium web design is our number-one craft — fast, clear, honest, and engineered to convert. See the work, then book a call and we'll scope yours.</p>
+                <div class="btn-row">
+                    <!-- TODO(owner): replace cal.com/kudbee -->
+                    <a class="btn-primary" href="https://cal.com/kudbee" target="_blank" rel="noopener">Book a discovery call →</a>
+                    <a class="btn-secondary" href="/">See our work</a>
+                </div>
+            </section>
+
+            <div class="more">
+                <h4>More articles</h4>
+                <a href="/blog/">Back to all articles →</a>
+            </div>
+        </article>
+    </div>
+
+    <footer>
+        <div class="wrap">
+            <div class="footer-bottom">
+                <span>© <span id="year">2026</span> Kudbee · <a href="/">Home</a> · <a href="/blog/">Blog</a></span>
+                <span>Built with ♥ — all original.</span>
+            </div>
+        </div>
+    </footer>
+
+</div>
+<script>
+    (function () { var y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear(); })();
+</script>
+</body>
+</html>

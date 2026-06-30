@@ -1106,11 +1106,12 @@
         <li><label for="page-home">Home</label></li>
         <li><label for="page-services">Services</label></li>
         <li><label for="page-agents">Agents</label></li>
-        <li><label for="page-games">Games</label></li>
+        <li><a href="brain/">Brain</a></li>
         <li><label for="page-work">Work</label></li>
+        <li><a href="blog/">Blog</a></li>
         <li><label for="page-contact">Contact</label></li>
+        <li><label for="page-games">Games</label></li>
         <li><label for="page-tools">Tools</label></li>
-        <li><label for="page-scribe">Scribe</label></li>
         <li><label for="page-doctrine">Doctrine</label></li>
         <li><a href="leaderboard/public/leaderboard.html">🏆 League</a></li>
     </ul>
@@ -1138,6 +1139,7 @@
 
     <div class="m-group" style="--d:0.12s"><span>Build with us</span>
         <label for="page-agents" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 8V4M9 13h.01M15 13h.01"/></svg> Agents</label>
+        <a href="brain/" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 5a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 3 3 3 0 0 0 6 0 3 3 0 0 0 2-3 3 3 0 0 0-2-5 3 3 0 0 0-3-3Z"/><path d="M12 5v14"/></svg> Build your brain</a>
         <label for="page-tools" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-1.4-1.4 2.6-2.6Z"/></svg> Tools</label>
         <label for="page-scribe" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Scribe</label>
     </div>
@@ -1148,6 +1150,7 @@
     </div>
 
     <div class="m-group" style="--d:0.24s"><span>Read</span>
+        <a href="blog/" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Blog</a>
         <label for="page-doctrine" class="m-link"><svg aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19V5"/></svg> Doctrine</label>
     </div>
 
@@ -1199,23 +1202,24 @@
                 <div class="agent-orb"></div>
                 <div class="agent-id">
                     <b>Kudbee Agent</b>
-                    <span class="agent-status"><span class="dot" id="agent-dot"></span><span id="agent-state">concierge preview</span></span>
+                    <span class="agent-status"><span class="dot" id="agent-dot"></span><span id="agent-state">online · indexed this site</span></span>
                 </div>
-                <span class="agent-badge">Demo</span>
+                <span class="agent-badge">24/7</span>
             </div>
             <div class="agent-log" id="agent-log" aria-live="polite">
-                <div class="agent-msg bot">Hey — I'm the Kudbee Agent. Tell me what you're trying to build and I'll scope it, draft a brief, or set up a call with the team. What's the project?</div>
+                <div class="agent-msg bot">Hey — I'm the Kudbee Agent. I've indexed this whole site, so ask me anything — web design, AI &amp; agent training, our client work, games, tools, pricing — and I'll answer and take you straight there.</div>
             </div>
             <div class="agent-chips" id="agent-chips">
-                <button type="button" class="agent-chip">Build me a site that converts</button>
-                <button type="button" class="agent-chip">I need an AI agent for my business</button>
+                <button type="button" class="agent-chip">Show me your web design work</button>
+                <button type="button" class="agent-chip">How does AI agent training work?</button>
+                <button type="button" class="agent-chip">Build my own memory layer</button>
                 <button type="button" class="agent-chip">Book a discovery call</button>
             </div>
             <form class="agent-form" id="agent-form" autocomplete="off">
                 <input class="agent-input" id="agent-input" type="text" placeholder="Ask the Kudbee Agent…" aria-label="Message the Kudbee Agent" maxlength="600">
                 <button class="agent-send" id="agent-send" type="submit" title="Send" aria-label="Send">↑</button>
             </form>
-            <p class="agent-note">A UI preview of the Kudbee concierge. The full AI agent — drafting briefs and booking calls — ships with our Cloudflare Worker backend.</p>
+            <p class="agent-note">Answers instantly from a live index of every page on this site — no signup. Connect our Cloudflare Worker backend to also draft briefs and book calls automatically.</p>
         </div>
     </section>
 
@@ -2541,7 +2545,7 @@
             <div class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></div>
             <p>A creative dev studio building stunning websites, training teams on AI, and crafting original games.</p>
         </div>
-        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-agents">Support Agents</label><label for="page-work">Work</label><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-scribe">Scribe</label><label for="page-contact">Contact</label></div>
+        <div class="footer-col"><h4>Studio</h4><label for="page-services">Services</label><label for="page-agents">AI Agent Training</label><a href="brain/">Build Your Own Brain</a><label for="page-work">Work</label><a href="blog/">Articles</a><label for="page-games">Games</label><label for="page-tools">Tools</label><label for="page-contact">Contact</label></div>
         <div class="footer-col"><h4>Games</h4><a href="games/kudbee-contra/index.html">Play Kudbee Contra</a><a href="games/kudbee-darts/index.html">Play Kudbee Darts</a><a href="games/kudbee-riff/index.html">Play Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Play Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Play Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Play Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a><label for="page-games">All Games</label></div>
         <!-- TODO(owner): add real X / LinkedIn profile URLs and we'll re-add those links. -->
         <div class="footer-col"><h4>Connect</h4><label for="page-contact">Book a call</label><a href="https://github.com/KudbeeZero" target="_blank" rel="noopener" aria-label="Kudbee on GitHub">GitHub</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
@@ -3040,11 +3044,50 @@
     var state = document.getElementById('agent-state');
     if (!log || !form) return;
 
+    var CAL = 'https://cal.com/kudbee'; // TODO(owner): replace with the real Cal.com link.
     var BASE = (window.KUDBEE_AGENT_URL || '').replace(/\/$/, '');
-    var api = function (p) { return BASE + '/api/agent' + p; };
-    var history = [{ role: 'assistant', content: log.textContent.trim() }];
     var busy = false;
-    var TOOL_LABELS = { draft_project_brief: 'Drafting your project brief', book_call: 'Booking your discovery call' };
+
+    /* --------------------------------------------------------------
+     * Site index — the Kudbee Agent's "brain". Every page/section is
+     * indexed here so the agent answers instantly and deep-links you
+     * straight there, with no backend. Keep in sync as pages ship.
+     * target: a "page-*" id (CSS-routed view) or a URL (opens it).
+     * ------------------------------------------------------------ */
+    var KB = [
+        { t: 'Web design & development', kw: 'website websites web design develop build site convert landing redesign page speed', b: "Web design is our #1 craft — high-converting, hand-built, fast sites with no page-builder bloat. Want to see real client work, or start a project?", a: [['See our work', 'page-work'], ['Start a project', 'page-contact']] },
+        { t: 'Services & pricing', kw: 'services pricing plans price cost package offer what do you do rates quote', b: "We design websites (our #1), teach teams to build their own AI agents & infrastructure, and craft original games. Pricing is scoped to your project on a quick discovery call.", a: [['Browse services', 'page-services'], ['Book a call', CAL]] },
+        { t: 'AI agent training & consulting', kw: 'ai agent agents training teach learn consulting infrastructure workshop zoom team build your own automate', b: "We teach you and your team to build your own AI agents and infrastructure — hands-on, live over Zoom, no black boxes. You own everything you build.", a: [['How training works', 'page-services'], ['Build your own brain', 'brain/']] },
+        { t: 'Build your own memory layer', kw: 'memory layer second brain remember context across devices platform knowledge personal ai notes brain recall persistent', b: "Build Your Own Brain: we teach you to stand up a portable memory layer that remembers across every app and device — ChatGPT, Claude, Cursor, phone, laptop — and you keep control of your data.", a: [['Open the page', 'brain/'], ['Book a call', CAL]] },
+        { t: 'Selected work / portfolio', kw: 'work portfolio examples example case study studies clients proof projects results showcase', b: "Our Selected Work leads with real client websites — ModernMed Chicago and La Grange Park Fastpitch — plus AI work and original games.", a: [['See the work', 'page-work']] },
+        { t: 'ModernMed Chicago (client site)', kw: 'modernmed modern med medical clinic healthcare doctor concierge client example website chicago', b: "ModernMed Chicago — a concierge medical clinic site we designed end-to-end: clinical-luxury brand, booking, service pages, blog and SEO.", a: [['View the site', 'clients/modernmed/index.html'], ['More work', 'page-work']] },
+        { t: 'La Grange Park Fastpitch (client site)', kw: 'la grange park fastpitch softball baseball league youth sports club client website team', b: "La Grange Park Fastpitch — a youth softball league site with an embroidered heritage-patch look and real registration/division content.", a: [['View the site', 'clients/grange-park-fastpitch/index.html'], ['More work', 'page-work']] },
+        { t: 'Games', kw: 'games game play arcade browser contra darts riff pinball voidrunner fun studio', b: "We build original browser games — Kudbee Contra, Darts, Riff, Pinball and Voidrunner — all free, no install, 60fps.", a: [['Browse games', 'page-games'], ['Play Kudbee Contra', 'games/kudbee-contra/index.html']] },
+        { t: 'Kudbee Contra (flagship game)', kw: 'contra flagship run gun shooter neon jungle 2.5d play', b: "Kudbee Contra is our flagship — a 2.5D run-and-gun. Free in your browser, right now.", a: [['Play Kudbee Contra', 'games/kudbee-contra/index.html']] },
+        { t: 'Developer tools', kw: 'tools tool utilities utility token analyzer coverage dashboard apps developer', b: "Kudbee Tools are standalone browser apps — the Token Price Analyzer (AI cost dashboard) and a live coverage breakdown.", a: [['Browse tools', 'page-tools'], ['Token Price Analyzer', 'tools/token-analyzer/index.html']] },
+        { t: 'Kudbee Scribe (writing tool)', kw: 'scribe writing write editor grammar privacy text draft', b: "Kudbee Scribe is a privacy-first writing tool that runs entirely in your browser — nothing leaves your device.", a: [['Open Scribe', 'tools/kudbee-scribe/index.html']] },
+        { t: 'Articles / blog', kw: 'blog articles article posts post read seo guide learn writing content news', b: "Our articles cover building your own memory layer, what actually makes a website convert, and teaching teams to build AI agents.", a: [['Read the blog', 'blog/']] },
+        { t: 'Contact & booking', kw: 'contact book booking call email reach hire quote start project talk get in touch phone schedule message', b: "Reach us any way you like — book a discovery call on Cal.com, email, or the contact form. We reply within 24 hours, and I'm here 24/7.", a: [['Book a discovery call', CAL], ['Contact page', 'page-contact']] },
+        { t: 'The Kudbee Doctrine', kw: 'doctrine principles philosophy how you think values approach standards quality', b: "The Kudbee Doctrine is how we think about building — taste, verification, honesty, and no shortcuts.", a: [['Read the doctrine', 'page-doctrine']] },
+        { t: 'About Kudbee', kw: 'about who are you what is kudbee studio company team story', b: "Kudbee is a creative dev studio: premium web design (our #1), teaching teams to build their own AI agents & infrastructure, and original browser games.", a: [['Start a project', 'page-contact'], ['See our work', 'page-work']] }
+    ];
+    var STOP = { 'the':1,'a':1,'an':1,'and':1,'or':1,'to':1,'of':1,'for':1,'in':1,'on':1,'is':1,'are':1,'do':1,'you':1,'i':1,'me':1,'my':1,'we':1,'can':1,'how':1,'what':1,'with':1,'your':1,'about':1,'show':1,'tell':1,'need':1,'want':1,'get':1,'please':1 };
+    function toks(s) { return (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(function (w) { return w.length > 1 && !STOP[w]; }); }
+    function scoreKB(q) {
+        var qt = toks(q), best = null, bestScore = 0;
+        for (var i = 0; i < KB.length; i++) {
+            var e = KB[i], s = 0, kw = ' ' + e.kw + ' ', ti = e.t.toLowerCase(), bl = e.b.toLowerCase();
+            for (var j = 0; j < qt.length; j++) {
+                var w = qt[j];
+                if (kw.indexOf(' ' + w + ' ') !== -1) s += 3;
+                else if (kw.indexOf(w) !== -1) s += 2;
+                if (ti.indexOf(w) !== -1) s += 2;
+                if (bl.indexOf(w) !== -1) s += 1;
+            }
+            if (s > bestScore) { bestScore = s; best = e; }
+        }
+        return bestScore > 0 ? best : null;
+    }
 
     function scroll() { log.scrollTop = log.scrollHeight; }
     function addMsg(role, text) {
@@ -3053,85 +3096,96 @@
         el.textContent = text;
         log.appendChild(el); scroll(); return el;
     }
+    function goTo(target) {
+        if (target.indexOf('page-') === 0) {
+            var r = document.getElementById(target);
+            if (r) { r.checked = true; window.scrollTo(0, 0); var mt = document.getElementById('mobile-menu-toggle'); if (mt) mt.checked = false; }
+        } else if (/^https?:/.test(target)) {
+            window.open(target, '_blank', 'noopener');
+        } else {
+            window.location.href = target;
+        }
+    }
+    function addBot(text, actions) {
+        var el = addMsg('bot', text);
+        if (actions && actions.length) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;';
+            actions.forEach(function (act) {
+                var btn = document.createElement('button');
+                btn.type = 'button'; btn.textContent = act[0] + ' →';
+                btn.style.cssText = 'font:600 12px/1 inherit;color:var(--bg-primary);background:var(--grad);border:none;border-radius:999px;padding:8px 13px;cursor:pointer;';
+                btn.addEventListener('click', function () { goTo(act[1]); });
+                row.appendChild(btn);
+            });
+            el.appendChild(row); scroll();
+        }
+        return el;
+    }
     function typingEl() {
         var t = document.createElement('div');
         t.className = 'agent-typing'; t.innerHTML = '<span></span><span></span><span></span>';
         log.appendChild(t); scroll(); return t;
     }
-    function toolChip(name) {
-        var c = document.createElement('div');
-        c.className = 'agent-tool run';
-        c.innerHTML = '<span class="spin"></span><span class="tk">' + (TOOL_LABELS[name] || name) + '…</span>';
-        log.appendChild(c); scroll(); return c;
+    function setBusy(b) { busy = b; send.disabled = b; input.disabled = b; }
+
+    // Local, no-backend answer from the site index.
+    function answerLocal(text) {
+        var hit = scoreKB(text);
+        if (hit) { addBot(hit.b, hit.a); }
+        else {
+            addBot("I can help with web design, AI agent training, building your own memory layer, our client work, games, tools, pricing, or booking a call. Which one sounds right?", [['See our work', 'page-work'], ['Book a call', CAL]]);
+        }
     }
 
-    // Health check → status light (live vs demo vs offline preview).
-    fetch(api('/health')).then(function (r) { return r.json(); }).then(function (h) {
-        if (h && h.demo) { state.textContent = 'demo mode'; }
-        else { state.textContent = 'live · ask me anything'; }
-    }).catch(function () {
-        dot.classList.add('off');
-        state.textContent = 'preview · backend not deployed';
-    });
-
-    function setBusy(b) { busy = b; send.disabled = b; input.disabled = b; }
+    // Optional live backend (drafting briefs / booking). Falls back to local.
+    var history = [{ role: 'assistant', content: log.textContent.trim() }];
+    async function answerBackend(text) {
+        var typing = typingEl(), botEl = null, acc = '';
+        function ensureBot() { if (!botEl) { if (typing.parentNode) typing.parentNode.removeChild(typing); botEl = addMsg('bot', ''); } return botEl; }
+        var res = await fetch(BASE + '/api/agent/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: history }) });
+        if (!res.ok || !res.body) throw new Error('bad response');
+        var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+        while (true) {
+            var chunk = await reader.read(); if (chunk.done) break;
+            buf += dec.decode(chunk.value, { stream: true });
+            var parts = buf.split('\n\n'); buf = parts.pop();
+            for (var i = 0; i < parts.length; i++) {
+                var line = parts[i].trim(); if (line.indexOf('data:') !== 0) continue;
+                var evt; try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+                if (evt.type === 'text') { acc += evt.delta; ensureBot().textContent = acc; scroll(); }
+                else if (evt.type === 'error') { ensureBot().textContent = acc || ('⚠ ' + evt.message); }
+            }
+        }
+        if (typing.parentNode) typing.parentNode.removeChild(typing);
+        if (acc) history.push({ role: 'assistant', content: acc });
+        if (!acc && !botEl) throw new Error('empty');
+    }
 
     async function ask(text) {
         if (busy || !text.trim()) return;
+        text = text.trim();
         addMsg('user', text);
         history.push({ role: 'user', content: text });
         input.value = '';
         if (chips) chips.style.display = 'none';
         setBusy(true);
-        var typing = typingEl();
-        var botEl = null, acc = '', tools = {};
-
-        function ensureBot() {
-            if (!botEl) {
-                if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
-                botEl = addMsg('bot', '');
-            }
-            return botEl;
-        }
-
         try {
-            var res = await fetch(api('/chat'), {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ messages: history })
-            });
-            if (!res.ok || !res.body) throw new Error('bad response');
-
-            var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
-            while (true) {
-                var chunk = await reader.read();
-                if (chunk.done) break;
-                buf += dec.decode(chunk.value, { stream: true });
-                var parts = buf.split('\n\n'); buf = parts.pop();
-                for (var i = 0; i < parts.length; i++) {
-                    var line = parts[i].trim();
-                    if (line.indexOf('data:') !== 0) continue;
-                    var evt;
-                    try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
-                    if (evt.type === 'text') { acc += evt.delta; ensureBot().textContent = acc; scroll(); }
-                    else if (evt.type === 'tool') { tools[evt.name] = toolChip(evt.name); }
-                    else if (evt.type === 'tool_result') {
-                        var tc = tools[evt.name];
-                        if (tc) { tc.classList.remove('run'); tc.innerHTML = '<span class="tk">' + (evt.ok ? '✓ ' : '✕ ') + (TOOL_LABELS[evt.name] || evt.name) + (evt.ok ? ' — done' : ' — needs a detail') + '</span>'; }
-                    }
-                    else if (evt.type === 'error') { ensureBot().textContent = acc || ('⚠ ' + evt.message); }
-                }
+            if (BASE) { try { await answerBackend(text); } catch (e) { answerLocal(text); } }
+            else {
+                var typing = typingEl();
+                await new Promise(function (r) { setTimeout(r, 360); });
+                if (typing.parentNode) typing.parentNode.removeChild(typing);
+                answerLocal(text);
             }
-            if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
-            if (acc) history.push({ role: 'assistant', content: acc });
-            if (!acc && !botEl) addMsg('bot', "Hmm, I didn't catch a reply. Mind trying again, or head to the Contact page?");
-        } catch (e) {
-            if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
-            addMsg('bot', "This is a UI preview — the live agent backend isn't deployed here yet. Head to the Contact page and the team will jump in.");
-            dot.classList.add('off'); state.textContent = 'preview · backend not deployed';
-        } finally {
-            setBusy(false); input.focus();
-        }
+        } finally { setBusy(false); input.focus(); }
+    }
+
+    // If a backend is configured, reflect its health; otherwise we're the index.
+    if (BASE) {
+        fetch(BASE + '/api/agent/health').then(function (r) { return r.json(); }).then(function (h) {
+            state.textContent = (h && h.demo) ? 'demo mode' : 'live · ask me anything';
+        }).catch(function () { state.textContent = 'online · indexed this site'; });
     }
 
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
