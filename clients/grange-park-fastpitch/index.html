@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="La Grange Park Little League — Fastpitch Softball. Girls' youth softball in La Grange Park, IL (60526), from Tee Ball to Juniors fast-pitch. Founded 1952; fastpitch since 2018. Spring registration opens December 1.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a1430">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="La Grange Park Little League — Fastpitch Softball">
+<meta property="og:title" content="La Grange Park Little League — Fastpitch Softball">
+<meta property="og:description" content="Girls' youth softball in La Grange Park, IL — Tee Ball through Juniors fast-pitch. Founded 1952, fastpitch since 2018. Spring registration opens December 1.">
+<title>La Grange Park Little League — Fastpitch Softball · La Grange Park, IL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23f2e9d2' stroke='%23c5372e' stroke-width='2'/%3E%3Cpath d='M8 8c5 4 5 12 0 16M24 8c-5 4-5 12 0 16' stroke='%23c5372e' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0a1430; --navy-2:#0e1d44; --ink:#070e20; --panel:#101f44;
+  --cream:#f2e9d2; --cream-2:#e9ddbe;
+  --gold:#e8b54a; --gold-d:#c9952f;
+  --red:#c5372e; --red-2:#9f2a23;
+  --chalk:#f6f4ee; --muted:#9fb0d2; --line:rgba(160,185,230,.15);
+  --r:16px; --maxw:1140px;
+  --shadow:0 26px 64px -26px rgba(0,0,0,.75);
+  --patch:0 10px 24px -10px rgba(0,0,0,.55);
+  /* uniform fabrics */
+  --fab-pin:repeating-linear-gradient(90deg,rgba(214,226,255,.04) 0 1px,transparent 1px 17px);
+  --fab-mesh:radial-gradient(rgba(214,226,255,.05) .5px,transparent .8px);
+  --pique:radial-gradient(circle at 30% 30%,rgba(255,255,255,.7) .7px,transparent 1.1px),radial-gradient(circle at 70% 70%,rgba(70,55,20,.08) .9px,transparent 1.3px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{font-family:Inter,system-ui,sans-serif;color:var(--chalk);background-color:var(--ink);
+  background-image:var(--fab-pin),var(--fab-mesh);background-size:auto,6px 6px;
+  line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,h4,.display{font-family:Oswald,'Arial Narrow',sans-serif;line-height:1.04;letter-spacing:.005em;text-transform:uppercase}
+a{color:inherit;text-decoration:none}
+img,svg{display:block;max-width:100%}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+.eyebrow{font:700 12px/1 Oswald;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+.lead{color:var(--muted);font-size:clamp(15px,2.2vw,18px);max-width:62ch;font-family:Inter;text-transform:none;letter-spacing:0}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:6px}
+
+/* stitched divider */
+.stitch-row{height:14px;background:
+  repeating-linear-gradient(90deg,var(--red) 0 16px,transparent 16px 30px) center/100% 2px no-repeat;
+  opacity:.4}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:.5em;font:700 14px/1 Oswald;letter-spacing:.06em;text-transform:uppercase;
+  padding:15px 26px;border-radius:999px;cursor:pointer;border:1px solid transparent;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#241a05;
+  box-shadow:0 12px 30px -8px rgba(232,181,74,.5)}
+.btn-ghost{background:rgba(255,255,255,.05);border-color:var(--line);color:var(--chalk)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-red{background:linear-gradient(135deg,var(--red),var(--red-2));color:#fff;box-shadow:0 12px 30px -10px rgba(197,55,46,.55)}
+
+/* demo banner */
+.demo-bar{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;
+  background:var(--navy);color:var(--muted);font-size:12.5px;padding:9px 16px;border-bottom:1px solid var(--line);text-align:center}
+.demo-bar strong{color:var(--gold)}
+.demo-bar button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;font-size:11px;padding:3px 10px;cursor:pointer}
+
+/* nav */
+header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+  background:rgba(7,14,32,.8);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:18px;height:70px}
+.brand{display:flex;align-items:center;gap:12px;font:700 19px/1 Oswald;letter-spacing:.02em}
+.brand .mk{width:38px;height:38px;flex:0 0 38px}
+.brand small{display:block;font:600 9px/1 Oswald;letter-spacing:.2em;color:var(--gold);margin-top:5px}
+.nav-links{display:flex;gap:4px;margin-left:auto;align-items:center}
+.nav-links a{padding:9px 13px;border-radius:10px;font:600 13px/1 Oswald;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);transition:color .15s,background .15s}
+.nav-links a:hover{color:var(--chalk);background:rgba(255,255,255,.06)}
+.nav-cta{margin-left:6px}
+.burger{display:none;margin-left:auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);cursor:pointer;flex-direction:column;gap:5px;align-items:center;justify-content:center}
+.burger span{width:20px;height:2px;background:var(--chalk);border-radius:2px}
+
+/* hero */
+.hero{position:relative;overflow:hidden;min-height:clamp(640px,94vh,900px);display:flex;align-items:center}
+#fx{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 80% at 80% 18%,transparent,rgba(7,14,32,.5) 68%,var(--ink))}
+.hero-in{position:relative;z-index:2;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;padding:56px 0}
+.badge{display:inline-flex;align-items:center;gap:9px;background:rgba(232,181,74,.12);
+  border:1px solid rgba(232,181,74,.35);color:var(--gold);border-radius:999px;
+  padding:7px 15px;font:700 12px/1 Oswald;letter-spacing:.1em;text-transform:uppercase;margin-bottom:22px}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,181,74,.55)}70%{box-shadow:0 0 0 10px rgba(232,181,74,0)}100%{box-shadow:0 0 0 0 rgba(232,181,74,0)}}
+@media (prefers-reduced-motion:reduce){.badge .dot,.crest{animation:none!important}}
+.hero h1{font-size:clamp(44px,7.4vw,92px);font-weight:700;letter-spacing:.01em}
+.hero h1 .hl{color:var(--gold)}
+.hero p.lead{margin:20px 0 30px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.hero-trust{display:flex;gap:10px 22px;flex-wrap:wrap;margin-top:32px;color:var(--muted);font-size:13px}
+.hero-trust b{color:var(--chalk);font-family:Oswald;letter-spacing:.04em}
+.hero-trust span{display:inline-flex;align-items:center;gap:8px}
+.hero-trust span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--red)}
+.crest-wrap{display:flex;justify-content:center}
+.crest{width:min(420px,80vw);filter:drop-shadow(0 30px 40px rgba(0,0,0,.5));animation:sway 9s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+
+/* stat band */
+.stats{background-color:var(--navy);background-image:var(--fab-pin),var(--fab-mesh);background-size:auto,6px 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:46px 0}
+.stat{text-align:center}
+.stat b{display:block;font:700 clamp(36px,5vw,58px)/1 Oswald;color:var(--gold);letter-spacing:.01em}
+.stat span{font:600 12px/1.3 Oswald;color:var(--muted);text-transform:uppercase;letter-spacing:.16em}
+
+/* sections */
+.sec{padding:90px 0}
+.sec-head{max-width:660px;margin-bottom:46px}
+.sec-head h2{font-size:clamp(30px,4.6vw,50px);margin:14px 0 14px;font-weight:700}
+.bg-navy{background-color:var(--navy);background-image:var(--fab-pin),var(--fab-mesh);background-size:auto,6px 6px}
+.bg-panel{background-color:var(--navy-2);background-image:linear-gradient(180deg,rgba(8,14,32,.5),transparent 40%),var(--fab-pin),var(--fab-mesh);background-size:auto,auto,6px 6px}
+
+/* pillar cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-5px);border-color:rgba(232,181,74,.45)}
+.card .ico{width:54px;height:54px;margin-bottom:18px}
+.card h3{font-size:21px;margin-bottom:8px;font-weight:600}
+.card p{color:var(--muted);font-size:14.5px;font-family:Inter;text-transform:none}
+
+/* leadership roster */
+.roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px}
+.role{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:15px 18px;transition:transform .18s,border-color .18s}
+.role:hover{transform:translateY(-3px)}
+.role b{display:block;font:600 16px Oswald;letter-spacing:.04em;color:var(--chalk)}
+.role span{font-size:12.5px;color:var(--muted);font-family:Inter}
+
+/* division PATCHES */
+.divs{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:22px}
+.patch{position:relative;aspect-ratio:1.16;border-radius:22px;display:grid;place-items:center;text-align:center;
+  background-color:var(--cream);
+  background-image:var(--pique),radial-gradient(circle at 50% 32%,rgba(255,255,255,.55),rgba(233,221,190,.35));
+  background-size:6px 6px,auto;
+  color:var(--navy);box-shadow:var(--patch);border:5px solid var(--navy);
+  transition:transform .2s ease}
+.patch::before{content:"";position:absolute;inset:8px;border-radius:14px;border:2px dashed rgba(10,20,48,.32);pointer-events:none}
+.patch::after{content:"";position:absolute;inset:3px;border-radius:17px;box-shadow:inset 0 2px 7px rgba(0,0,0,.16),inset 0 0 0 3px var(--gold);pointer-events:none}
+.patch:hover{transform:translateY(-6px) rotate(-1.5deg)}
+.patch .age{font:700 25px/1 Oswald;letter-spacing:.02em;text-transform:uppercase;position:relative}
+.patch .nm{font:600 11px/1.1 Oswald;letter-spacing:.13em;text-transform:uppercase;color:var(--red-2);margin:6px 0 7px;position:relative}
+.patch .meta{font:600 10.5px/1.35 Inter;color:#5b5036;max-width:78%;position:relative;text-transform:none;letter-spacing:.02em}
+.patch .star{position:absolute;top:15%;font-size:11px;color:var(--gold)}
+
+/* timeline */
+.timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;margin-top:34px}
+.timeline::before{content:"";position:absolute;top:15px;left:6%;right:6%;height:3px;background:repeating-linear-gradient(90deg,var(--gold) 0 10px,transparent 10px 18px)}
+.tl{position:relative;text-align:center;padding:0 8px}
+.tl .node{width:32px;height:32px;border-radius:50%;background:var(--cream);border:3px solid var(--red);
+  margin:0 auto 16px;display:grid;place-items:center;position:relative;z-index:1;color:var(--navy);font:700 13px Oswald}
+.tl h3{font:600 15px Oswald;letter-spacing:.08em;margin-bottom:5px}
+.tl span{font-size:12.5px;color:var(--muted);font-family:Inter;text-transform:none}
+
+/* features */
+.feat{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center}
+.feat ul{list-style:none;display:grid;gap:15px;margin-top:24px}
+.feat li{display:flex;gap:13px;align-items:flex-start}
+.feat li .ck{flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#241a05;
+  display:grid;place-items:center;font:700 13px Oswald;margin-top:2px}
+.feat li b{font:600 16px Oswald;letter-spacing:.04em}
+.feat li p{color:var(--muted);font-size:14px;margin-top:2px;font-family:Inter;text-transform:none}
+.feat-art{display:flex;justify-content:center}
+
+/* pricing */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:18px}
+.tier{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:30px;position:relative}
+.tier.feature{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,181,74,.35),var(--shadow)}
+.tier .tag{position:absolute;top:-12px;left:30px;background:var(--gold);color:#241a05;
+  font:700 11px Oswald;letter-spacing:.1em;padding:5px 12px;border-radius:999px;text-transform:uppercase}
+.tier h3{font-size:22px;font-weight:600}
+.tier .price{font:700 44px/1 Oswald;margin:12px 0 4px}
+.tier .per{color:var(--muted);font-size:13px;margin-bottom:18px;font-family:Inter;text-transform:none}
+.tier ul{list-style:none;display:grid;gap:10px;font-size:14px;color:var(--muted);margin-bottom:24px;font-family:Inter;text-transform:none}
+.tier ul li::before{content:"✓";color:var(--gold);font-weight:700;margin-right:9px}
+.tier .btn{width:100%;justify-content:center}
+
+/* sponsors */
+.marquee{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.marquee-track{display:flex;gap:26px;width:max-content;animation:scroll 34s linear infinite}
+@keyframes scroll{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.marquee-track{animation:none;flex-wrap:wrap;justify-content:center}}
+.marquee:hover .marquee-track{animation-play-state:paused}
+.sponsor{display:inline-flex;align-items:center;gap:10px;background-color:var(--cream);
+  background-image:var(--pique);background-size:6px 6px;color:var(--navy);
+  border-radius:999px;padding:12px 22px;font:700 15px Oswald;letter-spacing:.05em;white-space:nowrap;
+  border:3px solid var(--navy);box-shadow:var(--patch),inset 0 0 0 2px var(--gold)}
+.sponsor::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--red)}
+
+/* testimonials */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.quote{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px}
+.quote p{font-size:16px;margin-bottom:18px;font-family:Inter;text-transform:none}
+.quote .who{display:flex;align-items:center;gap:12px}
+.quote .av{width:44px;height:44px;border-radius:50%;background:var(--gold);border:2px solid var(--cream);
+  display:grid;place-items:center;font:700 15px Oswald;color:#241a05}
+.quote .who b{display:block;font:600 14px Oswald;letter-spacing:.05em}
+.quote .who span{font-size:12.5px;color:var(--muted);font-family:Inter;text-transform:none}
+
+/* faq */
+.faq{max-width:780px;margin:0 auto}
+.faq details{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:var(--panel);overflow:hidden}
+.faq summary{cursor:pointer;padding:18px 22px;font:600 16px Oswald;letter-spacing:.04em;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--gold);font-size:24px;transition:transform .2s;font-family:Oswald}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 22px 20px;color:var(--muted);font-size:14.5px;font-family:Inter;text-transform:none}
+
+/* cta band */
+.cta-band{background:linear-gradient(135deg,var(--navy-2),#16346e);border:1px solid rgba(232,181,74,.3);
+  border-radius:26px;padding:clamp(38px,6vw,66px);text-align:center;position:relative;overflow:hidden}
+.cta-band::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 120% at 50% -10%,rgba(232,181,74,.2),transparent 60%)}
+.cta-band>*{position:relative}
+.cta-band h2{font-size:clamp(30px,4.8vw,50px);margin-bottom:14px;font-weight:700}
+.cta-band .hero-cta{justify-content:center;margin-top:26px}
+
+/* footer */
+footer{background-color:var(--ink);background-image:var(--fab-pin),var(--fab-mesh);background-size:auto,6px 6px;border-top:1px solid var(--line);padding:62px 0 30px}
+.foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:42px}
+.foot-grid h3{font:600 13px Oswald;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+.foot-grid a,.foot-grid p{color:var(--muted);font-size:14px;display:block;padding:4px 0;font-family:Inter;text-transform:none}
+.foot-grid a:hover{color:var(--chalk)}
+.rainout{background:rgba(197,55,46,.12);border:1px solid rgba(197,55,46,.34);border-radius:12px;padding:12px 16px;font-size:13px;color:#f3b6b2;margin-top:10px}
+.foot-bottom{border-top:1px solid var(--line);padding-top:24px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;align-items:center;font-family:Inter}
+.foot-bottom a{color:var(--gold)}
+.placeholder{border-bottom:1px dashed rgba(159,176,210,.5)}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* mobile */
+@media (max-width:900px){
+  .hero-in{grid-template-columns:1fr;gap:14px;text-align:center}
+  .hero-cta,.hero-trust{justify-content:center}
+  .crest-wrap{order:-1}
+  .crest{width:min(280px,66vw)}
+  .feat{grid-template-columns:1fr;gap:34px}
+}
+@media (max-width:860px){
+  .nav-links{position:fixed;inset:70px 0 auto 0;flex-direction:column;align-items:stretch;
+    background:rgba(7,14,32,.98);backdrop-filter:blur(16px);padding:16px;gap:4px;
+    border-bottom:1px solid var(--line);transform:translateY(-135%);transition:transform .3s ease;box-shadow:var(--shadow);margin-left:0}
+  .nav-links.open{transform:none}
+  .nav-links a{padding:15px;font-size:16px}
+  .nav-cta{margin:6px 0 0}
+  .burger{display:flex}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:34px 16px}
+  .timeline{grid-template-columns:1fr;gap:22px}
+  .timeline::before{display:none}
+  .tl{text-align:left;display:flex;gap:14px;align-items:center}
+  .tl .node{margin:0}
+  .foot-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){.foot-grid{grid-template-columns:1fr}.hero-trust{gap:10px}}
+</style>
+</head>
+<body>
+
+<div class="demo-bar" id="demoBar">
+  <span><strong>Concept demo</strong> — designed &amp; built by Kudbee for client review. Not the official La Grange Park Little League site; some content is placeholder.</span>
+  <button onclick="document.getElementById('demoBar').remove()">Dismiss</button>
+</div>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top">
+      <svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#f2e9d2" stroke="#c5372e" stroke-width="3"/><circle cx="20" cy="20" r="17" fill="none" stroke="#e8b54a" stroke-width="1" stroke-dasharray="2 3"/><path d="M9 11c6 5 6 13 0 18M31 11c-6 5-6 13 0 18" stroke="#c5372e" stroke-width="1.6" fill="none"/></svg>
+      <span>LGP Little League<small>FASTPITCH SOFTBALL · LA GRANGE PARK, IL</small></span>
+    </a>
+    <nav class="nav-links" id="navLinks" aria-label="Primary">
+      <a href="#program">Program</a>
+      <a href="#divisions">Divisions</a>
+      <a href="#season">Season</a>
+      <a href="#why">Why Us</a>
+      <a href="#sponsors">Sponsors</a>
+      <a href="#register" class="btn btn-primary nav-cta">Register</a>
+    </nav>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="wrap hero-in">
+    <div>
+      <div class="badge"><span class="dot"></span> Spring registration opens December 1</div>
+      <h1>Where La Grange<br>Park girls find<br>their <span class="hl">swing.</span></h1>
+      <p class="lead">La Grange Park Little League has been our village's home for youth ball since 1952 — and its girls' fastpitch softball program, launched in 2018, keeps growing. From first swings on the tee to Juniors fast-pitch, every player finds her team here.</p>
+      <div class="hero-cta">
+        <a href="#register" class="btn btn-primary">Register for the spring season</a>
+        <a href="#program" class="btn btn-ghost">Explore the program</a>
+      </div>
+      <div class="hero-trust">
+        <span><b>La Grange Park, IL 60526</b></span>
+        <span><b>Tee Ball → Juniors</b></span>
+        <span><b>Girls fastpitch</b> since 2018</span>
+        <span><b>Little League®</b> affiliated</span>
+      </div>
+    </div>
+    <div class="crest-wrap">
+      <!-- Embroidered team crest -->
+      <svg class="crest" viewBox="0 0 400 400" role="img" aria-label="La Grange Park Little League fastpitch softball team crest">
+        <defs>
+          <radialGradient id="creamG" cx="50%" cy="38%" r="65%">
+            <stop offset="0%" stop-color="#f7efd9"/><stop offset="100%" stop-color="#e6d8b6"/>
+          </radialGradient>
+          <path id="ringTop" d="M70,200 A130,130 0 0 1 330,200" fill="none"/>
+          <path id="ringBot" d="M72,200 A128,128 0 0 0 328,200" fill="none"/>
+        </defs>
+        <!-- outer merrow edge + stitch -->
+        <circle cx="200" cy="200" r="192" fill="#c5372e"/>
+        <circle cx="200" cy="200" r="180" fill="url(#creamG)"/>
+        <circle cx="200" cy="200" r="170" fill="none" stroke="#e8b54a" stroke-width="2" stroke-dasharray="2 6"/>
+        <!-- navy text band -->
+        <circle cx="200" cy="200" r="160" fill="#0a1430"/>
+        <circle cx="200" cy="200" r="120" fill="url(#creamG)"/>
+        <circle cx="200" cy="200" r="120" fill="none" stroke="#c5372e" stroke-width="3"/>
+        <g fill="#f2e9d2" font-family="Oswald, sans-serif" font-weight="700">
+          <text font-size="20" letter-spacing="2"><textPath href="#ringTop" startOffset="50%" text-anchor="middle">LA GRANGE PARK LITTLE LEAGUE</textPath></text>
+          <text font-size="18" letter-spacing="5" fill="#e8b54a"><textPath href="#ringBot" startOffset="50%" text-anchor="middle">FASTPITCH SOFTBALL</textPath></text>
+        </g>
+        <!-- side stars -->
+        <g fill="#e8b54a"><circle cx="40" cy="200" r="0"/></g>
+        <path d="M200 70 l3 7 l8 .5 l-6 5 l2 8 l-7-4 l-7 4 l2-8 l-6-5 l8-.5z" fill="#e8b54a" transform="translate(-160,0)"/>
+        <path d="M200 70 l3 7 l8 .5 l-6 5 l2 8 l-7-4 l-7 4 l2-8 l-6-5 l8-.5z" fill="#e8b54a" transform="translate(160,0)"/>
+        <!-- crossed bats -->
+        <g transform="translate(200,205)">
+          <g transform="rotate(38)"><rect x="-8" y="-78" width="16" height="120" rx="8" fill="#caa05a" stroke="#8a6a2e" stroke-width="2"/><rect x="-6" y="30" width="12" height="20" rx="4" fill="#8a6a2e"/></g>
+          <g transform="rotate(-38)"><rect x="-8" y="-78" width="16" height="120" rx="8" fill="#caa05a" stroke="#8a6a2e" stroke-width="2"/><rect x="-6" y="30" width="12" height="20" rx="4" fill="#8a6a2e"/></g>
+          <!-- softball -->
+          <circle cx="0" cy="-8" r="40" fill="#f2e9d2" stroke="#0a1430" stroke-width="3"/>
+          <path d="M-30 -28 q14 20 0 40 M30 -28 q-14 20 0 40" stroke="#c5372e" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <g stroke="#c5372e" stroke-width="2" stroke-linecap="round">
+            <path d="M-22 -22 l6 3 M-24 -12 l7 2 M-24 -2 l7 1 M-24 8 l7 0"/>
+            <path d="M22 -22 l-6 3 M24 -12 l-7 2 M24 -2 l-7 1 M24 8 l-7 0"/>
+          </g>
+        </g>
+        <!-- est ribbon -->
+        <g transform="translate(200,300)">
+          <path d="M-86 0 l-14 16 l20 -2 l0 16 l160 0 l0 -16 l20 2 l-14 -16 z" fill="#c5372e" stroke="#9f2a23" stroke-width="2"/>
+          <text x="0" y="14" text-anchor="middle" fill="#f2e9d2" font-family="Oswald, sans-serif" font-weight="700" font-size="17" letter-spacing="3">EST. 1952</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<div class="stitch-row" aria-hidden="true"></div>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div class="stat reveal"><b data-count="480">0</b><span>Players each season</span></div>
+    <div class="stat reveal"><b data-count="32">0</b><span>Teams across divisions</span></div>
+    <div class="stat reveal"><b data-count="7">0</b><span>Age divisions</span></div>
+    <div class="stat reveal"><b data-count="60" data-suffix="+">0</b><span>Volunteer coaches</span></div>
+  </div>
+</section>
+
+<!-- PROGRAM -->
+<section class="sec bg-navy" id="program">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">The Program</span>
+      <h2>From first swings to fast-pitch.</h2>
+      <p class="lead">A true development ladder — every player advances at her own pace, all within one La Grange Park community.</p>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="#e8b54a" stroke-width="2.5"/><circle cx="24" cy="24" r="9" fill="#f2e9d2"/><path d="M17 18q7 6 0 12M31 18q-7 6 0 12" stroke="#c5372e" stroke-width="2" fill="none"/></svg>
+        <h3>First Swings · Ages 4–7</h3>
+        <p>Tee Ball and Coach Pitch. Players learn to throw, catch, and hit off the tee or a coach's toss — no score, no strikeouts, all fun.</p>
+      </div>
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="30" width="28" height="6" rx="3" fill="#e8b54a" transform="rotate(-30 24 33)"/><circle cx="32" cy="14" r="7" fill="#f2e9d2" stroke="#c5372e" stroke-width="2"/></svg>
+        <h3>Learn to Pitch · Grades 2–3</h3>
+        <p>Kid Pitch "Peanuts" — a 10″ softie and a 30-foot mound. This is where players first take the circle and learn to pitch the game.</p>
+      </div>
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 10h20v8a10 10 0 01-20 0z" fill="#e8b54a"/><path d="M24 28v8M18 40h12" stroke="#e8b54a" stroke-width="3" stroke-linecap="round"/><path d="M34 12h6a6 6 0 01-6 6M14 12H8a6 6 0 006 6" fill="none" stroke="#e8b54a" stroke-width="2.5"/></svg>
+        <h3>Competitive Fastpitch</h3>
+        <p>Minors, Majors, and Juniors — full kid-pitch softball with umpires, standings, and playoffs. The heart of the league's spring season.</p>
+      </div>
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="18" r="9" fill="none" stroke="#e8b54a" stroke-width="2.5"/><path d="M24 18l3 4-3 2-3-2z" fill="#c5372e"/><path d="M12 40c2-7 7-10 12-10s10 3 12 10" fill="none" stroke="#e8b54a" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <h3>All-Stars &amp; Travel</h3>
+        <p>Standout players continue into All-Star tournaments and our travel pathway — coordinated by the league's travel-ball liaison.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIVISIONS as PATCHES -->
+<section class="sec bg-panel" id="divisions">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Divisions</span>
+      <h2>Earn your patch.</h2>
+      <p class="lead">Divisions follow the Little League® birth-year chart. Six steps from the tee to fast-pitch — our registrar will help place your player.</p>
+    </div>
+    <div class="divs">
+      <div class="patch reveal"><span class="star">★</span><span class="age">Tee Ball</span><span class="nm">Ages 4+</span><span class="meta">Hit off the tee · everyone bats · no score</span></div>
+      <div class="patch reveal"><span class="star">★</span><span class="age">Coach Pitch</span><span class="nm">Ages 6–7</span><span class="meta">Coach tosses · no walks or strikeouts</span></div>
+      <div class="patch reveal"><span class="star">★</span><span class="age">Peanuts</span><span class="nm">Kid Pitch · Gr 2–3</span><span class="meta">10″ softie · 30′ mound</span></div>
+      <div class="patch reveal"><span class="star">★</span><span class="age">Minors</span><span class="nm">Kid Pitch + Assist</span><span class="meta">4–6 innings · standings + playoffs</span></div>
+      <div class="patch reveal"><span class="star">★</span><span class="age">Majors</span><span class="nm">Full Kid Pitch</span><span class="meta">12″ ball · 40′ mound · 60′ bases</span></div>
+      <div class="patch reveal"><span class="star">★</span><span class="age">Juniors</span><span class="nm">Fast-Pitch</span><span class="meta">12″ ball · 43′ mound</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SEASON TIMELINE -->
+<section class="sec bg-navy" id="season">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Season at a glance</span>
+      <h2>The road to Opening Day.</h2>
+      <p class="lead">Dates shown are illustrative for the Spring 2026 season — the final calendar is confirmed at registration.</p>
+    </div>
+    <div class="timeline">
+      <div class="tl reveal"><div class="node">1</div><h3>Registration</h3><span>Opens Dec 1</span></div>
+      <div class="tl reveal"><div class="node">2</div><h3>Evaluations</h3><span>Early March</span></div>
+      <div class="tl reveal"><div class="node">3</div><h3>Opening Day</h3><span>Mid-April</span></div>
+      <div class="tl reveal"><div class="node">4</div><h3>All-Star Tourneys</h3><span>June</span></div>
+      <div class="tl reveal"><div class="node">5</div><h3>Playoffs</h3><span>Late June</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY US -->
+<section class="sec bg-panel" id="why">
+  <div class="wrap feat">
+    <div class="reveal">
+      <span class="eyebrow">Why families choose us</span>
+      <h2 style="font-size:clamp(28px,4.2vw,42px);margin:14px 0">Built for players,<br>run for parents.</h2>
+      <p class="lead">We sweat the details off the field so your family can focus on the game.</p>
+      <ul>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>5-minute online registration</b><p>Sign up, pay, and pick your division from your phone — no paper forms.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Live schedules &amp; standings</b><p>Game times, field maps, and results sync straight to your calendar.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Safe &amp; inclusive</b><p>Background-checked coaches, SafeSport standards, and a zero-tolerance code of conduct.</p></div></li>
+        <li><span class="ck" aria-hidden="true">✓</span><div><b>Nobody sits out over cost</b><p>Need-based scholarships and equipment loans keep the game open to every kid.</p></div></li>
+      </ul>
+    </div>
+    <div class="feat-art reveal">
+      <!-- field emblem patch -->
+      <svg viewBox="0 0 320 320" width="360" role="img" aria-label="La Grange Park softball diamond emblem" style="filter:drop-shadow(0 24px 36px rgba(0,0,0,.5));max-width:100%">
+        <circle cx="160" cy="160" r="154" fill="#c5372e"/>
+        <circle cx="160" cy="160" r="144" fill="#0e1d44"/>
+        <circle cx="160" cy="160" r="134" fill="none" stroke="#e8b54a" stroke-width="2" stroke-dasharray="2 6"/>
+        <path d="M160 250 a120 120 0 0 1 0 -180" fill="none"/>
+        <path d="M50 210 A130 130 0 0 1 270 210 Z" fill="rgba(232,181,74,.12)"/>
+        <g>
+          <polygon points="160,118 214,172 160,226 106,172" fill="rgba(232,181,74,.22)" stroke="#f2e9d2" stroke-width="3"/>
+          <rect x="153" y="111" width="14" height="14" fill="#f2e9d2"/>
+          <rect x="207" y="165" width="14" height="14" fill="#f2e9d2"/>
+          <rect x="153" y="219" width="14" height="14" fill="#f2e9d2"/>
+          <rect x="99" y="165" width="14" height="14" fill="#f2e9d2"/>
+        </g>
+        <g transform="translate(212,96)">
+          <circle r="26" fill="#f2e9d2" stroke="#0a1430" stroke-width="2.5"/>
+          <path d="M-19 -18 q9 13 0 26 M19 -18 q-9 13 0 26" stroke="#c5372e" stroke-width="2.4" fill="none"/>
+        </g>
+        <text x="160" y="292" text-anchor="middle" fill="#e8b54a" font-family="Oswald, sans-serif" font-weight="700" font-size="16" letter-spacing="2">LGP · EST. 1952</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- REGISTER / PRICING -->
+<section class="sec bg-navy" id="register">
+  <div class="wrap">
+    <div class="sec-head reveal" style="margin:0 auto 46px;text-align:center">
+      <span class="eyebrow">Registration</span>
+      <h2>Register for the spring season.</h2>
+      <p class="lead" style="margin:0 auto">Registration opens <b style="color:var(--chalk)">December 1</b> each year and runs on SportsEngine. Every player must live or attend school within the league boundaries. Fees include a uniform and a full season — exact pricing is shown at checkout.</p>
+    </div>
+    <div class="tiers">
+      <div class="tier reveal">
+        <h3>First Swings</h3>
+        <div class="price">4–7</div>
+        <div class="per">Tee Ball &amp; Coach Pitch · ages</div>
+        <ul><li>Learn-to-play fundamentals</li><li>Uniform included</li><li>Equipment provided</li><li>Coach-led, no score kept</li></ul>
+        <a href="https://www.lgplittleleague.com/" target="_blank" rel="noopener" class="btn btn-ghost">Register on SportsEngine</a>
+      </div>
+      <div class="tier feature reveal">
+        <div class="tag">Most popular</div>
+        <h3>Competitive Fastpitch</h3>
+        <div class="price">8–12</div>
+        <div class="per">Peanuts · Minors · Majors · ages</div>
+        <ul><li>Umpired, kid-pitch games</li><li>League standings &amp; playoffs</li><li>~14–18 games per season</li><li>Uniform kit included</li><li>Path to All-Star tournaments</li></ul>
+        <a href="https://www.lgplittleleague.com/" target="_blank" rel="noopener" class="btn btn-primary">Register on SportsEngine</a>
+      </div>
+      <div class="tier reveal">
+        <h3>Juniors Fast-Pitch</h3>
+        <div class="price">13+</div>
+        <div class="per">Juniors · ages</div>
+        <ul><li>Full fast-pitch, 43′ mound</li><li>12″ ball, regulation rules</li><li>Competitive spring schedule</li><li>Travel-ball pathway available</li></ul>
+        <a href="https://www.lgplittleleague.com/" target="_blank" rel="noopener" class="btn btn-red">Register on SportsEngine</a>
+      </div>
+    </div>
+    <p class="reveal" style="text-align:center;color:var(--muted);font-size:13px;margin-top:22px">Age ranges follow the Little League® birth-year chart. Fees set at registration and shown at checkout.</p>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="sec bg-panel">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="eyebrow">From our families</span><h2>The La Grange Park difference.</h2></div>
+    <div class="quotes">
+      <div class="quote reveal"><p>“My daughter showed up shy and left captain of her team. The coaches actually <em>coach</em> — and they make it fun.”</p><div class="who"><div class="av" aria-hidden="true">RM</div><div><b>Rachel M.</b><span>Parent · Majors</span></div></div></div>
+      <div class="quote reveal"><p>“Registration took five minutes and the schedule landed on my phone. As a working parent, that's everything.”</p><div class="who"><div class="av" aria-hidden="true">DK</div><div><b>David K.</b><span>Parent · Minors</span></div></div></div>
+      <div class="quote reveal"><p>“Juniors fast-pitch and the All-Star run gave my daughter real competition close to home. Great development, even better community.”</p><div class="who"><div class="av" aria-hidden="true">AT</div><div><b>Alicia T.</b><span>Parent · Juniors</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LEADERSHIP (roles only) -->
+<section class="sec bg-navy" id="leadership">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 40px">
+      <span class="eyebrow">Run by our community</span>
+      <h2>The all-volunteer board.</h2>
+      <p class="lead" style="margin:0 auto">La Grange Park Little League is led entirely by volunteer parents. These are the roles behind the softball program — reach any of them through the league office.</p>
+    </div>
+    <div class="roles">
+      <div class="role reveal"><b>President</b><span>League leadership</span></div>
+      <div class="role reveal"><b>EVP · Softball</b><span>Softball program lead</span></div>
+      <div class="role reveal"><b>VP · Majors Softball</b><span>Division director</span></div>
+      <div class="role reveal"><b>VP · Minors Softball</b><span>Division director</span></div>
+      <div class="role reveal"><b>VP · Juniors Softball</b><span>Division director</span></div>
+      <div class="role reveal"><b>VP · Coach &amp; Kid Pitch</b><span>Entry-level softball</span></div>
+      <div class="role reveal"><b>Player Agent</b><span>Placement &amp; eligibility</span></div>
+      <div class="role reveal"><b>Coaching Coordinator</b><span>Coach training</span></div>
+      <div class="role reveal"><b>Safety Officer</b><span>SafeSport &amp; field safety</span></div>
+      <div class="role reveal"><b>Umpire-in-Chief</b><span>Umpire program</span></div>
+      <div class="role reveal"><b>Travel-Ball Liaison</b><span>All-Star &amp; travel pathway</span></div>
+      <div class="role reveal"><b>Sponsorship</b><span>Community partners</span></div>
+    </div>
+    <p class="reveal" style="text-align:center;color:var(--muted);font-size:13px;margin-top:24px">Current board members are listed on the league's official site. <span class="placeholder">Names to be added on request.</span></p>
+  </div>
+</section>
+
+<!-- SPONSORS -->
+<section class="sec bg-navy" id="sponsors">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 36px">
+      <span class="eyebrow">Proudly supported by</span>
+      <h2>Our community sponsors.</h2>
+    </div>
+  </div>
+  <div class="marquee" aria-label="Sponsor names">
+    <div class="marquee-track">
+      <span class="sponsor">Park Diner</span><span class="sponsor">Riverside Auto</span><span class="sponsor">Hometown Bank</span><span class="sponsor">Ace Hardware</span><span class="sponsor">Bella's Pizza</span><span class="sponsor">Grange Dental</span><span class="sponsor">North Star Realty</span>
+      <span class="sponsor">Park Diner</span><span class="sponsor">Riverside Auto</span><span class="sponsor">Hometown Bank</span><span class="sponsor">Ace Hardware</span><span class="sponsor">Bella's Pizza</span><span class="sponsor">Grange Dental</span><span class="sponsor">North Star Realty</span>
+    </div>
+  </div>
+  <div class="wrap" style="text-align:center;margin-top:40px">
+    <a href="#register" class="btn btn-ghost reveal" onclick="alert('Demo only — link to your sponsorship form.');return false;">Become a sponsor →</a>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec bg-panel">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 40px"><span class="eyebrow">Questions</span><h2>Good to know.</h2></div>
+    <div class="faq">
+      <details class="reveal"><summary>How is my child's age division decided?</summary><p>Divisions are set by your athlete's age as of December 31, 2025. If they fall between groups or you'd like them to "play up," contact our registrar and we'll help place them.</p></details>
+      <details class="reveal"><summary>What equipment do we need to provide?</summary><p>Players bring their own glove and cleats. Bats and helmets can be shared or loaned, and we provide every player's jersey and cap. New to the sport? Our equipment closet can get you started at no cost.</p></details>
+      <details class="reveal"><summary>What's the difference between Rec and Travel?</summary><p>Recreation League is balanced, local, and built around equal play time and fun. Travel/Select is an evaluated, competitive roster that practices more and plays regional tournaments. Many players start in Rec and move up.</p></details>
+      <details class="reveal"><summary>Do you offer financial assistance?</summary><p>Yes. No child is turned away over cost — we offer need-based scholarships and equipment loans. Just note it during registration or reach out privately to our board.</p></details>
+      <details class="reveal"><summary>What's your refund and rainout policy?</summary><p>Full refunds are available up to one week before Opening Day. Rainouts are posted to the rainout line and rescheduled when fields allow.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="sec bg-navy">
+  <div class="wrap">
+    <div class="cta-band reveal">
+      <span class="eyebrow" style="color:var(--gold)">Spots fill fast</span>
+      <h2>Let's play ball.</h2>
+      <p class="lead" style="margin:0 auto;color:#d6def0">Spring registration opens December 1 and spots fill fast. Get your player on a La Grange Park roster before evaluations begin.</p>
+      <div class="hero-cta">
+        <a href="https://www.lgplittleleague.com/" target="_blank" rel="noopener" class="btn btn-primary">Register on SportsEngine</a>
+        <a href="#program" class="btn btn-ghost">See the program</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:16px">
+          <svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#f2e9d2" stroke="#c5372e" stroke-width="3"/><path d="M9 11c6 5 6 13 0 18M31 11c-6 5-6 13 0 18" stroke="#c5372e" stroke-width="1.6" fill="none"/></svg>
+          <span>LGP Little League<small>FASTPITCH SOFTBALL · EST. 1952</small></span>
+        </a>
+        <p style="color:var(--muted);font-size:14px;max-width:34ch">La Grange Park Little League — our village's home for youth baseball and girls' fastpitch softball since 1952. A Little League® chartered, all-volunteer organization.</p>
+        <div class="rainout">☎ Field conditions / rainout line: <span class="placeholder">(708) 555‑0143</span> — updated by 4:00 PM on game days.</div>
+      </div>
+      <div>
+        <h3>Program</h3>
+        <a href="#divisions">Divisions</a><a href="#season">Season calendar</a><a href="#register">Register</a><a href="#why">Scholarships</a>
+      </div>
+      <div>
+        <h3>Get involved</h3>
+        <a href="#register">Coach / volunteer</a><a href="#sponsors">Sponsor a team</a><a href="#program">Clinics</a><a href="#top">Code of conduct</a>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <p>1501 Barnsdale Rd<br>La Grange Park, IL 60526</p>
+        <p style="font-size:12.5px">Fields by the Community Park District of La Grange Park</p>
+        <a href="https://www.lgplittleleague.com/" target="_blank" rel="noopener">lgplittleleague.com</a>
+        <a href="https://www.facebook.com/lgpllsoftball/" target="_blank" rel="noopener">facebook.com/lgpllsoftball</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="yr">2026</span> La Grange Park Little League, La Grange Park, IL 60526. <span class="placeholder">Concept content for client review.</span></span>
+      <span>Concept site designed &amp; built by <a href="https://kudbee.dev">Kudbee</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  var burger = document.getElementById('burger'), links = document.getElementById('navLinks');
+  burger.addEventListener('click', function(){
+    var open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true':'false');
+  });
+  links.addEventListener('click', function(e){
+    if(e.target.tagName==='A'){ links.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }
+  });
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      en.target.classList.add('in');
+      en.target.querySelectorAll('[data-count]').forEach(countUp);
+      io.unobserve(en.target);
+    });
+  }, {threshold:.18, rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  function countUp(el){
+    var target=+el.getAttribute('data-count'), suffix=el.getAttribute('data-suffix')||'', dur=1400, start=null;
+    if(reduce){ el.textContent=target+suffix; return; }
+    function step(ts){ if(!start)start=ts;
+      var p=Math.min((ts-start)/dur,1), e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(target*e)+suffix; if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+
+  /* hero canvas — night-stadium particle field */
+  var c=document.getElementById('fx'), ctx=c.getContext('2d'),
+      W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2),motes=[],raf=null,visible=true;
+  function resize(){
+    W=c.clientWidth; H=c.clientHeight; c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    var n=Math.round(Math.min(80,W*H/16000)); motes=[]; for(var i=0;i<n;i++) motes.push(mote());
+  }
+  function mote(){ return {x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.7+.4,
+    vx:(Math.random()-.5)*.16,vy:-(Math.random()*.24+.05),a:Math.random()*.5+.15,
+    hue:Math.random()<.3?'197,55,46':'232,181,74'}; }
+  function paintBg(){
+    var g=ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,'#0a1430'); g.addColorStop(.55,'#0c1838'); g.addColorStop(1,'#070e20');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // away-jersey pinstripes
+    ctx.strokeStyle='rgba(214,226,255,.045)'; ctx.lineWidth=1;
+    for(var px=0;px<W;px+=17){ ctx.beginPath(); ctx.moveTo(px+0.5,0); ctx.lineTo(px+0.5,H); ctx.stroke(); }
+    ['rgba(232,181,74,.05)','rgba(120,150,220,.04)'].forEach(function(col,i){
+      ctx.save(); ctx.beginPath(); var ox=i?W*0.86:W*0.14;
+      ctx.moveTo(ox,-20); ctx.lineTo(ox+(i?-W*0.5:W*0.5),H); ctx.lineTo(ox+(i?-W*0.18:W*0.18),H);
+      ctx.closePath(); ctx.fillStyle=col; ctx.fill(); ctx.restore();
+    });
+    ctx.strokeStyle='rgba(160,185,230,.10)'; ctx.lineWidth=1.5;
+    var cx=W*0.5, by=H*0.97, span=Math.min(W*0.4,340);
+    ctx.beginPath(); ctx.moveTo(cx,by-span*0.62); ctx.lineTo(cx+span,by); ctx.lineTo(cx,by+span*0.62); ctx.lineTo(cx-span,by); ctx.closePath(); ctx.stroke();
+  }
+  function frame(){
+    paintBg();
+    for(var i=0;i<motes.length;i++){ var m=motes[i]; m.x+=m.vx; m.y+=m.vy;
+      if(m.y<-6||m.x<-6||m.x>W+6){ motes[i]=mote(); motes[i].y=H+5; }
+      ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,6.283); ctx.fillStyle='rgba('+m.hue+','+m.a+')'; ctx.fill(); }
+    if(visible) raf=requestAnimationFrame(frame);
+  }
+  function start(){ if(reduce){ paintBg(); return; } if(!raf){ visible=true; raf=requestAnimationFrame(frame); } }
+  function stop(){ visible=false; if(raf){ cancelAnimationFrame(raf); raf=null; } }
+  resize(); start();
+  window.addEventListener('resize', function(){ resize(); if(reduce) paintBg(); });
+  new IntersectionObserver(function(e){ e[0].isIntersecting?start():stop(); }, {threshold:0}).observe(c);
+  document.addEventListener('visibilitychange', function(){ document.hidden?stop():start(); });
+})();
+</script>
+</body>
+</html>
