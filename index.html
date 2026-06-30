@@ -308,6 +308,37 @@
     #page-doctrine:checked ~ .theme-wrapper .nav-center label[for="page-doctrine"] {
         background: var(--grad); color: #fff; box-shadow: var(--shadow-glow);
     }
+
+    /* "More" grouped menu — focus the studio nav on the core business */
+    .nav-more { position: relative; }
+    .nav-more-btn {
+        color: var(--text-muted); font: 500 13px inherit; cursor: pointer;
+        padding: 8px 14px; border-radius: 8px; background: none; border: none;
+        display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    .nav-more-btn:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-more-btn .chev { font-size: 10px; transition: transform 0.2s; }
+    .nav-more:hover .nav-more-btn .chev, .nav-more:focus-within .nav-more-btn .chev { transform: rotate(180deg); }
+    .nav-submenu {
+        position: absolute; top: calc(100% + 12px); right: 0; min-width: 176px; margin: 0;
+        list-style: none; padding: 6px; background: var(--bg-elevated);
+        border: 1px solid var(--border-hover); border-radius: 12px;
+        box-shadow: 0 24px 50px -20px rgba(0,0,0,0.7);
+        opacity: 0; visibility: hidden; transform: translateY(-6px);
+        transition: opacity 0.2s, transform 0.2s, visibility 0.2s; z-index: 120;
+    }
+    .nav-more:hover .nav-submenu, .nav-more:focus-within .nav-submenu { opacity: 1; visibility: visible; transform: none; }
+    .nav-submenu li { display: block; }
+    .nav-submenu label, .nav-submenu a {
+        display: block; width: 100%; color: var(--text-muted); font-size: 13px;
+        padding: 9px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; transition: all 0.15s;
+    }
+    .nav-submenu label:hover, .nav-submenu a:hover { color: var(--text-primary); background: var(--bg-card); }
+    #page-agents:checked ~ .theme-wrapper .nav-more-btn,
+    #page-games:checked ~ .theme-wrapper .nav-more-btn,
+    #page-tools:checked ~ .theme-wrapper .nav-more-btn,
+    #page-doctrine:checked ~ .theme-wrapper .nav-more-btn { color: var(--text-primary); }
+    @media (prefers-reduced-motion: reduce) { .nav-submenu, .nav-more-btn .chev { transition: none; } }
     .nav-center label .tag {
         font-size: 8px; font-weight: 700; letter-spacing: 0.08em; vertical-align: super;
         color: var(--cyan); margin-left: 3px;
@@ -1144,16 +1175,21 @@
     <label for="page-home" class="logo"><span class="mark"></span> kudbee<span class="dot">.</span></label>
     <ul class="nav-center">
         <li><label for="page-home">Home</label></li>
-        <li><label for="page-services">Services</label></li>
-        <li><label for="page-agents">Agents</label></li>
-        <li><a href="brain/">Brain</a></li>
         <li><label for="page-work">Work</label></li>
+        <li><label for="page-services">Services</label></li>
+        <li><a href="brain/">Brain</a></li>
         <li><a href="blog/">Blog</a></li>
         <li><label for="page-contact">Contact</label></li>
-        <li><label for="page-games">Games</label></li>
-        <li><label for="page-tools">Tools</label></li>
-        <li><label for="page-doctrine">Doctrine</label></li>
-        <li><a href="leaderboard/public/leaderboard.html">🏆 League</a></li>
+        <li class="nav-more">
+            <button type="button" class="nav-more-btn" aria-haspopup="true">More <span class="chev" aria-hidden="true">▾</span></button>
+            <ul class="nav-submenu">
+                <li><label for="page-agents">Agents</label></li>
+                <li><label for="page-games">Games</label></li>
+                <li><label for="page-tools">Tools</label></li>
+                <li><label for="page-doctrine">Doctrine</label></li>
+                <li><a href="leaderboard/public/leaderboard.html">🏆 League</a></li>
+            </ul>
+        </li>
     </ul>
     <div class="nav-right">
         <label for="theme-toggle" class="theme-switch" title="Toggle theme"></label>
