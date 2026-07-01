@@ -1,0 +1,16 @@
+# GitHub Ops Sentinel — separate Cloudflare Worker.
+# Deployed independently of the Pages site (root wrangler.toml is untouched).
+# Deploy from this directory:  npx wrangler deploy
+
+name = "kudbee-github-sentinel"
+main = "webhook-receiver.ts"
+compatibility_date = "2026-05-21"
+
+# Secrets (set via `npx wrangler secret put <NAME>`, never committed):
+#   GITHUB_WEBHOOK_SECRET  (required) — HMAC secret configured on the GitHub webhook
+#   GITHUB_TOKEN           (optional) — raises API rate limit from 60/h to 5000/h
+
+# Later: persistent cache via KV (see github-cache.ts MemoryCacheStore note)
+# [[kv_namespaces]]
+# binding = "SENTINEL_CACHE"
+# id = "<create with: npx wrangler kv namespace create SENTINEL_CACHE>"
