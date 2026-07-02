@@ -828,6 +828,33 @@ function renderStats() {
 /* ============================================================
    HISTORY TABLE
    ============================================================ */
+/* Escape untrusted strings before they touch innerHTML. Session fields
+   (desc/model) can arrive from an imported .json file authored by someone
+   else, so they must never be interpolated raw. */
+function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+/* Coerce an imported session into a known-safe shape: numeric fields become
+   finite numbers, strings are length-capped, and unknown keys are dropped.
+   Defense-in-depth alongside esc() so hostile data can't even persist. */
+function sanitizeSession(s, i) {
+    if (!s || typeof s !== 'object') return null;
+    var id = Number(s.id);
+    if (!isFinite(id)) id = Date.now() + i;
+    return {
+        id: id,
+        date: String(s.date == null ? '' : s.date).slice(0, 40),
+        model: String(s.model == null ? '' : s.model).slice(0, 64),
+        inTokens: Math.max(0, Number(s.inTokens) || 0),
+        outTokens: Math.max(0, Number(s.outTokens) || 0),
+        cost: Math.max(0, Number(s.cost) || 0),
+        desc: String(s.desc == null ? '' : s.desc).slice(0, 500),
+    };
+}
+
 function renderHistory() {
     var container = document.getElementById('historyContainer');
     if (!sessions.length) {
@@ -839,14 +866,14 @@ function renderHistory() {
         var m = MODELS[s.model] || { name: s.model, color: '#9aa3b8' };
         return '<tr>' +
             '<td>' + fmtDate(s.date) + '</td>' +
-            '<td><span class="model-badge" style="border-left:3px solid ' + m.color + ';">' + m.name + '</span></td>' +
+            '<td><span class="model-badge" style="border-left:3px solid ' + m.color + ';">' + esc(m.name) + '</span></td>' +
             '<td>' + fmtTokens(s.inTokens) + '</td>' +
             '<td>' + fmtTokens(s.outTokens) + '</td>' +
             '<td class="cost-cell">' + fmtCost(s.cost) + '</td>' +
-            '<td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (s.desc || '') + '">' + (s.desc || '<span style="color:var(--text-dim)">—</span>') + '</td>' +
+            '<td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(s.desc || '') + '">' + (s.desc ? esc(s.desc) : '<span style="color:var(--text-dim)">—</span>') + '</td>' +
             '<td><div class="row-actions">' +
-                '<button class="edit-btn" data-id="' + s.id + '" title="Edit session">✎</button>' +
-                '<button class="del-btn" data-id="' + s.id + '" title="Delete session">✕</button>' +
+                '<button class="edit-btn" data-id="' + esc(s.id) + '" title="Edit session">✎</button>' +
+                '<button class="del-btn" data-id="' + esc(s.id) + '" title="Delete session">✕</button>' +
             '</div></td>' +
         '</tr>';
     }).join('');
@@ -1175,7 +1202,8 @@ document.getElementById('importFile').addEventListener('change', function (e) {
     reader.onload = function (ev) {
         try {
             var data = JSON.parse(ev.target.result);
-            var imported = Array.isArray(data) ? data : (data.sessions || []);
+            var raw = Array.isArray(data) ? data : (data.sessions || []);
+            var imported = raw.map(sanitizeSession).filter(Boolean);
             var merged = imported.concat(sessions);
             var seen = {};
             sessions = merged.filter(function(s) {

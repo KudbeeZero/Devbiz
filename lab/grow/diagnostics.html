@@ -221,19 +221,19 @@ function render(counts, events) {
     const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
     el('counts').innerHTML = keys.length
         ? '<table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>' +
-          keys.map(k => '<tr><td class="ev">' + k + '</td><td>' + counts[k] + '</td></tr>').join('') + '</tbody></table>'
+          keys.map(k => '<tr><td class="ev">' + escapeHtml(k) + '</td><td>' + counts[k] + '</td></tr>').join('') + '</tbody></table>'
         : '<div class="empty">No events yet.</div>';
 
     // Recent
     if (events && events.length) {
         const rows = events.slice(-40).reverse().map(e =>
-            '<tr><td class="muted">' + new Date(e.t).toLocaleString() + '</td><td class="ev">' + e.event + '</td><td class="muted">' + (e.page || '') + '</td><td class="muted">' + (e.props ? escapeHtml(JSON.stringify(e.props)) : '') + '</td></tr>').join('');
+            '<tr><td class="muted">' + new Date(e.t).toLocaleString() + '</td><td class="ev">' + escapeHtml(e.event) + '</td><td class="muted">' + escapeHtml(e.page || '') + '</td><td class="muted">' + (e.props ? escapeHtml(JSON.stringify(e.props)) : '') + '</td></tr>').join('');
         el('recent').innerHTML = '<table><thead><tr><th>When</th><th>Event</th><th>Page</th><th>Props</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } else {
         el('recent').innerHTML = '<div class="empty">No recent events' + (source === 'collector' ? ' (collector returns aggregates only).' : '.') + '</div>';
     }
 }
-function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 async function load() {
     if (source === 'collector' && COLLECTOR_URL) {
