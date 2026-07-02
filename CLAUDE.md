@@ -20,6 +20,50 @@ Everything is static — any file server works for local preview:
 python3 -m http.server 8000
 ```
 
+## MEMORY LAYERS — THE KUDBEE BRAIN
+
+This file is not documentation; it is **long-term memory**. The whole repo is a brain, and
+each region is a concrete file/route. When you learn something, write it to the *right layer* —
+that is what turns this from a doc into a team. Start every task by reading the layer that
+holds the relevant memory; end it by writing back what changed.
+
+| Brain region | What it holds | Route(s) | Read / write when |
+| --- | --- | --- | --- |
+| **Cortex** — durable doctrine (long-term) | Identity, doctrine, conventions, guardrails | **`CLAUDE.md`** (this file) | Read at task start. Write when a rule becomes *permanent*. |
+| **Hippocampus** — working memory (in-flight) | Live lane status, what's ready/blocked/must-not-touch | **`docs/BUILD_LEDGER.md`** | Write on every lane state change (own docs/process lane). |
+| **Prefrontal cortex** — planning | Roadmap, backlog, process reference | **`docs/BUILD_PLAN.md`**, **`docs/BACKLOG.md`**, **`docs/PR_FLOW.md`** | Read before scoping; write when the plan changes. |
+| **Cerebellum** — procedural reflexes (learned) | Habits distilled from repetition & fixed mistakes | **Reflexes log** (below) | Write when something is learned the *second* time. |
+| **Amygdala** — guardrails / risk | Owner-only gates, `OWNER-OK` token, private surfaces | §11 below, **`docs/PRIVATE_TESTING_GATE.md`** | Never auto-cross. Read before any risky/irreversible action. |
+| **Motor cortex** — execution surfaces | Where changes actually land | `index.html`, `games/` (+ `games/shared/engine/`), `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Read the file before editing (Doctrine §D). |
+| **Sensory cortex** — external signals | How the brain perceives the outside | GitHub webhooks/CI, Cloudflare/Vercel deploys, **`ops/github-sentinel/`** | Treat bot/deploy comments as signal, act only when actionable (§6). |
+| **Corpus callosum** — the index/router | Which memory holds what | *this table* + `docs/` | Consult when unsure where a memory belongs. |
+
+### Memory discipline (the save-triggers)
+
+Save proactively — a month of this is what makes the brain yours:
+
+1. **Every repeated instruction** → write it as a rule (Cortex / this file) so it never has to be said a third time.
+2. **Every agreed convention** → write it (Cortex, or the Reflexes log if it's a habit).
+3. **Every mistake made twice** → write a reflex (Cerebellum, below) so the pattern is caught next time.
+
+Routing rule of thumb: *permanent rule* → CLAUDE.md · *in-flight state* → BUILD_LEDGER · *learned habit* → Reflexes log.
+
+### Reflexes log (procedural memory)
+
+Append-only. Newest first. Each entry: the trigger → the reflex.
+
+- **2026-07-02** — Owner prefers a **commit-streaming workflow**: don't reflexively open a PR per change. Default to one working/integration branch with incremental commits; open a PR only when a real review gate is needed or the owner asks. (See Working Conventions below.)
+- **2026-07-02** — Session **cron jobs are cleared on a model switch** (`/model`). After switching, recreate any watch/check-in cron; never assume it survived.
+- **2026-07-02** — Before extracting "shared" code, **diff the candidates first** — only lift what is genuinely duplicated. (Games engine: only `loop.js` + the `util` core were shared; `input/particles/audio/camera` had legitimately diverged.)
+- **2026-07-02** — First CSP on an inline-heavy site ships **Report-Only**; enforcing is a real-browser gate, never a blind flip.
+- **2026-07-02** — Vercel / Cloudflare bot **deploy comments are informational**; acknowledge silently per the Watcher Rule (§6), don't act.
+
+### Working Conventions (living memory)
+
+- **Commit-streaming default (owner, 2026-07-02):** prefer incremental commits on a working/integration branch over many small draft PRs. Open a PR only for a genuine review gate or on request. The detailed PR FLOW rules below still apply *when a PR is opened*.
+- **Owner may authorize closing PRs wholesale** when consolidating or changing rules; closing keeps the branch, so no work is lost (it can be reopened or folded into the integration branch).
+- **Still in force unless the owner changes it:** no direct pushes to `main` without explicit owner authorization; the §11 owner-only gates and the `OWNER-OK` token for irreversible/costly actions.
+
 ## BUILD LEDGER
 
 Every PR, phase, and active work lane is tracked with a numbered ID, a status label, and
@@ -42,6 +86,11 @@ Keep ledger updates on a docs/process lane — never bundled into feature or CI 
 
 These rules govern how every future PR is planned, opened, watched, audited, merged, and
 closed. They apply to all agents and contributors. Full reference: [`docs/PR_FLOW.md`](docs/PR_FLOW.md).
+
+> **Default workflow (owner, 2026-07-02):** the studio now prefers a *commit-streaming* flow —
+> incremental commits on a working/integration branch over a PR per change. The rules below apply
+> **when a PR is actually opened** (a genuine review gate, or on owner request). See
+> *Working Conventions* under **Memory Layers** above.
 
 ### 1. One PR = One Purpose
 
