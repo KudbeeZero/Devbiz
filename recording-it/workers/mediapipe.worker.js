@@ -60,7 +60,7 @@ async function init() {
 
   // Face detection — short-range model, jsdelivr-hosted WASM/assets.
   faceDetection = new FaceDetection({
-    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}`,
+    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${f}`,
   });
   faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
   faceDetection.onResults((results) => {
@@ -74,7 +74,7 @@ async function init() {
 
   // Selfie segmentation — landscape model (modelSelection:1) for general-purpose backgrounds.
   selfieSegmentation = new SelfieSegmentation({
-    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`,
+    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/${f}`,
   });
   selfieSegmentation.setOptions({ modelSelection: 1 });
   selfieSegmentation.onResults((results) => {
