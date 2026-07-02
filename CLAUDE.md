@@ -52,6 +52,7 @@ Routing rule of thumb: *permanent rule* → CLAUDE.md · *in-flight state* → B
 
 Append-only. Newest first. Each entry: the trigger → the reflex.
 
+- **2026-07-02** — **No branches left behind:** when a PR/lane closes or merges, delete its branch (local + remote) in the same step. Land verified lanes to `main`, then delete; only a branch with active in-progress work may linger.
 - **2026-07-02** — Owner prefers a **commit-streaming workflow**: don't reflexively open a PR per change. Default to one working/integration branch with incremental commits; open a PR only when a real review gate is needed or the owner asks. (See Working Conventions below.)
 - **2026-07-02** — Session **cron jobs are cleared on a model switch** (`/model`). After switching, recreate any watch/check-in cron; never assume it survived.
 - **2026-07-02** — Before extracting "shared" code, **diff the candidates first** — only lift what is genuinely duplicated. (Games engine: only `loop.js` + the `util` core were shared; `input/particles/audio/camera` had legitimately diverged.)
@@ -61,8 +62,9 @@ Append-only. Newest first. Each entry: the trigger → the reflex.
 ### Working Conventions (living memory)
 
 - **Commit-streaming default (owner, 2026-07-02):** prefer incremental commits on a working/integration branch over many small draft PRs. Open a PR only for a genuine review gate or on request. The detailed PR FLOW rules below still apply *when a PR is opened*.
-- **Owner may authorize closing PRs wholesale** when consolidating or changing rules; closing keeps the branch, so no work is lost (it can be reopened or folded into the integration branch).
-- **Still in force unless the owner changes it:** no direct pushes to `main` without explicit owner authorization; the §11 owner-only gates and the `OWNER-OK` token for irreversible/costly actions.
+- **Branch lifecycle — no branches left behind (owner, 2026-07-02):** `main` is the *only* long-lived branch and the deploy source (Cloudflare Pages) — keep it green and deployable. Working branches are short-lived and single-purpose (`claude/<lane>`); create one only for work in progress. When a lane is **done + verified** (or abandoned), land its commits to `main` and **delete the branch — local *and* remote — in the same step**. A branch may linger *only* while it holds active in-progress work you are explicitly continuing. A closed or merged PR ⇒ delete its head branch (its commits must already be on `main`, or be intentionally dropped). Turn on GitHub "auto-delete head branches".
+- **Landing to `main`:** under the streaming flow the owner authorized (2026-07-02), a completed + verified lane may be fast-forwarded to `main` without a PR. Still: **flag production deploys** (a push to `main` auto-deploys), respect the §11 owner-only gates, and never take an `OWNER-OK` action without the token.
+- **Closing PRs:** the owner may close PRs wholesale when consolidating or changing rules. Closing alone *keeps* the branch — so after a close, either land the commits to `main` or delete the branch; never leave it dangling.
 
 ## BUILD LEDGER
 
