@@ -1,13 +1,18 @@
 # Cloudflare Pages headers.
-# NOTE: No Content-Security-Policy here on purpose — the site uses intentional inline
-# <style>/<script> + Google Fonts, which would force CSP 'unsafe-inline'. CSP is tracked
-# as a separate hardening PR.
+# CSP ships in Report-Only mode first: the site uses intentional inline <style>/<script> +
+# Google Fonts + several CDNs (recording-it), so 'unsafe-inline' is required and an ENFORCED
+# policy needs real-browser validation. Report-Only makes browsers REPORT violations without
+# blocking anything — zero behavior change. To enforce later: open the preview, check the
+# console for CSP violations, widen the allowlist below to cover any legitimate ones, then
+# rename the header to `Content-Security-Policy` (drop the `-Report-Only` suffix).
 
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), browsing-topics=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://docs.opencv.org https://*.clerk.accounts.dev; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' https://*.workers.dev https://api.anthropic.com https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://tessdata.projectnaptha.com https://docs.opencv.org; frame-src 'self' https://cal.com
 
 # HTML: always revalidate so content updates ship immediately.
 /
