@@ -129,7 +129,10 @@
     [['Rating', m.rating], ['Best checkout', m.bestCheckout || '—'], ['180s', m.total180s], ['Wins', m.wins], ['Best streak', m.bestStreak]]
       .forEach(function (pair) {
         var s = document.createElement('div'); s.className = 'stat';
-        s.innerHTML = '<div class="k">' + pair[0] + '</div><div class="v">' + pair[1] + '</div>';
+        // textContent (not innerHTML) so a tampered local profile value can't inject markup.
+        var k = document.createElement('div'); k.className = 'k'; k.textContent = pair[0];
+        var v = document.createElement('div'); v.className = 'v'; v.textContent = pair[1];
+        s.appendChild(k); s.appendChild(v);
         grid.appendChild(s);
       });
   }

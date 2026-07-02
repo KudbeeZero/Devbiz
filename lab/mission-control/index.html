@@ -515,6 +515,10 @@ Agent state: active / parked / subscribed / complete / unknown</pre>
  * ------------------------------------------------------------------------- */
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+/* href values come from data/*.json — allow only http(s), relative, or anchor
+ * links so a `javascript:` scheme can never become a clickable script link. */
+const safeUrl = u => { const s = String(u == null ? '' : u).trim(); return (/^https?:\/\//i.test(s) || /^(\/|\.{1,2}\/|#)/.test(s)) ? s : '#'; };
+
 /* Map free-text status words → chip color class. */
 function chipClass(v) {
     const s = String(v || '').toLowerCase();
@@ -576,7 +580,7 @@ async function renderFocusBoard() {
                 `<li><span class="fb-bid">${esc(b.id)}</span> ${esc(b.title)} ${b.status ? chip(b.status, 'plain') : ''}</li>`).join('');
             const links = (p.links || []).map(l => l.pending
                 ? `<span class="fb-link muted" title="Lands when ${esc(l.pending)} merges">${esc(l.label)} · pending ${esc(l.pending)}</span>`
-                : `<a class="fb-link" href="${esc(l.href)}"${/^https?:/.test(l.href || '') ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label)}</a>`).join('');
+                : `<a class="fb-link" href="${esc(safeUrl(l.href))}"${/^https?:/.test(l.href || '') ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label)}</a>`).join('');
             return `
             <div class="item fb-card">
                 <div class="item-top">
@@ -652,7 +656,7 @@ async function renderPRs() {
         document.getElementById('prCount').textContent = items.length;
         document.getElementById('prGrid').innerHTML = items.map(p => {
             const titleHTML = p.url
-                ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--border-hover)">${esc(p.title)}</a>`
+                ? `<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--border-hover)">${esc(p.title)}</a>`
                 : esc(p.title);
             return `
             <div class="item">
@@ -739,7 +743,7 @@ async function renderPrompts() {
                     <span class="row-meta">${esc(x.purpose)}</span>
                 </summary>
                 <div class="row-body">
-                    ${x.link ? `<div style="margin-bottom:8px"><a href="${esc(x.link)}" style="color:var(--cyan);font-size:13px">${esc(x.link)}</a></div>` : ''}
+                    ${x.link ? `<div style="margin-bottom:8px"><a href="${esc(safeUrl(x.link))}" style="color:var(--cyan);font-size:13px">${esc(x.link)}</a></div>` : ''}
                     ${x.body ? `<div style="display:flex;justify-content:flex-end"><button class="copy-btn" data-copy="p${i}">Copy</button></div><pre class="prompt" id="p${i}">${esc(x.body)}</pre>` : ''}
                 </div>
             </details>`).join('');
