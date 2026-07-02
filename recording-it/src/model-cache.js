@@ -30,6 +30,13 @@ import { CAPABILITIES } from './capability-check.js';
  *
  * @type {Object<string, {urls: string[], cacheName: string}>}
  */
+// All URLs are pinned to an immutable ref so an upstream change can't silently
+// alter the code/weights we execute: HuggingFace via a commit SHA (not the
+// mutable `main` branch), MediaPipe via an exact npm version (not jsdelivr
+// "latest"), and ffmpeg/opencv/tesseract via their versioned paths. Bumping a
+// version here is a deliberate, reviewable change. (A SHA-256 integrity check on
+// the fetched bytes — verify-then-cache in downloadModel() — is the next
+// hardening step; it needs the known-good digests recorded per URL first.)
 const MODEL_REGISTRY = {
   'ffmpeg-core': {
     urls: [
@@ -41,24 +48,24 @@ const MODEL_REGISTRY = {
   },
   'whisper-tiny': {
     urls: [
-      'https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model.onnx',
-      'https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged.onnx',
-      'https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json',
-      'https://huggingface.co/Xenova/whisper-tiny/resolve/main/config.json',
+      'https://huggingface.co/Xenova/whisper-tiny/resolve/5332fcc35e32a33b86612b9a57a89be7906102b1/onnx/encoder_model.onnx',
+      'https://huggingface.co/Xenova/whisper-tiny/resolve/5332fcc35e32a33b86612b9a57a89be7906102b1/onnx/decoder_model_merged.onnx',
+      'https://huggingface.co/Xenova/whisper-tiny/resolve/5332fcc35e32a33b86612b9a57a89be7906102b1/tokenizer.json',
+      'https://huggingface.co/Xenova/whisper-tiny/resolve/5332fcc35e32a33b86612b9a57a89be7906102b1/config.json',
     ],
     cacheName: 'kudbee-models-v1',
   },
   'mediapipe-face': {
     urls: [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection_solution_simd_wasm_bin.wasm',
-      'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection_short_range.tflite',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection_solution_simd_wasm_bin.wasm',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection_short_range.tflite',
     ],
     cacheName: 'kudbee-models-v1',
   },
   'mediapipe-selfie': {
     urls: [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation_solution_simd_wasm_bin.wasm',
-      'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation_landscape.tflite',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation_solution_simd_wasm_bin.wasm',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation_landscape.tflite',
     ],
     cacheName: 'kudbee-models-v1',
   },
