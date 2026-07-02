@@ -16,8 +16,12 @@ self.addEventListener('fetch', function (e) {
   e.respondWith(
     caches.match(e.request).then(function (r) {
       return r || fetch(e.request).then(function (resp) {
-        var cp = resp.clone();
-        caches.open(C).then(function (c) { c.put(e.request, cp).catch(function () {}); });
+        // Only cache real successes: skip errors (4xx/5xx) and opaque cross-origin
+        // responses, otherwise a transient failure gets pinned for the cache's lifetime.
+        if (resp && resp.ok && resp.type !== 'opaque') {
+          var cp = resp.clone();
+          caches.open(C).then(function (c) { c.put(e.request, cp).catch(function () {}); });
+        }
         return resp;
       }).catch(function () { return caches.match('index.html'); });
     })
