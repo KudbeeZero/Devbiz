@@ -4,43 +4,106 @@
 > AI agent training, and develops original browser games. Home of Kudbee Games Studio.
 
 Kudbee is a zero-build, privacy-respecting studio. Everything we ship — the site, the
-games, and the tools — runs as static HTML with no tracking-heavy frameworks. Reach us
-through the Contact section at https://devbiz.kudbee.workers.dev/ (we reply within 24 hours).
+games, and the tools — runs as static HTML with no tracking-heavy frameworks. The whole
+site is a single cinematic long-scroll page at https://devbiz.kudbee.workers.dev/ — every
+section below is a named anchor on that one document, not a separate URL.
+
+## Page structure (section anchors on /)
+- `#home` — Intro / hero.
+- `#services` — Web Design & Development, AI Agent Training, Support Agent Suite, Game
+  Development.
+- `#work` — Selected client work (case studies) and the Support Agent Suite mini-grid.
+- `#games` — Kudbee Games Studio: nine original, free, in-browser titles.
+- `#agents` — The live Kudbee agent (ask it questions right on the page) and AI training.
+- `#lab` — Studio Media Lab: audio-reactive music videos and other in-browser experiments.
+- `#pricing` — Flat, one-time website pricing tiers; AI training scoped per engagement.
+- `#doctrine` — The Kudbee Doctrine — eight articles on how the studio decides what to build.
+- `#contact` — Contact section, reach the studio and start a project.
 
 ## Services
-- [Web Design & Development](https://devbiz.kudbee.workers.dev/): Custom, high-performance websites
-  engineered for conversions, SEO, and AI discoverability.
-- [AI Agent Training](https://devbiz.kudbee.workers.dev/): Live Zoom sessions that take a team from zero
-  to deploying production-ready AI agents.
-- [Support Agent Suite](https://devbiz.kudbee.workers.dev/): Custom AI support agents tailored to a
-  business's docs and workflows.
-- [Game Development](https://devbiz.kudbee.workers.dev/): Original browser games with cinematic 2.5D
-  worlds, fluid combat, and a 60 FPS feel.
+- Web Design & Development: Custom, high-performance websites engineered for conversions,
+  SEO, and AI discoverability.
+- AI Agent Training: Live Zoom sessions that take a team from zero to deploying
+  production-ready AI agents.
+- Support Agent Suite: Custom AI support agents tailored to a business's docs and workflows.
+- Game Development: Original browser games with cinematic 2.5D worlds, fluid combat, and a
+  60 FPS feel.
 
-## Games
-- [Kudbee Contra](https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html): A 2.5D side-scrolling
-  run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and turrets, and topple
-  the Hive Sentinel. Free, in-browser, no install.
-- [Kudbee Darts](https://devbiz.kudbee.workers.dev/games/kudbee-darts/index.html): Predictive flick-throw
-  darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and unlockable neon
-  dart skins. Free, in-browser.
-- [Online League](https://devbiz.kudbee.workers.dev/leaderboard/public/leaderboard.html): Live leaderboard
-  for Kudbee games.
+## Games (Kudbee Games Studio — nine titles, all free, in-browser, no install)
+- [Kudbee Contra](https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html) — flagship
+  2.5D side-scrolling run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and
+  turrets, and topple the Hive Sentinel.
+- [Kudbee Darts](https://devbiz.kudbee.workers.dev/games/kudbee-darts/index.html) — predictive
+  flick-throw darts with 501 & Cricket modes, smart AI rivals, an XP league ladder, and
+  unlockable neon dart skins.
+- [Kudbee Riff](https://devbiz.kudbee.workers.dev/games/kudbee-riff/index.html) — Fret Rush
+  rhythm game charted to the real beats of an original Kudbee track.
+- [Kudbee Riff II](https://devbiz.kudbee.workers.dev/games/kudbee-riff-2/index.html) — Neon
+  Fret Rush on a second original studio track, with its own leaderboard.
+- [Kudbee Pinball — Starbreak](https://devbiz.kudbee.workers.dev/games/kudbee-pinball/index.html)
+  — a neon space pinball table with skill shots and multi-ramp play.
+- [Kudbee Voidrunner](https://devbiz.kudbee.workers.dev/games/kudbee-voidrunner/index.html) —
+  Asteroid Dive: steer, dodge, and blast through a neon outer-space flyer.
+- [Kudbee Munch — Windy City](https://devbiz.kudbee.workers.dev/games/kudbee-munch/index.html)
+  — original maze-chase; Beezer the bee-bot vs. four surveillance drones on a neon Chicago grid.
+- [Kudbee Orbital](https://devbiz.kudbee.workers.dev/games/kudbee-orbital/index.html) — a
+  zero-gravity twin-stick arena skirmish with Newtonian drift and splitting asteroids.
+- [Kudbee Puzzles — Circuit](https://devbiz.kudbee.workers.dev/games/kudbee-puzzles/index.html)
+  — 30 rotate-the-pipe brain-benders, every board provably solvable.
+- [Online League](https://devbiz.kudbee.workers.dev/leaderboard/public/leaderboard.html) — live
+  leaderboard shared across Kudbee games.
 
 ## Tools (free, browser-based, zero-build)
-- [Token Price Analyzer](https://devbiz.kudbee.workers.dev/tools/token-analyzer/index.html): Track AI model
-  token usage and estimated cost across sessions, with live charts and JSON export.
-- [Coverage Breakdown](https://devbiz.kudbee.workers.dev/tools/coverage-dashboard/index.html): Read-only
-  view of the project's scoped test-coverage gate.
-- [Kudbee Scribe](https://devbiz.kudbee.workers.dev/tools/kudbee-scribe/index.html): Privacy-first writing
-  assistant — instant readability, style, clarity, and grammar feedback in the browser.
+- [UTM Campaign Builder](https://devbiz.kudbee.workers.dev/tools/utm-builder/index.html) —
+  build clean, consistent tracking links with live encoding, channel presets, and saved
+  history.
+- [Invoice Generator](https://devbiz.kudbee.workers.dev/tools/invoice-generator/index.html) —
+  build a polished invoice with live totals, logo, and multi-currency support; export to PDF.
+- [Token Price Analyzer](https://devbiz.kudbee.workers.dev/tools/token-analyzer/index.html) —
+  track AI model token usage and estimated cost across sessions, with live charts and JSON
+  export.
+- [Kudbee Scribe](https://devbiz.kudbee.workers.dev/tools/kudbee-scribe/index.html) —
+  privacy-first writing assistant — instant readability, style, clarity, and grammar
+  feedback in the browser.
+- [Coverage Breakdown](https://devbiz.kudbee.workers.dev/tools/coverage-dashboard/index.html)
+  — read-only view of the project's scoped test-coverage gate.
+- [Controls](https://devbiz.kudbee.workers.dev/tools/controls/index.html) — a live gallery
+  of the shared zero-build slider, rotary knob, and stepper components used across the site.
+
+## Pricing (flat, one-time website projects — no retainers)
+- Starter — $99: 1-page custom landing page, mobile-first, contact form or booking link,
+  1 revision round.
+- Launch — $199: up to 3 pages, SEO-ready metadata & sitemap, social/search preview cards,
+  2 revision rounds.
+- Studio (best value) — $399: up to 6 pages, custom animation & interactions, copywriting
+  polish & on-page SEO, priority delivery, 3 revisions.
+- Pro — $500: up to 10 pages + custom sections, advanced SEO + structured data, blog/CMS
+  setup, analytics, 30-day launch support.
+- AI agent training, the Support Agent Suite, and custom agent workflows are scoped per
+  engagement — book a demo via the Contact section.
+
+## Content
+- [Blog](https://devbiz.kudbee.workers.dev/blog/): practical, honest guides on web design,
+  AI agents, and memory systems.
+- [Build Your Own Memory Layer](https://devbiz.kudbee.workers.dev/brain/): a portable
+  second-brain memory layer that works across ChatGPT, Claude, Cursor, and every device —
+  Kudbee teaches the approach; you own the result.
+- [Ship-it](https://devbiz.kudbee.workers.dev/ship-it/): describe a business and watch
+  Kudbee assemble a real website preview in seconds, then book a call to make it real.
 
 ## Contact
-- Reach us through the Contact section at https://devbiz.kudbee.workers.dev/
+- Reach the studio through the Contact section at https://devbiz.kudbee.workers.dev/#contact
+  (replies within 24 hours).
 - AI training is delivered live over Zoom, with recordings for replay.
-- Start a project: https://devbiz.kudbee.workers.dev/ (Contact section)
+- Start a project: https://devbiz.kudbee.workers.dev/#contact
 
 ## Notes for AI agents
-- The website is a single HTML document with CSS-routed views; all content is present in
-  the DOM of https://devbiz.kudbee.workers.dev/.
+- The website is a single HTML document with CSS-routed views; all section content is
+  present in the DOM of https://devbiz.kudbee.workers.dev/ — link to a specific section
+  with its anchor (e.g. `/#pricing`), not a separate URL.
 - Games and tools are free to play/use, run client-side, and require no signup.
+- A live, in-page AI agent (in the `#agents` section) can answer questions about services,
+  games, tools, and pricing directly.
+- Private/gated surfaces (`/lab/*` internal ops tools, in-repo client demo sites under
+  `/clients/*`) are intentionally excluded from this file and from search indexing — they
+  are not part of the public studio surface.

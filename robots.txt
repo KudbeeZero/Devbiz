@@ -29,10 +29,13 @@ Disallow: /leaderboard/client/
 Disallow: /leaderboard/scripts/
 Disallow: /leaderboard/test/
 Disallow: /tools/kudbee-scribe/worker/
+Disallow: /tools/grow-telemetry/worker/
 Disallow: /games/kudbee-contra/src/
 Disallow: /games/kudbee-darts/src/
 Disallow: /games/kudbee-contra/docs/
 Disallow: /games/kudbee-darts/docs/
+Disallow: /games/kudbee-pinball/eval/
+Disallow: /ops/
 Disallow: /CLAUDE.md
 Disallow: /README.md
 Disallow: /wrangler.toml
