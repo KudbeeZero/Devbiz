@@ -18,7 +18,7 @@
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(circle at 50% 0%, rgba(111,91,255,0.12), transparent 60%), var(--ink); }
   /* Logical canvas 484x612 plus a 44px HUD bar → frame aspect ≈ 484/656 */
-  #frame { position:relative; width:min(100vw, calc(100vh * 0.738)); max-height:100vh;
+  #frame { position:relative; width:min(100vw, calc(100vh * 0.738)); height:min(100vh, calc(100vw / 0.738));
     display:flex; flex-direction:column;
     box-shadow:0 0 60px rgba(111,91,255,0.22), inset 0 0 0 1px rgba(57,230,255,0.12);
     border-radius:10px; overflow:hidden; background:#04040c; }
@@ -129,6 +129,7 @@
             <div class="row"><span>Level reached</span><b id="oLevel">1</b></div>
             <div class="row"><span>Honey chips</span><b id="oChips">0</b></div>
             <div class="row"><span>Drones busted</span><b id="oBusts">0</b></div>
+            <div class="row"><span>Close calls</span><b id="oCloseCalls">0</b></div>
           </div>
           <button class="btn" id="againBtn">Play again</button>
           <div class="ov-foot">Enter also restarts</div>
@@ -611,7 +612,7 @@
       kind: kind, state: 'idle', home: homeSlot,
       tx: HOUSE[homeSlot].c, ty: HOUSE[homeSlot].r, px: 0, dir: 3, gx: HOUSE[homeSlot].c, gy: HOUSE[homeSlot].r,
       release: 0, scatC: scatC, scatR: scatR, reverseFlag: false, fright: false,
-      biasCorner: 0, biasT: 0
+      biasCorner: 0, biasT: 0, nearMissCd: 0
     };
   }
   function resetDrones(afterDeath) {
@@ -640,7 +641,8 @@
   var STATE = 'ATTRACT';                      // ATTRACT READY PLAY DYING CLEAR OVER PAUSED
   var prePause = 'PLAY';
   var level = 1, score = 0, best = 0, lives = 3;
-  var chipsEaten = 0, bustCount = 0, chainIdx = 0;
+  var chipsEaten = 0, bustCount = 0, chainIdx = 0, closeCalls = 0;
+  var NEARMISS_LO2 = 0.45, NEARMISS_HI2 = 1.15, NEARMISS_BONUS = 15, NEARMISS_CD = 1.1;
   var frightT = 0, frightMax = 7;
   var modePhase = 0, modeT = 0;
   var stateT = 0, freezeT = 0, shake = 0;
@@ -852,6 +854,7 @@
   function stepDrone(d, dt) {
     d.biasT += dt;
     if (d.biasT > 7) { d.biasT = 0; d.biasCorner = (d.biasCorner + 1) & 3; }
+    if (d.nearMissCd > 0) d.nearMissCd -= dt;
     if (d.state === 'idle') {
       d.release -= dt;
       d.gy = HOUSE[0].r + Math.sin(now0 * 4 + d.kind * 2) * 0.12;
@@ -918,7 +921,7 @@
     sReady();
   }
   function newGame() {
-    level = 1; score = 0; lives = 3; chipsEaten = 0; bustCount = 0;
+    level = 1; score = 0; lives = 3; chipsEaten = 0; bustCount = 0; closeCalls = 0;
     extraGiven = false; collected.length = 0; lastHud.ic = -1;
     startLevel(true);
     gate.classList.add('hidden'); overOv.classList.add('hidden');
@@ -926,6 +929,14 @@
   function startClear() {
     STATE = 'CLEAR'; stateT = 2.2;
     addScore(100 * level);
+    // The maze-clear moment previously had no particle payoff at all (every other
+    // scoring event — chip, power pellet, bust, death — bursts particles). Give
+    // it a small multi-colour firework from Beezer's own tile so clearing a level
+    // reads as a real celebration, not just a text label + background flash.
+    var cp = playerPos();
+    burst(cp.x, cp.y, COL.amber, 14, 5);
+    burst(cp.x, cp.y, COL.cyan, 10, 4.4);
+    burst(cp.x, cp.y, COL.magenta, 10, 3.8);
   }
   function startDeath() {
     STATE = 'DYING'; stateT = 1.9;
@@ -942,6 +953,7 @@
     document.getElementById('oLevel').textContent = String(level);
     document.getElementById('oChips').textContent = String(chipsEaten);
     document.getElementById('oBusts').textContent = String(bustCount);
+    document.getElementById('oCloseCalls').textContent = String(closeCalls);
     document.getElementById('oKick').textContent = score >= best && score > 0 ? 'New best — the grid remembers' : 'Grid secured by the drones';
     overOv.classList.remove('hidden');
   }
@@ -966,6 +978,28 @@
       } else {
         startDeath();
         return;
+      }
+    }
+  }
+
+  // Small tasteful addition: a "close call" bonus for skirting an active (non-fright)
+  // drone without getting caught — rewards confident, risky navigation instead of just
+  // clearing chips passively. Each drone can only pay out once per cooldown window so it
+  // can't be farmed by hovering at the edge of the band.
+  function checkNearMiss() {
+    var pp = playerPos();
+    for (var i = 0; i < drones.length; i++) {
+      var d = drones[i];
+      if (d.state !== 'active' || d.fright || d.nearMissCd > 0) continue;
+      var dp = dronePos(d);
+      var dx = dp.x - pp.x, dy = dp.y - pp.y;
+      var dist2 = dx * dx + dy * dy;
+      if (dist2 > NEARMISS_LO2 && dist2 < NEARMISS_HI2) {
+        d.nearMissCd = NEARMISS_CD;
+        closeCalls++;
+        addScore(NEARMISS_BONUS);
+        popup((pp.x + dp.x) / 2, (pp.y + dp.y) / 2 - 0.35, 'CLOSE CALL!', COL.cyan);
+        burst((pp.x + dp.x) / 2, (pp.y + dp.y) / 2, COL.cyan, 6, 3);
       }
     }
   }
@@ -1018,6 +1052,7 @@
     stepPlayer(dt);
     for (i = 0; i < drones.length; i++) stepDrone(drones[i], dt);
     collide();
+    if (STATE === 'PLAY') checkNearMiss();
 
     if (cameo.active) {
       cameo.t -= dt;
@@ -1271,6 +1306,7 @@
     get level() { return level; },
     get chipsLeft() { return chipsLeft; },
     get frightT() { return frightT; },
+    get closeCalls() { return closeCalls; },
     debug: {
       eatPower: function () {         // consume a real Deep Dish Slice
         for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++)
@@ -1284,6 +1320,18 @@
         frightT = 0;
         for (var i = 0; i < drones.length; i++) drones[i].fright = false;
         collide();
+        return STATE;
+      },
+      nearMiss: function () {         // place HAWK just outside the collision radius (non-fright)
+        var d = drones[0];
+        d.state = 'active'; d.fright = false; d.nearMissCd = 0;
+        d.tx = P.tx + 1; d.ty = P.ty; d.px = 0; d.dir = 2;
+        checkNearMiss();
+        return { score: score, closeCalls: closeCalls };
+      },
+      finishLevel: function () {      // sweep every remaining chip to trigger STREET SWEPT!
+        for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++)
+          if (chips[r] && chips[r][c]) eatAt(r, c);
         return STATE;
       }
     }
