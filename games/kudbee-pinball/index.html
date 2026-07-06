@@ -34,9 +34,15 @@
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.55), rgba(3,3,10,0.92));
     backdrop-filter:blur(3px); transition:opacity 0.4s ease; }
   .overlay.hidden { opacity:0; pointer-events:none; }
-  .ov-inner { max-width:460px; }
+  /* width:100% + min-width:0 keeps this inside the grid cell's padded box (place-items:center
+     otherwise lets it grow to its content's natural size) so long headline words wrap instead of
+     spilling past the table frame on narrow/landscape aspect ratios (e.g. short phone-landscape
+     windows, where the frame itself is capped to ~0.6x the viewport height). */
+  .ov-inner { width:100%; min-width:0; max-width:460px; }
   .kicker { font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); }
-  .ov-inner h1 { font-size:clamp(34px,9vw,60px); line-height:1.02; font-weight:700; color:#fff; margin:10px 0 6px; letter-spacing:-0.02em; }
+  /* vmin (not vw) so headline size tracks the frame's actual short side — a vw-only clamp reads
+     the full viewport width even when the frame itself is squeezed narrow in landscape. */
+  .ov-inner h1 { font-size:clamp(28px,8vmin,56px); line-height:1.02; font-weight:700; color:#fff; margin:10px 0 6px; letter-spacing:-0.02em; word-break:break-word; }
   .grad { background:linear-gradient(120deg,#6af0ff,#9b8cff 55%,#d79bff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .ov-inner p { color:#9aa3b8; font-size:14px; line-height:1.5; max-width:380px; margin:0 auto; }
   .btn { margin-top:24px; display:inline-flex; align-items:center; gap:10px; padding:15px 28px; border:none; border-radius:999px;
@@ -380,12 +386,17 @@
   var saveT = 0, BALL_SAVE_S = 8;                   // ball-save grace window after each fresh serve
   var bonusU = 0;                                   // end-of-ball bonus units collected this ball
   var dispScore = 0, scoreFlash = 0;                // animated score count-up + glow
+  // skill-shot streak: back-to-back lit-lane hits across serves (fresh or ball-saved) within one
+  // game. Small capped scaling bonus on top of the base skill shot — rewards a player who's
+  // actually reading the plunge-power meter consistently, without needing a whole new mode.
+  var skillStreak = 0, bestSkillStreak = 0, SKILL_STREAK_CAP = 3;
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   function resetGame() {
     score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
+    skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
@@ -617,7 +628,11 @@
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
-      if (!reduceMotion) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 10) b.trail.shift(); }
+      // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
+      // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
+      // when a comet trail matters most for reading the shot. 22 samples (~73ms) gives a real,
+      // legible tail at speed while still vanishing quickly once the ball settles.
+      if (!reduceMotion) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 22) b.trail.shift(); }
       // drain
       if (b.y > DRAIN_Y) { balls.splice(bi, 1); burst(b.x, DRAIN_Y - 10, '#ff5d3c', 16, 420); onDrain(); }
     }
@@ -658,11 +673,20 @@
     b.x = L.x; b.y = 200; b.vx = lane === 0 ? 70 : lane === 2 ? -70 : 45; b.vy = 130; b.trail.length = 0;
     if (lane === skillLit) {
       comboHit(L.x, 210);
-      addScore(SKILL_VALUE); bonusU += 15; sfx('skill');
-      callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
-      shake = Math.min(shake + 0.55, 1.6);
-      burst(L.x, 210, '#ffd34d', 28, 520); burst(L.x, 210, '#ffffff', 14, 300);
+      skillStreak++; if (skillStreak > bestSkillStreak) bestSkillStreak = skillStreak;
+      // capped streak bonus: +50% of a base skill shot per streak step beyond the first, capped
+      var streakStep = Math.min(skillStreak - 1, SKILL_STREAK_CAP);
+      var streakBonus = streakStep * Math.round(SKILL_VALUE * 0.5);
+      addScore(SKILL_VALUE + streakBonus); bonusU += 15; sfx('skill');
+      if (skillStreak >= 2) {
+        callout('SKILL STREAK ×' + skillStreak, '+' + ((SKILL_VALUE + streakBonus) * mult).toLocaleString(), '#ffd34d');
+      } else {
+        callout('SKILL SHOT!', '+' + (SKILL_VALUE * mult).toLocaleString(), '#ffd34d');
+      }
+      shake = Math.min(shake + 0.55 + streakStep * 0.08, 1.6);
+      burst(L.x, 210, '#ffd34d', 28 + streakStep * 4, 520); burst(L.x, 210, '#ffffff', 14, 300);
     } else {
+      skillStreak = 0;
       addScore(SKILL_MISS); callout('LANE ' + L.label, '+' + SKILL_MISS, '#39e6ff');
       burst(L.x, 210, '#39e6ff', 10, 340);
     }
@@ -691,7 +715,7 @@
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
     dispScore = score;
     document.getElementById('oScore').textContent = score.toLocaleString();
-    var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '');
+    var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
   }
@@ -1145,6 +1169,7 @@
     get tilt() { return tilt; }, get tilted() { return tilted; },
     get saveT() { return saveT; }, get combo() { return comboN; }, get bonusU() { return bonusU; },
     get muted() { return muted; }, get ballsLeft() { return ballsLeft; },
+    get skillStreak() { return skillStreak; }, get bestSkillStreak() { return bestSkillStreak; },
     setMuted: setMuted,
     nudge: function (d) { nudge(d || 0); },
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
