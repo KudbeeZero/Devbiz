@@ -218,6 +218,13 @@ button { font: inherit; color: inherit; }
 h1, h2, h3, h4 { font-family: var(--fd); font-weight: 600; line-height: 1.04; letter-spacing: -0.03em; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+.skip-link {
+    position: fixed; top: -60px; left: 14px; z-index: 300;
+    padding: 14px 22px; border-radius: 12px; background: var(--bg-2); color: var(--txt);
+    border: 1px solid var(--border); font: 600 14px/1 var(--fd); text-decoration: none;
+    transition: top 0.25s var(--ease);
+}
+.skip-link:focus { top: 14px; }
 
 /* Film grain + ambient aurora — the room the whole site sits in */
 .noise {
@@ -302,7 +309,7 @@ html:not(.js) .preloader { display: none; }
     transition: background-position 0.4s var(--ease), transform 0.3s var(--ease), box-shadow 0.3s;
 }
 .nav-cta:hover { background-position: 100% 0; transform: translateY(-1px); box-shadow: 0 4px 30px rgba(111,91,255,0.5); }
-.burger { display: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer; align-items: center; justify-content: center; flex-direction: column; gap: 5px; }
+.burger { display: none; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer; align-items: center; justify-content: center; flex-direction: column; gap: 5px; }
 .burger span { display: block; width: 18px; height: 2px; background: var(--txt); border-radius: 2px; transition: transform 0.3s var(--ease), opacity 0.3s; }
 #nav-open:checked ~ .nav .burger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 #nav-open:checked ~ .nav .burger span:nth-child(2) { opacity: 0; }
@@ -320,7 +327,7 @@ html:not(.js) .preloader { display: none; }
 #nav-open:checked ~ .scrim { opacity: 1; visibility: visible; }
 #nav-open:checked ~ .drawer { transform: none; }
 .drawer .d-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.drawer .d-close { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer; font-size: 16px; }
+.drawer .d-close { width: 42px; height: 42px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer; font-size: 16px; }
 .drawer .d-kicker { margin: 18px 0 6px; font: 600 10.5px/1 var(--fd); letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
 .drawer a { display: flex; align-items: center; justify-content: space-between; padding: 11px 4px; font: 500 17px/1.2 var(--fd); color: var(--txt-2); text-decoration: none; border-bottom: 1px solid var(--border-soft); transition: color 0.25s, padding-left 0.25s; }
 .drawer a:hover { color: var(--txt); padding-left: 10px; }
@@ -458,8 +465,8 @@ html.js .hero.on h1 .line > span { transform: none; transition: transform 1.1s v
 .story .pin { position: sticky; top: 0; min-height: 100vh; display: flex; align-items: center; overflow: hidden; }
 .story .grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(30px, 5vw, 80px); align-items: center; width: 100%; }
 .story .steps { display: grid; gap: 6px; position: relative; }
-.story .step { position: relative; padding: 18px 20px 18px 58px; border-radius: 16px; transition: background 0.5s, opacity 0.5s; opacity: 0.38; }
-.story .step.on { background: var(--panel-2); opacity: 1; }
+.story .step { position: relative; padding: 18px 20px 18px 58px; border-radius: 16px; transition: background 0.5s; }
+.story .step.on { background: var(--panel-2); }
 .story .step .s-num {
     position: absolute; left: 16px; top: 20px; width: 28px; height: 28px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -467,7 +474,9 @@ html.js .hero.on h1 .line > span { transform: none; transition: transform 1.1s v
     border: 1px solid var(--border); transition: all 0.5s;
 }
 .story .step.on .s-num { color: #04040a; background: var(--grad); border-color: transparent; box-shadow: 0 0 16px var(--glow); }
-.story .step h4 { font-size: 18px; letter-spacing: -0.01em; }
+/* De-emphasize inactive steps with color (not opacity) so the dimmed state never drops below AA contrast. */
+.story .step h3 { font-size: 18px; letter-spacing: -0.01em; color: var(--txt-2); transition: color 0.5s; }
+.story .step.on h3 { color: var(--txt); }
 .story .step p { margin-top: 4px; color: var(--txt-2); font-size: 14.5px; max-width: 46ch; }
 .story .stage { position: relative; aspect-ratio: 16/11; border-radius: 24px; border: 1px solid var(--border); background: linear-gradient(165deg, var(--bg-3), #060612); overflow: hidden; }
 .story .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -475,7 +484,6 @@ html.js .hero.on h1 .line > span { transform: none; transition: transform 1.1s v
 .story .bar { height: 3px; margin-top: 26px; border-radius: 3px; background: var(--border-soft); overflow: hidden; }
 .story .bar span { display: block; height: 100%; width: 100%; background: var(--grad); transform: scaleX(0); transform-origin: left; }
 html:not(.js) .story .pin-outer { height: auto; }
-html:not(.js) .story .step { opacity: 1; }
 
 /* ---------------- Work ---------------- */
 .case { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(26px, 4.5vw, 70px); align-items: center; padding: clamp(36px, 6vw, 80px) 0; border-top: 1px solid var(--border-soft); }
@@ -506,7 +514,7 @@ html:not(.js) .story .step { opacity: 1; }
 .mini:hover::after { opacity: 1; }
 .mini .m-thumb { display: block; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; margin-bottom: 16px; border: 1px solid var(--border-soft); }
 .mini .m-thumb canvas { width: 100%; height: 100%; }
-.mini h4 { font-size: 17px; letter-spacing: -0.01em; }
+.mini h3 { font-size: 17px; letter-spacing: -0.01em; }
 .mini .m-cat { display: block; margin-top: 5px; font: 500 12px/1.5 var(--fb); color: var(--dim); }
 .mini .m-go { display: inline-block; margin-top: 12px; font: 600 12.5px/1 var(--fd); color: var(--cyan); }
 
@@ -542,7 +550,7 @@ html:not(.js) .story .step { opacity: 1; }
 }
 .gcard:hover .g-play { transform: scale(1.12) rotate(8deg); }
 .gcard .g-meta { display: block; position: relative; padding: 22px 20px 20px; }
-.gcard h4 { font-size: 18px; }
+.gcard h3 { font-size: 18px; }
 .gcard .g-cat { display: block; margin-top: 4px; font: 500 12px/1.5 var(--fb); color: var(--dim); }
 .gcard .g-badge { position: absolute; left: 14px; top: 12px; font: 700 10px/1 var(--fd); letter-spacing: 0.18em; text-transform: uppercase; color: var(--c, var(--cyan)); border: 1px solid currentColor; border-radius: 999px; padding: 6px 11px; background: rgba(5,5,10,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .league {
@@ -556,7 +564,7 @@ html:not(.js) .story .step { opacity: 1; }
 </head>
 <body>
 
-<h1 class="sr-only">Kudbee — Web Design, AI Agent Training, and Original Game Development</h1>
+<a class="skip-link" href="#main">Skip to content</a>
 
 <div class="noise" aria-hidden="true"></div>
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -615,7 +623,7 @@ html:not(.js) .story .step { opacity: 1; }
 .acap { padding: 24px; border-radius: 18px; border: 1px solid var(--border-soft); background: var(--panel); transition: transform 0.4s var(--ease), border-color 0.4s; }
 .acap:hover { transform: translateY(-4px); border-color: rgba(196,107,255,0.4); }
 .acap .a-ic { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(196,107,255,0.16), rgba(111,91,255,0.1)); margin-bottom: 16px; }
-.acap h4 { font-size: 16.5px; }
+.acap h3 { font-size: 16.5px; }
 .acap p { margin-top: 6px; color: var(--txt-2); font-size: 14px; }
 
 /* ---------------- Tiny-app store + terminal ---------------- */
@@ -626,7 +634,7 @@ html:not(.js) .story .step { opacity: 1; }
 .sc-top { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
 .sc-ic { flex: none; width: 38px; height: 38px; border-radius: 11px; background: var(--panel-2); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; padding: 8px; }
 .sc-ic svg { width: 100%; height: 100%; }
-.store-card h4 { font-size: 14.5px; line-height: 1.35; }
+.store-card h3 { font-size: 14.5px; line-height: 1.35; }
 .sc-slug { font: 500 10.5px/1.4 ui-monospace, monospace; color: var(--dim); }
 .store-card p { font-size: 12.8px; line-height: 1.55; color: var(--txt-2); }
 .sc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
@@ -681,7 +689,7 @@ html:not(.js) .story .step { opacity: 1; }
 .lt-art .sprout::after { left: 3px; transform: scaleX(-1) rotate(-38deg); top: 30%; }
 .lt-meta { padding: 16px 18px 18px; }
 .lt-meta .k { font: 600 10.5px/1 var(--fd); letter-spacing: 0.24em; text-transform: uppercase; color: var(--dim); }
-.lt-meta h4 { margin-top: 8px; font-size: 16px; color: var(--txt); }
+.lt-meta h3 { margin-top: 8px; font-size: 16px; color: var(--txt); }
 .lt-meta p { margin-top: 4px; font-size: 13px; color: var(--txt-2); }
 
 /* ---------------- Pricing ---------------- */
@@ -804,14 +812,14 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     </ul>
     <div style="display:flex;align-items:center;gap:12px;">
         <a class="nav-cta" href="#contact">Start a project</a>
-        <label class="burger" for="nav-open" role="button" aria-label="Open menu" tabindex="0"><span></span><span></span><span></span></label>
+        <button type="button" class="burger" aria-label="Open menu" aria-haspopup="dialog" aria-controls="drawer" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
 </header>
 <label class="scrim" for="nav-open" aria-hidden="true"></label>
-<aside class="drawer" id="drawer" aria-label="Menu">
+<div class="drawer" id="drawer" role="dialog" aria-label="Menu" tabindex="-1">
     <div class="d-head">
         <a class="logo" href="#home"><span class="mark"></span>kudbee<span class="tld">.</span></a>
-        <label class="d-close" for="nav-open" role="button" aria-label="Close menu" tabindex="0">✕</label>
+        <button type="button" class="d-close" aria-label="Close menu">✕</button>
     </div>
     <span class="d-kicker">Explore</span>
     <a href="#work">Work <span class="arr">→</span></a>
@@ -828,9 +836,9 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     <a href="tools/kudbee-scribe/index.html">Scribe <span class="arr">↗</span></a>
     <a href="leaderboard/public/leaderboard.html">🏆 Online League <span class="arr">↗</span></a>
     <a class="nav-cta d-cta" href="#contact">Start a project</a>
-</aside>
+</div>
 
-<main id="main">
+<main id="main" tabindex="-1">
 
 <!-- ==================== HERO ==================== -->
 <section class="hero" id="home" aria-label="Intro">
@@ -951,11 +959,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                         <span class="kicker">How work ships</span>
                         <h2 class="title" style="font-size:clamp(28px,3.8vw,46px)">A simple, <span class="g">proven</span> process</h2>
                         <div class="steps" id="storySteps">
-                            <div class="step on"><span class="s-num">01</span><h4>Discovery</h4><p>I learn your goals, audience, and vision on a fast, focused call.</p></div>
-                            <div class="step"><span class="s-num">02</span><h4>Strategy &amp; design</h4><p>Wireframes, agent architecture, or game design docs — the plan on paper first.</p></div>
-                            <div class="step"><span class="s-num">03</span><h4>Build &amp; train</h4><p>I ship the work and deliver live sessions — you watch it come alive.</p></div>
-                            <div class="step"><span class="s-num">04</span><h4>Proof</h4><p>Everything is verified before it's called done — real checks, not promises.</p></div>
-                            <div class="step"><span class="s-num">05</span><h4>Launch &amp; support</h4><p>Go live on Cloudflare with ongoing optimization. The work is yours to keep.</p></div>
+                            <div class="step on"><span class="s-num">01</span><h3>Discovery</h3><p>I learn your goals, audience, and vision on a fast, focused call.</p></div>
+                            <div class="step"><span class="s-num">02</span><h3>Strategy &amp; design</h3><p>Wireframes, agent architecture, or game design docs — the plan on paper first.</p></div>
+                            <div class="step"><span class="s-num">03</span><h3>Build &amp; train</h3><p>I ship the work and deliver live sessions — you watch it come alive.</p></div>
+                            <div class="step"><span class="s-num">04</span><h3>Proof</h3><p>Everything is verified before it's called done — real checks, not promises.</p></div>
+                            <div class="step"><span class="s-num">05</span><h3>Launch &amp; support</h3><p>Go live on Cloudflare with ongoing optimization. The work is yours to keep.</p></div>
                         </div>
                         <div class="bar" aria-hidden="true"><span id="storyBar"></span></div>
                     </div>
@@ -1018,12 +1026,12 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </article>
 
         <div class="mini-grid">
-            <a class="mini" data-rv href="tools/kudbee-scribe/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="scribe" aria-hidden="true"></canvas></span><h4>Kudbee Scribe</h4><span class="m-cat">Tool · Privacy-first writing assistant — 12 live checks, in-browser</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.08s" href="tools/token-analyzer/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="tokens" aria-hidden="true"></canvas></span><h4>Token Price Analyzer</h4><span class="m-cat">Tool · AI token spend across Claude, GPT &amp; Gemini</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.16s" href="#agents"><span class="m-thumb"><canvas class="shot-canvas" data-scene="ai2" aria-hidden="true"></canvas></span><h4>Support Agent Suite</h4><span class="m-cat">AI · Six focused agents that keep support moving</span><span class="m-go">View suite →</span></a>
-            <a class="mini" data-rv href="tools/utm-builder/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="utm" aria-hidden="true"></canvas></span><h4>UTM Builder</h4><span class="m-cat">Tool · Clean campaign URLs with presets &amp; history</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.08s" href="tools/invoice-generator/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="invoice" aria-hidden="true"></canvas></span><h4>Invoice Generator</h4><span class="m-cat">Tool · Polished PDF invoices, fully in-browser</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.16s" href="tools/coverage-dashboard/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="coverage" aria-hidden="true"></canvas></span><h4>Coverage Breakdown</h4><span class="m-cat">Tool · The exact per-file numbers CI enforces</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv href="tools/kudbee-scribe/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="scribe" aria-hidden="true"></canvas></span><h3>Kudbee Scribe</h3><span class="m-cat">Tool · Privacy-first writing assistant — 12 live checks, in-browser</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv style="--rvd:0.08s" href="tools/token-analyzer/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="tokens" aria-hidden="true"></canvas></span><h3>Token Price Analyzer</h3><span class="m-cat">Tool · AI token spend across Claude, GPT &amp; Gemini</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv style="--rvd:0.16s" href="#agents"><span class="m-thumb"><canvas class="shot-canvas" data-scene="ai2" aria-hidden="true"></canvas></span><h3>Support Agent Suite</h3><span class="m-cat">AI · Six focused agents that keep support moving</span><span class="m-go">View suite →</span></a>
+            <a class="mini" data-rv href="tools/utm-builder/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="utm" aria-hidden="true"></canvas></span><h3>UTM Builder</h3><span class="m-cat">Tool · Clean campaign URLs with presets &amp; history</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv style="--rvd:0.08s" href="tools/invoice-generator/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="invoice" aria-hidden="true"></canvas></span><h3>Invoice Generator</h3><span class="m-cat">Tool · Polished PDF invoices, fully in-browser</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv style="--rvd:0.16s" href="tools/coverage-dashboard/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="coverage" aria-hidden="true"></canvas></span><h3>Coverage Breakdown</h3><span class="m-cat">Tool · The exact per-file numbers CI enforces</span><span class="m-go">Open →</span></a>
         </div>
 
         <div class="receipts">
@@ -1066,15 +1074,15 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="game-grid">
-            <a class="gcard" data-rv href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Darts</h4><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Riff</h4><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Riff II</h4><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
-            <a class="gcard" data-rv href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Pinball — Starbreak</h4><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Voidrunner</h4><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy" width="960" height="412"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Contra</h4><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
-            <a class="gcard" data-rv href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Munch — Windy City</h4><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Orbital</h4><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Puzzles — Circuit</h4><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></span></a>
+            <a class="gcard" data-rv href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Darts</h3><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff</h3><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff II</h3><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
+            <a class="gcard" data-rv href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Pinball — Starbreak</h3><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Voidrunner</h3><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy" width="960" height="412"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Contra</h3><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
+            <a class="gcard" data-rv href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Munch — Windy City</h3><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Orbital</h3><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Puzzles — Circuit</h3><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></span></a>
         </div>
 
         <div class="league" data-rv>
@@ -1131,12 +1139,12 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="acap-grid">
-            <div class="acap" data-rv><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><h4>Inbox Triage Agent</h4><p>Sorts every incoming request by urgency and topic the moment it arrives.</p></div>
-            <div class="acap" data-rv style="--rvd:0.06s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><h4>Reply Draft Agent</h4><p>Drafts clear, on-brand responses — ready for a human to review and send.</p></div>
-            <div class="acap" data-rv style="--rvd:0.12s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div><h4>Follow-Up Agent</h4><p>Tracks what still needs action so open items never slip after the first reply.</p></div>
-            <div class="acap" data-rv><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h4>Knowledge Base Agent</h4><p>Turns repeated questions into reusable answers handled instantly.</p></div>
-            <div class="acap" data-rv style="--rvd:0.06s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h4>Escalation Agent</h4><p>Flags angry, legal, or billing-sensitive messages for a person to handle first.</p></div>
-            <div class="acap" data-rv style="--rvd:0.12s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><h4>Summary Agent</h4><p>Condenses long threads into quick context anyone can pick up in seconds.</p></div>
+            <div class="acap" data-rv><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><h3>Inbox Triage Agent</h3><p>Sorts every incoming request by urgency and topic the moment it arrives.</p></div>
+            <div class="acap" data-rv style="--rvd:0.06s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><h3>Reply Draft Agent</h3><p>Drafts clear, on-brand responses — ready for a human to review and send.</p></div>
+            <div class="acap" data-rv style="--rvd:0.12s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div><h3>Follow-Up Agent</h3><p>Tracks what still needs action so open items never slip after the first reply.</p></div>
+            <div class="acap" data-rv><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h3>Knowledge Base Agent</h3><p>Turns repeated questions into reusable answers handled instantly.</p></div>
+            <div class="acap" data-rv style="--rvd:0.06s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h3>Escalation Agent</h3><p>Flags angry, legal, or billing-sensitive messages for a person to handle first.</p></div>
+            <div class="acap" data-rv style="--rvd:0.12s"><div class="a-ic"><svg width="20" height="20" fill="none" stroke="#c46bff" stroke-width="1.7" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><h3>Summary Agent</h3><p>Condenses long threads into quick context anyone can pick up in seconds.</p></div>
         </div>
 
         <!-- Tiny apps + install terminal -->
@@ -1148,47 +1156,47 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         <div class="store-layout">
             <div class="store-grid">
                 <div class="store-card" data-rv data-app="utm-builder" data-name="UTM Campaign Builder" data-live="1" data-url="tools/utm-builder/index.html">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><h4>UTM Campaign Builder <span class="sc-live">● LIVE</span></h4><div class="sc-slug">kudbee add utm-builder</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><h3>UTM Campaign Builder <span class="sc-live">● LIVE</span></h3><div class="sc-slug">kudbee add utm-builder</div></div></div>
                     <p>Clean, consistent tracking links your whole team reuses — presets, validation, saved history.</p>
                     <div class="sc-foot"><span class="price-tag free">Free</span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.05s" data-app="invoice" data-name="Invoice Generator" data-live="1" data-url="tools/invoice-generator/index.html">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><div><h4>Invoice Generator <span class="sc-live">● LIVE</span></h4><div class="sc-slug">kudbee add invoice</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><div><h3>Invoice Generator <span class="sc-live">● LIVE</span></h3><div class="sc-slug">kudbee add invoice</div></div></div>
                     <p>A polished invoice in 30 seconds, exported to PDF — nothing leaves your browser.</p>
                     <div class="sc-foot"><span class="price-tag free">Free</span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.1s" data-app="token-tracker" data-name="Token Cost Tracker" data-live="1" data-url="tools/token-analyzer/index.html">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg></span><div><h4>Token Cost Tracker <span class="sc-live">● LIVE</span></h4><div class="sc-slug">kudbee add token-tracker</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg></span><div><h3>Token Cost Tracker <span class="sc-live">● LIVE</span></h3><div class="sc-slug">kudbee add token-tracker</div></div></div>
                     <p>Track AI token spend across Claude, GPT &amp; Gemini with live charts and JSON export.</p>
                     <div class="sc-foot"><span class="price-tag free">Free</span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.15s" data-app="scribe" data-name="Scribe — Writing Cleanup" data-live="1" data-url="tools/kudbee-scribe/index.html">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><div><h4>Scribe — Writing Cleanup <span class="sc-live">● LIVE</span></h4><div class="sc-slug">kudbee add scribe</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#7CFFb2" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><div><h3>Scribe — Writing Cleanup <span class="sc-live">● LIVE</span></h3><div class="sc-slug">kudbee add scribe</div></div></div>
                     <p>Tighten any draft into clearer, more confident writing — fully in your browser.</p>
                     <div class="sc-foot"><span class="price-tag free">Free</span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv data-app="qr-studio" data-name="QR Code Studio" data-live="0">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20h.01M17 20h.01M20 17h.01"/></svg></span><div><h4>QR Code Studio</h4><div class="sc-slug">kudbee add qr-studio</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20h.01M17 20h.01M20 17h.01"/></svg></span><div><h3>QR Code Studio</h3><div class="sc-slug">kudbee add qr-studio</div></div></div>
                     <p>Branded QR codes with your logo &amp; colors — crisp PNG/SVG, no watermark, no account.</p>
                     <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.05s" data-app="palette" data-name="Palette Extractor" data-live="0">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-1.3-1-1.5-1-2.5a2 2 0 0 1 2-2h2a5 5 0 0 0 5-5c0-5-4.5-8.5-12-8.5z"/></svg></span><div><h4>Palette Extractor</h4><div class="sc-slug">kudbee add palette</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-1.3-1-1.5-1-2.5a2 2 0 0 1 2-2h2a5 5 0 0 0 5-5c0-5-4.5-8.5-12-8.5z"/></svg></span><div><h3>Palette Extractor</h3><div class="sc-slug">kudbee add palette</div></div></div>
                     <p>Pull a usable palette from any image — hex/HSL plus instant contrast checks.</p>
                     <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.1s" data-app="passphrase" data-name="Passphrase Generator" data-live="0">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><div><h4>Passphrase Generator</h4><div class="sc-slug">kudbee add passphrase</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><div><h3>Passphrase Generator</h3><div class="sc-slug">kudbee add passphrase</div></div></div>
                     <p>Strong, memorable passphrases generated locally — never sent anywhere, ever.</p>
                     <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
                 </div>
                 <div class="store-card" data-rv style="--rvd:0.15s" data-app="og-preview" data-name="Meta &amp; OG Previewer" data-live="0">
-                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M6 13h7"/></svg></span><div><h4>Meta &amp; OG Previewer</h4><div class="sc-slug">kudbee add og-preview</div></div></div>
+                    <div class="sc-top"><span class="sc-ic"><svg fill="none" stroke="#39e6ff" stroke-width="1.7" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M6 13h7"/></svg></span><div><h3>Meta &amp; OG Previewer</h3><div class="sc-slug">kudbee add og-preview</div></div></div>
                     <p>See exactly how your link looks on Google, X, and iMessage before you ship it.</p>
                     <div class="sc-foot"><span class="price-tag">$5 <small>once</small></span><button type="button" class="install-btn">Install →</button></div>
                 </div>
             </div>
-            <div class="term" id="agent-terminal" aria-label="Kudbee install terminal" data-rv="right">
+            <div class="term" id="agent-terminal" role="region" aria-label="Kudbee install terminal" data-rv="right">
                 <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="term-title">kudbee — zsh</span><span class="term-live">ready</span></div>
                 <div class="term-body" id="term-body">
                     <div class="term-line"><span class="dim"># Kudbee tiny-app installer</span></div>
@@ -1213,16 +1221,16 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     </div>
     <div class="lab-marquee" data-rv>
         <div class="lab-track" data-marquee>
-            <a class="lab-tile" href="lab/music-video/index.html"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0s"></i><i style="--d:0.18s"></i><i style="--d:0.36s"></i><i style="--d:0.12s"></i><i style="--d:0.3s"></i><i style="--d:0.06s"></i><i style="--d:0.24s"></i></span></span><span class="lt-meta"><span class="k">Music video</span><h4>Original Track — Rendered Live</h4><p>Spectrum ring, beat-driven bursts, section-synced scenes.</p></span></a>
-            <a class="lab-tile" href="lab/music-video-2/index.html"><span class="lt-art"><span class="swarm" aria-hidden="true"><i style="top:38%;left:24%;--d:0s"></i><i style="top:30%;left:34%;--d:0.3s"></i><i style="top:46%;left:38%;--d:0.6s"></i><i style="top:34%;left:48%;--d:0.2s"></i><i style="top:42%;left:56%;--d:0.9s"></i><i style="top:30%;left:64%;--d:0.5s"></i><i style="top:48%;left:70%;--d:0.1s"></i><i style="top:38%;left:78%;--d:0.7s"></i><i style="top:56%;left:50%;--d:0.4s"></i></span></span><span class="lt-meta"><span class="k">Particle drone show</span><h4>N Orange Ave × Sweater Weather</h4><p>A swarm of light spells the track mid-air, in the house colors.</p></span></a>
-            <a class="lab-tile" href="games/kudbee-riff-2/index.html"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0.09s"></i><i style="--d:0.27s"></i><i style="--d:0s"></i><i style="--d:0.21s"></i><i style="--d:0.33s"></i><i style="--d:0.15s"></i><i style="--d:0.03s"></i></span></span><span class="lt-meta"><span class="k">Games · Rhythm</span><h4>Kudbee Riff II — Neon Fret Rush</h4><p>A brand-new studio track, charted to its real beat &amp; bass.</p></span></a>
-            <a class="lab-tile" href="lab/grow/index.html"><span class="lt-art"><span class="sprout" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">Interactive</span><h4>Grow Companion</h4><p>Watch a plant grow in time-lapse, then plant your own seed.</p></span></a>
-            <a class="lab-tile" href="lab/index.html"><span class="lt-art"><span class="ring" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">The Lab</span><h4>Studio Lab — See It All</h4><p>Every experiment, visual, and media build in one place.</p></span></a>
-            <a class="lab-tile" href="lab/music-video/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0s"></i><i style="--d:0.18s"></i><i style="--d:0.36s"></i><i style="--d:0.12s"></i><i style="--d:0.3s"></i><i style="--d:0.06s"></i><i style="--d:0.24s"></i></span></span><span class="lt-meta"><span class="k">Music video</span><h4>Original Track — Rendered Live</h4><p>Spectrum ring, beat-driven bursts, section-synced scenes.</p></span></a>
-            <a class="lab-tile" href="lab/music-video-2/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="swarm" aria-hidden="true"><i style="top:38%;left:24%;--d:0s"></i><i style="top:30%;left:34%;--d:0.3s"></i><i style="top:46%;left:38%;--d:0.6s"></i><i style="top:34%;left:48%;--d:0.2s"></i><i style="top:42%;left:56%;--d:0.9s"></i><i style="top:30%;left:64%;--d:0.5s"></i><i style="top:48%;left:70%;--d:0.1s"></i><i style="top:38%;left:78%;--d:0.7s"></i><i style="top:56%;left:50%;--d:0.4s"></i></span></span><span class="lt-meta"><span class="k">Particle drone show</span><h4>N Orange Ave × Sweater Weather</h4><p>A swarm of light spells the track mid-air, in the house colors.</p></span></a>
-            <a class="lab-tile" href="games/kudbee-riff-2/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0.09s"></i><i style="--d:0.27s"></i><i style="--d:0s"></i><i style="--d:0.21s"></i><i style="--d:0.33s"></i><i style="--d:0.15s"></i><i style="--d:0.03s"></i></span></span><span class="lt-meta"><span class="k">Games · Rhythm</span><h4>Kudbee Riff II — Neon Fret Rush</h4><p>A brand-new studio track, charted to its real beat &amp; bass.</p></span></a>
-            <a class="lab-tile" href="lab/grow/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="sprout" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">Interactive</span><h4>Grow Companion</h4><p>Watch a plant grow in time-lapse, then plant your own seed.</p></span></a>
-            <a class="lab-tile" href="lab/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="ring" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">The Lab</span><h4>Studio Lab — See It All</h4><p>Every experiment, visual, and media build in one place.</p></span></a>
+            <a class="lab-tile" href="lab/music-video/index.html"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0s"></i><i style="--d:0.18s"></i><i style="--d:0.36s"></i><i style="--d:0.12s"></i><i style="--d:0.3s"></i><i style="--d:0.06s"></i><i style="--d:0.24s"></i></span></span><span class="lt-meta"><span class="k">Music video</span><h3>Original Track — Rendered Live</h3><p>Spectrum ring, beat-driven bursts, section-synced scenes.</p></span></a>
+            <a class="lab-tile" href="lab/music-video-2/index.html"><span class="lt-art"><span class="swarm" aria-hidden="true"><i style="top:38%;left:24%;--d:0s"></i><i style="top:30%;left:34%;--d:0.3s"></i><i style="top:46%;left:38%;--d:0.6s"></i><i style="top:34%;left:48%;--d:0.2s"></i><i style="top:42%;left:56%;--d:0.9s"></i><i style="top:30%;left:64%;--d:0.5s"></i><i style="top:48%;left:70%;--d:0.1s"></i><i style="top:38%;left:78%;--d:0.7s"></i><i style="top:56%;left:50%;--d:0.4s"></i></span></span><span class="lt-meta"><span class="k">Particle drone show</span><h3>N Orange Ave × Sweater Weather</h3><p>A swarm of light spells the track mid-air, in the house colors.</p></span></a>
+            <a class="lab-tile" href="games/kudbee-riff-2/index.html"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0.09s"></i><i style="--d:0.27s"></i><i style="--d:0s"></i><i style="--d:0.21s"></i><i style="--d:0.33s"></i><i style="--d:0.15s"></i><i style="--d:0.03s"></i></span></span><span class="lt-meta"><span class="k">Games · Rhythm</span><h3>Kudbee Riff II — Neon Fret Rush</h3><p>A brand-new studio track, charted to its real beat &amp; bass.</p></span></a>
+            <a class="lab-tile" href="lab/grow/index.html"><span class="lt-art"><span class="sprout" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">Interactive</span><h3>Grow Companion</h3><p>Watch a plant grow in time-lapse, then plant your own seed.</p></span></a>
+            <a class="lab-tile" href="lab/index.html"><span class="lt-art"><span class="ring" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">The Lab</span><h3>Studio Lab — See It All</h3><p>Every experiment, visual, and media build in one place.</p></span></a>
+            <a class="lab-tile" href="lab/music-video/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0s"></i><i style="--d:0.18s"></i><i style="--d:0.36s"></i><i style="--d:0.12s"></i><i style="--d:0.3s"></i><i style="--d:0.06s"></i><i style="--d:0.24s"></i></span></span><span class="lt-meta"><span class="k">Music video</span><h3>Original Track — Rendered Live</h3><p>Spectrum ring, beat-driven bursts, section-synced scenes.</p></span></a>
+            <a class="lab-tile" href="lab/music-video-2/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="swarm" aria-hidden="true"><i style="top:38%;left:24%;--d:0s"></i><i style="top:30%;left:34%;--d:0.3s"></i><i style="top:46%;left:38%;--d:0.6s"></i><i style="top:34%;left:48%;--d:0.2s"></i><i style="top:42%;left:56%;--d:0.9s"></i><i style="top:30%;left:64%;--d:0.5s"></i><i style="top:48%;left:70%;--d:0.1s"></i><i style="top:38%;left:78%;--d:0.7s"></i><i style="top:56%;left:50%;--d:0.4s"></i></span></span><span class="lt-meta"><span class="k">Particle drone show</span><h3>N Orange Ave × Sweater Weather</h3><p>A swarm of light spells the track mid-air, in the house colors.</p></span></a>
+            <a class="lab-tile" href="games/kudbee-riff-2/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="bars" aria-hidden="true"><i style="--d:0.09s"></i><i style="--d:0.27s"></i><i style="--d:0s"></i><i style="--d:0.21s"></i><i style="--d:0.33s"></i><i style="--d:0.15s"></i><i style="--d:0.03s"></i></span></span><span class="lt-meta"><span class="k">Games · Rhythm</span><h3>Kudbee Riff II — Neon Fret Rush</h3><p>A brand-new studio track, charted to its real beat &amp; bass.</p></span></a>
+            <a class="lab-tile" href="lab/grow/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="sprout" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">Interactive</span><h3>Grow Companion</h3><p>Watch a plant grow in time-lapse, then plant your own seed.</p></span></a>
+            <a class="lab-tile" href="lab/index.html" aria-hidden="true" tabindex="-1"><span class="lt-art"><span class="ring" aria-hidden="true"></span></span><span class="lt-meta"><span class="k">The Lab</span><h3>Studio Lab — See It All</h3><p>Every experiment, visual, and media build in one place.</p></span></a>
         </div>
     </div>
 </section>
@@ -1479,19 +1487,52 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         }, { rootMargin: '-38% 0px -52% 0px' });
         Object.keys(map).forEach(function (id) { var s = document.getElementById(id); if (s) io.observe(s); });
     })();
-    // Drawer: close after choosing a link; close on Escape; keyboard-operable labels.
+    // Drawer: real accessible dialog — focus moves in on open, restores to the
+    // trigger on close, the background is set inert (genuine focus trap on
+    // supporting browsers), aria-expanded/aria-modal track state, Escape closes.
     (function () {
         if (!navOpen) return;
+        var drawerEl = document.getElementById('drawer');
+        var burger = document.querySelector('.burger');
+        var dClose = document.querySelector('.d-close');
+        var bgRegions = ['#siteNav', '#main', 'footer']
+            .map(function (s) { return document.querySelector(s); }).filter(Boolean);
+        var lastFocus = null;
+
+        function closeDrawer() { setChecked(false); }
+        function setChecked(checked) {
+            if (navOpen.checked === checked) return;
+            navOpen.checked = checked;
+            navOpen.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function setDrawer(open) {
+            if (burger) burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (drawerEl) { if (open) drawerEl.setAttribute('aria-modal', 'true'); else drawerEl.removeAttribute('aria-modal'); }
+            if (open) {
+                lastFocus = document.activeElement;
+                // Blur the about-to-be-inerted focused element FIRST so inert has
+                // nothing to bounce focus off of; then move focus into the dialog.
+                if (lastFocus && lastFocus.blur) lastFocus.blur();
+                bgRegions.forEach(function (el) { el.setAttribute('inert', ''); });
+                if (drawerEl) {
+                    var focusDrawer = function () { if (navOpen.checked) drawerEl.focus(); };
+                    requestAnimationFrame(focusDrawer);
+                    setTimeout(focusDrawer, 40);
+                }
+            } else {
+                bgRegions.forEach(function (el) { el.removeAttribute('inert'); });
+                if (lastFocus && lastFocus.focus) { lastFocus.focus(); lastFocus = null; }
+            }
+        }
+        navOpen.addEventListener('change', function () { setDrawer(navOpen.checked); });
+
         document.querySelectorAll('.drawer a').forEach(function (a) {
-            a.addEventListener('click', function () { navOpen.checked = false; });
+            a.addEventListener('click', closeDrawer);
         });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') navOpen.checked = false; });
-        document.querySelectorAll('label[for="nav-open"][role="button"]').forEach(function (l) {
-            l.addEventListener('keydown', function (e) {
-                if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-                e.preventDefault(); navOpen.checked = !navOpen.checked;
-            });
-        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+        // Burger + close are real <button>s now — click (and native Enter/Space) just toggle the checkbox.
+        if (burger) burger.addEventListener('click', function () { setChecked(!navOpen.checked); });
+        if (dClose) dClose.addEventListener('click', closeDrawer);
     })();
 
     /* ---------- Reveal system ---------- */
@@ -2250,7 +2291,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     }
     function typingEl() {
         var t = document.createElement('div');
-        t.className = 'agent-typing'; t.innerHTML = '<span></span><span></span><span></span>';
+        t.className = 'agent-typing';
+        t.innerHTML = '<span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span class="sr-only">Kudbee Agent is typing…</span>';
         log.appendChild(t); scroll(); return t;
     }
     function setBusy(b) { busy = b; send.disabled = b; input.disabled = b; }
