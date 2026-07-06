@@ -664,10 +664,26 @@ html:not(.js) .story .pin-outer { height: auto; }
     transition: transform var(--mo-dur-45) var(--ease), border-color var(--mo-dur-45), box-shadow var(--mo-dur-45);
     will-change: transform;
 }
-.gcard:hover { transform: translateY(-7px); border-color: rgba(57,230,255,0.35); box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(57,230,255,0.10); }
+/* --acc-rgb is set per-card inline (style="--acc-rgb:57,230,255") so the hover
+   glow and CRT bloom below pick up that title's own palette instead of one
+   generic cyan accent (DBZ-054); falls back to cyan if a card omits it. */
+.gcard:hover, .gcard:focus-visible { transform: translateY(-7px); border-color: rgba(var(--acc-rgb, 57,230,255), 0.4); box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(var(--acc-rgb, 57,230,255), 0.16); }
 .gcard .g-art { display: block; position: relative; aspect-ratio: 16/9; overflow: hidden; }
 .gcard .g-art canvas, .gcard .g-art img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--mo-dur-8) var(--ease); }
-.gcard:hover .g-art canvas, .gcard:hover .g-art img { transform: scale(1.06); }
+.gcard:hover .g-art canvas, .gcard:hover .g-art img, .gcard:focus-visible .g-art canvas, .gcard:focus-visible .g-art img { transform: scale(1.06); }
+/* CRT hover treatment — scanline + a soft per-title bloom, CSS-only. Sits
+   above the canvas/img (pseudo-elements paint last) and is fully inert
+   (opacity 0, pointer-events none) until hover/focus. */
+.gcard .g-art::after {
+    content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px),
+                radial-gradient(120% 90% at 50% 8%, rgba(var(--acc-rgb, 57,230,255), 0.38), transparent 60%);
+    transition: opacity var(--mo-dur-3) var(--mo-ease-out);
+}
+.gcard:hover .g-art::after, .gcard:focus-visible .g-art::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .gcard .g-art::after { transition: none; }
+}
 .gcard .g-play {
     position: absolute; right: 14px; top: -23px; width: 46px; height: 46px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center; font-size: 15px; color: #04040a;
@@ -1227,15 +1243,15 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="game-grid">
-            <a class="gcard" data-rv href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Darts</h3><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff</h3><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff II</h3><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
-            <a class="gcard" data-rv href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Pinball — Starbreak</h3><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Voidrunner</h3><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy" width="960" height="412"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Contra</h3><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
-            <a class="gcard" data-rv href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Munch — Windy City</h3><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Orbital</h3><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Puzzles — Circuit</h3><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></span></a>
+            <a class="gcard" data-rv style="--acc-rgb:57,230,255" href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Darts</h3><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:255,211,77" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff</h3><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff II</h3><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
+            <a class="gcard" data-rv style="--acc-rgb:196,107,255" href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Pinball — Starbreak</h3><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:57,230,255" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Voidrunner</h3><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy" width="960" height="412"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Contra</h3><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
+            <a class="gcard" data-rv style="--acc-rgb:255,211,77" href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Munch — Windy City</h3><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:111,91,255" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Orbital</h3><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:57,230,255" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Puzzles — Circuit</h3><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></span></a>
         </div>
 
         <div class="league" data-rv>
@@ -2232,7 +2248,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         ctx.restore();
     }
     function drone(ctx, x, y, s) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.shadowColor = palette.violet; ctx.shadowBlur = 12; ctx.fillStyle = '#7a2bbf'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 12, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(6, -1, 4, 0, 7); ctx.fill(); ctx.restore(); }
-    function bolt(ctx, x, y, c) { ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 10; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, 7, 3, 0, 0, 7); ctx.fill(); ctx.restore(); }
+    function bolt(ctx, x, y, c, a) { if (a === undefined) a = 1; if (a <= 0.02) return; ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = c; ctx.shadowBlur = 10; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, 7, 3, 0, 0, 7); ctx.fill(); ctx.restore(); }
     function boss(ctx, x, y, s) {
         ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
         ctx.shadowColor = palette.violet; ctx.shadowBlur = 22;
@@ -2249,7 +2265,10 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         ctx.arcTo(x, y + hh, x, y, rad); ctx.arcTo(x, y, x + ww, y, rad); ctx.closePath(); ctx.fill();
     }
     var scenes = {
-        jungle: function (ctx, w, h) { bg(ctx, w, h); moon(ctx, w * 0.78, h * 0.26, h * 0.1, palette.violet); moon(ctx, w * 0.3, h * 0.2, h * 0.05, palette.cyan); canopy(ctx, w, h, h * 0.66, '#0c2a1e'); var gy = h * 0.78; ground(ctx, w, h, gy); shafts(ctx, w, h); operative(ctx, w * 0.32, gy, h / 110, 1); drone(ctx, w * 0.7, h * 0.4, h / 130); bolt(ctx, w * 0.45, gy - h * 0.13, palette.cyan); },
+        jungle: function (ctx, w, h, t) { t = t || 0; bg(ctx, w, h); moon(ctx, w * 0.78, h * 0.26, h * 0.1, palette.violet); moon(ctx, w * 0.3, h * 0.2, h * 0.05, palette.cyan); canopy(ctx, w, h, h * 0.66, '#0c2a1e'); var gy = h * 0.78; ground(ctx, w, h, gy); shafts(ctx, w, h); operative(ctx, w * 0.32, gy, h / 110, 1); drone(ctx, w * 0.7, h * 0.4, h / 130);
+            // t=0 -> sin(0)=0 -> flick=1, identical to the pre-animation static bolt
+            var flick = 1 - 0.5 * Math.abs(Math.sin(t * 0.009));
+            bolt(ctx, w * 0.45, gy - h * 0.13, palette.cyan, flick); },
         combat: function (ctx, w, h) { bg(ctx, w, h); canopy(ctx, w, h, h * 0.62, '#0c2a1e'); var gy = h * 0.8; ground(ctx, w, h, gy); operative(ctx, w * 0.22, gy, h / 105, 1); for (var i = 0; i < 4; i++) drone(ctx, w * (0.5 + i * 0.13), h * (0.3 + (i % 2) * 0.18), h / 150); for (var j = 0; j < 5; j++) bolt(ctx, w * (0.3 + j * 0.09), gy - h * 0.22 + (j % 2) * 14, palette.amber); shafts(ctx, w, h); },
         boss: function (ctx, w, h) { bg(ctx, w, h); var gy = h * 0.82; ground(ctx, w, h, gy); boss(ctx, w * 0.62, h * 0.42, h / 150); operative(ctx, w * 0.2, gy, h / 105, 1); for (var k = 0; k < 6; k++) { var a = -0.6 + k * 0.2; bolt(ctx, w * 0.5 + Math.cos(a) * 30, h * 0.45 + Math.sin(a) * 30, palette.red); } shafts(ctx, w, h); },
         web1: function (ctx, w, h) {
@@ -2347,7 +2366,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.save(); ctx.shadowColor = palette.green; ctx.shadowBlur = 10; ctx.fillStyle = palette.green;
             r(ctx, w * 0.47, h * 0.79, w * 0.22, h * 0.07, h * 0.035); ctx.restore();
         },
-        munch: function (ctx, w, h) {
+        munch: function (ctx, w, h, t) {
+            t = t || 0;
             ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, w, h);
             var cols = 9, rows = 7, cw = w / cols, rh = h / rows;
             ctx.strokeStyle = 'rgba(57,230,255,0.5)'; ctx.lineWidth = Math.max(1.5, cw * 0.05);
@@ -2357,12 +2377,15 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             }
             ctx.fillStyle = 'rgba(255,211,77,0.8)';
             for (var i = 0; i < 18; i++) { var dx = (i * 53) % cols, dy = (i * 31) % rows; ctx.beginPath(); ctx.arc(dx * cw + cw / 2, dy * rh + rh / 2, Math.min(cw, rh) * 0.08, 0, 7); ctx.fill(); }
+            // chomp: t=0 -> sin(0)=0 -> delta=0 -> arc(0.6, 5.6) exactly, matching the static frame
+            var delta = Math.sin(t * 0.007) * 0.28;
             ctx.save(); ctx.shadowColor = palette.amber; ctx.shadowBlur = 10; ctx.fillStyle = palette.amber;
-            ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.09, 0.6, 5.6); ctx.fill(); ctx.restore();
+            ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.09, 0.6 + delta, 5.6 - delta); ctx.fill(); ctx.restore();
             ctx.save(); ctx.shadowColor = palette.violet; ctx.shadowBlur = 10; ctx.fillStyle = palette.violet;
             ctx.beginPath(); ctx.moveTo(w * 0.72, h * 0.32); ctx.lineTo(w * 0.82, h * 0.38); ctx.lineTo(w * 0.72, h * 0.44); ctx.closePath(); ctx.fill(); ctx.restore();
         },
-        orbital: function (ctx, w, h) {
+        orbital: function (ctx, w, h, t) {
+            t = t || 0;
             var g = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
             g.addColorStop(0, '#0c1230'); g.addColorStop(1, '#03030a'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
             ctx.fillStyle = 'rgba(200,222,255,0.7)';
@@ -2372,10 +2395,12 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.save(); ctx.translate(w * 0.5, h * 0.22); ctx.rotate(-0.4); ctx.shadowColor = palette.cyan; ctx.shadowBlur = 8; ctx.strokeStyle = '#dff6ff'; ctx.lineWidth = 2;
             var s = Math.min(w, h) * 0.07; ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.7, s * 0.6); ctx.lineTo(0, s * 0.3); ctx.lineTo(-s * 0.7, s * 0.6); ctx.closePath(); ctx.stroke(); ctx.restore();
             for (var j = 0; j < 3; j++) { ctx.save(); ctx.shadowColor = palette.violet; ctx.shadowBlur = 8; ctx.strokeStyle = palette.violet; ctx.lineWidth = 1.6;
-                ctx.translate(w * (0.28 + j * 0.22), h * (0.62 + (j % 2) * 0.14)); ctx.rotate(j);
+                // t=0 -> rotate(j) exactly, matching the static frame; drifts slowly after
+                ctx.translate(w * (0.28 + j * 0.22), h * (0.62 + (j % 2) * 0.14)); ctx.rotate(j + t * 0.0012);
                 ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, -3); ctx.lineTo(3, 0); ctx.lineTo(6, 3); ctx.closePath(); ctx.stroke(); ctx.restore(); }
         },
-        circuit: function (ctx, w, h) {
+        circuit: function (ctx, w, h, t) {
+            t = t || 0;
             var g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#0e1230'); g.addColorStop(1, '#05061c');
             ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
             var cols = 5, rows = 4, cw = w / cols, rh = h / rows;
@@ -2391,6 +2416,16 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             var core = pt(1, 1); ctx.beginPath(); ctx.arc(core[0], core[1], Math.min(cw, rh) * 0.14, 0, 7); ctx.fill(); ctx.restore();
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
             [[0,1],[2,1],[2,2],[3,2],[1,2],[3,1],[4,1]].forEach(function (c) { var p = pt(c[0], c[1]); ctx.beginPath(); ctx.arc(p[0], p[1], Math.min(cw, rh) * 0.06, 0, 7); ctx.fill(); });
+            // traveling spark along the lit path — alpha is 0 at t=0 (sin(0)=0), so
+            // drawing it is a no-op on the static/reduced-motion frame
+            var alpha = Math.max(0, Math.sin(t * 0.004));
+            if (alpha > 0.01) {
+                var travel = (t * 0.0006) % 1, segIdx = Math.min(lit.length - 1, Math.floor(travel * lit.length)), segT = travel * lit.length - segIdx;
+                var sl = lit[segIdx], sa = pt(sl[0], sl[1]), sb = pt(sl[2], sl[3]);
+                var sx = sa[0] + (sb[0] - sa[0]) * segT, sy = sa[1] + (sb[1] - sa[1]) * segT;
+                ctx.save(); ctx.globalAlpha = alpha; ctx.shadowColor = '#fff'; ctx.shadowBlur = 12; ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(sx, sy, Math.min(cw, rh) * 0.05, 0, 7); ctx.fill(); ctx.restore();
+            }
         },
         coverage: function (ctx, w, h) {
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0c1c2c'); g.addColorStop(1, '#070e18');
@@ -2407,7 +2442,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = '500 ' + (R * 0.14) + 'px Inter, sans-serif';
             ctx.fillText('COVERED · CI-ENFORCED', cx, cy + R * 0.28);
         },
-        darts: function (ctx, w, h) {
+        darts: function (ctx, w, h, t) {
+            t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0f24'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
             var cx = w * 0.5, cy = h * 0.5, R = Math.min(w, h) * 0.42;
             for (var i = 0; i < 20; i++) {
@@ -2424,31 +2460,43 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             function dart(px, py, ang, col) { ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = '#eaf6ff'; ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(12, -3); ctx.lineTo(12, 3); ctx.closePath(); ctx.fill(); ctx.fillStyle = col; ctx.fillRect(0, -3, 12, 6); ctx.fillStyle = '#1a2236'; ctx.fillRect(-10, -2, 10, 4); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-20, -6); ctx.lineTo(-15, 0); ctx.lineTo(-20, 6); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.restore(); }
             var t20a = -90 * Math.PI / 180, rx = cx + Math.cos(t20a) * R * 0.605, ry = cy + Math.sin(t20a) * R * 0.605;
             dart(rx, ry, t20a + Math.PI * 0.15, palette.cyan); dart(cx, cy, Math.PI * 0.9, palette.amber);
-            ctx.save(); ctx.strokeStyle = palette.green; ctx.shadowColor = palette.green; ctx.shadowBlur = 12; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rx, ry, 14, 0, 7); ctx.stroke(); ctx.restore();
+            // reticle pulse: t=0 -> sin(0)=0 -> radius 14 / blur 12, exactly the static frame
+            var p = Math.sin(t * 0.004);
+            ctx.save(); ctx.strokeStyle = palette.green; ctx.shadowColor = palette.green; ctx.shadowBlur = 12 + p * 6; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rx, ry, 14 + p * 3, 0, 7); ctx.stroke(); ctx.restore();
         },
-        riff: function (ctx, w, h) {
+        riff: function (ctx, w, h, t) {
+            t = t || 0;
             ctx.fillStyle = '#05060f'; ctx.fillRect(0, 0, w, h);
             var cols = [palette.cyan, palette.violet, palette.green, palette.amber], n = 4, lw = w / (n + 1);
+            // falling notes: wrap range is bigger than h so at t=0 (fall=0) every
+            // ny is already inside [0, range) and the modulo is a no-op — exact
+            // match with the pre-animation static frame.
+            var range = h * 1.15, fall = (t * 0.045) % range;
             for (var i = 0; i < n; i++) {
                 var x = lw * (i + 1);
                 ctx.strokeStyle = 'rgba(120,150,210,0.22)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
                 for (var j = 0; j < 2; j++) {
-                    var ny = h * (0.16 + i * 0.12 + j * 0.34);
+                    var ny = (h * (0.16 + i * 0.12 + j * 0.34) + fall) % range;
+                    if (ny > h) continue;
                     ctx.save(); ctx.shadowColor = cols[i]; ctx.shadowBlur = 14; ctx.fillStyle = cols[i];
                     ctx.beginPath(); ctx.arc(x, ny, Math.min(w, h) * 0.05, 0, 7); ctx.fill(); ctx.restore();
                 }
             }
             ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(lw * 0.5, h * 0.82); ctx.lineTo(w - lw * 0.5, h * 0.82); ctx.stroke();
         },
-        riff2: function (ctx, w, h) {
+        riff2: function (ctx, w, h, t) {
+            t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#07120b'); g.addColorStop(1, '#04070f');
             ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
             var cols = [palette.green, palette.cyan, palette.amber, palette.violet], n = 4, lw = w / (n + 1);
+            // falling notes, same no-op-at-rest wrap trick as riff()
+            var range = h * 1.15, fall = (t * 0.05) % range;
             for (var i = 0; i < n; i++) {
                 var x = lw * (i + 1);
                 ctx.strokeStyle = 'rgba(120,210,170,0.22)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
                 for (var j = 0; j < 3; j++) {
-                    var ny = h * (0.1 + ((i * 2 + j * 3) % 7) * 0.11);
+                    var ny = (h * (0.1 + ((i * 2 + j * 3) % 7) * 0.11) + fall) % range;
+                    if (ny > h) continue;
                     ctx.save(); ctx.shadowColor = cols[i]; ctx.shadowBlur = 14; ctx.fillStyle = cols[i];
                     ctx.beginPath(); ctx.arc(x, ny, Math.min(w, h) * 0.045, 0, 7); ctx.fill(); ctx.restore();
                 }
@@ -2457,7 +2505,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.beginPath(); ctx.moveTo(lw * 0.5, h * 0.82); ctx.lineTo(w - lw * 0.5, h * 0.82); ctx.stroke();
             ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(lw * 2, h * 0.82, Math.min(w, h) * 0.07, 0, 7); ctx.stroke(); ctx.restore();
         },
-        pinball: function (ctx, w, h) {
+        pinball: function (ctx, w, h, t) {
+            t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0a1e'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
             var bmp = [[0.32, 0.30], [0.60, 0.26], [0.46, 0.46]];
             for (var i = 0; i < bmp.length; i++) {
@@ -2466,12 +2515,18 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             }
             ctx.save(); ctx.strokeStyle = palette.green; ctx.lineWidth = Math.min(w, h) * 0.05; ctx.lineCap = 'round'; ctx.shadowColor = palette.green; ctx.shadowBlur = 12;
             ctx.beginPath(); ctx.moveTo(w * 0.30, h * 0.84); ctx.lineTo(w * 0.46, h * 0.92); ctx.moveTo(w * 0.70, h * 0.84); ctx.lineTo(w * 0.54, h * 0.92); ctx.stroke(); ctx.restore();
-            ctx.fillStyle = '#eaf6ff'; ctx.beginPath(); ctx.arc(w * 0.40, h * 0.66, Math.min(w, h) * 0.035, 0, 7); ctx.fill();
+            // ball drift: t=0 -> sin(0)=0 for both axes -> the exact static ball position
+            var dx = Math.sin(t * 0.0021) * w * 0.035, dy = Math.sin(t * 0.0034) * h * 0.02;
+            ctx.fillStyle = '#eaf6ff'; ctx.beginPath(); ctx.arc(w * 0.40 + dx, h * 0.66 + dy, Math.min(w, h) * 0.035, 0, 7); ctx.fill();
         },
-        voidrunner: function (ctx, w, h) {
+        voidrunner: function (ctx, w, h, t) {
+            t = t || 0;
             ctx.fillStyle = '#03030a'; ctx.fillRect(0, 0, w, h);
             ctx.fillStyle = 'rgba(200,222,255,0.8)';
-            for (var i = 0; i < 42; i++) { var sx = (i * 73 % 100) / 100 * w, sy = (i * 149 % 100) / 100 * h, r = (i % 3) * 0.6 + 0.6; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7); ctx.fill(); }
+            // starfield drift: every base sy already sits in [0, h), so at t=0
+            // (drift=0) the modulo is a no-op and stars land on their static spots
+            var drift = (t * 0.012) % h;
+            for (var i = 0; i < 42; i++) { var sx = (i * 73 % 100) / 100 * w, sy = ((i * 149 % 100) / 100 * h + drift) % h, r = (i % 3) * 0.6 + 0.6; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7); ctx.fill(); }
             ctx.save(); ctx.translate(w * 0.66, h * 0.32); ctx.strokeStyle = 'rgba(127,214,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath();
             for (var v = 0; v < 7; v++) { var a = v / 7 * Math.PI * 2, rr = Math.min(w, h) * 0.12 * (0.7 + (v % 2) * 0.3), px = Math.cos(a) * rr, py = Math.sin(a) * rr; if (v === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.closePath(); ctx.stroke(); ctx.restore();
             ctx.save(); ctx.translate(w * 0.42, h * 0.70);
@@ -2480,11 +2535,20 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.7, s * 0.6); ctx.lineTo(0, s * 0.3); ctx.lineTo(-s * 0.7, s * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
         }
     };
+    // Game-scene canvases get a subtle idle-loop animation (DBZ-054): reticle
+    // pulse, falling notes, ball/starfield drift, bolt flicker, chomp, debris
+    // spin, circuit spark. Every animated scene fn above is written so t=0
+    // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
+    // comments in each), so paintAll's single frame and the reduced-motion
+    // path below are pixel-identical to the art that shipped before this lane.
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');
             if (!scenes[scene]) return;
-            var f = fitCanvas(cv); scenes[scene](f.ctx, f.w, f.h);
+            var f = fitCanvas(cv);
+            scenes[scene](f.ctx, f.w, f.h, 0);
+            if (ANIMATED_SCENES[scene]) cv._kfCache = f; // cached ctx/w/h for the shared ticker below
         });
     }
     // These vector-art thumbnails are decorative (aria-hidden) and mostly
@@ -2498,6 +2562,44 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     window.addEventListener('load', schedulePaintAll);
     schedulePaintAll();
     var prt; window.addEventListener('resize', function () { clearTimeout(prt); prt = setTimeout(paintAll, 200); });
+
+    /* --------------------------------------------------------------
+     * Arcade thumbnail motion (DBZ-054) — one shared rAF ticker for every
+     * animated game-scene canvas, not one loop per canvas. Gated by a single
+     * IntersectionObserver (only currently-visible thumbnails redraw), paused
+     * while the tab is hidden, and never started at all under
+     * prefers-reduced-motion — paintAll's static frame above is the whole
+     * experience in that case, exactly as it was before this lane.
+     * ------------------------------------------------------------ */
+    (function () {
+        if (reduce || !('IntersectionObserver' in window)) return;
+        var animCanvases = [];
+        document.querySelectorAll('.shot-canvas').forEach(function (cv) {
+            if (ANIMATED_SCENES[cv.getAttribute('data-scene')]) animCanvases.push(cv);
+        });
+        if (!animCanvases.length) return;
+        var visible = new Set();
+        var running = false, hidden = document.hidden;
+        function tick(now) {
+            if (!visible.size || hidden) { running = false; return; }
+            for (var i = 0; i < animCanvases.length; i++) {
+                var cv = animCanvases[i];
+                if (!visible.has(cv) || !cv._kfCache) continue;
+                scenes[cv.getAttribute('data-scene')](cv._kfCache.ctx, cv._kfCache.w, cv._kfCache.h, now);
+            }
+            requestAnimationFrame(tick);
+        }
+        function start() { if (!running) { running = true; requestAnimationFrame(tick); } }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (en) { if (en.isIntersecting) visible.add(en.target); else visible.delete(en.target); });
+            if (visible.size && !hidden) start();
+        }, { threshold: 0, rootMargin: '120px 0px' });
+        animCanvases.forEach(function (cv) { io.observe(cv); });
+        document.addEventListener('visibilitychange', function () {
+            hidden = document.hidden;
+            if (!hidden && visible.size) start();
+        });
+    })();
 
     /* ---------- Legacy hash router: old deep links land on the right section ---------- */
     (function () {
