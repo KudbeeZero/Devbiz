@@ -62,8 +62,8 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip the center <b>loop</b> — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>.</p>
-        <div class="badge">Skill shot · combos · ball save · multiball-ready</div>
+        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
+        <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
         <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
@@ -150,6 +150,7 @@
       case 'roll':   tone(980, 0.09, 'sine', 0.15, 1240); break;
       case 'launch': tone(120, 0.32, 'sawtooth', 0.16, 640); break;
       case 'ramp':   tone(240, 0.24, 'sawtooth', 0.16, 1100); break;
+      case 'kick':   tone(90, 0.16, 'square', 0.2, 640); tone(180, 0.22, 'sawtooth', 0.18, 900, 0.04); break;
       case 'drain':  tone(320, 0.5, 'sawtooth', 0.18, 55); break;
       case 'save':   tone(520, 0.1, 'square', 0.15, 700); tone(780, 0.14, 'square', 0.15, 1040, 0.09); break;
       case 'skill':  tone(660, 0.09, 'square', 0.16); tone(880, 0.09, 'square', 0.16, 0, 0.08); tone(1320, 0.16, 'square', 0.16, 0, 0.16); break;
@@ -294,6 +295,18 @@
 
     // ---- center loop-ramp: a hard upward shot through the gate loops over the top ----
     ramp = { x: 450, y0: 560, y1: 624, hw: 36 };
+    // ---- side loop-ramps: the wide outer alleys (long dead space along each cabinet
+    //      wall) now double as a second and third loop shot — same "shoot it upward
+    //      through the gate" trigger as the center ramp, just planted out by the walls. ----
+    leftRamp = { x: 140, y0: 860, y1: 1000, hw: 25, side: -1 };
+    rightRamp = { x: 760, y0: 860, y1: 1000, hw: 25, side: 1 };
+    // ---- outlane kickbacks: a loaded coil low in each outlane fires a draining ball
+    //      back into play instead of losing it — one charge per outlane per fresh ball.
+    //      Wide (the outlanes have no separate rail) but only in the last stretch before
+    //      the drain, and clear of the flipper/inlane band (x 300-600), so it only ever
+    //      catches a ball that was truly about to be lost out that side. ----
+    kickZoneL = { x0: 60, x1: 300, y0: 1382, y1: 1426 };
+    kickZoneR = { x0: 600, x1: 840, y0: 1382, y1: 1426 };
 
     // ---- decorative colored light inserts (fill the open regions, pure render) ----
     var lampSpec = [
@@ -324,7 +337,8 @@
       bonusU = 0;                                             // end-of-ball bonus units
     }
     comboN = 0; comboT = 0; saveT = 0;                        // combo chain + save window reset per serve
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lowT: 0, trail: [], noSave: !!keep });
+    if (!keep) { kickL = true; kickR = true; }                 // outlane kickbacks reload each fresh ball (a saved re-serve keeps whatever's left)
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: !!keep });
   }
 
   // floating score callout (skill shot / big events)
@@ -346,6 +360,9 @@
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
   var mult = 1, multFlash = 0, rampShots = 0;       // playfield multiplier (resets each ball) + loop counter
+  var kickL = true, kickR = true;                   // outlane kickbacks — one loaded save per outlane, consumed on use
+  var leftRamp = null, rightRamp = null;             // side loop-ramp triggers (mirror the center `ramp`)
+  var kickZoneL = null, kickZoneR = null;            // outlane kickback trigger boxes
   var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
   var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto free
   var comboN = 0, comboT = 0, bestCombo = 0;        // chained-shot combo (targets/loops/skill within a window)
@@ -359,6 +376,7 @@
     score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
+    kickL = true; kickR = true;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -510,6 +528,29 @@
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220);
     else callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
   }
+  // Side loop ramps — same trick as the center loop: a hard upward shot through the
+  // gate teleports the ball to the top of the field with a scatter, minus the physical
+  // "tube" (this table draws loops the same way the center one always has).
+  function onSideRamp(b, r) {
+    var col = r.side < 0 ? '#c46bff' : '#ffd34d';
+    comboHit(r.x, r.y0);
+    addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
+    burst(r.x, r.y0, col, 22, 460); shake = Math.min(shake + 0.35, 1.4);
+    b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
+    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220);
+    else callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * mult).toLocaleString(), col);
+  }
+  // Outlane kickback — a ball about to drain out an outlane instead gets punched
+  // back up into the playfield. One charge per outlane, consumed on use, both
+  // reload on the next fresh ball.
+  function onKickback(b, side) {
+    if (side < 0) kickL = false; else kickR = false;
+    var col = '#7CFFb2';
+    addScore(250); bonusU += 4; sfx('kick');
+    burst(b.x, b.y, col, 20, 520); shake = Math.min(shake + 0.5, 1.6);
+    b.x = side < 0 ? 220 : 680; b.y = 1300; b.vx = side < 0 ? 260 : -260; b.vy = -1250; b.trail.length = 0;
+    callout('KICKBACK!', 'saved', col);
+  }
   function onBumper(c) { if (c.kind === 'bumper') { addScore(100); bonusU += 1; c.flash = 1; sfx('bumper'); shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
   function onSling(x, y) { addScore(25); bonusU += 1; sfx('sling'); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
 
@@ -553,6 +594,12 @@
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
+      if (leftRamp && b.lRampCd <= 0 && b.vy < -520 && b.x > leftRamp.x - leftRamp.hw && b.x < leftRamp.x + leftRamp.hw && b.y > leftRamp.y0 && b.y < leftRamp.y1) { b.lRampCd = 0.7; onSideRamp(b, leftRamp); }
+      if (rightRamp && b.rRampCd <= 0 && b.vy < -520 && b.x > rightRamp.x - rightRamp.hw && b.x < rightRamp.x + rightRamp.hw && b.y > rightRamp.y0 && b.y < rightRamp.y1) { b.rRampCd = 0.7; onSideRamp(b, rightRamp); }
+      // outlane kickbacks: a ball sinking through the last stretch before the drain,
+      // out past the flipper/inlane band, gets punched back into play if still loaded.
+      if (kickL && kickZoneL && b.vy > 0 && b.x > kickZoneL.x0 && b.x < kickZoneL.x1 && b.y > kickZoneL.y0 && b.y < kickZoneL.y1) onKickback(b, -1);
+      else if (kickR && kickZoneR && b.vy > 0 && b.x > kickZoneR.x0 && b.x < kickZoneR.x1 && b.y > kickZoneR.y0 && b.y < kickZoneR.y1) onKickback(b, 1);
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -659,7 +706,11 @@
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
-    for (var bk = 0; bk < balls.length; bk++) if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
+    for (var bk = 0; bk < balls.length; bk++) {
+      if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
+      if (balls[bk].lRampCd > 0) balls[bk].lRampCd -= dt;
+      if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
+    }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
@@ -723,7 +774,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
     drawBallSave();
@@ -839,17 +890,43 @@
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
-  function drawRamp() {
-    if (!ramp) return;
+  function drawOneRamp(r, rgb) {
+    if (!r) return;
     var t = performance.now();
     var pulse = reduceMotion ? 0.5 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 300));
-    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    ctx.lineCap = 'round';
     for (var k = 0; k < 3; k++) {                          // up-chevrons = "shoot here to loop"
-      var yy = ramp.y1 - k * 26, a = (0.5 - k * 0.12) * pulse;
-      ctx.strokeStyle = 'rgba(57,230,255,' + a.toFixed(2) + ')'; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(ramp.x - ramp.hw, yy); ctx.lineTo(ramp.x, yy - 20); ctx.lineTo(ramp.x + ramp.hw, yy); ctx.stroke();
+      var yy = r.y1 - k * 26, a = (0.5 - k * 0.12) * pulse;
+      ctx.strokeStyle = 'rgba(' + rgb + ',' + a.toFixed(2) + ')'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(r.x - r.hw, yy); ctx.lineTo(r.x, yy - 20); ctx.lineTo(r.x + r.hw, yy); ctx.stroke();
     }
+  }
+  function drawRamp() {
+    ctx.globalCompositeOperation = 'lighter';
+    drawOneRamp(ramp, '57,230,255');
+    drawOneRamp(leftRamp, '196,107,255');
+    drawOneRamp(rightRamp, '255,211,77');
     ctx.globalCompositeOperation = 'source-over';
+  }
+  // outlane kickback lamps — bright + pulsing while loaded, dim once spent
+  function drawKickback() {
+    if (!kickZoneL || !kickZoneR) return;
+    var t = performance.now();
+    var zones = [[kickZoneL, kickL], [kickZoneR, kickR]];
+    ctx.globalCompositeOperation = 'lighter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = 0; i < zones.length; i++) {
+      var z = zones[i][0], on = zones[i][1];
+      var cx = (z.x0 + z.x1) / 2, cy = z.y0 - 14;
+      var pulse = on ? (reduceMotion ? 0.6 : 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(t / 260))) : 0.14;
+      var rgb = on ? '124,255,178' : '90,100,120';
+      var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 34);
+      g.addColorStop(0, 'rgba(' + rgb + ',' + (pulse * 0.5).toFixed(2) + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (on ? 0.95 : 0.5) + ')';
+      ctx.font = '700 10px "Space Grotesk", sans-serif';
+      ctx.fillText('KICK', cx, cy);
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
   function drawFlipper(f) {
     var tip = f.tip(), fl = f.flash || 0;
@@ -1027,6 +1104,20 @@
     if (el && best > 0) { el.textContent = '★ Best score ' + best.toLocaleString(); el.style.display = 'block'; }
   })();
   document.addEventListener('visibilitychange', function () { /* loop pauses naturally; state stays */ });
+
+  // Test/verification hook (harmless in production — read-only introspection plus
+  // a couple of deterministic triggers so automated checks don't rely on flaky physics RNG).
+  window.__kbTest = {
+    state: function () { return state; },
+    score: function () { return score; },
+    kickCharges: function () { return { L: kickL, R: kickR }; },
+    rampShots: function () { return rampShots; },
+    geometry: function () { return { ramp: ramp, leftRamp: leftRamp, rightRamp: rightRamp, kickZoneL: kickZoneL, kickZoneR: kickZoneR, DRAIN_Y: DRAIN_Y }; },
+    forceStart: function () { start(); },
+    fireLeftRamp: function () { if (balls[0]) onSideRamp(balls[0], leftRamp); },
+    fireRightRamp: function () { if (balls[0]) onSideRamp(balls[0], rightRamp); },
+    fireKickback: function (side) { if (balls[0]) onKickback(balls[0], side); }
+  };
 
   // ===== boot =====
   resize();
