@@ -242,6 +242,9 @@
       pl.dartsThrown = 0; pl.totalScored = 0; pl.t180 = 0; pl.legs = 0;
       // Digital-scoreboard juice state.
       pl._scorePop = 0; pl._shed = []; pl._shedFired = false; pl._digX = null; pl._digY = 0; pl._digH = 0; pl._popCol = '#39e6ff';
+      // Hot-streak badge: consecutive BIG hits (see _onDartLand) by this
+      // player, across turns. Cosmetic only — no XP/coins/leaderboard impact.
+      pl.hotStreak = 0;
     });
     this.current = 0;
     this.dartsThisTurn = 0;
@@ -310,7 +313,11 @@
     this.dartsThisTurn++;
 
     // Floating score pop + scoring explosion (density scales with the score).
-    const big = (res.ring === 'treble' && res.value === 20) || res.ring === 'inbull' || out.win;
+    // A one-dart Cricket close (0 -> 3 marks on a fresh number, e.g. a clean
+    // treble-19) is just as rare and skillful as a treble-20 or bull in 501 —
+    // give it the same "big hit" weight instead of only T20/bull ever popping.
+    const big = (res.ring === 'treble' && res.value === 20) || res.ring === 'inbull' || out.win
+      || (this.mode.id === 'cricket' && out.marksGained === 3);
     const burstCol = res.ring === 'treble' ? C.green
       : res.ring === 'double' ? C.gold
       : (res.ring === 'inbull' || res.ring === 'outbull') ? C.ember : skinCol;
@@ -333,6 +340,21 @@
     this.camera.shake(big ? 0.22 : 0.12);
     this.particles.scorePop(lx, ly - 6, out.text, big,
       res.ring === 'treble' ? C.green : res.ring === 'double' ? C.gold : null);
+
+    // Hot-streak badge: consecutive BIG hits (see above) by the same thrower,
+    // across turns. A bust reverts the whole turn, so it also breaks the
+    // streak. Capped at 5 and purely cosmetic — no XP/coins/save-data impact.
+    if (out.bust) {
+      cur.hotStreak = 0;
+    } else if (big) {
+      const wasCapped = (cur.hotStreak || 0) >= 5;
+      cur.hotStreak = Math.min((cur.hotStreak || 0) + 1, 5);
+      if (cur.hotStreak >= 2 && !wasCapped) {
+        this.toasts.push({ text: 'HOT STREAK', sub: cur.name + ' ×' + cur.hotStreak, life: 1.5 });
+      }
+    } else {
+      cur.hotStreak = 0;
+    }
 
     if (out.bust) {
       this.audio.bust();
@@ -706,6 +728,9 @@
       ctx.moveTo(ax, y + 18); ctx.lineTo(ax + dir * 9, y + 24); ctx.lineTo(ax, y + 30);
       ctx.closePath(); ctx.fill();
     }
+    // Hot-streak badge: nudged in from the avatar toward the card's centre
+    // and dropped below the "you"/rival subtitle line so it never overlaps it.
+    this._drawStreakBadge(ctx, pl.hotStreak, avx + 14 * (side === 'left' ? 1 : -1), avy + 24);
 
     // Big primary readout as a glowing seven-segment display. Each side gets
     // its own digital tint — left BLUE, right cool GREEN — and pops + sheds
@@ -740,6 +765,29 @@
     }
     ctx.restore();
     ctx.textAlign = 'left';
+  };
+
+  // Small "hot streak" chip — consecutive BIG hits (T20/bull, or a one-dart
+  // Cricket close) by this player, across turns. Pure HUD flair: it never
+  // touches scoring, XP, coins, or the saved profile the leaderboard reads.
+  // (bx, by) is the badge's own centre — callers place it wherever the card
+  // layout has room, so it never clips a card edge or another element.
+  Game.prototype._drawStreakBadge = function (ctx, n, bx, by) {
+    if (!n || n < 2) return;
+    const col = n >= 5 ? C.ember : n >= 4 ? C.gold : C.cyan;
+    const w = 32, h = 16;
+    ctx.save();
+    ctx.fillStyle = 'rgba(5,8,16,0.85)';
+    this._roundRect(ctx, bx - w / 2, by - h / 2, w, h, 8); ctx.fill();
+    ctx.lineWidth = 1.3; ctx.strokeStyle = col;
+    ctx.shadowColor = col; ctx.shadowBlur = 8;
+    this._roundRect(ctx, bx - w / 2, by - h / 2, w, h, 8); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = col; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🔥' + n, bx, by + 1);
+    ctx.restore();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   };
 
   Game.prototype._drawHUDx01 = function (ctx) {
@@ -788,6 +836,10 @@
     ctx.fillText(pl.name, x + 52, y + 24);
     ctx.fillStyle = C.dim; ctx.font = '10px "Space Grotesk", sans-serif';
     ctx.fillText(pl.isAI ? (pl.tierName || 'AI') + ' rival' : 'you', x + 52, y + 38);
+    // Hot-streak badge, tucked in the panel's top-right — clear of the
+    // left-aligned name/avatar and (with an 8px margin) of the active-turn
+    // chevron, which only occupies the very edge at x+PW-16.
+    this._drawStreakBadge(ctx, pl.hotStreak, x + PW - 40, y + 22);
     if (active) {
       ctx.fillStyle = col; ctx.beginPath();
       ctx.moveTo(x + PW - 16, y + 16); ctx.lineTo(x + PW - 8, y + 22); ctx.lineTo(x + PW - 16, y + 28);

@@ -219,7 +219,14 @@
       ctx.restore();
       ctx.textAlign = 'left';
     }
-    if (this.state !== 'aiming' || this.isAI) return;
+    if (this.state !== 'aiming') return;
+
+    // The AI gets its own, deliberately simpler "targeting" reticle instead of
+    // the human crosshair + power gauge (which teaches the flick and would be
+    // meaningless for a scripted throw). Previously an opponent's think-time
+    // had NO board-side feedback at all beyond a small dim HUD line ("Rookie
+    // Bot is throwing…"), so it was hard to read where the AI was even aiming.
+    if (this.isAI) { this.drawAIReticle(ctx); return; }
 
     const p = { x: this.aimX, y: this.aimY };
     const res = this.game.board.hitTest(p.x, p.y);
@@ -274,6 +281,35 @@
     ctx.fillStyle = inBand ? '#7CFFb2' : this.power > 1.15 ? '#ff5d3c' : '#39e6ff';
     ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
     ctx.fillRect(gx, gy0 + gh * (1 - f), gw, gh * f);
+    ctx.restore();
+  };
+
+  // A softer "targeting lock" reticle for the AI's think-time: a ring that
+  // eases inward on a slow loop plus four short corner ticks, tinted in the
+  // AI's own skin colour. No crosshair/label/power gauge (those are about
+  // teaching a human's flick and would be noise for a scripted throw) — this
+  // is just enough to read WHERE the opponent is about to throw.
+  Dart.prototype.drawAIReticle = function (ctx) {
+    const p = { x: this.aimX, y: this.aimY };
+    const g = this.game;
+    const col = (this.skin && this.skin.color) || '#c46bff';
+    const cyc = g.reduceMotion ? 0.5 : (g.time * 1.1) % 1;   // 0 -> 1 loop
+    const rr = Math.max(5, 30 - cyc * 14);
+    ctx.save();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    ctx.shadowColor = col; ctx.shadowBlur = 9;
+    ctx.globalAlpha = 0.28 + 0.32 * (1 - cyc);
+    ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
+    // Four short corner ticks, fixed distance out — a "lock-on" frame.
+    ctx.globalAlpha = 0.55;
+    const tickR = 13, tickLen = 6;
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 + Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(p.x + Math.cos(a) * tickR, p.y + Math.sin(a) * tickR);
+      ctx.lineTo(p.x + Math.cos(a) * (tickR + tickLen), p.y + Math.sin(a) * (tickR + tickLen));
+      ctx.stroke();
+    }
     ctx.restore();
   };
 
