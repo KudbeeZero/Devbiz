@@ -268,6 +268,17 @@
     // a couple of round posts to bank off
     bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
     bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    // ---- side bumpers: the wide outer alleys next to each wall were empty — a ball
+    //      that strayed out there just slid straight down toward the outlane. These
+    //      live bumpers (same kick as the "asteroid belt" trio) fill that dead space
+    //      and keep the ball alive and bouncing instead of sliding out. Kept clear of
+    //      the side loop-ramp gates (x=140/760, y 860-1000) so those shots stay open. ----
+    bumpers.push({ x: 140, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 745, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 115, y: 720, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 750, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 120, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 745, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
     // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
     //      Light a side's pair for a multiplier step. ----
     target(210, 640, 'standup', '#39e6ff', 'L');
