@@ -132,6 +132,7 @@
     var canvas = document.getElementById('game');
     var touchRoot = document.getElementById('touch');
     var game = new KC.Game({ canvas: canvas, touchRoot: touchRoot });
+    window.__kcGame = game; // debug/testing handle (no gameplay effect)
 
     // Mobile: auto-fire so you only steer + jump (no fire button to juggle).
     var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);

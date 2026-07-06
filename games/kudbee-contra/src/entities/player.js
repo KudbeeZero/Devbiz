@@ -70,6 +70,7 @@
     this.iframe = IFRAME_TIME;
     this.game.audio.playerHurt();
     this.game.camera.shake(0.5);
+    this.game.hurtFx = 0.45;   // brief red screen-edge flash (drawn by game.js)
     this.game.particles.burst(this.cx(), this.cy(), '#39e6ff', 14, 240, { glow: true });
     if (this.health <= 0) this._die();
   };

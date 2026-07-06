@@ -54,6 +54,8 @@
     this.health -= dmg;
     this.flash = 0.08;
     this.game.particles.spark(this.cx(), this.cy(), '#fff');
+    // Short bright impact core for punchier hit feedback.
+    this.game.particles.emit({ x: this.cx(), y: this.cy(), vx: 0, vy: 0, life: 0.06, size: 11, color: '#ffffff', glow: true, gravity: 0, drag: 0 });
     if (this.health <= 0) this._die();
   };
 
@@ -62,6 +64,7 @@
     this.game.audio.explosion();
     this.game.particles.explosion(this.cx(), this.cy(), false);
     this.game.camera.shake(0.12);
+    this.game.registerKill();
     this.game.addScore(this.score, this.cx(), this.cy());
     this.game.addPower(15);
     this.game.addXP(20);
@@ -234,6 +237,7 @@
       setTimeout(() => this.game.particles.explosion(this.cx() + Util.rand(-50, 50), this.cy() + Util.rand(-40, 40), true), i * 120);
     }
     this.game.audio.explosion();
+    this.game.registerKill();
     this.game.addScore(this.score, this.cx(), this.cy());
     this.game.addXP(250);
     this.game.onBossDefeated();
