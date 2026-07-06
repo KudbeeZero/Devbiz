@@ -119,6 +119,7 @@
         <div><div class="lbl">Par</div><div class="val" id="winPar">0</div></div>
       </div>
       <p id="winSub"></p>
+      <div class="badge" id="winStreak" style="display:none"></div><br>
       <button class="btn" id="nextBtn">Next level &rarr;</button><br>
       <button class="btn ghost" id="replayBtn">&#8635; Replay</button>
       <button class="btn ghost" id="winLvBtn">&#9638; Levels</button>
@@ -269,6 +270,9 @@
   var hover = -1;
   var bx = 0, by = 0, cs = 0;    // board origin + cell size
   var sparks = [];
+  // consecutive at-or-under-par (3-star) solves this session; resets on any lesser solve.
+  // Session-only (not persisted) — a lightweight skill flourish, not part of the saved star record.
+  var flawlessStreak = 0;
 
   function curMask(i) { return rotCW(baseMasks[i], turns[i]); }
   function logicalMasks() { var a = []; for (var i = 0; i < L.w * L.h; i++) a.push(curMask(i)); return a; }
@@ -289,10 +293,13 @@
   }
   function layout() {
     if (!L) return;
-    var topPad = 62, pad = 16;
-    cs = Math.min((W - pad * 2) / L.w, (H - topPad - pad * 2) / L.h, 96);
+    // foot: reserved space below the board for the canvas-drawn progress bar +
+    // "N / total powered" label, so short/landscape viewports never clip it.
+    var topPad = 62, pad = 16, foot = 38;
+    var availH = H - topPad - pad - foot;
+    cs = Math.min((W - pad * 2) / L.w, availH / L.h, 96);
     bx = (W - cs * L.w) / 2;
-    by = topPad + (H - topPad - cs * L.h) / 2 - 4;
+    by = topPad + Math.max(0, (availH - cs * L.h) / 2);
   }
   function updateHud() {
     hudLvl.textContent = 'Level ' + (lvIndex + 1);
@@ -308,6 +315,7 @@
       var st = moves <= L.par ? 3 : moves <= L.par * 2 ? 2 : 1;
       var key = String(lvIndex + 1);
       if ((progress[key] || 0) < st) { progress[key] = st; saveProgress(); }
+      flawlessStreak = st === 3 ? flawlessStreak + 1 : 0;
       S.solve();
       for (var s = 0; s < st; s++) S.star(s);
       showWinSoon(st);
@@ -333,6 +341,14 @@
     document.getElementById('winSub').textContent =
       st === 3 ? 'Under par. The board hums in your honor.' :
       st === 2 ? 'Clean routing. Par is within reach.' : 'Every node lit. Now try trimming the moves.';
+    var streakEl = document.getElementById('winStreak');
+    if (flawlessStreak >= 2) {
+      var shown = Math.min(flawlessStreak, 9);
+      streakEl.textContent = '⚡ Flawless streak ×' + shown + (flawlessStreak > 9 ? '+' : '');
+      streakEl.style.display = '';
+    } else {
+      streakEl.style.display = 'none';
+    }
     document.getElementById('nextBtn').style.display = lvIndex < LEVELS.length - 1 ? '' : 'none';
     win.classList.remove('hidden');
   }
@@ -569,7 +585,8 @@
       ctx.fillStyle = 'rgba(124,255,178,' + clamp(solvedT * 2, 0, 1).toFixed(2) + ')';
       ctx.font = '700 26px "Space Grotesk", sans-serif';
       if (!reduceMotion) { ctx.shadowColor = 'rgba(124,255,178,0.9)'; ctx.shadowBlur = 18; }
-      ctx.fillText('CIRCUIT ONLINE', W / 2, by - 26);
+      // clamp below the HUD row so short viewports never overlap the moves/par readout
+      ctx.fillText('CIRCUIT ONLINE', W / 2, Math.max(60, by - 26));
       ctx.shadowBlur = 0;
     }
   }
@@ -690,7 +707,7 @@
   window.__test = {
     loadLevel: function (n) { audioInit(); loadLevel(n); show('play'); },
     rotate: function (i) { return rotateTile(i, true); },
-    state: function () { return { screen: screen, level: lvIndex + 1, moves: moves, solved: solved, lit: fl ? fl.count : 0, total: L ? L.w * L.h : 0, par: L ? L.par : 0 }; },
+    state: function () { return { screen: screen, level: lvIndex + 1, moves: moves, solved: solved, lit: fl ? fl.count : 0, total: L ? L.w * L.h : 0, par: L ? L.par : 0, flawlessStreak: flawlessStreak }; },
     // per-tile minimal CW rotations from the CURRENT state back to the solved orientation
     solution: function () {
       var out = [];
