@@ -149,9 +149,14 @@
           "@type": "FAQPage",
           "@id": "https://devbiz.kudbee.workers.dev/#faq",
           "mainEntity": [
+            { "@type": "Question", "name": "What does a project cost?", "acceptedAnswer": { "@type": "Answer", "text": "Website builds are flat, one-time pricing from $99 for a single page up to $500 for a 10-page Pro build. AI training, the Support Agent Suite, and custom agent workflows are scoped per engagement after a quick call." } },
+            { "@type": "Question", "name": "How many revisions do I get?", "acceptedAnswer": { "@type": "Answer", "text": "It scales with the tier: 1 round on Starter, 2 on Launch, and 3 rounds with priority delivery on Studio and Pro — Pro also includes 30 days of launch support." } },
+            { "@type": "Question", "name": "What's the timeline from kickoff to launch?", "acceptedAnswer": { "@type": "Answer", "text": "It depends on scope — a Starter one-pager can move fast, while a multi-page Studio or Pro build runs through the full process (discovery, design, build and train, proof, launch). Most projects kick off within a week of the discovery call." } },
+            { "@type": "Question", "name": "What does AI agent training actually include?", "acceptedAnswer": { "@type": "Answer", "text": "Live, hands-on sessions over Zoom covering prompt engineering, agent architecture, and building custom agents and automation workflows, with human-in-the-loop guardrails by default — recorded so your team can replay it." } },
+            { "@type": "Question", "name": "Who owns the games' IP — can I license one?", "acceptedAnswer": { "@type": "Answer", "text": "Every Kudbee game is original or procedurally generated end to end, no scraped or licensed assets. The games are free to play and not for resale, but a custom original game built for your brand is a project this studio takes on." } },
             { "@type": "Question", "name": "How fast can you start?", "acceptedAnswer": { "@type": "Answer", "text": "Most projects kick off within a week of our discovery call." } },
             { "@type": "Question", "name": "Do you train remote teams?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — all AI training is delivered live over Zoom, with recordings for replay." } },
-            { "@type": "Question", "name": "Is the game really free to play?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Kudbee Contra runs free in your browser — no install, no signup." } }
+            { "@type": "Question", "name": "Are the games really free to play?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — every Kudbee game (nine so far) runs free in your browser, no install and no signup." } }
           ]
         }
       ]
@@ -196,6 +201,7 @@
     --magenta: #c46bff;
     --green: #7cffb2;
     --amber: #ffd34d;
+    --danger: #ff5d3c;
     --grad: linear-gradient(90deg, var(--cyan), var(--violet) 52%, var(--magenta));
     --glow: rgba(111,91,255,0.35);
     --fd: 'Space Grotesk', system-ui, sans-serif;
@@ -852,7 +858,9 @@ html:not(.js) .story .pin-outer { height: auto; }
 /* ---------------- Pricing ---------------- */
 .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: stretch; }
 .pkg { position: relative; display: flex; flex-direction: column; padding: 30px 26px; border-radius: 20px; border: 1px solid var(--border-soft); background: var(--panel); transition: transform var(--mo-dur-3) var(--ease), border-color var(--mo-dur-3), box-shadow var(--mo-dur-3); }
-.pkg:hover { transform: translateY(-6px); border-color: var(--border); }
+/* --acc-rgb is set per-card inline (same convention as .gcard, DBZ-054) so
+   each tier gets its own hover glow instead of one identical treatment. */
+.pkg:hover, .pkg:focus-within { transform: translateY(-8px); border-color: rgba(var(--acc-rgb, 111,91,255), 0.5); box-shadow: 0 26px 60px -20px rgba(0,0,0,0.55), 0 0 44px rgba(var(--acc-rgb, 111,91,255), 0.2); }
 .pkg.hot { border-color: rgba(111,91,255,0.55); background: linear-gradient(170deg, rgba(111,91,255,0.10), var(--panel) 55%); box-shadow: 0 0 44px rgba(111,91,255,0.16); }
 .pkg .hot-tag { position: absolute; top: -12px; left: 24px; font: 700 10px/1 var(--fd); letter-spacing: 0.2em; text-transform: uppercase; color: #04040a; background: var(--grad); border-radius: 999px; padding: 7px 13px; }
 .pkg h3 { font-size: 17px; letter-spacing: 0.01em; }
@@ -863,6 +871,7 @@ html:not(.js) .story .pin-outer { height: auto; }
 .pkg ul li { display: flex; gap: 10px; align-items: baseline; font-size: 13.8px; color: var(--txt-2); }
 .pkg ul li::before { content: "✓"; color: var(--green); font-size: 12px; }
 .pkg .btn, .pkg .btn-o { width: 100%; padding: 14px 18px; font-size: 14px; }
+.pkg .pkg-next { margin-top: 12px; font: 500 12px/1.5 var(--fb); color: var(--dim); text-align: center; }
 .custom-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-top: 18px; padding: clamp(22px, 3vw, 34px); border-radius: 20px; border: 1px dashed var(--border); background: var(--panel); }
 .custom-row h3 { font-size: clamp(18px, 2.2vw, 24px); }
 .custom-row p { color: var(--txt-2); margin-top: 5px; max-width: 60ch; }
@@ -885,11 +894,20 @@ html:not(.js) .story .pin-outer { height: auto; }
 .cform label { display: grid; gap: 8px; font: 600 11.5px/1 var(--fd); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
 .cform input, .cform select, .cform textarea {
     width: 100%; background: rgba(3,3,8,0.6); border: 1px solid var(--border); border-radius: 13px;
-    padding: 14px 16px; color: var(--txt); font: 15px var(--fb); outline: none; transition: border-color var(--mo-dur-1), box-shadow var(--mo-dur-1);
+    padding: 14px 16px; color: var(--txt); font: 15px var(--fb); outline: none; transition: border-color var(--mo-dur-1) var(--ease), box-shadow var(--mo-dur-1) var(--ease), transform var(--mo-dur-1) var(--ease);
 }
 .cform textarea { min-height: 130px; resize: vertical; }
-.cform input:focus, .cform select:focus, .cform textarea:focus { border-color: rgba(57,230,255,0.55); box-shadow: 0 0 0 3px rgba(57,230,255,0.10); }
+.cform input:focus, .cform select:focus, .cform textarea:focus { border-color: rgba(57,230,255,0.55); box-shadow: 0 0 0 3px rgba(57,230,255,0.10); transform: translateY(-1px); }
+/* Inline validation states (DBZ-056): a labelled error string per field
+   (not color alone) + aria-invalid, toggled by the submit-handling script
+   further down. .ferr stays empty/collapsed until a field actually fails. */
+.cform label.err input, .cform label.err select, .cform label.err textarea { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255,93,60,0.12); }
+.cform .ferr { display: block; min-height: 0; font: 500 12px/1.5 var(--fb); letter-spacing: 0.02em; text-transform: none; color: var(--danger); }
+.cform .ferr:empty { display: none; }
 .cform .form-note { font: 400 12.5px/1.6 var(--fb); color: var(--dim); }
+.cform .form-note--top { margin: 0 0 4px; padding: 12px 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); }
+.cform .form-note--top a { color: var(--txt-2); }
+.cform .form-note--top a:hover { color: var(--cyan); }
 .cinfo h3 { font-size: clamp(20px, 2.4vw, 26px); }
 .cinfo > p { margin-top: 10px; color: var(--txt-2); }
 .cline { display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid var(--border-soft); font-size: 14.5px; color: var(--txt-2); }
@@ -902,6 +920,38 @@ html:not(.js) .story .pin-outer { height: auto; }
 .faq summary::after { content: "+"; color: var(--cyan); font-size: 18px; transition: transform var(--mo-dur-2); }
 .faq details[open] summary::after { transform: rotate(45deg); }
 .faq .fa { padding: 0 18px 16px; color: var(--txt-2); font-size: 14px; }
+
+/* ---------------- Floating "Start a project" pill (DBZ-056) ----------------
+   Fixed bottom-right, content-sized (never a full-width bar) so it can't
+   overlap page content at narrow widths; shown/hidden by the IntersectionObserver
+   pair in the main script (past #services, hidden again near #contact).
+   opacity+visibility (not display) mirrors the .scrim pattern above so
+   reduced-motion's global transition-duration:0.01ms hard-gate (see the
+   media query near the end of this stylesheet) still applies cleanly. */
+.fcta {
+    position: fixed; right: clamp(14px, 4vw, 28px); bottom: clamp(14px, 4vw, 28px); z-index: 95;
+    display: flex; align-items: center; gap: 4px; max-width: calc(100vw - 28px);
+    padding: 6px 8px 6px 20px; border-radius: 999px; border: 1px solid var(--border);
+    background: linear-gradient(120deg, rgba(8,8,16,0.94), rgba(20,16,36,0.94));
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    opacity: 0; visibility: hidden; transform: translateY(16px) scale(0.94);
+    transition: opacity var(--mo-dur-3) var(--ease), visibility var(--mo-dur-3), transform var(--mo-dur-3) var(--ease);
+}
+.fcta.show { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+.fcta-link { display: flex; align-items: center; gap: 9px; padding: 9px 4px; font: 600 13.5px/1 var(--fd); color: var(--txt); text-decoration: none; white-space: nowrap; }
+.fcta-link:hover, .fcta-link:focus-visible { color: var(--cyan); }
+.fcta-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--grad); box-shadow: 0 0 10px var(--glow); }
+.fcta-close {
+    flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%;
+    border: 1px solid var(--border-soft); background: transparent; color: var(--dim); font-size: 11px; line-height: 1;
+    cursor: pointer; transition: color var(--mo-dur-1), border-color var(--mo-dur-1), background var(--mo-dur-1);
+}
+.fcta-close:hover, .fcta-close:focus-visible { color: var(--txt); border-color: var(--border); background: rgba(255,255,255,0.06); }
+@media (max-width: 480px) {
+    .fcta { right: 12px; bottom: 12px; padding: 5px 6px 5px 16px; }
+    .fcta-link { font-size: 12.5px; }
+}
 
 /* ---------------- Big CTA + footer ---------------- */
 .mega-cta { position: relative; overflow: hidden; text-align: center; padding: clamp(90px, 14vh, 160px) 0; }
@@ -1425,34 +1475,38 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             <p class="sub">Flat, one-time project pricing for websites — no retainers, no surprises. Your site ships on Cloudflare and it's yours to keep.</p>
         </div>
         <div class="price-grid">
-            <div class="pkg" data-rv>
+            <div class="pkg" data-rv style="--acc-rgb:57,230,255">
                 <h3>Starter</h3>
                 <div class="amount">$99</div>
                 <div class="p-note">one-page site</div>
                 <ul><li>1-page custom landing page</li><li>Mobile-first &amp; responsive</li><li>Contact form or booking link</li><li>Deployed on Cloudflare</li><li>1 round of revisions</li></ul>
                 <a class="btn-o" href="#contact">Get started</a>
+                <p class="pkg-next">What happens next: tell me about your 1-pager in the form below — I reply within 24 hours to confirm scope.</p>
             </div>
-            <div class="pkg" data-rv style="--rvd:0.07s">
+            <div class="pkg" data-rv style="--rvd:0.07s;--acc-rgb:196,107,255">
                 <h3>Launch</h3>
                 <div class="amount">$199</div>
                 <div class="p-note">small site</div>
                 <ul><li>Everything in Starter</li><li>Up to 3 pages</li><li>SEO-ready — metadata &amp; sitemap</li><li>Social &amp; search preview cards</li><li>2 rounds of revisions</li></ul>
                 <a class="btn-o" href="#contact">Get started</a>
+                <p class="pkg-next">What happens next: describe your up-to-3-page site below — I reply within 24 hours to confirm scope.</p>
             </div>
-            <div class="pkg hot" data-rv style="--rvd:0.14s">
+            <div class="pkg hot" data-rv style="--rvd:0.14s;--acc-rgb:111,91,255">
                 <span class="hot-tag">Best value</span>
                 <h3>Studio</h3>
                 <div class="amount">$399</div>
                 <div class="p-note">the sweet spot</div>
                 <ul><li>Everything in Launch</li><li>Up to 6 pages</li><li>Custom animation &amp; interactions</li><li>Copywriting polish &amp; on-page SEO</li><li>Priority delivery + 3 revisions</li></ul>
                 <a class="btn" href="#contact">Get started</a>
+                <p class="pkg-next">What happens next: share your up-to-6-page build below — I reply within 24 hours to schedule the discovery call.</p>
             </div>
-            <div class="pkg" data-rv style="--rvd:0.21s">
+            <div class="pkg" data-rv style="--rvd:0.21s;--acc-rgb:124,255,178">
                 <h3>Pro</h3>
                 <div class="amount">$500</div>
                 <div class="p-note">the big one</div>
                 <ul><li>Everything in Studio</li><li>Up to 10 pages + custom sections</li><li>Advanced SEO + structured data</li><li>Blog / CMS setup</li><li>Analytics + 30-day launch support</li></ul>
                 <a class="btn-o" href="#contact">Get started</a>
+                <p class="pkg-next">What happens next: outline your full build below — I reply within 24 hours to scope the engagement.</p>
             </div>
         </div>
         <div class="custom-row" data-rv>
@@ -1496,13 +1550,20 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             <p class="sub">Tell me about your project — a website, an AI-trained team, or a game idea. I typically reply within 24 hours.</p>
         </div>
         <div class="contact-grid">
-            <form class="cform" data-rv="left" action="mailto:kudbeezero@gmail.com" method="post" enctype="text/plain">
+            <form class="cform" id="contactForm" data-rv="left" action="mailto:kudbeezero@gmail.com" method="post" enctype="text/plain" novalidate>
+                <p class="form-note form-note--top">No backend behind this form — sending opens your email app with this message pre-filled, addressed to <a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a>. Prefer not to? Email that address directly any time.</p>
                 <div class="frow">
-                    <label>Name<input type="text" name="name" placeholder="Your name" autocomplete="name" required></label>
-                    <label>Email<input type="email" name="email" placeholder="you@company.com" autocomplete="email" required></label>
+                    <label for="cf-name">Name
+                        <input type="text" id="cf-name" name="name" placeholder="Your name" autocomplete="name" required aria-describedby="cf-name-err" aria-invalid="false">
+                        <span class="ferr" id="cf-name-err"></span>
+                    </label>
+                    <label for="cf-email">Email
+                        <input type="email" id="cf-email" name="email" placeholder="you@company.com" autocomplete="email" required aria-describedby="cf-email-err" aria-invalid="false">
+                        <span class="ferr" id="cf-email-err"></span>
+                    </label>
                 </div>
-                <label>Interested in
-                    <select name="interest">
+                <label for="cf-interest">Interested in
+                    <select id="cf-interest" name="interest">
                         <option>Web Design &amp; Development</option>
                         <option>AI Agent Training</option>
                         <option>Support Agent Suite</option>
@@ -1510,9 +1571,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                         <option>Something else</option>
                     </select>
                 </label>
-                <label>Message<textarea name="message" placeholder="What are you building?"></textarea></label>
+                <label for="cf-message">Message
+                    <textarea id="cf-message" name="message" placeholder="What are you building?"></textarea>
+                </label>
                 <button class="btn" type="submit" data-mag>Send message</button>
-                <p class="form-note">Opens your mail app addressed to the studio — or just email directly. Replies within 24 hours.</p>
+                <p class="form-note" id="cf-status" role="status" aria-live="polite">Replies within 24 hours.</p>
             </form>
             <div class="cinfo" data-rv="right">
                 <h3>Reach me — any way you like</h3>
@@ -1524,9 +1587,14 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 <div class="cline">💬 Live AI training &amp; consulting via Zoom</div>
                 <div class="cline">⌨ <a href="https://github.com/KudbeeZero" target="_blank" rel="noopener">github.com/KudbeeZero</a></div>
                 <div class="faq">
+                    <details><summary>What does a project cost?</summary><div class="fa">Website builds are flat, one-time pricing from $99 for a single page up to $500 for a 10-page Pro build — see the tiers above. AI training, the Support Agent Suite, and custom agent workflows are scoped per engagement after a quick call.</div></details>
+                    <details><summary>How many revisions do I get?</summary><div class="fa">It scales with the tier: 1 round on Starter, 2 on Launch, and 3 rounds with priority delivery on Studio and Pro — Pro also includes 30 days of launch support.</div></details>
+                    <details><summary>What's the timeline from kickoff to launch?</summary><div class="fa">It depends on scope — a Starter one-pager can move fast, while a multi-page Studio or Pro build runs through the full process (discovery → design → build &amp; train → proof → launch). Most projects kick off within a week of the discovery call, and I'll give you a concrete estimate once I know the scope.</div></details>
+                    <details><summary>What does AI agent training actually include?</summary><div class="fa">Live, hands-on sessions over Zoom — not a pre-recorded course. We cover prompt engineering, agent architecture, and building your own custom agents and automation workflows, with human-in-the-loop guardrails by default. Every session is recorded so your team can replay it.</div></details>
+                    <details><summary>Who owns the games' IP — can I license one?</summary><div class="fa">Every Kudbee game is original or procedurally generated end to end — no scraped assets, nothing licensed in. The games themselves are free to play, not for resale, but a custom original game built for your brand is exactly the kind of project I take on — get in touch.</div></details>
                     <details><summary>How fast can you start?</summary><div class="fa">Most projects kick off within a week of our discovery call.</div></details>
                     <details><summary>Do you train remote teams?</summary><div class="fa">Yes — all AI training is delivered live over Zoom, with recordings for replay.</div></details>
-                    <details><summary>Are the games really free to play?</summary><div class="fa">Absolutely. Every Kudbee game runs free in your browser — no install, no signup.</div></details>
+                    <details><summary>Are the games really free to play?</summary><div class="fa">Yes — every Kudbee game (nine so far) runs free in your browser, no install and no signup.</div></details>
                 </div>
             </div>
         </div>
@@ -1547,6 +1615,20 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 </section>
 
 </main>
+
+<!-- ==================== FLOATING CTA (DBZ-056) ====================
+     Content-sized pill, not a banner — appears once the visitor scrolls
+     past Services, hides again near Contact (where the same CTA already
+     lives inline), dismissable and remembered for the session. Progressive
+     enhancement only: with JS off it simply never appears; nothing here is
+     required content. -->
+<div class="fcta" id="floatCta" aria-label="Quick contact shortcut">
+    <a class="fcta-link" href="#contact" data-mag>
+        <span class="fcta-dot" aria-hidden="true"></span>
+        Start a project
+    </a>
+    <button type="button" class="fcta-close" id="floatCtaClose" aria-label="Dismiss this shortcut for the rest of the session">✕</button>
+</div>
 
 <!-- ==================== FOOTER ==================== -->
 <footer>
@@ -2635,6 +2717,117 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         }
         window.addEventListener('hashchange', apply);
         apply();
+    })();
+
+    /* ---------- Floating "Start a project" pill (DBZ-056) ----------
+       Shows once the visitor has scrolled past #services into the next
+       section, hides again once #contact starts entering view (same CTA
+       already lives inline there — no need to cover it). #services itself
+       is the tall sticky-stack section (three panels pinned/receding as you
+       scroll), so watching for it to fully leave the viewport would need an
+       unreasonably long scroll; watching #process (the very next section)
+       enter view is the accurate "just moved past services" signal. That
+       flag latches permanently once true (mirrors the one-shot ".lit"
+       section-lighting observer above — fires once, never re-hides) so
+       scrolling on past #process into #work/#games/#agents doesn't flicker
+       the pill back off before #contact is actually near.
+       Dismissable and remembered for the session via sessionStorage, so it
+       never nags on repeat page views within a tab. */
+    (function () {
+        var pill = document.getElementById('floatCta');
+        var closeBtn = document.getElementById('floatCtaClose');
+        if (!pill || !closeBtn) return;
+        var DISMISS_KEY = 'kudbee.fctaDismissed';
+        var dismissed = false;
+        try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
+        if (dismissed) { pill.hidden = true; return; }
+        var pastServicesEl = document.getElementById('process');
+        var contactEl = document.getElementById('contact');
+        if (!pastServicesEl || !contactEl || !('IntersectionObserver' in window)) return;
+        var pastServices = false;
+        var nearContact = false;
+        function sync() { pill.classList.toggle('show', pastServices && !nearContact); }
+        var servicesIo = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { pastServices = true; sync(); servicesIo.unobserve(e.target); }
+            });
+        }, { threshold: 0, rootMargin: '-10% 0px -10% 0px' });
+        servicesIo.observe(pastServicesEl);
+        var contactIo = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) { nearContact = e.isIntersecting; sync(); });
+        }, { threshold: 0, rootMargin: '0px 0px -15% 0px' });
+        contactIo.observe(contactEl);
+        closeBtn.addEventListener('click', function () {
+            pill.classList.remove('show');
+            pill.hidden = true;
+            try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
+        });
+    })();
+
+    /* ---------- Contact form: inline validation + honest mailto disclosure (DBZ-056) ----------
+       This form has no backend (see the .form-note--top copy above it in the
+       markup) — submitting it hands off to the browser's mailto: flow. This
+       script only (a) validates the two required fields as-you-type/on-blur
+       with a real per-field error string (not color alone) plus
+       aria-invalid/aria-describedby, and (b) swaps the status line to an
+       honest "opening your email app" message on a valid submit instead of
+       implying a silent server-side send. It never fabricates a server-side
+       success/failure the page can't actually observe. */
+    (function () {
+        var form = document.getElementById('contactForm');
+        if (!form) return;
+        var status = document.getElementById('cf-status');
+        var fields = [
+            {
+                input: document.getElementById('cf-name'),
+                err: document.getElementById('cf-name-err'),
+                validate: function (v) { return v.trim() ? '' : 'Please enter your name.'; }
+            },
+            {
+                input: document.getElementById('cf-email'),
+                err: document.getElementById('cf-email-err'),
+                validate: function (v) {
+                    var t = v.trim();
+                    if (!t) return 'Please enter your email.';
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return 'Enter a valid email address.';
+                    return '';
+                }
+            }
+        ];
+        function setState(f, msg) {
+            if (!f.input) return;
+            var label = f.input.closest('label');
+            f.input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+            if (f.err) f.err.textContent = msg;
+            if (label) label.classList.toggle('err', !!msg);
+        }
+        fields.forEach(function (f) {
+            if (!f.input) return;
+            f.input.addEventListener('blur', function () { setState(f, f.validate(f.input.value)); });
+            f.input.addEventListener('input', function () {
+                // Only re-validate live once a field has already been flagged —
+                // don't scold the visitor mid-first-keystroke.
+                if (f.input.getAttribute('aria-invalid') === 'true') setState(f, f.validate(f.input.value));
+            });
+        });
+        form.addEventListener('submit', function (e) {
+            var firstInvalid = null;
+            fields.forEach(function (f) {
+                if (!f.input) return;
+                var msg = f.validate(f.input.value);
+                setState(f, msg);
+                if (msg && !firstInvalid) firstInvalid = f.input;
+            });
+            if (firstInvalid) {
+                e.preventDefault();
+                firstInvalid.focus();
+                if (status) status.textContent = 'Please fix the highlighted field before sending.';
+                return;
+            }
+            if (status) status.textContent = 'Opening your email app with this message pre-filled — send it from there. If nothing opens, email kudbeezero@gmail.com directly.';
+            // Not preventDefault()'d: the native mailto: action proceeds so the
+            // browser actually opens the visitor's email client.
+        });
     })();
 })();
 </script>
