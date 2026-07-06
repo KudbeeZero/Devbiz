@@ -287,8 +287,16 @@ h1, h2, h3, h4 { font-family: var(--fd); font-weight: 600; line-height: 1.04; le
 }
 .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .aurora i {
-    position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.5;
+    position: absolute; border-radius: 50%; opacity: 0.5;
     will-change: transform;
+    /* DBZ-052: per-section hue bias. --aurora-bias is set on .aurora itself
+       (not documentElement, to keep style-recalc scoped to these three
+       decorative circles) by the main script as scroll position moves
+       through the page (home/services/story/work stay at the default
+       0deg; games biases green; agents biases magenta) — subtle, ambient,
+       never a hard cut. Falls back to 0deg (today's exact cyan-violet-
+       magenta look) if the script never runs. */
+    filter: blur(110px) hue-rotate(var(--aurora-bias, 0deg));
 }
 .aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -12vw; top: -14vw; background: radial-gradient(circle, rgba(57,230,255,0.16), transparent 65%); }
 .aurora i:nth-child(2) { width: 52vw; height: 52vw; right: -16vw; top: 22vh; background: radial-gradient(circle, rgba(111,91,255,0.17), transparent 65%); }
@@ -299,7 +307,7 @@ h1, h2, h3, h4 { font-family: var(--fd); font-weight: 600; line-height: 1.04; le
     66% { transform: translate3d(-3vw, 4vh, 0) scale(0.95); }
 }
 @media (prefers-reduced-motion: no-preference) {
-    .aurora i { animation: auroraDrift var(--mo-loop-aurora-1) var(--ease-io) infinite; }
+    .aurora i { animation: auroraDrift var(--mo-loop-aurora-1) var(--ease-io) infinite; transition: filter var(--mo-dur-4) var(--mo-ease-in-out); }
     .aurora i:nth-child(2) { animation-duration: var(--mo-loop-aurora-2); animation-delay: var(--mo-loop-aurora-delay-2); }
     .aurora i:nth-child(3) { animation-duration: var(--mo-loop-aurora-3); animation-delay: var(--mo-loop-aurora-delay-3); }
 }
@@ -313,8 +321,19 @@ h1, h2, h3, h4 { font-family: var(--fd); font-weight: 600; line-height: 1.04; le
 }
 .preloader.done { opacity: 0; visibility: hidden; }
 html:not(.js) .preloader { display: none; }
-.preloader .pl-logo { font: 700 clamp(28px, 5vw, 44px)/1 var(--fd); letter-spacing: -0.03em; }
+/* Signature moment (DBZ-052): a dim "ghost" wordmark sits in-flow to set
+   the box size; a bright gradient-clipped copy is layered on top and
+   clipped to a width the main script drives in lockstep with the loading
+   bar/counter (same tick loop, same ~1.05s budget — well under the 1.2s
+   ceiling) — a wipe reveal instead of a flat fade-in. Static (full width,
+   no clip) if JS never sets it, so nothing renders half-drawn. */
+.preloader .pl-logo { position: relative; font: 700 clamp(28px, 5vw, 44px)/1 var(--fd); letter-spacing: -0.03em; }
 .preloader .pl-logo em { font-style: normal; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.preloader .pl-ghost { display: block; opacity: 0.22; }
+.preloader .pl-wipe {
+    position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; white-space: nowrap;
+    filter: drop-shadow(0 0 16px rgba(111,91,255,0.5));
+}
 .preloader .pl-bar { width: min(280px, 60vw); height: 1px; background: var(--border); position: relative; overflow: hidden; }
 .preloader .pl-bar span { position: absolute; inset: 0; background: var(--grad); transform: scaleX(0); transform-origin: left; transition: transform var(--mo-dur-2) var(--ease); }
 .preloader .pl-count { font: 500 12px/1 var(--fd); letter-spacing: 0.35em; color: var(--dim); }
@@ -408,6 +427,28 @@ html:not(.js) .preloader { display: none; }
 }
 .rule { border: none; border-top: 1px solid var(--border-soft); }
 
+/* ---------------- Section lighting (DBZ-052) ----------------
+   A soft top-glow per .sec — the "lit exhibit" note from the north star
+   (§2): each content section brightens softly the first time it enters
+   view instead of the page reading as one flat scroll. One-shot via
+   IntersectionObserver in the main script (never re-dims once lit).
+   Under reduced-motion the glow is simply always-on — a static
+   composition, nothing to gate a fade for. */
+.sec::before {
+    content: ""; position: absolute; left: 50%; top: 0; z-index: 0; pointer-events: none;
+    width: min(880px, 82vw); height: clamp(200px, 28vh, 360px);
+    transform: translate(-50%, -42%);
+    background: radial-gradient(closest-side, rgba(255,255,255,0.055), transparent 72%);
+    opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .sec::before { transition: opacity var(--mo-dur-4) var(--mo-ease-out); }
+}
+.sec.lit::before { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .sec::before { opacity: 1; }
+}
+
 /* Buttons */
 .btn, .btn-o {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -432,6 +473,13 @@ html:not(.js) .preloader { display: none; }
 #heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
 .hero-fade { position: absolute; inset: auto 0 0 0; height: 26vh; z-index: 1; background: linear-gradient(180deg, transparent, var(--bg)); pointer-events: none; }
 .hero .wrap { width: 100%; }
+/* Hero exit choreography (DBZ-052): #heroWrap's transform/opacity are set
+   directly by the main script's scroll bus subscriber, composite-only
+   (translateY + opacity), so the title/sub/CTA block eases up and fades
+   slightly as you scroll away. will-change hints the compositor; no base
+   transform here so the block sits exactly where it does today until JS
+   (if running, and motion is allowed) starts driving it. */
+#heroWrap { will-change: transform, opacity; }
 .hero-badge {
     display: inline-flex; align-items: center; gap: 10px; margin-bottom: 30px;
     padding: 9px 18px 9px 12px; border-radius: 999px;
@@ -620,7 +668,10 @@ html:not(.js) .story .pin-outer { height: auto; }
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="preloader" id="preloader" aria-hidden="true">
-    <div class="pl-logo">kudbee<em>.</em></div>
+    <div class="pl-logo">
+        <span class="pl-ghost">kudbee<em>.</em></span>
+        <span class="pl-wipe" id="plWipe">kudbee<em>.</em></span>
+    </div>
     <div class="pl-bar"><span id="plBar"></span></div>
     <div class="pl-count" id="plCount">00</div>
 </div>
@@ -894,7 +945,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 <section class="hero" id="home" aria-label="Intro">
     <canvas id="heroCanvas" aria-hidden="true"></canvas>
     <div class="hero-fade" aria-hidden="true"></div>
-    <div class="wrap">
+    <div class="wrap" id="heroWrap">
         <div class="hero-badge" data-rv><span class="pulse"></span> Now booking web design &amp; AI training projects</div>
         <h1 id="heroTitle">
             <span class="line"><span style="--d:0.05s">I design <em class="grad" style="font-style:normal">websites</em>,</span></span>
@@ -1446,6 +1497,48 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     var yearEl = document.getElementById('year');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+    /* ---------- Motion-token readers (DBZ-052) ----------
+       Every new easing/duration this lane adds is read from the lane-04
+       CSS custom properties at runtime instead of a hardcoded curve or
+       millisecond literal — so the hero atmosphere always tracks
+       whatever the tokens say, and there is nothing here to drift out of
+       sync with the CSS. Failure mode is a neutral no-op (linear / the
+       supplied fallback), never a silently reintroduced magic number. */
+    function bezierFromPoints(x1, y1, x2, y2) {
+        function a(p1, p2) { return 1 - 3 * p2 + 3 * p1; }
+        function b(p1, p2) { return 3 * p2 - 6 * p1; }
+        function c(p1) { return 3 * p1; }
+        function bez(t, p1, p2) { return ((a(p1, p2) * t + b(p1, p2)) * t + c(p1)) * t; }
+        function slope(t, p1, p2) { return 3 * a(p1, p2) * t * t + 2 * b(p1, p2) * t + c(p1); }
+        function tForX(x) {
+            var t = x;
+            for (var i = 0; i < 6; i++) {
+                var s = slope(t, x1, x2);
+                if (Math.abs(s) < 1e-6) break;
+                t -= (bez(t, x1, x2) - x) / s;
+            }
+            return t;
+        }
+        return function (x) {
+            if (x <= 0) return 0; if (x >= 1) return 1;
+            return bez(tForX(x), y1, y2);
+        };
+    }
+    function tokenEase(varName) {
+        var raw = '';
+        try { raw = getComputedStyle(document.documentElement).getPropertyValue(varName); } catch (e) {}
+        var m = raw && raw.match(/cubic-bezier\(\s*([-.\d]+)\s*,\s*([-.\d]+)\s*,\s*([-.\d]+)\s*,\s*([-.\d]+)\s*\)/);
+        if (!m) return function (x) { return x; }; // linear no-op fallback
+        return bezierFromPoints(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), parseFloat(m[4]));
+    }
+    function tokenMs(varName) {
+        var raw = '';
+        try { raw = getComputedStyle(document.documentElement).getPropertyValue(varName); } catch (e) {}
+        var v = parseFloat(raw);
+        if (isNaN(v)) return 0;
+        return raw.indexOf('ms') !== -1 ? v : v * 1000;
+    }
+
     /* ---------- Preloader (skips on reduced-motion and repeat visits) ---------- */
     var pre = document.getElementById('preloader');
     var hero = document.querySelector('.hero');
@@ -1456,12 +1549,14 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         try { seen = sessionStorage.getItem('kudbee.seen') === '1'; } catch (e) {}
         if (reduce || seen) { pre.classList.add('done'); heroOn(); return; }
         var bar = document.getElementById('plBar'), count = document.getElementById('plCount');
+        var wipe = document.getElementById('plWipe'); // DBZ-052 logo mask wipe, synced to the same tick
         var start = performance.now(), DUR = 1050;
         function tick(now) {
             var t = Math.min(1, (now - start) / DUR);
             var eased = 1 - Math.pow(1 - t, 3);
             if (bar) bar.style.transform = 'scaleX(' + eased + ')';
             if (count) count.textContent = String(Math.round(eased * 100)).padStart(2, '0');
+            if (wipe) wipe.style.width = (eased * 100).toFixed(2) + '%';
             if (t < 1) requestAnimationFrame(tick);
             else {
                 pre.classList.add('done');
@@ -1551,6 +1646,26 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         }, { rootMargin: '-38% 0px -52% 0px' });
         Object.keys(map).forEach(function (id) { var s = document.getElementById(id); if (s) io.observe(s); });
     })();
+    // Section lighting (DBZ-052): one-shot top-glow per .sec, the "lit
+    // exhibit" note from the north star — mirrors the reveal system's
+    // "fires once, never re-hides" contract. Reduced-motion doesn't need
+    // this at all: the CSS media query already forces the glow permanently
+    // on with no transition, so there's nothing for the observer to gate.
+    (function () {
+        if (reduce) return;
+        var sections = document.querySelectorAll('.sec');
+        if (!sections.length) return;
+        if (!('IntersectionObserver' in window)) {
+            sections.forEach(function (s) { s.classList.add('lit'); });
+            return;
+        }
+        var lio = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('lit'); lio.unobserve(e.target); }
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+        sections.forEach(function (s) { lio.observe(s); });
+    })();
     // Drawer: real accessible dialog — focus moves in on open, restores to the
     // trigger on close, the background is set inert (genuine focus trap on
     // supporting browsers), aria-expanded/aria-modal track state, Escape closes.
@@ -1631,6 +1746,75 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         }
         scrollUpdaters.push(onGhostScroll);
         onGhostScroll();
+    })();
+
+    /* ---------- Hero exit choreography (DBZ-052) ----------
+       The title/sub/CTA block eases up and fades slightly as the hero
+       scrolls out of view — composite-only (translateY + opacity),
+       subscribed onto the same shared scroll bus above instead of a
+       fourth listener. Progress is shaped by --mo-ease-out (lane-04
+       token, read at runtime via tokenEase — see the top of this
+       script) so the feel matches the rest of the site's motion.
+       Skipped entirely under reduced-motion: the hero keeps its plain,
+       fully-visible static layout. */
+    (function () {
+        if (reduce) return;
+        var heroWrap = document.getElementById('heroWrap');
+        var heroSection = document.querySelector('.hero');
+        if (!heroWrap || !heroSection) return;
+        var ease = tokenEase('--mo-ease-out');
+        var TRAVEL = 46, MIN_OPACITY = 0.4;
+        function onHeroExitScroll() {
+            var h = heroSection.offsetHeight || 1;
+            var p = Math.max(0, Math.min(1, window.scrollY / (h * 0.62)));
+            var eased = ease(p);
+            heroWrap.style.transform = eased > 0 ? 'translateY(-' + (eased * TRAVEL).toFixed(2) + 'px)' : '';
+            heroWrap.style.opacity = eased > 0 ? (1 - eased * (1 - MIN_OPACITY)).toFixed(3) : '';
+        }
+        scrollUpdaters.push(onHeroExitScroll);
+        onHeroExitScroll();
+    })();
+
+    /* ---------- Aurora per-section hue bias (DBZ-052) ----------
+       Subtle, scroll-driven color bias on the ambient aurora: cyan-violet
+       (default) everywhere except a green lean over Games and a magenta
+       lean over Agents, per the north star's "lit exhibit" zones. Weight
+       falls off with distance from the viewport center so the shift
+       reads as a slow bias, never a hard cut; CSS (.aurora i) does the
+       actual easing of the change via --mo-dur-4/--mo-ease-in-out, this
+       just sets the target. Shares the scroll bus — no new listener.
+       The custom property is written on .aurora itself (3 decorative
+       children), not documentElement — profiling showed setting it on
+       <html> every scroll tick pulled the whole document into style
+       recalc (RecalcStyleDuration ~5x over a scripted scroll trace);
+       scoping the write to the small subtree that actually consumes the
+       token removes that cost. Also skips the write entirely when the
+       target hasn't moved enough to matter. */
+    (function () {
+        if (reduce) return;
+        var zones = [
+            { id: 'games', hue: -38 },
+            { id: 'agents', hue: 96 }
+        ].map(function (z) { z.el = document.getElementById(z.id); return z; }).filter(function (z) { return z.el; });
+        var auroraEl = document.querySelector('.aurora');
+        if (!zones.length || !auroraEl) return;
+        var lastBias = null;
+        function onAuroraScroll() {
+            var vh = window.innerHeight, vc = vh / 2, bias = 0;
+            zones.forEach(function (z) {
+                var r = z.el.getBoundingClientRect();
+                var dist = Math.abs((r.top + r.height / 2) - vc);
+                var span = Math.max(r.height, vh) * 0.9;
+                var w = Math.max(0, 1 - dist / span);
+                bias += z.hue * w;
+            });
+            bias = Math.max(-70, Math.min(120, bias));
+            if (lastBias !== null && Math.abs(bias - lastBias) < 0.5) return;
+            lastBias = bias;
+            auroraEl.style.setProperty('--aurora-bias', bias.toFixed(1) + 'deg');
+        }
+        scrollUpdaters.push(onAuroraScroll);
+        onAuroraScroll();
     })();
 
     /* ---------- Sticky service stack: covered panels recede ---------- */
@@ -1752,6 +1936,22 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
      * cells, only test the 3x3 neighborhood) instead of an O(n^2) scan
      * over every pair — same visual result, far fewer distance checks
      * once N grows past a couple dozen points.
+     *
+     * DBZ-052: three depth layers (far/mid/near), each with its own
+     * point set, spatial grid and link pass — a link never bridges two
+     * depths, so the existing grid-based cost model is unchanged (same
+     * total point count, just partitioned). A pointer-parallax offset
+     * scaled by depth is applied per layer at paint time only (a
+     * ctx.translate around that layer's draw calls) — physics/positions
+     * stay layer-local. Pointer gravity is shaped by --mo-ease-spring
+     * (DBZ-051 token, parsed at runtime via tokenEase, never a
+     * hardcoded curve) for a smoother pull with a slight overshoot.
+     * Links blend each endpoint's own palette color across two half
+     * segments (cyan→violet etc. along the line) instead of one flat
+     * gray-blue stroke — same single ctx.strokeStyle-per-segment cost
+     * as before, just two segments instead of one. An occasional
+     * shooting spark streaks across the scene; its lifetime comes from
+     * --mo-dur-8 (0.8s), also read at runtime.
      * ------------------------------------------------------------ */
     (function () {
         var canvas = document.getElementById('heroCanvas');
@@ -1759,10 +1959,19 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         var lowPower = !!(navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
         var small = (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) || lowPower;
         var N = small ? 42 : 90, LINK = small ? 110 : 150, LINK2 = LINK * LINK;
-        var ctx, W = 0, H = 0, pts = [], grid = {}, cols = 0, rows = 0;
-        var mx = -9999, my = -9999;
+        var ctx, W = 0, H = 0, layers = [], cols = 0, rows = 0;
+        var mx = -9999, my = -9999, pnx = 0, pny = 0;
         var active = false, running = false, hidden = (typeof document.hidden === 'boolean') && document.hidden;
         var COLS = ['rgba(57,230,255,', 'rgba(111,91,255,', 'rgba(196,107,255,', 'rgba(124,255,178,'];
+        // Depth scale, far → near: share of the point budget, point size,
+        // drift speed, pointer-pull strength, and paint-time parallax (px).
+        var DEPTH = [
+            { count: 0.34, size: 0.68, speed: 0.55, pull: 0.55, parallax: 6 },
+            { count: 0.36, size: 0.92, speed: 0.8, pull: 0.8, parallax: 14 },
+            { count: 0.30, size: 1.28, speed: 1.15, pull: 1.25, parallax: 26 }
+        ];
+        var gravityEase = tokenEase('--mo-ease-spring');
+        var sparkLifeMs = tokenMs('--mo-dur-8');
         function rand(a, b) { return a + Math.random() * (b - a); }
         function fit() {
             var r = canvas.getBoundingClientRect();
@@ -1771,21 +1980,31 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             W = r.width; H = r.height;
             cols = Math.max(1, Math.ceil(W / LINK)); rows = Math.max(1, Math.ceil(H / LINK));
-            pts = [];
-            for (var i = 0; i < N; i++) pts.push({
-                x: rand(0, W), y: rand(0, H),
-                vx: rand(-0.22, 0.22), vy: rand(-0.18, 0.18),
-                r: rand(1, 2.4), c: COLS[i % COLS.length], tw: rand(0, 6.28)
-            });
+            layers = [];
+            var idx = 0;
+            for (var li = 0; li < DEPTH.length; li++) {
+                var d = DEPTH[li], count = Math.max(4, Math.round(N * d.count)), pts = [];
+                for (var i = 0; i < count; i++) {
+                    pts.push({
+                        x: rand(0, W), y: rand(0, H),
+                        vx: rand(-0.22, 0.22) * d.speed, vy: rand(-0.18, 0.18) * d.speed,
+                        r: rand(1, 2.4) * d.size, c: COLS[idx % COLS.length], tw: rand(0, 6.28)
+                    });
+                    idx++;
+                }
+                layers.push({ def: d, pts: pts, grid: {} });
+            }
         }
         canvas.parentElement.addEventListener('pointermove', function (e) {
             var r = canvas.getBoundingClientRect();
             mx = e.clientX - r.left; my = e.clientY - r.top;
+            pnx = Math.max(-1, Math.min(1, (mx - W / 2) / (W / 2 || 1)));
+            pny = Math.max(-1, Math.min(1, (my - H / 2) / (H / 2 || 1)));
         }, { passive: true });
-        canvas.parentElement.addEventListener('pointerleave', function () { mx = -9999; my = -9999; }, { passive: true });
+        canvas.parentElement.addEventListener('pointerleave', function () { mx = -9999; my = -9999; pnx = 0; pny = 0; }, { passive: true });
         function cellKey(cx, cy) { return cx + ',' + cy; }
-        function buildGrid() {
-            grid = {};
+        function buildGrid(layer) {
+            var grid = {}, pts = layer.pts;
             for (var i = 0; i < pts.length; i++) {
                 var p = pts[i];
                 var cx = Math.max(0, Math.min(cols - 1, Math.floor(p.x / LINK)));
@@ -1793,9 +2012,20 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 var key = cellKey(cx, cy);
                 (grid[key] || (grid[key] = [])).push(i);
             }
+            layer.grid = grid;
         }
-        function drawLinks() {
+        function drawLink(pts, a, b, dist) {
+            var q = pts[a], w = pts[b];
+            var midx = (q.x + w.x) / 2, midy = (q.y + w.y) / 2;
+            var al = (0.16 * (1 - dist / LINK)).toFixed(3);
             ctx.lineWidth = 1;
+            ctx.strokeStyle = q.c + al + ')';
+            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(midx, midy); ctx.stroke();
+            ctx.strokeStyle = w.c + al + ')';
+            ctx.beginPath(); ctx.moveTo(midx, midy); ctx.lineTo(w.x, w.y); ctx.stroke();
+        }
+        function drawLinks(layer) {
+            var pts = layer.pts, grid = layer.grid;
             for (var cy = 0; cy < rows; cy++) {
                 for (var cx = 0; cx < cols; cx++) {
                     var here = grid[cellKey(cx, cy)];
@@ -1815,9 +2045,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                                     var ddx = q.x - w.x, ddy = q.y - w.y;
                                     var d2 = ddx * ddx + ddy * ddy;
                                     if (d2 >= LINK2) continue;
-                                    var dist = Math.sqrt(d2);
-                                    ctx.strokeStyle = 'rgba(111,120,180,' + (0.14 * (1 - dist / LINK)).toFixed(3) + ')';
-                                    ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(w.x, w.y); ctx.stroke();
+                                    drawLink(pts, a, b, Math.sqrt(d2));
                                 }
                             }
                         }
@@ -1825,26 +2053,67 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 }
             }
         }
+        // Occasional shooting spark: a single fast streak, rare, self-expiring.
+        var spark = null;
+        function maybeSpawnSpark() {
+            if (spark || small || Math.random() > 0.0022) return;
+            var goRight = Math.random() > 0.5;
+            spark = {
+                x: goRight ? -20 : W + 20, y: rand(H * 0.05, H * 0.55),
+                vx: (goRight ? 1 : -1) * rand(5.5, 8), vy: rand(0.8, 2.2),
+                born: performance.now()
+            };
+        }
+        function drawSpark(t) {
+            if (!spark) return;
+            var age = t - spark.born;
+            if (age > sparkLifeMs || spark.x < -60 || spark.x > W + 60) { spark = null; return; }
+            spark.x += spark.vx; spark.y += spark.vy;
+            var life = Math.max(0, 1 - age / sparkLifeMs);
+            ctx.save();
+            ctx.globalAlpha = life;
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+            ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(spark.x, spark.y);
+            ctx.lineTo(spark.x - spark.vx * 5, spark.y - spark.vy * 5);
+            ctx.stroke();
+            ctx.restore();
+        }
         function draw(t) {
             ctx.clearRect(0, 0, W, H);
-            for (var i = 0; i < pts.length; i++) {
-                var p = pts[i];
-                p.x += p.vx; p.y += p.vy;
-                // gentle pull toward the cursor
-                var dx = mx - p.x, dy = my - p.y, d2 = dx * dx + dy * dy;
-                if (d2 < 48400 && d2 > 1) { var d = Math.sqrt(d2); p.x += dx / d * 0.35; p.y += dy / d * 0.35; }
-                if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
-                if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
+            for (var li = 0; li < layers.length; li++) {
+                var layer = layers[li], def = layer.def, pts = layer.pts;
+                for (var i = 0; i < pts.length; i++) {
+                    var p = pts[i];
+                    p.x += p.vx; p.y += p.vy;
+                    // pointer gravity, shaped by the spring token so the pull
+                    // ramps in smoothly (with a slight overshoot) instead of
+                    // linearly with proximity.
+                    var dx = mx - p.x, dy = my - p.y, d2 = dx * dx + dy * dy;
+                    if (d2 < 48400 && d2 > 1) {
+                        var d = Math.sqrt(d2);
+                        var prox = gravityEase(Math.max(0, Math.min(1, 1 - d / 220)));
+                        var pull = prox * 0.35 * def.pull;
+                        p.x += dx / d * pull; p.y += dy / d * pull;
+                    }
+                    if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+                    if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
+                }
+                buildGrid(layer);
+                ctx.save();
+                ctx.translate(pnx * def.parallax, pny * def.parallax);
+                drawLinks(layer);
+                for (var k = 0; k < pts.length; k++) {
+                    var pt = pts[k];
+                    var al = 0.35 + 0.35 * Math.sin(t * 0.0012 + pt.tw);
+                    ctx.fillStyle = pt.c + al.toFixed(3) + ')';
+                    ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r, 0, 7); ctx.fill();
+                }
+                ctx.restore();
             }
-            buildGrid();
-            drawLinks();
-            // points
-            for (var k = 0; k < pts.length; k++) {
-                var pt = pts[k];
-                var al = 0.35 + 0.35 * Math.sin(t * 0.0012 + pt.tw);
-                ctx.fillStyle = pt.c + al.toFixed(3) + ')';
-                ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r, 0, 7); ctx.fill();
-            }
+            maybeSpawnSpark();
+            drawSpark(t);
         }
         function loop(now) {
             if (!active) { running = false; return; }
