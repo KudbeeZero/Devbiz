@@ -41,6 +41,14 @@
     this.state = 'menu';
     this.loop = new KC.Loop(this._update.bind(this), this._render.bind(this));
 
+    // Presentation: honor reduced-motion for menu/UI-level animation, keep a
+    // menu clock for the cinematic title, and lazy-build the vignette overlay.
+    this.reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.menuT = 0;
+    this._vignette = null;
+    this.best = 0;
+    try { this.best = parseInt(window.localStorage.getItem('kudbee-contra.best'), 10) || 0; } catch (e) { /* storage unavailable */ }
+
     this._initRun();
     this._bindMeta();
   }
@@ -65,6 +73,11 @@
     this.projectiles.clear();
     this.particles.clear();
     this.score = 0;
+    this.kills = 0;
+    this.runTime = 0;
+    this.hurtFx = 0;       // brief red edge flash when the operative takes a hit
+    this.scorePop = 0;     // HUD score punch on gain
+    this.newBest = false;
     this.lives = this.player.lives;
     this.spawnFlags = this.level.spawns.map(() => false);
     this.boss = null;
@@ -98,7 +111,20 @@
 
   Game.prototype.addScore = function (n, x, y) {
     this.score += n;
+    this.scorePop = 0.35;
     if (x != null) this.particles.damageNumber(x, y - 10, '+' + n, n >= 1000);
+  };
+
+  // Called by enemies/boss on death — feeds the end-of-run stats recap.
+  Game.prototype.registerKill = function () { this.kills++; };
+
+  // Persist best score at the end of a run (additive; safe if storage is blocked).
+  Game.prototype._endRun = function () {
+    if (this.score > this.best) {
+      this.best = this.score;
+      this.newBest = true;
+      try { window.localStorage.setItem('kudbee-contra.best', String(this.best)); } catch (e) { /* ignore */ }
+    }
   };
 
   // Charge the OVERDRIVE meter (drives the K9 companion special).
@@ -157,6 +183,14 @@
     this.particles.update(dt);
 
     if (this.state === 'menu') {
+      this.menuT += dt;
+      // Cinematic attract-mode: slowly drift the camera through the level so
+      // the parallax jungle scrolls behind the logo (skipped for reduced motion).
+      if (!this.reducedMotion) {
+        const range = Math.max(0, this.level.width - this.viewW);
+        const ping = (this.menuT * 26) % (range * 2);
+        this.camera.x = ping < range ? ping : range * 2 - ping;
+      }
       if (this.input.justPressed('start') || this.input.justPressed('jump') || this.input.justPressed('fire')) {
         this._beginPlay();
       }
@@ -179,7 +213,10 @@
     const p = this.player;
     p.update(dt, this.input, this.level);
 
+    this.runTime += dt;
     if (this.levelFlash > 0) this.levelFlash -= dt;
+    if (this.hurtFx > 0) this.hurtFx -= dt;
+    if (this.scorePop > 0) this.scorePop -= dt;
 
     // Special: unleash the K9 missile barrage when OVERDRIVE is charged.
     if (this.input.justPressed('special') && this.power >= this.powerMax && !this.companion.active && !p.dead) {
@@ -196,6 +233,7 @@
           p.respawn(safeX);
         } else {
           this.state = 'gameover';
+          this._endRun();
           this.audio.stopMusic();
         }
       }
@@ -241,7 +279,7 @@
     // Win sequence.
     if (this.won) {
       this.winTimer -= dt;
-      if (this.winTimer <= 0) { this.state = 'win'; this.audio.stopMusic(); }
+      if (this.winTimer <= 0) { this.state = 'win'; this._endRun(); this.audio.stopMusic(); }
     }
 
     // Sync DOM HUD if provided.
@@ -448,12 +486,15 @@
     // Foreground atmospherics (screen space).
     this.parallax.drawFront(ctx, this.camera);
 
+    // Damage flash + low-health pulse (screen space, under the HUD).
+    if (this.state === 'play' || this.state === 'pause') this._drawVignettes(ctx);
+
     // HUD + menus (screen space).
     this._drawHUD(ctx);
     if (this.state === 'menu') this._drawMenu(ctx);
-    else if (this.state === 'pause') this._drawCenter(ctx, 'PAUSED', 'Press P / Start to resume');
-    else if (this.state === 'gameover') this._drawCenter(ctx, 'GAME OVER', 'Score ' + this.score + ' — Press Enter / A to retry', '#ff5d6d');
-    else if (this.state === 'win') this._drawCenter(ctx, 'OUTPOST CLEARED', 'Score ' + this.score + ' — Press Enter / A to play again', '#7CFFb2');
+    else if (this.state === 'pause') this._drawPauseOverlay(ctx);
+    else if (this.state === 'gameover') this._drawEndOverlay(ctx, false);
+    else if (this.state === 'win') this._drawEndOverlay(ctx, true);
 
     // Level-up flash toast.
     if (this.levelFlash > 0 && (this.state === 'play' || this.state === 'pause')) {
@@ -542,6 +583,16 @@
     ctx.font = 'bold 16px monospace';
     ctx.textBaseline = 'top';
 
+    // Soft glass panels behind the HUD clusters for readability.
+    const lpw = Math.max(184, 19 + this.player.maxHealth * 20);
+    ctx.fillStyle = 'rgba(4,8,18,0.45)';
+    this._roundRect(ctx, 12, 12, lpw, 102, 10); ctx.fill();
+    this._roundRect(ctx, this.viewW - 12 - 168, 12, 168, 66, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(57,230,255,0.14)';
+    ctx.lineWidth = 1;
+    this._roundRect(ctx, 12, 12, lpw, 102, 10); ctx.stroke();
+    this._roundRect(ctx, this.viewW - 12 - 168, 12, 168, 66, 10); ctx.stroke();
+
     // Health pips.
     for (let i = 0; i < this.player.maxHealth; i++) {
       const filled = i < this.player.health;
@@ -582,13 +633,25 @@
       ctx.fillText('OVERDRIVE ' + Math.floor(frac * 100) + '%', ox, oy + oh + 4);
     }
 
-    // Score (right aligned).
+    // Score (right aligned) with a punch-scale pop on gain.
+    ctx.save();
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffffff';
+    const pop = this.scorePop > 0 ? this.scorePop / 0.35 : 0;
+    if (pop > 0) {
+      const s = 1 + pop * 0.18;
+      ctx.translate(this.viewW - 20, 20);
+      ctx.scale(s, s);
+      ctx.translate(-(this.viewW - 20), -20);
+      ctx.shadowColor = '#ffd34d';
+      ctx.shadowBlur = 10 * pop;
+    }
+    ctx.fillStyle = pop > 0.45 ? '#ffe9a8' : '#ffffff';
     ctx.font = 'bold 22px monospace';
     ctx.fillText(String(this.score).padStart(6, '0'), this.viewW - 20, 20);
+    ctx.restore();
 
     // Level + XP bar (top-right, under score).
+    ctx.textAlign = 'right';
     ctx.fillStyle = '#7CFFb2';
     ctx.font = 'bold 13px monospace';
     ctx.fillText('LV ' + this.playerLevel, this.viewW - 20, 48);
@@ -621,53 +684,334 @@
     ctx.restore();
   };
 
+  // ---- Title screen (cinematic attract mode) -----------------------------
   Game.prototype._drawMenu = function (ctx) {
+    const W = this.viewW, H = this.viewH;
+    const t = this.menuT;
+    const rm = this.reducedMotion;
+    const intro = rm ? 1 : Math.min(1, t / 1.1);
+    const ease = 1 - Math.pow(1 - intro, 3);   // ease-out entrance
+
     ctx.save();
-    ctx.fillStyle = 'rgba(4,4,16,0.55)';
-    ctx.fillRect(0, 0, this.viewW, this.viewH);
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
 
-    ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 24;
-    ctx.fillStyle = '#39e6ff';
-    ctx.font = '900 64px monospace';
-    ctx.fillText('KUDBEE', this.viewW / 2, this.viewH / 2 - 70);
-    ctx.fillStyle = '#c46bff';
-    ctx.shadowColor = '#c46bff';
-    ctx.fillText('CONTRA', this.viewW / 2, this.viewH / 2 - 6);
+    // Cinematic grade over the drifting level (darker top/bottom).
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, 'rgba(3,4,14,0.82)');
+    bg.addColorStop(0.45, 'rgba(4,5,18,0.52)');
+    bg.addColorStop(1, 'rgba(3,4,14,0.86)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Letterbox bars with a thin neon rule.
+    ctx.fillStyle = '#020208';
+    ctx.fillRect(0, 0, W, 42);
+    ctx.fillRect(0, H - 42, W, 42);
+    ctx.fillStyle = 'rgba(57,230,255,0.25)';
+    ctx.fillRect(0, 42, W, 1);
+    ctx.fillRect(0, H - 43, W, 1);
+
+    // Studio strap (top bar) + footer (bottom bar).
+    ctx.fillStyle = 'rgba(159,182,200,0.75)';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText('K U D B E E   G A M E S   S T U D I O', W / 2, 27);
+    ctx.fillStyle = 'rgba(93,116,136,0.8)';
+    ctx.font = '10px monospace';
+    ctx.fillText('100% ORIGINAL — CODE · ART · AUDIO', W / 2, H - 17);
+
+    // ---- Logo block ----
+    const float = rm ? 0 : Math.sin(t * 1.4) * 4;
+    ctx.save();
+    ctx.globalAlpha = ease;
+    ctx.translate(0, (1 - ease) * 26);
+
+    // Ghost echo behind the wordmark.
+    ctx.fillStyle = 'rgba(57,230,255,0.05)';
+    ctx.font = '900 118px monospace';
+    ctx.fillText('KUDBEE', W / 2, H / 2 - 60 + float * 0.5);
+
+    // KUDBEE — cyan gradient, neon glow.
+    const g1 = ctx.createLinearGradient(0, H / 2 - 138, 0, H / 2 - 70);
+    g1.addColorStop(0, '#bdf6ff');
+    g1.addColorStop(0.55, '#39e6ff');
+    g1.addColorStop(1, '#1f8fb8');
+    ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 26;
+    ctx.fillStyle = g1;
+    ctx.font = '900 68px monospace';
+    ctx.fillText('KUDBEE', W / 2, H / 2 - 78 + float);
+
+    // CONTRA — violet gradient, neon glow.
+    const g2 = ctx.createLinearGradient(0, H / 2 - 70, 0, H / 2 - 2);
+    g2.addColorStop(0, '#f0d9ff');
+    g2.addColorStop(0.55, '#c46bff');
+    g2.addColorStop(1, '#7a3cc9');
+    ctx.shadowColor = '#c46bff'; ctx.shadowBlur = 26;
+    ctx.fillStyle = g2;
+    ctx.fillText('CONTRA', W / 2, H / 2 - 10 - float);
     ctx.shadowBlur = 0;
+    ctx.restore();
 
-    ctx.fillStyle = '#9fb6c8';
-    ctx.font = '16px monospace';
-    ctx.fillText('NEON JUNGLE OUTPOST  —  LEVEL 1', this.viewW / 2, this.viewH / 2 + 40);
-
-    const blink = Math.floor(performance.now() / 500) % 2 === 0;
-    if (blink) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18px monospace';
-      ctx.fillText('PRESS ENTER / TAP / A TO DEPLOY', this.viewW / 2, this.viewH / 2 + 80);
+    // Specular sweep across the wordmark (skipped for reduced motion).
+    if (!rm) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(W / 2 - 260, H / 2 - 150, 520, 150);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'lighter';
+      const sx = W / 2 - 660 + ((t * 220) % 1440);
+      const sg = ctx.createLinearGradient(sx, 0, sx + 150, 0);
+      sg.addColorStop(0, 'rgba(255,255,255,0)');
+      sg.addColorStop(0.5, 'rgba(210,245,255,0.14)');
+      sg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(W / 2 - 260, H / 2 - 150, 520, 150);
+      ctx.restore();
     }
-    ctx.fillStyle = '#5d7488';
-    ctx.font = '12px monospace';
-    ctx.fillText('Move WASD/Arrows · Jump Space · Fire K/X · Grenade L/C · Slide Shift · K9 Special E', this.viewW / 2, this.viewH - 40);
-    ctx.textAlign = 'left';
+
+    // Divider energy bar.
+    ctx.save();
+    ctx.globalAlpha = ease;
+    const dw = 320 * ease;
+    const dy = H / 2 + 10;
+    const dg = ctx.createLinearGradient(W / 2 - dw / 2, 0, W / 2 + dw / 2, 0);
+    dg.addColorStop(0, 'rgba(57,230,255,0)');
+    dg.addColorStop(0.5, 'rgba(57,230,255,0.9)');
+    dg.addColorStop(1, 'rgba(196,107,255,0)');
+    ctx.fillStyle = dg;
+    ctx.fillRect(W / 2 - dw / 2, dy, dw, 2);
+
+    // Mission pill.
+    ctx.font = 'bold 14px monospace';
+    const sub = 'LEVEL 1  —  NEON JUNGLE OUTPOST';
+    const sw = ctx.measureText(sub).width;
+    ctx.fillStyle = 'rgba(10,16,30,0.7)';
+    this._roundRect(ctx, W / 2 - sw / 2 - 16, dy + 14, sw + 32, 28, 14); ctx.fill();
+    ctx.strokeStyle = 'rgba(57,230,255,0.35)';
+    ctx.lineWidth = 1;
+    this._roundRect(ctx, W / 2 - sw / 2 - 16, dy + 14, sw + 32, 28, 14); ctx.stroke();
+    ctx.fillStyle = '#9fdcf0';
+    ctx.fillText(sub, W / 2, dy + 33);
+
+    // Press-to-start (soft pulse instead of a hard blink).
+    const pa = rm ? 1 : 0.55 + 0.45 * Math.sin(t * 3.2);
+    ctx.globalAlpha = ease * Math.max(0.3, pa);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 12;
+    ctx.font = 'bold 19px monospace';
+    ctx.fillText('PRESS ENTER · TAP · (A) TO DEPLOY', W / 2, dy + 86);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = ease;
+
+    // Best score.
+    if (this.best > 0) {
+      ctx.fillStyle = '#ffd34d';
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('BEST  ' + String(this.best).padStart(6, '0'), W / 2, dy + 114);
+    }
+
+    // Controls panel.
+    ctx.fillStyle = 'rgba(6,10,22,0.62)';
+    this._roundRect(ctx, W / 2 - 350, H - 116, 700, 44, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(57,230,255,0.16)';
+    this._roundRect(ctx, W / 2 - 350, H - 116, 700, 44, 10); ctx.stroke();
+    this._drawControlItems(ctx, W / 2, H - 94, [
+      ['WASD', 'MOVE'], ['SPACE', 'JUMP'], ['K', 'FIRE'],
+      ['L', 'GRENADE'], ['SHIFT', 'SLIDE'], ['E', 'K9 SPECIAL'],
+    ]);
+
+    ctx.restore();
     ctx.restore();
   };
 
-  Game.prototype._drawCenter = function (ctx, title, sub, color) {
+  // Row of keycap + label control hints, centered on cx.
+  Game.prototype._drawControlItems = function (ctx, cx, cy, items) {
     ctx.save();
-    ctx.fillStyle = 'rgba(4,4,16,0.6)';
-    ctx.fillRect(0, 0, this.viewW, this.viewH);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = color || '#39e6ff';
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 20;
-    ctx.font = '900 52px monospace';
-    ctx.fillText(title, this.viewW / 2, this.viewH / 2 - 10);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#cfe9ff';
-    ctx.font = '16px monospace';
-    ctx.fillText(sub, this.viewW / 2, this.viewH / 2 + 36);
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
+    const padX = 7, gapKey = 8, gapItem = 26, capH = 22;
+    let total = 0;
+    const meas = [];
+    for (let i = 0; i < items.length; i++) {
+      const kw = ctx.measureText(items[i][0]).width + padX * 2;
+      const lw = ctx.measureText(items[i][1]).width;
+      meas.push({ key: items[i][0], label: items[i][1], kw: kw, lw: lw });
+      total += kw + gapKey + lw;
+    }
+    total += gapItem * (items.length - 1);
+    let x = cx - total / 2;
+    for (let i = 0; i < meas.length; i++) {
+      const m = meas[i];
+      ctx.fillStyle = 'rgba(20,30,46,0.9)';
+      this._roundRect(ctx, x, cy - capH / 2, m.kw, capH, 5); ctx.fill();
+      ctx.strokeStyle = 'rgba(159,182,200,0.4)';
+      ctx.lineWidth = 1;
+      this._roundRect(ctx, x, cy - capH / 2, m.kw, capH, 5); ctx.stroke();
+      ctx.fillStyle = '#dff3ff';
+      ctx.fillText(m.key, x + padX, cy + 4);
+      ctx.fillStyle = '#7f97ab';
+      ctx.fillText(m.label, x + m.kw + gapKey, cy + 4);
+      x += m.kw + gapKey + m.lw + gapItem;
+    }
     ctx.restore();
+  };
+
+  // ---- Overlay panels (pause / game over / win) ---------------------------
+  Game.prototype._panel = function (ctx, x, y, w, h, accent) {
+    ctx.save();
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 34;
+    ctx.fillStyle = 'rgba(6,9,20,0.92)';
+    this._roundRect(ctx, x, y, w, h, 14); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.65;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5;
+    this._roundRect(ctx, x, y, w, h, 14); ctx.stroke();
+    ctx.globalAlpha = 1;
+    // Corner accent ticks.
+    ctx.fillStyle = accent;
+    ctx.fillRect(x + 18, y - 1, 46, 3);
+    ctx.fillRect(x + w - 64, y - 1, 46, 3);
+    ctx.restore();
+  };
+
+  // Columns of small stat label/value pairs, centered on cx.
+  Game.prototype._statCols = function (ctx, cx, y, stats, valueColor) {
+    const colW = 132;
+    const x0 = cx - (stats.length * colW) / 2 + colW / 2;
+    for (let i = 0; i < stats.length; i++) {
+      const x = x0 + i * colW;
+      ctx.fillStyle = '#67809a';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(stats[i][0], x, y);
+      ctx.fillStyle = valueColor || '#e8f6ff';
+      ctx.font = 'bold 20px monospace';
+      ctx.fillText(String(stats[i][1]), x, y + 26);
+    }
+  };
+
+  Game.prototype._fmtTime = function (s) {
+    s = Math.max(0, Math.floor(s));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  };
+
+  Game.prototype._promptAlpha = function () {
+    return this.reducedMotion ? 1 : 0.5 + 0.5 * Math.sin(performance.now() / 300);
+  };
+
+  Game.prototype._drawPauseOverlay = function (ctx) {
+    const W = this.viewW, H = this.viewH;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(3,4,14,0.66)';
+    ctx.fillRect(0, 0, W, H);
+    const pw = 480, ph = 250, px = (W - pw) / 2, py = (H - ph) / 2;
+    this._panel(ctx, px, py, pw, ph, '#39e6ff');
+
+    ctx.fillStyle = '#39e6ff';
+    ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 18;
+    ctx.font = '900 40px monospace';
+    ctx.fillText('PAUSED', W / 2, py + 64);
+    ctx.shadowBlur = 0;
+
+    this._statCols(ctx, W / 2, py + 102, [
+      ['SCORE', String(this.score).padStart(6, '0')],
+      ['KILLS', this.kills],
+      ['TIME', this._fmtTime(this.runTime)],
+    ]);
+
+    ctx.globalAlpha = 0.45 + 0.55 * this._promptAlpha();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('P / ESC / START — RESUME', W / 2, py + 186);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#5d7488';
+    ctx.font = '12px monospace';
+    ctx.fillText('M MUTE  ·  ~ DEBUG', W / 2, py + 216);
+    ctx.restore();
+  };
+
+  Game.prototype._drawEndOverlay = function (ctx, won) {
+    const W = this.viewW, H = this.viewH;
+    const accent = won ? '#7CFFb2' : '#ff5d6d';
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(3,4,14,0.72)';
+    ctx.fillRect(0, 0, W, H);
+    const pw = 560, ph = 330, px = (W - pw) / 2, py = (H - ph) / 2;
+    this._panel(ctx, px, py, pw, ph, accent);
+
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent; ctx.shadowBlur = 22;
+    ctx.font = '900 44px monospace';
+    ctx.fillText(won ? 'OUTPOST CLEARED' : 'GAME OVER', W / 2, py + 68);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#8fa8bd';
+    ctx.font = '13px monospace';
+    ctx.fillText(won ? 'THE NEON JUNGLE FALLS SILENT' : 'THE OUTPOST HOLDS... FOR NOW', W / 2, py + 94);
+
+    // Final score, gold-lit on a new best.
+    ctx.fillStyle = '#67809a';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('FINAL SCORE', W / 2, py + 132);
+    ctx.fillStyle = this.newBest ? '#ffd34d' : '#ffffff';
+    if (this.newBest) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 14; }
+    ctx.font = '900 36px monospace';
+    ctx.fillText(String(this.score).padStart(6, '0'), W / 2, py + 168);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = this.newBest ? '#ffd34d' : '#67809a';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(this.newBest ? '★ NEW BEST ★' : 'BEST  ' + String(this.best).padStart(6, '0'), W / 2, py + 190);
+
+    this._statCols(ctx, W / 2, py + 224, [
+      ['KILLS', this.kills],
+      ['TIME', this._fmtTime(this.runTime)],
+      ['LEVEL', 'LV ' + this.playerLevel],
+    ]);
+
+    ctx.globalAlpha = 0.45 + 0.55 * this._promptAlpha();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText(won ? 'PRESS ENTER / TAP — PLAY AGAIN' : 'PRESS ENTER / TAP — RETRY', W / 2, py + 296);
+    ctx.restore();
+  };
+
+  // ---- Damage / low-health vignette ---------------------------------------
+  Game.prototype._drawVignettes = function (ctx) {
+    const p = this.player;
+    let a = 0;
+    if (this.hurtFx > 0) a = Math.min(0.5, this.hurtFx * 1.4);
+    if (!p.dead && p.health > 0 && p.health <= 2) {
+      const pulse = this.reducedMotion
+        ? 0.22
+        : 0.15 + 0.13 * (0.5 + 0.5 * Math.sin(performance.now() / 280));
+      a = Math.max(a, pulse);
+    }
+    if (a <= 0.005) return;
+    if (!this._vignette) this._buildVignette();
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.drawImage(this._vignette, 0, 0);
+    ctx.restore();
+  };
+
+  // Cached offscreen radial vignette (built once; drawing it per frame is cheap).
+  Game.prototype._buildVignette = function () {
+    const c = document.createElement('canvas');
+    c.width = this.viewW; c.height = this.viewH;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(
+      this.viewW / 2, this.viewH / 2, this.viewH * 0.38,
+      this.viewW / 2, this.viewH / 2, this.viewH * 0.85
+    );
+    grad.addColorStop(0, 'rgba(255,40,70,0)');
+    grad.addColorStop(1, 'rgba(255,30,60,0.9)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, this.viewW, this.viewH);
+    this._vignette = c;
   };
 
   Game.prototype._drawDebug = function (ctx) {

@@ -19,7 +19,9 @@
     this.focusY = viewH / 2;
 
     // Trauma-based shake (Squirrel Eiserloh style): shake = trauma^2.
+    // shakeScale lets the game dial shake down (e.g. prefers-reduced-motion).
     this.trauma = 0;
+    this.shakeScale = 1;
     this._shakeX = 0;
     this._shakeY = 0;
     this._t = 0;
@@ -27,7 +29,7 @@
 
   /* Add a shake impulse (0..1). Stacks but is capped at 1. */
   Camera.prototype.shake = function (amount) {
-    this.trauma = Util.clamp(this.trauma + amount, 0, 1);
+    this.trauma = Util.clamp(this.trauma + amount * this.shakeScale, 0, 1);
   };
 
   Camera.prototype.zoomTo = function (z) {

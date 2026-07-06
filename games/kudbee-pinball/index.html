@@ -27,6 +27,10 @@
     text-transform:uppercase; color:#9fb6c8; text-decoration:none; padding:6px 10px;
     border:1px solid rgba(159,182,200,0.25); border-radius:6px; background:rgba(5,5,15,0.5); backdrop-filter:blur(6px); }
   .back-link:hover { color:#fff; border-color:var(--cyan); }
+  .snd-btn { position:absolute; top:10px; right:12px; z-index:30; font-size:14px; line-height:1;
+    color:#9fb6c8; padding:6px 10px; border:1px solid rgba(159,182,200,0.25); border-radius:6px;
+    background:rgba(5,5,15,0.5); backdrop-filter:blur(6px); cursor:pointer; }
+  .snd-btn:hover { color:#fff; border-color:var(--cyan); }
   .overlay { position:absolute; inset:0; z-index:25; display:grid; place-items:center; text-align:center; padding:24px;
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.55), rgba(3,3,10,0.92));
     backdrop-filter:blur(3px); transition:opacity 0.4s ease; }
@@ -51,17 +55,19 @@
 <div id="stage">
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
+    <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
     <canvas id="game"></canvas>
 
     <div class="overlay" id="gate">
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip the center <b>loop</b> — every combo climbs your <b>multiplier</b>.</p>
-        <div class="badge">Skill shot · ramps · multiball-ready</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · on touch, tap low to flip, tap up top to nudge</p>
+        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
+        <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
-        <div class="ov-foot">Desktop &amp; mobile · physics sandbox — table art &amp; modes come next</div>
+        <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
+        <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
       </div>
     </div>
 
@@ -74,7 +80,7 @@
       </div>
     </div>
 
-    <div class="hint">Z / . flippers · Space launch · ~ debug</div>
+    <div class="hint">Z / . flippers · Space launch · X / C nudge · M sound · ~ debug</div>
   </div>
 </div>
 
@@ -100,6 +106,60 @@
   var TAU = Math.PI * 2;
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+  // ===== audio — tiny procedural WebAudio blips (no assets, no autoplay) =====
+  // The context is only created inside a user-gesture handler (start / key / tap),
+  // never on load. Mute persists in localStorage; the 🔊 button + M key toggle it.
+  var AC = null, mGain = null, muted = false, sfxLast = {};
+  try { muted = localStorage.getItem('kudbee.pinball.muted') === '1'; } catch (e) {}
+  function audioInit() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    var Ctor = window.AudioContext || window.webkitAudioContext; if (!Ctor) return;
+    try { AC = new Ctor(); } catch (e) { return; }
+    mGain = AC.createGain(); mGain.gain.value = muted ? 0 : 0.5; mGain.connect(AC.destination);
+  }
+  function setMuted(m) {
+    muted = m; if (mGain) mGain.gain.value = muted ? 0 : 0.5;
+    try { localStorage.setItem('kudbee.pinball.muted', muted ? '1' : '0'); } catch (e) {}
+    var btn = document.getElementById('sndBtn');
+    if (btn) { btn.textContent = muted ? '🔇' : '🔊'; btn.setAttribute('aria-pressed', muted ? 'true' : 'false'); }
+  }
+  // one enveloped oscillator; slideTo = optional pitch glide target; at = schedule offset (s)
+  function tone(freq, dur, type, vol, slideTo, at) {
+    if (!AC || muted) return;
+    var t = AC.currentTime + (at || 0);
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(30, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(mGain); o.start(t); o.stop(t + dur + 0.03);
+  }
+  function sfx(name) {
+    if (!AC || muted) return;
+    var now = performance.now();                              // rate-limit per sound
+    if (now - (sfxLast[name] || 0) < 45) return; sfxLast[name] = now;
+    switch (name) {
+      case 'flip':   tone(170, 0.05, 'square', 0.15, 70); break;                       // flipper fires
+      case 'thock':  tone(95, 0.05, 'triangle', 0.2, 60); break;                       // ball meets flipper
+      case 'bumper': tone(420 + Math.random() * 240, 0.1, 'triangle', 0.22, 900); break;
+      case 'sling':  tone(300, 0.08, 'sawtooth', 0.13, 170); break;
+      case 'target': tone(660, 0.1, 'square', 0.15, 880); break;
+      case 'drop':   tone(500, 0.08, 'square', 0.16, 250); tone(760, 0.1, 'square', 0.13, 990, 0.05); break;
+      case 'roll':   tone(980, 0.09, 'sine', 0.15, 1240); break;
+      case 'launch': tone(120, 0.32, 'sawtooth', 0.16, 640); break;
+      case 'ramp':   tone(240, 0.24, 'sawtooth', 0.16, 1100); break;
+      case 'kick':   tone(90, 0.16, 'square', 0.2, 640); tone(180, 0.22, 'sawtooth', 0.18, 900, 0.04); break;
+      case 'drain':  tone(320, 0.5, 'sawtooth', 0.18, 55); break;
+      case 'save':   tone(520, 0.1, 'square', 0.15, 700); tone(780, 0.14, 'square', 0.15, 1040, 0.09); break;
+      case 'skill':  tone(660, 0.09, 'square', 0.16); tone(880, 0.09, 'square', 0.16, 0, 0.08); tone(1320, 0.16, 'square', 0.16, 0, 0.16); break;
+      case 'mult':   tone(523, 0.08, 'square', 0.15); tone(659, 0.08, 'square', 0.15, 0, 0.07); tone(784, 0.14, 'square', 0.16, 0, 0.14); break;
+      case 'combo':  tone(440 + Math.min(comboN, 8) * 110, 0.12, 'square', 0.16, 660 + Math.min(comboN, 8) * 110); break;
+      case 'nudgeS': tone(140, 0.07, 'triangle', 0.18, 90); break;
+      case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
+    }
+  }
 
   // Logical table space (rendered scaled to the canvas).
   var VW = 900, VH = 1500;
@@ -161,15 +221,22 @@
   function Flipper(px, py, length, side, restA, upA) {
     this.px = px; this.py = py; this.len = length; this.r = 13; this.side = side;
     this.restA = restA; this.upA = upA; this.a = restA; this.av = 0; this.pressed = false;
+    this.prevA = restA; this.endA = restA;   // swept range this phys step (anti-tunnel interp)
+    this.buf = 0;                            // input buffer: a tap always yields >= this many s of "up"
+    this.flash = 0;                          // hit flash (render)
   }
   Flipper.prototype.tip = function () { return { x: this.px + Math.cos(this.a) * this.len, y: this.py + Math.sin(this.a) * this.len }; };
   Flipper.prototype.update = function (h) {
-    var target = this.pressed ? this.upA : this.restA;
+    // input buffering: a press-release inside one frame still flips (buf keeps it "held")
+    var want = this.pressed || this.buf > 0;
+    if (this.buf > 0) this.buf -= h;
+    var target = want ? this.upA : this.restA;
     var SPD = 34;                      // rad/s swing speed (fast = responsive)
-    var prev = this.a;
+    this.prevA = this.a;
     if (this.a < target) this.a = Math.min(target, this.a + SPD * h);
     else if (this.a > target) this.a = Math.max(target, this.a - SPD * h);
-    this.av = (this.a - prev) / h;     // angular velocity → surface speed for kicks
+    this.av = (this.a - this.prevA) / h;     // angular velocity → surface speed for kicks
+    this.endA = this.a;
   };
   var flipL, flipR;
 
@@ -201,6 +268,17 @@
     // a couple of round posts to bank off
     bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
     bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    // ---- side bumpers: the wide outer alleys next to each wall were empty — a ball
+    //      that strayed out there just slid straight down toward the outlane. These
+    //      live bumpers (same kick as the "asteroid belt" trio) fill that dead space
+    //      and keep the ball alive and bouncing instead of sliding out. Kept clear of
+    //      the side loop-ramp gates (x=140/760, y 860-1000) so those shots stay open. ----
+    bumpers.push({ x: 140, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 745, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 115, y: 720, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 750, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 120, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 745, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
     // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
     //      Light a side's pair for a multiplier step. ----
     target(210, 640, 'standup', '#39e6ff', 'L');
@@ -228,6 +306,18 @@
 
     // ---- center loop-ramp: a hard upward shot through the gate loops over the top ----
     ramp = { x: 450, y0: 560, y1: 624, hw: 36 };
+    // ---- side loop-ramps: the wide outer alleys (long dead space along each cabinet
+    //      wall) now double as a second and third loop shot — same "shoot it upward
+    //      through the gate" trigger as the center ramp, just planted out by the walls. ----
+    leftRamp = { x: 140, y0: 860, y1: 1000, hw: 25, side: -1 };
+    rightRamp = { x: 760, y0: 860, y1: 1000, hw: 25, side: 1 };
+    // ---- outlane kickbacks: a loaded coil low in each outlane fires a draining ball
+    //      back into play instead of losing it — one charge per outlane per fresh ball.
+    //      Wide (the outlanes have no separate rail) but only in the last stretch before
+    //      the drain, and clear of the flipper/inlane band (x 300-600), so it only ever
+    //      catches a ball that was truly about to be lost out that side. ----
+    kickZoneL = { x0: 60, x1: 300, y0: 1382, y1: 1426 };
+    kickZoneR = { x0: 600, x1: 840, y0: 1382, y1: 1426 };
 
     // ---- decorative colored light inserts (fill the open regions, pure render) ----
     var lampSpec = [
@@ -248,11 +338,18 @@
 
   // ===== balls + particles =====
   var balls = [];
-  function spawnBallInLane() {
+  // keep=true → ball-save re-serve: the run continues (multiplier / tilt / bonus survive),
+  // but the saved ball earns no fresh save window of its own.
+  function spawnBallInLane(keep) {
     skillLit = Math.floor(Math.random() * 3);                 // light a fresh lane each serve
-    mult = 1;                                                 // playfield multiplier resets with each new ball
-    tilt = 0; tilted = false;                                 // fresh tilt budget each ball
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lowT: 0, trail: [] });
+    if (!keep) {
+      mult = 1;                                               // playfield multiplier resets with each new ball
+      tilt = 0; tilted = false;                               // fresh tilt budget each ball
+      bonusU = 0;                                             // end-of-ball bonus units
+    }
+    comboN = 0; comboT = 0; saveT = 0;                        // combo chain + save window reset per serve
+    if (!keep) { kickL = true; kickR = true; }                 // outlane kickbacks reload each fresh ball (a saved re-serve keeps whatever's left)
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: !!keep });
   }
 
   // floating score callout (skill shot / big events)
@@ -274,13 +371,23 @@
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
   var mult = 1, multFlash = 0, rampShots = 0;       // playfield multiplier (resets each ball) + loop counter
+  var kickL = true, kickR = true;                   // outlane kickbacks — one loaded save per outlane, consumed on use
+  var leftRamp = null, rightRamp = null;             // side loop-ramp triggers (mirror the center `ramp`)
+  var kickZoneL = null, kickZoneR = null;            // outlane kickback trigger boxes
   var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
-  var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto ball-save
+  var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto free
+  var comboN = 0, comboT = 0, bestCombo = 0;        // chained-shot combo (targets/loops/skill within a window)
+  var COMBO_WINDOW = 4;                             // seconds to keep a chain alive
+  var saveT = 0, BALL_SAVE_S = 8;                   // ball-save grace window after each fresh serve
+  var bonusU = 0;                                   // end-of-ball bonus units collected this ball
+  var dispScore = 0, scoreFlash = 0;                // animated score count-up + glow
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   function resetGame() {
     score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
+    comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
+    kickL = true; kickR = true;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -345,7 +452,10 @@
     var t = clamp(((b.x - f.px) * ex + (b.y - f.py) * ey) / el2, 0, 1);
     var qx = f.px + ex * t, qy = f.py + ey * t;
     var pv = flipperPointVel(f, qx, qy);
-    return resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y);
+    var relSp = len(b.vx - pv.x, b.vy - pv.y);        // approach speed before resolution
+    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y);
+    if (hit && relSp > 260) { f.flash = 1; sfx('thock'); }
+    return hit;
   }
 
   function resolveAll(b) {
@@ -371,13 +481,28 @@
   }
 
   // ===== scoring events (all points scale by the playfield multiplier) =====
-  function addScore(n) { score += n * mult; }
+  function addScore(n) { score += n * mult; scoreFlash = 1; }
   function bumpMult(reason, x, y) {
     if (mult >= 6) { addScore(2500); }                  // already maxed → consolation
     else { mult++; multFlash = 1; }
     callout(reason, mult + '×  MULTIPLIER', '#ffd34d');
+    sfx('mult');
     shake = Math.min(shake + 0.4, 1.5);
     if (x != null) burst(x, y, '#ffd34d', 22, 460);
+  }
+  // combo: chained MAJOR shots (targets / loop / skill) within COMBO_WINDOW seconds.
+  // Called BEFORE each event's own callout so headline moments still take the marquee.
+  function comboHit(x, y) {
+    if (comboT > 0) {
+      comboN++;
+      if (comboN > bestCombo) bestCombo = comboN;
+      var pts = 250 * comboN;
+      addScore(pts);
+      callout('COMBO ×' + comboN, '+' + (pts * mult).toLocaleString(), '#c46bff');
+      sfx('combo');
+      burst(x, y, '#c46bff', 12, 340);
+    } else comboN = 1;
+    comboT = COMBO_WINDOW;
   }
   function bankComplete(grp) {
     for (var i = 0; i < targets.length; i++) { var t = targets[i]; if (t.grp === grp && !(t.down || t.lit)) return false; }
@@ -387,8 +512,11 @@
     for (var i = 0; i < targets.length; i++) if (targets[i].grp === grp) { if (drop) targets[i].down = false; else targets[i].lit = false; }
   }
   function onTarget(t) {
+    comboHit(t.x, t.y);
     t.flash = 1; shake = Math.min(shake + 0.12, 1.1);
     addScore(t.kind === 'drop' ? 500 : 250);
+    bonusU += t.kind === 'drop' ? 8 : 5;
+    sfx(t.kind === 'drop' ? 'drop' : 'target');
     burst(t.x, t.y, t.color, 12, 360);
     if (t.kind === 'drop') {
       t.down = true;
@@ -399,24 +527,49 @@
     }
   }
   function onRollover(r) {
-    r.lit = true; r.flash = 1; addScore(150); burst(r.x, r.y, r.color, 8, 280);
+    r.lit = true; r.flash = 1; addScore(150); bonusU += 3; sfx('roll'); burst(r.x, r.y, r.color, 8, 280);
     var all = true; for (var i = 0; i < rollovers.length; i++) if (!rollovers[i].lit) all = false;
     if (all) { addScore(3000); bumpMult('K · U · D', r.x, r.y); for (var j = 0; j < rollovers.length; j++) rollovers[j].lit = false; }
   }
   function onRamp(b) {
-    addScore(1000); rampShots++;
+    comboHit(ramp.x, ramp.y0);
+    addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
     burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220);
     else callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
   }
-  function onBumper(c) { if (c.kind === 'bumper') { addScore(100); c.flash = 1; shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
-  function onSling(x, y) { addScore(25); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
+  // Side loop ramps — same trick as the center loop: a hard upward shot through the
+  // gate teleports the ball to the top of the field with a scatter, minus the physical
+  // "tube" (this table draws loops the same way the center one always has).
+  function onSideRamp(b, r) {
+    var col = r.side < 0 ? '#c46bff' : '#ffd34d';
+    comboHit(r.x, r.y0);
+    addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
+    burst(r.x, r.y0, col, 22, 460); shake = Math.min(shake + 0.35, 1.4);
+    b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
+    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220);
+    else callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * mult).toLocaleString(), col);
+  }
+  // Outlane kickback — a ball about to drain out an outlane instead gets punched
+  // back up into the playfield. One charge per outlane, consumed on use, both
+  // reload on the next fresh ball.
+  function onKickback(b, side) {
+    if (side < 0) kickL = false; else kickR = false;
+    var col = '#7CFFb2';
+    addScore(250); bonusU += 4; sfx('kick');
+    burst(b.x, b.y, col, 20, 520); shake = Math.min(shake + 0.5, 1.6);
+    b.x = side < 0 ? 220 : 680; b.y = 1300; b.vx = side < 0 ? 260 : -260; b.vy = -1250; b.trail.length = 0;
+    callout('KICKBACK!', 'saved', col);
+  }
+  function onBumper(c) { if (c.kind === 'bumper') { addScore(100); bonusU += 1; c.flash = 1; sfx('bumper'); shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
+  function onSling(x, y) { addScore(25); bonusU += 1; sfx('sling'); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
 
   // ===== physics step =====
   function physStep(h) {
-    if (tilted) { flipL.pressed = false; flipR.pressed = false; }   // over-nudged → flippers dead until this ball drains
+    if (tilted) { flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h);
+    if (saveT > 0) saveT -= h;                                      // ball-save window ticks down
     if (charging && balls.length && balls[0].inLane) charge = Math.min(1, charge + h * 1.6);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
@@ -433,23 +586,35 @@
       if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
       // speed cap
       var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
-      // micro sub-steps so the ball never moves > r/2 before resolving
+      // micro sub-steps so the ball never moves > r/2 before resolving.
+      // The flippers' swept angle is interpolated across the same sub-steps so a
+      // fast-swinging flipper can't rotate through the ball inside one phys step.
       var move = len(b.vx, b.vy) * h;
       var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
       var hh = h / steps;
       for (var s = 0; s < steps; s++) {
+        var fr = (s + 1) / steps;
+        flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
+        flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
         b.x += b.vx * hh; b.y += b.vy * hh;
         resolveAll(b);
         if (b.y > DRAIN_Y) break;
       }
+      flipL.a = flipL.endA; flipR.a = flipR.endA;
       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
+      if (leftRamp && b.lRampCd <= 0 && b.vy < -520 && b.x > leftRamp.x - leftRamp.hw && b.x < leftRamp.x + leftRamp.hw && b.y > leftRamp.y0 && b.y < leftRamp.y1) { b.lRampCd = 0.7; onSideRamp(b, leftRamp); }
+      if (rightRamp && b.rRampCd <= 0 && b.vy < -520 && b.x > rightRamp.x - rightRamp.hw && b.x < rightRamp.x + rightRamp.hw && b.y > rightRamp.y0 && b.y < rightRamp.y1) { b.rRampCd = 0.7; onSideRamp(b, rightRamp); }
+      // outlane kickbacks: a ball sinking through the last stretch before the drain,
+      // out past the flipper/inlane band, gets punched back into play if still loaded.
+      if (kickL && kickZoneL && b.vy > 0 && b.x > kickZoneL.x0 && b.x < kickZoneL.x1 && b.y > kickZoneL.y0 && b.y < kickZoneL.y1) onKickback(b, -1);
+      else if (kickR && kickZoneR && b.vy > 0 && b.x > kickZoneR.x0 && b.x < kickZoneR.x1 && b.y > kickZoneR.y0 && b.y < kickZoneR.y1) onKickback(b, 1);
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
-      if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('BALL SAVED', 'freed the ball', '#7CFFb2'); }
+      if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
@@ -464,6 +629,7 @@
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
     b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+    sfx('launch');
   }
 
   // Nudge ("tilt") — shove the table to free a stuck ball. dir: -1 left, +1 right, 0 straight shake.
@@ -478,20 +644,23 @@
       hit = true;
     }
     if (!hit) return;
-    tilt += 1.4; tiltFlash = 1; shake = Math.min(shake + 0.5, 1.6);
-    if (tilt >= TILT_MAX) { tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); flipL.pressed = false; flipR.pressed = false; }
+    tilt += 1.4; tiltFlash = 1; shake = Math.min(shake + 0.5, 1.6); sfx('nudgeS');
+    if (tilt >= TILT_MAX) { tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); sfx('tilt'); flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }
   }
 
   // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
   function enterFromLane(b) {
     b.injected = true;
+    if (!b.noSave) saveT = BALL_SAVE_S;                        // arm the ball-save grace window (fresh serves only)
     var f = clamp((b.launchPow - 0.45) / 0.55, 0, 1);          // 0 = just cleared .. 1 = max plunge
     var lane = clamp(2 - Math.min(2, Math.floor(f * 3)), 0, 2); // equal thirds → matches the meter bands (strong→A)
     var L = SKILL_LANES[lane];
     // nudge horizontally so a clean vertical drop can never balance on a rail tip / target gap
     b.x = L.x; b.y = 200; b.vx = lane === 0 ? 70 : lane === 2 ? -70 : 45; b.vy = 130; b.trail.length = 0;
     if (lane === skillLit) {
-      addScore(SKILL_VALUE); callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
+      comboHit(L.x, 210);
+      addScore(SKILL_VALUE); bonusU += 15; sfx('skill');
+      callout('SKILL SHOT!', '+' + SKILL_VALUE.toLocaleString(), '#ffd34d');
       shake = Math.min(shake + 0.55, 1.6);
       burst(L.x, 210, '#ffd34d', 28, 520); burst(L.x, 210, '#ffffff', 14, 300);
     } else {
@@ -501,7 +670,17 @@
   }
 
   function onDrain() {
+    sfx('drain');
     if (balls.length > 0) return;             // multiball: only count when the last ball drains
+    // ball save: a fresh serve that drains inside the grace window comes right back
+    if (saveT > 0 && !tilted) {
+      saveT = 0; sfx('save');
+      callout('BALL SAVED', 'shoot again', '#7CFFb2');
+      spawnBallInLane(true);
+      return;
+    }
+    // end-of-ball bonus: everything collected this ball pays out (× multiplier)
+    if (bonusU > 0) { var bp = bonusU * 40; addScore(bp); callout('BONUS', '+' + (bp * mult).toLocaleString(), '#7CFFb2'); }
     ballsLeft--;
     if (ballsLeft <= 0) { gameOver(); }
     else { spawnBallInLane(); }
@@ -509,9 +688,12 @@
 
   function gameOver() {
     state = 'over';
+    var isBest = score > 0 && score > best;
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
+    dispScore = score;
     document.getElementById('oScore').textContent = score.toLocaleString();
-    document.getElementById('oSub').textContent = 'Score ' + score.toLocaleString() + ' · best ' + best.toLocaleString();
+    var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '');
+    document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
   }
 
@@ -535,10 +717,22 @@
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
-    for (var bk = 0; bk < balls.length; bk++) if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
+    for (var bk = 0; bk < balls.length; bk++) {
+      if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
+      if (balls[bk].lRampCd > 0) balls[bk].lRampCd -= dt;
+      if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
+    }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
+    if (comboT > 0) { comboT -= dt; if (comboT <= 0) comboN = 0; }  // combo chain expires
+    if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); }
+    if (reduceMotion) { dispScore = score; scoreFlash = 0; }        // count-up is a flourish; skip it
+    else {
+      dispScore += (score - dispScore) * Math.min(1, dt * 10);      // animated score count-up
+      if (Math.abs(score - dispScore) < 2) dispScore = score;
+      if (scoreFlash > 0) scoreFlash = Math.max(0, scoreFlash - dt * 2.2);
+    }
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 900 * dt; q.life -= dt * 1.6; } }
     draw(now);
   }
@@ -591,9 +785,10 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
+    drawBallSave();
 
     // balls
     for (var b = 0; b < balls.length; b++) drawBall(balls[b]);
@@ -633,6 +828,19 @@
       if (lit) { ctx.fillStyle = 'rgba(255,211,77,0.85)'; ctx.font = '700 13px Inter, sans-serif'; ctx.fillText('SKILL', L.x, 168); }
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+  // pulsing "BALL SAVE" light over the drain while the grace window is live
+  function drawBallSave() {
+    if (state !== 'play' || saveT <= 0) return;
+    var t = performance.now();
+    // urgency: pulse speeds up in the final 2.5 s
+    var pu = reduceMotion ? 0.75 : 0.5 + 0.5 * Math.sin(t / (saveT < 2.5 ? 90 : 240));
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(124,255,178,' + (0.3 + 0.5 * pu).toFixed(2) + ')';
+    ctx.font = '700 24px "Space Grotesk", sans-serif';
+    if (!reduceMotion) { ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 12; }
+    ctx.fillText('◈ BALL SAVE ◈', 450, 1398);
+    ctx.shadowBlur = 0; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
   function drawCallout(now) {
     if (co.life <= 0) return;
@@ -693,23 +901,55 @@
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
-  function drawRamp() {
-    if (!ramp) return;
+  function drawOneRamp(r, rgb) {
+    if (!r) return;
     var t = performance.now();
     var pulse = reduceMotion ? 0.5 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 300));
-    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    ctx.lineCap = 'round';
     for (var k = 0; k < 3; k++) {                          // up-chevrons = "shoot here to loop"
-      var yy = ramp.y1 - k * 26, a = (0.5 - k * 0.12) * pulse;
-      ctx.strokeStyle = 'rgba(57,230,255,' + a.toFixed(2) + ')'; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(ramp.x - ramp.hw, yy); ctx.lineTo(ramp.x, yy - 20); ctx.lineTo(ramp.x + ramp.hw, yy); ctx.stroke();
+      var yy = r.y1 - k * 26, a = (0.5 - k * 0.12) * pulse;
+      ctx.strokeStyle = 'rgba(' + rgb + ',' + a.toFixed(2) + ')'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(r.x - r.hw, yy); ctx.lineTo(r.x, yy - 20); ctx.lineTo(r.x + r.hw, yy); ctx.stroke();
     }
+  }
+  function drawRamp() {
+    ctx.globalCompositeOperation = 'lighter';
+    drawOneRamp(ramp, '57,230,255');
+    drawOneRamp(leftRamp, '196,107,255');
+    drawOneRamp(rightRamp, '255,211,77');
     ctx.globalCompositeOperation = 'source-over';
   }
+  // outlane kickback lamps — bright + pulsing while loaded, dim once spent
+  function drawKickback() {
+    if (!kickZoneL || !kickZoneR) return;
+    var t = performance.now();
+    var zones = [[kickZoneL, kickL], [kickZoneR, kickR]];
+    ctx.globalCompositeOperation = 'lighter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = 0; i < zones.length; i++) {
+      var z = zones[i][0], on = zones[i][1];
+      var cx = (z.x0 + z.x1) / 2, cy = z.y0 - 14;
+      var pulse = on ? (reduceMotion ? 0.6 : 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(t / 260))) : 0.14;
+      var rgb = on ? '124,255,178' : '90,100,120';
+      var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 34);
+      g.addColorStop(0, 'rgba(' + rgb + ',' + (pulse * 0.5).toFixed(2) + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (on ? 0.95 : 0.5) + ')';
+      ctx.font = '700 10px "Space Grotesk", sans-serif';
+      ctx.fillText('KICK', cx, cy);
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
   function drawFlipper(f) {
-    var tip = f.tip();
+    var tip = f.tip(), fl = f.flash || 0;
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
-    ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 14;
-    ctx.beginPath(); ctx.moveTo(f.px, f.py); ctx.lineTo(tip.x, tip.y); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 14 + fl * 22;
+    ctx.beginPath(); ctx.moveTo(f.px, f.py); ctx.lineTo(tip.x, tip.y); ctx.stroke();
+    if (fl > 0.02) {                                       // hit flash: white core pops on contact
+      ctx.strokeStyle = 'rgba(255,255,255,' + (fl * 0.85).toFixed(2) + ')';
+      ctx.lineWidth = f.r * 1.2;
+      ctx.beginPath(); ctx.moveTo(f.px, f.py); ctx.lineTo(tip.x, tip.y); ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#cdfbe2'; ctx.beginPath(); ctx.arc(f.px, f.py, f.r * 0.7, 0, TAU); ctx.fill();
   }
   function drawBall(b) {
@@ -727,25 +967,49 @@
   }
   function drawHUD() {
     var pad = Math.round(Math.min(W, H) * 0.03);
+    var mn = Math.min(W, H);
+    // backglass-style header: a soft dark band the readouts sit on, with a neon rule
+    var bh = Math.max(pad, 46) + Math.round(mn * 0.1);
+    var hg = ctx.createLinearGradient(0, 0, 0, bh);
+    hg.addColorStop(0, 'rgba(6,8,22,0.92)'); hg.addColorStop(0.7, 'rgba(6,8,22,0.45)'); hg.addColorStop(1, 'rgba(6,8,22,0)');
+    ctx.fillStyle = hg; ctx.fillRect(0, 0, W, bh);
+    var rg = ctx.createLinearGradient(0, 0, W, 0);
+    rg.addColorStop(0, 'rgba(57,230,255,0)'); rg.addColorStop(0.5, 'rgba(57,230,255,0.35)'); rg.addColorStop(1, 'rgba(196,107,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, bh - 2, W, 1.5);
+    // score (animated count-up; glows briefly on every award) — below the back-link button
+    var ry = Math.max(pad, 46);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#fff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.05) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText(score.toLocaleString(), pad, pad);
-    ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-    ctx.fillText('SCORE', pad, pad + Math.round(Math.min(W, H) * 0.052));
-    // balls
+    ctx.fillStyle = '#fff'; ctx.font = '700 ' + Math.round(mn * 0.05) + 'px "Space Grotesk", sans-serif';
+    if (scoreFlash > 0 && !reduceMotion) { ctx.shadowColor = '#39e6ff'; ctx.shadowBlur = 6 + scoreFlash * 16; }
+    ctx.fillText(Math.floor(dispScore).toLocaleString(), pad, ry);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.018) + 'px Inter, sans-serif';
+    ctx.fillText('SCORE', pad, ry + Math.round(mn * 0.052));
+    // balls (offset below the sound toggle button in the frame's top-right corner)
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.02) + 'px Inter, sans-serif';
-    ctx.fillText('BALL ' + (4 - ballsLeft) + ' / 3', W - pad, pad);
+    ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
+    ctx.fillText('BALL ' + (4 - ballsLeft) + ' / 3', W - pad, ry);
+    ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.026));
     // playfield multiplier (top-center)
     if (state === 'play') {
       var mx = W / 2, my = pad, ms = 1 + multFlash * 0.45;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       ctx.fillStyle = mult > 1 ? '#ffd34d' : '#5a6276';
       if (mult > 1 && !reduceMotion) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10 + multFlash * 18; }
-      ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.05 * ms) + 'px "Space Grotesk", sans-serif';
+      ctx.font = '700 ' + Math.round(mn * 0.05 * ms) + 'px "Space Grotesk", sans-serif';
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
-      ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px Inter, sans-serif';
-      ctx.fillText('MULTIPLIER', mx, my + Math.round(Math.min(W, H) * 0.052));
+      ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
+      ctx.fillText('MULTIPLIER', mx, my + Math.round(mn * 0.052));
+      // live combo chain: label + draining timer bar under the multiplier
+      if (comboN >= 2 && comboT > 0) {
+        var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.14;
+        ctx.fillStyle = '#c46bff'; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
+        ctx.fillText('COMBO ×' + comboN, mx, cyy);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw, 4);
+        ctx.fillStyle = 'rgba(196,107,255,0.9)';
+        ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw * clamp(comboT / COMBO_WINDOW, 0, 1), 4);
+      }
       ctx.textAlign = 'left';
     }
     // charge meter — banded by the lane each power range drops into (lit band highlighted)
@@ -789,9 +1053,18 @@
   function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 
   // ===== input =====
-  function setFlip(side, on) { if (side < 0) flipL.pressed = on; else flipR.pressed = on; }
+  function setFlip(side, on) {
+    var f = side < 0 ? flipL : flipR;
+    if (on && !f.pressed && !tilted) {
+      f.buf = 0.06;                          // input buffer: even a same-frame tap flips
+      if (state === 'play') sfx('flip');
+    }
+    f.pressed = on;
+  }
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase();
+    if (!e.repeat) audioInit();              // any keypress is a valid gesture to unlock audio
+    if (k === 'm' && !e.repeat) { setMuted(!muted); return; }
     if (k === 'enter' && state !== 'play') { start(); return; }
     if (state !== 'play') return;
     if (k === 'arrowleft' || k === 'z' || k === 'a') { setFlip(-1, true); e.preventDefault(); }
@@ -811,23 +1084,51 @@
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
     else if (k === ' ') { charging = false; launch(); }
   });
-  // touch: lower half left/right = flippers; tap up top = NUDGE (toward the tap side); tap lower-right in lane = launch
+  // touch: lower half left/right = flippers; tap up top = NUDGE (toward the tap side); tap lower-right in lane = launch.
+  // Each pointer's role is tracked by pointerId so two-finger play works: releasing one
+  // flipper finger never drops the other (classic multitouch bug, fixed).
+  var ptrRole = {};
   canvas.addEventListener('pointerdown', function (e) {
+    audioInit();
     if (state !== 'play') return;
     var r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; e._launch = true; return; }
+    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
     if (py < H * 0.42) { nudge(px < W * 0.5 ? -1 : 1); return; }   // tap the upper playfield to shake a stuck ball loose
-    if (px < W / 2) setFlip(-1, true); else setFlip(1, true);
+    if (px < W / 2) { setFlip(-1, true); ptrRole[e.pointerId] = 'L'; }
+    else { setFlip(1, true); ptrRole[e.pointerId] = 'R'; }
   }, { passive: true });
-  canvas.addEventListener('pointerup', function (e) {
-    if (charging) { charging = false; launch(); }
-    setFlip(-1, false); setFlip(1, false);
-  }, { passive: true });
-  canvas.addEventListener('pointercancel', function () { charging = false; setFlip(-1, false); setFlip(1, false); }, { passive: true });
+  function pointerEnd(e) {
+    var role = ptrRole[e.pointerId]; delete ptrRole[e.pointerId];
+    if (role === 'launch') { if (charging) { charging = false; launch(); } }
+    else if (role === 'L') setFlip(-1, false);
+    else if (role === 'R') setFlip(1, false);
+  }
+  canvas.addEventListener('pointerup', pointerEnd, { passive: true });
+  canvas.addEventListener('pointercancel', pointerEnd, { passive: true });
 
-  document.getElementById('startBtn').addEventListener('click', start);
-  document.getElementById('againBtn').addEventListener('click', start);
+  document.getElementById('startBtn').addEventListener('click', function () { audioInit(); start(); });
+  document.getElementById('againBtn').addEventListener('click', function () { audioInit(); start(); });
+  document.getElementById('sndBtn').addEventListener('click', function () { audioInit(); setMuted(!muted); });
+  setMuted(muted);                          // sync the 🔊/🔇 icon with the stored preference
+  (function () {                            // show the stored best on the attract screen
+    var el = document.getElementById('gBest');
+    if (el && best > 0) { el.textContent = '★ Best score ' + best.toLocaleString(); el.style.display = 'block'; }
+  })();
   document.addEventListener('visibilitychange', function () { /* loop pauses naturally; state stays */ });
+
+  // Test/verification hook (harmless in production — read-only introspection plus
+  // a couple of deterministic triggers so automated checks don't rely on flaky physics RNG).
+  window.__kbTest = {
+    state: function () { return state; },
+    score: function () { return score; },
+    kickCharges: function () { return { L: kickL, R: kickR }; },
+    rampShots: function () { return rampShots; },
+    geometry: function () { return { ramp: ramp, leftRamp: leftRamp, rightRamp: rightRamp, kickZoneL: kickZoneL, kickZoneR: kickZoneR, DRAIN_Y: DRAIN_Y }; },
+    forceStart: function () { start(); },
+    fireLeftRamp: function () { if (balls[0]) onSideRamp(balls[0], leftRamp); },
+    fireRightRamp: function () { if (balls[0]) onSideRamp(balls[0], rightRamp); },
+    fireKickback: function (side) { if (balls[0]) onKickback(balls[0], side); }
+  };
 
   // ===== boot =====
   resize();
@@ -843,6 +1144,9 @@
     get skillLit() { return skillLit; }, get lastCallout() { return co.text; },
     get mult() { return mult; }, get targets() { return targets; }, get rollovers() { return rollovers; }, get ramp() { return ramp; },
     get tilt() { return tilt; }, get tilted() { return tilted; },
+    get saveT() { return saveT; }, get combo() { return comboN; }, get bonusU() { return bonusU; },
+    get muted() { return muted; }, get ballsLeft() { return ballsLeft; },
+    setMuted: setMuted,
     nudge: function (d) { nudge(d || 0); },
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
     start: start, physStep: physStep, launch: launch,

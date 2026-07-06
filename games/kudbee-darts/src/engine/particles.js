@@ -126,10 +126,11 @@
     }
   };
 
-  /* Celebratory confetti rain from a point, in studio palette colours. */
-  Particles.prototype.confetti = function (x, y, colors) {
+  /* Celebratory confetti rain from a point, in studio palette colours.
+   * `count` lets celebrations thin out under prefers-reduced-motion. */
+  Particles.prototype.confetti = function (x, y, colors, count) {
     colors = colors || ['#39e6ff', '#c46bff', '#7CFFb2', '#ffd34d', '#ff5d3c'];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < (count || 90); i++) {
       const a = -Math.PI / 2 + Util.rand(-1.1, 1.1);
       const s = Util.rand(180, 460);
       this.emit({

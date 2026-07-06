@@ -56,6 +56,8 @@
   };
 
   Particles.prototype.muzzle = function (x, y, dir) {
+    // Bright glow core at the muzzle — reads as a flash, one particle per shot.
+    this.emit({ x: x + dir * 5, y: y, vx: dir * 60, vy: 0, life: 0.07, size: 10, color: '#e6fbff', glow: true, gravity: 0, drag: 6 });
     for (let i = 0; i < 6; i++) {
       this.emit({
         x: x, y: y,
