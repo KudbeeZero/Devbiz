@@ -7,30 +7,32 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://devbiz.kudbee.workers.dev/tools/controls/">
     <title>Controls · Kudbee Tools</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Shared Deep Lab chrome tokens (DBZ-057) — palette, self-hosted fonts,
+         button/panel/glow recipes, sourced from index.html's :root. -->
+    <link rel="stylesheet" href="/assets/kudbee-ui.css">
     <link rel="stylesheet" href="/assets/kbd-controls.css">
     <script src="/assets/kbd-controls.js" defer></script>
 <style>
     :root {
-        --bg-primary: #06060c;
-        --bg-elevated: #0b0b16;
+        /* Shared with index.html via assets/kudbee-ui.css (DBZ-057):
+           --cyan/--green/--amber are dropped here since the shared file
+           already defines the identical value; --violet/--accent/
+           --accent-glow/--grad/--bg-primary are repointed to their
+           canonical counterpart instead of re-declaring a duplicate
+           literal. The .light theme override block below is unaffected —
+           it only exists in this page, no canonical light-mode tokens. */
+        --bg-primary: var(--bg);
+        --bg-elevated: var(--bg-2);
         --bg-secondary: rgba(255,255,255,0.025);
         --bg-card: rgba(255,255,255,0.035);
-        --border: rgba(255,255,255,0.07);
         --border-hover: rgba(255,255,255,0.16);
         --text-primary: #ffffff;
         --text-secondary: #e6e8f0;
         --text-muted: #9aa3b8;
         --text-dim: #646c82;
-        --cyan: #39e6ff;
-        --violet: #c46bff;
-        --green: #7CFFb2;
-        --amber: #ffd34d;
-        --accent: #6f5bff;
-        --accent-glow: rgba(111,91,255,0.35);
-        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --violet: var(--magenta);
+        --accent: #6f5bff; /* = canonical --violet; can't var()-reference it once --violet is repointed above */
+        --accent-glow: var(--glow);
         --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
         --grad-green: linear-gradient(90deg, #7CFFb2, #39e6ff);
         --grad-amber: linear-gradient(90deg, #ffd34d, #ff9054);
@@ -38,6 +40,9 @@
         --radius: 16px;
         --maxw: 1180px;
     }
+    /* --border is intentionally not redeclared above (dark mode) so it falls
+       through to assets/kudbee-ui.css's canonical value; .light keeps its own
+       override below since there's no canonical light-theme token set. */
     .light {
         --bg-primary: #f6f7fb;
         --bg-elevated: #ffffff;
@@ -55,13 +60,13 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: var(--fb);
         line-height: 1.6; overflow-x: hidden;
         background: var(--bg-primary); color: var(--text-secondary);
         min-height: 100vh; -webkit-font-smoothing: antialiased;
         transition: background 0.4s, color 0.4s;
     }
-    h1, h2, h3, h4, .logo-txt, .panel-title, .demo-title { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    h1, h2, h3, h4, .logo-txt, .panel-title, .demo-title { font-family: var(--fd); }
     .gradient-text {
         background: var(--grad-text);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;

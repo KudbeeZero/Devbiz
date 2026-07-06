@@ -1,0 +1,150 @@
+/* ================================================================
+   Kudbee shared UI tokens — visual design system (DBZ-057, Polish
+   Lane 10). Extracted from index.html's :root and its button/panel/
+   card CSS so every sub-surface (blog, brain, ship-it, lab, tools)
+   can share the exact same Deep Lab palette, type stack, and glow/
+   border recipes as the home page, instead of re-declaring drifting
+   copies of the same hex values.
+
+   Progressive enhancement / zero-build: this is a plain stylesheet
+   linked with <link rel="stylesheet">. If it 404s, pages fall back to
+   whatever local :root values they still declare inline — nothing here
+   is required for a page to render or read correctly.
+
+   This file does NOT redefine the palette — every value below is a
+   direct copy of index.html's current :root (see that file, "Deep Lab
+   redesign" style block) so this is extraction, not redesign. Motion
+   tokens (--mo-*) are a separate concern and live in kudbee-motion.css
+   (DBZ-051); this file is visual-only: color, type, buttons, panel/
+   border/glow recipes, and a couple of small shared chrome primitives
+   (back-to-home link, section wrap).
+   ================================================================ */
+
+/* ---------------- Self-hosted fonts ----------------
+   Identical family/weight ranges/URLs to index.html — one shared copy
+   so sub-pages stop round-tripping to Google Fonts and instead render
+   with the exact same faces as home, cached from the same file. */
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('/assets/fonts/space-grotesk-variable-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/assets/fonts/inter-variable-latin.woff2') format('woff2');
+}
+
+/* ---------------- Canonical Deep Lab tokens ----------------
+   Copied verbatim from index.html's :root. Kept under the exact same
+   custom-property names so any page that already uses these names
+   (several sub-pages independently converged on --cyan, --green,
+   --border, --grad, etc.) inherits the canonical value automatically
+   just by linking this stylesheet — no renaming required. */
+:root {
+    --bg: #05050a;
+    --bg-2: #0a0a16;
+    --bg-3: #0e0e1e;
+    --panel: rgba(255,255,255,0.028);
+    --panel-2: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.09);
+    --border-soft: rgba(255,255,255,0.055);
+    --txt: #f3f5fb;
+    --txt-2: #b6bdd1;
+    --dim: #7b8299;
+    --cyan: #39e6ff;
+    --violet: #6f5bff;
+    --magenta: #c46bff;
+    --green: #7cffb2;
+    --amber: #ffd34d;
+    --danger: #ff5d3c;
+    /* Hex values inlined (not var(--cyan)/var(--violet)/var(--magenta))
+       on purpose: several consuming sub-pages locally repoint --violet to
+       this file's --magenta value for their own historical naming (their
+       "violet" == this palette's magenta). If --grad referenced those
+       custom properties by name, a page's local --violet override would
+       silently reshuffle --grad's middle stop too, since var() resolution
+       follows the final cascaded value of that property name on the
+       element — not whichever stylesheet declared it. Inlining keeps
+       --grad exact and immune to that collision. */
+    --grad: linear-gradient(90deg, #39e6ff, #6f5bff 52%, #c46bff);
+    --glow: rgba(111,91,255,0.35);
+    --fd: 'Space Grotesk', system-ui, sans-serif;
+    --fb: 'Inter', system-ui, sans-serif;
+    --nav-h: 72px;
+    --gutter: clamp(20px, 5vw, 72px);
+
+    /* ---------------- Type scale ----------------
+       The recurring clamp() sizes index.html uses for its section
+       titles / panel headings / body copy — pulled out as tokens so a
+       sub-page heading can opt into the exact same scale as home
+       instead of hand-tuning its own clamp(). Optional to consume;
+       existing per-page heading sizes are untouched by this lane
+       (chrome only, no layout/type retuning on sub-pages). */
+    --fs-display: clamp(34px, 5.2vw, 62px);   /* index .title */
+    --fs-h2: clamp(26px, 3.4vw, 44px);        /* index .panel h3 */
+    --fs-body: clamp(15.5px, 1.35vw, 17.5px); /* index .sub */
+}
+
+/* ---------------- Buttons ----------------
+   Exact copy of index.html's .btn / .btn-o. Namespaced kd- so it can't
+   collide with a sub-page's own .btn-primary/.btn-secondary classes —
+   opt-in by adding kd-btn/kd-btn-o to new markup, or by having a page's
+   existing button rule read var(--grad)/var(--glow)/var(--border)
+   instead of a hardcoded literal (that's the extraction this lane does
+   inside each sub-page's own stylesheet). */
+.kd-btn, .kd-btn-o {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 16px 30px; border-radius: 999px; font: 600 15px/1 var(--fd); letter-spacing: 0.01em;
+    text-decoration: none; cursor: pointer; border: none;
+    transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s, background-position 0.3s cubic-bezier(0.22,1,0.36,1), border-color 0.2s, color 0.2s;
+}
+.kd-btn { color: #04040a; background: var(--grad); background-size: 160% 100%; box-shadow: 0 0 28px rgba(111,91,255,0.3); }
+.kd-btn:hover { background-position: 100% 0; box-shadow: 0 6px 36px rgba(111,91,255,0.5); }
+.kd-btn-o { color: var(--txt); background: var(--panel); border: 1px solid var(--border); }
+.kd-btn-o:hover { border-color: rgba(57,230,255,0.5); color: var(--cyan); }
+
+/* ---------------- Panel / card recipe ----------------
+   The shared "glass panel" treatment from index.html's .panel /
+   .p-visual: soft gradient background, 1px border, radial tint. A
+   sub-page's own .card/.feature-card keep their own class names and
+   layout — this is available as an additive class for new chrome
+   (e.g. a back-to-home affordance box) without touching existing
+   component CSS. */
+.kd-panel {
+    position: relative; border: 1px solid var(--border); border-radius: 18px;
+    background: linear-gradient(165deg, var(--bg-3), var(--bg-2) 60%);
+    overflow: hidden;
+}
+.kd-panel::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(680px 300px at 12% 0%, rgba(57,230,255,0.09), transparent 60%);
+}
+
+/* ---------------- Back-to-home affordance ----------------
+   A small, consistent "back to the main site" chip for any sub-surface
+   that wants it. Most hub pages already ship their own bespoke back
+   link (kept as-is, chrome only — no copy/markup rewrites); this class
+   exists so any future sub-page can drop in the same affordance
+   without re-deriving the recipe. */
+.kd-back-home {
+    display: inline-flex; align-items: center; gap: 7px;
+    font: 500 13px/1 var(--fd); color: var(--txt-2); text-decoration: none;
+    padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--panel); transition: color 0.2s, border-color 0.2s;
+}
+.kd-back-home:hover { color: var(--cyan); border-color: rgba(57,230,255,0.5); }
+
+/* ---------------- Shared section wrap ----------------
+   Same max-width/gutter rhythm as index.html's .wrap, offered as a
+   utility for any sub-page that wants to align its content column with
+   home without hand-rolling the clamp() gutter again. */
+.kd-wrap { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+
+@media (prefers-reduced-motion: reduce) {
+    .kd-btn, .kd-btn-o, .kd-back-home { transition: none !important; }
+}
