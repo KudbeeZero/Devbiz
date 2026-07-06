@@ -586,10 +586,18 @@ html:not(.js) .story .pin-outer { height: auto; }
 /* ---------------- Work ---------------- */
 .case { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(26px, 4.5vw, 70px); align-items: center; padding: clamp(36px, 6vw, 80px) 0; border-top: 1px solid var(--border-soft); }
 .case:first-of-type { border-top: none; }
-.case.flip .c-media { order: 2; }
-.c-media { position: relative; border-radius: 22px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 100/47; background: var(--bg-2); }
-.c-media img, .c-media canvas { width: 100%; height: 100%; object-fit: cover; transition: transform var(--mo-dur-4) var(--ease); }
-.case:hover .c-media img, .case:hover .c-media canvas { transform: scale(1.045); }
+.case.flip .c-frame { order: 2; }
+/* Device-frame presentation (DBZ-053): a browser-chrome shell wraps the
+   screenshot. .c-frame is the card (border/radius/aspect-ratio moved here
+   from the old .c-media so the chrome bar sits inside the same box);
+   .c-media is now just the clipped "screen" area the picture lives in. */
+.c-frame { position: relative; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 100/47; background: var(--bg-2); }
+.c-chrome { flex: none; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; background: var(--panel-2); border-bottom: 1px solid var(--border-soft); }
+.c-chrome .c-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cd, var(--dim)); opacity: 0.85; }
+.c-chrome .c-url { margin-left: 6px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px/1 var(--fb); letter-spacing: 0.01em; color: var(--dim); background: rgba(0,0,0,0.28); border: 1px solid var(--border-soft); border-radius: 999px; padding: 5px 12px; }
+.c-media { position: relative; display: block; flex: 1; min-height: 0; overflow: hidden; }
+.c-media img { position: absolute; top: 0; left: 0; width: 100%; height: 132%; object-fit: cover; object-position: top; transform: translateY(0) scale(1); transition: transform var(--mo-dur-11) var(--mo-ease-in-out); }
+.case:hover .c-media img, .case:focus-within .c-media img { transform: translateY(-22%) scale(1.03); }
 .c-media .c-glare { position: absolute; inset: 0; background: linear-gradient(200deg, rgba(255,255,255,0.09), transparent 38%); pointer-events: none; }
 .c-body .c-idx { font: 600 12px/1 var(--fd); letter-spacing: 0.3em; color: var(--dim); }
 .c-body h3 { margin: 14px 0 6px; font-size: clamp(24px, 3vw, 38px); }
@@ -597,9 +605,16 @@ html:not(.js) .story .pin-outer { height: auto; }
 .c-body p { margin-top: 16px; color: var(--txt-2); max-width: 50ch; }
 .c-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .c-tags span { font: 500 11.5px/1 var(--fb); color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 13px; }
+/* Fact chips (DBZ-053) — every value here traces to docs/CLIENT_SITES.md;
+   see the PR body for the line-by-line citation. Visually distinct from
+   .c-tags (labelled key/value, monospace-leaning) so they read as sourced
+   facts, not marketing tags. */
+.c-facts { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 14px; }
+.c-fact { display: inline-flex; align-items: baseline; gap: 6px; font: 500 11.5px/1.4 var(--fb); color: var(--txt-2); border: 1px solid var(--border-soft); border-radius: 10px; padding: 6px 11px; background: var(--panel); }
+.c-fact b { font: 700 10px/1 var(--fd); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .c-link { display: inline-flex; align-items: center; gap: 10px; margin-top: 26px; font: 600 14.5px/1 var(--fd); color: var(--txt); text-decoration: none; }
 .c-link .c-arr { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; transition: all var(--mo-dur-35) var(--ease); }
-.c-link:hover .c-arr { background: var(--grad); color: #04040a; border-color: transparent; transform: translateX(5px); }
+.c-link:hover .c-arr, .c-link:focus-visible .c-arr { background: var(--grad); color: #04040a; border-color: transparent; transform: translateX(5px); }
 
 .mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: clamp(30px, 5vw, 60px); }
 .mini {
@@ -608,20 +623,33 @@ html:not(.js) .story .pin-outer { height: auto; }
     transition: transform var(--mo-dur-3) var(--ease), border-color var(--mo-dur-3), background var(--mo-dur-3);
 }
 .mini::after { content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity var(--mo-dur-3); background: radial-gradient(420px 200px at var(--mx, 50%) 0%, rgba(111,91,255,0.12), transparent 65%); pointer-events: none; }
-.mini:hover { transform: translateY(-5px); border-color: var(--border); background: var(--panel-2); }
-.mini:hover::after { opacity: 1; }
-.mini .m-thumb { display: block; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; margin-bottom: 16px; border: 1px solid var(--border-soft); }
+.mini:hover, .mini:focus-visible { transform: translateY(-5px); border-color: var(--border); background: var(--panel-2); }
+.mini:hover::after, .mini:focus-visible::after { opacity: 1; }
+.mini .m-thumb { position: relative; display: block; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; margin-bottom: 16px; border: 1px solid var(--border-soft); }
 .mini .m-thumb canvas { width: 100%; height: 100%; }
+/* Wordmark badge (DBZ-053): a short, consistently-styled logotype per tool —
+   same visual language as the games section's .g-badge. The site doesn't
+   ship distinct favicon files per tool (most inherit the shared site icon),
+   so this is a typographic mark rather than a literal favicon; see the PR
+   body for that call-out. */
+.mini .m-mark { position: absolute; left: 9px; top: 8px; font: 700 10px/1 var(--fd); letter-spacing: 0.16em; text-transform: uppercase; color: var(--mc, var(--cyan)); border: 1px solid currentColor; border-radius: 999px; padding: 6px 10px; background: rgba(5,5,10,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .mini h3 { font-size: 17px; letter-spacing: -0.01em; }
 .mini .m-cat { display: block; margin-top: 5px; font: 500 12px/1.5 var(--fb); color: var(--dim); }
-.mini .m-go { display: inline-block; margin-top: 12px; font: 600 12.5px/1 var(--fd); color: var(--cyan); }
+.mini .m-go { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; font: 600 12.5px/1 var(--fd); color: var(--cyan); }
 
-.receipts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: clamp(40px, 6vw, 70px); }
-.receipt { padding: 26px; border-radius: 18px; border: 1px solid var(--border-soft); background: var(--panel); }
-.receipt blockquote { font: 400 15.5px/1.65 var(--fb); color: var(--txt-2); }
-.receipt .r-who { margin-top: 16px; font: 600 13.5px/1.4 var(--fd); color: var(--txt); }
+.receipts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: clamp(40px, 6vw, 70px); }
+/* Quote-mark editorial treatment (DBZ-053): a large gradient pull-quote
+   glyph anchors each receipt; copy tightens up under it. Decorative-only
+   (CSS generated content), so it carries no alt text and isn't announced. */
+.receipt { position: relative; padding: 28px 24px 24px; border-radius: 18px; border: 1px solid var(--border-soft); background: var(--panel); }
+.receipt::before { content: "\201C"; position: absolute; top: 6px; left: 20px; font: 700 52px/1 Georgia, 'Times New Roman', serif; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; opacity: 0.55; }
+.receipt blockquote { position: relative; margin-top: 30px; font: 400 15px/1.6 var(--fb); color: var(--txt-2); }
+.receipt .r-who { margin-top: 14px; font: 600 13.5px/1.4 var(--fd); color: var(--txt); }
 .receipt .r-role { font: 500 12px/1.5 var(--fb); color: var(--dim); }
-.receipt .r-who::before { content: ""; display: block; width: 28px; height: 2px; margin-bottom: 12px; background: var(--grad); }
+.receipt .r-who::before { content: ""; display: block; width: 24px; height: 2px; margin-bottom: 10px; background: var(--grad); }
+@media (prefers-reduced-motion: reduce) {
+    .c-media img { transform: none !important; }
+}
 
 /* ---------------- Games ---------------- */
 .games-band { position: relative; background: linear-gradient(180deg, transparent, rgba(10,6,26,0.7) 18%, rgba(10,6,26,0.7) 82%, transparent); }
@@ -880,7 +908,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     .stats .cell:nth-child(2) { border-right: none; }
     .stats .cell:nth-child(-n+2) { border-bottom: 1px solid var(--border-soft); }
     .case, .case.flip { grid-template-columns: 1fr; }
-    .case.flip .c-media { order: 0; }
+    .case.flip .c-frame { order: 0; }
     .game-hero { grid-template-columns: 1fr; }
     .mini-grid, .acap-grid, .game-grid, .receipts, .price-grid, .store-grid, .cform .frow, .contact-grid { grid-template-columns: 1fr; }
     .doc-grid { columns: 1; }
@@ -1089,50 +1117,74 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <article class="case" data-rv>
-            <a class="c-media" href="clients/modernmed/index.html" aria-label="View the ModernMed Chicago site">
-                <picture>
-                    <source type="image/avif" srcset="assets/work/modernmed-600.avif 600w, assets/work/modernmed-900.avif 900w, assets/work/modernmed.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
-                    <source type="image/webp" srcset="assets/work/modernmed-600.webp 600w, assets/work/modernmed-900.webp 900w, assets/work/modernmed.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
-                    <img src="assets/work/modernmed.jpg" srcset="assets/work/modernmed-600.jpg 600w, assets/work/modernmed-900.jpg 900w, assets/work/modernmed.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="ModernMed Chicago — concierge medical clinic website designed by Kudbee" loading="lazy" width="1200" height="564">
-                </picture>
-                <span class="c-glare"></span>
-            </a>
+            <div class="c-frame">
+                <div class="c-chrome" aria-hidden="true">
+                    <span class="c-dot" style="--cd:#ff5f57"></span>
+                    <span class="c-dot" style="--cd:#febc2e"></span>
+                    <span class="c-dot" style="--cd:#28c840"></span>
+                    <span class="c-url">clients/modernmed/</span>
+                </div>
+                <a class="c-media" href="clients/modernmed/index.html" aria-label="View the ModernMed Chicago site">
+                    <picture>
+                        <source type="image/avif" srcset="assets/work/modernmed-600.avif 600w, assets/work/modernmed-900.avif 900w, assets/work/modernmed.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                        <source type="image/webp" srcset="assets/work/modernmed-600.webp 600w, assets/work/modernmed-900.webp 900w, assets/work/modernmed.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                        <img src="assets/work/modernmed.jpg" srcset="assets/work/modernmed-600.jpg 600w, assets/work/modernmed-900.jpg 900w, assets/work/modernmed.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="ModernMed Chicago — concierge medical clinic website designed by Kudbee" loading="lazy" width="1200" height="564">
+                    </picture>
+                    <span class="c-glare"></span>
+                </a>
+            </div>
             <div class="c-body">
                 <span class="c-idx">CASE — 01</span>
                 <h3>ModernMed Chicago</h3>
                 <span class="c-cat">Web · Concierge medical clinic</span>
                 <p>A concierge-medicine site designed end-to-end — clinical-luxury brand, online booking, service pages, blog and SEO. Built to feel as considered as the practice itself.</p>
                 <div class="c-tags"><span>Brand</span><span>Booking</span><span>SEO</span><span>Blog</span></div>
+                <div class="c-facts">
+                    <span class="c-fact"><b>Pages</b> Landing + 4 service pages</span>
+                    <span class="c-fact"><b>Also shipped</b> Blog · Dashboard · Local-SEO kit</span>
+                    <span class="c-fact"><b>Domain</b> modernmedchicago.com <em>(placeholder, pre-launch)</em></span>
+                </div>
                 <a class="c-link" href="clients/modernmed/index.html">View the live site <span class="c-arr">→</span></a>
             </div>
         </article>
 
         <article class="case flip" data-rv>
-            <a class="c-media" href="clients/grange-park-fastpitch/index.html" aria-label="View the La Grange Park Fastpitch site">
-                <picture>
-                    <source type="image/avif" srcset="assets/work/lagrange-600.avif 600w, assets/work/lagrange-900.avif 900w, assets/work/lagrange.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
-                    <source type="image/webp" srcset="assets/work/lagrange-600.webp 600w, assets/work/lagrange-900.webp 900w, assets/work/lagrange.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
-                    <img src="assets/work/lagrange.jpg" srcset="assets/work/lagrange-600.jpg 600w, assets/work/lagrange-900.jpg 900w, assets/work/lagrange.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="La Grange Park Fastpitch — youth softball league website designed by Kudbee" loading="lazy" width="1200" height="564">
-                </picture>
-                <span class="c-glare"></span>
-            </a>
+            <div class="c-frame">
+                <div class="c-chrome" aria-hidden="true">
+                    <span class="c-dot" style="--cd:#ff5f57"></span>
+                    <span class="c-dot" style="--cd:#febc2e"></span>
+                    <span class="c-dot" style="--cd:#28c840"></span>
+                    <span class="c-url">clients/grange-park-fastpitch/</span>
+                </div>
+                <a class="c-media" href="clients/grange-park-fastpitch/index.html" aria-label="View the La Grange Park Fastpitch site">
+                    <picture>
+                        <source type="image/avif" srcset="assets/work/lagrange-600.avif 600w, assets/work/lagrange-900.avif 900w, assets/work/lagrange.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                        <source type="image/webp" srcset="assets/work/lagrange-600.webp 600w, assets/work/lagrange-900.webp 900w, assets/work/lagrange.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                        <img src="assets/work/lagrange.jpg" srcset="assets/work/lagrange-600.jpg 600w, assets/work/lagrange-900.jpg 900w, assets/work/lagrange.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="La Grange Park Fastpitch — youth softball league website designed by Kudbee" loading="lazy" width="1200" height="564">
+                    </picture>
+                    <span class="c-glare"></span>
+                </a>
+            </div>
             <div class="c-body">
                 <span class="c-idx">CASE — 02</span>
                 <h3>La Grange Park Fastpitch</h3>
                 <span class="c-cat">Web · Youth softball league</span>
                 <p>A heritage-patch youth-softball league site with real divisions, registration and a season schedule — warm, trustworthy, and easy for parents on a phone at the field.</p>
                 <div class="c-tags"><span>League site</span><span>Registration</span><span>Schedule</span><span>Mobile-first</span></div>
+                <div class="c-facts">
+                    <span class="c-fact"><b>Pages</b> Single landing page</span>
+                </div>
                 <a class="c-link" href="clients/grange-park-fastpitch/index.html">View the live site <span class="c-arr">→</span></a>
             </div>
         </article>
 
         <div class="mini-grid">
-            <a class="mini" data-rv href="tools/kudbee-scribe/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="scribe" aria-hidden="true"></canvas></span><h3>Kudbee Scribe</h3><span class="m-cat">Tool · Privacy-first writing assistant — 12 live checks, in-browser</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.08s" href="tools/token-analyzer/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="tokens" aria-hidden="true"></canvas></span><h3>Token Price Analyzer</h3><span class="m-cat">Tool · AI token spend across Claude, GPT &amp; Gemini</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.16s" href="#agents"><span class="m-thumb"><canvas class="shot-canvas" data-scene="ai2" aria-hidden="true"></canvas></span><h3>Support Agent Suite</h3><span class="m-cat">AI · Six focused agents that keep support moving</span><span class="m-go">View suite →</span></a>
-            <a class="mini" data-rv href="tools/utm-builder/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="utm" aria-hidden="true"></canvas></span><h3>UTM Builder</h3><span class="m-cat">Tool · Clean campaign URLs with presets &amp; history</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.08s" href="tools/invoice-generator/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="invoice" aria-hidden="true"></canvas></span><h3>Invoice Generator</h3><span class="m-cat">Tool · Polished PDF invoices, fully in-browser</span><span class="m-go">Open →</span></a>
-            <a class="mini" data-rv style="--rvd:0.16s" href="tools/coverage-dashboard/index.html"><span class="m-thumb"><canvas class="shot-canvas" data-scene="coverage" aria-hidden="true"></canvas></span><h3>Coverage Breakdown</h3><span class="m-cat">Tool · The exact per-file numbers CI enforces</span><span class="m-go">Open →</span></a>
+            <a class="mini" data-rv href="tools/kudbee-scribe/index.html" target="_blank" rel="noopener"><span class="m-thumb"><canvas class="shot-canvas" data-scene="scribe" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--cyan)" aria-hidden="true">Scribe</span></span><h3>Kudbee Scribe</h3><span class="m-cat">Tool · Privacy-first writing assistant — 12 live checks, in-browser</span><span class="m-go">Open <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></span></a>
+            <a class="mini" data-rv style="--rvd:0.08s" href="tools/token-analyzer/index.html" target="_blank" rel="noopener"><span class="m-thumb"><canvas class="shot-canvas" data-scene="tokens" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--violet)" aria-hidden="true">Tokens</span></span><h3>Token Price Analyzer</h3><span class="m-cat">Tool · AI token spend across Claude, GPT &amp; Gemini</span><span class="m-go">Open <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></span></a>
+            <a class="mini" data-rv style="--rvd:0.16s" href="#agents"><span class="m-thumb"><canvas class="shot-canvas" data-scene="ai2" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--magenta)" aria-hidden="true">Suite</span></span><h3>Support Agent Suite</h3><span class="m-cat">AI · Six focused agents that keep support moving</span><span class="m-go">View suite →</span></a>
+            <a class="mini" data-rv href="tools/utm-builder/index.html" target="_blank" rel="noopener"><span class="m-thumb"><canvas class="shot-canvas" data-scene="utm" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--green)" aria-hidden="true">UTM</span></span><h3>UTM Builder</h3><span class="m-cat">Tool · Clean campaign URLs with presets &amp; history</span><span class="m-go">Open <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></span></a>
+            <a class="mini" data-rv style="--rvd:0.08s" href="tools/invoice-generator/index.html" target="_blank" rel="noopener"><span class="m-thumb"><canvas class="shot-canvas" data-scene="invoice" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--amber)" aria-hidden="true">Invoice</span></span><h3>Invoice Generator</h3><span class="m-cat">Tool · Polished PDF invoices, fully in-browser</span><span class="m-go">Open <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></span></a>
+            <a class="mini" data-rv style="--rvd:0.16s" href="tools/coverage-dashboard/index.html" target="_blank" rel="noopener"><span class="m-thumb"><canvas class="shot-canvas" data-scene="coverage" aria-hidden="true"></canvas><span class="m-mark" style="--mc:var(--cyan)" aria-hidden="true">Coverage</span></span><h3>Coverage Breakdown</h3><span class="m-cat">Tool · The exact per-file numbers CI enforces</span><span class="m-go">Open <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></span></a>
         </div>
 
         <div class="receipts">
