@@ -25,11 +25,11 @@
     color:#9fb6c8; padding:6px 10px; border:1px solid rgba(159,182,200,0.25); border-radius:6px;
     background:rgba(5,5,15,0.5); backdrop-filter:blur(6px); }
   .snd-btn:hover { color:#fff; border-color:var(--cyan); }
-  .overlay { position:absolute; inset:0; z-index:25; display:grid; place-items:center; text-align:center; padding:24px;
+  .overlay { position:absolute; inset:0; z-index:25; display:flex; text-align:center; padding:24px; overflow-y:auto;
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.5), rgba(3,3,10,0.9));
     backdrop-filter:blur(3px); transition:opacity 0.4s ease; }
   .overlay.hidden { opacity:0; pointer-events:none; }
-  .ov-inner { max-width:480px; }
+  .ov-inner { max-width:480px; margin:auto; }
   .kicker { font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); }
   .ov-inner h1 { font-size:clamp(36px,9vw,64px); line-height:1.02; font-weight:700; color:#fff; margin:10px 0 6px; letter-spacing:-0.02em; }
   .grad { background:linear-gradient(120deg,#6af0ff,#9b8cff 55%,#d79bff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
@@ -66,8 +66,23 @@
   .ov-stats.hidden { display:none; }
   .badge { display:inline-block; margin-top:10px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
-  .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none; }
+  .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none;
+    white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  /* short viewports (landscape phones): the gate/game-over panel can be taller than the
+     screen, so it scrolls instead of clipping — but tighten spacing first so the common
+     cases (launch button, restart button) fit without needing a scroll at all. */
+  @media (max-height:560px) {
+    .ov-inner h1 { margin:6px 0 4px; font-size:clamp(28px,7vw,48px); }
+    .ov-inner p { font-size:12px; line-height:1.35; }
+    .kicker { margin-bottom:2px; }
+    .badge { margin-top:6px; }
+    .btn { margin-top:14px; padding:11px 24px; font-size:14px; }
+    .ov-foot { margin-top:8px; }
+    .ov-stats { margin-top:8px; }
+    .name-entry { margin-top:10px; }
+    .board { margin:10px auto 4px; }
+  }
 
   /* ===== KUDBEE STUDIOS boot intro ===== */
   #intro { position:absolute; inset:0; z-index:50; display:grid; place-items:center; text-align:center; cursor:pointer;
@@ -354,6 +369,48 @@
       ctx.fillStyle = 'rgba(190,215,255,' + a.toFixed(2) + ')';
       ctx.fillRect(dx2, dy2, ds.s, ds.s);
     }
+    drawComets();
+  }
+
+  // ---- rare background comets: a purely decorative streak that occasionally
+  // crosses the far backdrop during a run. Screen-space, non-interactive —
+  // no collision, no score — just a bit of "the void is alive" flavor to
+  // match the nebulae/dust layer. Skipped entirely under reduced motion. ----
+  var comets = [], cometT = Infinity;
+  function spawnComet() {
+    var side = Math.random() < 0.5 ? -1 : 1;
+    var sx0 = side < 0 ? -50 : W + 50, sy0 = rand(H * 0.05, H * 0.5);
+    var ex0 = side < 0 ? W + 50 : -50, ey0 = sy0 + rand(H * 0.25, H * 0.55) * (Math.random() < 0.5 ? 1 : -1);
+    var dur = rand(1.1, 1.7);
+    var rgb = Math.random() < 0.6 ? '190,225,255' : '255,214,150';
+    comets.push({ x: sx0, y: sy0, vx: (ex0 - sx0) / dur, vy: (ey0 - sy0) / dur, life: dur, maxLife: dur, w: rand(1.6, 2.6), rgb: rgb });
+    if (comets.length > 2) comets.shift();
+  }
+  function updateComets(dt) {
+    if (reduceMotion) return;
+    cometT -= dt;
+    if (cometT <= 0) { spawnComet(); cometT = rand(16, 26); }
+    for (var i = comets.length - 1; i >= 0; i--) {
+      var cm = comets[i]; cm.life -= dt; cm.x += cm.vx * dt; cm.y += cm.vy * dt;
+      if (cm.life <= 0) comets.splice(i, 1);
+    }
+  }
+  function drawComets() {
+    if (!comets.length) return;
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < comets.length; i++) {
+      var cm = comets[i], k = clamp(cm.life / cm.maxLife, 0, 1);
+      var a = k < 0.15 ? k / 0.15 : (k > 0.7 ? (1 - k) / 0.3 : 1);
+      var tx = cm.x - cm.vx * 0.16, ty = cm.y - cm.vy * 0.16;
+      var grd = ctx.createLinearGradient(cm.x, cm.y, tx, ty);
+      grd.addColorStop(0, 'rgba(' + cm.rgb + ',' + (0.85 * a).toFixed(2) + ')');
+      grd.addColorStop(1, 'rgba(' + cm.rgb + ',0)');
+      ctx.strokeStyle = grd; ctx.lineWidth = cm.w; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(cm.x, cm.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * a).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(cm.x, cm.y, cm.w * 0.55, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   // ---- expanding shockwave rings (explosions / pickups), screen space ----
@@ -439,7 +496,18 @@
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); SFX.playerHit();
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
-    if (shields <= 0) gameOver();
+    if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
+  }
+
+  // the finishing blow: previously this looked identical to any other hit,
+  // so "ship destroyed" landed as an anticlimactic cut to the game-over
+  // screen. Give it the same weight as a boss kill — a bigger multi-colour
+  // burst, a double shockwave, and a harder shake — right before the overlay.
+  function shipDestroyed(x, y) {
+    for (var i = 0; i < 4; i++) burst(x + rand(-24, 24), y + rand(-24, 24), ['#ff5d3c', '#ffd34d', '#fff', '#39e6ff'][i], 20, 480);
+    ring(x, y, '#ff5d3c', 180, 0.8, 5);
+    ring(x, y, '#ffffff', 110, 0.6, 3);
+    shake = Math.min(shake + 1.2, 1.9);
   }
 
   function burst(x, y, col, n, sp) {
@@ -505,6 +573,7 @@
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
+    comets.length = 0; cometT = rand(12, 18);
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     initStars();
     for (var k = 0; k < 7; k++) { var rk = makeRock(rand(NEAR + 400, FAR)); rk.hp = rk.r > 70 ? 2 : 1; rocks.push(rk); }
@@ -554,6 +623,7 @@
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
     engineSet(speed, boost);                              // engine drone tracks speed + boost
     exhaust(dt);                                          // thruster wash off the engines
+    updateComets(dt);                                     // rare decorative background comet streaks
 
     // steering
     var ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
@@ -688,7 +758,7 @@
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); SFX.playerHit();
     var sp = project(rk.x, rk.y, rk.z); burst(sp.sx, sp.sy, '#ff5d3c', 30, 560);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
-    if (shields <= 0) gameOver();
+    if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
   }
 
   // little floating score popups — colour and size climb with the combo chain
@@ -1268,6 +1338,7 @@
     get rapidActive() { return rapidT > 0; }, get tripleActive() { return tripleT > 0; },
     forcePowerupAtShip: function (type) { var pw = { type: type || 'shield', x: camX, y: camY, z: 70, r: 30, rot: 0, alive: true }; powerups.push(pw); return pw; },
     spawnPowerupFar: function () { spawnPowerup(); return powerups[powerups.length - 1]; },
+    comets: function () { return comets; }, forceComet: function () { spawnComet(); return comets[comets.length - 1]; },
     get muted() { return muted; }, get audioReady() { return !!AC; }, setMuted: setMuted, sfx: SFX,
     getScores: function () { return loadScores(); },
     clearScores: function () { try { localStorage.removeItem(SCORES_KEY); } catch (e) {} },
