@@ -235,8 +235,8 @@ html:not(.js) .preloader { display: none; }
     transition: transform 0.45s var(--ease), background 0.45s;
 }
 .nav.hidden { transform: translateY(-100%); }
-.logo { display: inline-flex; align-items: baseline; gap: 8px; font: 700 21px/1 var(--fd); letter-spacing: -0.02em; text-decoration: none; }
-.logo .mark { width: 10px; height: 10px; align-self: center; border-radius: 3px; background: var(--grad); box-shadow: 0 0 14px var(--glow); }
+.logo { display: inline-flex; align-items: baseline; font: 700 21px/1 var(--fd); letter-spacing: -0.02em; text-decoration: none; }
+.logo .mark { width: 10px; height: 10px; align-self: center; margin-right: 8px; border-radius: 3px; background: var(--grad); box-shadow: 0 0 14px var(--glow); }
 .logo .tld { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
 .nav-links a {
@@ -289,7 +289,7 @@ html:not(.js) .preloader { display: none; }
 }
 .kicker::before { content: ""; width: 26px; height: 1px; background: var(--grad); }
 .title { font-size: clamp(34px, 5.2vw, 62px); letter-spacing: -0.035em; }
-.title .g { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.title .g, .title.g { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .sub { margin-top: 18px; max-width: 620px; color: var(--txt-2); font-size: clamp(15.5px, 1.35vw, 17.5px); }
 .gword {
     position: absolute; z-index: 0; left: 50%; transform: translateX(-50%); top: clamp(8px, 3vw, 40px);
@@ -433,7 +433,7 @@ html:not(.js) .story .step { opacity: 1; }
 .case { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(26px, 4.5vw, 70px); align-items: center; padding: clamp(36px, 6vw, 80px) 0; border-top: 1px solid var(--border-soft); }
 .case:first-of-type { border-top: none; }
 .case.flip .c-media { order: 2; }
-.c-media { position: relative; border-radius: 22px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 16/10; background: var(--bg-2); }
+.c-media { position: relative; border-radius: 22px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 100/47; background: var(--bg-2); }
 .c-media img, .c-media canvas { width: 100%; height: 100%; object-fit: cover; transition: transform 0.9s var(--ease); }
 .case:hover .c-media img, .case:hover .c-media canvas { transform: scale(1.045); }
 .c-media .c-glare { position: absolute; inset: 0; background: linear-gradient(200deg, rgba(255,255,255,0.09), transparent 38%); pointer-events: none; }
@@ -487,7 +487,7 @@ html:not(.js) .story .step { opacity: 1; }
 .gcard .g-art canvas, .gcard .g-art img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease); }
 .gcard:hover .g-art canvas, .gcard:hover .g-art img { transform: scale(1.06); }
 .gcard .g-play {
-    position: absolute; right: 14px; bottom: -18px; width: 46px; height: 46px; border-radius: 50%;
+    position: absolute; right: 14px; top: -23px; width: 46px; height: 46px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center; font-size: 15px; color: #04040a;
     background: var(--grad); box-shadow: 0 8px 24px rgba(111,91,255,0.45);
     transition: transform 0.4s var(--ease);
@@ -613,7 +613,7 @@ html:not(.js) .story .step { opacity: 1; }
 .lab-marquee:hover .lab-track, .lab-marquee:focus-within .lab-track { animation-play-state: paused; }
 .lab-tile { flex: none; width: min(320px, 74vw); border-radius: 18px; overflow: hidden; border: 1px solid var(--border-soft); background: var(--bg-2); text-decoration: none; transition: transform 0.45s var(--ease), border-color 0.45s; }
 .lab-tile:hover { transform: translateY(-6px); border-color: rgba(57,230,255,0.4); }
-.lt-art { position: relative; aspect-ratio: 16/9; background: linear-gradient(160deg, #14103a, #070714); overflow: hidden; }
+.lt-art { display: block; position: relative; aspect-ratio: 16/9; background: linear-gradient(160deg, #14103a, #070714); overflow: hidden; }
 .lt-art .bars { position: absolute; inset: auto 0 0 0; height: 62%; display: flex; align-items: flex-end; gap: 6%; padding: 0 12%; }
 .lt-art .bars i { flex: 1; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--cyan), var(--violet)); height: 30%; opacity: 0.85; }
 @media (prefers-reduced-motion: no-preference) {
@@ -971,9 +971,9 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="receipts">
-            <div class="receipt" data-rv><blockquote>"A concierge-medicine site designed end-to-end — brand, online booking, service pages, blog and SEO."</blockquote><div class="r-who">ModernMed Chicago</div><div class="r-role">Client site build</div></div>
-            <div class="receipt" data-rv style="--rvd:0.08s"><blockquote>"A heritage-patch youth-softball league site with real divisions, registration and a season schedule."</blockquote><div class="r-who">La Grange Park Fastpitch</div><div class="r-role">Client site build</div></div>
-            <div class="receipt" data-rv style="--rvd:0.16s"><blockquote>"Six original browser games at 60 FPS, plus a set of privacy-first tools — all hand-built, zero-build, no bloat."</blockquote><div class="r-who">Kudbee Games &amp; Tools</div><div class="r-role">Play &amp; try them below</div></div>
+            <div class="receipt" data-rv><blockquote>A concierge-medicine site designed end-to-end — brand, online booking, service pages, blog and SEO.</blockquote><div class="r-who">ModernMed Chicago</div><div class="r-role">Client site build</div></div>
+            <div class="receipt" data-rv style="--rvd:0.08s"><blockquote>A heritage-patch youth-softball league site with real divisions, registration and a season schedule.</blockquote><div class="r-who">La Grange Park Fastpitch</div><div class="r-role">Client site build</div></div>
+            <div class="receipt" data-rv style="--rvd:0.16s"><blockquote>Six original browser games at 60 FPS, plus a set of privacy-first tools — all hand-built, zero-build, no bloat.</blockquote><div class="r-who">Kudbee Games &amp; Tools</div><div class="r-role">Play &amp; try them below</div></div>
         </div>
     </div>
 </section>
@@ -990,7 +990,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 
         <div class="game-hero">
             <div class="g-media" data-rv="left">
-                <img src="games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg" alt="Kudbee Contra — Neon Jungle Outpost" loading="lazy">
+                <img src="games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg" alt="Kudbee Contra — Neon Jungle Outpost" loading="lazy" width="1920" height="823">
                 <span class="scan" aria-hidden="true"></span>
             </div>
             <div data-rv="right">
@@ -1000,18 +1000,18 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 <div class="c-tags" style="margin-top:16px"><span>7-layer parallax</span><span>K9 OVERDRIVE</span><span>2-phase boss</span><span>Gamepad + touch</span></div>
                 <div class="hero-cta" style="margin-top:26px">
                     <a class="btn" href="games/kudbee-contra/index.html" data-mag>▶ Play now — free</a>
-                    <a class="btn-o" href="games/kudbee-contra/README.md" data-mag>Game docs</a>
+                    <a class="btn-o" href="leaderboard/public/leaderboard.html" data-mag>🏆 Online League</a>
                 </div>
             </div>
         </div>
 
         <div class="game-grid">
-            <a class="gcard" data-rv href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Darts</h4><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Riff</h4><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Riff II</h4><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
-            <a class="gcard" data-rv href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Pinball — Starbreak</h4><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Voidrunner</h4><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
-            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy"><span class="g-badge" style="--c:var(--green)">Flagship</span><span class="g-play" aria-hidden="true">▶</span></span><span class="g-meta"><h4>Kudbee Contra</h4><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
+            <a class="gcard" data-rv href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Darts</h4><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Riff</h4><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Riff II</h4><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
+            <a class="gcard" data-rv href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Pinball — Starbreak</h4><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.07s" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Voidrunner</h4><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.14s" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="" loading="lazy" width="960" height="412"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h4>Kudbee Contra</h4><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></span></a>
         </div>
 
         <div class="league" data-rv>
@@ -1247,8 +1247,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         <div class="contact-grid">
             <form class="cform" data-rv="left" action="mailto:kudbeezero@gmail.com" method="post" enctype="text/plain">
                 <div class="frow">
-                    <label>Name<input type="text" name="name" placeholder="Your name" autocomplete="name"></label>
-                    <label>Email<input type="email" name="email" placeholder="you@company.com" autocomplete="email"></label>
+                    <label>Name<input type="text" name="name" placeholder="Your name" autocomplete="name" required></label>
+                    <label>Email<input type="email" name="email" placeholder="you@company.com" autocomplete="email" required></label>
                 </div>
                 <label>Interested in
                     <select name="interest">
@@ -1266,8 +1266,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             <div class="cinfo" data-rv="right">
                 <h3>Reach me — any way you like</h3>
                 <p>Pick whatever's easiest. I reply fast, and the Kudbee Agent is awake 24/7 to answer questions and pull up anything on this site.</p>
-                <!-- TODO(owner): replace cal.com/kudbee with the real Kudbee Cal.com link. -->
-                <a href="https://cal.com/kudbee" target="_blank" rel="noopener" class="btn" style="width:100%;margin:20px 0 6px">📅 Book a discovery call →</a>
+                <!-- TODO(owner): claim the Cal.com handle, then point this back at https://cal.com/kudbee -->
+                <a href="mailto:kudbeezero@gmail.com?subject=Discovery%20call%20request" class="btn" style="width:100%;margin:20px 0 6px">📅 Book a discovery call →</a>
                 <div class="cline">🤖 <a href="#agents">Ask the Kudbee Agent — 24/7</a></div>
                 <div class="cline">✉️ <a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
                 <div class="cline">💬 Live AI training &amp; consulting via Zoom</div>
@@ -2004,7 +2004,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     var state = document.getElementById('agent-state');
     if (!log || !form) return;
 
-    var CAL = 'https://cal.com/kudbee'; // TODO(owner): replace with the real Cal.com link.
+    var CAL = 'mailto:kudbeezero@gmail.com?subject=Discovery%20call%20request'; // TODO(owner): swap to the real Cal.com link once the handle exists.
     var BASE = (window.KUDBEE_AGENT_URL || '').replace(/\/$/, '');
     var busy = false;
 
