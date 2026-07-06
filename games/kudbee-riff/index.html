@@ -128,6 +128,27 @@
   .hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10;
     font-size: 11px; color: #45586a; letter-spacing: 0.05em; pointer-events: none; }
   @media (pointer: coarse) { .hint { display: none; } }
+
+  /* Short/landscape frames: #frame keeps a fixed portrait aspect, so on a
+     short viewport (phone landscape, a squat desktop window) it stays much
+     narrower than the screen — the gate/pause/results copy then outgrows the
+     frame and, being vertically centered, spills upward into the pinned
+     "← Studio" back-link. Top-align + let the card scroll internally, and
+     trim the copy so most of it fits without scrolling. The bottom key hint
+     is dropped too — at these heights it lands on top of the strike pads. */
+  @media (max-height: 480px) {
+    .overlay { align-items: flex-start; overflow-y: auto; padding-top: 46px; }
+    .kicker { font-size: 10px; }
+    .ov-inner h1 { font-size: clamp(20px, 6vh, 34px); margin: 8px 0 6px; }
+    .ov-inner p { font-size: 12px; line-height: 1.4; }
+    .keycaps { margin: 14px 0 4px; }
+    .keycap { width: 36px; height: 36px; font-size: 14px; }
+    .btn { margin-top: 14px; padding: 11px 22px; font-size: 14px; }
+    .ov-foot { margin-top: 10px; }
+    .results-grid { margin: 14px 0 4px; }
+    .lb-block { margin: 10px auto 2px; }
+    .hint { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -411,6 +432,13 @@
   var emberCD = 0;                  // ember-spawn cooldown
   var frameCount = 0;               // for throttled side-panel updates
 
+  // Perfect Chain — a small precision-only escalation, separate from the
+  // heat/combo system: counts *consecutive PERFECT judgements only* (a single
+  // GOOD or MISS resets it), and celebrates a run of dead-on timing with a
+  // capped one-time bonus + callout at each milestone.
+  var PERFECT_CHAIN_TIERS = [15, 30, 50, 80];
+  var perfectStreak = 0, perfectChainTier = -1;
+
   // ---- Ambient sky: parallax starfield + shooting stars ----
   var stars = [];                   // built on resize
   var METMAX = reduceMotion ? 3 : 8, MET = new Array(METMAX);
@@ -434,6 +462,7 @@
     heat = 0; overdrive = false; odFlash = 0; heatTier = -1; nOverdrives = nCharged = 0;
     displayScore = 0; scorePulse = 0; shake = 0; emberCD = 0;
     callout.life = 0;
+    perfectStreak = 0; perfectChainTier = -1;
     for (var i = 0; i < notes.length; i++) { notes[i].judged = false; notes[i].hit = false; notes[i].missAt = 0; }
     for (var l = 0; l < LANES; l++) { laneFlash[l] = 0; laneHeld[l] = false; }
     pop.length = 0; sfx.length = 0;
@@ -601,6 +630,9 @@
       nGood++; gain = 50 * em;
       addPop(x, y, 'GOOD', '#cfe9ff'); burst(x, y, LANE_RGB[lane], Math.round(8 * hotK));
     }
+    // Perfect Chain: only back-to-back PERFECTs extend it — a GOOD is still a
+    // fine hit for combo/heat purposes but breaks this precision-only streak.
+    if (perfect) { perfectStreak++; } else { perfectStreak = 0; perfectChainTier = -1; }
     score += gain;
     scorePulse = 1;
     // The floating number grows with the hit and shows the streak bonus inline.
@@ -618,6 +650,7 @@
     combo++; if (combo > maxCombo) maxCombo = combo; mult = multFor(combo);
     if (mult > prevMult) multUp();
     checkHeatTier();
+    if (perfect) checkPerfectChain(x, y);
     laneFlash[lane] = 1.4;
     recordHit(note.t, x, y, LANE_RGB[lane], perfect);
   }
@@ -631,6 +664,23 @@
       var T = HEAT_TIERS[idx];
       fireCallout(T.name, combo + ' STREAK', T.col);
       shake = Math.max(shake, 0.7);     // (main's shake scale: small value, rendered ×16)
+    }
+  }
+
+  // Perfect Chain milestones: a small, capped, one-time celebration for a run
+  // of dead-on-the-beat PERFECTs — separate from (and additive to) the heat/
+  // combo bonus above, so it rewards precision specifically.
+  function checkPerfectChain(x, y) {
+    var idx = -1;
+    for (var i = 0; i < PERFECT_CHAIN_TIERS.length; i++) { if (perfectStreak >= PERFECT_CHAIN_TIERS[i]) idx = i; }
+    if (idx > perfectChainTier) {
+      perfectChainTier = idx;
+      var chainBonus = 250 * (idx + 1);
+      score += chainBonus;
+      fireCallout('DEAD-ON!', perfectStreak + ' PERFECT CHAIN · +' + chainBonus, [255, 255, 255]);
+      addScore(x, y - 40, chainBonus, '#ffffff', true);
+      rings.push({ x: x, y: y, r: 3, vr: 9, life: 1, rgb: [255, 255, 255], w: 4 });
+      shake = Math.max(shake, 0.35);
     }
   }
 
@@ -653,6 +703,7 @@
       if (!nt.judged && now - nt.t > W_MISS) {
         nt.judged = true; nt.missAt = now; nTotal++; nMiss++;
         combo = 0; mult = 1; heatTier = -1;        // streak broken → heat stages reset
+        perfectStreak = 0; perfectChainTier = -1;  // a miss also breaks the perfect chain
       }
     }
   }
@@ -1148,14 +1199,20 @@
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(R.x + R.w / 2, R.y + R.h, R.h * 0.7, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
-    // label
+    // label — the bar sits close to the left rail, and "OVERDRIVE" (the widest
+    // of the three labels) would bleed off the frame's left edge if centered
+    // on the bar; measure + clamp so it always stays fully on-canvas.
     ctx.save();
-    ctx.translate(R.x + R.w / 2, R.y - Math.min(W, H) * 0.012);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
-    if (overdrive) { ctx.fillStyle = '#fff3c4'; ctx.fillText('OVERDRIVE', 0, 0); }
-    else if (ready) { ctx.fillStyle = 'rgba(255,221,120,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; ctx.fillText((isCoarse ? 'TAP' : 'SPACE') + ' / AUTO', 0, 0); }
-    else { ctx.fillStyle = '#6a7488'; ctx.fillText('HEAT', 0, 0); }
+    var labelTxt = overdrive ? 'OVERDRIVE' : ready ? (isCoarse ? 'TAP' : 'SPACE') + ' / AUTO' : 'HEAT';
+    var labelW = ctx.measureText(labelTxt).width;
+    var labelX = Math.max(6, Math.min(W - 6 - labelW, R.x + R.w / 2 - labelW / 2));
+    var labelY = R.y - Math.min(W, H) * 0.012;
+    if (overdrive) ctx.fillStyle = '#fff3c4';
+    else if (ready) ctx.fillStyle = 'rgba(255,221,120,' + (0.6 + pulse * 0.4).toFixed(2) + ')';
+    else ctx.fillStyle = '#6a7488';
+    ctx.fillText(labelTxt, labelX, labelY);
     ctx.restore();
   }
 
@@ -1201,15 +1258,27 @@
     ctx.font = '600 ' + Math.round(base * 0.018) + 'px Inter, sans-serif';
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.fillText('SCORE', W - pad, pad + Math.round(base * 0.052));
+    // Perfect Chain — sits under the score readout (the top-left corner is
+    // already crowded once streak/bonus text is showing, and this side has
+    // clear room). See checkPerfectChain() for the milestone logic.
+    if (perfectChainTier >= 0 && perfectStreak > 0) {
+      ctx.fillStyle = '#eaf6ff';
+      ctx.font = '700 ' + Math.round(base * 0.02) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText('✦ CHAIN ×' + perfectStreak, W - pad, pad + Math.round(base * 0.078));
+    }
 
-    // combo + multiplier (top-left)
+    // combo + multiplier (top-left) — offset clear of the "← Studio" back-link
+    // (a fixed-size DOM button pinned at top/left of the frame; on every frame
+    // size the plain `pad` origin sat directly under it, hiding the streak
+    // number entirely behind the button).
     var em = effMult();
+    var padTop = Math.max(pad, 52);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     if (combo > 0) {
       var ccol = overdrive ? '#ffd34d' : (heatTier >= 0 ? rgbStr(HEAT_TIERS[heatTier].col) : LANE_COL[Math.min(3, mult - 1)]);
       // a little throb on the streak number, livelier the hotter you are
       var cPop = 1 + (overdrive ? 0.06 + 0.04 * Math.sin(performance.now() * 0.02) : Math.min(0.08, combo * 0.0006));
-      ctx.save(); ctx.translate(pad, pad); ctx.scale(cPop, cPop);
+      ctx.save(); ctx.translate(pad, padTop); ctx.scale(cPop, cPop);
       ctx.fillStyle = ccol;
       ctx.font = '700 ' + Math.round(base * 0.045) + 'px "Space Grotesk", sans-serif';
       ctx.fillText(combo + '', 0, 0);
@@ -1218,18 +1287,18 @@
       ctx.font = '600 ' + Math.round(base * 0.018) + 'px Inter, sans-serif';
       var label = (overdrive ? '🔥 ' : '') + 'STREAK · x' + em;
       ctx.fillStyle = overdrive ? '#ffd34d' : '#8a93a8';
-      ctx.fillText(label, pad, pad + Math.round(base * 0.048));
+      ctx.fillText(label, pad, padTop + Math.round(base * 0.048));
       // Bonus-within-the-bonus: a live per-hit bonus that compounds with heat.
       if (combo >= 4) {
         var bf = bonusTierK();
         ctx.fillStyle = heatTier >= 0 ? rgbStr(HEAT_TIERS[Math.min(heatTier, HEAT_TIERS.length - 1)].col) : '#7CFFb2';
         ctx.font = '700 ' + Math.round(base * 0.02) + 'px "Space Grotesk", sans-serif';
-        ctx.fillText('BONUS ×' + bf.toFixed(1) + '  +' + streakBonusFor(true) + '/hit', pad, pad + Math.round(base * 0.072));
+        ctx.fillText('BONUS ×' + bf.toFixed(1) + '  +' + streakBonusFor(true) + '/hit', pad, padTop + Math.round(base * 0.072));
       }
     } else {
       ctx.fillStyle = '#8a93a8';
       ctx.font = '600 ' + Math.round(base * 0.02) + 'px Inter, sans-serif';
-      ctx.fillText('x' + em, pad, pad);
+      ctx.fillText('x' + em, pad, padTop);
     }
 
     // progress bar (very bottom)
