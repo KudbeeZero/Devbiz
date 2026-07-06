@@ -33,6 +33,8 @@ python3 -m http.server 8000
 - Stars per level: 3 for solving at-or-under par moves, 2 for under double par, 1 for any solve.
   Progress (stars per level) saves locally to `kudbee.puzzles.progress`.
 - Difficulty ramps from a plain 4×4 grid to an 8×8 grid with wrapping edges.
+- A **flawless streak** badge appears on the win screen after two or more consecutive
+  at-or-under-par (3-star) solves, capped at ×9+ — a session-only skill flourish, not persisted.
 
 ## Tech notes
 
