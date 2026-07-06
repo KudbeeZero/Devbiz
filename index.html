@@ -653,6 +653,14 @@ html:not(.js) .story .pin-outer { height: auto; }
 .receipt .r-who { margin-top: 14px; font: 600 13.5px/1.4 var(--fd); color: var(--txt); }
 .receipt .r-role { font: 500 12px/1.5 var(--fb); color: var(--dim); }
 .receipt .r-who::before { content: ""; display: block; width: 24px; height: 2px; margin-bottom: 10px; background: var(--grad); }
+
+/* Museum exhibit entry point (DBZ-058): one tasteful, low-key footer link
+   out of the Work section — no new nav item. Reuses the existing .c-link
+   arrow-chip recipe (see .c-link above) rather than inventing new link
+   chrome; this wrapper only adds the section-close rhythm (top border +
+   spacing) that a lone link needs after the receipts grid. */
+.work-museum { margin-top: clamp(28px, 4.5vw, 46px); padding-top: clamp(22px, 3.5vw, 34px); border-top: 1px solid var(--border-soft); text-align: center; }
+.work-museum .c-link { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
     .c-media img { transform: none !important; }
 }
@@ -1269,6 +1277,10 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             <div class="receipt" data-rv><blockquote>A concierge-medicine site designed end-to-end — brand, online booking, service pages, blog and SEO.</blockquote><div class="r-who">ModernMed Chicago</div><div class="r-role">Client site build</div></div>
             <div class="receipt" data-rv style="--rvd:0.08s"><blockquote>A heritage-patch youth-softball league site with real divisions, registration and a season schedule.</blockquote><div class="r-who">La Grange Park Fastpitch</div><div class="r-role">Client site build</div></div>
             <div class="receipt" data-rv style="--rvd:0.16s"><blockquote>Six original browser games at 60 FPS, plus a set of privacy-first tools — all hand-built, zero-build, no bloat.</blockquote><div class="r-who">Kudbee Games &amp; Tools</div><div class="r-role">Play &amp; try them below</div></div>
+        </div>
+
+        <div class="work-museum" data-rv>
+            <a class="c-link" href="museum/kudbee-contra/index.html">🏛 Behind the scenes — step into the Kudbee Contra exhibit <span class="c-arr" aria-hidden="true">→</span></a>
         </div>
     </div>
 </section>
