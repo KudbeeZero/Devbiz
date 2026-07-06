@@ -206,6 +206,7 @@
     emp:    function () { sfx('emp', 0.2, function () { tone(60, 400, 0.5, 'sine', 0.28); noise(0.5, 0.2, 0.4); }); },
     wave:   function () { sfx('wave', 0.4, function () { tone(392, 0, 0.12, 'triangle', 0.14); tone(587, 0, 0.16, 'triangle', 0.14, 0.12); }); },
     bounce: function () { sfx('bounce', 0.12, function () { tone(150, 90, 0.08, 'sine', 0.1); }); },
+    chain:  function () { sfx('chain', 0.15, function () { tone(660, 1100, 0.09, 'triangle', 0.14); }); },
     over:   function () { sfx('over', 0.5, function () { tone(300, 60, 0.7, 'sawtooth', 0.2); noise(0.7, 0.25, 0.5); }); }
   };
 
@@ -247,6 +248,7 @@
   var ship = { x: 0, y: 0, vx: 0, vy: 0, aim: 0, r: 14, hp: 3, shield: 0, inv: 0, rapid: 0, fireCd: 0, thrustX: 0, thrustY: 0 };
   var bullets = [], eBullets = [], enemies = [], rocks = [], pickups = [], parts = [], rings = [];
   var shakeMag = 0, camX = 0, camY = 0, banner = null, killFlash = 0;
+  var rockChain = 0, rockChainT = 0, chainLabel = null;   // shatter-chain bonus: quick consecutive rock kills
 
   var SHIP_ACC = 920, SHIP_MAX = 470, DAMP = 0.12;   // DAMP: gentle exponential decay per second
   var BULLET_SP = 940;
@@ -404,6 +406,17 @@
 
   // ---------- scoring / damage ----------
   function addScore(base) { score += base * mult(); streak++; streakT = 2.6; kills++; }
+  // shatter chain: rewards destroying rock fragments in quick succession (0.9s window), capped x5
+  function rockChainHit(x, y) {
+    rockChain = rockChainT > 0 ? rockChain + 1 : 1;
+    rockChainT = 0.9;
+    if (rockChain >= 2) {
+      var n = Math.min(rockChain, 5);
+      score += n * 15;
+      chainLabel = { x: x, y: y - 26, t: 0.8, dur: 0.8, text: 'SHATTER x' + n };
+      S.chain();
+    }
+  }
   function damagePlayer(n, fromX, fromY) {
     if (ship.inv > 0 || state !== 'play') return;
     if (ship.shield > 0) {
@@ -459,6 +472,7 @@
     bullets.length = 0; eBullets.length = 0; enemies.length = 0; rocks.length = 0;
     pickups.length = 0; parts.length = 0; rings.length = 0;
     shakeMag = 0; killFlash = 0;
+    rockChain = 0; rockChainT = 0; chainLabel = null;
     startWave(1);
   }
   function startGame() {
@@ -577,8 +591,10 @@
 
     // --- waves ---
     waveT += dt;
+    // banner timer must keep ticking after the phase flips to 'combat', otherwise it freezes
+    // partway through its fade and sits at full opacity over the arena for the rest of the wave.
+    if (banner) banner.t += dt;
     if (wavePhase === 'banner') {
-      if (banner) { banner.t += dt; }
       if (waveT > 1.1 && wavePhase === 'banner') { wavePhase = 'combat'; deployWave(); }
     } else if (enemies.length === 0) {
       startWave(wave + 1);
@@ -619,11 +635,13 @@
                 rk.vx + Math.cos(sa2) * rnd(60, 120), rk.vy + Math.sin(sa2) * rnd(60, 120));
             }
             addScore(40);
+            rockChainHit(rk.x, rk.y);
           } else {
             addScore(60);
             burst(rk.x, rk.y, 14, 170, '160,150,190', 2.4, false);
             ringFx(rk.x, rk.y, 4, 44, 0.35, '159,182,200');
             if (Math.random() < 0.12) spawnPickup(rk.x, rk.y);
+            rockChainHit(rk.x, rk.y);
           }
           break;
         }
@@ -733,6 +751,8 @@
     }
     for (i = rings.length - 1; i >= 0; i--) { rings[i].t -= dt; if (rings[i].t <= 0) rings.splice(i, 1); }
     if (killFlash > 0) killFlash -= dt;
+    if (rockChainT > 0) { rockChainT -= dt; if (rockChainT <= 0) rockChain = 0; }
+    if (chainLabel) { chainLabel.t -= dt; if (chainLabel.t <= 0) chainLabel = null; }
     shakeMag *= Math.exp(-6 * dt);
 
     // soft camera follow
@@ -794,6 +814,16 @@
       ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.rotate(-e.ang);
       ctx.rotate(Math.atan2(ship.y - e.y, ship.x - e.x));
+      // telegraph: brief warning line as the turret's lead shot charges, so it reads clearly
+      // against the starfield instead of firing with no cue
+      var chargeWin = 0.45;
+      if (e.born <= 0 && e.fireT > 0 && e.fireT < chargeWin && len(ship.x - e.x, ship.y - e.y) < 620) {
+        var cf = 1 - e.fireT / chargeWin;
+        ctx.strokeStyle = 'rgba(255,211,77,' + (0.2 + cf * 0.6).toFixed(3) + ')';
+        ctx.lineWidth = 1 + cf * 2;
+        ctx.beginPath(); ctx.moveTo(e.r + 4, 0); ctx.lineTo(e.r + 44 + cf * 60, 0); ctx.stroke();
+      }
+      ctx.strokeStyle = col;
       ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(e.r + 4, 0); ctx.stroke();
     }
     ctx.shadowBlur = 0;
@@ -960,6 +990,20 @@
     if (killFlash > 0) {
       ctx.fillStyle = 'rgba(207,233,255,' + (killFlash * 0.5).toFixed(3) + ')';
       ctx.fillRect(0, 0, W, H);
+    }
+    // shatter-chain label (floating callout for quick consecutive rock kills)
+    if (chainLabel && (state === 'play' || state === 'pause')) {
+      var clf = clamp(chainLabel.t / chainLabel.dur, 0, 1);
+      var rise = reduceMotion ? 0 : (1 - clf) * 30;
+      var scr = worldToScreen(chainLabel.x, chainLabel.y - rise);
+      ctx.save();
+      ctx.globalAlpha = clf;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffd34d'; ctx.font = '700 15px "Space Grotesk", sans-serif';
+      ctx.shadowColor = 'rgba(255,211,77,0.9)'; ctx.shadowBlur = reduceMotion ? 0 : 10;
+      ctx.fillText(chainLabel.text, scr.x, scr.y);
+      ctx.shadowBlur = 0;
+      ctx.restore();
     }
     // wave banner
     if (banner && (state === 'play' || state === 'pause')) {
