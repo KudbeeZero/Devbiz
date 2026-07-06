@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Page not found — Kudbee. This page doesn't exist or moved. Head back to the studio home page.">
+<meta name="robots" content="noindex, follow">
+<meta name="author" content="Kudbee">
+<meta name="theme-color" content="#05050a">
+<title>404 — Page Not Found · Kudbee</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- Shared Deep Lab chrome tokens (DBZ-057) — palette, self-hosted fonts,
+     button/panel/glow recipes, sourced from index.html's :root. This page
+     is new (not an existing sub-page), so it consumes the .kd-btn/.kd-panel/
+     .kd-wrap/.kd-back-home utilities directly instead of re-declaring them. -->
+<link rel="stylesheet" href="/assets/kudbee-ui.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--txt); font: 16px/1.6 var(--fb);
+    -webkit-font-smoothing: antialiased; padding: 24px; overflow-x: hidden;
+    position: relative;
+}
+/* Same soft radial "lit exhibit" glow used across sub-surfaces — decorative only. */
+.glow { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.glow::before, .glow::after { content: ""; position: absolute; width: 560px; height: 560px; border-radius: 50%; filter: blur(90px); opacity: 0.5; }
+.glow::before { top: -180px; left: -140px; background: radial-gradient(circle, rgba(57,230,255,0.3), transparent 65%); }
+.glow::after { bottom: -200px; right: -160px; background: radial-gradient(circle, rgba(196,107,255,0.26), transparent 65%); }
+@media (prefers-reduced-motion: no-preference) {
+    .glow::before { animation: drift1 22s ease-in-out infinite; }
+    .glow::after { animation: drift2 26s ease-in-out infinite; }
+}
+@keyframes drift1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 24px); } }
+@keyframes drift2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-26px, -18px); } }
+
+.card {
+    position: relative; z-index: 1; max-width: 560px; width: 100%;
+    padding: clamp(32px, 6vw, 56px); text-align: center;
+}
+.status-chip {
+    display: inline-flex; align-items: center; gap: 8px; font: 600 12px/1 var(--fd);
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; margin-bottom: 26px;
+}
+.status-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+.num {
+    font: 700 clamp(72px, 15vw, 120px)/1 var(--fd); letter-spacing: -0.03em;
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 8px;
+}
+h1 { font: 600 clamp(22px, 3.4vw, 30px)/1.25 var(--fd); color: var(--txt); letter-spacing: -0.01em; margin-bottom: 14px; }
+p { color: var(--txt-2); font-size: 15.5px; max-width: 42ch; margin: 0 auto 30px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .glow::before, .glow::after { animation: none; } }
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<main class="card kd-panel">
+    <span class="status-chip"><span class="dot" aria-hidden="true"></span> Signal lost</span>
+    <div class="num" aria-hidden="true">404</div>
+    <h1>This page doesn't exist — yet, or anymore.</h1>
+    <p>The link you followed drifted off the map. It may have moved, shipped under a new name, or never existed. Let's get you back to the studio.</p>
+    <div class="actions">
+        <a class="kd-btn" href="/">Back to Kudbee home</a>
+        <a class="kd-btn-o" href="/#games">Enter the arcade</a>
+    </div>
+</main>
+</body>
+</html>

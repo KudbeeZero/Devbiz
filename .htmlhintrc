@@ -8,6 +8,9 @@
   "title-require": true,
   "doctype-first": true,
   "doctype-html5": true,
+
+  "alt-require": true,
+
   "spec-char-escape": false,
   "attr-value-double-quotes": false,
   "attr-value-not-empty": false,

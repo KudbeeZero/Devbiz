@@ -36,6 +36,7 @@ Disallow: /games/kudbee-contra/docs/
 Disallow: /games/kudbee-darts/docs/
 Disallow: /games/kudbee-pinball/eval/
 Disallow: /ops/
+Disallow: /tests/
 Disallow: /CLAUDE.md
 Disallow: /README.md
 Disallow: /wrangler.toml
