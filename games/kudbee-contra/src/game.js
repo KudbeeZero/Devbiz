@@ -14,6 +14,12 @@
   const VIEW_W = 960;
   const VIEW_H = 600;
 
+  // Kill-streak combo: chain rapid kills within this window for a small
+  // score bonus + HUD callout. Purely cosmetic scoring flair — does not
+  // touch XP/leveling or weapon progression.
+  const COMBO_WINDOW = 2.2;
+  const COMBO_COLORS = ['#39e6ff', '#c46bff', '#ff5d9e'];
+
   function Game(opts) {
     this.canvas = opts.canvas;
     this.ctx = this.canvas.getContext('2d');
@@ -77,6 +83,11 @@
     this.runTime = 0;
     this.hurtFx = 0;       // brief red edge flash when the operative takes a hit
     this.scorePop = 0;     // HUD score punch on gain
+    this.combo = 0;        // current kill-streak count
+    this.comboTimer = 0;   // seconds left before the streak lapses
+    this.comboPop = 0;     // punch-scale for the combo readout
+    this.bestCombo = 0;
+    this.hitstop = 0;      // brief freeze-frame timer on chunky impacts
     this.newBest = false;
     this.lives = this.player.lives;
     this.spawnFlags = this.level.spawns.map(() => false);
@@ -115,8 +126,25 @@
     if (x != null) this.particles.damageNumber(x, y - 10, '+' + n, n >= 1000);
   };
 
-  // Called by enemies/boss on death — feeds the end-of-run stats recap.
-  Game.prototype.registerKill = function () { this.kills++; };
+  // Called by enemies/boss on death — feeds the end-of-run stats recap,
+  // chains the kill-streak combo, and kicks a brief hitstop for punch.
+  Game.prototype.registerKill = function () {
+    this.kills++;
+    this.combo = this.comboTimer > 0 ? this.combo + 1 : 1;
+    this.comboTimer = COMBO_WINDOW;
+    this.comboPop = 0.28;
+    if (this.combo > this.bestCombo) this.bestCombo = this.combo;
+    if (this.combo >= 2) this.score += this._comboBonus(this.combo);
+    // Chunky freeze-frame on a kill — a few frames only, doesn't fight the
+    // player's next input (see the hitstop guard in _update).
+    this.hitstop = Math.max(this.hitstop, this.combo >= 4 ? 0.075 : 0.045);
+  };
+
+  // Small escalating score bonus for chaining kills; capped so it never
+  // dwarfs the base per-enemy score values.
+  Game.prototype._comboBonus = function (combo) {
+    return Math.min(500, Math.max(0, combo - 1) * 25);
+  };
 
   // Persist best score at the end of a run (additive; safe if storage is blocked).
   Game.prototype._endRun = function () {
@@ -209,6 +237,13 @@
       return;
     }
 
+    // Kill hitstop: a few-frame freeze on a kill for extra combat punch.
+    // Only the *world* (enemies/projectiles/companion/spawns) holds still —
+    // the operative's own controls never pause, so a jump/fire tap during
+    // the freeze is never delayed or dropped.
+    if (this.hitstop > 0) this.hitstop -= dt;
+    const frozen = this.hitstop > 0;
+
     // ---- Active play ----
     const p = this.player;
     p.update(dt, this.input, this.level);
@@ -217,6 +252,11 @@
     if (this.levelFlash > 0) this.levelFlash -= dt;
     if (this.hurtFx > 0) this.hurtFx -= dt;
     if (this.scorePop > 0) this.scorePop -= dt;
+    if (this.comboPop > 0) this.comboPop -= dt;
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) this.combo = 0;
+    }
 
     // Special: unleash the K9 missile barrage when OVERDRIVE is charged.
     if (this.input.justPressed('special') && this.power >= this.powerMax && !this.companion.active && !p.dead) {
@@ -239,38 +279,40 @@
       }
     }
 
-    // Spawn director.
-    this._runSpawns();
+    if (!frozen) {
+      // Spawn director.
+      this._runSpawns();
 
-    // Update enemies.
-    for (let i = this.enemies.length - 1; i >= 0; i--) {
-      const e = this.enemies[i];
-      e.update(dt, p, this.level);
-      if (e.dead) this.enemies.splice(i, 1);
+      // Update enemies.
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        const e = this.enemies[i];
+        e.update(dt, p, this.level);
+        if (e.dead) this.enemies.splice(i, 1);
+      }
+
+      // Boss.
+      if (this.bossActive && this.boss && !this.boss.dead) {
+        this.boss.update(dt, p);
+      }
+      if (this.reveal > 0) {
+        this.reveal -= dt;
+        if (this.reveal <= 0) this.camera.zoomTo(1);
+      }
+
+      // Companion follows + (when active) fires homing missiles at targets.
+      var targets = this.enemies;
+      if (this.boss && !this.boss.dead && this.bossActive) targets = this.enemies.concat([this.boss]);
+      this.companion.update(dt, p, targets);
+
+      // Projectiles + collisions.
+      this.projectiles.update(dt, this.level.groundY);
+      this._homeMissiles(dt);
+      this._resolveCollisions();
+      this.projectiles.sweep();
+
+      // Pickups.
+      this._updatePickups(dt, p);
     }
-
-    // Boss.
-    if (this.bossActive && this.boss && !this.boss.dead) {
-      this.boss.update(dt, p);
-    }
-    if (this.reveal > 0) {
-      this.reveal -= dt;
-      if (this.reveal <= 0) this.camera.zoomTo(1);
-    }
-
-    // Companion follows + (when active) fires homing missiles at targets.
-    var targets = this.enemies;
-    if (this.boss && !this.boss.dead && this.bossActive) targets = this.enemies.concat([this.boss]);
-    this.companion.update(dt, p, targets);
-
-    // Projectiles + collisions.
-    this.projectiles.update(dt, this.level.groundY);
-    this._homeMissiles(dt);
-    this._resolveCollisions();
-    this.projectiles.sweep();
-
-    // Pickups.
-    this._updatePickups(dt, p);
 
     // Camera.
     if (!p.dead) this.camera.follow(p.cx(), p.cy(), p.dir, dt);
@@ -491,6 +533,7 @@
 
     // HUD + menus (screen space).
     this._drawHUD(ctx);
+    if (this.combo >= 2 && (this.state === 'play' || this.state === 'pause')) this._drawCombo(ctx);
     if (this.state === 'menu') this._drawMenu(ctx);
     else if (this.state === 'pause') this._drawPauseOverlay(ctx);
     else if (this.state === 'gameover') this._drawEndOverlay(ctx, false);
@@ -682,6 +725,39 @@
       ctx.textAlign = 'left';
     }
     ctx.restore();
+  };
+
+  // ---- Kill-streak combo readout ------------------------------------------
+  // Small addition: rewards chaining kills quickly with an escalating score
+  // bonus and a callout that punches in on every new kill in the streak,
+  // then fades once the window lapses. Tiers climb through the Deep Lab
+  // cyan -> violet -> magenta accents already used elsewhere in the HUD.
+  // Lives in the top-right HUD cluster (under the LV/XP readout) rather than
+  // center-screen so it never competes with the rarer, bigger LEVEL UP toast
+  // — the two can legitimately fire in the same instant since both ride on
+  // a kill.
+  Game.prototype._drawCombo = function (ctx) {
+    const W = this.viewW;
+    const tier = this.combo >= 6 ? 2 : (this.combo >= 4 ? 1 : 0);
+    const color = COMBO_COLORS[tier];
+    const pop = this.comboPop > 0 ? this.comboPop / 0.28 : 0;
+    const fadeOut = Util.clamp(this.comboTimer / 0.5, 0, 1);
+    if (fadeOut <= 0.01) return;
+    const scale = 1 + pop * 0.22;
+
+    ctx.save();
+    ctx.globalAlpha = fadeOut;
+    ctx.textAlign = 'right';
+    ctx.translate(W - 20, 92);
+    ctx.scale(scale, scale);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8 + pop * 10;
+    ctx.fillStyle = color;
+    ctx.font = 'bold 15px monospace';
+    ctx.fillText('COMBO ×' + this.combo + '  +' + this._comboBonus(this.combo), 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.textAlign = 'left';
   };
 
   // ---- Title screen (cinematic attract mode) -----------------------------
@@ -966,11 +1042,13 @@
     ctx.font = 'bold 12px monospace';
     ctx.fillText(this.newBest ? '★ NEW BEST ★' : 'BEST  ' + String(this.best).padStart(6, '0'), W / 2, py + 190);
 
-    this._statCols(ctx, W / 2, py + 224, [
+    const endStats = [
       ['KILLS', this.kills],
       ['TIME', this._fmtTime(this.runTime)],
       ['LEVEL', 'LV ' + this.playerLevel],
-    ]);
+    ];
+    if (this.bestCombo >= 2) endStats.push(['MAX COMBO', '×' + this.bestCombo]);
+    this._statCols(ctx, W / 2, py + 224, endStats);
 
     ctx.globalAlpha = 0.45 + 0.55 * this._promptAlpha();
     ctx.fillStyle = '#ffffff';

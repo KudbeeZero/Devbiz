@@ -238,14 +238,19 @@
     ctx.restore();
   };
 
-  // Foreground foliage: nearest layer, fastest parallax (factor 1.2), tiled.
+  // Foreground foliage frame: a single symmetric composition (hanging vines
+  // top, monstera leaves bottom-corners, transparent middle) — not a
+  // repeating texture. It used to be tiled + scrolled like the other
+  // parallax layers, which sent leaf clusters drifting into the middle of
+  // the arena as the camera panned, burying the player/enemies mid-combat.
+  // Pin it in screen space instead, "cover"-fit so it always frames the
+  // viewport edges and never obstructs the play area.
   Parallax.prototype._drawForeground = function (ctx, cam, img) {
     const W = this.viewW, H = this.viewH;
-    const dh = H;
-    const dw = dh * (img.width / img.height);
-    let off = cam.parallaxX(1.2) % dw;
-    if (off > 0) off -= dw;
-    for (let x = off; x < W + dw; x += dw) ctx.drawImage(img, x, 0, dw, dh);
+    const scale = Math.max(W / img.width, H / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
   };
 
   Parallax.prototype._tiled = function (ctx, cam, factor, span, draw) {
