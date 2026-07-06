@@ -27,10 +27,15 @@
     this.time = 0;
     this.timeScale = 1;
 
+    // Respect prefers-reduced-motion: shake/zoom/confetti flourishes thin out.
+    this.reduceMotion = !!(window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
     // Engine systems.
     this.input = new KD.Input(this.canvas);
     this.audio = new KD.Audio();
     this.camera = new KD.Camera(VIEW_W, VIEW_H);
+    if (this.reduceMotion) this.camera.shakeScale = 0;
     this.particles = new KD.Particles();
     this.sprites = new KD.Sprites();
     this.board = new KD.Board();
@@ -83,7 +88,15 @@
   };
 
   // Triggered by Dart.release(): the board lunges in a touch, then snaps back.
-  Game.prototype.lungeBoard = function () { this._lungeT = this.LUNGE_DUR; };
+  Game.prototype.lungeBoard = function () {
+    if (this.reduceMotion) return;      // stillness beats snap under reduced motion
+    this._lungeT = this.LUNGE_DUR;
+  };
+
+  // Set the big centre callout with a pop-in scale (see _drawCallout).
+  Game.prototype._say = function (text, life, col) {
+    this.callout = { text: text, life: life, max: life, col: col || C.gold };
+  };
 
   Game.prototype._bindMeta = function () {
     window.addEventListener('keydown', (e) => {
@@ -283,6 +296,8 @@
     const lx = this.dart.landX, ly = this.dart.landY;
 
     this.audio.thud();
+    // Impact "thunk" flash — a quick white bloom right at the tip.
+    this.particles.emit({ x: lx, y: ly, vx: 0, vy: 0, life: 0.12, size: 26, color: '#ffffff', glow: true });
     const skinCol = cur.skin().color;
     // Stuck dart: tip lands exactly on the scoring point; lean varies by where
     // on the board it landed (+ a hair of jitter) so groups don't look stamped.
@@ -321,13 +336,13 @@
 
     if (out.bust) {
       this.audio.bust();
-      this.callout = { text: 'BUST', life: 1.3 };
+      this._say('BUST', 1.3, C.ember);
       this._endTurn();
       return;
     }
     if (big) {
       this.timeScale = 0.4;
-      this.camera.punchZoom(1.16, lx, ly);
+      if (!this.reduceMotion) this.camera.punchZoom(1.16, lx, ly);
       this.camera.shake(0.4);
       this.audio.chime(2);
     } else if (res.score > 0) {
@@ -344,11 +359,20 @@
     // Announcer for the completed turn.
     if (this.mode.id === 'x01') {
       const ts = cur.scoreState.turnScore;
-      if (ts === 180) { cur.t180++; this.callout = { text: '180!', life: 1.6 }; this.audio.cheer(); }
-      else if (ts >= 100) this.callout = { text: ts + '!', life: 1.3 };
+      if (ts === 180) {
+        // The maximum — celebrate properly: gold rain + a double shockwave.
+        cur.t180++;
+        this._say('180!', 1.9);
+        this.audio.cheer();
+        this.particles.confetti(this.board.cx, this.board.cy - 30,
+          ['#ffd34d', '#fff0bf', '#7CFFb2', '#39e6ff'], this.reduceMotion ? 24 : 80);
+        this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 250, 0.8, 5);
+        this.particles.shockwave(this.board.cx, this.board.cy, '#ffffff', 160, 0.55, 3);
+        this.camera.shake(0.5);
+      } else if (ts >= 100) this._say(ts + '!', 1.3);
     } else {
       const ts = cur.scoreState.turnScore;
-      if (ts >= 60) this.callout = { text: '+' + ts, life: 1.2 };
+      if (ts >= 60) this._say('+' + ts, 1.2, C.green);
     }
     this.turnEndTimer = 1.5;
     this.banner = cur.name + (this.mode.id === 'x01' ? ' scored ' + cur.scoreState.turnScore : '');
@@ -375,8 +399,13 @@
   Game.prototype._matchWin = function (winner) {
     this.state = 'matchOver';
     this.timeScale = 0.5;
-    this.camera.punchZoom(1.1, this.board.cx, this.board.cy);
-    this.particles.confetti(this.board.cx, this.board.cy);
+    if (!this.reduceMotion) this.camera.punchZoom(1.1, this.board.cx, this.board.cy);
+    const cCount = this.reduceMotion ? 26 : 90;
+    this.particles.confetti(this.board.cx, this.board.cy, null, cCount);
+    // Side cannons for the winning moment.
+    this.particles.confetti(this.board.cx - 260, this.board.cy - 110, null, Math.round(cCount * 0.6));
+    this.particles.confetti(this.board.cx + 260, this.board.cy - 110, null, Math.round(cCount * 0.6));
+    this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 300, 0.9, 5);
     this.audio.cheer();
 
     const human = this.players[0];
@@ -396,7 +425,12 @@
       result.marks = m;
     }
     const xp = this.progression.recordMatch(result);
-    this.matchResult = { winner: winner.name, won: won, xp: xp };
+    this.matchResult = {
+      winner: winner.name, won: won, xp: xp,
+      darts: human.dartsThrown, t180: human.t180,
+      checkout: result.checkout, mode: this.mode.id,
+      points: result.points,
+    };
     this.matchOverTimer = 0.8;
   };
 
@@ -408,12 +442,29 @@
     }
   };
 
+  Game.prototype._pauseLayout = function () {
+    const cx = VIEW_W / 2;
+    return [
+      { id: 'resume', label: '▶  RESUME', x: cx - 130, y: VIEW_H / 2 - 4, w: 260, h: 58, group: 'play', sel: false },
+      { id: 'quit', label: 'QUIT TO MENU', x: cx - 130, y: VIEW_H / 2 + 70, w: 260, h: 48, group: 'nav', sel: false },
+    ];
+  };
+
   Game.prototype._updatePause = function () {
     if (this.input.justPressed('pause') || this.input.justPressed('confirm')) { this.state = 'play'; return; }
+    if (this.input.justPressed('back')) { this.state = 'menu'; return; }
     const p = this.input.pointer;
     if (p.justDown) {
-      // bottom button = quit to menu, else resume
-      if (p.y > VIEW_H * 0.62) this.state = 'menu'; else this.state = 'play';
+      const btns = this._pauseLayout();
+      for (let i = 0; i < btns.length; i++) {
+        const b = btns[i];
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+          this.audio.tick();
+          this.state = b.id === 'quit' ? 'menu' : 'play';
+          return;
+        }
+      }
+      this.state = 'play';   // tap anywhere else = resume
     }
   };
 
@@ -519,7 +570,8 @@
     // Title.
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.shadowColor = C.cyan; ctx.shadowBlur = 24;
+    ctx.shadowColor = C.cyan;
+    ctx.shadowBlur = this.reduceMotion ? 24 : 22 + Math.sin(this.time * 1.8) * 9;
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 64px "Space Grotesk", sans-serif';
     ctx.fillText('KUDBEE DARTS', VIEW_W / 2, 110);
@@ -851,22 +903,35 @@
 
   // ---- Overlays ----------------------------------------------------------
   Game.prototype._drawCallout = function (ctx) {
-    const a = Math.min(1, this.callout.life * 1.4);
+    const c = this.callout;
+    const a = Math.min(1, c.life * 1.4);
+    const col = c.col || C.gold;
+    // Pop-in: a quick scale overshoot as the callout is born, easing to 1.
+    const born = (c.max || 1.3) - c.life;
+    const s = this.reduceMotion ? 1 : 1 + Math.max(0, 0.35 - born * 2.8);
     ctx.save();
     ctx.globalAlpha = a;
+    ctx.translate(VIEW_W / 2, VIEW_H * 0.5);
+    ctx.scale(s, s);
     ctx.textAlign = 'center';
-    ctx.fillStyle = C.gold; ctx.shadowColor = C.gold; ctx.shadowBlur = 26;
+    ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 26;
     ctx.font = 'bold 72px "Space Grotesk", sans-serif';
-    ctx.fillText(this.callout.text, VIEW_W / 2, VIEW_H * 0.5);
+    ctx.fillText(c.text, 0, 0);
     ctx.restore();
     ctx.textAlign = 'left';
   };
 
   Game.prototype._drawBanner = function (ctx) {
+    // Neon-carded turn banner, tinted to whoever just threw.
+    const col = this.players[this.current] ? this.players[this.current].skin().color : C.cyan;
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(5,6,15,0.7)';
-    this._roundRect(ctx, VIEW_W / 2 - 220, VIEW_H - 150, 440, 56, 10); ctx.fill();
+    ctx.fillStyle = 'rgba(5,6,15,0.78)';
+    this._roundRect(ctx, VIEW_W / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = col;
+    ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.globalAlpha = 0.9;
+    this._roundRect(ctx, VIEW_W / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
     ctx.fillText(this.banner, VIEW_W / 2, VIEW_H - 122);
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
@@ -890,9 +955,16 @@
     ctx.fillText(r.winner + ' takes the leg', VIEW_W / 2, VIEW_H / 2 + 14);
     ctx.fillStyle = C.gold; ctx.font = 'bold 20px "Space Grotesk", sans-serif';
     ctx.fillText('+' + r.xp + ' XP', VIEW_W / 2, VIEW_H / 2 + 52);
+    // Your match line: darts thrown, plus the highlights that matter.
+    const bits = [r.darts + ' darts'];
+    if (r.t180 > 0) bits.push(r.t180 + '× 180');
+    if (r.won && r.mode === 'x01' && r.checkout) bits.push(r.checkout + ' checkout');
+    if (r.mode === 'cricket' && r.points) bits.push(r.points + ' pts');
+    ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
+    ctx.fillText(bits.join('  ·  '), VIEW_W / 2, VIEW_H / 2 + 80);
     if (this.matchOverTimer <= 0) {
       ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
-      ctx.fillText('tap to return to the menu', VIEW_W / 2, VIEW_H / 2 + 96);
+      ctx.fillText('tap to return to the menu', VIEW_W / 2, VIEW_H / 2 + 116);
     }
     ctx.restore();
     ctx.textAlign = 'left';
@@ -902,12 +974,16 @@
     ctx.save();
     ctx.fillStyle = 'rgba(4,6,14,0.8)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 20;
     ctx.font = 'bold 48px "Space Grotesk", sans-serif';
-    ctx.fillText('PAUSED', VIEW_W / 2, VIEW_H / 2 - 30);
-    ctx.font = '18px "Space Grotesk", sans-serif'; ctx.fillStyle = C.cyan;
-    ctx.fillText('tap upper area to resume', VIEW_W / 2, VIEW_H / 2 + 30);
-    ctx.fillStyle = C.ember;
-    ctx.fillText('tap lower area to quit to menu', VIEW_W / 2, VIEW_H * 0.7);
+    ctx.fillText('PAUSED', VIEW_W / 2, VIEW_H / 2 - 60);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    this._pauseLayout().forEach((b) => this._neonButton(ctx, b));
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
+    ctx.font = '12px "Space Grotesk", sans-serif';
+    ctx.fillText('P resume · M mute · Esc quit', VIEW_W / 2, VIEW_H / 2 + 150);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -1141,10 +1217,10 @@
 
     // Big live preview of the equipped loadout, gently bobbing + spinning.
     const skin = KD.Sprites.SKINS[d.skins.equipped];
-    const bob = Math.sin(this.time * 1.6) * 6;
+    const bob = this.reduceMotion ? 0 : Math.sin(this.time * 1.6) * 6;
     ctx.save();
     ctx.translate(VIEW_W / 2, 180 + bob);
-    ctx.rotate(-Math.PI * 0.12 + Math.sin(this.time * 0.8) * 0.05);
+    ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
     this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);

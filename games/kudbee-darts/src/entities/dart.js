@@ -183,6 +183,14 @@
     this._ft = 0;
     this.state = 'flying';
     this.game.audio.whoosh();
+    // Release juice: a snap-ring + a few sparks at the hand as the dart leaves.
+    if (this.game.particles) {
+      const col = (this.skin && this.skin.color) || '#39e6ff';
+      this.game.particles.shockwave(this._fromX, this._fromY - 10, col, 44, 0.28, 2.5);
+      if (!this.game.reduceMotion) {
+        this.game.particles.burst(this._fromX, this._fromY - 10, col, 6, 190, { glow: true, life: 0.25, size: 2, drag: 3 });
+      }
+    }
     if (this.game.lungeBoard) this.game.lungeBoard();
     return this.result;
   };
@@ -293,6 +301,41 @@
     let y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
 
     const scale = Util.lerp(1.45, 0.48, e);
+
+    // Shadow converging on the impact point: as the dart closes in, a soft
+    // dark ellipse tightens onto the exact landing spot — reads as depth.
+    if (e > 0.4) {
+      const sa = (e - 0.4) / 0.6;
+      ctx.save();
+      ctx.globalAlpha = sa * 0.34;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(x1 + (1 - sa) * 10, y1 + (1 - sa) * 16,
+        15 * (1.7 - sa * 0.7), 8 * (1.7 - sa * 0.7), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Motion streak: a short glowing ribbon along the recent arc, so the flick
+    // reads fast without ghost-drawing the whole dart repeatedly.
+    if (k > 0.06 && !this.game.reduceMotion) {
+      const eb = Util.smooth(Math.max(0, k - 0.09));
+      const omb = 1 - eb;
+      const bxr = omb * omb * x0 + 2 * omb * eb * cxp + eb * eb * x1;
+      const byr = omb * omb * y0 + 2 * omb * eb * cyp + eb * eb * y1;
+      const col = (this.skin && this.skin.color) || '#39e6ff';
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const grad = ctx.createLinearGradient(bxr, byr, x, y);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, col);
+      ctx.strokeStyle = grad;
+      ctx.globalAlpha = 0.4 * (1 - e * 0.5);
+      ctx.lineWidth = 5 * scale;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(bxr, byr); ctx.lineTo(x, y); ctx.stroke();
+      ctx.restore();
+    }
     // Travel angle = Bézier tangent, with a hair of extra droop near landing.
     const tx = 2 * om * (cxp - x0) + 2 * e * (x1 - cxp);
     const ty = 2 * om * (cyp - y0) + 2 * e * (y1 - cyp);
