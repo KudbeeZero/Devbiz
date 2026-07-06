@@ -25,10 +25,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <!-- Shared Deep Lab chrome tokens (DBZ-057) — palette, self-hosted fonts,
+         button/panel/glow recipes, sourced from index.html's :root. -->
+    <link rel="stylesheet" href="/assets/kudbee-ui.css">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -58,24 +57,25 @@
     </script>
 <style>
     :root {
-        --bg-primary: #06060c;
-        --bg-elevated: #0b0b16;
+        /* Shared with index.html via assets/kudbee-ui.css (DBZ-057):
+           --cyan/--green are dropped here since the shared file already
+           defines the identical value; --violet/--accent/--accent-glow/
+           --grad/--bg-primary are repointed to their canonical counterpart
+           instead of re-declaring a duplicate literal. */
+        --bg-primary: var(--bg);
+        --bg-elevated: var(--bg-2);
         --bg-secondary: rgba(255,255,255,0.025);
         --bg-card: rgba(255,255,255,0.035);
         --bg-glass: rgba(12,12,24,0.6);
-        --border: rgba(255,255,255,0.07);
         --border-hover: rgba(255,255,255,0.16);
         --text-primary: #ffffff;
         --text-secondary: #e6e8f0;
         --text-muted: #9aa3b8;
         --text-dim: #646c82;
-        --cyan: #39e6ff;
-        --violet: #c46bff;
-        --green: #7CFFb2;
         --red: #ff5d3c;
-        --accent: #6f5bff;
-        --accent-glow: rgba(111,91,255,0.35);
-        --grad: linear-gradient(135deg, #39e6ff 0%, #6f5bff 50%, #c46bff 100%);
+        --violet: var(--magenta);
+        --accent: #6f5bff; /* = canonical --violet; can't var()-reference it once --violet is repointed above */
+        --accent-glow: var(--glow);
         --grad-text: linear-gradient(120deg, #6af0ff, #9b8cff 55%, #d79bff);
         --shadow-glow: 0 10px 40px -8px var(--accent-glow);
         --radius: 16px;
@@ -85,12 +85,12 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: var(--fb);
         line-height: 1.6; overflow-x: clip;
         background: var(--bg-primary); color: var(--text-secondary);
         min-height: 100vh; -webkit-font-smoothing: antialiased;
     }
-    h1, h2, h3, h4, .logo-txt, .panel-title, .inv-name { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, h4, .logo-txt, .panel-title, .inv-name { font-family: var(--fd); }
     .gradient-text {
         background: var(--grad-text);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
@@ -120,7 +120,7 @@
         display: flex; align-items: center; justify-content: space-between;
         padding: 13px 24px;
         background: rgba(6,6,12,0.78); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
-        border-bottom: 1px solid var(--border); z-index: 100;
+        border-bottom: 1px solid var(--border-soft); z-index: 100;
     }
     .nav-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
     .back-link {
@@ -304,7 +304,7 @@
     .inv-foot { margin-top: 22px; text-align: center; font-size: 11px; color: #aab1c2; }
 
     /* Footer */
-    .site-foot { border-top: 1px solid var(--border); padding: 28px 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+    .site-foot { border-top: 1px solid var(--border-soft); padding: 28px 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
     .site-foot a { color: var(--text-muted); text-decoration: none; }
     .site-foot a:hover { color: var(--cyan); }
 
