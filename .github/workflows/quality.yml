@@ -5,15 +5,24 @@
 # href that 404'd — and (b) basic structural HTML mistakes (duplicate ids, unclosed
 # tags). This workflow catches those on every PR.
 #
+# DBZ-059 (Polish Lane 12) added two more jobs on top of the original two:
+# a Playwright smoke suite (real Chromium pass over the home page) and a
+# Lighthouse CI budget check (performance/SEO/accessibility category scores).
+# Both follow the exact same advisory pattern as the original two jobs below.
+#
 # ADVISORY / NON-BLOCKING (on purpose, for now):
-#   Both checks run with `continue-on-error: true`, so this workflow SURFACES problems
-#   in the PR's Checks tab but never blocks a merge. It is intentionally NOT a required
-#   status check yet — these tools run on their own introductory PR too, and we don't
-#   want to hard-gate everything before we've watched a few real runs and confirmed the
-#   repo is clean. Once it has been green on a few PRs, promote it to required by:
-#     1. removing `continue-on-error: true` from the steps below, and
-#     2. adding "Quality guardrails / *" to the branch protection required checks.
-#   (Empirically, against the current repo, both checks already pass — see the PR body.)
+#   All four checks run with `continue-on-error: true`, so this workflow SURFACES
+#   problems in the PR's Checks tab but never blocks a merge. None of them are
+#   required status checks yet — each new tool runs on its own introductory PR too,
+#   and we don't want to hard-gate everything before we've watched a few real runs
+#   and confirmed the repo is clean. Once a job has been green on a few PRs, promote
+#   it to required by:
+#     1. removing `continue-on-error: true` from that job's step(s), and
+#     2. adding "Quality guardrails / <job name>" to the branch protection required checks.
+#   (Empirically, against the current repo: link-check + html-sanity already pass —
+#   see PR #114 and prior. The two DBZ-059 jobs have been verified locally against
+#   this exact branch — see PR body for the real numbers — but have not yet been
+#   observed running on GitHub's own runners; "expected green," not confirmed green.)
 #
 # Scope note: only the site's own HTML is linted. `.agents/skills/**` holds third-party
 # React/Vue auth scaffolding templates we don't author, so it is excluded.
@@ -27,6 +36,8 @@ on:
       - ".github/workflows/quality.yml"
       - ".htmlhintrc"
       - ".lycheeignore"
+      - ".lighthouserc.json"
+      - "tests/quality/**"
   push:
     branches: [main]
     paths:
@@ -34,6 +45,8 @@ on:
       - ".github/workflows/quality.yml"
       - ".htmlhintrc"
       - ".lycheeignore"
+      - ".lighthouserc.json"
+      - "tests/quality/**"
 
 # Avoid piling up redundant runs on rapid pushes to the same PR/branch.
 concurrency:
@@ -106,3 +119,65 @@ jobs:
           mapfile -t files < <(git ls-files '*.html' | grep -v '^\.agents/')
           echo "Linting ${#files[@]} HTML files"
           npx --yes htmlhint@1 --config .htmlhintrc "${files[@]}"
+
+  playwright-smoke:
+    name: Playwright smoke suite (home page)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Self-contained under tests/quality/ (its own package.json — playwright
+      # only) so the root repo stays dependency-free/zero-build. See
+      # tests/quality/smoke.mjs for exactly what's checked (DBZ-059, Polish Lane
+      # 12): the home page renders with zero console/page errors at 1440px and
+      # 390px, the pinned scrollytelling section (#storyOuter/.pin) actually
+      # engages while scrolling, the live agent answers a real question from its
+      # local KB, and the reduced-motion render still delivers the content
+      # statically. tests/quality/server.mjs serves the repo root itself the
+      # same way Cloudflare Pages does — no separate dev-server step needed.
+      - name: Install smoke-suite dependencies
+        working-directory: tests/quality
+        run: npm install
+
+      - name: Install Chromium (Playwright)
+        working-directory: tests/quality
+        run: npx playwright install --with-deps chromium
+
+      # ADVISORY (DBZ-032 precedent, see header): continue-on-error keeps this
+      # from blocking a merge while the suite proves itself out on a few real
+      # runs. Promote later per the header's instructions.
+      - name: Run Playwright smoke suite
+        continue-on-error: true
+        working-directory: tests/quality
+        run: npm run smoke
+
+  lighthouse-budget:
+    name: Lighthouse CI budget (perf/SEO/a11y)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # @lhci/cli's `autorun` serves `.` (the repo root) as a static site itself
+      # (see .lighthouserc.json's `staticDistDir`) and drives Lighthouse against
+      # /index.html — no separate server step needed. Relies on the Chrome that
+      # ships preinstalled on GitHub-hosted ubuntu-latest runners (chrome-launcher
+      # auto-detects it); if a future runner image drops it, this step would need
+      # an explicit Chrome install added.
+      #
+      # Budgets (DBZ-059): performance >= 90, SEO = 100, accessibility >= 95 —
+      # asserted at "error" level in .lighthouserc.json so a real miss is
+      # surfaced as a failed step in the Checks tab; continue-on-error below
+      # keeps that advisory/non-blocking for now (DBZ-032 precedent, see header).
+      # numberOfRuns is 1 for CI speed, so treat this as a smoke-level budget
+      # check, not a certified median score.
+      - name: Run Lighthouse CI
+        continue-on-error: true
+        run: npx --yes @lhci/cli@0.15 autorun --config=./.lighthouserc.json
