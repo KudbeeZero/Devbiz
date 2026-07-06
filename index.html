@@ -745,6 +745,13 @@ html:not(.js) .story .pin-outer { height: auto; }
 .agent-msg { max-width: 88%; padding: 12px 15px; border-radius: 15px; font-size: 14px; line-height: 1.55; }
 .agent-msg.bot { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--border-soft); color: var(--txt-2); border-bottom-left-radius: 5px; }
 .agent-msg.user { align-self: flex-end; background: linear-gradient(120deg, rgba(57,230,255,0.16), rgba(111,91,255,0.2)); border: 1px solid rgba(111,91,255,0.35); color: var(--txt); border-bottom-right-radius: 5px; }
+/* DBZ-055 message entrance: gated by reduced-motion, driven by lane-04 tokens */
+@media (prefers-reduced-motion: no-preference) {
+    .agent-msg.in.bot { animation: msgInBot var(--mo-dur-3) var(--ease) both; }
+    .agent-msg.in.user { animation: msgInUser var(--mo-dur-3) var(--ease) both; }
+}
+@keyframes msgInBot { from { opacity: 0; transform: translate3d(-8px, 8px, 0); } to { opacity: 1; transform: none; } }
+@keyframes msgInUser { from { opacity: 0; transform: translate3d(8px, 8px, 0); } to { opacity: 1; transform: none; } }
 .agent-typing { align-self: flex-start; display: inline-flex; gap: 5px; padding: 13px 15px; background: var(--panel-2); border-radius: 15px; border-bottom-left-radius: 5px; }
 .agent-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
 @media (prefers-reduced-motion: no-preference) {
@@ -791,17 +798,22 @@ html:not(.js) .story .pin-outer { height: auto; }
 .sc-live { font: 700 9.5px/1 var(--fd); letter-spacing: 0.08em; color: var(--green); }
 
 .term { position: sticky; top: calc(var(--nav-h) + 20px); border-radius: 18px; border: 1px solid var(--border); background: #060610; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+@media (prefers-reduced-motion: no-preference) { .term { transition: border-color var(--mo-dur-3) var(--ease), box-shadow var(--mo-dur-3) var(--ease); } }
+.term.installing { border-color: rgba(196,107,255,0.5); }
+@media (prefers-reduced-motion: no-preference) { .term.installing { box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 40px rgba(196,107,255,0.28); } }
 .term-bar { display: flex; align-items: center; gap: 7px; padding: 12px 15px; background: rgba(255,255,255,0.035); border-bottom: 1px solid var(--border-soft); }
 .term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
 .term-bar .r { background: #ff5f57; } .term-bar .y { background: #febc2e; } .term-bar .g { background: #28c840; }
 .term-title { margin-left: 8px; font: 500 11.5px/1 ui-monospace, monospace; color: var(--dim); }
 .term-live { margin-left: auto; font: 600 10.5px/1 ui-monospace, monospace; color: var(--green); }
-.term-body { padding: 16px 16px 20px; min-height: 240px; max-height: 340px; overflow-y: auto; font: 12.5px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; scrollbar-width: thin; }
+.term-body { padding: 16px 16px 20px; min-height: 240px; max-height: 340px; overflow-y: auto; font: 12.5px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; scrollbar-width: thin; cursor: text; }
 .term-line { white-space: pre-wrap; word-break: break-word; }
 .term-body .pr { color: var(--green); } .term-body .dim { color: var(--dim); } .term-body .cmd { color: var(--txt); }
 .term-body .ok { color: var(--green); } .term-body .vio { color: var(--magenta); } .term-body .warn { color: var(--amber); }
 .term-cursor { display: inline-block; width: 8px; height: 14px; vertical-align: -2px; background: var(--cyan); }
 @media (prefers-reduced-motion: no-preference) { .term-cursor { animation: caret var(--mo-dur-11) steps(1) infinite; } }
+.term-prompt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.term-cmd-input { flex: 1; min-width: 60px; background: transparent; border: none; outline: none; color: var(--txt); font: inherit; padding: 0; caret-color: var(--cyan); }
 @keyframes caret { 50% { opacity: 0; } }
 .term-cta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
 .term-cta .buy { font: 600 12px/1 var(--fd); color: #04040a; background: var(--grad); border: none; border-radius: 999px; padding: 10px 16px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
@@ -1369,10 +1381,9 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="term-title">kudbee — zsh</span><span class="term-live">ready</span></div>
                 <div class="term-body" id="term-body">
                     <div class="term-line"><span class="dim"># Kudbee tiny-app installer</span></div>
-                    <div class="term-line"><span class="dim"># pick an app on the left, or run a command:</span></div>
+                    <div class="term-line"><span class="dim"># pick an app on the left, or type a command below — try "kudbee help":</span></div>
                     <div class="term-line"><span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="cmd">kudbee list</span></div>
                     <div class="term-line"><span class="ok">8 apps available</span> <span class="dim">· installs in your browser · private by default</span></div>
-                    <div class="term-line"><span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="term-cursor"></span></div>
                 </div>
             </div>
         </div>
@@ -2632,6 +2643,20 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
      when a Worker backend is present; degrades to a graceful offline preview
      otherwise. The live agent backend ships separately. -->
 <script>
+/* --------------------------------------------------------------
+ * DBZ-055 — single owner config block (ties into DBZ-039/DBZ-040).
+ * Both capture forms below (agent lead capture + tiny-app waitlist)
+ * read their POST endpoint from here, so the owner pastes both
+ * Formspree/Formsubmit URLs in exactly one place. Both stay '' —
+ * no backend is enabled by this lane; each capture form falls back
+ * to a mailto: draft (and always saves locally) until an endpoint
+ * is set here.
+ * ------------------------------------------------------------ */
+var KUDBEE_CONFIG = {
+    LEAD_ENDPOINT: '',     // TODO(owner): paste a Formspree/Formsubmit POST URL to auto-collect agent leads.
+    WAITLIST_ENDPOINT: ''  // TODO(owner): paste a Formspree/Formsubmit POST URL to auto-collect tiny-app waitlist signups.
+};
+
 (function initAgent() {
     var log = document.getElementById('agent-log');
     var form = document.getElementById('agent-form');
@@ -2671,32 +2696,122 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         { t: 'Articles / blog', kw: 'blog articles article posts post read seo guide learn writing content news', b: "The articles cover building your own memory layer, what actually makes a website convert, and teaching teams to build AI agents.", a: [['Read the blog', 'blog/']] },
         { t: 'Contact & booking', kw: 'contact book booking call email reach hire quote start project talk get in touch phone schedule message', b: "Reach me any way you like — book a discovery call, email, or the contact form. I reply within 24 hours, and I'm here 24/7.", a: [['Book a discovery call', CAL], ['Contact section', '#contact']] },
         { t: 'The Kudbee Doctrine', kw: 'doctrine principles philosophy how you think values approach standards quality believe', b: "The Kudbee Doctrine is how I think about building — taste, verification, honesty, and no shortcuts. Eight articles, out in the open.", a: [['Read the doctrine', '#doctrine']] },
-        { t: 'About Kudbee', kw: 'about who are you what is kudbee studio company team story personal', b: "Kudbee is my one-person creative dev studio: premium web design (my #1), teaching teams to build their own AI agents & infrastructure, and original browser games.", a: [['Start a project', '#contact'], ['See the work', '#work']] }
+        { t: 'About Kudbee', kw: 'about who are you what is kudbee studio company team story personal', b: "Kudbee is my one-person creative dev studio: premium web design (my #1), teaching teams to build their own AI agents & infrastructure, and original browser games.", a: [['Start a project', '#contact'], ['See the work', '#work']] },
+        { t: 'Pricing tiers in detail', kw: 'pricing price prices cost starter launch studio pro tier tiers package packages breakdown revisions revision pages included how much', b: "Site pricing breaks into four flat tiers: Starter $99 (1-page), Launch $199 (up to 3 pages + SEO basics), Studio $399 (up to 6 pages, custom animation — best value), and Pro $500 (up to 10 pages, advanced SEO, blog/CMS, 30-day launch support). AI training and agent suites are scoped separately on a discovery call.", a: [['See pricing', '#pricing'], ['Book a demo', CAL]] },
+        { t: 'How work ships (process)', kw: 'process steps step how it works workflow methodology discovery strategy proof launch timeline what happens next', b: "Work ships in five steps: Discovery (a fast goals call), Strategy & design (wireframes or agent architecture on paper first), Build & train (live sessions as it comes together), Proof (everything verified before it's called done), then Launch & support on Cloudflare — yours to keep.", a: [['See the process', '#process']] },
+        { t: 'The Kudbee Online League', kw: 'league leaderboard leaderboards score scores rank ranking compete competitive ladder online', b: "The Kudbee Online League is a global leaderboard across the arcade — post a score in Kudbee Darts or Kudbee Riff (I and II) and claim your spot on the ladder.", a: [['View the leaderboard', 'leaderboard/public/leaderboard.html'], ['Enter the arcade', '#games']] },
+        { t: 'Kudbee Darts (league game)', kw: 'darts 501 cricket dartboard throw ai rival rivals xp ladder skins', b: "Kudbee Darts: 501 & Cricket against smart AI rivals, with an XP ladder and unlockable skins — one of the two games feeding the Online League.", a: [['Play Kudbee Darts', 'games/kudbee-darts/index.html'], ['View the leaderboard', 'leaderboard/public/leaderboard.html']] },
+        { t: 'Kudbee Riff & Riff II (rhythm games)', kw: 'riff rhythm fret guitar track neon music note charted beat', b: "Kudbee Riff and Riff II are rhythm games charted to real original studio tracks — Fret Rush, and the newer Neon Fret Rush — both feed the Online League leaderboard.", a: [['Play Kudbee Riff', 'games/kudbee-riff/index.html'], ['Play Riff II', 'games/kudbee-riff-2/index.html']] },
+        { t: 'Kudbee Pinball & Voidrunner', kw: 'pinball starbreak voidrunner asteroid dive flyer table skill shots space', b: "Kudbee Pinball — Starbreak is a neon space table with real skill shots; Kudbee Voidrunner — Asteroid Dive is a steer-and-blast flyer through drifting asteroids.", a: [['Play Kudbee Pinball', 'games/kudbee-pinball/index.html'], ['Play Kudbee Voidrunner', 'games/kudbee-voidrunner/index.html']] },
+        { t: 'Doctrine — privacy & API keys (Article III)', kw: 'privacy security secure api key keys safe server worker leak data protect', b: "Doctrine Article III — Keys live on the server, always: every model call runs through a Cloudflare Worker that holds the secret, so the client (your browser) never sees it. Privacy and security are the floor, not a paid tier.", a: [['Read the doctrine', '#doctrine']] },
+        { t: 'Doctrine — own your stack (Article II)', kw: 'own stack infrastructure lock-in vendor lockin cloudflare keep code keys yours portable', b: "Doctrine Article II — Own your stack: everything is built on infrastructure you can actually keep — static front-ends and serverless Workers on Cloudflare, no rented black boxes. When an engagement ends, the work — keys, code, and all — is yours.", a: [['Read the doctrine', '#doctrine']] },
+        { t: 'Grow Companion (Lab piece)', kw: 'grow companion plant seed time lapse interactive sprout', b: "Grow Companion is an interactive Lab piece — watch a plant grow in time-lapse, then plant your own seed, rendered live in the browser.", a: [['Open Grow Companion', 'lab/grow/index.html'], ['Visit the lab', '#lab']] }
     ];
-    var STOP = { 'the':1,'a':1,'an':1,'and':1,'or':1,'to':1,'of':1,'for':1,'in':1,'on':1,'is':1,'are':1,'do':1,'you':1,'i':1,'me':1,'my':1,'we':1,'can':1,'how':1,'what':1,'with':1,'your':1,'about':1,'show':1,'tell':1,'need':1,'want':1,'get':1,'please':1 };
+    var STOP = { 'the':1,'a':1,'an':1,'and':1,'or':1,'to':1,'of':1,'for':1,'in':1,'on':1,'is':1,'are':1,'do':1,'you':1,'i':1,'me':1,'my':1,'we':1,'can':1,'how':1,'what':1,'with':1,'your':1,'about':1,'show':1,'tell':1,'need':1,'want':1,'get':1,'please':1,'kudbee':1 };
     function toks(s) { return (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(function (w) { return w.length > 1 && !STOP[w]; }); }
-    function scoreKB(q) {
-        var qt = toks(q), best = null, bestScore = 0;
-        for (var i = 0; i < KB.length; i++) {
-            var e = KB[i], s = 0, kw = ' ' + e.kw + ' ', ti = e.t.toLowerCase(), bl = e.b.toLowerCase();
-            for (var j = 0; j < qt.length; j++) {
-                var w = qt[j];
-                if (kw.indexOf(' ' + w + ' ') !== -1) s += 3;
-                else if (kw.indexOf(w) !== -1) s += 2;
-                if (ti.indexOf(w) !== -1) s += 2;
-                if (bl.indexOf(w) !== -1) s += 1;
+
+    /* ---------- KB scoring (DBZ-055): stemming + typo tolerance + multi-intent ----------
+       A trailing-suffix stemmer folds plurals/verb forms onto one root (so
+       "pricing" and "priced" both hit "price"), and a bounded Levenshtein
+       check tolerates a single typo/transposition on longer keywords (so
+       "pricng" or "gmaes" still lands). scoreKB ranks every entry instead of
+       stopping at the first hit, so a query that touches two topics — e.g.
+       "pricing and ai training" — can surface both instead of only whichever
+       KB row happened to score first. */
+    function stem(w) {
+        if (w.length > 5 && /ies$/.test(w)) return w.slice(0, -3) + 'y';
+        if (w.length > 6 && /ing$/.test(w)) return w.slice(0, -3);
+        if (w.length > 5 && /(ed|es)$/.test(w)) return w.slice(0, -2);
+        if (w.length > 4 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+        return w;
+    }
+    // Levenshtein distance, but bails out the moment it's proven > 1 (we only
+    // ever care whether two short keywords are "off by one typo").
+    function lev1(a, b) {
+        if (a === b) return 0;
+        var la = a.length, lb = b.length;
+        if (Math.abs(la - lb) > 1) return 2;
+        var prev = [], i, j;
+        for (j = 0; j <= lb; j++) prev[j] = j;
+        for (i = 1; i <= la; i++) {
+            var cur = [i], rowMin = i;
+            for (j = 1; j <= lb; j++) {
+                cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+                if (cur[j] < rowMin) rowMin = cur[j];
             }
-            if (s > bestScore) { bestScore = s; best = e; }
+            if (rowMin > 1) return 2; // whole row already past tolerance — short-circuit
+            prev = cur;
         }
-        return bestScore > 0 ? best : null;
+        return prev[lb];
+    }
+    function fuzzyScore(qTok, kwTok) {
+        if (qTok === kwTok) return 3;
+        if (stem(qTok) === stem(kwTok)) return 2.2;
+        if (qTok.length >= 4 && kwTok.length >= 4 && Math.abs(qTok.length - kwTok.length) <= 1 && lev1(qTok, kwTok) <= 1) return 1.4;
+        return 0;
+    }
+    // Precompute each entry's keyword token list once.
+    for (var kbi = 0; kbi < KB.length; kbi++) {
+        var kbe = KB[kbi];
+        kbe._kw = kbe.kw.split(/\s+/);
+        kbe._ti = kbe.t.toLowerCase();
+        kbe._bl = kbe.b.toLowerCase();
+    }
+    // Ranks every KB entry against the query; returns [{entry, score}, ...] sorted high→low.
+    function rankKB(q) {
+        var qt = toks(q), ranked = [];
+        for (var i = 0; i < KB.length; i++) {
+            var e = KB[i], s = 0;
+            for (var j = 0; j < qt.length; j++) {
+                var w = qt[j], best = 0;
+                for (var k = 0; k < e._kw.length; k++) {
+                    var m = fuzzyScore(w, e._kw[k]);
+                    if (m > best) best = m;
+                }
+                s += best;
+                if (e._ti.indexOf(w) !== -1) s += 2;
+                if (e._bl.indexOf(w) !== -1) s += 1;
+            }
+            if (s > 0) ranked.push({ entry: e, score: s });
+        }
+        ranked.sort(function (a, b) { return b.score - a.score; });
+        return ranked;
+    }
+    // Picks up to two entries for multi-intent questions — the runner-up only
+    // counts if it's a genuinely different, still-strong topic, never a weak
+    // tail match.
+    function pickHits(q) {
+        var ranked = rankKB(q);
+        if (!ranked.length) return [];
+        var hits = [ranked[0].entry], top = ranked[0].score;
+        for (var i = 1; i < ranked.length; i++) {
+            if (ranked[i].score >= 4 && ranked[i].score >= top * 0.5 && ranked[i].entry.t !== ranked[0].entry.t) {
+                hits.push(ranked[i].entry);
+                break; // cap at two topics — stay focused, don't dump the whole KB
+            }
+        }
+        return hits;
     }
 
-    function scroll() { log.scrollTop = log.scrollHeight; }
+    var pinnedToBottom = true;
+    function scroll(force) {
+        if (force || pinnedToBottom) log.scrollTop = log.scrollHeight;
+    }
+    log.addEventListener('scroll', function () {
+        // Smarter auto-scroll (DBZ-055): if the visitor has scrolled up to
+        // read history, new messages must not yank the viewport back down.
+        // Only re-pin once they're within a small threshold of the bottom.
+        pinnedToBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 32;
+    }, { passive: true });
     function addMsg(role, text) {
         var el = document.createElement('div');
-        el.className = 'agent-msg ' + (role === 'user' ? 'user' : 'bot');
+        el.className = 'agent-msg in ' + (role === 'user' ? 'user' : 'bot');
         el.textContent = text;
-        log.appendChild(el); scroll(); return el;
+        log.appendChild(el);
+        // A message the visitor just sent should always pull the log down to
+        // show it; a bot reply respects whatever scroll position they're in.
+        scroll(role === 'user');
+        return el;
     }
     function goTo(target) {
         if (target.charAt(0) === '#') {
@@ -2732,22 +2847,34 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     }
     function setBusy(b) { busy = b; send.disabled = b; input.disabled = b; }
 
-    // Local, no-backend answer from the site index.
+    // Local, no-backend answer from the site index. Supports multi-intent:
+    // a question that scores meaningfully on two distinct KB rows gets both
+    // answers, joined into one reply, with a merged (deduped) action list.
     function answerLocal(text) {
-        var hit = scoreKB(text);
-        if (hit) { addBot(hit.b, hit.a); }
-        else {
+        var hits = pickHits(text);
+        if (hits.length === 1) {
+            addBot(hits[0].b, hits[0].a);
+        } else if (hits.length > 1) {
+            var combined = hits[0].b + ' And on ' + hits[1].t.replace(/\s*\([^)]*\)/, '').toLowerCase() + ' — ' + hits[1].b;
+            var seen = {}, actions = [];
+            hits.forEach(function (h) {
+                (h.a || []).forEach(function (act) {
+                    if (!seen[act[1]]) { seen[act[1]] = true; actions.push(act); }
+                });
+            });
+            addBot(combined, actions.slice(0, 4));
+        } else {
             addBot("I can help with web design, AI agent training, building your own memory layer, client work, games, tools, pricing, or booking a call. Which one sounds right?", [['See the work', '#work'], ['Book a call', CAL]]);
         }
         // Offer to capture the lead on buying intent.
-        if ((hit && /Contact|About Kudbee|Services|memory layer/.test(hit.t)) ||
+        if ((hits.length && /Contact|About Kudbee|Services|memory layer|Pricing tiers/.test(hits[0].t)) ||
             /\b(book|email|contact|quote|hire|reach|budget|price|pricing|cost|start a project|get started)\b/.test(text.toLowerCase())) {
             captureCTA();
         }
     }
 
     // ---- Lead capture (no backend): POST to a form endpoint if set, else mailto; always saved locally ----
-    var LEAD_ENDPOINT = ''; // TODO(owner): paste a Formspree/Formsubmit POST URL to auto-collect leads.
+    var LEAD_ENDPOINT = KUDBEE_CONFIG.LEAD_ENDPOINT; // see the config block at the top of this script.
     var captured = false;
     function recentUser() {
         return history.filter(function (m) { return m.role === 'user'; }).slice(-4).map(function (m) { return m.content; }).join(' | ');
@@ -2879,6 +3006,112 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         if (reduce) { el.textContent = text; return; }
         for (var i = 0; i < text.length; i++) { el.textContent += text[i]; term.scrollTop = term.scrollHeight; await sleep(20); }
     }
+    function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- Typed terminal commands (DBZ-055) ----------
+       Real keyboard input, not decorative: `kudbee help`, `kudbee list`,
+       `kudbee open <slug>` (plus the `add` alias the store cards already
+       advertise as `kudbee add <slug>`), with Up/Down cycling command
+       history like a real shell prompt. */
+    var cmdHistory = [];
+    var histIdx = 0;
+    function currentInput() { return term.querySelector('.term-cmd-input'); }
+    function addPrompt(focusIt) {
+        var row = document.createElement('div');
+        row.className = 'term-line term-prompt';
+        row.innerHTML = '<span class="pr">kudbee@studio</span><span class="dim">:~$</span>';
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'term-cmd-input'; inp.autocomplete = 'off'; inp.autocapitalize = 'off';
+        inp.spellcheck = false; inp.setAttribute('aria-label', 'Kudbee terminal command input');
+        row.appendChild(inp);
+        term.appendChild(row); term.scrollTop = term.scrollHeight;
+        inp.addEventListener('keydown', onPromptKeydown);
+        // Only steal focus when the visitor is already interacting with the
+        // terminal (mid command, or just triggered an install) — never on
+        // initial page load, which would be a rude, unrequested focus jump.
+        if (focusIt) inp.focus({ preventScroll: true });
+        return inp;
+    }
+    function commitPromptLine(inp, text) {
+        var row = inp.closest('.term-prompt');
+        if (!row) return;
+        row.classList.remove('term-prompt');
+        row.innerHTML = '<span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="cmd">' + escapeHtml(text) + '</span>';
+    }
+    function findCard(slug) {
+        var match = null;
+        document.querySelectorAll('.store-card').forEach(function (c) { if (c.getAttribute('data-app') === slug) match = c; });
+        return match;
+    }
+    function runCommand(raw) {
+        var inp = currentInput(), text = (raw || '').trim();
+        if (inp) commitPromptLine(inp, text);
+        if (!text) { addPrompt(true); return; }
+        cmdHistory.push(text); histIdx = cmdHistory.length;
+        var parts = text.split(/\s+/);
+        var root = parts[0].toLowerCase();
+        if (root !== 'kudbee') {
+            line('<span class="warn">command not found: ' + escapeHtml(parts[0]) + '</span> <span class="dim">— try</span> <span class="cmd">kudbee help</span>');
+            addPrompt(true);
+            return;
+        }
+        var sub = (parts[1] || 'help').toLowerCase();
+        if (sub === 'help') {
+            line('<span class="ok">Available commands</span>');
+            line('<span class="cmd">kudbee help</span><span class="dim"> — show this list</span>');
+            line('<span class="cmd">kudbee list</span><span class="dim"> — list every tiny app &amp; status</span>');
+            line('<span class="cmd">kudbee open &lt;slug&gt;</span><span class="dim"> — install &amp; open an app, e.g. kudbee open scribe</span>');
+            line('<span class="dim">↑ / ↓ — cycle command history</span>');
+            addPrompt(true);
+        } else if (sub === 'list') {
+            var cards = document.querySelectorAll('.store-card');
+            line('<span class="ok">' + cards.length + ' apps available</span> <span class="dim">· installs in your browser · private by default</span>');
+            cards.forEach(function (card) {
+                var slug = card.getAttribute('data-app'), name = card.getAttribute('data-name');
+                var isLive = card.getAttribute('data-live') === '1';
+                var status = isLive ? '<span class="ok">● live</span>' : '<span class="warn">○ $5</span>';
+                line('&nbsp; <span class="cmd">' + escapeHtml(slug) + '</span> <span class="dim">— ' + escapeHtml(name) + '</span> ' + status);
+            });
+            addPrompt(true);
+        } else if (sub === 'open' || sub === 'add') {
+            var slug = (parts[2] || '').toLowerCase();
+            if (!slug) { line('<span class="warn">usage: kudbee open &lt;slug&gt;</span> <span class="dim">— try</span> <span class="cmd">kudbee list</span>'); addPrompt(true); return; }
+            var card = findCard(slug);
+            if (!card) { line('<span class="warn">unknown app: ' + escapeHtml(slug) + '</span> <span class="dim">— try</span> <span class="cmd">kudbee list</span>'); addPrompt(true); return; }
+            panel.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+            install(card.getAttribute('data-app'), card.getAttribute('data-name'), card.getAttribute('data-live') === '1', card.getAttribute('data-url') || '');
+            // install() clears the screen and re-adds a fresh, focused prompt when it finishes.
+        } else {
+            line('<span class="warn">unknown command: kudbee ' + escapeHtml(sub) + '</span> <span class="dim">— try</span> <span class="cmd">kudbee help</span>');
+            addPrompt(true);
+        }
+    }
+    function onPromptKeydown(e) {
+        var inp = e.target;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            runCommand(inp.value);
+        } else if (e.key === 'ArrowUp') {
+            if (!cmdHistory.length) return;
+            e.preventDefault();
+            histIdx = Math.max(0, histIdx - 1);
+            inp.value = cmdHistory[histIdx] || '';
+            inp.setSelectionRange(inp.value.length, inp.value.length);
+        } else if (e.key === 'ArrowDown') {
+            if (!cmdHistory.length) return;
+            e.preventDefault();
+            histIdx = Math.min(cmdHistory.length, histIdx + 1);
+            inp.value = histIdx === cmdHistory.length ? '' : cmdHistory[histIdx];
+            inp.setSelectionRange(inp.value.length, inp.value.length);
+        }
+    }
+    // Clicking anywhere in the terminal (not on a link/button) focuses the
+    // live command prompt, like a real terminal window.
+    panel.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input')) return;
+        var inp = currentInput();
+        if (inp) inp.focus();
+    });
 
     // Checkout via Gumroad. Flip PAYMENT_LIVE to true once the products exist.
     // TODO(owner): set GUMROAD to your real store ("https://<handle>.gumroad.com/l/")
@@ -2891,7 +3124,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     }
 
     // Demand capture: per-app waitlist, saved locally; POSTs to endpoint if set, else mailto.
-    var WAITLIST_ENDPOINT = ''; // TODO(owner): paste a Formspree/Formsubmit URL to auto-collect store signups.
+    var WAITLIST_ENDPOINT = KUDBEE_CONFIG.WAITLIST_ENDPOINT; // see the config block at the top of this script.
     function mailtoWaitlist(slug, email) {
         window.location.href = 'mailto:kudbeezero@gmail.com?subject=' + encodeURIComponent('Waitlist: ' + slug) + '&body=' + encodeURIComponent('Email: ' + email + '\nApp: ' + slug);
     }
@@ -2920,6 +3153,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     async function install(slug, name, isLive, url) {
         if (busy) return; busy = true;
         if (live) { live.textContent = 'installing'; live.style.color = 'var(--magenta)'; }
+        panel.classList.add('installing');
         term.innerHTML = '';
         var l1 = line('<span class="pr">kudbee@studio</span><span class="dim">:~$</span> <span class="cmd"></span><span class="term-cursor"></span>');
         await typeInto(l1.querySelector('.cmd'), 'npx kudbee add ' + slug);
@@ -2946,7 +3180,9 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         var buy = cta.querySelector('[data-buy]'); if (buy) buy.addEventListener('click', function () { buyOnGumroad(slug); });
         var book = cta.querySelector('[data-book]'); if (book) book.addEventListener('click', function () { joinWaitlist(slug, name); });
         if (live) { live.textContent = 'ready'; live.style.color = 'var(--green)'; }
+        panel.classList.remove('installing');
         busy = false;
+        addPrompt(true);
     }
 
     document.querySelectorAll('.store-card').forEach(function (card) {
@@ -2958,6 +3194,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                     card.getAttribute('data-live') === '1', card.getAttribute('data-url') || '');
         });
     });
+
+    addPrompt(false); // seed the live command prompt on load — never steal focus unrequested
 })();
 </script>
 
