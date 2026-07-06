@@ -27,10 +27,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <link rel="preload" href="assets/fonts/space-grotesk-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/inter-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="alternate" type="text/plain" href="https://devbiz.kudbee.workers.dev/llms.txt" title="llms.txt">
     <script>document.documentElement.classList.add('js');</script>
     <script type="application/ld+json">
@@ -159,6 +157,23 @@
    Everything reads with JS off; motion is gated on .js + no
    prefers-reduced-motion. Palette + fonts carry over from v1.
    ================================================================ */
+/* Self-hosted, latin-subset variable fonts — no Google Fonts round-trip.
+   Both files are variable-weight (Space Grotesk 300–700, Inter 100–900),
+   so one file per family covers every weight the site actually uses. */
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('assets/fonts/space-grotesk-variable-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('assets/fonts/inter-variable-latin.woff2') format('woff2');
+}
 :root {
     --bg: #05050a;
     --bg-2: #0a0a16;
@@ -966,7 +981,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 
         <article class="case" data-rv>
             <a class="c-media" href="clients/modernmed/index.html" aria-label="View the ModernMed Chicago site">
-                <img src="assets/work/modernmed.jpg" alt="ModernMed Chicago — concierge medical clinic website designed by Kudbee" loading="lazy" width="1200" height="564">
+                <picture>
+                    <source type="image/avif" srcset="assets/work/modernmed-600.avif 600w, assets/work/modernmed-900.avif 900w, assets/work/modernmed.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <source type="image/webp" srcset="assets/work/modernmed-600.webp 600w, assets/work/modernmed-900.webp 900w, assets/work/modernmed.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <img src="assets/work/modernmed.jpg" srcset="assets/work/modernmed-600.jpg 600w, assets/work/modernmed-900.jpg 900w, assets/work/modernmed.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="ModernMed Chicago — concierge medical clinic website designed by Kudbee" loading="lazy" width="1200" height="564">
+                </picture>
                 <span class="c-glare"></span>
             </a>
             <div class="c-body">
@@ -981,7 +1000,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 
         <article class="case flip" data-rv>
             <a class="c-media" href="clients/grange-park-fastpitch/index.html" aria-label="View the La Grange Park Fastpitch site">
-                <img src="assets/work/lagrange.jpg" alt="La Grange Park Fastpitch — youth softball league website designed by Kudbee" loading="lazy" width="1200" height="564">
+                <picture>
+                    <source type="image/avif" srcset="assets/work/lagrange-600.avif 600w, assets/work/lagrange-900.avif 900w, assets/work/lagrange.avif 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <source type="image/webp" srcset="assets/work/lagrange-600.webp 600w, assets/work/lagrange-900.webp 900w, assets/work/lagrange.webp 1200w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <img src="assets/work/lagrange.jpg" srcset="assets/work/lagrange-600.jpg 600w, assets/work/lagrange-900.jpg 900w, assets/work/lagrange.jpg 1200w" sizes="(max-width: 700px) 100vw, 50vw" alt="La Grange Park Fastpitch — youth softball league website designed by Kudbee" loading="lazy" width="1200" height="564">
+                </picture>
                 <span class="c-glare"></span>
             </a>
             <div class="c-body">
@@ -1023,7 +1046,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
 
         <div class="game-hero">
             <div class="g-media" data-rv="left">
-                <img src="games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg" alt="Kudbee Contra — Neon Jungle Outpost" loading="lazy" width="1920" height="823">
+                <picture>
+                    <source type="image/avif" srcset="games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.avif 640w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.avif 960w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.avif 1280w, games/kudbee-contra/assets/backgrounds/neon-jungle-far.avif 1920w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <source type="image/webp" srcset="games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.webp 640w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.webp 960w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.webp 1280w, games/kudbee-contra/assets/backgrounds/neon-jungle-far.webp 1920w" sizes="(max-width: 700px) 100vw, 50vw">
+                    <img src="games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg" srcset="games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.jpg 640w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.jpg 960w, games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.jpg 1280w, games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg 1920w" sizes="(max-width: 700px) 100vw, 50vw" alt="Kudbee Contra — Neon Jungle Outpost" loading="lazy" width="1920" height="823">
+                </picture>
                 <span class="scan" aria-hidden="true"></span>
             </div>
             <div data-rv="right">
@@ -1668,24 +1695,29 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
      * Hero canvas — a drifting constellation in the house palette
      * that leans toward the cursor. rAF-gated by visibility, capped
      * on small/low-power devices, skipped under reduced-motion.
+     * Neighbor links use a spatial grid (bucket points into LINK-sized
+     * cells, only test the 3x3 neighborhood) instead of an O(n^2) scan
+     * over every pair — same visual result, far fewer distance checks
+     * once N grows past a couple dozen points.
      * ------------------------------------------------------------ */
     (function () {
         var canvas = document.getElementById('heroCanvas');
         if (!canvas || !canvas.getContext || reduce) return;
-        var small = (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) ||
-                    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
-        var N = small ? 42 : 90, LINK = small ? 110 : 150;
-        var ctx, W = 0, H = 0, pts = [];
+        var lowPower = !!(navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+        var small = (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) || lowPower;
+        var N = small ? 42 : 90, LINK = small ? 110 : 150, LINK2 = LINK * LINK;
+        var ctx, W = 0, H = 0, pts = [], grid = {}, cols = 0, rows = 0;
         var mx = -9999, my = -9999;
-        var active = false, running = false;
+        var active = false, running = false, hidden = (typeof document.hidden === 'boolean') && document.hidden;
         var COLS = ['rgba(57,230,255,', 'rgba(111,91,255,', 'rgba(196,107,255,', 'rgba(124,255,178,'];
         function rand(a, b) { return a + Math.random() * (b - a); }
         function fit() {
             var r = canvas.getBoundingClientRect();
-            var dpr = Math.min(2, window.devicePixelRatio || 1);
+            var dpr = Math.min(lowPower ? 1.5 : 2, window.devicePixelRatio || 1);
             canvas.width = Math.max(2, r.width * dpr); canvas.height = Math.max(2, r.height * dpr);
             ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             W = r.width; H = r.height;
+            cols = Math.max(1, Math.ceil(W / LINK)); rows = Math.max(1, Math.ceil(H / LINK));
             pts = [];
             for (var i = 0; i < N; i++) pts.push({
                 x: rand(0, W), y: rand(0, H),
@@ -1698,6 +1730,48 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             mx = e.clientX - r.left; my = e.clientY - r.top;
         }, { passive: true });
         canvas.parentElement.addEventListener('pointerleave', function () { mx = -9999; my = -9999; }, { passive: true });
+        function cellKey(cx, cy) { return cx + ',' + cy; }
+        function buildGrid() {
+            grid = {};
+            for (var i = 0; i < pts.length; i++) {
+                var p = pts[i];
+                var cx = Math.max(0, Math.min(cols - 1, Math.floor(p.x / LINK)));
+                var cy = Math.max(0, Math.min(rows - 1, Math.floor(p.y / LINK)));
+                var key = cellKey(cx, cy);
+                (grid[key] || (grid[key] = [])).push(i);
+            }
+        }
+        function drawLinks() {
+            ctx.lineWidth = 1;
+            for (var cy = 0; cy < rows; cy++) {
+                for (var cx = 0; cx < cols; cx++) {
+                    var here = grid[cellKey(cx, cy)];
+                    if (!here) continue;
+                    for (var ny = cy; ny <= cy + 1; ny++) {
+                        for (var nx = (ny === cy ? cx : cx - 1); nx <= cx + 1; nx++) {
+                            if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+                            var there = grid[cellKey(nx, ny)];
+                            if (!there) continue;
+                            var sameCell = (nx === cx && ny === cy);
+                            for (var hi = 0; hi < here.length; hi++) {
+                                var a = here[hi];
+                                var startJ = sameCell ? hi + 1 : 0;
+                                for (var tj = startJ; tj < there.length; tj++) {
+                                    var b = there[tj];
+                                    var q = pts[a], w = pts[b];
+                                    var ddx = q.x - w.x, ddy = q.y - w.y;
+                                    var d2 = ddx * ddx + ddy * ddy;
+                                    if (d2 >= LINK2) continue;
+                                    var dist = Math.sqrt(d2);
+                                    ctx.strokeStyle = 'rgba(111,120,180,' + (0.14 * (1 - dist / LINK)).toFixed(3) + ')';
+                                    ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(w.x, w.y); ctx.stroke();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         function draw(t) {
             ctx.clearRect(0, 0, W, H);
             for (var i = 0; i < pts.length; i++) {
@@ -1709,20 +1783,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
                 if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
             }
-            // links
-            ctx.lineWidth = 1;
-            for (var a = 0; a < pts.length; a++) {
-                for (var b = a + 1; b < pts.length; b++) {
-                    var q = pts[a], w = pts[b];
-                    var ddx = q.x - w.x, ddy = q.y - w.y;
-                    if (Math.abs(ddx) > LINK || Math.abs(ddy) > LINK) continue;
-                    var dist = Math.sqrt(ddx * ddx + ddy * ddy);
-                    if (dist < LINK) {
-                        ctx.strokeStyle = 'rgba(111,120,180,' + (0.14 * (1 - dist / LINK)).toFixed(3) + ')';
-                        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(w.x, w.y); ctx.stroke();
-                    }
-                }
-            }
+            buildGrid();
+            drawLinks();
             // points
             for (var k = 0; k < pts.length; k++) {
                 var pt = pts[k];
@@ -1735,13 +1797,23 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             if (!active) { running = false; return; }
             draw(now); requestAnimationFrame(loop);
         }
-        function start() { if (!running) { running = true; requestAnimationFrame(loop); } }
+        function start() { if (!running && !hidden) { running = true; requestAnimationFrame(loop); } }
         fit();
+        var intersecting = false;
         if ('IntersectionObserver' in window) {
             new IntersectionObserver(function (entries) {
-                active = entries[0].isIntersecting; if (active) start();
+                intersecting = entries[0].isIntersecting;
+                active = intersecting && !hidden;
+                if (active) start();
             }, { threshold: 0 }).observe(canvas);
-        } else { active = true; start(); }
+        } else { intersecting = true; active = true; start(); }
+        // Pause the rAF loop entirely while the tab is backgrounded — no point
+        // animating a canvas nobody can see, and it keeps background CPU/battery down.
+        document.addEventListener('visibilitychange', function () {
+            hidden = document.hidden;
+            active = intersecting && !hidden;
+            if (active) start();
+        });
         var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(fit, 220); });
     })();
 
@@ -2041,8 +2113,16 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             var f = fitCanvas(cv); scenes[scene](f.ctx, f.w, f.h);
         });
     }
-    window.addEventListener('load', function () { setTimeout(paintAll, 50); });
-    setTimeout(paintAll, 200);
+    // These vector-art thumbnails are decorative (aria-hidden) and mostly
+    // below the fold, so painting them isn't on the critical path — hand it
+    // to the browser's idle time instead of racing it against real work.
+    // requestIdleCallback isn't in Safari; setTimeout is an equally-deferred fallback.
+    function schedulePaintAll() {
+        if ('requestIdleCallback' in window) requestIdleCallback(paintAll, { timeout: 500 });
+        else setTimeout(paintAll, 200);
+    }
+    window.addEventListener('load', schedulePaintAll);
+    schedulePaintAll();
     var prt; window.addEventListener('resize', function () { clearTimeout(prt); prt = setTimeout(paintAll, 200); });
 
     /* ---------- Legacy hash router: old deep links land on the right section ---------- */
