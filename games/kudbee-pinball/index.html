@@ -163,6 +163,8 @@
       case 'combo':  tone(440 + Math.min(comboN, 8) * 110, 0.12, 'square', 0.16, 660 + Math.min(comboN, 8) * 110); break;
       case 'nudgeS': tone(140, 0.07, 'triangle', 0.18, 90); break;
       case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
+      case 'lock':   tone(700, 0.07, 'sine', 0.16, 300); tone(300, 0.12, 'sine', 0.14, 120, 0.05); break;         // ball vanishes into the saucer
+      case 'multiball': tone(200, 0.5, 'sawtooth', 0.22, 1400); tone(400, 0.4, 'square', 0.18, 1200, 0.06); tone(600, 0.3, 'square', 0.16, 1600, 0.12); break;
     }
   }
 
@@ -216,6 +218,7 @@
   // circles : {x,y,r,rest,kick,kind,flash} (bumpers/posts)
   var segs = [], bumpers = [], targets = [], rollovers = [], lamps = [];
   var ramp = null;                           // center loop-ramp trigger
+  var saucer = null;                         // ball-lock saucer (captures a ball, feeds multiball)
   function seg(ax, ay, bx, by, o) { o = o || {}; segs.push({ ax: ax, ay: ay, bx: bx, by: by, r: o.r || 0, rest: o.rest == null ? WALL_REST : o.rest, fric: o.fric == null ? WALL_FRIC : o.fric, kick: o.kick || 0, sling: o.sling || false }); }
   // standup / drop targets (circle colliders that score + light up). grp groups them into a bank.
   function target(x, y, kind, color, grp) { targets.push({ x: x, y: y, r: 17, rest: 0.55, kind: kind, color: color, grp: grp, down: false, lit: false, flash: 0 }); }
@@ -258,7 +261,13 @@
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
     // ---- lower funnel toward the flippers ----
-    seg(L, 1180, 295, 1360, { rest: 0.22 });              // left funnel wall
+    // Left funnel's mouth used to be nearly 2x as wide as the right's (235px vs 135px,
+    // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
+    // of the table AND fed drains to x≈300-380, just past kickZoneL's right edge (x1=300),
+    // so the left kickback silently whiffed on balls it was built to save. Narrowed to
+    // match the right's proportions (mouth ≈150px) so drains land solidly inside the
+    // kickback zone and both outlanes read the same width. See the side-alley rails below.
+    seg(L, 1180, 210, 1360, { rest: 0.22 });              // left funnel wall (was 295 — see above)
     seg(LIN, 1180, 665, 1360, { rest: 0.22 });            // right funnel wall
     // inlane/outlane guide posts
     seg(330, 1250, 360, 1330, { rest: 0.2 });
@@ -274,16 +283,45 @@
     bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
     bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
     // ---- side bumpers: the wide outer alleys next to each wall were empty — a ball
-    //      that strayed out there just slid straight down toward the outlane. These
-    //      live bumpers (same kick as the "asteroid belt" trio) fill that dead space
-    //      and keep the ball alive and bouncing instead of sliding out. Kept clear of
-    //      the side loop-ramp gates (x=140/760, y 860-1000) so those shots stay open. ----
-    bumpers.push({ x: 140, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 745, y: 480, r: 30, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 115, y: 720, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 750, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 120, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 745, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0 });
+    //      that strayed out there just slid straight down toward the outlane. A prior fix
+    //      dropped 6 live bumpers ~55-80px off the outer wall to catch it — but that's
+    //      MORE than a ball's 28px diameter clear of the wall, so a ball actually hugging
+    //      the wall (the exact case a player sees on a bad bounce) slides right past every
+    //      one of them untouched (confirmed in sim: dropping a ball down the bare wall from
+    //      y=800 scored 0 and drained clean — no bumper, no wall, no flipper ever touched it).
+    //      A first attempt to close this with a physical guide-rail wall alongside the outer
+    //      wall backfired worse: with the ball pinned between two near-parallel walls every
+    //      physics substep, the per-contact friction term compounds (resolveAll runs 3
+    //      iterations × 2 surfaces per step) and can shed >85% of the ball's velocity in a
+    //      single 1/300s step — the ball doesn't drain, it just freezes in place, wedged,
+    //      which is worse than the original bug. Circles-with-kick don't have that failure
+    //      mode (a bumper hit is a velocity injection, not a static constraint), so the real
+    //      fix is pulling these bumpers in close enough to the wall to actually reach a
+    //      hugging ball, plus two more to close the resulting gaps — while staying clear of
+    //      the side loop-ramp gates (x 115-165 / 735-785, y 860-1000) so those shots stay
+    //      open, and clear of the standup targets further in.
+    //
+    //      One more failure mode surfaced pulling bumpers in this close: if a bumper's own
+    //      collision radius (kick bumpers depenetrate hard) reaches back past the ball's
+    //      resting spot on the wall, a single resolve pass can shove the ball clean through
+    //      the thin outer wall in one step (both corrections land in the same iteration,
+    //      the wall's 14px-wide corridor gets blown through). Kept each bumper's near edge
+    //      (x − r − ball.r) a few px shy of the wall's own touch line (x=74/826) so the
+    //      worst-case shove is smaller than that corridor and can never tunnel the ball out
+    //      of the table. ----
+    // col: a cooler indigo accent (vs. the center trio's signature cyan) so a wall-side hit
+    // reads as visually distinct — see onBumper()'s particle burst and the render pass below.
+    var WALL_BUMPER_COL = '#7b8cff';
+    bumpers.push({ x: 109, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 751, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — bridges the 480→720 gap
+    bumpers.push({ x: 755, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 107, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 753, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — bridges the 720→ramp-band gap
+    bumpers.push({ x: 757, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 107, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 753, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
     // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
     //      Light a side's pair for a multiplier step. ----
     target(210, 640, 'standup', '#39e6ff', 'L');
@@ -323,6 +361,11 @@
     //      catches a ball that was truly about to be lost out that side. ----
     kickZoneL = { x0: 60, x1: 300, y0: 1382, y1: 1426 };
     kickZoneR = { x0: 600, x1: 840, y0: 1382, y1: 1426 };
+    // ---- ball-lock saucer: a dead-center open pocket (no shot lands here by accident — it's
+    //      below the ramp exit, above the mid-field posts, clear of every bumper/target/lamp
+    //      collider) that captures the ball outright, banks a lock, and serves a fresh ball.
+    //      Lock 2 and the 3rd catch launches MULTIBALL — see onSaucer(). ----
+    saucer = { x: 450, y: 940, r: 24 };
 
     // ---- decorative colored light inserts (fill the open regions, pure render) ----
     var lampSpec = [
@@ -353,6 +396,7 @@
       bonusU = 0;                                             // end-of-ball bonus units
     }
     comboN = 0; comboT = 0; saveT = 0;                        // combo chain + save window reset per serve
+    comboKinds.length = 0; comboTripleAwarded = false;
     if (!keep) { kickL = true; kickR = true; }                 // outlane kickbacks reload each fresh ball (a saved re-serve keeps whatever's left)
     balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: !!keep });
   }
@@ -375,6 +419,17 @@
   // ===== game state =====
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
+  var ballNum = 1;                                  // which ball of the game is in play (for the "BALL N / total" HUD readout)
+  // Ball-lock + multiball: the saucer captures a ball (lockedBalls++) and serves a fresh one
+  // from the shooter lane without ending the current ball. The catch that reaches LOCK_MAX
+  // instead RELEASES every locked ball onto the table at once — real multiball, using the
+  // physics engine's existing multi-ball support (see ballVsBall() and onDrain()'s
+  // `balls.length > 0` guard, both already written to handle >1 simultaneous ball).
+  var lockedBalls = 0, LOCK_MAX = 2, multiballActive = false;
+  // Extra balls: a classic pinball award (adds to ballsLeft instead of ending the game) hooked
+  // into milestones the table already tracks — no parallel scoring system, just a bonus payout
+  // on top of events that already exist. Capped so it stays a rare "you earned this" moment.
+  var extraBallsAwarded = 0, EXTRA_BALL_MAX = 2;
   var mult = 1, multFlash = 0, rampShots = 0;       // playfield multiplier (resets each ball) + loop counter
   var kickL = true, kickR = true;                   // outlane kickbacks — one loaded save per outlane, consumed on use
   var leftRamp = null, rightRamp = null;             // side loop-ramp triggers (mirror the center `ramp`)
@@ -382,6 +437,7 @@
   var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
   var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto free
   var comboN = 0, comboT = 0, bestCombo = 0;        // chained-shot combo (targets/loops/skill within a window)
+  var comboKinds = [], comboTripleAwarded = false;  // shot-kind history for the current chain (named combos)
   var COMBO_WINDOW = 4;                             // seconds to keep a chain alive
   var saveT = 0, BALL_SAVE_S = 8;                   // ball-save grace window after each fresh serve
   var bonusU = 0;                                   // end-of-ball bonus units collected this ball
@@ -393,11 +449,13 @@
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   function resetGame() {
-    score = 0; ballsLeft = 3; balls.length = 0; charge = 0; charging = false; shake = 0;
+    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
+    comboKinds.length = 0; comboTripleAwarded = false;
     skillStreak = 0; bestSkillStreak = 0;
-    kickL = true; kickR = true;
+    kickL = true; kickR = true; extraBallsAwarded = 0;
+    lockedBalls = 0; multiballActive = false;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -492,27 +550,82 @@
 
   // ===== scoring events (all points scale by the playfield multiplier) =====
   function addScore(n) { score += n * mult; scoreFlash = 1; }
-  function bumpMult(reason, x, y) {
+  // `quiet`: skip the callout (still bumps the multiplier/sfx/shake/burst) — used when a
+  // higher-priority named/tiered combo callout just claimed the marquee this same instant,
+  // so a plain "LOOP × N" text can't stomp something more exciting like "TRIPLE LOOP!".
+  function bumpMult(reason, x, y, quiet) {
     if (mult >= 6) { addScore(2500); }                  // already maxed → consolation
     else { mult++; multFlash = 1; }
-    callout(reason, mult + '×  MULTIPLIER', '#ffd34d');
+    if (!quiet) callout(reason, mult + '×  MULTIPLIER', '#ffd34d');
     sfx('mult');
     shake = Math.min(shake + 0.4, 1.5);
     if (x != null) burst(x, y, '#ffd34d', 22, 460);
+    // jackpot flourish: the drop-bank clear is the single biggest one-shot award on the table
+    // (5000 base) — give it its own multi-ring, multi-color burst so it visibly outclasses an
+    // ordinary multiplier bump instead of reusing the same plain amber puff.
+    if (reason === 'DROP BANK!' && x != null) {
+      burst(x, y, '#ffffff', 16, 560); burst(x, y, '#ff8a3c', 18, 500); burst(x, y, '#c46bff', 14, 440);
+      shake = Math.min(shake + 0.5, 1.8);
+    }
+    // extra-ball award: reuse the two biggest existing lamp/bank milestones as the trigger
+    // (see awardExtraBall() — capped, so this can't just be farmed every bank reset).
+    if (reason === 'DROP BANK!' || reason === 'K · U · D') awardExtraBall(reason === 'DROP BANK!' ? 'drop bank cleared' : 'K·U·D lit');
   }
   // combo: chained MAJOR shots (targets / loop / skill) within COMBO_WINDOW seconds.
   // Called BEFORE each event's own callout so headline moments still take the marquee.
-  function comboHit(x, y) {
+  // `kind` identifies WHAT was hit ('rampC'/'rampL'/'rampR'/'target'/'drop'/'skill') so the
+  // chain can recognize actual shot SEQUENCES, not just a bare hit count — see comboSpecial().
+  var RAMP_KINDS = ['rampC', 'rampL', 'rampR'];
+  function isRampKind(k) { return RAMP_KINDS.indexOf(k) !== -1; }
+  // Named combo patterns, checked in priority order against the current unbroken chain:
+  //  - TRIPLE LOOP: all 3 ramps hit within one chain (any order) — the rare, big one.
+  //  - LOOP-TO-LOOP: the last two shots were both ramps back-to-back.
+  //  - RAMP -> BANK: a ramp shot linked directly with a drop-target hit, either order.
+  // Each pays a flat bonus on TOP of the normal 250×comboN scaling, with its own callout
+  // text/color so a player can tell at a glance which shot pattern just paid off.
+  function comboSpecial() {
+    var n = comboKinds.length, last = comboKinds[n - 1], prev = n >= 2 ? comboKinds[n - 2] : null;
+    if (!comboTripleAwarded && RAMP_KINDS.every(function (k) { return comboKinds.indexOf(k) !== -1; })) {
+      comboTripleAwarded = true;
+      return { name: 'TRIPLE LOOP!', bonus: 3000, col: '#ffd34d', rainbow: true };
+    }
+    if (prev != null && isRampKind(last) && isRampKind(prev)) return { name: 'LOOP-TO-LOOP ×' + comboN, bonus: 750, col: '#39ffe0' };
+    if (prev != null && ((isRampKind(last) && prev === 'drop') || (last === 'drop' && isRampKind(prev)))) return { name: 'RAMP → BANK ×' + comboN, bonus: 900, col: '#ff8a3c' };
+    return null;
+  }
+  // Generic (un-named) chain tiers escalate in both label and color as it grows, so a long
+  // chain reads as visibly hotter even without hitting one of the named patterns above.
+  function comboTierLabel(n) { return (n >= 6 ? 'COMBO FRENZY' : (n >= 4 ? 'COMBO STREAK' : 'COMBO')) + ' ×' + n; }
+  function comboTierColor(n) { return n >= 6 ? '#ff5d3c' : (n >= 4 ? '#ff4d9e' : '#c46bff'); }
+  // Returns true iff it just displayed its own callout (an active chain, comboN>=2) — callers
+  // use this to skip their own generic flavor-text callout so it can't stomp a more exciting
+  // named/tiered combo message that landed in the same instant (see bumpMult's `quiet` param).
+  function comboHit(x, y, kind) {
+    kind = kind || 'shot';
     if (comboT > 0) {
       comboN++;
       if (comboN > bestCombo) bestCombo = comboN;
-      var pts = 250 * comboN;
+      comboKinds.push(kind);
+      var special = comboSpecial();
+      var pts = 250 * comboN + (special ? special.bonus : 0);
       addScore(pts);
-      callout('COMBO ×' + comboN, '+' + (pts * mult).toLocaleString(), '#c46bff');
+      var label = special ? special.name : comboTierLabel(comboN);
+      var col = special ? special.col : comboTierColor(comboN);
+      callout(label, '+' + (pts * mult).toLocaleString(), col);
       sfx('combo');
-      burst(x, y, '#c46bff', 12, 340);
-    } else comboN = 1;
+      if (special && special.rainbow) {                     // TRIPLE LOOP: a jackpot-grade flourish
+        burst(x, y, '#39e6ff', 16, 420); burst(x, y, '#c46bff', 16, 460); burst(x, y, '#ffd34d', 18, 500);
+        shake = Math.min(shake + 0.7, 1.8);
+        awardExtraBall('triple loop');                      // TRIPLE LOOP is rare enough to double as the extra-ball trigger
+      } else {
+        burst(x, y, col, 12 + Math.min(comboN, 6) * 2, 340 + Math.min(comboN, 6) * 15);
+      }
+      comboT = COMBO_WINDOW;
+      return true;
+    }
+    comboN = 1; comboKinds = [kind]; comboTripleAwarded = false;
     comboT = COMBO_WINDOW;
+    return false;
   }
   function bankComplete(grp) {
     for (var i = 0; i < targets.length; i++) { var t = targets[i]; if (t.grp === grp && !(t.down || t.lit)) return false; }
@@ -522,7 +635,7 @@
     for (var i = 0; i < targets.length; i++) if (targets[i].grp === grp) { if (drop) targets[i].down = false; else targets[i].lit = false; }
   }
   function onTarget(t) {
-    comboHit(t.x, t.y);
+    comboHit(t.x, t.y, t.kind === 'drop' ? 'drop' : 'target');
     t.flash = 1; shake = Math.min(shake + 0.12, 1.1);
     addScore(t.kind === 'drop' ? 500 : 250);
     bonusU += t.kind === 'drop' ? 8 : 5;
@@ -542,24 +655,69 @@
     if (all) { addScore(3000); bumpMult('K · U · D', r.x, r.y); for (var j = 0; j < rollovers.length; j++) rollovers[j].lit = false; }
   }
   function onRamp(b) {
-    comboHit(ramp.x, ramp.y0);
+    var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
     addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
     burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
-    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220);
-    else callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
+    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
+    else if (!chained) callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
   }
   // Side loop ramps — same trick as the center loop: a hard upward shot through the
   // gate teleports the ball to the top of the field with a scatter, minus the physical
   // "tube" (this table draws loops the same way the center one always has).
   function onSideRamp(b, r) {
     var col = r.side < 0 ? '#c46bff' : '#ffd34d';
-    comboHit(r.x, r.y0);
+    var chained = comboHit(r.x, r.y0, r.side < 0 ? 'rampL' : 'rampR');
     addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
-    burst(r.x, r.y0, col, 22, 460); shake = Math.min(shake + 0.35, 1.4);
+    burst(r.x, r.y0, col, 22, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
+    shake = Math.min(shake + 0.35, 1.4);
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
-    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220);
-    else callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * mult).toLocaleString(), col);
+    if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
+    else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * mult).toLocaleString(), col);
+  }
+  // Ball-lock saucer — captures the ball outright (it's removed from live physics, not
+  // bounced) and serves a fresh one from the shooter lane so play continues without costing
+  // a ball. The catch that fills the lock quota instead triggers MULTIBALL: every locked ball
+  // gets ejected back onto the table at once, alongside whatever ball is already in play.
+  function onSaucer(b, bi) {
+    balls.splice(bi, 1);                                    // the ball vanishes into the saucer
+    addScore(1000); bonusU += 10; sfx('lock');
+    burst(saucer.x, saucer.y, '#39ffe0', 10, 160); burst(saucer.x, saucer.y, '#ffffff', 6, 90);  // tight, "sucked-in" flourish (low speed, small count) vs. every outward-exploding burst elsewhere
+    shake = Math.min(shake + 0.25, 1.3);
+    if (lockedBalls < LOCK_MAX - 1) {
+      lockedBalls++;
+      callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX, '#39ffe0');
+      // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
+      // state — the run in progress (and whichever ball is already live) carries on untouched.
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: true });
+    } else {
+      // lock quota filled — release every locked ball at once. Real multiball: the physics
+      // step already iterates `balls` as an array and onDrain() already only ends the ball
+      // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
+      var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
+      lockedBalls = 0; multiballActive = true;
+      callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
+      sfx('multiball');
+      burst(saucer.x, saucer.y, '#ffd34d', 26, 620); burst(saucer.x, saucer.y, '#39e6ff', 20, 560); burst(saucer.x, saucer.y, '#c46bff', 20, 600);
+      shake = Math.min(shake + 0.8, 1.9);
+      // NOTE: deliberately does NOT also park a ball in the shooter lane here. onDrain() only
+      // runs its "end of ball" logic (bonus payout / ballsLeft-- / next serve) once
+      // balls.length hits 0 — a permanently-parked lane ball would never drain on its own and
+      // would silently wedge that check forever. All `releaseCount` balls play out and the
+      // normal single-ball serve resumes exactly the way it already does once the last one
+      // actually drains.
+      for (var i = 0; i < releaseCount; i++) {
+        var a = (Math.random() - 0.5) * 1.4;
+        balls.push({
+          // saucerCd: a brief immunity window so a released ball can clear the saucer's own
+          // capture radius before it's eligible to be re-locked (it spawns almost on top of
+          // the saucer — without this, one of the two balls would fall straight back in and
+          // silently re-lock itself before either physics or the player got a look at it).
+          x: saucer.x + (Math.random() - 0.5) * 40, y: saucer.y - 60, vx: Math.sin(a) * 220, vy: -560 - Math.random() * 120,
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, saucerCd: 1.2, lowT: 0, trail: [], noSave: true
+        });
+      }
+    }
   }
   // Outlane kickback — a ball about to drain out an outlane instead gets punched
   // back up into the playfield. One charge per outlane, consumed on use, both
@@ -568,11 +726,19 @@
     if (side < 0) kickL = false; else kickR = false;
     var col = '#7CFFb2';
     addScore(250); bonusU += 4; sfx('kick');
-    burst(b.x, b.y, col, 20, 520); shake = Math.min(shake + 0.5, 1.6);
+    burst(b.x, b.y, col, 20, 520); burst(b.x, b.y, '#ffffff', 10, 300);     // shockwave: green save-flash + a hot white core
+    shake = Math.min(shake + 0.5, 1.6);
     b.x = side < 0 ? 220 : 680; b.y = 1300; b.vx = side < 0 ? 260 : -260; b.vy = -1250; b.trail.length = 0;
     callout('KICKBACK!', 'saved', col);
   }
-  function onBumper(c) { if (c.kind === 'bumper') { addScore(100); bonusU += 1; c.flash = 1; sfx('bumper'); shake = Math.min(shake + 0.18, 1.2); burst(c.x, c.y, '#39e6ff', 12, 360); } }
+  function onBumper(c) {
+    if (c.kind !== 'bumper') return;
+    addScore(100); bonusU += 1; c.flash = 1; sfx('bumper'); shake = Math.min(shake + 0.18, 1.2);
+    // distinct look per bumper family: the center "asteroid belt" trio stays signature cyan;
+    // the close-to-wall side bumpers get their own cooler indigo accent (see c.col at buildTable())
+    // so a hit on the wall reads as visually different from a hit in the middle of the field.
+    burst(c.x, c.y, c.col || '#39e6ff', 12, 360);
+  }
   function onSling(x, y) { addScore(25); bonusU += 1; sfx('sling'); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
 
   // ===== physics step =====
@@ -621,6 +787,10 @@
       // out past the flipper/inlane band, gets punched back into play if still loaded.
       if (kickL && kickZoneL && b.vy > 0 && b.x > kickZoneL.x0 && b.x < kickZoneL.x1 && b.y > kickZoneL.y0 && b.y < kickZoneL.y1) onKickback(b, -1);
       else if (kickR && kickZoneR && b.vy > 0 && b.x > kickZoneR.x0 && b.x < kickZoneR.x1 && b.y > kickZoneR.y0 && b.y < kickZoneR.y1) onKickback(b, 1);
+      // ball-lock saucer: captures the ball outright (any approach direction/speed) — see onSaucer().
+      // saucerCd guards a ball that just got released FROM the saucer (multiball) so it can't
+      // fall straight back in a frame later and immediately re-lock itself.
+      if (saucer && (b.saucerCd || 0) <= 0) { var sadx = b.x - saucer.x, sady = b.y - saucer.y; if (sadx * sadx + sady * sady < saucer.r * saucer.r) { onSaucer(b, bi); continue; } }
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -659,7 +829,13 @@
     }
     if (!hit) return;
     tilt += 1.4; tiltFlash = 1; shake = Math.min(shake + 0.5, 1.6); sfx('nudgeS');
-    if (tilt >= TILT_MAX) { tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); sfx('tilt'); flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }
+    if (tilt >= TILT_MAX) {
+      tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); sfx('tilt');
+      flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0;
+      // tilt gets its own harsh, table-wide look — a dead-ember shockwave at every live ball,
+      // distinct from every other event's particles (no other event bursts red/ember + this wide).
+      for (var bi = 0; bi < balls.length; bi++) { var tb = balls[bi]; if (!tb.inLane) burst(tb.x, tb.y, '#ff5d3c', 26, 620); }
+    }
   }
 
   // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
@@ -672,7 +848,7 @@
     // nudge horizontally so a clean vertical drop can never balance on a rail tip / target gap
     b.x = L.x; b.y = 200; b.vx = lane === 0 ? 70 : lane === 2 ? -70 : 45; b.vy = 130; b.trail.length = 0;
     if (lane === skillLit) {
-      comboHit(L.x, 210);
+      comboHit(L.x, 210, 'skill');
       skillStreak++; if (skillStreak > bestSkillStreak) bestSkillStreak = skillStreak;
       // capped streak bonus: +50% of a base skill shot per streak step beyond the first, capped
       var streakStep = Math.min(skillStreak - 1, SKILL_STREAK_CAP);
@@ -695,6 +871,7 @@
   function onDrain() {
     sfx('drain');
     if (balls.length > 0) return;             // multiball: only count when the last ball drains
+    multiballActive = false;                  // multiball ends once every ball is gone
     // ball save: a fresh serve that drains inside the grace window comes right back
     if (saveT > 0 && !tilted) {
       saveT = 0; sfx('save');
@@ -706,7 +883,20 @@
     if (bonusU > 0) { var bp = bonusU * 40; addScore(bp); callout('BONUS', '+' + (bp * mult).toLocaleString(), '#7CFFb2'); }
     ballsLeft--;
     if (ballsLeft <= 0) { gameOver(); }
-    else { spawnBallInLane(); }
+    else { ballNum++; spawnBallInLane(); }
+  }
+
+  // Extra ball: adds to ballsLeft instead of ending the game — the classic pinball award.
+  // Hooked into milestones the table already scores (drop bank, K·U·D, TRIPLE LOOP combo)
+  // rather than inventing a new mechanic; capped at EXTRA_BALL_MAX per game so it stays a
+  // rare, earned moment instead of a routine top-up.
+  function awardExtraBall(reason) {
+    if (extraBallsAwarded >= EXTRA_BALL_MAX) return;
+    extraBallsAwarded++; ballsLeft++;
+    callout('EXTRA BALL!', reason, '#7CFFb2');
+    sfx('save');
+    shake = Math.min(shake + 0.6, 1.8);
+    burst(450, 700, '#7CFFb2', 30, 560); burst(450, 700, '#ffffff', 16, 420);
   }
 
   function gameOver() {
@@ -744,6 +934,7 @@
       if (balls[bk].rampCd > 0) balls[bk].rampCd -= dt;
       if (balls[bk].lRampCd > 0) balls[bk].lRampCd -= dt;
       if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
+      if (balls[bk].saucerCd > 0) balls[bk].saucerCd -= dt;
     }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
@@ -797,7 +988,7 @@
 
     // bumpers / posts
     for (var j = 0; j < bumpers.length; j++) {
-      var c = bumpers[j]; var col = c.kind === 'bumper' ? [57, 230, 255] : [160, 180, 220];
+      var c = bumpers[j]; var col = c.col ? hexToRgb(c.col).split(',').map(Number) : (c.kind === 'bumper' ? [57, 230, 255] : [160, 180, 220]);
       ctx.globalCompositeOperation = 'lighter';
       var gg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * (1.5 + c.flash));
       gg.addColorStop(0, 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + (0.35 + c.flash * 0.5).toFixed(2) + ')');
@@ -808,7 +999,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers(); drawKickback();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
     drawBallSave();
@@ -876,6 +1067,7 @@
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   }
   function hexToRgb(h) { var n = parseInt(h.slice(1), 16); return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255); }
+  function hexToRgba(h, a) { return 'rgba(' + hexToRgb(h) + ',' + a + ')'; }
   function drawLamps() {
     var t = performance.now();
     ctx.globalCompositeOperation = 'lighter';
@@ -962,6 +1154,33 @@
     }
     ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
+  // ball-lock saucer — a dark "hole" (unlike every other collider, it reads as an absence,
+  // not a glowing thing) ringed with the lock progress (unlit / lit pips) so the player can
+  // see at a glance how close the next multiball is.
+  function drawSaucer() {
+    if (!saucer) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.6 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 500));
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(saucer.x, saucer.y, 0, saucer.x, saucer.y, saucer.r * 2.2);
+    g.addColorStop(0, 'rgba(57,255,224,' + (0.16 + pulse * 0.12).toFixed(2) + ')'); g.addColorStop(1, 'rgba(57,255,224,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(saucer.x, saucer.y, saucer.r * 2.2, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(2,4,10,0.85)'; ctx.beginPath(); ctx.arc(saucer.x, saucer.y, saucer.r, 0, TAU); ctx.fill();   // the "hole"
+    ctx.strokeStyle = 'rgba(57,255,224,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(saucer.x, saucer.y, saucer.r, 0, TAU); ctx.stroke();
+    // lock-progress pips, or a bright ring while multiball is live
+    if (multiballActive) {
+      ctx.strokeStyle = 'rgba(255,211,77,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(saucer.x, saucer.y, saucer.r + 8, 0, TAU); ctx.stroke();
+    } else {
+      for (var i = 0; i < LOCK_MAX; i++) {
+        var ang = -Math.PI / 2 + (i - (LOCK_MAX - 1) / 2) * 0.7;
+        var px = saucer.x + Math.cos(ang) * (saucer.r + 10), py = saucer.y + Math.sin(ang) * (saucer.r + 10);
+        ctx.fillStyle = i < lockedBalls ? 'rgba(57,255,224,0.95)' : 'rgba(57,255,224,0.25)';
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, TAU); ctx.fill();
+      }
+    }
+  }
   function drawFlipper(f) {
     var tip = f.tip(), fl = f.flash || 0;
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
@@ -1011,7 +1230,7 @@
     // balls (offset below the sound toggle button in the frame's top-right corner)
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
-    ctx.fillText('BALL ' + (4 - ballsLeft) + ' / 3', W - pad, ry);
+    ctx.fillText('BALL ' + ballNum + ' / ' + (3 + extraBallsAwarded), W - pad, ry);
     ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.026));
     // playfield multiplier (top-center)
@@ -1027,10 +1246,11 @@
       // live combo chain: label + draining timer bar under the multiplier
       if (comboN >= 2 && comboT > 0) {
         var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.14;
-        ctx.fillStyle = '#c46bff'; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
-        ctx.fillText('COMBO ×' + comboN, mx, cyy);
+        var chudCol = comboTierColor(comboN);
+        ctx.fillStyle = chudCol; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
+        ctx.fillText(comboTierLabel(comboN), mx, cyy);
         ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw, 4);
-        ctx.fillStyle = 'rgba(196,107,255,0.9)';
+        ctx.fillStyle = hexToRgba(chudCol, 0.9);
         ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw * clamp(comboT / COMBO_WINDOW, 0, 1), 4);
       }
       ctx.textAlign = 'left';
@@ -1150,7 +1370,13 @@
     forceStart: function () { start(); },
     fireLeftRamp: function () { if (balls[0]) onSideRamp(balls[0], leftRamp); },
     fireRightRamp: function () { if (balls[0]) onSideRamp(balls[0], rightRamp); },
-    fireKickback: function (side) { if (balls[0]) onKickback(balls[0], side); }
+    fireKickback: function (side) { if (balls[0]) onKickback(balls[0], side); },
+    fireSideRamp: function (side) { if (balls[0]) onSideRamp(balls[0], side < 0 ? leftRamp : rightRamp); },
+    comboKinds: function () { return comboKinds.slice(); },
+    extraBalls: function () { return { awarded: extraBallsAwarded, ballsLeft: ballsLeft, ballNum: ballNum }; },
+    bumperCols: function () { return bumpers.map(function (b) { return { x: b.x, y: b.y, col: b.col || null, kind: b.kind }; }); },
+    saucerState: function () { return { saucer: saucer, lockedBalls: lockedBalls, LOCK_MAX: LOCK_MAX, multiballActive: multiballActive, ballCount: balls.length }; },
+    fireSaucer: function () { if (balls[0]) onSaucer(balls[0], 0); }
   };
 
   // ===== boot =====
