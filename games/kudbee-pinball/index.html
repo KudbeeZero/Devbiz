@@ -419,6 +419,7 @@
   // ===== game state =====
   var state = 'gate';                  // gate | play | over
   var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
+  var level = 1, comboExplosion = 0;                  // level (every 50k score), combo visual burst
   var ballNum = 1;                                  // which ball of the game is in play (for the "BALL N / total" HUD readout)
   // Ball-lock + multiball: the saucer captures a ball (lockedBalls++) and serves a fresh one
   // from the shooter lane without ending the current ball. The catch that reaches LOCK_MAX
@@ -450,6 +451,7 @@
 
   function resetGame() {
     score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
+    level = 1; comboExplosion = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
     comboKinds.length = 0; comboTripleAwarded = false;
@@ -549,7 +551,13 @@
   }
 
   // ===== scoring events (all points scale by the playfield multiplier) =====
-  function addScore(n) { score += n * mult; scoreFlash = 1; }
+  function addScore(n) {
+    var prevLevel = level;
+    score += n * mult;
+    level = 1 + Math.floor(score / 50000);  // level increases every 50k
+    if (level > prevLevel) { sfx('mult'); shake = Math.min(shake + 0.6, 1.8); }
+    scoreFlash = 1;
+  }
   // `quiet`: skip the callout (still bumps the multiplier/sfx/shake/burst) — used when a
   // higher-priority named/tiered combo callout just claimed the marquee this same instant,
   // so a plain "LOOP × N" text can't stomp something more exciting like "TRIPLE LOOP!".
@@ -613,6 +621,13 @@
       var col = special ? special.col : comboTierColor(comboN);
       callout(label, '+' + (pts * mult).toLocaleString(), col);
       sfx('combo');
+      // Enhanced combo explosion effect
+      if (comboN >= 6) {
+        comboExplosion = 0.8;  // trigger visual explosion
+        burst(x, y, col, 24 + comboN * 2, 420 + comboN * 20);
+        burst(x, y, '#ffffff', 16, 500);
+        shake = Math.min(shake + 0.8, 1.9);
+      }
       if (special && special.rainbow) {                     // TRIPLE LOOP: a jackpot-grade flourish
         burst(x, y, '#39e6ff', 16, 420); burst(x, y, '#c46bff', 16, 460); burst(x, y, '#ffd34d', 18, 500);
         shake = Math.min(shake + 0.7, 1.8);
@@ -940,6 +955,7 @@
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
     if (comboT > 0) { comboT -= dt; if (comboT <= 0) comboN = 0; }  // combo chain expires
+    if (comboExplosion > 0) comboExplosion = Math.max(0, comboExplosion - dt * 2);  // combo explosion visual
     if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); }
     if (reduceMotion) { dispScore = score; scoreFlash = 0; }        // count-up is a flourish; skip it
     else {
@@ -1227,10 +1243,14 @@
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.018) + 'px Inter, sans-serif';
     ctx.fillText('SCORE', pad, ry + Math.round(mn * 0.052));
-    // balls (offset below the sound toggle button in the frame's top-right corner)
+    // balls (offset below the sound toggle button in the frame's top-right corner) + LEVEL
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
     ctx.fillText('BALL ' + ballNum + ' / ' + (3 + extraBallsAwarded), W - pad, ry);
+    // Level display (space-themed)
+    var levelCol = level >= 5 ? '#ff5d3c' : (level >= 3 ? '#ffd34d' : '#39e6ff');
+    ctx.fillStyle = levelCol; ctx.font = '700 ' + Math.round(mn * 0.026) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('LEVEL ' + level, W - pad, ry - Math.round(mn * 0.045));
     ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.026));
     // playfield multiplier (top-center)
@@ -1252,6 +1272,15 @@
         ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw, 4);
         ctx.fillStyle = hexToRgba(chudCol, 0.9);
         ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw * clamp(comboT / COMBO_WINDOW, 0, 1), 4);
+      }
+      // Combo explosion visual effect (6+ combo)
+      if (comboExplosion > 0 && comboN >= 6) {
+        ctx.globalCompositeOperation = 'lighter';
+        var explosionR = mn * 0.08 * (1 - comboExplosion);
+        var explosionAlpha = comboExplosion * 0.7;
+        ctx.fillStyle = 'rgba(255,' + Math.round(93 + comboExplosion * 100) + ',60,' + explosionAlpha + ')';
+        ctx.beginPath(); ctx.arc(mx, my + Math.round(mn * 0.04), explosionR, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
       }
       ctx.textAlign = 'left';
     }
