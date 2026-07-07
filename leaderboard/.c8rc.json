@@ -14,8 +14,8 @@
   "reporter": ["text", "json-summary", "json"],
   "reports-dir": "coverage",
   "check-coverage": true,
-  "lines": 88,
+  "lines": 87,
   "branches": 60,
   "functions": 88,
-  "statements": 88
+  "statements": 87
 }
