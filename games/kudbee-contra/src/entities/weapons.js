@@ -19,6 +19,7 @@
       color: '#9fefff',
       style: 'bolt',
       sfx: 'shoot',
+      kick: 0.05,           // light camera recoil — a rifle tick, not a boom
     },
     spread: {
       name: 'Spread Shot',
@@ -31,6 +32,7 @@
       color: '#ffd34d',
       style: 'bolt',
       sfx: 'spread',
+      kick: 0.09,           // wider shotgun-style punch
     },
     plasma: {
       name: 'Plasma Cannon',
@@ -44,6 +46,7 @@
       style: 'plasma',
       pierce: true,        // tears through a whole line of enemies
       sfx: 'spread',
+      kick: 0.16,           // heavy cannon — the biggest per-shot camera kick
     },
     laser: {
       name: 'Laser',
@@ -57,6 +60,7 @@
       style: 'laser',
       pierce: true,        // hitscan-fast piercing beam bolts
       sfx: 'shoot',
+      kick: 0.03,           // rapid beam — almost no recoil per bolt
     },
   };
 

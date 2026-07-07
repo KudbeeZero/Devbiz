@@ -53,22 +53,55 @@
   Enemy.prototype.hurt = function (dmg) {
     this.health -= dmg;
     this.flash = 0.08;
-    this.game.particles.spark(this.cx(), this.cy(), '#fff');
-    // Short bright impact core for punchier hit feedback.
-    this.game.particles.emit({ x: this.cx(), y: this.cy(), vx: 0, vy: 0, life: 0.06, size: 11, color: '#ffffff', glow: true, gravity: 0, drag: 0 });
+    // A pistol tick and a plasma/grenade hit shouldn't throw the same
+    // handful of sparks — scale the impact to the weight of the blow.
+    const k = Util.clamp(dmg / 2, 0.7, 2.4);
+    const heavy = dmg >= 3;
+    this.game.particles.spark(this.cx(), this.cy(), '#fff', k);
+    // Short bright impact core for punchier hit feedback, sized to the blow.
+    this.game.particles.emit({ x: this.cx(), y: this.cy(), vx: 0, vy: 0, life: heavy ? 0.09 : 0.06, size: heavy ? 16 : 11, color: '#ffffff', glow: true, gravity: 0, drag: 0 });
+    this.game.audio.hit();
+    if (heavy) {
+      this.game.camera.shake(0.08);
+      this.game._addHitstop(0.035);
+    }
     if (this.health <= 0) this._die();
   };
 
   Enemy.prototype._die = function () {
     this.dead = true;
-    this.game.audio.explosion();
-    this.game.particles.explosion(this.cx(), this.cy(), false);
-    this.game.camera.shake(0.12);
+    this._dieFx();
     this.game.registerKill();
     this.game.addScore(this.score, this.cx(), this.cy());
     this.game.addPower(15);
     this.game.addXP(20);
     this.game.maybeDropPickup(this.cx(), this.cy());
+  };
+
+  // Each archetype dies with a distinct silhouette — a light flyer, a
+  // grounded trooper, and a heavy fixed hardpoint shouldn't all pop the same
+  // way. Keeps the existing explosion()/debris()/zap() particle vocabulary,
+  // just recombined per type.
+  Enemy.prototype._dieFx = function () {
+    const cx = this.cx(), cy = this.cy();
+    if (this.type === 'drone') {
+      // Light robotic flyer: electric short-circuit, no fireball.
+      this.game.audio.zap();
+      this.game.particles.zap(cx, cy, '#c46bff');
+      this.game.camera.shake(0.08);
+    } else if (this.type === 'soldier') {
+      // Grounded trooper: mid explosion + armor plating flies off.
+      this.game.audio.explosion();
+      this.game.particles.explosion(cx, cy, false);
+      this.game.particles.debris(cx, cy, '#b8412f', 5, { speed: 200, size: 6, life: 0.7 });
+      this.game.camera.shake(0.14);
+    } else {
+      // Turret: heaviest, fixed hardpoint — biggest blast + raining metal.
+      this.game.audio.explosion();
+      this.game.particles.explosion(cx, cy, true);
+      this.game.particles.debris(cx, cy, '#5a6270', 9, { speed: 280, size: 8, life: 0.9, gravity: 1100 });
+      this.game.camera.shake(0.22);
+    }
   };
 
   Enemy.prototype.update = function (dt, player, level) {
@@ -220,11 +253,13 @@
     if (this.state === 'intro') return;
     this.health -= dmg;
     this.flash = 0.06;
-    this.game.particles.spark(this.cx() + Util.rand(-40, 40), this.cy() + Util.rand(-30, 30), '#fff');
+    this.game.particles.spark(this.cx() + Util.rand(-40, 40), this.cy() + Util.rand(-30, 30), '#fff', Util.clamp(dmg / 2, 0.7, 2.2));
+    this.game.audio.hit();
     if (this.phaseNum === 1 && this.health <= this.maxHealth * 0.5) {
       this.phaseNum = 2;
       this.game.audio.bossAlarm();
       this.game.camera.shake(0.6);
+      this.game._addHitstop(0.07);
       this.game.particles.explosion(this.cx(), this.cy(), true);
     }
     if (this.health <= 0) this._die();
@@ -233,6 +268,7 @@
   Boss.prototype._die = function () {
     this.dead = true;
     this.game.camera.shake(1);
+    this.game._addHitstop(0.12);
     for (let i = 0; i < 6; i++) {
       setTimeout(() => this.game.particles.explosion(this.cx() + Util.rand(-50, 50), this.cy() + Util.rand(-40, 40), true), i * 120);
     }

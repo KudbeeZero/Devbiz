@@ -55,6 +55,7 @@
     this.deathT = 0;
     this.phase = 0;            // animation phase
     this.aim = 0;              // -1 up, 0 forward, 1 down (visual)
+    this.dustT = 0;            // cooldown gate for running foot-dust puffs
   };
 
   Player.prototype.fullReset = function () {
@@ -70,6 +71,7 @@
     this.iframe = IFRAME_TIME;
     this.game.audio.playerHurt();
     this.game.camera.shake(0.5);
+    this.game._addHitstop(0.04);   // brief punch so a hit always reads
     this.game.hurtFx = 0.45;   // brief red screen-edge flash (drawn by game.js)
     this.game.particles.burst(this.cx(), this.cy(), '#39e6ff', 14, 240, { glow: true });
     if (this.health <= 0) this._die();
@@ -82,6 +84,7 @@
     this.vx = -this.dir * 120;
     this.game.audio.explosion();
     this.game.camera.shake(0.7);
+    this.game._addHitstop(0.09);   // the climactic hit — the biggest freeze
     this.game.particles.explosion(this.cx(), this.cy(), false);
     this.game.onPlayerDeath();
   };
@@ -172,6 +175,15 @@
     // ---- Integrate + collide ----
     this._moveAndCollide(dt, level);
 
+    // ---- Environmental detail: subtle foot dust while sprinting ----
+    // (slide/land/double-jump already puff via _moveAndCollide/update above —
+    // this fills in the gap during a plain flat-out run.)
+    this.dustT -= dt;
+    if (this.grounded && !this.sliding && Math.abs(this.vx) > 140 && this.dustT <= 0) {
+      this.dustT = 0.1;
+      this.game.particles.burst(this.cx() - this.dir * 8, this.y + this.h - 2, '#7fb8c9', 2, 60, { life: 0.28, size: 2, gravity: 40 });
+    }
+
     // ---- Shooting (auto-fire on touch devices) ----
     if ((input.down('fire') || this.game.autoFire) && this.fireCd <= 0 && !this.sliding) this._shoot();
 
@@ -204,8 +216,10 @@
     const my = this.cy() - 8 + dy * 14;
     this.game.projectiles.fireWeapon(w, mx, my, dx, dy, true);
     this.game.audio[w.sfx]();
-    this.game.particles.muzzle(mx, my, dx >= 0 ? 1 : -1);
-    this.game.camera.shake(0.06);
+    // Muzzle flash + camera kick are tuned per weapon (see weapons.js `kick`)
+    // so the Plasma Cannon feels like a cannon and the Laser barely nudges.
+    this.game.particles.muzzle(mx, my, dx >= 0 ? 1 : -1, w);
+    this.game.camera.shake(w.kick != null ? w.kick : 0.06);
   };
 
   Player.prototype._moveAndCollide = function (dt, level) {
