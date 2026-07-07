@@ -206,7 +206,7 @@ checking).
 | `claude/games-studio-roadmap` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/branch-cleanup-ledger` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/coverage-gate-flake-note` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
-| `claude/voidrunner-ship-enemies-fx` | PR #135 (pending merge) | 2026-07-07 | Not yet — awaiting owner merge decision |
+| `claude/voidrunner-ship-enemies-fx` | PR #135 → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/csp-report-only-hsts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
 | `claude/fix-modernmed-sw-cache` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
 | `claude/game-polish-contra` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
