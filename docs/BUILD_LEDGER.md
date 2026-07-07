@@ -58,6 +58,7 @@ Use **only** these labels:
 
 | ID | Repo | PR | Branch | Lane | Status | Gate | Next Owner Action | Notes |
 |---|---|---|---|---|---|---|---|---|
+| DBZ-060 | Devbiz | TBD | N/A | CI/tests | `PLAN` | N/A | — | **Coverage-gate snapshot flake**: `leaderboard/scripts/coverage-snapshot.mjs --check` exact-matches branch-coverage % against the committed snapshot, but `shared/auth.js` branch coverage has been observed to drift run-to-run (72.51% vs 72.64%, no code change) — likely `getKey()`'s JWKS-cache-freshness check (`Date.now() - cached.fetchedAt > JWKS_TTL_MS`) being timing-sensitive. Confirmed recurring across PR #133 and PR #135 (the latter touches zero leaderboard files). Not merge-blocking (`leaderboard/shared/ coverage gate` is a non-required check — `mergeable_state` was `unstable`, not `blocked`, while it failed on #135), but will keep intermittently red-flagging unrelated PRs until fixed. Fix idea: tolerate small branch-% drift (round to whole percent, or check thresholds only, not exact match) rather than chase a moving target. |
 | DBZ-059 | Devbiz | TBD | `claude/polish-12-launch-qa` | CI/tests | `PLAN` | CI jobs green on own PR | — | **Polish L12 — Launch QA**: Playwright smoke + Lighthouse budget in CI (advisory), htmlhint/lychee tightening, 404 page. Runs last. See `POLISH_BUILDOUT.md`. |
 | DBZ-058 | Devbiz | TBD | `claude/polish-11-exhibit` | feature | `PLAN` | Owner browser preview (quality bar) | — | **Polish L11 — Museum exhibit prototype** (north-star Phase B): one premium exhibit at `museum/kudbee-contra/`, simulated proof timeline, data-driven. Depends DBZ-051/057. |
 | DBZ-057 | Devbiz | TBD | `claude/polish-10-shared-tokens` | infrastructure | `PLAN` | Render pass on every touched page | — | **Polish L10 — Shared Deep Lab chrome**: extract `assets/kudbee-ui.css` tokens; apply chrome-only to blog/brain/ship-it/lab/tools hubs. Depends DBZ-051. |
@@ -204,6 +205,8 @@ checking).
 | `claude/leaderboard-audit-architecture-r5b2xh` | PR #133 → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/games-studio-roadmap` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/branch-cleanup-ledger` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/coverage-gate-flake-note` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/voidrunner-ship-enemies-fx` | PR #135 (pending merge) | 2026-07-07 | Not yet — awaiting owner merge decision |
 | `claude/csp-report-only-hsts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
 | `claude/fix-modernmed-sw-cache` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
 | `claude/game-polish-contra` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
