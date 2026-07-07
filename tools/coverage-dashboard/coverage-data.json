@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-07-07T03:19:27.517Z",
-  "commit": "b9fcfcb",
+  "generatedAt": "2026-07-07T05:10:06.150Z",
+  "commit": "b7a312e",
   "thresholds": {
     "lines": 88,
     "branches": 60,

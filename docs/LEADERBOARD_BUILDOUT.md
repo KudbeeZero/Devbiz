@@ -9,9 +9,10 @@
 ## Executive Summary
 
 This document tracks the complete rebuild and enhancement of Kudbee's leaderboard system:
-- ✅ **Phase 0:** Scaffolding + spec documentation
-- ⏳ **Phase 1:** Server-side ALGO wallet authentication
-- ⏳ **Phase 2:** Client SDK enhancements
+- ✅ **Phase 0:** Scaffolding + spec documentation — merged (PR #133)
+- ✅ **Phase 1:** Server-side ALGO wallet authentication — merged (PR #133)
+- ✅ **Phase 2:** Client SDK enhancements — code + unit tests complete;
+  **manual browser/wallet test still pending** (see Phase 2 Testing Checklist)
 - ⏳ **Phase 3:** UI/UX polish and error handling
 - ⏳ **Phase 4:** Multi-game integration (all 9 games)
 - ⏳ **Phase 5:** Production deployment configuration
@@ -44,68 +45,93 @@ docs/LEADERBOARD_BUILDOUT.md (THIS FILE)
 
 ---
 
-## Phase 1: Server-Side ALGO Auth ⏳
+## Phase 1: Server-Side ALGO Auth ✅
+
+**Status:** Merged to `main` in PR #133.
 
 ### Deliverables
-- [ ] Implement `verifyAlgoMessage()` in `algo-auth.js`
+- [x] Implement `verifyAlgoMessage()` in `algo-auth.js`
   - Parse and validate message payload
   - Verify ed25519 signature
   - Check expiration, nonce, timestamp bounds
-- [ ] Integrate into `resolveAuth()` in `shared/auth.js`
-  - Add ALGO pathway (check before Clerk/demo)
-  - Return `{ userId: 'algo:<address>', name, wallet: address, ... }`
-- [ ] Run test suite: all 15+ algo-auth tests passing
-- [ ] Run full API tests: verify Clerk + demo still work
-- [ ] Verify D1 schema works with `algo:<address>` user_ids
+- [x] Integrate into `resolveAuth()` in `shared/auth.js`
+  - Add ALGO pathway (checked before Clerk/demo)
+  - Returns `{ userId: 'algo:<address>', name, wallet: address, ... }`
+- [x] Run test suite: 37 algo-auth tests passing (`test/algo-auth.test.js`)
+- [x] Run full API tests: Clerk + demo still work unchanged
+- [x] `leaderboard/shared/` coverage gate green (88.84%, threshold 88%)
 
 ### Testing Checklist
-- [ ] Valid signature verifies (mock Pera + ed25519)
-- [ ] Invalid signature rejected (401)
-- [ ] Expired signature rejected (401)
-- [ ] Nonce replay attempt rejected (401)
-- [ ] Timestamp bounds enforced
-- [ ] Clerk pathway still works (backward compat)
-- [ ] Demo mode still works (backward compat)
-- [ ] Mixing auth types rejected (only one valid)
+- [x] Valid signature path exercised (ed25519 verify, address round-trip via `publicKeyToAddress`)
+- [x] Invalid signature rejected (401)
+- [x] Expired signature rejected (401)
+- [x] Timestamp-in-future / too-old bounds enforced
+- [x] Clerk pathway still works (backward compat)
+- [x] Demo mode still works (backward compat)
+- [ ] **Nonce replay is NOT enforced on the live request path** — `resolveAuth()` calls
+      `verifyAlgoMessage()` without a `used_nonces` set, so `verifyAlgoMessage()`'s replay
+      check only runs when a caller explicitly passes one (which nothing in production does
+      yet). See README "Security notes" — tracked as a follow-up needing durable storage
+      (D1/KV), not a Phase 1 test gap.
 
 ### Files Modified
 ```
 leaderboard/
-  ├─ shared/algo-auth.js (COMPLETE)     ~250 lines
-  ├─ shared/auth.js (MODIFIED)          +30 lines for integration
-  ├─ test/algo-auth.test.js (COMPLETE)  ~300 lines, all tests green
-  └─ test/api.test.js (MODIFIED)        +15 tests for ALGO flows
+  ├─ shared/algo-auth.js (COMPLETE)     281 lines
+  ├─ shared/auth.js (MODIFIED)          ALGO pathway integrated into resolveAuth()
+  ├─ test/algo-auth.test.js (COMPLETE)  37 tests, all green
+  └─ public/config.js, README.md         AUTH_PROVIDERS config + docs
 ```
 
 ---
 
-## Phase 2: Client SDK Enhancements ⏳
+## Phase 2: Client SDK Enhancements ✅ (code) / ⏳ (manual browser gate)
 
 ### Deliverables
-- [ ] Lazy-load Pera SDK in `kd-leaderboard.js`
-- [ ] Implement wallet connection: `connectAlgoWallet()`
-- [ ] Implement message signing: `signAlgoMessage()`
-- [ ] Update `_authHeaders()` to use ALGO headers when signed in
-- [ ] Implement session caching (localStorage)
-- [ ] Implement `signOut()` for ALGO (clear session + disconnect)
-- [ ] Test on dev leaderboard with testnet Pera
+- [x] Lazy-load `@perawallet/connect` in `kd-leaderboard.js` (dynamic `import()` from
+  esm.sh — ESM-only package, zero-build via CDN, only fetched when `'algo'` is enabled)
+- [x] Implement wallet connection: `AlgoWallet.connect()` / `.reconnect()` (silent, on load)
+- [x] Implement message signing: `AlgoWallet._sign()` via `peraWallet.signData()`
+- [x] Update `Client.prototype._authHeaders()` to send ALGO headers when signed in
+- [x] Implement session caching (`localStorage`, re-signs ~60s before server-side expiry)
+- [x] Implement `signOut()` / `disconnect()` for ALGO (clears cache + wallet session)
+- [ ] **Manual test on dev leaderboard with a real testnet Pera wallet — not yet done.**
+  This requires a live browser + a real Pera wallet extension/app, which this coding
+  session cannot drive. Documented as a manual gate per `docs/PR_FLOW.md` §8 — do not
+  mark Phase 2 fully audit-ready until this is completed or explicitly waived.
+
+### Design notes / honest limitations
+- The API this SDK calls (`connect`, `reconnectSession`, `disconnect`, `signData`,
+  the `connector.on('disconnect', ...)` event) was verified against Pera's public
+  SDK documentation (`@perawallet/connect`), not against a live wallet — the manual
+  gate above is what closes that gap.
+- "Session caching" reuses the same signed message for its freshness window
+  (`ALGO_MAX_AGE_SECONDS`, default 10 min) — it is **not** a 7-day zero-reprompt
+  session. See README "How it works" for the follow-up needed (a server-issued
+  session-token exchange endpoint) to actually deliver that.
+- This PR is scoped to the SDK only — no changes to `leaderboard.html`/`app.js` UI
+  (that's Phase 3, per the phase-order rule: don't jump ahead of an approved phase).
 
 ### Testing Checklist
-- [ ] Pera SDK loads without blocking page
-- [ ] Wallet connect → address displayed
-- [ ] Message signed → signature cached
-- [ ] API calls include ALGO headers
-- [ ] Session survives page refresh
-- [ ] Sign-out clears ALGO session
-- [ ] Fallback to demo if wallet unavailable
-- [ ] Works on Chrome + Firefox (desktop)
+- [x] Pure logic unit-tested in Node (11 tests, `test/algo-client.test.js`): nonce format,
+  payload shape/field-order (verified byte-identical to what the server reconstructs and
+  signs against), base64 encode/decode round-trips, Clerk key decoding unchanged
+- [x] `payloadToBase64()` output round-trips through the server's real `parseAlgoMessage()`
+- [ ] Pera SDK loads without blocking page (manual — needs a browser)
+- [ ] Wallet connect → address displayed (manual)
+- [ ] Message signed → signature cached, reused across requests (manual)
+- [ ] API calls include ALGO headers and the Worker accepts them end-to-end (manual)
+- [ ] Session cache survives page refresh; re-signs near expiry (manual)
+- [ ] Sign-out clears ALGO session + disconnects wallet (manual)
+- [ ] Fallback to demo if wallet unavailable / user cancels (manual)
+- [ ] Works on Chrome + Firefox (desktop) (manual)
 
 ### Files Modified
 ```
 leaderboard/
-  ├─ client/kd-leaderboard.js (MODIFIED)  +~300 lines for ALGO support
-  ├─ public/config.js (MODIFIED)          Add AUTH_PROVIDERS config
-  └─ test/integration.test.js (NEW)       Browser/SDK integration tests
+  ├─ client/kd-leaderboard.js (REWRITTEN)   AlgoWallet provider, multi-provider Client
+  ├─ test/algo-client.test.js (NEW)         11 tests — pure helpers, no DOM/wallet needed
+  └─ README.md, docs/LEADERBOARD_BUILDOUT.md  Updated to match real implementation
 ```
 
 ---
@@ -225,16 +251,21 @@ leaderboard/
 ### Phase 0 Status
 - [x] Phase 0 scaffolding complete
 - [x] Spec documentation created
-- [ ] Awaiting Phase 0 PR merge
+- [x] Phase 0 PR merged (#133, squashed into the same PR as Phase 1)
 
 ### Phase 1 Status
-- [ ] `algo-auth.js` implementation (in progress)
-- [ ] Integration with `auth.js` (pending)
-- [ ] Test suite execution (pending)
-- [ ] Backward compatibility verification (pending)
+- [x] `algo-auth.js` implementation complete
+- [x] Integration with `auth.js` complete
+- [x] Test suite execution: 37 tests green, coverage gate passing (88.84%)
+- [x] Backward compatibility verified (Clerk + demo unaffected)
+- [x] Merged to `main` (PR #133)
 
 ### Phase 2 Status
-- [ ] Client SDK enhancement (not started)
+- [x] Client SDK implementation complete (`client/kd-leaderboard.js`)
+- [x] Pure-logic unit tests green (11 tests, `test/algo-client.test.js`)
+- [ ] Manual browser/wallet test — **not done**, needs a real Pera testnet wallet in an
+  actual browser (this coding session cannot drive one). Do not treat Phase 2 as fully
+  audit-ready until this manual gate is completed or explicitly waived.
 
 ### Phase 3 Status
 - [ ] UI polish (not started)
