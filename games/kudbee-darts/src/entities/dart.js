@@ -205,6 +205,30 @@
     return false;
   };
 
+  // Helper to get current position along flight arc for trail emission.
+  Dart.prototype._getFlightPos = function () {
+    if (this.state !== 'flying') return null;
+    const Util = this.game.constructor.prototype.constructor.name === 'Util' ? window.KD.Util : window.KD.Util || {};
+    const k = this._ft / FLIGHT_TIME;
+    const e = Util.smooth ? Util.smooth(k) : (3 * k * k - 2 * k * k * k);
+    const x0 = this._fromX, y0 = this._fromY, x1 = this.landX, y1 = this.landY;
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const dx = x1 - x0, dy = y1 - y0;
+    const dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = -dy / dl, ny = dx / dl;
+    const curlPx = (this._curl || 0) * this.game.board.Rpx * 0.55 + (this._sway || 0);
+    const cxp = mx + nx * curlPx;
+    const cyp = my + ny * curlPx - 78;
+    const om = 1 - e;
+    const x = om * om * x0 + 2 * om * e * cxp + e * e * x1;
+    const y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
+    const deriv_e = e > 0 ? k * 6 - k * k * 6 : 0;
+    const deriv_om = -deriv_e;
+    const vx = deriv_om * deriv_om * x0 + 2 * (deriv_om * (-deriv_e) * cxp + (-deriv_e) * deriv_e * cxp) + deriv_e * deriv_e * x1;
+    const vy = deriv_om * deriv_om * y0 + 2 * (deriv_om * (-deriv_e) * cyp + (-deriv_e) * deriv_e * cyp) + deriv_e * deriv_e * y1;
+    return { x: x, y: y, vx: vx, vy: vy };
+  };
+
   // ---- Rendering ---------------------------------------------------------
   // The aim reticle + a live power gauge teaching the flick.
   Dart.prototype.drawReticle = function (ctx) {

@@ -63,6 +63,18 @@
     this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.16, size: 22, color: color || '#39e6ff', glow: true });
   };
 
+  /* Dart in-flight trail: glowing particles following the dart trajectory. */
+  Particles.prototype.trail = function (x, y, vx, vy, color) {
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed < 100) return;
+    const trailColor = color || '#39e6ff';
+    this.emit({
+      x: x + Util.rand(-3, 3), y: y + Util.rand(-3, 3),
+      vx: -vx * 0.08 + Util.rand(-20, 20), vy: -vy * 0.08 + Util.rand(-20, 20),
+      life: 0.15, size: 1.5, color: trailColor, glow: true, drag: 2,
+    });
+  };
+
   /* An expanding shockwave ring (Darts-of-Fury style hit feedback). */
   Particles.prototype.shockwave = function (x, y, color, r1, life, lw) {
     this.emit({

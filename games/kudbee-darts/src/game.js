@@ -150,7 +150,17 @@
     const adt = dt * this.timeScale;
     this.particles.update(adt);
     this.camera.update(adt);
-    if (this.dart.state === 'flying') { if (this.dart.update(adt)) this._onDartLand(); }
+    if (this.dart.state === 'flying') {
+      // Emit trail particles during flight.
+      if (!this.reduceMotion && Math.random() < 0.6) {
+        const dartPos = this.dart._getFlightPos && this.dart._getFlightPos();
+        if (dartPos) {
+          const skinCol = (this.dart.skin && this.dart.skin.color) || '#39e6ff';
+          this.particles.trail(dartPos.x, dartPos.y, dartPos.vx || 0, dartPos.vy || 0, skinCol);
+        }
+      }
+      if (this.dart.update(adt)) this._onDartLand();
+    }
 
     // Tumbling "bounce out" darts from a genuine miss (see _spawnBounceDart).
     for (let i = this.bounceDarts.length - 1; i >= 0; i--) {
@@ -322,10 +332,12 @@
 
     const isMiss = res.ring === 'miss';
     if (isMiss) this.audio.clunk(); else this.audio.thud();
-    // Impact "thunk" flash — a quick white bloom right at the tip. Skip it
-    // for a genuine miss: nothing was actually struck, so no bloom.
-    if (!isMiss) this.particles.emit({ x: lx, y: ly, vx: 0, vy: 0, life: 0.12, size: 26, color: '#ffffff', glow: true });
+    // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
+    if (!isMiss) {
+      this.particles.impact(lx, ly, skinCol);
+      this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
+    }
     // Stuck dart: tip lands exactly on the scoring point; lean varies by where
     // on the board it landed (+ a hair of jitter) so groups don't look stamped.
     const lean = -Math.PI * 0.78 + (lx - this.board.cx) / this.board.Rpx * 0.14
