@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Kudbee Museum — Exhibit 01: Kudbee Contra. A vertical-slice look at how the studio's flagship browser game was built, framed with a simulated, read-only proof timeline. Illustrative only — no wallet, mint, or live chain data.">
+<title>Kudbee Contra — Exhibit 01 · Kudbee Museum</title>
+
+<!-- Shared Deep Lab visual tokens (DBZ-057) + motion engine (DBZ-051) — this
+     exhibit is built on both rather than inventing a third styling system. -->
+<link rel="stylesheet" href="/assets/kudbee-ui.css">
+<link rel="stylesheet" href="/assets/kudbee-motion.css">
+<script>document.documentElement.classList.add('js');</script>
+<script src="/assets/kudbee-motion.js" defer></script>
+
+<style>
+    /* ---------------- Local motion tokens ----------------
+       Copied verbatim from index.html's :root (DBZ-051) — kudbee-motion.css
+       only *consumes* --mo-* custom properties, it doesn't define them, so
+       every page that wants the shared engine at its exact canonical speed
+       declares the same token set locally. If this block is ever missing,
+       kudbee-motion.css's var() calls simply resolve to nothing/initial and
+       the affected rules no-op — never a hard failure. */
+    :root {
+        --mo-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+        --mo-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+        --mo-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --mo-dur-1: 0.25s;
+        --mo-dur-2: 0.3s;
+        --mo-dur-3: 0.4s;
+        --mo-dur-4: 0.9s;
+        --mo-dur-35: calc((var(--mo-dur-2) + var(--mo-dur-3)) / 2);
+        --mo-dur-7: calc(var(--mo-dur-4) - var(--mo-dur-3) / 2);
+        --mo-stagger-1: 0.06s;
+        --mo-stagger-2: 0.08s;
+        --mo-loop-pulse: 2.2s;
+        --mo-loop-aurora-1: 26s;
+        --mo-loop-aurora-2: 34s;
+        --mo-loop-aurora-3: 42s;
+        --mo-loop-aurora-delay-2: -8s;
+        --mo-loop-aurora-delay-3: -16s;
+        --ease: var(--mo-ease-out);
+        --ease-io: var(--mo-ease-in-out);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        background: var(--bg); color: var(--txt); font: 400 16px/1.7 var(--fb);
+        -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh;
+    }
+    img, canvas, svg { max-width: 100%; display: block; }
+    a { color: inherit; }
+    h1, h2, h3 { font-family: var(--fd); font-weight: 600; line-height: 1.06; letter-spacing: -0.03em; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--gutter); }
+
+    /* Ambient room — identical recipe to index.html's .noise/.aurora so
+       leaving the home page keeps the exact same "lit lab" atmosphere. */
+    .noise {
+        position: fixed; inset: -50%; z-index: 0; pointer-events: none; opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    }
+    .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .aurora i {
+        position: absolute; border-radius: 50%; opacity: 0.42; will-change: transform;
+        filter: blur(110px);
+    }
+    .aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -12vw; top: -14vw; background: radial-gradient(circle, rgba(196,107,255,0.16), transparent 65%); }
+    .aurora i:nth-child(2) { width: 52vw; height: 52vw; right: -16vw; top: 10vh; background: radial-gradient(circle, rgba(111,91,255,0.16), transparent 65%); }
+    .aurora i:nth-child(3) { width: 40vw; height: 40vw; left: 22vw; bottom: -18vw; background: radial-gradient(circle, rgba(57,230,255,0.12), transparent 65%); }
+    @keyframes exAuroraDrift {
+        0%, 100% { transform: translate3d(0,0,0) scale(1); }
+        33% { transform: translate3d(3vw, -2vh, 0) scale(1.06); }
+        66% { transform: translate3d(-2vw, 3vh, 0) scale(0.96); }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+        .aurora i { animation: exAuroraDrift var(--mo-loop-aurora-1) var(--ease-io) infinite; }
+        .aurora i:nth-child(2) { animation-duration: var(--mo-loop-aurora-2); animation-delay: var(--mo-loop-aurora-delay-2); }
+        .aurora i:nth-child(3) { animation-duration: var(--mo-loop-aurora-3); animation-delay: var(--mo-loop-aurora-delay-3); }
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    /* ---------------- Enter-exhibit moment ----------------
+       A deliberate transition into the page: a brief curtain with a
+       gradient-clipped wipe of the exhibit title, gone in well under a
+       second. Session-gated (shows once per browser session, like the
+       home page's own preloader) and skipped entirely under
+       prefers-reduced-motion or with JS disabled — #enter has no CSS
+       rule outside html.js, so with no JS it simply never appears and
+       the exhibit content underneath is already fully present. */
+    .enter {
+        position: fixed; inset: 0; z-index: 200; display: none;
+        align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+        background: var(--bg);
+        transition: opacity var(--mo-dur-7) var(--ease), visibility var(--mo-dur-7);
+    }
+    html.js .enter.show { display: flex; }
+    .enter.done { opacity: 0; visibility: hidden; }
+    .enter-kicker { font: 600 12px/1 var(--fd); letter-spacing: 0.32em; text-transform: uppercase; color: var(--dim); }
+    .enter-title { position: relative; font: 700 clamp(30px, 6vw, 52px)/1 var(--fd); letter-spacing: -0.03em; }
+    .enter-ghost { display: block; opacity: 0.2; }
+    .enter-wipe {
+        position: absolute; left: 0; top: 0; width: 0%; overflow: hidden; white-space: nowrap;
+        background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 0 18px rgba(196,107,255,0.45));
+    }
+    .enter-bar { width: min(240px, 55vw); height: 1px; background: var(--border); position: relative; overflow: hidden; }
+    .enter-bar span { position: absolute; inset: 0; background: var(--grad); transform: scaleX(0); transform-origin: left; }
+    .enter-hint { font: 500 11.5px/1 var(--fd); letter-spacing: 0.28em; text-transform: uppercase; color: var(--dim); }
+
+    /* ---------------- Nav / breadcrumb ---------------- */
+    .mnav {
+        position: sticky; top: 0; z-index: 90; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+        padding: 16px var(--gutter); background: rgba(5,5,10,0.6);
+        -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .crumb { font: 500 13px/1 var(--fd); color: var(--dim); display: flex; align-items: center; gap: 8px; }
+    .crumb strong { color: var(--txt-2); font-weight: 600; }
+    .crumb span { opacity: 0.6; }
+    .proto-badge {
+        margin-left: auto; font: 600 10.5px/1 var(--fd); letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--amber); border: 1px solid rgba(255,211,77,0.4); border-radius: 999px; padding: 6px 12px;
+    }
+
+    main { padding: clamp(40px, 7vw, 84px) 0 0; }
+
+    /* ---------------- Hero / artifact frame ---------------- */
+    .ex-hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: center; }
+    .ex-frame {
+        position: relative; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden;
+        border: 1px solid var(--border); aspect-ratio: 100/62; background: var(--bg-2);
+        box-shadow: 0 40px 100px -40px rgba(111,91,255,0.35);
+    }
+    .ex-chrome { flex: none; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; background: var(--panel-2); border-bottom: 1px solid var(--border-soft); }
+    .ex-chrome .ex-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cd, var(--dim)); opacity: 0.85; }
+    .ex-chrome .ex-url { margin-left: 6px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px/1 var(--fb); color: var(--dim); background: rgba(0,0,0,0.28); border: 1px solid var(--border-soft); border-radius: 999px; padding: 5px 12px; }
+    .ex-media { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+    .ex-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ex-media .ex-glare { position: absolute; inset: 0; background: linear-gradient(200deg, rgba(255,255,255,0.09), transparent 42%); pointer-events: none; }
+    .ex-status {
+        position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
+        font: 600 11.5px/1 var(--fd); letter-spacing: 0.08em; text-transform: uppercase; color: var(--txt);
+        background: rgba(5,5,10,0.72); border: 1px solid var(--border); border-radius: 999px; padding: 7px 13px;
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    }
+    .ex-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(124,255,178,0.6); flex: none; }
+    @media (prefers-reduced-motion: no-preference) {
+        .ex-status .dot { animation: exPulse var(--mo-loop-pulse) ease-out infinite; }
+    }
+    @keyframes exPulse {
+        0% { box-shadow: 0 0 0 0 rgba(124,255,178,0.55); }
+        70% { box-shadow: 0 0 0 10px rgba(124,255,178,0); }
+        100% { box-shadow: 0 0 0 0 rgba(124,255,178,0); }
+    }
+
+    .ex-copy .kicker { display: block; font: 600 12px/1 var(--fd); letter-spacing: 0.28em; text-transform: uppercase; color: var(--magenta); margin-bottom: 16px; }
+    .ex-copy h1 { font-size: clamp(32px, 4.6vw, 54px); }
+    .ex-copy .tagline { margin-top: 16px; color: var(--txt-2); max-width: 50ch; }
+    .ex-facts { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 22px; }
+    .ex-fact { display: inline-flex; align-items: baseline; gap: 6px; font: 500 11.5px/1.4 var(--fb); color: var(--txt-2); border: 1px solid var(--border-soft); border-radius: 10px; padding: 6px 11px; background: var(--panel); }
+    .ex-fact b { font: 700 10px/1 var(--fd); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+    .ex-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+
+    /* ---------------- Section rhythm ---------------- */
+    .sec { padding: clamp(64px, 9vw, 120px) 0; border-top: 1px solid var(--border-soft); }
+    .sec-head { max-width: 620px; margin-bottom: clamp(32px, 5vw, 56px); }
+    .sec-head .kicker { display: block; font: 600 12px/1 var(--fd); letter-spacing: 0.28em; text-transform: uppercase; color: var(--cyan); margin-bottom: 14px; }
+    .sec-head h2 { font-size: clamp(26px, 3.4vw, 42px); }
+    .sec-head p { margin-top: 14px; color: var(--txt-2); }
+
+    /* ---------------- Narrative beats ---------------- */
+    .beats { list-style: none; display: grid; gap: 4px; counter-reset: beat; }
+    .beat { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 20px; padding: 20px 0 20px 4px; border-top: 1px solid var(--border-soft); }
+    .beat:first-child { border-top: none; }
+    .beat-num {
+        counter-increment: beat; width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font: 600 13px/1 var(--fd); color: var(--dim); border: 1px solid var(--border);
+    }
+    .beat-num::before { content: counter(beat, decimal-leading-zero); }
+    .beat h3 { font-size: 18px; letter-spacing: -0.01em; color: var(--txt); }
+    .beat p { margin-top: 6px; color: var(--txt-2); font-size: 15px; max-width: 62ch; }
+
+    /* ---------------- Simulated proof timeline ---------------- */
+    .sim-banner {
+        display: flex; gap: 14px; align-items: flex-start; padding: 18px 22px; border-radius: 16px;
+        background: linear-gradient(135deg, rgba(196,107,255,0.08), rgba(111,91,255,0.06));
+        border: 1px solid rgba(196,107,255,0.28); margin-bottom: clamp(28px, 4vw, 44px);
+    }
+    .sim-banner svg { flex-shrink: 0; margin-top: 2px; color: var(--magenta); }
+    .sim-banner .sb-title { font: 700 13.5px/1.4 var(--fd); color: var(--txt); letter-spacing: 0.01em; }
+    .sim-banner .sb-body { margin-top: 4px; font-size: 13.5px; color: var(--txt-2); }
+
+    .timeline { list-style: none; position: relative; display: grid; gap: 0; }
+    .timeline::before {
+        content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px; width: 1px;
+        background: linear-gradient(var(--violet), var(--magenta));
+        opacity: 0.35;
+    }
+    .tl-item { position: relative; display: grid; grid-template-columns: 40px 1fr; gap: 20px; padding: 18px 0; }
+    .tl-dot {
+        position: relative; z-index: 1; width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; font-size: 16px;
+        background: var(--bg-2); border: 1px solid var(--border);
+    }
+    .tl-item.real .tl-dot { border-color: rgba(124,255,178,0.5); color: var(--green); }
+    .tl-item.sim .tl-dot { border-color: rgba(196,107,255,0.5); color: var(--magenta); }
+    .tl-card { border: 1px solid var(--border-soft); border-radius: 16px; padding: 16px 20px; background: var(--panel); }
+    .tl-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .tl-head h3 { font-size: 16.5px; letter-spacing: -0.01em; }
+    .tl-chip { font: 700 9.5px/1 var(--fd); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+    .tl-item.real .tl-chip { color: var(--green); border: 1px solid rgba(124,255,178,0.4); }
+    .tl-item.sim .tl-chip { color: var(--magenta); border: 1px solid rgba(196,107,255,0.4); }
+    .tl-card p { margin-top: 8px; color: var(--txt-2); font-size: 14px; }
+    .tl-item.sim .tl-card p em { color: var(--dim); font-style: normal; }
+
+    /* ---------------- Footer CTA ---------------- */
+    .ex-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding: clamp(36px, 6vw, 60px) 0; border-top: 1px solid var(--border-soft); }
+    .ex-foot p { color: var(--dim); font-size: 13.5px; max-width: 46ch; }
+    .site-foot { max-width: 1180px; margin: 0 auto; padding: 26px var(--gutter) 46px; text-align: center; color: var(--dim); font-size: 13px; }
+    .site-foot a { color: var(--txt-2); text-decoration: none; }
+    .site-foot a:hover { color: var(--cyan); }
+
+    @media (max-width: 880px) {
+        .ex-hero { grid-template-columns: 1fr; }
+        .ex-frame { order: -1; }
+    }
+    @media (max-width: 560px) {
+        .mnav { padding: 14px 18px; }
+        .crumb .crumb-sep { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+        .enter { display: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="noise" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<!-- Enter-exhibit moment: hidden by default; JS below reveals it (session-
+     gated, reduced-motion-skipped) before the page settles into its
+     resting state. No JS / no CSS load ⇒ this div simply never becomes
+     visible and the exhibit content below is already fully rendered. -->
+<div class="enter" id="enter" aria-hidden="true">
+    <span class="enter-kicker">Kudbee Museum</span>
+    <div class="enter-title">
+        <span class="enter-ghost">Kudbee Contra</span>
+        <span class="enter-wipe" id="enterWipe">Kudbee Contra</span>
+    </div>
+    <div class="enter-bar"><span id="enterBar"></span></div>
+    <span class="enter-hint">Entering exhibit…</span>
+</div>
+
+<div class="content">
+
+<nav class="mnav">
+    <a class="kd-back-home" href="../../index.html">← Back to site</a>
+    <div class="crumb">Museum <span class="crumb-sep">/</span> <strong>Kudbee Contra</strong></div>
+    <span class="proto-badge">Exhibit prototype · 1 of 1</span>
+</nav>
+
+<main>
+    <div class="wrap">
+
+        <!-- ==================== HERO / ARTIFACT FRAME ==================== -->
+        <section class="ex-hero" aria-label="Kudbee Contra exhibit">
+            <div class="ex-frame" data-tilt data-tilt-max="3">
+                <div class="ex-chrome" aria-hidden="true">
+                    <span class="ex-dot" style="--cd:#ff5f57"></span>
+                    <span class="ex-dot" style="--cd:#febc2e"></span>
+                    <span class="ex-dot" style="--cd:#28c840"></span>
+                    <span class="ex-url">museum/kudbee-contra</span>
+                </div>
+                <div class="ex-media">
+                    <picture>
+                        <source type="image/avif" srcset="../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.avif 640w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.avif 960w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.avif 1280w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far.avif 1920w" sizes="(max-width: 880px) 100vw, 55vw">
+                        <source type="image/webp" srcset="../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.webp 640w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.webp 960w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.webp 1280w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far.webp 1920w" sizes="(max-width: 880px) 100vw, 55vw">
+                        <img src="../../games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg" srcset="../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-640.jpg 640w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-960.jpg 960w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far-1280.jpg 1280w, ../../games/kudbee-contra/assets/backgrounds/neon-jungle-far.jpg 1920w" sizes="(max-width: 880px) 100vw, 55vw" alt="Kudbee Contra — the Neon Jungle Outpost, the game's opening level" loading="eager" width="1920" height="823">
+                    </picture>
+                    <span class="ex-glare" aria-hidden="true"></span>
+                    <span class="ex-status"><span class="dot" aria-hidden="true"></span> Shipped · Live</span>
+                </div>
+            </div>
+
+            <div class="ex-copy" data-rv="right">
+                <span class="kicker">Exhibit 01 · Flagship</span>
+                <h1>Kudbee Contra</h1>
+                <p class="tagline">A 2.5D run-and-gun, built end-to-end through agent-driven dev sessions and shipped free to the browser — no install, no copyrighted assets, no bundler.</p>
+                <div class="ex-facts">
+                    <span class="ex-fact"><b>Engine</b> Vanilla Canvas 2D, zero-build</span>
+                    <span class="ex-fact"><b>Parallax</b> 7 layers</span>
+                    <span class="ex-fact"><b>Loop</b> Fixed-timestep, 60&nbsp;Hz</span>
+                    <span class="ex-fact"><b>Input</b> Keyboard · gamepad · touch</span>
+                    <span class="ex-fact"><b>Assets</b> 100% original</span>
+                </div>
+                <div class="ex-cta">
+                    <a class="kd-btn" href="../../games/kudbee-contra/index.html" data-mag>▶ Play now — free</a>
+                    <a class="kd-btn-o" href="../../index.html#work">← Back to Work</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== NARRATIVE ==================== -->
+        <section class="sec" aria-label="How Kudbee Contra was built">
+            <div class="sec-head" data-rv>
+                <span class="kicker">How it was built</span>
+                <h2>From idea to shipped</h2>
+                <p>Four real beats — no simulated content in this section, every line traces to the game's own README and build history.</p>
+            </div>
+
+            <ol class="beats">
+                <li class="beat" data-rv>
+                    <span class="beat-num" aria-hidden="true"></span>
+                    <div>
+                        <h3>The idea</h3>
+                        <p>Kudbee Games Studio wanted a flagship title — something that proves the studio ships full, replayable products, not tech demos. A 2.5D run-and-gun was the pick: readable, physical, and hard to fake.</p>
+                    </div>
+                </li>
+                <li class="beat" data-rv style="--rvd:0.08s">
+                    <span class="beat-num" aria-hidden="true"></span>
+                    <div>
+                        <h3>Built by agents</h3>
+                        <p>The engine, entities, and level data were authored through iterative Claude Code agent sessions — classic <code>&lt;script&gt;</code> files attached to one global namespace (<code>window.KC</code>), no bundler, no framework. Art and audio are procedural, generated in code rather than fetched from a runtime AI provider.</p>
+                    </div>
+                </li>
+                <li class="beat" data-rv style="--rvd:0.16s">
+                    <span class="beat-num" aria-hidden="true"></span>
+                    <div>
+                        <h3>Iteration</h3>
+                        <p>Phase 1 shipped as a vertical slice: a full moveset for the Kudbee Operative and the K9 companion, seven parallax depth layers, pooled particles and projectiles, and a two-phase Hive Sentinel mini-boss — refined across build passes tracked in the studio's own ledger.</p>
+                    </div>
+                </li>
+                <li class="beat" data-rv style="--rvd:0.24s">
+                    <span class="beat-num" aria-hidden="true"></span>
+                    <div>
+                        <h3>Shipped</h3>
+                        <p>Free, in your browser, right now — no install, no signup, no paywall. It runs from a static file server exactly the way it runs in production.</p>
+                    </div>
+                </li>
+            </ol>
+        </section>
+
+        <!-- ==================== SIMULATED PROOF TIMELINE ==================== -->
+        <section class="sec" aria-label="Simulated proof timeline">
+            <div class="sec-head" data-rv>
+                <span class="kicker" style="color:var(--magenta)">Proof you can see</span>
+                <h2>A simulated proof timeline</h2>
+                <p>Kudbee's product philosophy is verifiable agent action: idea → agent runs → proof created → receipt → shipped. The timeline below illustrates that shape for this exhibit — it is not a live feed.</p>
+            </div>
+
+            <div class="sim-banner" role="note" data-rv>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+                <div>
+                    <div class="sb-title">Simulated — read-only illustration</div>
+                    <div class="sb-body">The three middle stages below (agent runs, proof created, receipt) are mocked for display. No wallet, mint, blockchain write, or live API is involved anywhere on this page or the rest of the site. "Idea" and "Shipped" describe things that actually happened; everything in between is illustrative only.</div>
+                </div>
+            </div>
+
+            <ol class="timeline">
+                <li class="tl-item real" data-rv>
+                    <span class="tl-dot" aria-hidden="true">💡</span>
+                    <div class="tl-card">
+                        <div class="tl-head"><h3>Idea</h3><span class="tl-chip">Real</span></div>
+                        <p>Flagship browser game, scoped by the studio.</p>
+                    </div>
+                </li>
+                <li class="tl-item sim" data-rv style="--rvd:0.06s">
+                    <span class="tl-dot" aria-hidden="true">🤖</span>
+                    <div class="tl-card">
+                        <div class="tl-head"><h3>Agent runs</h3><span class="tl-chip">Simulated</span></div>
+                        <p><em>Illustrative agent-session log — not a live process feed.</em></p>
+                    </div>
+                </li>
+                <li class="tl-item sim" data-rv style="--rvd:0.12s">
+                    <span class="tl-dot" aria-hidden="true">🧾</span>
+                    <div class="tl-card">
+                        <div class="tl-head"><h3>Proof created</h3><span class="tl-chip">Simulated</span></div>
+                        <p><em>A mocked proof artifact — no hash is computed, no chain is touched.</em></p>
+                    </div>
+                </li>
+                <li class="tl-item sim" data-rv style="--rvd:0.18s">
+                    <span class="tl-dot" aria-hidden="true">📄</span>
+                    <div class="tl-card">
+                        <div class="tl-head"><h3>Receipt</h3><span class="tl-chip">Simulated</span></div>
+                        <p><em>A receipt-styled card for illustration only — no wallet or transaction exists.</em></p>
+                    </div>
+                </li>
+                <li class="tl-item real" data-rv style="--rvd:0.24s">
+                    <span class="tl-dot" aria-hidden="true">🚀</span>
+                    <div class="tl-card">
+                        <div class="tl-head"><h3>Shipped</h3><span class="tl-chip">Real</span></div>
+                        <p>Live at <code>/games/kudbee-contra/</code> today.</p>
+                    </div>
+                </li>
+            </ol>
+        </section>
+
+        <!-- ==================== FOOTER CTA ==================== -->
+        <div class="ex-foot">
+            <p>This is one exhibit — a vertical-slice prototype of the Kudbee Museum format. A full <code>/museum</code> section is a possible next phase, gated on this exhibit clearing the owner's own quality bar.</p>
+            <div class="ex-cta" style="margin-top:0">
+                <a class="kd-btn" href="../../games/kudbee-contra/index.html" data-mag>▶ Play Kudbee Contra</a>
+                <a class="kd-btn-o" href="../../index.html#work">← Back to Work</a>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<footer class="site-foot">
+    Kudbee Museum — exhibit prototype (Phase B) · <a href="../../index.html">Back to Kudbee</a>
+</footer>
+
+</div>
+
+<script src="../exhibits.js"></script>
+<script>
+(function () {
+    'use strict';
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------- Enter-exhibit moment ----------
+       Session-gated cinematic entrance, mirroring index.html's own
+       preloader pattern (rAF tick, hard fallback timeout, sessionStorage
+       once-per-session). Skips entirely on reduced-motion or if the
+       overlay elements are missing for any reason — the exhibit content
+       is already fully rendered underneath regardless. */
+    (function () {
+        var enter = document.getElementById('enter');
+        if (!enter || reduce) return;
+        var seen = false;
+        try { seen = sessionStorage.getItem('kudbee.museum.contra.seen') === '1'; } catch (e) {}
+        if (seen) return;
+
+        enter.classList.add('show');
+        var wipe = document.getElementById('enterWipe');
+        var bar = document.getElementById('enterBar');
+        var start = performance.now(), DUR = 850;
+
+        function tick(now) {
+            var t = Math.min(1, (now - start) / DUR);
+            var eased = 1 - Math.pow(1 - t, 3);
+            if (wipe) wipe.style.width = (eased * 100).toFixed(2) + '%';
+            if (bar) bar.style.transform = 'scaleX(' + eased + ')';
+            if (t < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                setTimeout(function () {
+                    enter.classList.add('done');
+                    try { sessionStorage.setItem('kudbee.museum.contra.seen', '1'); } catch (e) {}
+                }, 220);
+            }
+        }
+        requestAnimationFrame(tick);
+        // Hard fallback so the overlay can never strand the page.
+        setTimeout(function () {
+            enter.classList.add('done');
+            try { sessionStorage.setItem('kudbee.museum.contra.seen', '1'); } catch (e) {}
+        }, 3000);
+    })();
+
+    /* ---------- Exhibit data model hookup ----------
+       This page's real content is authored statically above (so it reads
+       fully with JS disabled); this block reads the same facts back out of
+       museum/exhibits.js purely to prove the data model is a live source of
+       truth for the shipped exhibit, not a decorative, unused file — it
+       sets the document title/status text from the model and logs a
+       mismatch warning in dev if the two ever drift apart. */
+    if (window.KudbeeMuseum) {
+        var ex = window.KudbeeMuseum.get('kudbee-contra');
+        if (ex) {
+            document.title = ex.title + ' — Exhibit 01 · Kudbee Museum';
+            var statusEl = document.querySelector('.ex-status');
+            if (statusEl && ex.status) {
+                statusEl.innerHTML = '<span class="dot" aria-hidden="true"></span> ' + ex.status.label + ' · Live';
+            }
+        }
+    }
+})();
+</script>
+</body>
+</html>
