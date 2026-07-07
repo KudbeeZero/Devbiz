@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-06-24T04:01:12.582Z",
-  "commit": "8042fdd",
+  "generatedAt": "2026-07-07T03:19:27.517Z",
+  "commit": "b9fcfcb",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -22,27 +22,27 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 91.15,
-    "branches": 65.41,
-    "functions": 90.9,
-    "statements": 91.15
+    "lines": 88.84,
+    "branches": 72.51,
+    "functions": 93.54,
+    "statements": 88.84
   },
   "totalCounts": {
     "lines": {
-      "covered": 340,
-      "total": 373
+      "covered": 621,
+      "total": 699
     },
     "branches": {
-      "covered": 87,
-      "total": 133
+      "covered": 153,
+      "total": 211
     },
     "functions": {
-      "covered": 20,
-      "total": 22
+      "covered": 29,
+      "total": 31
     },
     "statements": {
-      "covered": 340,
-      "total": 373
+      "covered": 621,
+      "total": 699
     }
   },
   "files": [
@@ -74,29 +74,56 @@
       }
     },
     {
-      "path": "shared/auth.js",
+      "path": "shared/algo-auth.js",
       "metrics": {
-        "lines": 93.63,
-        "branches": 67.69,
-        "functions": 90.9,
-        "statements": 93.63
+        "lines": 88.33,
+        "branches": 84.93,
+        "functions": 100,
+        "statements": 88.33
       },
       "counts": {
         "lines": {
-          "covered": 147,
-          "total": 157
+          "covered": 250,
+          "total": 283
         },
         "branches": {
-          "covered": 44,
-          "total": 65
+          "covered": 62,
+          "total": 73
+        },
+        "functions": {
+          "covered": 9,
+          "total": 9
+        },
+        "statements": {
+          "covered": 250,
+          "total": 283
+        }
+      }
+    },
+    {
+      "path": "shared/auth.js",
+      "metrics": {
+        "lines": 89,
+        "branches": 68.57,
+        "functions": 90.9,
+        "statements": 89
+      },
+      "counts": {
+        "lines": {
+          "covered": 178,
+          "total": 200
+        },
+        "branches": {
+          "covered": 48,
+          "total": 70
         },
         "functions": {
           "covered": 10,
           "total": 11
         },
         "statements": {
-          "covered": 147,
-          "total": 157
+          "covered": 178,
+          "total": 200
         }
       }
     },

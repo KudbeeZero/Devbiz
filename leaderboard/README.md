@@ -147,6 +147,94 @@ the Worker standalone and point `public/config.js` `API_BASE` at its URL.
 > believable bounds and keeps best-ever values. That stops trivial tampering but
 > isn't full anti-cheat — for that, validate match results server-side later.
 
+## Turn on ALGO wallet authentication (Algorand)
+
+The leaderboard supports **ALGO wallet authentication** as an alternative (or parallel)
+to Clerk. Players can sign in with their Algorand wallet and their wallet address
+becomes the persistent user identity.
+
+### How it works
+
+1. User connects their Algorand wallet (Pera, Defly, or another WalletConnect app)
+2. SDK creates a signed message: `{ algo_address, timestamp, nonce, exp }`
+3. User signs with their wallet (one-click approval, no chain write)
+4. API verifies the ed25519 signature against the wallet's public key
+5. Session cached for 7 days
+
+### Setup
+
+1. Ensure Pera SDK is available in `public/leaderboard.html`:
+   ```html
+   <script src="https://cdn.jsdelivr.net/gh/perawallet/connect-button@latest/dist/pera.js"></script>
+   ```
+
+2. Update `public/config.js` to enable ALGO:
+   ```js
+   window.KD_LB_CONFIG = {
+     API_BASE: '',
+     GAME: 'darts',
+     AUTH_PROVIDERS: ['algo', 'demo'],  // NEW: enable ALGO wallet
+   };
+   ```
+
+3. Backend: ALGO auth is enabled by default. To verify:
+   ```bash
+   # In wrangler.toml [env.production.vars]
+   ALGO_AUTH_ENABLED = "true"           # default if unset
+   ALGO_MAX_AGE_SECONDS = "600"          # 10 min message freshness
+   ```
+
+4. Deploy the Worker:
+   ```bash
+   cd leaderboard/worker
+   npx wrangler deploy
+   ```
+
+### Authentication priority
+
+The backend checks auth methods in order:
+1. **ALGO wallet signature** (new)
+2. **Clerk JWT** (existing)
+3. **Demo mode** (existing, keyless)
+
+The first valid auth method is used; others are ignored.
+
+### User identity format
+
+- **ALGO:** `userId = 'algo:XXXXX...XXXXX'` (wallet address with checksum)
+- **Clerk:** `userId = 'clerk:<sub>'` (OpenID sub claim)
+- **Demo:** `userId = 'demo:<id>'` (random ID, localStorage persisted)
+
+All user data is stored in the same `scores` table; the prefix allows mixing auth methods
+(though a player should use the same method consistently).
+
+### Security notes
+
+- **No chain writes:** ALGO auth is based on message signing only; no transactions.
+- **Signature freshness:** Messages expire after 10 minutes; old signatures are rejected.
+- **Nonce replay:** Each signature includes a unique nonce; replay attacks are prevented.
+- **Public key verification:** Signatures are verified against the wallet's ed25519 public key
+  (derived from the Algorand address), not a centralized service.
+- **Wallet control:** The player's private key never leaves their wallet; Kudbee never sees it.
+
+### Testnet vs. mainnet
+
+By default, the Pera SDK connects to **testnet**. For production:
+1. Configure Pera to use mainnet
+2. Update `wrangler.toml` to point API_BASE at the production Worker
+3. Verify a test submission works end-to-end
+
+### Comparison: ALGO vs. Clerk
+
+| Feature | ALGO | Clerk |
+|---------|------|-------|
+| **Setup** | Just Pera SDK | Clerk project + keys |
+| **Cost** | Free | Free (up to limit) |
+| **Identity** | Wallet address | Email/phone + OAuth |
+| **Sign-in flow** | One-click (Pera) | Modal (Google/email/etc) |
+| **Logout** | Disconnect wallet | Clerk sign-out |
+| **Recovery** | User owns wallet; can re-import seed | Clerk account recovery |
+
 ## Wire it into the games / studio nav
 
 The leaderboard page links back to the game via `config.js` `GAME_URL`

@@ -1,19 +1,35 @@
 /* Kudbee Leaderboard — public runtime config (safe to expose; no secrets).
  *
- * Leave CLERK_PUBLISHABLE_KEY empty to run in keyless DEMO mode (pick a
- * display name, no real accounts). To go live with real accounts, paste your
- * Clerk publishable key (pk_test_... or pk_live_...). The issuer/JWKS the
- * backend verifies against are derived from this key automatically.
+ * Authentication providers:
+ *   AUTH_PROVIDERS: ['algo', 'clerk', 'demo']  (checked in order; first valid method used)
  *
- * API_BASE: '' means "same origin" (the dev server and the Worker both serve
- * /api on the same origin). Point it at your Worker URL if the API is hosted
- * separately, e.g. 'https://kudbee-leaderboard.you.workers.dev'.
+ * ALGO Wallet (new):
+ *   - Players connect an Algorand wallet (Pera, Defly, etc)
+ *   - SDK signs a message; API verifies ed25519 signature
+ *   - No chain writes; instant, free verification
+ *   - Set AUTH_PROVIDERS: ['algo', 'demo'] to enable ALGO + demo fallback
+ *
+ * Clerk (existing):
+ *   - OAuth/email-based authentication
+ *   - To enable: set CLERK_PUBLISHABLE_KEY to your publishable key
+ *   - Leave empty to disable
+ *
+ * Demo (keyless, always available):
+ *   - Players pick a display name, no real accounts
+ *   - Enabled by default if other providers not available
+ *   - Can be disabled by setting AUTH_PROVIDERS to exclude 'demo'
+ *
+ * API_BASE: '' means "same origin". Point at your Worker URL if hosted separately.
  */
 window.KD_LB_CONFIG = {
   API_BASE: '',
   CLERK_PUBLISHABLE_KEY: '',
   GAME: 'darts',
-  // Where the "Play Kudbee Darts" link points. On the studio site the game lives
-  // at the repo-root path below; app.js applies this to the .back link.
+  AUTH_PROVIDERS: ['demo'],  // NEW: list enabled providers (algo, clerk, demo)
+                              // Examples:
+                              // ['demo'] — demo mode only
+                              // ['algo', 'demo'] — ALGO wallet + demo fallback
+                              // ['algo', 'clerk', 'demo'] — all three
+  // Where the "Play Kudbee Darts" link points.
   GAME_URL: '/games/kudbee-darts/',
 };
