@@ -160,7 +160,7 @@
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
       <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and fly through the glowing pickups — <b style="color:#39e6ff">shields</b>, <b style="color:#ffd34d">rapid fire</b>, <b style="color:#7CFFb2">triple shot</b> — to blast deeper into the void.</p>
       <div class="badge">Outer-space flyer</div>
-      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost · on touch, <b>drag</b> to steer &amp; <b>tap</b> to fire</p>
+      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the charged gauge to chain</p>
       <div class="ov-stats hidden" id="gateStats"></div>
       <button class="btn" id="startBtn">▶ Launch</button>
       <div class="ov-foot">Desktop &amp; mobile · 60fps neon · headfirst into the asteroid belt</div>
@@ -182,7 +182,7 @@
     </div>
   </div>
 
-  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost</div>
+  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain (once charged)</div>
 </div>
 
 <script>
@@ -286,7 +286,9 @@
     bossWarn: function () { tone(190, 0.45, 'sawtooth', 0.18, 150, 0); tone(190, 0.45, 'sawtooth', 0.18, 150, 0.28); },
     bossHit: function () { noiseHit(0.14, 0.26, 2200); },
     bossDown: function () { noiseHit(0.8, 0.6, 700); tone(150, 0.7, 'sawtooth', 0.3, 40); tone(300, 0.7, 'square', 0.16, 60, 0.05); },
-    over: function () { tone(420, 0.7, 'sawtooth', 0.22, 70); tone(280, 0.9, 'triangle', 0.16, 50, 0.08); }
+    over: function () { tone(420, 0.7, 'sawtooth', 0.22, 70); tone(280, 0.9, 'triangle', 0.16, 50, 0.08); },
+    chain: function () { tone(240, 0.16, 'sawtooth', 0.22, 900, 0); tone(720, 0.24, 'triangle', 0.18, 1400, 0.05); noiseHit(0.35, 0.34, 3000, 'highpass'); },
+    afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
   // a continuous low engine drone that tracks speed + boost
   function engineStart() {
@@ -531,8 +533,11 @@
     for (var i = 0; i < n; i++) ebullets.push({ x: en.x + (i - (n - 1) / 2) * spacing, y: en.y + 20, z: en.z, life: 1, col: en.col });
     var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col || '#ff9a7a', 6, 200); SFX.enemyFire();
   }
-  function hitEnemy(en) {
-    en.hp--; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
+  // dmg defaults to 1 (a regular bolt); the chain weapon calls this with CHAIN_DMG so
+  // the "shoot it with the gun" vs "hit it with the chain" difference is a real,
+  // shared-code mechanical one (hp math), not a separate scoring/FX path.
+  function hitEnemy(en, dmg) {
+    en.hp -= dmg || 1; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
     if (en.hp <= 0) {
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
       combo++; comboT = 2.2; var gain = (en.scoreBase || 250) * Math.max(1, combo); score += gain;
@@ -544,7 +549,47 @@
       ring(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 120 : 95, en.type === 'gunship' ? 0.7 : 0.55, en.type === 'gunship' ? 4.5 : 3.5);
       if (en.type === 'turret') ring(sp.sx, sp.sy, '#ffffff', 130, 0.5, 2.5);   // extra pulse for the mine's spike ring
       flash(gain, sp.sx, sp.sy); SFX.enemyKill();
+      // the chain weapon's own kills don't refill its meter — only regular combat does,
+      // so triggering it is always paid for out of prior kills, never self-sustaining.
+      if (!chaining) chainMeter = Math.min(CHAIN_MAX, chainMeter + CHAIN_CHARGE);
     }
+  }
+
+  // ===== chain weapon: single-button piercing beam down the forward firing line =====
+  // Gated entirely behind a full meter (no partial/spammable use). Hits every enemy
+  // whose world x/y is within CHAIN_RADIUS of the ship's line of fire (camX/camY),
+  // regardless of z — exactly the "several enemies line up at different z" case the
+  // pseudo-3D tunnel produces naturally. Resolves instantly (deterministic + testable
+  // via window.VOID) but paints as a chained, staggered beam over drawChainBeam()'s
+  // short life so a multi-kill actually reads as a chain, not one static line.
+  function fireChain() {
+    if (state !== 'play' || chainMeter < CHAIN_MAX) return;
+    chainMeter = 0;
+    var targets = [];
+    for (var i = 0; i < enemies.length; i++) {
+      var en = enemies[i]; if (!en.alive) continue;
+      var dx = en.x - camX, dy = en.y - camY, rr = CHAIN_RADIUS + en.r;
+      if (dx * dx + dy * dy < rr * rr) targets.push(en);
+    }
+    targets.sort(function (a, b) { return b.z - a.z; });   // far → near: beam reads as piercing in from the vanishing point
+    var rp = project(camX, camY, 240);
+    var hits = [];
+    for (var t = 0; t < targets.length; t++) {
+      var en2 = targets[t], sp = project(en2.x, en2.y, en2.z);
+      hits.push({ x: sp.sx, y: sp.sy, revealAt: reduceMotion ? 0 : t / Math.max(1, targets.length) });
+    }
+    var beamLife = reduceMotion ? 0.18 : 0.5;
+    chainBeam = { life: beamLife, max: beamLife, ox: rp.sx, oy: rp.sy, hits: hits };
+    var comboBefore = combo;
+    chaining = true;
+    for (var k = 0; k < targets.length; k++) hitEnemy(targets[k], CHAIN_DMG);
+    chaining = false;
+    var killCount = combo - comboBefore;
+    lastChainResult = { hitCount: targets.length, killCount: killCount, comboBefore: comboBefore, comboAfter: combo };
+    shake = Math.min(shake + 0.5 + Math.min(0.9, targets.length * 0.15), 1.9);
+    SFX.chain();
+    if (killCount > 0) callout('CHAIN ×' + combo, killCount + (killCount === 1 ? ' enemy destroyed' : ' enemies destroyed'), '#39e6ff');
+    else callout('CHAIN FIRED', targets.length ? 'targets survived the hit' : 'no targets in line', '#5a6276');
   }
   // per-type movement — dispatched once per enemy per tick from update()'s enemy loop.
   function updateEnemyMovement(en, dt) {
@@ -665,15 +710,33 @@
   var powerups = [], powerT = 11, rapidT = 0, tripleT = 0;
   var MAXSHIELD = 5, RAPID_DUR = 7.5, TRIPLE_DUR = 7.5;
   var keys = {};
+
+  // afterburner: rather than a new pickup, the existing boost meter itself pays off —
+  // holding it pinned at max for AB_HOLD seconds kicks in a genuine "rocket booster"
+  // state (extra top speed on top of normal boost + a distinct warp-streak/hot-flame
+  // look), so the Shift-held meter the owner already has reads as leading somewhere
+  // instead of just being a continuously-held speed dial.
+  var boostFullT = 0, afterburner = false;
+  var AB_HOLD = 0.55, AB_SPEED_BONUS = 340;
+
+  // chain weapon: a piercing beam that destroys every enemy aligned close to the
+  // forward firing line in one shot. Charges only from enemy kills (not rocks) so it
+  // reads as an earned payoff tied to combat, not a giveaway; fully gated behind a
+  // full meter — no partial/spammable use. `chaining` suppresses meter-charging for
+  // kills the chain itself causes, so a chain can't refill itself mid-swing.
+  var chainMeter = 0, CHAIN_MAX = 100, CHAIN_CHARGE = 16, CHAIN_DMG = 3, CHAIN_RADIUS = 110;
+  var chaining = false, chainBeam = null, lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
   var BASE_SPEED = 360, MAX_SPEED = 1700;
-  function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620; }
+  function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620 + (afterburner ? AB_SPEED_BONUS : 0); }
 
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
+    boostFullT = 0; afterburner = false;
+    chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     comets.length = 0; cometT = rand(12, 18);
@@ -724,6 +787,13 @@
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
+    // afterburner: pinning boost at max for AB_HOLD seconds kicks in the genuine
+    // "rocket booster" state (curSpeed() picks this up next tick); dropping boost
+    // even briefly resets the hold timer, so it has to be earned by committing to it.
+    if (boost > 0.97) { boostFullT += dt; } else { boostFullT = 0; }
+    var wasAfterburner = afterburner;
+    afterburner = boostFullT > AB_HOLD;
+    if (afterburner && !wasAfterburner) { callout('AFTERBURNER', 'max thrust engaged', '#ffffff'); shake = Math.min(shake + 0.3, 1.4); SFX.afterburner(); }
     engineSet(speed, boost);                              // engine drone tracks speed + boost
     exhaust(dt);                                          // thruster wash off the engines
     updateComets(dt);                                     // rare decorative background comet streaks
@@ -960,6 +1030,7 @@
     if (co.life > 0) co.life -= dt;
     while (pops.length && pops[0].life <= 0) pops.shift();
     for (var ri = rings.length - 1; ri >= 0; ri--) { rings[ri].life -= dt; if (rings[ri].life <= 0) rings.splice(ri, 1); }
+    if (chainBeam) { chainBeam.life -= dt; if (chainBeam.life <= 0) chainBeam = null; }
     draw(now);
   }
 
@@ -986,10 +1057,12 @@
     drawEbullets();
     drawParticles();
     drawRings();
+    drawChainBeam();
     if (state !== 'gate') drawShip();
     drawPops();
     ctx.restore();
 
+    drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
     drawHitFlash();             // screen-space damage vignette (impact readability for the bigger ship)
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
@@ -1003,6 +1076,64 @@
     var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
     vg.addColorStop(0, 'rgba(255,60,50,0)'); vg.addColorStop(1, 'rgba(255,40,30,' + (fa * 0.35).toFixed(2) + ')');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+  // the chain weapon's payoff shot: a bright core beam from the ship's forward point
+  // through every hit enemy (far → near), plus a per-hit flash that reveals on a
+  // stagger (chainBeam.hits[i].revealAt) so a multi-kill actually *reads* as chained
+  // through each target rather than one straight line drawn once. Reduced motion still
+  // shows the beam (it's the core mechanic's feedback, not pure decoration) but skips
+  // the stagger/glow so it's a single clean flash instead of an animated sweep.
+  function drawChainBeam() {
+    if (!chainBeam) return;
+    var k = 1 - chainBeam.life / chainBeam.max, coreAlpha = clamp(chainBeam.life / chainBeam.max, 0, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (!reduceMotion) {
+      ctx.strokeStyle = 'rgba(120,220,255,' + (0.4 * coreAlpha).toFixed(2) + ')'; ctx.lineWidth = 15; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(chainBeam.ox, chainBeam.oy);
+      for (var i = 0; i < chainBeam.hits.length; i++) ctx.lineTo(chainBeam.hits[i].x, chainBeam.hits[i].y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(220,248,255,' + (0.9 * coreAlpha).toFixed(2) + ')'; ctx.lineWidth = reduceMotion ? 3 : 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(chainBeam.ox, chainBeam.oy);
+    for (var j = 0; j < chainBeam.hits.length; j++) ctx.lineTo(chainBeam.hits[j].x, chainBeam.hits[j].y);
+    ctx.stroke();
+    for (var h = 0; h < chainBeam.hits.length; h++) {
+      var hit = chainBeam.hits[h], reveal = k - hit.revealAt; if (reveal < 0) continue;
+      var fa = clamp(1 - reveal * 3, 0, 1); if (fa <= 0) continue;
+      ctx.fillStyle = 'rgba(255,255,255,' + (fa * 0.95).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(hit.x, hit.y, 18 - fa * 4, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(120,220,255,' + (fa * 0.5).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(hit.x, hit.y, 30 - fa * 6, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+  // afterburner screen-space read: radiating speed-lines from the vanishing point +
+  // a hot cyan-white edge glow, distinct from the ordinary star-streak warp effect
+  // that kicks in at any high boost/speed. Purely cosmetic (the speed bonus lives in
+  // curSpeed()), so fully skipped under reduced motion.
+  function drawAfterburnerFX() {
+    if (!afterburner || reduceMotion) return;
+    var now = performance.now(), pulse = 0.7 + 0.3 * Math.sin(now / 55);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var n = 14, reach = Math.max(W, H) * 0.62;
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * TAU + now / 2400;
+      var len = reach * (0.55 + 0.45 * Math.sin(i * 2.1 + now / 260));
+      var x1 = cx + Math.cos(a) * 40, y1 = cy + Math.sin(a) * 40;
+      var x2 = cx + Math.cos(a) * len, y2 = cy + Math.sin(a) * len;
+      var g = ctx.createLinearGradient(x1, y1, x2, y2);
+      g.addColorStop(0, 'rgba(210,245,255,' + (0.5 * pulse).toFixed(2) + ')'); g.addColorStop(1, 'rgba(120,220,255,0)');
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+    vg.addColorStop(0, 'rgba(120,220,255,0)'); vg.addColorStop(1, 'rgba(120,220,255,' + (0.16 * pulse).toFixed(2) + ')');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
   }
   function drawCallout(now) {
     if (co.life <= 0) return;
@@ -1266,25 +1397,36 @@
     // ---- twin engine exhaust (always, behind hull) ----
     var flick = 0.8 + 0.2 * Math.sin(now / 40) + Math.random() * 0.12;
     var thrust = (0.55 + boost * 0.7) * flick;
+    // afterburner: a hotter white-blue core + a much longer trail on top of the normal
+    // boost exhaust, so lighting it reads as a distinct "rocket booster" moment rather
+    // than just a bigger version of the continuously-held boost flame.
+    var abK = afterburner ? (0.85 + 0.15 * Math.sin(now / 35)) : 0;
     ctx.globalCompositeOperation = 'lighter';
     for (var e = -1; e <= 1; e += 2) {
       var ex = e * 15;
-      var eg = ctx.createRadialGradient(ex, 24, 0, ex, 24, 30 + boost * 46);
+      var eg = ctx.createRadialGradient(ex, 24, 0, ex, 24, 30 + boost * 46 + abK * 26);
       eg.addColorStop(0, 'rgba(120,255,200,' + (0.55 + boost * 0.4).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(120,255,200,0)');
-      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, 24, 30 + boost * 46, 0, TAU); ctx.fill();
+      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, 24, 30 + boost * 46 + abK * 26, 0, TAU); ctx.fill();
       // flame tongue
       ctx.fillStyle = 'rgba(180,255,225,' + (0.7 * flick).toFixed(2) + ')';
       ctx.beginPath(); ctx.moveTo(ex - 6, 20); ctx.quadraticCurveTo(ex, 30 + thrust * 60, ex + 6, 20); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(57,230,255,' + (0.5 * flick).toFixed(2) + ')';
       ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 40, ex + 3, 22); ctx.closePath(); ctx.fill();
+      if (abK > 0) {
+        // white-hot afterburner core spike, riding inside the normal flame
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * abK).toFixed(2) + ')';
+        ctx.beginPath(); ctx.moveTo(ex - 2, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 78, ex + 2, 22); ctx.closePath(); ctx.fill();
+      }
       // long soft vapor trail — persistent thrust wash behind the flame tongue,
-      // stretches with speed/boost (skipped under reduced motion)
+      // stretches with speed/boost (skipped under reduced motion); afterburner
+      // stretches it much further and shifts it hot white-blue.
       if (!reduceMotion) {
-        var trailLen = 46 + boost * 90 + Math.min(60, speed * 0.05);
+        var trailLen = 46 + boost * 90 + Math.min(60, speed * 0.05) + abK * 140;
+        var trailCol = abK > 0 ? '210,245,255' : '120,255,200';
         var tg = ctx.createLinearGradient(ex, 20, ex, 20 + trailLen);
-        tg.addColorStop(0, 'rgba(120,255,200,' + (0.35 + boost * 0.25).toFixed(2) + ')');
-        tg.addColorStop(1, 'rgba(120,255,200,0)');
-        ctx.fillStyle = tg; ctx.fillRect(ex - 3, 20, 6, trailLen);
+        tg.addColorStop(0, 'rgba(' + trailCol + ',' + (0.35 + boost * 0.25 + abK * 0.35).toFixed(2) + ')');
+        tg.addColorStop(1, 'rgba(' + trailCol + ',0)');
+        ctx.fillStyle = tg; ctx.fillRect(ex - (3 + abK * 2), 20, 6 + abK * 4, trailLen);
       }
     }
     ctx.globalCompositeOperation = 'source-over';
@@ -1402,10 +1544,36 @@
       ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
       ctx.fillText(label, W - pad, my - 6); my -= step;
     }
-    if (boost > 0.02) meter('BOOST', boost, '#7CFFb2');
+    if (boost > 0.02) meter(afterburner ? 'AFTERBURNER' : 'BOOST', boost, afterburner ? '#ffffff' : '#7CFFb2');
     if (rapidT > 0) meter('RAPID', rapidT / RAPID_DUR, '#ffd34d');
     if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    drawChainMeter();
+  }
+
+  // chain-weapon readout: a bottom-center gauge that fills from kills and pulses
+  // bright white with a "READY" callout once full — doubles as the touch hit-target
+  // (see chainMeterRect(), shared with the pointerdown handler) so the single-button
+  // trigger works the same way on desktop (C key) and mobile (tap the gauge).
+  function chainMeterRect() {
+    var w = Math.min(W, H) * 0.34, h = Math.round(Math.min(W, H) * 0.03);
+    return { x: cx - w / 2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
+  }
+  function drawChainMeter() {
+    if (state !== 'play') return;
+    var r = chainMeterRect(), ready = chainMeter >= CHAIN_MAX, frac = clamp(chainMeter / CHAIN_MAX, 0, 1);
+    var pulse = ready ? (0.7 + 0.3 * Math.sin(performance.now() / 140)) : 1;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = ready ? '#ffffff' : '#8a93a8'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(ready ? '⬡ CHAIN READY — C / tap' : 'CHAIN', cx, r.y - 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = ready ? ('rgba(120,220,255,' + pulse.toFixed(2) + ')') : '#39e6ff';
+    ctx.fillRect(r.x, r.y, r.w * frac, r.h);
+    if (ready && !reduceMotion) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.6 * pulse).toFixed(2) + ')'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
 
   function drawIdle(now) {
@@ -1428,6 +1596,7 @@
     if (!introDone) { runIntro(); e.preventDefault(); return; }   // the boot intro eats the first keypress
     if (e.key === 'Enter' && state !== 'play') { start(); return; }
     if (e.key === 'm' || e.key === 'M') { audioInit(); audioResume(); setMuted(!muted); return; }
+    if ((e.key === 'c' || e.key === 'C') && state === 'play') { fireChain(); e.preventDefault(); return; }
     if (state !== 'play') return;
     setKey(e, true);
   });
@@ -1437,6 +1606,14 @@
   var dragId = null, lastFx = 0, lastFy = 0, autofire = false;
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
+    // tapping the chain gauge fires the chain weapon instead of steering/autofire —
+    // the single-button trigger on touch, matching the C key on desktop.
+    if (chainMeter >= CHAIN_MAX) {
+      var cr = chainMeterRect();
+      if (e.clientX >= cr.x - 10 && e.clientX <= cr.x + cr.w + 10 && e.clientY >= cr.y - 22 && e.clientY <= cr.y + cr.h + 10) {
+        fireChain(); return;
+      }
+    }
     dragId = e.pointerId; lastFx = e.clientX; lastFy = e.clientY; autofire = true; fire();
   }, { passive: true });
   canvas.addEventListener('pointermove', function (e) {
@@ -1543,7 +1720,16 @@
     getScores: function () { return loadScores(); },
     clearScores: function () { try { localStorage.removeItem(SCORES_KEY); } catch (e) {} },
     submitScore: function (name, s, d) { pendingScore = Math.max(0, Math.round(s)); pendingDist = Math.round(d || 0); return commitScore(name); },
-    scoreQualifies: function (s) { return scoreQualifies(s, loadScores()); }
+    scoreQualifies: function (s) { return scoreQualifies(s, loadScores()); },
+    // ---- afterburner debug hooks ----
+    get afterburnerActive() { return afterburner; }, get boostFullT() { return boostFullT; }, get boost() { return boost; },
+    forceAfterburner: function () { boost = 1; boostFullT = AB_HOLD + 0.1; afterburner = true; },
+    // ---- chain weapon debug hooks ----
+    get chainMeter() { return chainMeter; }, get chainMax() { return CHAIN_MAX; }, get chainReady() { return chainMeter >= CHAIN_MAX; },
+    get chainDmg() { return CHAIN_DMG; }, get chainRadius() { return CHAIN_RADIUS; },
+    forceChainReady: function () { chainMeter = CHAIN_MAX; },
+    fireChain: function () { fireChain(); },
+    get lastChain() { return lastChainResult; }
   };
 })();
 </script>
