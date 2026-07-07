@@ -1,26 +1,39 @@
 /* =====================================================================
  * Kudbee Leaderboard — shared/auth.js
- * Resolves the caller's identity for an incoming request. Two modes:
+ * Resolves the caller's identity for an incoming request. Three modes:
  *
- *   1. Clerk (production): the frontend sends `Authorization: Bearer <jwt>`
+ *   1. ALGO wallet (new): the frontend sends `Authorization: Bearer <sig>`
+ *      where <sig> is a base64-encoded ed25519 signature, and
+ *      `X-Algo-Message: <payload>` contains the signed message
+ *      (base64-encoded JSON: { algo_address, timestamp, nonce, exp }).
+ *      We verify it *networklessly* — ed25519 signature against the wallet's
+ *      public key (derived from the address).
+ *
+ *   2. Clerk (production): the frontend sends `Authorization: Bearer <jwt>`
  *      where the JWT is a Clerk session token (Clerk.session.getToken()).
  *      We verify it *networklessly* — RS256 signature against the instance
  *      JWKS (fetched once and cached), plus iss/exp/nbf checks. Works the
  *      same on Cloudflare Workers and Node 18+ (both expose globalThis.crypto
  *      + fetch).
  *
- *   2. Demo (keyless): when no Clerk issuer is configured (or env.ALLOW_DEMO
+ *   3. Demo (keyless): when no Clerk issuer is configured (or env.ALLOW_DEMO
  *      is on), a caller may send `X-Demo-User: <id>` to act as a sandbox
  *      identity. This lets the whole thing run + be tested before any keys
  *      exist; turn it OFF in production by setting ALLOW_DEMO=0.
  *
- * Resolve config (env) — all optional until you go live with Clerk:
+ * Auth precedence: ALGO → Clerk → Demo (first valid method is used)
+ *
+ * Resolve config (env) — all optional:
+ *   ALGO_AUTH_ENABLED       "1"/"true" (default: true) to enable ALGO wallet
+ *   ALGO_MAX_AGE_SECONDS    Max message age in seconds (default: 600)
  *   CLERK_ISSUER            e.g. https://your-app.clerk.accounts.dev
  *   CLERK_PUBLISHABLE_KEY   pk_test_... (issuer is derived from it if unset)
  *   CLERK_JWKS_URL          override (defaults to <issuer>/.well-known/jwks.json)
  *   CLERK_AUTHORIZED_PARTIES  comma list of allowed `azp` origins (optional)
  *   ALLOW_DEMO              "1"/"true" to permit demo identities
  * ===================================================================== */
+
+import { verifyAlgoMessage, isAlgoAuthEnabled } from './algo-auth.js';
 
 const subtle = (globalThis.crypto && globalThis.crypto.subtle);
 
@@ -128,14 +141,43 @@ function header(headers, name) {
 // a token that is *present but invalid* (so the adapter can 401 clearly).
 export async function resolveAuth(headers, env) {
   env = env || {};
+
+  // 1. Try ALGO wallet authentication (new)
+  if (isAlgoAuthEnabled(env)) {
+    const authz = header(headers, 'authorization') || header(headers, 'Authorization');
+    const algoMsg = header(headers, 'x-algo-message') || header(headers, 'X-Algo-Message');
+    if (authz && /^Bearer\s+/i.test(authz) && algoMsg) {
+      const sig = authz.replace(/^Bearer\s+/i, '').trim();
+      try {
+        // Will throw authError if signature is invalid
+        return await verifyAlgoMessage(sig, algoMsg, env);
+      } catch (e) {
+        // If it's an auth error and looks like ALGO (not Clerk), throw it
+        if (e.authError && e.code && e.code.startsWith('algo_')) {
+          throw e;
+        }
+        // Otherwise fall through to try Clerk/demo
+      }
+    }
+  }
+
+  // 2. Try Clerk JWT authentication
   const authz = header(headers, 'authorization') || header(headers, 'Authorization');
   if (authz && /^Bearer\s+/i.test(authz)) {
     const token = authz.replace(/^Bearer\s+/i, '').trim();
-    const claims = await verifyClerkJWT(token, env);
-    const name = claims.name || claims.username
-      || [claims.first_name, claims.last_name].filter(Boolean).join(' ') || null;
-    return { userId: 'clerk:' + claims.sub, name, demo: false, claims };
+    try {
+      const claims = await verifyClerkJWT(token, env);
+      const name = claims.name || claims.username
+        || [claims.first_name, claims.last_name].filter(Boolean).join(' ') || null;
+      return { userId: 'clerk:' + claims.sub, name, demo: false, claims };
+    } catch (e) {
+      // If Clerk parsing failed (malformed token), throw the error
+      if (e.authError) throw e;
+      // Otherwise fall through to try demo
+    }
   }
+
+  // 3. Try demo mode (keyless)
   if (demoAllowed(env)) {
     const demo = header(headers, 'x-demo-user') || header(headers, 'X-Demo-User');
     if (demo) {
@@ -147,6 +189,7 @@ export async function resolveAuth(headers, env) {
       }
     }
   }
+
   return null;
 }
 
