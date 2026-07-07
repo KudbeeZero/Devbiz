@@ -2732,17 +2732,24 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     })();
 
     /* ---------- Floating "Start a project" pill (DBZ-056) ----------
-       Shows once the visitor has scrolled past #services into the next
-       section, hides again once #contact starts entering view (same CTA
-       already lives inline there — no need to cover it). #services itself
-       is the tall sticky-stack section (three panels pinned/receding as you
-       scroll), so watching for it to fully leave the viewport would need an
-       unreasonably long scroll; watching #process (the very next section)
-       enter view is the accurate "just moved past services" signal. That
-       flag latches permanently once true (mirrors the one-shot ".lit"
+       Shows once the visitor has scrolled past #services AND past #process
+       into #work, hides again once #contact starts entering view (same CTA
+       already lives inline there — no need to cover it).
+       Originally watched #process (the section right after #services)
+       entering view as the "just moved past services" signal, but #process
+       is itself a 340vh `position: sticky`-pinned scrollytelling section
+       (.story .pin-outer) — while it's pinned, its own step cards
+       continuously animate through the same bottom-of-viewport region the
+       pill occupies, so the pill (which latches on permanently once shown)
+       ended up overlapping step-card text for the *entire* pinned scroll,
+       not just at the boundary (found 2026-07-07, reproduced against both
+       the last `#services` panel's `.pv-cap` caption chip and #process's
+       own "01 · Discovery" step card). Fix: watch #work — the section that
+       only enters view once the #process pin has fully released — instead.
+       That flag latches permanently once true (mirrors the one-shot ".lit"
        section-lighting observer above — fires once, never re-hides) so
-       scrolling on past #process into #work/#games/#agents doesn't flicker
-       the pill back off before #contact is actually near.
+       scrolling on past #work into #games/#agents doesn't flicker the pill
+       back off before #contact is actually near.
        Dismissable and remembered for the session via sessionStorage, so it
        never nags on repeat page views within a tab. */
     (function () {
@@ -2753,7 +2760,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         var dismissed = false;
         try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
         if (dismissed) { pill.hidden = true; return; }
-        var pastServicesEl = document.getElementById('process');
+        var pastServicesEl = document.getElementById('work');
         var contactEl = document.getElementById('contact');
         if (!pastServicesEl || !contactEl || !('IntersectionObserver' in window)) return;
         var pastServices = false;
