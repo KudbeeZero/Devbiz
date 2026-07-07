@@ -247,7 +247,8 @@
 
   var ship = { x: 0, y: 0, vx: 0, vy: 0, aim: 0, r: 14, hp: 3, shield: 0, inv: 0, rapid: 0, fireCd: 0, thrustX: 0, thrustY: 0 };
   var bullets = [], eBullets = [], enemies = [], rocks = [], pickups = [], parts = [], rings = [];
-  var shakeMag = 0, camX = 0, camY = 0, banner = null, killFlash = 0;
+  var trail = [];   // momentum trail: recent ship positions, sampled every update frame (see update())
+  var shakeMag = 0, camX = 0, camY = 0, banner = null, killFlash = 0, hitFlash = 0, delayedFx = [];
   var rockChain = 0, rockChainT = 0, chainLabel = null;   // shatter-chain bonus: quick consecutive rock kills
 
   var SHIP_ACC = 920, SHIP_MAX = 470, DAMP = 0.12;   // DAMP: gentle exponential decay per second
@@ -255,9 +256,10 @@
 
   // ---------- particles (pooled-ish: capped array) ----------
   var PART_CAP = reduceMotion ? 140 : 620;
-  function spawnPart(x, y, vx, vy, life, size, color, glow) {
+  function spawnPart(x, y, vx, vy, life, size, color, glow, shard) {
     if (parts.length >= PART_CAP) parts.shift();
-    parts.push({ x: x, y: y, vx: vx, vy: vy, t: life, life: life, size: size, color: color, glow: !!glow });
+    parts.push({ x: x, y: y, vx: vx, vy: vy, t: life, life: life, size: size, color: color, glow: !!glow,
+      shard: !!shard, ang: shard ? Math.atan2(vy, vx) : 0, spin: shard ? rnd(-7, 7) : 0 });
   }
   function burst(x, y, n, speed, color, size, glow) {
     if (reduceMotion) n = Math.max(2, Math.round(n * 0.3));
@@ -266,10 +268,21 @@
       spawnPart(x, y, Math.cos(a) * sp, Math.sin(a) * sp, rnd(0.25, 0.7), size * rnd(0.6, 1.3), color, glow);
     }
   }
+  // shard debris: elongated tumbling splinters (rock/hull fragments) instead of round sparks —
+  // used for shatter/destruction moments so they read as material breaking apart, not just a pop
+  function shardBurst(x, y, n, speed, color, length) {
+    if (reduceMotion) n = Math.max(1, Math.round(n * 0.3));
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * TAU, sp = speed * (0.4 + Math.random() * 0.9);
+      spawnPart(x, y, Math.cos(a) * sp, Math.sin(a) * sp, rnd(0.35, 0.85), length * rnd(0.7, 1.3), color, true, true);
+    }
+  }
   function ringFx(x, y, r0, r1, dur, color) {
     rings.push({ x: x, y: y, r0: r0, r1: r1, t: dur, dur: dur, color: color });
   }
   function shake(m) { if (!reduceMotion) shakeMag = Math.min(22, shakeMag + m); }
+  // tiny scheduler for a second delayed fx beat (e.g. a turret's weightier two-stage kill pop)
+  function schedule(delay, fn) { delayedFx.push({ t: delay, fn: fn }); }
 
   // ---------- input ----------
   var keys = {};
@@ -422,11 +435,14 @@
     if (ship.shield > 0) {
       ship.shield--; ship.inv = 1.0;
       ringFx(ship.x, ship.y, ship.r, ship.r + 46, 0.4, '124,255,178');
+      shardBurst(ship.x, ship.y, 5, 160, '124,255,178', 5);
       S.hit(); shake(5);
     } else {
       ship.hp -= n; ship.inv = 1.6; streak = 0;
       burst(ship.x, ship.y, 26, 260, '255,120,90', 3, true);
+      shardBurst(ship.x, ship.y, 8, 240, '255,180,140', 7);
       ringFx(ship.x, ship.y, 6, 80, 0.5, '255,211,77');
+      hitFlash = reduceMotion ? 0 : 0.32;
       S.hurt(); shake(12);
       if (fromX != null) { var d = len(ship.x - fromX, ship.y - fromY) || 1; ship.vx += (ship.x - fromX) / d * 180; ship.vy += (ship.y - fromY) / d * 180; }
       if (ship.hp <= 0) gameOver();
@@ -436,13 +452,49 @@
     enemies.splice(i, 1);
     var pts = e.kind === 'chaser' ? 100 : e.kind === 'strafer' ? 150 : 250;
     addScore(pts);
-    var col = e.kind === 'turret' ? '255,211,77' : '196,107,255';
-    burst(e.x, e.y, 30, 300, col, 3, true);
-    burst(e.x, e.y, 10, 120, '207,233,255', 2, false);
-    ringFx(e.x, e.y, 6, 70, 0.45, col);
+    var col = e.kind === 'turret' ? '255,211,77' : e.kind === 'strafer' ? '111,91,255' : '196,107,255';
+    var ex = e.x, ey = e.y, ekind = e.kind;
+    burst(ex, ey, 30, 300, col, 3, true);
+    burst(ex, ey, 10, 120, '207,233,255', 2, false);
+    // hull debris shape/count varies per drone class so a kill reads as "that kind" breaking apart
+    if (ekind === 'chaser') shardBurst(ex, ey, 7, 260, col, 6);
+    else if (ekind === 'strafer') shardBurst(ex, ey, 9, 230, col, 8);
+    else shardBurst(ex, ey, 12, 210, col, 9);
+    ringFx(ex, ey, 6, 70, 0.45, col);
     killFlash = reduceMotion ? 0 : 0.14;
-    S.boom(); shake(4);
-    if (Math.random() < 0.2) spawnPickup(e.x, e.y);
+    S.boom(); shake(ekind === 'turret' ? 6 : 4);
+    if (ekind === 'turret') {
+      // turrets are the tankiest drone: give the kill a second, weightier beat instead of one pop
+      schedule(0.12, function () {
+        burst(ex, ey, 16, 220, '255,211,77', 3.2, true);
+        ringFx(ex, ey, 10, 110, 0.5, '255,211,77');
+        shake(3); S.boom();
+      });
+    }
+    if (Math.random() < 0.2) spawnPickup(ex, ey);
+  }
+  // split-or-destroy visual/scoring beat shared by real bullet hits and the __test verification hook
+  function shatterRock(rk, hitX, hitY) {
+    if (rk.big) {   // split once — read as a shatter: shard debris + shockwave, not just a pop
+      for (var s2 = 0; s2 < 2; s2++) {
+        var sa2 = Math.atan2(rk.y - hitY, rk.x - hitX) + (s2 ? 0.9 : -0.9) + rnd(-0.3, 0.3);
+        spawnRock(rk.x + Math.cos(sa2) * rk.r * 0.4, rk.y + Math.sin(sa2) * rk.r * 0.4, false,
+          rk.vx + Math.cos(sa2) * rnd(60, 120), rk.vy + Math.sin(sa2) * rnd(60, 120));
+      }
+      burst(rk.x, rk.y, 16, 200, '159,182,200', 2.6, false);
+      shardBurst(rk.x, rk.y, 9, 230, '120,112,150', 7);
+      ringFx(rk.x, rk.y, 6, 80, 0.4, '159,182,200');
+      shake(3);
+      addScore(40);
+      rockChainHit(rk.x, rk.y);
+    } else {
+      addScore(60);
+      burst(rk.x, rk.y, 14, 170, '160,150,190', 2.4, false);
+      shardBurst(rk.x, rk.y, 6, 190, '120,112,150', 5.5);
+      ringFx(rk.x, rk.y, 4, 44, 0.35, '159,182,200');
+      if (Math.random() < 0.12) spawnPickup(rk.x, rk.y);
+      rockChainHit(rk.x, rk.y);
+    }
   }
   function empBurst(x, y) {
     ringFx(x, y, 10, 420, 0.8, '57,230,255');
@@ -470,8 +522,8 @@
     ship.x = 0; ship.y = 0; ship.vx = 0; ship.vy = 0; ship.aim = -Math.PI / 2;
     ship.hp = 3; ship.shield = 0; ship.inv = 2; ship.rapid = 0; ship.fireCd = 0;
     bullets.length = 0; eBullets.length = 0; enemies.length = 0; rocks.length = 0;
-    pickups.length = 0; parts.length = 0; rings.length = 0;
-    shakeMag = 0; killFlash = 0;
+    pickups.length = 0; parts.length = 0; rings.length = 0; trail.length = 0; delayedFx.length = 0;
+    shakeMag = 0; killFlash = 0; hitFlash = 0;
     rockChain = 0; rockChainT = 0; chainLabel = null;
     startWave(1);
   }
@@ -549,13 +601,28 @@
       if (vn > 90) { S.bounce(); burst(ship.x + nx * ship.r, ship.y + ny * ship.r, 6, 90, '57,230,255', 2, true); shake(vn / 120); }
     });
 
-    // thruster plume
-    if (tm > 0.1 && !reduceMotion) {
-      for (var pi = 0; pi < 2; pi++) {
+    // momentum trail: samples ship position/speed every frame so drift itself stays visible even
+    // when coasting with no thrust input — distinct from the short-lived thrust flame below, this
+    // is what actually sells "there is no brake in space"
+    if (!reduceMotion) {
+      var curSpd0 = len(ship.vx, ship.vy);
+      trail.unshift({ x: ship.x, y: ship.y, a: clamp(curSpd0 / SHIP_MAX, 0, 1) });
+      if (trail.length > 16) trail.length = 16;
+    } else if (trail.length) trail.length = 0;
+
+    // thruster plume: emission scales with thrust magnitude; a retro-burn (thrusting against the
+    // current velocity, i.e. braking) gets a hotter amber accent so braking reads differently from
+    // accelerating — makes the momentum-vs-thrust split at the heart of the drift model visible
+    if (tm > 0.08 && !reduceMotion) {
+      var curSpd = len(ship.vx, ship.vy);
+      var retro = curSpd > 40 ? -(tx * ship.vx + ty * ship.vy) / curSpd : 0;   // > 0 => braking against drift
+      var plumeN = 1 + Math.round(tm * 1.6);
+      for (var pi = 0; pi < plumeN; pi++) {
         var ja = Math.atan2(ty, tx) + Math.PI + rnd(-0.35, 0.35);
+        var hot = retro > 40 && Math.random() < 0.55;
         spawnPart(ship.x - tx * ship.r, ship.y - ty * ship.r,
-          Math.cos(ja) * rnd(120, 260) + ship.vx * 0.4, Math.sin(ja) * rnd(120, 260) + ship.vy * 0.4,
-          rnd(0.18, 0.4), rnd(1.5, 3), Math.random() < 0.7 ? '57,230,255' : '111,91,255', true);
+          Math.cos(ja) * rnd(120, 260) * (0.7 + tm * 0.3) + ship.vx * 0.4, Math.sin(ja) * rnd(120, 260) * (0.7 + tm * 0.3) + ship.vy * 0.4,
+          rnd(0.18, 0.4), rnd(1.5, 3) * (hot ? 1.15 : 1), hot ? '255,211,77' : (Math.random() < 0.7 ? '57,230,255' : '111,91,255'), true);
       }
     }
 
@@ -628,21 +695,7 @@
           burst(b.x, b.y, 6, 120, '160,150,190', 2, false);
           S.rock();
           rocks.splice(j, 1);
-          if (rk.big) {   // split once
-            for (var s2 = 0; s2 < 2; s2++) {
-              var sa2 = Math.atan2(rk.y - b.y, rk.x - b.x) + (s2 ? 0.9 : -0.9) + rnd(-0.3, 0.3);
-              spawnRock(rk.x + Math.cos(sa2) * rk.r * 0.4, rk.y + Math.sin(sa2) * rk.r * 0.4, false,
-                rk.vx + Math.cos(sa2) * rnd(60, 120), rk.vy + Math.sin(sa2) * rnd(60, 120));
-            }
-            addScore(40);
-            rockChainHit(rk.x, rk.y);
-          } else {
-            addScore(60);
-            burst(rk.x, rk.y, 14, 170, '160,150,190', 2.4, false);
-            ringFx(rk.x, rk.y, 4, 44, 0.35, '159,182,200');
-            if (Math.random() < 0.12) spawnPickup(rk.x, rk.y);
-            rockChainHit(rk.x, rk.y);
-          }
+          shatterRock(rk, b.x, b.y);
           break;
         }
       }
@@ -746,11 +799,17 @@
       var pp = parts[i];
       pp.x += pp.vx * dt; pp.y += pp.vy * dt;
       pp.vx *= Math.exp(-1.6 * dt); pp.vy *= Math.exp(-1.6 * dt);
+      if (pp.shard) pp.ang += pp.spin * dt;
       pp.t -= dt;
       if (pp.t <= 0) parts.splice(i, 1);
     }
     for (i = rings.length - 1; i >= 0; i--) { rings[i].t -= dt; if (rings[i].t <= 0) rings.splice(i, 1); }
+    for (i = delayedFx.length - 1; i >= 0; i--) {
+      delayedFx[i].t -= dt;
+      if (delayedFx[i].t <= 0) { delayedFx[i].fn(); delayedFx.splice(i, 1); }
+    }
     if (killFlash > 0) killFlash -= dt;
+    if (hitFlash > 0) hitFlash -= dt;
     if (rockChainT > 0) { rockChainT -= dt; if (rockChainT <= 0) rockChain = 0; }
     if (chainLabel) { chainLabel.t -= dt; if (chainLabel.t <= 0) chainLabel = null; }
     shakeMag *= Math.exp(-6 * dt);
@@ -960,8 +1019,31 @@
       var p = parts[i], al = clamp(p.t / p.life, 0, 1);
       ctx.fillStyle = 'rgba(' + p.color + ',' + al.toFixed(3) + ')';
       if (p.glow && !reduceMotion) { ctx.shadowColor = 'rgba(' + p.color + ',1)'; ctx.shadowBlur = 8; }
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * al + 0.4, 0, TAU); ctx.fill();
+      if (p.shard) {
+        // elongated tumbling splinter instead of a round spark — reads as breaking material
+        ctx.save();
+        ctx.translate(p.x, p.y); ctx.rotate(p.ang);
+        var sl = p.size * al + 0.6;
+        ctx.fillRect(-sl * 0.5, -sl * 0.16, sl, sl * 0.32);
+        ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * al + 0.4, 0, TAU); ctx.fill();
+      }
       ctx.shadowBlur = 0;
+    }
+    // momentum trail: a fading ribbon behind the ship along its actual velocity history —
+    // makes coasting drift visible even when thrust isn't firing
+    if (!reduceMotion && trail.length > 1 && (state === 'play' || state === 'pause')) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (i = 0; i < trail.length - 1; i++) {
+        var tp0 = trail[i], tp1 = trail[i + 1], tf = 1 - i / trail.length;
+        if (tp0.a < 0.02) continue;
+        ctx.strokeStyle = 'rgba(57,230,255,' + (tf * tp0.a * 0.35).toFixed(3) + ')';
+        ctx.lineWidth = 1 + tp0.a * 3.5 * tf;
+        ctx.beginPath(); ctx.moveTo(tp0.x, tp0.y); ctx.lineTo(tp1.x, tp1.y); ctx.stroke();
+      }
+      ctx.restore();
     }
     // entities
     for (i = 0; i < rocks.length; i++) drawRock(rocks[i]);
@@ -989,6 +1071,16 @@
     // kill flash
     if (killFlash > 0) {
       ctx.fillStyle = 'rgba(207,233,255,' + (killFlash * 0.5).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    // hull-hit vignette: a red edge pulse (not a full-screen flash) so a real hit reads distinctly
+    // from a kill flash — impact feedback that says "you", not "an enemy"
+    if (hitFlash > 0) {
+      var hf = hitFlash / 0.32;
+      var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+      vg.addColorStop(0, 'rgba(255,60,60,0)');
+      vg.addColorStop(1, 'rgba(255,60,60,' + (hf * 0.45).toFixed(3) + ')');
+      ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
     }
     // shatter-chain label (floating callout for quick consecutive rock kills)
@@ -1034,8 +1126,13 @@
       // idle fx decay so title/pause still feel alive
       for (var i = parts.length - 1; i >= 0; i--) { parts[i].t -= dt; if (parts[i].t <= 0) parts.splice(i, 1); }
       for (i = rings.length - 1; i >= 0; i--) { rings[i].t -= dt; if (rings[i].t <= 0) rings.splice(i, 1); }
+      for (i = delayedFx.length - 1; i >= 0; i--) {
+        delayedFx[i].t -= dt;
+        if (delayedFx[i].t <= 0) { delayedFx[i].fn(); delayedFx.splice(i, 1); }
+      }
       shakeMag *= Math.exp(-6 * dt);
       if (killFlash > 0) killFlash -= dt;
+      if (hitFlash > 0) hitFlash -= dt;
     }
     draw(now);
   }
@@ -1056,7 +1153,33 @@
       return e ? { x: e.x, y: e.y, kind: e.kind } : null;
     },
     worldToScreen: function (x, y) { return worldToScreen(x, y); },
-    hurt: function (n) { ship.inv = 0; for (var i = 0; i < n; i++) { ship.inv = 0; damagePlayer(1); } }
+    hurt: function (n) { ship.inv = 0; for (var i = 0; i < n; i++) { ship.inv = 0; damagePlayer(1); } },
+    // --- verification helpers added for the visual-polish pass; harmless in production ---
+    partCount: function () { return parts.length; },
+    spawnRockNear: function (dx, dy, big) {
+      spawnRock(ship.x + (dx || 80), ship.y + (dy || 0), !!big, 0, 0);
+      var rk = rocks[rocks.length - 1];
+      return { x: rk.x, y: rk.y, idx: rocks.length - 1 };
+    },
+    spawnEnemyNear: function (kind, dx, dy) {
+      var p = { x: ship.x + (dx || 120), y: ship.y + (dy || 0) };
+      var e = { kind: kind || 'chaser', x: p.x, y: p.y, vx: 0, vy: 0, r: kind === 'turret' ? 19 : kind === 'strafer' ? 14 : 13,
+        hp: 9999, fireT: 5, flash: 0, born: 0, ang: 0, orbitDir: 1 };
+      enemies.push(e);
+      return { x: e.x, y: e.y, idx: enemies.length - 1 };
+    },
+    killEnemyAt: function (idx) {
+      var i = idx || 0;
+      if (enemies[i]) killEnemy(enemies[i], i);
+    },
+    splitRockAt: function (idx) {
+      var i = idx != null ? idx : rocks.length - 1;
+      var rk = rocks[i];
+      if (!rk) return false;
+      rocks.splice(i, 1);
+      shatterRock(rk, rk.x - 40, rk.y);
+      return true;
+    }
   };
 })();
 </script>
