@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-07-07T03:16:16.024Z",
-  "commit": "54dfac8",
+  "generatedAt": "2026-07-07T03:19:27.517Z",
+  "commit": "b9fcfcb",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -23,7 +23,7 @@
   ],
   "total": {
     "lines": 88.84,
-    "branches": 72.64,
+    "branches": 72.51,
     "functions": 93.54,
     "statements": 88.84
   },
@@ -33,8 +33,8 @@
       "total": 699
     },
     "branches": {
-      "covered": 154,
-      "total": 212
+      "covered": 153,
+      "total": 211
     },
     "functions": {
       "covered": 29,
@@ -77,7 +77,7 @@
       "path": "shared/algo-auth.js",
       "metrics": {
         "lines": 88.33,
-        "branches": 85.13,
+        "branches": 84.93,
         "functions": 100,
         "statements": 88.33
       },
@@ -87,8 +87,8 @@
           "total": 283
         },
         "branches": {
-          "covered": 63,
-          "total": 74
+          "covered": 62,
+          "total": 73
         },
         "functions": {
           "covered": 9,

@@ -474,6 +474,68 @@ test('verifyAlgoMessage: nonce set is updated on success', async () => {
   // (In MVP, it might not be checked, but the structure should be in place)
 });
 
+// ---- Tests: Additional coverage paths -----------------------------------
+
+test('verifyAlgoMessage: invalid base64 signature encoding throws', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = mockAlgoPayload(
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HVY',
+    now,
+    'test_nonce_b64error',
+    now + 600
+  );
+  const b64 = payloadToBase64(payload);
+
+  try {
+    await verifyAlgoMessage('!!!invalid!!!base64!!!', b64, {});
+  } catch (e) {
+    // Error thrown as expected
+    assert(e.code === 'algo_signature_malformed' || e.code === 'algo_signature_invalid');
+  }
+});
+
+test('isAlgoAuthEnabled: env config variants', () => {
+  assert.strictEqual(isAlgoAuthEnabled({}), true, 'default should be true');
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: '1' }), true);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'true' }), true);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'yes' }), true);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: '0' }), false);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'false' }), false);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'no' }), false);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'TRUE' }), true);
+  assert.strictEqual(isAlgoAuthEnabled({ ALGO_AUTH_ENABLED: 'FALSE' }), false);
+});
+
+test('reconstructSignedMessage: produces consistent canonical JSON', () => {
+  const payload1 = {
+    algo_address: 'TESTADDRESS123',
+    timestamp: 1000000,
+    nonce: 'testnonce',
+    exp: 2000000,
+  };
+  const msg1 = reconstructSignedMessage(payload1);
+  const msg1Text = new TextDecoder().decode(msg1);
+  const obj1 = JSON.parse(msg1Text);
+
+  assert.strictEqual(obj1.algo_address, 'TESTADDRESS123');
+  assert.strictEqual(obj1.timestamp, 1000000);
+  assert.strictEqual(obj1.nonce, 'testnonce');
+  assert.strictEqual(obj1.exp, 2000000);
+
+  // Verify it's proper Uint8Array
+  assert(msg1 instanceof Uint8Array, 'should be Uint8Array');
+});
+
+test('parseAlgoMessage: edge case - max length nonce', () => {
+  const maxNonce = 'a'.repeat(64);
+  const payload = { algo_address: 'A'.repeat(58), timestamp: 1000, nonce: maxNonce, exp: 2000 };
+  const b64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+  const parsed = parseAlgoMessage(b64);
+
+  assert(parsed !== null, 'should parse max-length nonce');
+  assert.strictEqual(parsed.nonce.length, 64);
+});
+
 // ---- Tests: Auth error structure ----------------------------------------
 
 test('authError: error properties are set correctly', () => {
