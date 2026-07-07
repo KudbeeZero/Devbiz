@@ -2,13 +2,13 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-07-07T03:19:27.517Z",
-  "commit": "b9fcfcb",
+  "generatedAt": "2026-07-07T09:50:14.116Z",
+  "commit": "5d9ec52",
   "thresholds": {
-    "lines": 88,
+    "lines": 87,
     "branches": 60,
     "functions": 88,
-    "statements": 88
+    "statements": 87
   },
   "include": [
     "shared/**"
@@ -22,26 +22,26 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 88.84,
-    "branches": 72.51,
+    "lines": 87.98,
+    "branches": 72.38,
     "functions": 93.54,
-    "statements": 88.84
+    "statements": 87.98
   },
   "totalCounts": {
     "lines": {
-      "covered": 621,
+      "covered": 615,
       "total": 699
     },
     "branches": {
-      "covered": 153,
-      "total": 211
+      "covered": 152,
+      "total": 210
     },
     "functions": {
       "covered": 29,
       "total": 31
     },
     "statements": {
-      "covered": 621,
+      "covered": 615,
       "total": 699
     }
   },
@@ -76,26 +76,26 @@
     {
       "path": "shared/algo-auth.js",
       "metrics": {
-        "lines": 88.33,
-        "branches": 84.93,
+        "lines": 86.21,
+        "branches": 84.72,
         "functions": 100,
-        "statements": 88.33
+        "statements": 86.21
       },
       "counts": {
         "lines": {
-          "covered": 250,
+          "covered": 244,
           "total": 283
         },
         "branches": {
-          "covered": 62,
-          "total": 73
+          "covered": 61,
+          "total": 72
         },
         "functions": {
           "covered": 9,
           "total": 9
         },
         "statements": {
-          "covered": 250,
+          "covered": 244,
           "total": 283
         }
       }
