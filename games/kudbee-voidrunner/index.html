@@ -227,6 +227,14 @@
   // ---- helpers ----
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function rand(a, b) { return a + Math.random() * (b - a); }
+  // '#ff7a5d' -> '255,122,93' — precomputed once per enemy (at spawn) so per-type
+  // glow gradients aren't parsing hex strings every frame.
+  function hexRGB(hex) {
+    var h = hex.charAt(0) === '#' ? hex.slice(1) : hex;
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+  }
 
   // ===== audio — procedural Web-Audio SFX + engine drone (no asset files) =====
   var AC = null, master = null, muted = false;
@@ -443,10 +451,47 @@
   }
   function spawnRock() { var rk = makeRock(FAR + rand(0, 260)); rk.hp = rk.r > 70 ? 2 : 1; rocks.push(rk); }
 
-  // enemy fighters: approach, weave around the player, and fire homing-ish bolts
-  function makeEnemy() {
-    return { x: rand(-WORLD * 0.8, WORLD * 0.8), y: rand(-WORLD * 0.6, WORLD * 0.6), z: FAR + rand(0, 200),
-      r: 32, hp: 2, alive: true, fireT: rand(0.8, 1.8), phase: Math.random() * TAU, col: '#ff7a5d' };
+  // enemy fighters: four distinct silhouettes/behaviours, weighted in by depth + wave —
+  // follows the same "wave scales difficulty" idea spawnBoss() already uses (line ~455).
+  //   drone        — the original: smooth sine-weave homing, single homing-ish bolt.
+  //   interceptor  — fast, fragile, erratic juke-darts rather than smooth sines.
+  //   gunship      — heavy, holds engage range, fires 3-bolt spread volleys.
+  //   turret       — slow-drifting mine, barely chases, fires wide 5-bolt radial volleys.
+  function pickEnemyType() {
+    var w = {
+      drone: 10,
+      interceptor: dist > 350 ? 6 + Math.min(6, wave * 1.2) : 0,
+      gunship: dist > 900 ? 4 + Math.min(8, wave * 1.5) : 0,
+      turret: dist > 650 ? 5 + Math.min(6, wave * 1.2) : 0
+    };
+    var total = 0, k;
+    for (k in w) total += w[k];
+    var roll = Math.random() * total;
+    for (k in w) { if (roll < w[k]) return k; roll -= w[k]; }
+    return 'drone';
+  }
+  function makeEnemy(forceType) {
+    var type = forceType || pickEnemyType();
+    var en = { type: type, x: rand(-WORLD * 0.8, WORLD * 0.8), y: rand(-WORLD * 0.6, WORLD * 0.6),
+      z: FAR + rand(0, 200), alive: true, phase: Math.random() * TAU, vx: 0, vy: 0 };
+    switch (type) {
+      case 'interceptor':
+        en.r = 22; en.hp = 1; en.col = '#ff3df0'; en.scoreBase = 320;
+        en.jukeT = rand(0.22, 0.5); en.jukeX = en.x; en.jukeY = en.y; en.fireT = rand(1.6, 2.6);
+        break;
+      case 'gunship':
+        en.r = 46; en.hp = 5; en.col = '#ffd34d'; en.scoreBase = 480;
+        en.holdZ = rand(360, 520); en.fireT = rand(1.4, 2.2);
+        break;
+      case 'turret':
+        en.r = 40; en.hp = 3; en.col = '#7CFFb2'; en.scoreBase = 360;
+        en.driftX = en.x; en.driftY = en.y; en.fireT = rand(1.8, 2.6);
+        break;
+      default: // 'drone'
+        en.type = 'drone'; en.r = 32; en.hp = 2; en.col = '#ff7a5d'; en.scoreBase = 250; en.fireT = rand(0.8, 1.8);
+    }
+    en.glowRGB = hexRGB(en.col);
+    return en;
   }
   function spawnEnemy() { enemies.push(makeEnemy()); }
 
@@ -477,23 +522,81 @@
     wave++; nextBossDist = dist + 1600 + wave * 400; boss = null;
   }
   function enemyFire(en) {
-    ebullets.push({ x: en.x, y: en.y, z: en.z, life: 1 });   // travels toward the player plane, mildly homing
-    burst(project(en.x, en.y, en.z).sx, project(en.x, en.y, en.z).sy, '#ff9a7a', 4, 160); SFX.enemyFire();
+    ebullets.push({ x: en.x, y: en.y, z: en.z, life: 1, col: en.col });   // travels toward the player plane, mildly homing
+    var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col || '#ff9a7a', 4, 160); SFX.enemyFire();
+  }
+  // wide-arc volley (gunship spread / turret radial burst) — same fan-by-x-offset
+  // trick spawnBoss's bossVolley() already uses, just tuned per caller.
+  function enemyVolley(en, n, spacing) {
+    for (var i = 0; i < n; i++) ebullets.push({ x: en.x + (i - (n - 1) / 2) * spacing, y: en.y + 20, z: en.z, life: 1, col: en.col });
+    var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col || '#ff9a7a', 6, 200); SFX.enemyFire();
   }
   function hitEnemy(en) {
-    en.hp--; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, '#ffb07a', 9, 280); SFX.hit();
+    en.hp--; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
     if (en.hp <= 0) {
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
-      combo++; comboT = 2.2; var gain = 250 * Math.max(1, combo); score += gain;
-      shake = Math.min(shake + 0.4, 1.4);
-      burst(sp.sx, sp.sy, '#ff5d3c', 26, 520); burst(sp.sx, sp.sy, '#fff', 12, 320);
-      ring(sp.sx, sp.sy, '#ff7a5d', 95, 0.55, 3.5);
+      combo++; comboT = 2.2; var gain = (en.scoreBase || 250) * Math.max(1, combo); score += gain;
+      shake = Math.min(shake + (en.type === 'gunship' ? 0.55 : en.type === 'turret' ? 0.5 : 0.4), 1.4);
+      // kill FX tuned per type — heavier types get a bigger/slower burst + ring,
+      // following the same tiering spawnBoss()/bossDefeated() already use for the boss.
+      burst(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 34 : 26, en.type === 'interceptor' ? 620 : 520);
+      burst(sp.sx, sp.sy, '#fff', 12, 320);
+      ring(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 120 : 95, en.type === 'gunship' ? 0.7 : 0.55, en.type === 'gunship' ? 4.5 : 3.5);
+      if (en.type === 'turret') ring(sp.sx, sp.sy, '#ffffff', 130, 0.5, 2.5);   // extra pulse for the mine's spike ring
       flash(gain, sp.sx, sp.sy); SFX.enemyKill();
+    }
+  }
+  // per-type movement — dispatched once per enemy per tick from update()'s enemy loop.
+  function updateEnemyMovement(en, dt) {
+    switch (en.type) {
+      case 'interceptor': {
+        var px = en.x, py = en.y;
+        en.z -= (speed * 0.72) * dt;                          // fast closing speed
+        en.jukeT -= dt;
+        if (en.jukeT <= 0) {                                  // erratic juke-dart: snap to a fresh random target
+          en.jukeT = rand(0.22, 0.5);
+          en.jukeX = camX + rand(-260, 260); en.jukeY = camY * 0.5 + rand(-170, 170);
+        }
+        en.x += clamp((en.jukeX - en.x) / 40, -1, 1) * 260 * dt;
+        en.y += clamp((en.jukeY - en.y) / 40, -1, 1) * 220 * dt;
+        en.vx = dt > 0 ? (en.x - px) / dt : 0; en.vy = dt > 0 ? (en.y - py) / dt : 0;   // for the drawn tilt/trail
+        break;
+      }
+      case 'gunship': {
+        // closes to holdZ, then all but stops — a slow side-to-side drift while it unloads volleys
+        var holdSpeed = en.z > en.holdZ ? speed * 0.5 : speed * 0.06;
+        en.z -= holdSpeed * dt;
+        var gtX = camX + Math.cos(en.phase * 0.4) * 240, gtY = camY * 0.5 + Math.sin(en.phase * 0.3) * 60;
+        en.x += clamp((gtX - en.x) / 90, -1, 1) * 55 * dt; en.y += clamp((gtY - en.y) / 90, -1, 1) * 40 * dt;
+        break;
+      }
+      case 'turret': {
+        en.z -= (speed * 0.22) * dt;                          // barely closes — a lurking hazard, not a chaser
+        en.driftX += Math.cos(en.phase * 0.6) * 6 * dt; en.driftY += Math.sin(en.phase * 0.5) * 6 * dt;
+        en.x += (en.driftX - en.x) * Math.min(1, dt * 0.6); en.y += (en.driftY - en.y) * Math.min(1, dt * 0.6);
+        break;
+      }
+      default: { // 'drone' — the original smooth sine-weave homing toward a moving target point
+        en.z -= (speed * 0.55) * dt;
+        var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
+        en.x += clamp((tgX - en.x) / 60, -1, 1) * 110 * dt; en.y += clamp((tgY - en.y) / 60, -1, 1) * 90 * dt;
+      }
+    }
+  }
+  // per-type attack pattern — single homing bolt vs. multi-bolt spread/radial volleys.
+  function updateEnemyFire(en, dt) {
+    if (!(en.z > 120 && en.z < 950)) return;
+    en.fireT -= dt; if (en.fireT > 0) return;
+    switch (en.type) {
+      case 'interceptor': en.fireT = rand(1.6, 2.6); enemyFire(en); break;
+      case 'gunship': en.fireT = rand(1.6, 2.4); enemyVolley(en, 3, 34); break;
+      case 'turret': en.fireT = rand(2.0, 3.0); enemyVolley(en, 5, 46); break;
+      default: en.fireT = rand(1.1, 2.2); enemyFire(en);
     }
   }
   function playerHit(x, y) {
     if (iframes > 0) return;
-    shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); SFX.playerHit();
+    shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); hitFlashT = 0.32; SFX.playerHit();
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -556,7 +659,7 @@
 
   // ===== game state =====
   var state = 'gate';
-  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0;
+  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0;
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
   // power-ups: drifting pickups you fly into — shield repair, rapid fire, triple shot
   var powerups = [], powerT = 11, rapidT = 0, tripleT = 0;
@@ -568,7 +671,7 @@
   function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620; }
 
   function resetGame() {
-    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0;
+    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
     camX = camY = camVX = camVY = bank = 0;
@@ -618,7 +721,7 @@
   // ===== update =====
   function update(dt) {
     speed = curSpeed();
-    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; if (comboT <= 0) combo = 0;
+    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
     engineSet(speed, boost);                              // engine drone tracks speed + boost
@@ -684,11 +787,10 @@
     enemyT -= dt;
     if (dist > 220 && enemyT <= 0 && !boss) { enemyT = Math.max(1.5, 3.6 - dist * 0.0009); spawnEnemy(); }
     for (var ei = enemies.length - 1; ei >= 0; ei--) {
-      var en = enemies[ei]; en.z -= (speed * 0.55) * dt; en.phase += dt * 2;
-      var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
-      en.x += clamp((tgX - en.x) / 60, -1, 1) * 110 * dt; en.y += clamp((tgY - en.y) / 60, -1, 1) * 90 * dt;
+      var en = enemies[ei]; en.phase += dt * 2;
+      updateEnemyMovement(en, dt);
       if (en.z < NEAR - 30) { enemies.splice(ei, 1); continue; }
-      if (en.z > 120 && en.z < 950) { en.fireT -= dt; if (en.fireT <= 0) { en.fireT = rand(1.1, 2.2); enemyFire(en); } }
+      updateEnemyFire(en, dt);
       if (en.alive && en.z < 64 && iframes <= 0) {
         var edx = en.x - camX, edy = en.y - camY, err = en.r + 40;
         if (edx * edx + edy * edy < err * err) { playerHit(en.x, en.y); enemies.splice(ei, 1); }
@@ -755,7 +857,7 @@
   }
   function hitShip(rk) {
     rk.alive = false; var idx = rocks.indexOf(rk); if (idx >= 0) rocks.splice(idx, 1);
-    shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); SFX.playerHit();
+    shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); hitFlashT = 0.32; SFX.playerHit();
     var sp = project(rk.x, rk.y, rk.z); burst(sp.sx, sp.sy, '#ff5d3c', 30, 560);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -888,9 +990,19 @@
     drawPops();
     ctx.restore();
 
+    drawHitFlash();             // screen-space damage vignette (impact readability for the bigger ship)
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
     drawCallout(now);
+  }
+  // brief screen-space damage vignette on a hit — reads as impact even where the
+  // particle burst lands off-frame; single quick fade, skipped under reduced motion.
+  function drawHitFlash() {
+    if (hitFlashT <= 0 || reduceMotion) return;
+    var fa = clamp(hitFlashT / 0.32, 0, 1);
+    var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(255,60,50,0)'); vg.addColorStop(1, 'rgba(255,40,30,' + (fa * 0.35).toFixed(2) + ')');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   }
   function drawCallout(now) {
     if (co.life <= 0) return;
@@ -996,19 +1108,86 @@
       var depth = clamp((FAR - en.z) / FAR, 0, 1);
       ctx.save(); ctx.translate(p.sx, p.sy);
       ctx.globalCompositeOperation = 'lighter';
-      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.8);
-      g.addColorStop(0, 'rgba(255,93,60,' + (0.14 + depth * 0.22).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,93,60,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.8, 0, TAU); ctx.fill();
+      var glowR = R * (en.type === 'gunship' || en.type === 'turret' ? 2.1 : 1.8);
+      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+      g.addColorStop(0, 'rgba(' + en.glowRGB + ',' + (0.14 + depth * 0.22).toFixed(2) + ')'); g.addColorStop(1, 'rgba(' + en.glowRGB + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, glowR, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
-      // menacing arrowhead, pointing down toward you
-      ctx.beginPath();
-      ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.lineTo(R * 0.32, -R * 0.32);
-      ctx.lineTo(0, -R * 0.72); ctx.lineTo(-R * 0.32, -R * 0.32); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.closePath();
-      ctx.fillStyle = 'rgba(30,12,14,0.94)'; ctx.fill();
-      ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(255,150,90,0.95)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(2, R * 0.16), 0, TAU); ctx.fill();
+      if (en.type === 'interceptor') drawInterceptor(en, R, depth);
+      else if (en.type === 'gunship') drawGunship(en, R, depth);
+      else if (en.type === 'turret') drawTurret(en, R, depth);
+      else drawDrone(en, R, depth);
       ctx.restore();
     }
+  }
+  // ---- per-type enemy silhouettes (each ctx already translated to the enemy's screen pos) ----
+  function drawDrone(en, R, depth) {
+    // menacing arrowhead, pointing down toward you (the original enemy shape)
+    ctx.beginPath();
+    ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.lineTo(R * 0.32, -R * 0.32);
+    ctx.lineTo(0, -R * 0.72); ctx.lineTo(-R * 0.32, -R * 0.32); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.closePath();
+    ctx.fillStyle = 'rgba(30,12,14,0.94)'; ctx.fill();
+    ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(255,150,90,0.95)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(2, R * 0.16), 0, TAU); ctx.fill();
+  }
+  function drawInterceptor(en, R, depth) {
+    // needle-thin dart that banks into its juke direction, trailing thin ion streaks
+    var tilt = clamp((en.vx || 0) / 260, -0.6, 0.6);
+    ctx.save(); ctx.rotate(tilt);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,61,240,' + (0.35 + depth * 0.25).toFixed(2) + ')';
+    ctx.lineWidth = Math.max(1, R * 0.06); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-R * 0.22, -R * 0.3); ctx.lineTo(-R * 0.42, -R * 1.35); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(R * 0.22, -R * 0.3); ctx.lineTo(R * 0.42, -R * 1.35); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.moveTo(0, R * 1.05); ctx.lineTo(R * 0.34, -R * 0.15); ctx.lineTo(R * 0.14, -R * 0.75);
+    ctx.lineTo(0, -R * 0.5); ctx.lineTo(-R * 0.14, -R * 0.75); ctx.lineTo(-R * 0.34, -R * 0.15); ctx.closePath();
+    ctx.fillStyle = 'rgba(28,10,32,0.94)'; ctx.fill();
+    ctx.lineWidth = Math.max(1.2, R * 0.09); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.65 + depth * 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,150,255,0.9)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(1.6, R * 0.12), 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+  function drawGunship(en, R, depth) {
+    // squat armored hex hull with twin side cannon pods + a pulsing power core
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.9, -R * 0.1); ctx.lineTo(-R * 0.5, -R * 0.55); ctx.lineTo(R * 0.5, -R * 0.55);
+    ctx.lineTo(R * 0.9, -R * 0.1); ctx.lineTo(R * 0.62, R * 0.5); ctx.lineTo(-R * 0.62, R * 0.5); ctx.closePath();
+    ctx.fillStyle = 'rgba(34,26,10,0.94)'; ctx.fill();
+    ctx.lineWidth = Math.max(1.6, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(50,38,14,0.95)';
+    ctx.fillRect(-R * 0.98, -R * 0.15, R * 0.28, R * 0.5); ctx.fillRect(R * 0.7, -R * 0.15, R * 0.28, R * 0.5);
+    ctx.strokeStyle = en.col; ctx.lineWidth = Math.max(1, R * 0.05);
+    ctx.strokeRect(-R * 0.98, -R * 0.15, R * 0.28, R * 0.5); ctx.strokeRect(R * 0.7, -R * 0.15, R * 0.28, R * 0.5);
+    ctx.globalCompositeOperation = 'lighter';
+    var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 220 + en.phase);
+    ctx.fillStyle = 'rgba(255,220,120,' + pulse.toFixed(2) + ')';
+    ctx.beginPath(); ctx.arc(0, -R * 0.05, Math.max(2, R * 0.18), 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function drawTurret(en, R, depth) {
+    // radial spiked mine that slowly rotates in place, with a pulsing core "eye"
+    ctx.save(); ctx.rotate(en.phase * 0.6);
+    ctx.strokeStyle = en.col; ctx.lineWidth = Math.max(1.2, R * 0.07); ctx.globalAlpha = 0.55 + depth * 0.35;
+    var spikes = 6;
+    for (var s = 0; s < spikes; s++) {
+      var a = (s / spikes) * TAU;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.5, Math.sin(a) * R * 0.5);
+      ctx.lineTo(Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.55, 0, TAU);
+    ctx.fillStyle = 'rgba(10,28,22,0.94)'; ctx.fill();
+    ctx.lineWidth = Math.max(1.4, R * 0.07); ctx.strokeStyle = en.col; ctx.stroke();
+    ctx.restore();
+    ctx.globalCompositeOperation = 'lighter';
+    var pulse2 = 0.55 + 0.45 * Math.sin(performance.now() / 160 + en.phase);
+    var cg = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.4);
+    cg.addColorStop(0, 'rgba(160,255,210,' + pulse2.toFixed(2) + ')'); cg.addColorStop(1, 'rgba(124,255,178,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R * 0.4, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
   }
   function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : '#7CFFb2'; }
   function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
@@ -1052,7 +1231,7 @@
     for (var i = 0; i < ebullets.length; i++) {
       var eb = ebullets[i], p = project(eb.x, eb.y, eb.z), p2 = project(eb.x, eb.y, Math.min(FAR, eb.z + 55));
       var w = Math.max(1.5, p.sc * 5);
-      ctx.strokeStyle = 'rgba(255,120,90,0.92)'; ctx.lineWidth = w; ctx.lineCap = 'round';
+      ctx.strokeStyle = eb.col || 'rgba(255,120,90,0.92)'; ctx.lineWidth = w; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(p2.sx, p2.sy); ctx.lineTo(p.sx, p.sy); ctx.stroke();
       ctx.fillStyle = '#ffd9c9'; ctx.beginPath(); ctx.arc(p.sx, p.sy, w * 0.6, 0, TAU); ctx.fill();
     }
@@ -1079,7 +1258,7 @@
   function drawShip() {
     var now = performance.now();
     var bx = cx, by = cy + Math.min(W, H) * 0.30 + Math.sin(now / 900) * 3;   // subtle idle bob
-    var S = Math.min(W, H) / 840;                                             // scale ship to viewport
+    var S = Math.min(W, H) / 840 * 1.3;                                       // scale ship to viewport (1.3x — owner asked for bigger)
     var blink = iframes > 0 && (Math.floor(now / 90) % 2 === 0);
     var roll = clamp(bank * 2.2, -0.5, 0.5);                                  // exaggerated banking roll
     ctx.save(); ctx.translate(bx, by); ctx.rotate(bank); ctx.scale(S, S);
@@ -1098,6 +1277,15 @@
       ctx.beginPath(); ctx.moveTo(ex - 6, 20); ctx.quadraticCurveTo(ex, 30 + thrust * 60, ex + 6, 20); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(57,230,255,' + (0.5 * flick).toFixed(2) + ')';
       ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 40, ex + 3, 22); ctx.closePath(); ctx.fill();
+      // long soft vapor trail — persistent thrust wash behind the flame tongue,
+      // stretches with speed/boost (skipped under reduced motion)
+      if (!reduceMotion) {
+        var trailLen = 46 + boost * 90 + Math.min(60, speed * 0.05);
+        var tg = ctx.createLinearGradient(ex, 20, ex, 20 + trailLen);
+        tg.addColorStop(0, 'rgba(120,255,200,' + (0.35 + boost * 0.25).toFixed(2) + ')');
+        tg.addColorStop(1, 'rgba(120,255,200,0)');
+        ctx.fillStyle = tg; ctx.fillRect(ex - 3, 20, 6, trailLen);
+      }
     }
     ctx.globalCompositeOperation = 'source-over';
 
@@ -1333,6 +1521,18 @@
     forceRockNear: function () { var rk = makeRock(70); rk.x = camX + rk.r + 120; rk.y = camY; rk.hp = 1; rocks.push(rk); return rk; },
     forceEnemyAtShip: function () { var en = makeEnemy(); en.z = 70; en.x = camX; en.y = camY; en.hp = 1; enemies.push(en); return en; },
     spawnEnemyFar: function () { var en = makeEnemy(); en.z = 600; en.hp = 1; enemies.push(en); return en; },
+    // force-spawn a specific enemy type ('drone'|'interceptor'|'gunship'|'turret') for headless verification.
+    forceEnemyType: function (type, opts) {
+      var en = makeEnemy(type); opts = opts || {};
+      en.z = opts.z != null ? opts.z : 70; en.x = opts.x != null ? opts.x : camX; en.y = opts.y != null ? opts.y : camY;
+      // makeEnemy() seeds per-type "anchor" fields (turret's driftX/Y, interceptor's jukeX/Y) from
+      // its own random spawn x/y — resync them so an overridden position doesn't get slowly pulled
+      // back toward the pre-override spot.
+      if (en.driftX != null) { en.driftX = en.x; en.driftY = en.y; }
+      if (en.jukeX != null) { en.jukeX = en.x; en.jukeY = en.y; }
+      if (opts.hp != null) en.hp = opts.hp;
+      enemies.push(en); return en;
+    },
     enemyFireAll: function () { for (var i = 0; i < enemies.length; i++) enemyFire(enemies[i]); },
     powerups: function () { return powerups; }, get maxShield() { return MAXSHIELD; },
     get rapidActive() { return rapidT > 0; }, get tripleActive() { return tripleT > 0; },
