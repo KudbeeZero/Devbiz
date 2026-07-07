@@ -295,11 +295,26 @@
   var munchAlt = false;
   function sMunch() { munchAlt = !munchAlt; tone(munchAlt ? 340 : 255, 0.045, 'square', 0.05); }
   function sPower() { tone(392, 0.09, 'triangle', 0.14); tone(523, 0.09, 'triangle', 0.14, 0, 0.08); tone(659, 0.09, 'triangle', 0.14, 0, 0.16); tone(784, 0.14, 'triangle', 0.16, 0, 0.24); }
-  function sBust() { tone(880, 0.16, 'sawtooth', 0.12, 180); tone(1320, 0.1, 'square', 0.06, 330); }
+  // Bust pitch varies by drone kind so a catch *sounds* like which drone it was,
+  // not just one generic "bust" cue — HAWK sharp/high, SPIRE steady mid, LOOP gets
+  // an extra echo tail (its ring silhouette "rings"), RANDO detunes randomly each
+  // time to match its chaotic movement.
+  var BUST_FREQ = [1046, 831, 988, 660];
+  function sBust(kind) {
+    var f = BUST_FREQ[kind] || 880;
+    if (kind === 3) f *= 0.82 + Math.random() * 0.36;
+    tone(f, 0.16, 'sawtooth', 0.12, f * 0.2);
+    tone(f * 1.5, 0.1, 'square', 0.06, f * 0.38);
+    if (kind === 2) tone(f * 0.55, 0.14, 'triangle', 0.08, f * 0.1, 0.09);
+  }
   function sDeath() { tone(520, 0.6, 'sawtooth', 0.14, 55); tone(260, 0.7, 'triangle', 0.1, 40, 0.05); }
   function sCameo() { tone(660, 0.08, 'square', 0.1); tone(990, 0.12, 'square', 0.1, 0, 0.07); }
   function sExtra() { tone(523, 0.08, 'triangle', 0.14); tone(659, 0.08, 'triangle', 0.14, 0, 0.07); tone(784, 0.08, 'triangle', 0.14, 0, 0.14); tone(1047, 0.16, 'triangle', 0.16, 0, 0.21); }
   function sReady() { tone(330, 0.1, 'triangle', 0.1); tone(494, 0.14, 'triangle', 0.12, 0, 0.1); }
+  // Chase-tension heartbeat: pitch/gain rise with threat (0-1) as a drone closes in.
+  function sTension(threat) { tone(170 + threat * 260, 0.05, 'square', 0.045 + threat * 0.05); }
+  // LOOP's "spotted you" chirp — the instant its flank AI switches to a direct pounce.
+  function sSpotted() { tone(740, 0.05, 'triangle', 0.09); tone(1100, 0.06, 'triangle', 0.07, 0, 0.05); }
 
   /* ============================== ART HELPERS ============================== */
   function mkCanvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
@@ -596,7 +611,7 @@
   /* ============================== ENTITIES ============================== */
   function speedT(v) { return v * T; }        // tiles/s → px/s (we track progress in tiles)
 
-  var P = { tx: SPAWN.c, ty: SPAWN.r, px: 0, dir: 2, moving: false, speed: 6, munch: 0, wing: 0 };
+  var P = { tx: SPAWN.c, ty: SPAWN.r, px: 0, dir: 2, moving: false, speed: 6, munch: 0, wing: 0, trailCd: 0 };
   var queued = -1;
 
   function playerPos() {                      // continuous tile coords
@@ -612,7 +627,7 @@
       kind: kind, state: 'idle', home: homeSlot,
       tx: HOUSE[homeSlot].c, ty: HOUSE[homeSlot].r, px: 0, dir: 3, gx: HOUSE[homeSlot].c, gy: HOUSE[homeSlot].r,
       release: 0, scatC: scatC, scatR: scatR, reverseFlag: false, fright: false,
-      biasCorner: 0, biasT: 0, nearMissCd: 0
+      biasCorner: 0, biasT: 0, nearMissCd: 0, pounceCue: false
     };
   }
   function resetDrones(afterDeath) {
@@ -643,9 +658,11 @@
   var level = 1, score = 0, best = 0, lives = 3;
   var chipsEaten = 0, bustCount = 0, chainIdx = 0, closeCalls = 0;
   var NEARMISS_LO2 = 0.45, NEARMISS_HI2 = 1.15, NEARMISS_BONUS = 15, NEARMISS_CD = 1.1;
+  var TENSION_R2 = 9, TENSION_INNER = 0.7, TENSION_SPAN = 2.3;   // chase-tension danger band
   var frightT = 0, frightMax = 7;
   var modePhase = 0, modeT = 0;
   var stateT = 0, freezeT = 0, shake = 0;
+  var tensionLevel = 0, tensionCd = 0;         // chase-tension read: 0-1 threat from nearest active drone
   var extraGiven = false;
   var cameo = { active: false, type: 'dish', t: 0 };
   var cameoSpawned = 0;
@@ -709,7 +726,9 @@
       return;
     }
   }
-  var PARTS = []; for (pi = 0; pi < 48; pi++) PARTS.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 0, col: '#fff', sz: 2 });
+  // Pool sized for both radial bursts (pickups/busts/death, up to ~20 at once) and
+  // the continuous Beezer movement trail (a few live at any moment) sharing one pool.
+  var PARTS = []; for (pi = 0; pi < 72; pi++) PARTS.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 0, col: '#fff', sz: 2 });
   function burst(x, y, col, n, sp) {
     var made = 0;
     for (var i = 0; i < PARTS.length && made < n; i++) if (!PARTS[i].on) {
@@ -718,6 +737,27 @@
       p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v;
       p.t = 0; p.life = 0.4 + Math.random() * 0.5; p.col = col; p.sz = 1.5 + Math.random() * 2.5;
       made++;
+    }
+  }
+  // Single low-velocity particle for the maze-traversal trail — same struct/pool as
+  // burst(), just one drop at a time with a caller-supplied velocity instead of a
+  // random radial spray.
+  function trailDrop(x, y, vx, vy, col, life, sz) {
+    for (var i = 0; i < PARTS.length; i++) if (!PARTS[i].on) {
+      var p = PARTS[i]; p.on = true; p.x = x; p.y = y; p.vx = vx; p.vy = vy;
+      p.t = 0; p.life = life; p.col = col; p.sz = sz;
+      return;
+    }
+  }
+
+  // Expanding shockwave rings for the "big" moments (Deep Dish payoff, drone bust,
+  // Beezer's death, level clear) — a lightweight pool exactly like POPS/PARTS above,
+  // rendered as a stroked circle whose radius eases out over its lifetime.
+  var SHOCKS = []; for (var shi = 0; shi < 8; shi++) SHOCKS.push({ on: false, x: 0, y: 0, t: 0, life: 0.4, col: '#fff', r1: 22 });
+  function shockwave(x, y, col, life, r1) {
+    for (var i = 0; i < SHOCKS.length; i++) if (!SHOCKS[i].on) {
+      var s = SHOCKS[i]; s.on = true; s.x = x; s.y = y; s.t = 0; s.life = life || 0.4; s.col = col; s.r1 = r1 || 22;
+      return;
     }
   }
 
@@ -764,6 +804,16 @@
       if (queued >= 0 && canGo(P.ty, P.tx, queued, false, false)) { P.dir = queued; queued = -1; }
       if (!canGo(P.ty, P.tx, P.dir, false, false)) { P.moving = false; }
     }
+    // Maze-traversal juice: a short glowing tail dropped behind Beezer while moving,
+    // reusing the burst particle pool (see trailDrop). Frenzy shifts it frost-blue to
+    // match the drones' own color flip, so speeding through on a power run *feels*
+    // different from ordinary chip-sweeping.
+    P.trailCd -= dt;
+    if (P.trailCd <= 0) {
+      P.trailCd = 0.045;
+      var tp = playerPos();
+      trailDrop(tp.x, tp.y, -DX[P.dir] * 0.7, -DY[P.dir] * 0.7, frightT > 0 ? COL.frost : COL.amber, 0.26, 3);
+    }
   }
 
   function eatAt(r, c) {
@@ -778,7 +828,11 @@
         var d = drones[i];
         if (d.state !== 'eyes') { d.fright = true; if (d.state === 'active') d.reverseFlag = true; }
       }
-      burst(c, r, COL.amber, 10, 4);
+      // Deep Dish payoff: a bigger two-tone burst plus an expanding ring so "the
+      // drones just went frosty" reads as a real power moment, not just a color swap.
+      burst(c, r, COL.amber, 12, 4.4);
+      burst(c, r, COL.frost, 8, 5.6);
+      shockwave(c, r, COL.amber, 0.5, 30);
     }
     // cameo spawns at 30% / 65% of chips
     if (cameoSpawned === 0 && chipsEaten >= Math.floor(chipsTotal * 0.3)) spawnCameo();
@@ -840,7 +894,13 @@
       tgtBuf.x = pp.x + DX[P.dir] * 4; tgtBuf.y = pp.y + DY[P.dir] * 4;
     } else if (d.kind === 2) {       // LOOP: flank via corner bias, pounce when close
       var dx = d.tx - pp.x, dy = d.ty - pp.y;
-      if (dx * dx + dy * dy < 12) { tgtBuf.x = pp.x; tgtBuf.y = pp.y; }
+      var close = dx * dx + dy * dy < 12;
+      // "Spotted you" cue — the one-shot moment LOOP's AI flips from lazy flanking
+      // to a direct pounce, made audible/visible so the switch reads as a decision
+      // instead of a silent target-math change.
+      if (close && !d.pounceCue) { d.pounceCue = true; sSpotted(); burst(d.tx, d.ty, DRONE_COLORS[2], 6, 3.2); }
+      else if (!close) { d.pounceCue = false; }
+      if (close) { tgtBuf.x = pp.x; tgtBuf.y = pp.y; }
       else {
         var cn = CORNERS[d.biasCorner];
         tgtBuf.x = (pp.x + cn[0]) * 0.5; tgtBuf.y = (pp.y + cn[1]) * 0.5;
@@ -906,10 +966,11 @@
       pauseOv = document.getElementById('pauseOv');
 
   function resetPositions() {
-    P.tx = SPAWN.c; P.ty = SPAWN.r; P.px = 0; P.dir = 2; P.moving = false; P.munch = 0;
+    P.tx = SPAWN.c; P.ty = SPAWN.r; P.px = 0; P.dir = 2; P.moving = false; P.munch = 0; P.trailCd = 0;
     queued = -1;
     resetDrones();
     frightT = 0; chainIdx = 0;
+    tensionLevel = 0; tensionCd = 0;
     cameo.active = false;
   }
   function startLevel(fresh) {
@@ -937,6 +998,7 @@
     burst(cp.x, cp.y, COL.amber, 14, 5);
     burst(cp.x, cp.y, COL.cyan, 10, 4.4);
     burst(cp.x, cp.y, COL.magenta, 10, 3.8);
+    shockwave(cp.x, cp.y, COL.cyan, 0.6, 42);
   }
   function startDeath() {
     STATE = 'DYING'; stateT = 1.9;
@@ -945,6 +1007,7 @@
     var pp = playerPos();
     burst(pp.x, pp.y, COL.amber, 14, 5);
     burst(pp.x, pp.y, COL.cyan, 8, 4);
+    shockwave(pp.x, pp.y, COL.ember, 0.55, 34);
   }
   function gameOver() {
     STATE = 'OVER';
@@ -968,13 +1031,19 @@
       var dx = dp.x - pp.x, dy = dp.y - pp.y;
       if (dx * dx + dy * dy > 0.45) continue;
       if (d.fright) {
+        var comboN = chainIdx;                    // combo count before increment, for the label
         var pts = 200 << chainIdx; chainIdx = Math.min(3, chainIdx + 1);
         addScore(pts); bustCount++;
-        popup(dp.x, dp.y, String(pts), COL.frost);
-        burst(dp.x, dp.y, DRONE_COLORS[d.kind], 12, 5);
+        popup(dp.x, dp.y, String(pts) + (comboN > 0 ? ' COMBO!' : ''), COL.frost);
+        // Richer catch payoff: two-tone burst (drone color + frost) plus an
+        // expanding ring, so busting reads as a bigger beat than a plain sparkle —
+        // especially once a chain is running.
+        burst(dp.x, dp.y, DRONE_COLORS[d.kind], 14, 5.5);
+        burst(dp.x, dp.y, COL.frost, 8, 4);
+        shockwave(dp.x, dp.y, DRONE_COLORS[d.kind], 0.4, 20);
         d.state = 'eyes'; d.fright = false;
         freezeT = 0.35;
-        sBust();
+        sBust(d.kind);
       } else {
         startDeath();
         return;
@@ -1001,6 +1070,32 @@
         popup((pp.x + dp.x) / 2, (pp.y + dp.y) / 2 - 0.35, 'CLOSE CALL!', COL.cyan);
         burst((pp.x + dp.x) / 2, (pp.y + dp.y) / 2, COL.cyan, 6, 3);
       }
+    }
+  }
+
+  // Chase-tension feedback: tracks how close the nearest *active, non-fright* drone
+  // is and turns that into a 0-1 threat level the renderer pulses around Beezer and
+  // an occasional heartbeat blip that quickens as the gap closes. Fright drones are
+  // prey, not threats, so they're excluded — this is purely "am I about to get caught."
+  function updateTension(dt) {
+    tensionCd -= dt;
+    var pp = playerPos(), best2 = 1e9;
+    for (var i = 0; i < drones.length; i++) {
+      var d = drones[i];
+      if (d.state !== 'active' || d.fright) continue;
+      var dp = dronePos(d);
+      var dx = dp.x - pp.x, dy = dp.y - pp.y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 < best2) best2 = d2;
+    }
+    if (best2 < TENSION_R2) {
+      tensionLevel = 1 - Math.min(1, Math.max(0, (Math.sqrt(best2) - TENSION_INNER) / TENSION_SPAN));
+    } else {
+      tensionLevel = 0;
+    }
+    if (tensionLevel > 0.08 && tensionCd <= 0) {
+      sTension(tensionLevel);
+      tensionCd = 0.55 - tensionLevel * 0.4;   // heartbeat quickens as the threat closes in
     }
   }
 
@@ -1052,7 +1147,7 @@
     stepPlayer(dt);
     for (i = 0; i < drones.length; i++) stepDrone(drones[i], dt);
     collide();
-    if (STATE === 'PLAY') checkNearMiss();
+    if (STATE === 'PLAY') { checkNearMiss(); updateTension(dt); }
 
     if (cameo.active) {
       cameo.t -= dt;
@@ -1147,6 +1242,19 @@
         drawDrone(ctx, d.kind, d.dir, d.fright, frFlash, d.state === 'eyes', now0);
         ctx.restore();
       }
+      // SPIRE telegraphs its ambush point 4 tiles ahead of Beezer's heading — makes
+      // its "flank the corner" AI (see droneTarget, kind 1) readable instead of just
+      // felt. Only shown while it's actually hunting, not scattering or frightened.
+      if (d.kind === 1 && d.state === 'active' && !d.fright && !inScatter() && STATE === 'PLAY') {
+        var rp = playerPos();
+        var lx = rp.x + DX[P.dir] * 4, ly = rp.y + DY[P.dir] * 4;
+        ctx.save();
+        ctx.globalAlpha = reduceMotion ? 0.55 : (0.5 + 0.2 * Math.sin(now0 * 6));
+        ctx.strokeStyle = COL.cyan; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.arc(tX(lx), tY(ly), 6, 0, 6.2832); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
     }
 
     // Beezer
@@ -1163,7 +1271,32 @@
         drawBeezer(ctx, P.dir, P.munch * 6, P.wing, dScale, dying);
         ctx.restore();
       }
+      // Chase-tension ring: a warning halo around Beezer that brightens as the
+      // nearest live drone closes in (see updateTension). The pulsing scale is
+      // motion, so it's frozen to a steady ring under reduced-motion; the color/
+      // alpha read (the actual "how close is it" signal) stays either way.
+      if (STATE === 'PLAY' && tensionLevel > 0.02) {
+        var tPulse = reduceMotion ? 1 : (1 + 0.22 * Math.sin(now0 * (8 + tensionLevel * 10)));
+        ctx.save();
+        ctx.globalAlpha = tensionLevel * 0.55;
+        ctx.strokeStyle = COL.ember; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(tX(pp.x), tY(pp.y), 13 * tPulse, 0, 6.2832); ctx.stroke();
+        ctx.restore();
+      }
     }
+
+    // shockwave rings (pellet, bust, death, level clear) — expanding stroke, eased alpha
+    for (i = 0; i < SHOCKS.length; i++) {
+      var sh = SHOCKS[i];
+      if (!sh.on) continue;
+      sh.t += 1 / 60;
+      if (sh.t >= sh.life) { sh.on = false; continue; }
+      var shK = sh.t / sh.life;
+      ctx.globalAlpha = 1 - shK;
+      ctx.strokeStyle = sh.col; ctx.lineWidth = 2.4 * (1 - shK * 0.6);
+      ctx.beginPath(); ctx.arc(tX(sh.x), tY(sh.y), 2 + sh.r1 * shK, 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
 
     // particles
     for (i = 0; i < PARTS.length; i++) {
@@ -1332,6 +1465,15 @@
       finishLevel: function () {      // sweep every remaining chip to trigger STREET SWEPT!
         for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++)
           if (chips[r] && chips[r][c]) eatAt(r, c);
+        return STATE;
+      },
+      bust: function () {             // put HAWK in fright state onto Beezer for a clean catch/bust moment
+        var d = drones[0];
+        frightT = frightMax;
+        for (var i = 0; i < drones.length; i++) drones[i].fright = drones[i].state !== 'eyes';
+        d.state = 'active';
+        d.tx = P.tx; d.ty = P.ty; d.px = P.moving ? P.px : 0; d.dir = P.dir;
+        collide();
         return STATE;
       }
     }
