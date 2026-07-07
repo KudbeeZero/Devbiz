@@ -14,33 +14,33 @@
 
   // Dart skins: barrel + glow colour + stat mods. Unlocked via progression.
   const SKINS = {
-    cyan:   { color: '#39e6ff', accent: '#bff3ff', name: 'Cyan Bolt', tier: 'common', speed: 0, stability: 0, slimness: 0, cost: 0 },
-    violet: { color: '#c46bff', accent: '#ecd2ff', name: 'Violet Flux', tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0, cost: 250 },
-    green:  { color: '#7CFFb2', accent: '#daffe9', name: 'Jade Spike', tier: 'uncommon', speed: 0, stability: 0.03, slimness: 0, cost: 250 },
-    gold:   { color: '#ffd34d', accent: '#fff0bf', name: 'Gold Ace', tier: 'rare', speed: 0.04, stability: 0.02, slimness: 0, cost: 500 },
-    ember:  { color: '#ff5d3c', accent: '#ffc8bb', name: 'Ember Tip', tier: 'rare', speed: 0, stability: 0, slimness: 0.05, cost: 500 },
+    cyan:   { color: '#39e6ff', accent: '#bff3ff', name: 'Cyan Bolt', tier: 'common', speed: 0, stability: 0, slimness: 0 },
+    violet: { color: '#c46bff', accent: '#ecd2ff', name: 'Violet Flux', tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0 },
+    green:  { color: '#7CFFb2', accent: '#daffe9', name: 'Jade Spike', tier: 'uncommon', speed: 0, stability: 0.03, slimness: 0 },
+    gold:   { color: '#ffd34d', accent: '#fff0bf', name: 'Gold Ace', tier: 'rare', speed: 0.04, stability: 0.02, slimness: 0 },
+    ember:  { color: '#ff5d3c', accent: '#ffc8bb', name: 'Ember Tip', tier: 'rare', speed: 0, stability: 0, slimness: 0.05 },
   };
 
   // ---- Dart Workshop catalogs -------------------------------------------
   // TIPS change the point geometry + colour/glow + stat mods. `col:null` means "use the
   // barrel/skin colour" so neon tips theme with the equipped skin.
   const TIPS = {
-    steel:  { name: 'Steel Point', col: '#eaf6ff', len: 0.20, glow: 0, tier: 'common', speed: 0, stability: 0, slimness: 0, cost: 0 },
-    needle: { name: 'Needle',      col: '#dfeaff', len: 0.27, glow: 1, tier: 'uncommon', speed: 0.03, stability: 0, slimness: 0.02, cost: 200 },
-    neon:   { name: 'Neon Spike',  col: null,      len: 0.21, glow: 7, tier: 'uncommon', speed: 0, stability: 0.03, slimness: 0, cost: 200 },
-    plasma: { name: 'Plasma Tip',  col: '#ffffff', len: 0.25, glow: 13, hot: true, tier: 'epic', speed: 0.05, stability: 0.03, slimness: 0, cost: 750 },
-    goldp:  { name: 'Gold Point',  col: '#ffd34d', len: 0.20, glow: 4, tier: 'rare', speed: 0, stability: 0.04, slimness: 0, cost: 400 },
+    steel:  { name: 'Steel Point', col: '#eaf6ff', len: 0.20, glow: 0, tier: 'common', speed: 0, stability: 0, slimness: 0 },
+    needle: { name: 'Needle',      col: '#dfeaff', len: 0.27, glow: 1, tier: 'uncommon', speed: 0.03, stability: 0, slimness: 0.02 },
+    neon:   { name: 'Neon Spike',  col: null,      len: 0.21, glow: 7, tier: 'uncommon', speed: 0, stability: 0.03, slimness: 0 },
+    plasma: { name: 'Plasma Tip',  col: '#ffffff', len: 0.25, glow: 13, hot: true, tier: 'epic', speed: 0.05, stability: 0.03, slimness: 0 },
+    goldp:  { name: 'Gold Point',  col: '#ffd34d', len: 0.20, glow: 4, tier: 'rare', speed: 0, stability: 0.04, slimness: 0 },
   };
 
   // FLIGHTS change the tail feather silhouette + opacity + stat mods. Each `shape` returns
   // the polygon (in barrel-relative units) for one half; the renderer mirrors.
   const FLIGHTS = {
-    standard: { name: 'Standard', alpha: 0.92, spread: 1.30, sweep: 0.50, notch: 0, tier: 'common', speed: 0, stability: 0, slimness: 0, cost: 0 },
-    slim:     { name: 'Slim',     alpha: 0.95, spread: 0.85, sweep: 0.50, notch: 0, tier: 'uncommon', speed: 0, stability: 0, slimness: 0.04, cost: 150 },
-    kite:     { name: 'Kite',     alpha: 0.92, spread: 1.65, sweep: 0.46, notch: 0, tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0, cost: 150 },
-    shark:    { name: 'Shark',    alpha: 0.94, spread: 1.45, sweep: 0.72, notch: 0, tier: 'rare', speed: 0.03, stability: 0.02, slimness: 0, cost: 350 },
-    star:     { name: 'Star',     alpha: 0.95, spread: 1.55, sweep: 0.50, notch: 0.4, tier: 'rare', speed: 0, stability: 0.04, slimness: 0.02, cost: 350 },
-    ghost:    { name: 'Ghost',    alpha: 0.55, spread: 1.70, sweep: 0.50, notch: 0, tier: 'epic', speed: 0.04, stability: 0, slimness: 0.06, cost: 600 },
+    standard: { name: 'Standard', alpha: 0.92, spread: 1.30, sweep: 0.50, notch: 0, tier: 'common', speed: 0, stability: 0, slimness: 0 },
+    slim:     { name: 'Slim',     alpha: 0.95, spread: 0.85, sweep: 0.50, notch: 0, tier: 'uncommon', speed: 0, stability: 0, slimness: 0.04 },
+    kite:     { name: 'Kite',     alpha: 0.92, spread: 1.65, sweep: 0.46, notch: 0, tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0 },
+    shark:    { name: 'Shark',    alpha: 0.94, spread: 1.45, sweep: 0.72, notch: 0, tier: 'rare', speed: 0.03, stability: 0.02, slimness: 0 },
+    star:     { name: 'Star',     alpha: 0.95, spread: 1.55, sweep: 0.50, notch: 0.4, tier: 'rare', speed: 0, stability: 0.04, slimness: 0.02 },
+    ghost:    { name: 'Ghost',    alpha: 0.55, spread: 1.70, sweep: 0.50, notch: 0, tier: 'epic', speed: 0.04, stability: 0, slimness: 0.06 },
   };
 
   function Sprites() {

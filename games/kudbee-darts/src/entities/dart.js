@@ -205,12 +205,13 @@
     return false;
   };
 
-  // Helper to get current position along flight arc for trail emission.
-  Dart.prototype._getFlightPos = function () {
-    if (this.state !== 'flying') return null;
-    const Util = this.game.constructor.prototype.constructor.name === 'Util' ? window.KD.Util : window.KD.Util || {};
-    const k = this._ft / FLIGHT_TIME;
-    const e = Util.smooth ? Util.smooth(k) : (3 * k * k - 2 * k * k * k);
+  // Quadratic-Bézier hand -> curl control point -> landing, shared by the
+  // flight render and the trail-emission sampler below. `k` is 0..1 flight
+  // progress; the returned vx/vy is dPosition/dk (chain rule through the
+  // smoothstep easing), i.e. the dart's actual instantaneous travel direction.
+  Dart.prototype._bezierFlight = function (k) {
+    const e = Util.smooth(k);
+    const om = 1 - e;
     const x0 = this._fromX, y0 = this._fromY, x1 = this.landX, y1 = this.landY;
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
     const dx = x1 - x0, dy = y1 - y0;
@@ -219,14 +220,19 @@
     const curlPx = (this._curl || 0) * this.game.board.Rpx * 0.55 + (this._sway || 0);
     const cxp = mx + nx * curlPx;
     const cyp = my + ny * curlPx - 78;
-    const om = 1 - e;
     const x = om * om * x0 + 2 * om * e * cxp + e * e * x1;
     const y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
-    const deriv_e = e > 0 ? k * 6 - k * k * 6 : 0;
-    const deriv_om = -deriv_e;
-    const vx = deriv_om * deriv_om * x0 + 2 * (deriv_om * (-deriv_e) * cxp + (-deriv_e) * deriv_e * cxp) + deriv_e * deriv_e * x1;
-    const vy = deriv_om * deriv_om * y0 + 2 * (deriv_om * (-deriv_e) * cyp + (-deriv_e) * deriv_e * cyp) + deriv_e * deriv_e * y1;
-    return { x: x, y: y, vx: vx, vy: vy };
+    const tx = 2 * om * (cxp - x0) + 2 * e * (x1 - cxp);
+    const ty = 2 * om * (cyp - y0) + 2 * e * (y1 - cyp);
+    const deriv_e = 6 * k - 6 * k * k;
+    return { x: x, y: y, vx: deriv_e * tx, vy: deriv_e * ty, tx: tx, ty: ty, cxp: cxp, cyp: cyp, om: om, e: e };
+  };
+
+  // Current position + velocity along the flight arc, for trail emission.
+  Dart.prototype._getFlightPos = function () {
+    if (this.state !== 'flying') return null;
+    const f = this._bezierFlight(this._ft / FLIGHT_TIME);
+    return { x: f.x, y: f.y, vx: f.vx, vy: f.vy };
   };
 
   // ---- Rendering ---------------------------------------------------------
@@ -343,22 +349,8 @@
   Dart.prototype.drawFlight = function (ctx) {
     if (this.state !== 'flying') return;
     const k = this._ft / FLIGHT_TIME;
-    const e = Util.smooth(k);
-
-    // Quadratic Bézier from hand -> control -> landing. The control point is
-    // offset sideways by the curl so the dart hooks in, and lifted so it lofts.
-    const Rpx = this.game.board.Rpx;
-    const x0 = this._fromX, y0 = this._fromY, x1 = this.landX, y1 = this.landY;
-    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-    const dx = x1 - x0, dy = y1 - y0;
-    const dl = Math.sqrt(dx * dx + dy * dy) || 1;
-    const nx = -dy / dl, ny = dx / dl;               // perpendicular
-    const curlPx = (this._curl || 0) * Rpx * 0.55 + (this._sway || 0);
-    const cxp = mx + nx * curlPx;
-    const cyp = my + ny * curlPx - 78;               // lift for the loft
-    const om = 1 - e;
-    let x = om * om * x0 + 2 * om * e * cxp + e * e * x1;
-    let y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
+    const f = this._bezierFlight(k);
+    const e = f.e, x = f.x, y = f.y;
 
     const scale = Util.lerp(1.45, 0.48, e);
 
@@ -370,7 +362,7 @@
       ctx.globalAlpha = sa * 0.34;
       ctx.fillStyle = '#000';
       ctx.beginPath();
-      ctx.ellipse(x1 + (1 - sa) * 10, y1 + (1 - sa) * 16,
+      ctx.ellipse(this.landX + (1 - sa) * 10, this.landY + (1 - sa) * 16,
         15 * (1.7 - sa * 0.7), 8 * (1.7 - sa * 0.7), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
@@ -379,10 +371,8 @@
     // Motion streak: a short glowing ribbon along the recent arc, so the flick
     // reads fast without ghost-drawing the whole dart repeatedly.
     if (k > 0.06 && !this.game.reduceMotion) {
-      const eb = Util.smooth(Math.max(0, k - 0.09));
-      const omb = 1 - eb;
-      const bxr = omb * omb * x0 + 2 * omb * eb * cxp + eb * eb * x1;
-      const byr = omb * omb * y0 + 2 * omb * eb * cyp + eb * eb * y1;
+      const fb = this._bezierFlight(Math.max(0, k - 0.09));
+      const bxr = fb.x, byr = fb.y;
       const col = (this.skin && this.skin.color) || '#39e6ff';
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -397,9 +387,7 @@
       ctx.restore();
     }
     // Travel angle = Bézier tangent, with a hair of extra droop near landing.
-    const tx = 2 * om * (cxp - x0) + 2 * e * (x1 - cxp);
-    const ty = 2 * om * (cyp - y0) + 2 * e * (y1 - cyp);
-    const ang = Math.atan2(ty, tx) + Math.cos(k * Math.PI) * 0.10;
+    const ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
     // Barrel roll: squashes the silhouette vertically as it spins.
     const spin = (this._roll || 1) * (k * 13);
     const roll = 0.4 + 0.6 * Math.abs(Math.cos(spin));

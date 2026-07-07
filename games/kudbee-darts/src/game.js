@@ -13,6 +13,7 @@
 
   const VIEW_W = 960;
   const VIEW_H = 720;
+  const DART_SCALE = 1.4;
   const C = {
     cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2',
     gold: '#ffd34d', ember: '#ff5d3c', text: '#cfe9ff', dim: '#7d8aa8',
@@ -457,7 +458,6 @@
       ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
       ctx.translate(b.x, b.y);
       ctx.rotate(b.rot);
-      // Enhanced: 40% bigger darts for better screen presence
       this.sprites.drawDart(ctx, 48, b.skin, 0, b.parts);
       ctx.restore();
     }
@@ -682,7 +682,7 @@
       ctx.save();
       ctx.translate(b.x + b.w / 2, b.y + b.h / 2 + 4);
       ctx.rotate(-Math.PI * 0.25);
-      this.sprites.drawDart(ctx, 64, KD.Sprites.SKINS[b.id.split(':')[1]], 0); // Enhanced: 40% larger
+      this.sprites.drawDart(ctx, 64, KD.Sprites.SKINS[b.id.split(':')[1]], 0);
       ctx.restore();
       if (locked) {
         ctx.fillStyle = '#cfe9ff'; ctx.font = '11px "Space Grotesk", sans-serif';
@@ -727,7 +727,7 @@
     ctx.save();
     ctx.translate(VIEW_W / 2, 530);
     ctx.rotate(-Math.PI * 0.12);
-    this.sprites.drawDart(ctx, 168, skin, 0.4, d.darts); // Enhanced: 40% larger
+    this.sprites.drawDart(ctx, 168, skin, 0.4, d.darts);
     ctx.restore();
     ctx.save();
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
@@ -1370,20 +1370,20 @@
     // Mini preview.
     if (b.group === 'skin') {
       ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
-      this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts); // Enhanced: 40% larger
+      this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
       ctx.restore();
     } else {
       const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
       const parts = b.group === 'tip' ? { tip: b.key, flight: this.progression.data.darts.flight }
                                        : { tip: this.progression.data.darts.tip, flight: b.key };
       ctx.save(); ctx.translate(cx + 22, b.y + 28); ctx.rotate(Math.PI);
-      this.sprites.drawDart(ctx, 109, skin, 0.2, parts); // Enhanced: 40% larger
+      this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
       ctx.restore();
     }
     // Name.
     ctx.textAlign = 'center'; ctx.fillStyle = b.sel ? '#fff' : C.text;
     ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText((cat[b.key] || {}).name || b.key, cx, b.y + b.h - 18);
+    ctx.fillText((cosmetic || {}).name || b.key, cx, b.y + b.h - 18);
     // Status line: EQUIPPED / cost / OWNED / LOCKED.
     ctx.font = '11px "Space Grotesk", sans-serif';
     if (b.sel) { ctx.fillStyle = C.green; ctx.fillText('EQUIPPED', cx, b.y + b.h - 5); }
@@ -1418,7 +1418,7 @@
     ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 420, skin, 0.6, d.darts); // Enhanced: 40% larger
+    this.sprites.drawDart(ctx, 420, skin, 0.6, d.darts);
     ctx.restore();
 
     // Combined stats panel (bottom-right of preview).

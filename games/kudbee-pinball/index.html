@@ -622,8 +622,8 @@
       callout(label, '+' + (pts * mult).toLocaleString(), col);
       sfx('combo');
       // Enhanced combo explosion effect
-      if (comboN >= 6) {
-        comboExplosion = 0.8;  // trigger visual explosion
+      if (comboN >= 6 && !reduceMotion) {
+        comboExplosion = 0.8;
         burst(x, y, col, 24 + comboN * 2, 420 + comboN * 20);
         burst(x, y, '#ffffff', 16, 500);
         shake = Math.min(shake + 0.8, 1.9);
@@ -955,7 +955,7 @@
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
     if (comboT > 0) { comboT -= dt; if (comboT <= 0) comboN = 0; }  // combo chain expires
-    if (comboExplosion > 0) comboExplosion = Math.max(0, comboExplosion - dt * 2);  // combo explosion visual
+    if (comboExplosion > 0 && !reduceMotion) comboExplosion = Math.max(0, comboExplosion - dt * 2);
     if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); }
     if (reduceMotion) { dispScore = score; scoreFlash = 0; }        // count-up is a flourish; skip it
     else {
@@ -1273,8 +1273,8 @@
         ctx.fillStyle = hexToRgba(chudCol, 0.9);
         ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw * clamp(comboT / COMBO_WINDOW, 0, 1), 4);
       }
-      // Combo explosion visual effect (6+ combo)
-      if (comboExplosion > 0 && comboN >= 6) {
+      // Combo explosion visual effect
+      if (comboExplosion > 0 && !reduceMotion) {
         ctx.globalCompositeOperation = 'lighter';
         var explosionR = mn * 0.08 * (1 - comboExplosion);
         var explosionAlpha = comboExplosion * 0.7;
