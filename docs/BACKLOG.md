@@ -31,7 +31,8 @@ These make the site actually *transact / measure*. All the UI is built and waiti
 
 ## 🟢 Cleanup
 - [ ] 🟢 **Prune merged remote branches** — ~75 stale `origin/claude/*` branches (mostly other efforts: pinball/voidrunner/growverse/mission-control). Delete only the fully-merged ones; owner ok first since they span other work.
-- [ ] 🟢 **Ledger truth fix** — `BUILD_LEDGER.md` row `DBZ-035` still reads `DRAFT` but its branch (`claude/ledger-reconcile-session`) is merged. One-line docs fix.
+- [x] 🟢 **Ledger truth fix** — `BUILD_LEDGER.md` rows `DBZ-035` and `DBZ-048..059` were stale (`DRAFT`/`PLAN`) though all merged. Fixed 2026-07-07: all 12 polish lanes (PRs #112–123) confirmed merged and flipped to `MERGED`; `DBZ-035` flipped too (its branch is gone, content already reflected).
+- [ ] 🟢 **SEO follow-ups from the DBZ-048 re-verification (2026-07-07)** — not blocking: (1) `assets/og/home.jpg` was captured before Lane 05's hero changes landed, may no longer be a fully current render; (2) `museum/kudbee-contra/` (added by Lane 11, after Lane 01) has no `canonical`/`og:*`/`robots` meta and isn't in `sitemap.xml`.
 
 ## 🌟 Dream feature (north star)
 - [ ] 🌟 **Ship-it → real deployed draft → booked call** — after the teaser, the agent interviews for ~60s, generates an *actual multi-page* site (real pages/copy/schema, house style), deploys to a temporary `their-business.kudbee.dev`, and books the call with the draft attached. (Deploy step is owner-gated/backend.) Fuses agent + Ship-it + templates + real deploy into a top-of-funnel no template shop can match.
