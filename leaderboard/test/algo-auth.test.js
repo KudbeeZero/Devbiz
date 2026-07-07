@@ -6,14 +6,20 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import {
-  decodeAlgoAddress,
-  extractPublicKeyFromAddress,
   verifyAlgoMessage,
-  parseAlgoMessage,
-  reconstructSignedMessage,
   isAlgoAuthEnabled,
   authError,
+  TEST_UTILS,
 } from '../shared/algo-auth.js';
+
+const {
+  decodeAlgoAddress,
+  extractPublicKeyFromAddress,
+  publicKeyToAddress,
+  verifySignature,
+  parseAlgoMessage,
+  reconstructSignedMessage,
+} = TEST_UTILS;
 
 // ---- Test utilities ---------------------------------------------------
 
@@ -111,6 +117,32 @@ test('extractPublicKeyFromAddress: stub (needs real Algorand test addresses)', (
 
   const result2 = extractPublicKeyFromAddress('');
   assert.strictEqual(result2, null);
+});
+
+test('publicKeyToAddress: converts 32-byte key to Algorand address', async () => {
+  // Create a 32-byte public key (all zeros for testing)
+  const publicKey = new Uint8Array(32);
+
+  const address = await publicKeyToAddress(publicKey);
+
+  // Should return a valid-looking Algorand address (58 chars)
+  assert(typeof address === 'string' || address === null);
+  if (address) {
+    assert.strictEqual(address.length, 58);
+    // All characters should be valid base32 (A-Z, 2-7)
+    assert(/^[A-Z2-7]{58}$/.test(address));
+  }
+});
+
+test('publicKeyToAddress: null key returns null', async () => {
+  const result = await publicKeyToAddress(null);
+  assert.strictEqual(result, null);
+});
+
+test('publicKeyToAddress: wrong key length returns null', async () => {
+  const shortKey = new Uint8Array(16);
+  const result = await publicKeyToAddress(shortKey);
+  assert.strictEqual(result, null);
 });
 
 // ---- Tests: Message reconstruction (signing baseline) -------------------

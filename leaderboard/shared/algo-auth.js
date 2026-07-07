@@ -276,6 +276,8 @@ export function authError(status, code) {
 export const TEST_UTILS = {
   decodeAlgoAddress,
   extractPublicKeyFromAddress,
+  publicKeyToAddress,
   parseAlgoMessage,
   reconstructSignedMessage,
+  verifySignature,
 };
