@@ -86,6 +86,9 @@
   Audio.prototype.whoosh = function () { this._noise(0.18, 0.18, 2600, 500); };
   // Dart sticking into the board: a low thud + tick.
   Audio.prototype.thud = function () { this._tone(150, 0.07, 'sine', 0.22, 70); this._noise(0.05, 0.10, 900); };
+  // A genuine miss: a duller, deflated clunk — no ring or bite, so it reads
+  // as "that didn't stick" rather than a scoring thud.
+  Audio.prototype.clunk = function () { this._tone(95, 0.10, 'sine', 0.14, 45); this._noise(0.09, 0.12, 420); };
   // UI tick / reticle blip.
   Audio.prototype.tick = function () { this._tone(660, 0.04, 'square', 0.08); };
   // Good score chime. tier 0 = single, 1 = treble/20s, 2 = bull/checkout.

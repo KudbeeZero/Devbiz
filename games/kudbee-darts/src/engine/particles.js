@@ -105,6 +105,26 @@
     this.burst(x, y, color || '#9fefff', 8, 200, { glow: true, life: 0.3, size: 2 });
   };
 
+  /* A genuine miss: a duller, grayer puff with no glow and no score color —
+   * so a whiff on the surround reads as "that didn't count", not a hit. */
+  Particles.prototype.dust = function (x, y, count) {
+    this.burst(x, y, '#8a93ad', count || 8, 90, { life: 0.4, size: 2.2, gravity: 60, drag: 2 });
+  };
+
+  /* Slow rising ember wisps — the bullseye's hot little flourish, layered on
+   * top of scoreBurst (not a replacement for it). */
+  Particles.prototype.smoke = function (x, y, color, count) {
+    color = color || '#ff5d3c';
+    for (let i = 0; i < (count || 5); i++) {
+      this.emit({
+        x: x + Util.rand(-5, 5), y: y - Util.rand(0, 4),
+        vx: Util.rand(-10, 10), vy: -Util.rand(24, 46),
+        life: Util.rand(0.5, 0.8), size: Util.rand(4, 8),
+        color: color, gravity: -14, drag: 1.6, glow: true,
+      });
+    }
+  };
+
   /* Tumbling square "bricks" knocked off the board/segment on a hit — the
    * chunky, physical pop the digital scoreboards echo. */
   Particles.prototype.bricks = function (x, y, color, count, opts) {
