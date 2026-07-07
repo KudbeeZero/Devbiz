@@ -137,7 +137,15 @@
     if (this.combo >= 2) this.score += this._comboBonus(this.combo);
     // Chunky freeze-frame on a kill — a few frames only, doesn't fight the
     // player's next input (see the hitstop guard in _update).
-    this.hitstop = Math.max(this.hitstop, this.combo >= 4 ? 0.075 : 0.045);
+    this._addHitstop(this.combo >= 4 ? 0.075 : 0.045);
+  };
+
+  // Freeze-frame punch shared by every "solid hit" moment (kills, heavy
+  // weapon hits, explosions, taking damage). Simultaneous sources take the
+  // strongest single value rather than stacking additively — otherwise a
+  // burst of small hits would add up into one long, disorienting freeze.
+  Game.prototype._addHitstop = function (t) {
+    this.hitstop = Math.max(this.hitstop, t);
   };
 
   // Small escalating score bonus for chaining kills; capped so it never
@@ -369,11 +377,15 @@
         this.particles.explosion(pr.x, pr.y, true);
         this.audio.explosion();
         this.camera.shake(0.3);
+        this._addHitstop(0.06);
         this._areaDamage(pr.x, pr.y, 90, 4);
         continue;
       }
 
       if (pr.friendly) {
+        // Scale the contact spark to the weapon's damage so a plasma/laser
+        // hit reads heavier than a pulse-rifle tick.
+        const k = Util.clamp(pr.damage / 2, 0.7, 2.4);
         // vs enemies
         for (let j = 0; j < this.enemies.length; j++) {
           const e = this.enemies[j];
@@ -382,11 +394,11 @@
               if (pr.hit.indexOf(e) !== -1) continue;  // already struck
               e.hurt(pr.damage);
               pr.hit.push(e);
-              this.particles.spark(pr.x, pr.y, pr.color);
+              this.particles.spark(pr.x, pr.y, pr.color, k);
               // piercing bolts keep going
             } else {
               e.hurt(pr.damage);
-              this.particles.spark(pr.x, pr.y, pr.color);
+              this.particles.spark(pr.x, pr.y, pr.color, k);
               if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
               pr.dead = true;
               break;
@@ -397,7 +409,7 @@
         if (!pr.dead && this.boss && !this.boss.dead && this.bossActive) {
           if (Util.aabb(this._prBox(pr), this.boss.box()) && pr.hit.indexOf(this.boss) === -1) {
             this.boss.hurt(pr.damage);
-            this.particles.spark(pr.x, pr.y, pr.color);
+            this.particles.spark(pr.x, pr.y, pr.color, k);
             if (pr.style === 'missile') this._missileBlast(pr.x, pr.y);
             if (pr.pierce) pr.hit.push(this.boss); else pr.dead = true;
           }
@@ -451,6 +463,7 @@
     this.particles.explosion(x, y, false);
     this.audio.explosion();
     this.camera.shake(0.18);
+    this._addHitstop(0.045);
     this._areaDamage(x, y, 64, 2);
   };
 

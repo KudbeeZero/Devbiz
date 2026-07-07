@@ -22,6 +22,12 @@
         p.glow = cfg.glow || false;
         p.text = cfg.text || null;
         p.drag = cfg.drag || 0;
+        // 'circle' (default) or 'rect' — rects read as chunky physical debris
+        // (armor plating, shrapnel) so a death can look like solid matter
+        // breaking apart rather than just another glowing dot.
+        p.shape = cfg.shape || 'circle';
+        p.rot = cfg.rot || 0;
+        p.rotSpeed = cfg.rotSpeed || 0;
       }
     );
   }
@@ -55,21 +61,76 @@
     this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.18, size: big ? 60 : 36, color: '#fff6d8', glow: true });
   };
 
-  Particles.prototype.muzzle = function (x, y, dir) {
+  // `weapon` (optional, from entities/weapons.js) tints the flash and spark
+  // color to match the gun firing it and fattens the core for heavy shots
+  // (plasma) — so each weapon's muzzle reads distinctly instead of every
+  // shot flashing the same generic cyan. Omit `weapon` for a neutral flash
+  // (e.g. the K9 companion's missile launch, which isn't a "gun").
+  Particles.prototype.muzzle = function (x, y, dir, weapon) {
+    const color = weapon ? weapon.color : '#9fefff';
+    const heavy = !!(weapon && weapon.style === 'plasma');
     // Bright glow core at the muzzle — reads as a flash, one particle per shot.
-    this.emit({ x: x + dir * 5, y: y, vx: dir * 60, vy: 0, life: 0.07, size: 10, color: '#e6fbff', glow: true, gravity: 0, drag: 6 });
-    for (let i = 0; i < 6; i++) {
+    this.emit({ x: x + dir * 5, y: y, vx: dir * 60, vy: 0, life: heavy ? 0.1 : 0.07, size: heavy ? 16 : 10, color: '#e6fbff', glow: true, gravity: 0, drag: 6 });
+    const n = weapon && weapon.pellets > 1 ? 9 : 6;
+    for (let i = 0; i < n; i++) {
       this.emit({
         x: x, y: y,
         vx: dir * Util.rand(120, 360) + Util.rand(-40, 40),
         vy: Util.rand(-60, 60),
-        life: 0.12, size: Util.rand(2, 4), color: '#9fefff', glow: true, drag: 4,
+        life: 0.12, size: Util.rand(2, 4), color: color, glow: true, drag: 4,
+      });
+    }
+    // Ejected shell casing — only for ballistic ('bolt'-style) weapons, since
+    // a beam/plasma cannon has nothing to eject.
+    if (!weapon || weapon.style === 'bolt') {
+      this.emit({
+        x: x, y: y, vx: -dir * Util.rand(60, 120), vy: -Util.rand(60, 140),
+        life: 0.5, size: 3, color: '#e8c56b', shape: 'rect', rotSpeed: Util.rand(-14, 14),
+        gravity: 700, drag: 0.4, shrink: false,
       });
     }
   };
 
-  Particles.prototype.spark = function (x, y, color) {
-    this.burst(x, y, color || '#9fefff', 8, 200, { glow: true, life: 0.3, size: 2 });
+  // `intensity` (default 1) scales a hit spark to the weight of the blow —
+  // a pistol tick and a plasma/grenade hit shouldn't throw the same handful
+  // of sparks.
+  Particles.prototype.spark = function (x, y, color, intensity) {
+    const k = Util.clamp(intensity || 1, 0.6, 2.4);
+    this.burst(x, y, color || '#9fefff', Math.round(8 * k), 200 * k, { glow: true, life: 0.3, size: 2 * k });
+  };
+
+  // Chunky physical debris (armor plates, metal shrapnel) that tumbles under
+  // gravity — used for enemy-death variety so grounded/armored enemies feel
+  // like they broke apart rather than just puffed into smoke.
+  Particles.prototype.debris = function (x, y, color, count, opts) {
+    opts = opts || {};
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = (opts.speed || 220) * (0.4 + Math.random() * 0.8);
+      this.emit({
+        x: x, y: y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - (opts.pop || 90),
+        life: opts.life || (0.6 + Math.random() * 0.5),
+        size: opts.size || (5 + Math.random() * 5),
+        color: color,
+        gravity: opts.gravity != null ? opts.gravity : 900,
+        shape: 'rect',
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: Util.rand(-10, 10),
+        drag: opts.drag != null ? opts.drag : 0.6,
+        glow: opts.glow || false,
+      });
+    }
+  };
+
+  // Electric short-circuit burst — a lighter, non-explosive kill FX (the
+  // drone) so not every enemy dies with the same fireball: fast bright
+  // sparks + a thin rising smoke wisp instead of a boom.
+  Particles.prototype.zap = function (x, y, color) {
+    this.burst(x, y, '#ffffff', 10, 320, { glow: true, life: 0.2, size: 2.5, drag: 3 });
+    this.burst(x, y, color || '#c46bff', 14, 260, { glow: true, life: 0.3, size: 2, drag: 1 });
+    this.burst(x, y, '#7a7a86', 6, 90, { life: 0.55, size: 6, gravity: -40, drag: 1.2 });
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.12, size: 26, color: '#f4e8ff', glow: true, gravity: 0, drag: 0 });
   };
 
   Particles.prototype.damageNumber = function (x, y, amount, crit) {
@@ -93,6 +154,7 @@
       p.vy += p.gravity * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
+      if (p.rotSpeed) p.rot += p.rotSpeed * dt;
     }
     this.pool.sweep();
   };
@@ -117,9 +179,17 @@
       }
       ctx.fillStyle = p.color;
       const s = p.shrink ? p.size * (0.3 + k * 0.7) : p.size;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
-      ctx.fill();
+      if (p.shape === 'rect') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillRect(-s / 2, -s * 0.33, s, s * 0.66);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;

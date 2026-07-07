@@ -96,6 +96,13 @@
   };
   Audio.prototype.playerHurt = function () { this._tone(220, 0.25, 'sawtooth', 0.3, 70); };
   Audio.prototype.grenade = function () { this._tone(140, 0.18, 'triangle', 0.14, 260); };
+  // Short robotic short-circuit blip for a non-explosive kill (the drone) —
+  // so not every enemy death booms identically.
+  Audio.prototype.zap = function () {
+    this._tone(1400, 0.05, 'square', 0.16, 220);
+    this._tone(700, 0.08, 'sawtooth', 0.12, 90);
+    this._noise(0.05, 0.08, 2200);
+  };
   Audio.prototype.bossAlarm = function () {
     let n = 0;
     const beep = () => { if (n++ < 4) { this._tone(440, 0.18, 'sawtooth', 0.22); setTimeout(beep, 240); } };
