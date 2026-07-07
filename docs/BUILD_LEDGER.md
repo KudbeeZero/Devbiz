@@ -173,6 +173,69 @@ When a PR merges:
 
 ---
 
+## Stale branches (merged, remote-delete blocked)
+
+**Known tooling limitation (discovered 2026-07-07, confirmed repeatedly across sessions):**
+this environment's git remote is a local proxy, and `git push origin --delete <branch>`
+consistently fails with `HTTP 403` against it — it is not a permissions/auth problem that
+retrying fixes. The GitHub MCP server also has **no delete-branch/delete-ref tool** (checked
+directly; `create_branch`, `list_branches`, `delete_file`, etc. exist, branch deletion does
+not). **There is currently no tool-based path from any agent session in this environment to
+delete a remote branch.** Do not retry `git push --delete` more than once per branch — it
+will not succeed differently on retry.
+
+**Root-cause fix (owner action, not agent-executable):** enable **"Automatically delete head
+branches"** in the repo's GitHub settings (Settings → General → Pull Requests). This makes
+every future PR merge self-clean with zero agent action — it's the actual fix, not a
+workaround. This has been recommended before (see `PR_FLOW.md`) but as of this writing is
+still not confirmed on. Until it's on, every merged branch accumulates here instead of
+disappearing.
+
+**What agents should do instead:** after a lane merges (PR-merge or direct fast-forward),
+attempt the delete once; if it 403s, add a row below rather than treating it as done or
+retrying in a loop. This table is the actual record of "branches that should not exist
+anymore" — check it before assuming the branch list is clean, and re-attempt deletion here
+first if a future session ever gains a working delete path (a fresh session may have
+different git remote permissions — don't assume this limitation is permanent without
+checking).
+
+| Branch | Merged via | Date noted | Safe to delete? |
+|---|---|---|---|
+| `claude/leaderboard-audit-architecture-r5b2xh` | PR #133 → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/games-studio-roadmap` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/csp-report-only-hsts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/fix-modernmed-sw-cache` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-contra` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-darts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-munch` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-orbital` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-pinball` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-puzzles` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-riff` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-riff-2` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-voidrunner` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/github-sentinel-webhook-cache-3hs8ay` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/guitar-hero-combo-research-3asnqb` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/integration` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/personal-website-redesign-yd2a3y` | PR #109 → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/polish-01-seo` through `claude/polish-12-launch-qa` (12 branches) | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/polish-buildout-plan` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/pr-review-roadmap-2xeeer` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/recording-it-pin-cdn` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/security-xss-hardening` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/shared-engine-core` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/site-audit-games-work` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/voidrunner-boss` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+
+"Backfilled" dates mean the branch was already merged and stale before this table existed —
+found via `git merge-base --is-ancestor origin/<branch> origin/main` across all remote
+branches on 2026-07-07, not merged on that date. New entries should record the actual merge
+date. When the owner (or a future session) does gain a working delete path, clear this table
+in the same PR/commit that does the deleting — don't let it grow stale in the other
+direction.
+
+---
+
 ## Updating this ledger
 
 - One row per work item; keep **Notes** to short context, not history.
