@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-07-07T03:19:27.517Z",
-  "commit": "b9fcfcb",
+  "generatedAt": "2026-07-07T18:08:52.347Z",
+  "commit": "14b3392",
   "thresholds": {
     "lines": 88,
     "branches": 60,
@@ -22,80 +22,53 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 88.84,
-    "branches": 72.51,
-    "functions": 93.54,
-    "statements": 88.84
+    "lines": 95.85,
+    "branches": 89.55,
+    "functions": 100,
+    "statements": 95.85
   },
   "totalCounts": {
     "lines": {
-      "covered": 621,
+      "covered": 670,
       "total": 699
     },
     "branches": {
-      "covered": 153,
-      "total": 211
+      "covered": 240,
+      "total": 268
     },
     "functions": {
-      "covered": 29,
+      "covered": 31,
       "total": 31
     },
     "statements": {
-      "covered": 621,
+      "covered": 670,
       "total": 699
     }
   },
   "files": [
     {
-      "path": "shared/http.js",
-      "metrics": {
-        "lines": 55.81,
-        "branches": 71.42,
-        "functions": 50,
-        "statements": 55.81
-      },
-      "counts": {
-        "lines": {
-          "covered": 24,
-          "total": 43
-        },
-        "branches": {
-          "covered": 5,
-          "total": 7
-        },
-        "functions": {
-          "covered": 1,
-          "total": 2
-        },
-        "statements": {
-          "covered": 24,
-          "total": 43
-        }
-      }
-    },
-    {
       "path": "shared/algo-auth.js",
       "metrics": {
-        "lines": 88.33,
-        "branches": 84.93,
+        "lines": 89.75,
+        "branches": 88.15,
         "functions": 100,
-        "statements": 88.33
+        "statements": 89.75
       },
       "counts": {
         "lines": {
-          "covered": 250,
+          "covered": 254,
           "total": 283
         },
         "branches": {
-          "covered": 62,
-          "total": 73
+          "covered": 67,
+          "total": 76
         },
         "functions": {
           "covered": 9,
           "total": 9
         },
         "statements": {
-          "covered": 250,
+          "covered": 254,
           "total": 283
         }
       }
@@ -103,26 +76,26 @@
     {
       "path": "shared/auth.js",
       "metrics": {
-        "lines": 89,
-        "branches": 68.57,
-        "functions": 90.9,
-        "statements": 89
+        "lines": 100,
+        "branches": 80.45,
+        "functions": 100,
+        "statements": 100
       },
       "counts": {
         "lines": {
-          "covered": 178,
+          "covered": 200,
           "total": 200
         },
         "branches": {
-          "covered": 48,
-          "total": 70
+          "covered": 70,
+          "total": 87
         },
         "functions": {
-          "covered": 10,
+          "covered": 11,
           "total": 11
         },
         "statements": {
-          "covered": 178,
+          "covered": 200,
           "total": 200
         }
       }
@@ -130,27 +103,54 @@
     {
       "path": "shared/core.js",
       "metrics": {
-        "lines": 97.68,
-        "branches": 62.29,
+        "lines": 100,
+        "branches": 97.7,
         "functions": 100,
-        "statements": 97.68
+        "statements": 100
       },
       "counts": {
         "lines": {
-          "covered": 169,
+          "covered": 173,
           "total": 173
         },
         "branches": {
-          "covered": 38,
-          "total": 61
+          "covered": 85,
+          "total": 87
         },
         "functions": {
           "covered": 9,
           "total": 9
         },
         "statements": {
-          "covered": 169,
+          "covered": 173,
           "total": 173
+        }
+      }
+    },
+    {
+      "path": "shared/http.js",
+      "metrics": {
+        "lines": 100,
+        "branches": 100,
+        "functions": 100,
+        "statements": 100
+      },
+      "counts": {
+        "lines": {
+          "covered": 43,
+          "total": 43
+        },
+        "branches": {
+          "covered": 18,
+          "total": 18
+        },
+        "functions": {
+          "covered": 2,
+          "total": 2
+        },
+        "statements": {
+          "covered": 43,
+          "total": 43
         }
       }
     }

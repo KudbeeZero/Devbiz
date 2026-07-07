@@ -46,6 +46,29 @@ function payloadToBase64(payload) {
   return Buffer.from(JSON.stringify(payload)).toString('base64');
 }
 
+// Minimal standalone base32 encoder (RFC 4648, no padding) used ONLY to
+// build synthetic test addresses byte-for-byte. Independent of the
+// source's own encode logic in publicKeyToAddress() — this is test
+// infrastructure, not a re-test of the implementation.
+function encodeBase32NoPad(bytes) {
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const byte of bytes) bits += byte.toString(2).padStart(8, '0');
+  let encoded = '';
+  for (let i = 0; i < bits.length; i += 5) {
+    const chunk = bits.substr(i, 5).padEnd(5, '0');
+    encoded += ALPHABET[parseInt(chunk, 2)];
+  }
+  return encoded;
+}
+
+function concatBytes(a, b) {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+}
+
 // ---- Tests: Message parsing -------------------------------------------
 
 test('parseAlgoMessage: valid payload', () => {
@@ -119,18 +142,31 @@ test('extractPublicKeyFromAddress: stub (needs real Algorand test addresses)', (
   assert.strictEqual(result2, null);
 });
 
-test('publicKeyToAddress: converts 32-byte key to Algorand address', async () => {
+test('publicKeyToAddress: converts 32-byte key to Algorand address (or null if the runtime lacks SHA-512/256)', async () => {
   // Create a 32-byte public key (all zeros for testing)
   const publicKey = new Uint8Array(32);
 
   const address = await publicKeyToAddress(publicKey);
 
-  // Should return a valid-looking Algorand address (58 chars)
-  assert(typeof address === 'string' || address === null);
-  if (address) {
+  // publicKeyToAddress() computes the 4-byte checksum via
+  // crypto.subtle.digest('SHA-512/256', ...). Node's WebCrypto does NOT
+  // implement that algorithm ("Unrecognized algorithm name" — verified
+  // directly against globalThis.crypto.subtle in this repo's Node 22 test
+  // runtime), so the function's own try/catch always lands in the catch
+  // and returns null here. Cloudflare Workers' documented
+  // SubtleCrypto.digest() algorithm list (MD5/SHA-1/256/384/512 only, no
+  // SHA-512/256) suggests this isn't just a Node quirk either — see the
+  // DBZ-060 PR notes ("Found but not changed": ALGO wallet auth's
+  // address-recovery check may never succeed on either runtime as
+  // written). Out of scope for this CI/tests-only PR.
+  if (address !== null) {
+    // If a future runtime *does* implement SHA-512/256, assert the
+    // expected shape rather than silently accepting anything.
+    assert.strictEqual(typeof address, 'string');
     assert.strictEqual(address.length, 58);
-    // All characters should be valid base32 (A-Z, 2-7)
     assert(/^[A-Z2-7]{58}$/.test(address));
+  } else {
+    assert.strictEqual(address, null);
   }
 });
 
@@ -261,29 +297,103 @@ test('verifyAlgoMessage: invalid address format', async () => {
   }
 });
 
-test('verifyAlgoMessage: nonce replay detection', async () => {
+test('verifyAlgoMessage: nonce replay is rejected deterministically (pre-seeded used_nonces)', async () => {
+  // The replay check (line ~215) runs BEFORE signature verification, so it
+  // can be exercised deterministically without any real signing: seed
+  // used_nonces with the exact nonce the payload carries, and confirm the
+  // call throws algo_nonce_replayed rather than falling through to (and
+  // failing on) signature verification.
   const now = Math.floor(Date.now() / 1000);
   const payload = mockAlgoPayload(
     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HVY',
     now,
-    'replay_nonce',
+    'replay_nonce_seeded',
+    now + 600
+  );
+  const b64 = payloadToBase64(payload);
+  const used_nonces = new Set(['replay_nonce_seeded']);
+
+  await assert.rejects(
+    () => verifyAlgoMessage('anything', b64, {}, used_nonces),
+    (e) => e.code === 'algo_nonce_replayed'
+  );
+  // The set must still contain exactly the one seeded nonce — a replay
+  // rejection must not re-add or mutate it.
+  assert.strictEqual(used_nonces.size, 1);
+});
+
+test('verifyAlgoMessage: a fresh nonce is recorded in used_nonces before signature verification', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = mockAlgoPayload(
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HVY',
+    now,
+    'fresh_nonce_recorded',
     now + 600
   );
   const b64 = payloadToBase64(payload);
   const used_nonces = new Set();
 
-  // First attempt should fail at signature verification (no real sig)
-  try {
-    await verifyAlgoMessage('invalid_sig', b64, {}, used_nonces);
-    assert.fail('should have thrown');
-  } catch (e) {
-    // Expected: signature verification fails before nonce check
-    assert(e.code.includes('algo_'));
-  }
+  // Signature is garbage so this still throws — but AFTER the nonce has
+  // been recorded (recording happens before signature decode/verify).
+  await assert.rejects(() => verifyAlgoMessage('invalid_sig', b64, {}, used_nonces));
+  assert.strictEqual(used_nonces.has('fresh_nonce_recorded'), true);
+});
 
-  // For a real test, we'd need to successfully verify the first sig,
-  // then check that a second call with the same nonce throws.
-  // This requires actual ed25519 signing from Pera SDK.
+test('verifyAlgoMessage: non-string signature is a malformed signature (Buffer.from throws on non-strings)', async () => {
+  // Buffer.from(str, 'base64') never throws for garbage *strings* in Node
+  // (invalid characters are silently skipped) — so the only deterministic
+  // way to hit the algo_signature_malformed catch (line ~231) is a
+  // non-string sig_b64, which Buffer.from() rejects with a TypeError.
+  const now = Math.floor(Date.now() / 1000);
+  const payload = mockAlgoPayload(
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HVY',
+    now,
+    'malformed_sig_nonce',
+    now + 600
+  );
+  const b64 = payloadToBase64(payload);
+
+  await assert.rejects(
+    () => verifyAlgoMessage(null, b64, {}),
+    (e) => e.code === 'algo_signature_malformed' && e.status === 401
+  );
+});
+
+test('verifyAlgoMessage: a genuinely valid ed25519 signature reaches address-consistency, not signature failure', async () => {
+  // End-to-end with REAL ed25519 signing (Node 22's WebCrypto supports
+  // Ed25519 natively — verified directly). This proves the function's
+  // "happy path" plumbing — message reconstruction, signature
+  // verification succeeding, and the address-recovery check — actually
+  // runs, rather than every test only ever exercising early-exit branches.
+  //
+  // We deliberately do NOT assert a successful return here: recovering
+  // the address back from the public key requires
+  // crypto.subtle.digest('SHA-512/256', ...), which this runtime doesn't
+  // implement (see the publicKeyToAddress test above) — so the recovered
+  // address is always null, and the call always ends in
+  // algo_address_mismatch even though the signature itself verified.
+  // That is the real, current behavior of this code path today.
+  const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const pubKeyBytes = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+
+  // Build a syntactically valid 58-char base32 Algorand-shaped address
+  // whose first 32 bytes are the real public key (the trailing checksum
+  // bytes don't need to be cryptographically correct — extractPublicKeyFromAddress
+  // never validates them, it only slices the first 32 bytes).
+  const address = encodeBase32NoPad(concatBytes(pubKeyBytes, new Uint8Array(4)));
+  assert.strictEqual(address.length, 58);
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { algo_address: address, timestamp: now, nonce: 'real_sig_e2e_nonce', exp: now + 600 };
+  const message = reconstructSignedMessage(payload);
+  const signature = new Uint8Array(await crypto.subtle.sign('Ed25519', pair.privateKey, message));
+  const sig_b64 = Buffer.from(signature).toString('base64');
+  const payload_b64 = payloadToBase64(payload);
+
+  await assert.rejects(
+    () => verifyAlgoMessage(sig_b64, payload_b64, {}),
+    (e) => e.code === 'algo_address_mismatch' // NOT algo_signature_invalid — proves the sig verified
+  );
 });
 
 test('verifyAlgoMessage: malformed signature (wrong length)', async () => {
@@ -366,49 +476,45 @@ test('decodeAlgoAddress: empty string returns null or throws', () => {
 
 // ---- Tests: Signature edge cases ----------------------------------------
 
-test('verifySignature: crypto operations work or return false', async () => {
+// verifySignature()'s entire body is wrapped in a try/catch that always
+// returns false on any failure — per its own contract it can never throw
+// to the caller. These three tests assert that contract directly instead
+// of hedging with a try/catch that would silently pass either way.
+test('verifySignature: wrong-length key returns false (never throws)', async () => {
   const message = new TextEncoder().encode('test');
   const sig = new Uint8Array(64);
   const badKey = new Uint8Array(16); // Should be 32 bytes
-
-  try {
-    const result = await verifySignature(message, sig, badKey);
-    // If it doesn't throw, it should return false
-    assert.strictEqual(result, false);
-  } catch (e) {
-    // It's also OK to throw on invalid key length
-    assert(true);
-  }
+  assert.strictEqual(await verifySignature(message, sig, badKey), false);
 });
 
-test('verifySignature: invalid signature length throws or returns false', async () => {
+test('verifySignature: wrong-length signature returns false (never throws)', async () => {
   const message = new TextEncoder().encode('test');
   const badSig = new Uint8Array(32); // Should be 64 bytes
   const key = new Uint8Array(32);
-
-  try {
-    const result = await verifySignature(message, badSig, key);
-    // If it doesn't throw, it should return false
-    assert.strictEqual(result, false);
-  } catch (e) {
-    // It's also OK to throw on invalid signature length
-    assert(true);
-  }
+  assert.strictEqual(await verifySignature(message, badSig, key), false);
 });
 
-test('verifySignature: empty or zero-filled keys/sigs fail verification', async () => {
+test('verifySignature: correctly-sized but zero-filled keys/sigs fail verification', async () => {
   const message = new TextEncoder().encode('test');
   const sig = new Uint8Array(64);
   const key = new Uint8Array(32);
+  assert.strictEqual(await verifySignature(message, sig, key), false);
+});
 
-  try {
-    const result = await verifySignature(message, sig, key);
-    // Zero-filled sig/key should fail verification
-    assert.strictEqual(result, false);
-  } catch (e) {
-    // It's also OK to throw if crypto operations fail
-    assert(true);
-  }
+test('verifySignature: a genuine ed25519 signature verifies true; a tampered one verifies false', async () => {
+  const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const pubKeyBytes = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+  const message = new TextEncoder().encode('kudbee-leaderboard-test-message');
+  const sig = new Uint8Array(await crypto.subtle.sign('Ed25519', pair.privateKey, message));
+
+  assert.strictEqual(await verifySignature(message, sig, pubKeyBytes), true);
+
+  const tampered = new Uint8Array(sig);
+  tampered[0] ^= 0xff;
+  assert.strictEqual(await verifySignature(message, tampered, pubKeyBytes), false);
+
+  const wrongMessage = new TextEncoder().encode('a different message entirely');
+  assert.strictEqual(await verifySignature(wrongMessage, sig, pubKeyBytes), false);
 });
 
 // ---- Tests: Message reconstruction consistency -------------------------
@@ -449,30 +555,10 @@ test('reconstructSignedMessage: field order is fixed', () => {
 });
 
 // ---- Tests: Nonce replay with caching ----------------------------------
-
-test('verifyAlgoMessage: nonce set is updated on success', async () => {
-  // This is a structural test; actual signature verification would fail.
-  // We verify that nonce tracking would work.
-  const used_nonces = new Set();
-  const now = Math.floor(Date.now() / 1000);
-  const payload = mockAlgoPayload(
-    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HVY',
-    now,
-    'unique_nonce_12345',
-    now + 600
-  );
-  const b64 = payloadToBase64(payload);
-  const validSig = Buffer.alloc(64).toString('base64');
-
-  try {
-    await verifyAlgoMessage(validSig, b64, {}, used_nonces);
-  } catch (e) {
-    // Expected to fail on signature verification
-  }
-
-  // Nonce should be in the set if replay prevention is enabled
-  // (In MVP, it might not be checked, but the structure should be in place)
-});
+// (Real, deterministic nonce-replay coverage — pre-seeded set and
+// fresh-nonce recording — now lives in the "verifyAlgoMessage: nonce
+// replay is rejected deterministically" and "...fresh nonce is recorded"
+// tests above.)
 
 // ---- Tests: Additional coverage paths -----------------------------------
 
