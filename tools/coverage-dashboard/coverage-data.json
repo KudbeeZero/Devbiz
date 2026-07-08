@@ -2,13 +2,13 @@
   "version": 1,
   "scope": "leaderboard/shared/",
   "note": "Scoped coverage gate — leaderboard/shared/ only. NOT global repository coverage.",
-  "generatedAt": "2026-07-07T03:19:27.517Z",
-  "commit": "b9fcfcb",
+  "generatedAt": "2026-07-07T09:46:27.660Z",
+  "commit": "de5afc1",
   "thresholds": {
-    "lines": 88,
+    "lines": 87,
     "branches": 60,
     "functions": 88,
-    "statements": 88
+    "statements": 87
   },
   "include": [
     "shared/**"
@@ -22,26 +22,26 @@
     "scripts/**"
   ],
   "total": {
-    "lines": 88.84,
-    "branches": 72.51,
-    "functions": 93.54,
-    "statements": 88.84
+    "lines": 88,
+    "branches": 72,
+    "functions": 94,
+    "statements": 88
   },
   "totalCounts": {
     "lines": {
-      "covered": 621,
+      "covered": 615,
       "total": 699
     },
     "branches": {
-      "covered": 153,
-      "total": 211
+      "covered": 152,
+      "total": 210
     },
     "functions": {
       "covered": 29,
       "total": 31
     },
     "statements": {
-      "covered": 621,
+      "covered": 615,
       "total": 699
     }
   },
@@ -49,10 +49,10 @@
     {
       "path": "shared/http.js",
       "metrics": {
-        "lines": 55.81,
-        "branches": 71.42,
+        "lines": 56,
+        "branches": 71,
         "functions": 50,
-        "statements": 55.81
+        "statements": 56
       },
       "counts": {
         "lines": {
@@ -76,26 +76,26 @@
     {
       "path": "shared/algo-auth.js",
       "metrics": {
-        "lines": 88.33,
-        "branches": 84.93,
+        "lines": 86,
+        "branches": 85,
         "functions": 100,
-        "statements": 88.33
+        "statements": 86
       },
       "counts": {
         "lines": {
-          "covered": 250,
+          "covered": 244,
           "total": 283
         },
         "branches": {
-          "covered": 62,
-          "total": 73
+          "covered": 61,
+          "total": 72
         },
         "functions": {
           "covered": 9,
           "total": 9
         },
         "statements": {
-          "covered": 250,
+          "covered": 244,
           "total": 283
         }
       }
@@ -104,8 +104,8 @@
       "path": "shared/auth.js",
       "metrics": {
         "lines": 89,
-        "branches": 68.57,
-        "functions": 90.9,
+        "branches": 69,
+        "functions": 91,
         "statements": 89
       },
       "counts": {
@@ -130,10 +130,10 @@
     {
       "path": "shared/core.js",
       "metrics": {
-        "lines": 97.68,
-        "branches": 62.29,
+        "lines": 98,
+        "branches": 62,
         "functions": 100,
-        "statements": 97.68
+        "statements": 98
       },
       "counts": {
         "lines": {

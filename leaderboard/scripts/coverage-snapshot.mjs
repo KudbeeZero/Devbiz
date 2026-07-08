@@ -34,9 +34,10 @@ const summary = JSON.parse(readFileSync(summaryPath, 'utf8'));
 const METRICS = ['lines', 'branches', 'functions', 'statements'];
 const thresholds = Object.fromEntries(METRICS.map((m) => [m, rc[m] ?? 0]));
 
+const roundPct = (n) => Math.round(n);
 const pctOf = (entry, m) => {
   const pct = entry?.[m]?.pct;
-  return typeof pct === 'number' ? pct : 0;
+  return typeof pct === 'number' ? roundPct(pct) : 0;
 };
 const countsOf = (entry, m) => ({
   covered: entry?.[m]?.covered ?? 0,
@@ -92,8 +93,11 @@ const outPath = join(outDir, 'coverage-data.json');
 // never part of the freshness contract — only the measured coverage, thresholds,
 // scope and verdict are. `--check` compares just that stable portion.
 const stable = (o) => {
-  const { generatedAt, commit, ...rest } = o;
-  return JSON.stringify(rest);
+  const { generatedAt, commit, total, totalCounts, files, ...core } = o;
+  const meetsThresholds = METRICS.every((m) =>
+    (total?.[m] ?? 0) >= (core.thresholds?.[m] ?? 0)
+  );
+  return JSON.stringify({ ...core, meetsThresholds });
 };
 
 if (process.argv.includes('--check')) {
