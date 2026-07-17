@@ -13,6 +13,7 @@
 
   const VIEW_W = 960;
   const VIEW_H = 720;
+  const DART_SCALE = 1.4;
   const C = {
     cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2',
     gold: '#ffd34d', ember: '#ff5d3c', text: '#cfe9ff', dim: '#7d8aa8',
@@ -150,7 +151,17 @@
     const adt = dt * this.timeScale;
     this.particles.update(adt);
     this.camera.update(adt);
-    if (this.dart.state === 'flying') { if (this.dart.update(adt)) this._onDartLand(); }
+    if (this.dart.state === 'flying') {
+      // Emit trail particles during flight.
+      if (!this.reduceMotion && Math.random() < 0.6) {
+        const dartPos = this.dart._getFlightPos && this.dart._getFlightPos();
+        if (dartPos) {
+          const skinCol = (this.dart.skin && this.dart.skin.color) || '#39e6ff';
+          this.particles.trail(dartPos.x, dartPos.y, dartPos.vx || 0, dartPos.vy || 0, skinCol);
+        }
+      }
+      if (this.dart.update(adt)) this._onDartLand();
+    }
 
     // Tumbling "bounce out" darts from a genuine miss (see _spawnBounceDart).
     for (let i = this.bounceDarts.length - 1; i >= 0; i--) {
@@ -322,10 +333,12 @@
 
     const isMiss = res.ring === 'miss';
     if (isMiss) this.audio.clunk(); else this.audio.thud();
-    // Impact "thunk" flash — a quick white bloom right at the tip. Skip it
-    // for a genuine miss: nothing was actually struck, so no bloom.
-    if (!isMiss) this.particles.emit({ x: lx, y: ly, vx: 0, vy: 0, life: 0.12, size: 26, color: '#ffffff', glow: true });
+    // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
+    if (!isMiss) {
+      this.particles.impact(lx, ly, skinCol);
+      this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
+    }
     // Stuck dart: tip lands exactly on the scoring point; lean varies by where
     // on the board it landed (+ a hair of jitter) so groups don't look stamped.
     const lean = -Math.PI * 0.78 + (lx - this.board.cx) / this.board.Rpx * 0.14
@@ -445,7 +458,7 @@
       ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
       ctx.translate(b.x, b.y);
       ctx.rotate(b.rot);
-      this.sprites.drawDart(ctx, 34, b.skin, 0, b.parts);
+      this.sprites.drawDart(ctx, 48, b.skin, 0, b.parts);
       ctx.restore();
     }
   };
@@ -669,7 +682,7 @@
       ctx.save();
       ctx.translate(b.x + b.w / 2, b.y + b.h / 2 + 4);
       ctx.rotate(-Math.PI * 0.25);
-      this.sprites.drawDart(ctx, 46, KD.Sprites.SKINS[b.id.split(':')[1]], 0);
+      this.sprites.drawDart(ctx, 64, KD.Sprites.SKINS[b.id.split(':')[1]], 0);
       ctx.restore();
       if (locked) {
         ctx.fillStyle = '#cfe9ff'; ctx.font = '11px "Space Grotesk", sans-serif';
@@ -714,7 +727,7 @@
     ctx.save();
     ctx.translate(VIEW_W / 2, 530);
     ctx.rotate(-Math.PI * 0.12);
-    this.sprites.drawDart(ctx, 120, skin, 0.4, d.darts);
+    this.sprites.drawDart(ctx, 168, skin, 0.4, d.darts);
     ctx.restore();
     ctx.save();
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
@@ -1305,10 +1318,38 @@
     }
   };
 
+  Game.prototype._tierColor = function (tier) {
+    const colors = { common: '#b4d2ff', uncommon: '#7cffb2', rare: '#ffd34d', epic: '#c46bff' };
+    return colors[tier] || '#39e6ff';
+  };
+
+  Game.prototype._drawStatBars = function (ctx, x, y, speed, stability, slimness) {
+    const stats = [
+      { label: 'SPEED', val: speed, color: '#ff5d3c' },
+      { label: 'STABILITY', val: stability, color: '#7cffb2' },
+      { label: 'SLIMNESS', val: slimness, color: '#39e6ff' }
+    ];
+    ctx.font = '10px "Space Grotesk", sans-serif';
+    ctx.fillStyle = C.dim;
+    stats.forEach((s, i) => {
+      const sy = y + i * 16;
+      ctx.fillText(s.label, x, sy);
+      ctx.fillStyle = 'rgba(180,210,255,0.15)';
+      ctx.fillRect(x + 65, sy - 6, 60, 8);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x + 65, sy - 6, 60 * Math.min(1, s.val * 10), 8);
+      ctx.fillStyle = C.dim;
+    });
+  };
+
   Game.prototype._workshopChip = function (ctx, b) {
     const r = 12;
     const skinCol = (KD.Sprites.SKINS[b.key] || {}).color || C.cyan;
-    const accent = b.group === 'skin' ? skinCol : C.cyan;
+    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
+    const cosmetic = cat[b.key];
+    const tier = cosmetic ? cosmetic.tier : 'common';
+    const tierCol = this._tierColor(tier);
+    const accent = b.group === 'skin' ? skinCol : tierCol;
     ctx.save();
     ctx.globalAlpha = (!b.owned && b.group === 'skin') ? 0.4 : 1;
     ctx.fillStyle = b.sel ? 'rgba(57,230,255,0.13)' : 'rgba(10,16,32,0.6)';
@@ -1317,27 +1358,32 @@
     ctx.strokeStyle = b.sel ? accent : 'rgba(180,210,255,0.2)';
     if (b.sel) { ctx.shadowColor = accent; ctx.shadowBlur = 14; }
     this._roundRect(ctx, b.x, b.y, b.w, b.h, r); ctx.stroke();
+
+    // Rarity badge
+    if (tier !== 'common') {
+      ctx.fillStyle = tierCol;
+      ctx.beginPath(); ctx.arc(b.x + b.w - 10, b.y + 10, 6, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.shadowBlur = 0;
 
     const cx = b.x + b.w / 2;
     // Mini preview.
     if (b.group === 'skin') {
       ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
-      this.sprites.drawDart(ctx, 70, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
+      this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
       ctx.restore();
     } else {
       const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
       const parts = b.group === 'tip' ? { tip: b.key, flight: this.progression.data.darts.flight }
                                        : { tip: this.progression.data.darts.tip, flight: b.key };
       ctx.save(); ctx.translate(cx + 22, b.y + 28); ctx.rotate(Math.PI);
-      this.sprites.drawDart(ctx, 78, skin, 0.2, parts);
+      this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
       ctx.restore();
     }
     // Name.
-    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
     ctx.textAlign = 'center'; ctx.fillStyle = b.sel ? '#fff' : C.text;
     ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText((cat[b.key] || {}).name || b.key, cx, b.y + b.h - 18);
+    ctx.fillText((cosmetic || {}).name || b.key, cx, b.y + b.h - 18);
     // Status line: EQUIPPED / cost / OWNED / LOCKED.
     ctx.font = '11px "Space Grotesk", sans-serif';
     if (b.sel) { ctx.fillStyle = C.green; ctx.fillText('EQUIPPED', cx, b.y + b.h - 5); }
@@ -1372,8 +1418,20 @@
     ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, 420, skin, 0.6, d.darts);
     ctx.restore();
+
+    // Combined stats panel (bottom-right of preview).
+    const skinObj = KD.Sprites.SKINS[d.skins.equipped];
+    const tipObj = KD.Sprites.TIPS[d.darts.tip] || KD.Sprites.TIPS.steel;
+    const flightObj = KD.Sprites.FLIGHTS[d.darts.flight] || KD.Sprites.FLIGHTS.standard;
+    const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
+    const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
+    const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(VIEW_W / 2 + 160, 130, 140, 80); // stat panel bg
+    ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', VIEW_W / 2 + 170, 145);
+    this._drawStatBars(ctx, VIEW_W / 2 + 170, 155, totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
