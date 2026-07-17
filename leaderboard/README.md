@@ -10,12 +10,14 @@ publishable key; **zero code changes.**
 
 ```
 leaderboard/
-  shared/      core.js (API + metrics + ranking) · auth.js (Clerk JWT verify + demo) · http.js
+  shared/      core.js (API + metrics + ranking) · auth.js (ALGO + Clerk + demo) · algo-auth.js (ed25519) · http.js
   worker/      worker.js (Cloudflare entry) · store-d1.js · schema.sql · wrangler.toml
   server/      dev-server.js (portable Node) · store-file.js (JSON store)
   public/      leaderboard.html · app.js · styles.css · config.js
-  client/      kd-leaderboard.js (browser SDK, used by the page and games)
+  client/      kd-leaderboard.js (browser SDK — ALGO wallet, Clerk, demo; used by the page and games)
   test/        api.test.js (demo + real RS256 JWT verification)
+               algo-auth.test.js (ed25519 verification, message parsing, replay/freshness)
+               algo-client.test.js (browser SDK's pure helpers — nonce/payload/base64)
 ```
 
 The **same `shared/` logic** runs on both Cloudflare and Node — the platform
@@ -155,36 +157,45 @@ becomes the persistent user identity.
 
 ### How it works
 
-1. User connects their Algorand wallet (Pera, Defly, or another WalletConnect app)
-2. SDK creates a signed message: `{ algo_address, timestamp, nonce, exp }`
-3. User signs with their wallet (one-click approval, no chain write)
-4. API verifies the ed25519 signature against the wallet's public key
-5. Session cached for 7 days
+1. Player clicks "Connect Wallet" → `lb.signIn({ provider: 'algo' })` opens the Pera
+   wallet picker (`peraWallet.connect()`); the SDK lazily loads `@perawallet/connect`
+   from an ESM CDN (esm.sh) the first time — no manual `<script>` tag needed, no build step.
+2. The SDK builds a message: `{ algo_address, timestamp, nonce, exp }` and has the wallet
+   sign it via `peraWallet.signData(...)` (one-click approval, no chain write, no gas).
+3. It's sent as `Authorization: Bearer <sig_b64>` + `X-Algo-Message: <payload_b64>`.
+4. The Worker verifies the ed25519 signature against the wallet's public key (derived
+   from the address itself — no external call).
+5. The signed (signature, payload) pair is cached client-side (`localStorage`) and reused
+   until it's within 60s of the server's freshness window, then transparently re-signed.
+
+**Known limitation:** the server verifies the *raw signed message* on every request — there
+is no session/JWT issuance endpoint. So "session caching" today means "reuse the same signed
+message for up to `ALGO_MAX_AGE_SECONDS`" (10 minutes by default), not "sign once, stay in for
+7 days with zero prompts." A true multi-day, zero-reprompt session needs a follow-up Worker
+endpoint that exchanges a verified ALGO signature for a short-lived server-issued session
+token — not built yet, tracked as a Phase 3 follow-up.
 
 ### Setup
 
-1. Ensure Pera SDK is available in `public/leaderboard.html`:
-   ```html
-   <script src="https://cdn.jsdelivr.net/gh/perawallet/connect-button@latest/dist/pera.js"></script>
-   ```
-
-2. Update `public/config.js` to enable ALGO:
+1. Update `public/config.js` to enable ALGO:
    ```js
    window.KD_LB_CONFIG = {
      API_BASE: '',
      GAME: 'darts',
-     AUTH_PROVIDERS: ['algo', 'demo'],  // NEW: enable ALGO wallet
+     AUTH_PROVIDERS: ['algo', 'demo'],  // enable ALGO wallet (+ demo fallback)
+     ALGO_NETWORK: 'testnet',            // 'testnet' (default) or 'mainnet'
    };
    ```
+   That's it — `client/kd-leaderboard.js` handles wallet connect, signing, and caching.
 
-3. Backend: ALGO auth is enabled by default. To verify:
+2. Backend: ALGO auth is enabled by default. To verify:
    ```bash
    # In wrangler.toml [env.production.vars]
    ALGO_AUTH_ENABLED = "true"           # default if unset
    ALGO_MAX_AGE_SECONDS = "600"          # 10 min message freshness
    ```
 
-4. Deploy the Worker:
+3. Deploy the Worker:
    ```bash
    cd leaderboard/worker
    npx wrangler deploy
@@ -211,18 +222,28 @@ All user data is stored in the same `scores` table; the prefix allows mixing aut
 ### Security notes
 
 - **No chain writes:** ALGO auth is based on message signing only; no transactions.
-- **Signature freshness:** Messages expire after 10 minutes; old signatures are rejected.
-- **Nonce replay:** Each signature includes a unique nonce; replay attacks are prevented.
+- **Signature freshness:** Messages expire after 10 minutes by default (`ALGO_MAX_AGE_SECONDS`);
+  old signatures are rejected.
+- **Nonce replay — not yet enforced:** each message carries a unique nonce and
+  `verifyAlgoMessage()` supports rejecting a reused one via a `used_nonces` set, but the live
+  request path (`shared/auth.js` `resolveAuth()`) doesn't pass one — so replaying a still-fresh
+  signature within its 10-minute window currently works. Low real-world impact today (no funds
+  or chain writes are gated by this signature — worst case is impersonating a leaderboard
+  entry), but it's a gap, not a solved problem; persistent replay protection needs durable
+  storage (D1/KV) since Workers don't share memory across invocations. Tracked as a follow-up,
+  not implemented.
 - **Public key verification:** Signatures are verified against the wallet's ed25519 public key
   (derived from the Algorand address), not a centralized service.
 - **Wallet control:** The player's private key never leaves their wallet; Kudbee never sees it.
 
 ### Testnet vs. mainnet
 
-By default, the Pera SDK connects to **testnet**. For production:
-1. Configure Pera to use mainnet
-2. Update `wrangler.toml` to point API_BASE at the production Worker
-3. Verify a test submission works end-to-end
+The client SDK defaults to **testnet** (`ALGO_NETWORK` unset or `'testnet'` → Pera chain ID
+`416002`). For production:
+1. Set `ALGO_NETWORK: 'mainnet'` in `public/config.js` (chain ID `416001`) — this is a
+   production-facing change and should go through the same review as any other prod flip.
+2. Update `wrangler.toml` to point `API_BASE` at the production Worker.
+3. Verify a real testnet submission works end-to-end before flipping to mainnet.
 
 ### Comparison: ALGO vs. Clerk
 
