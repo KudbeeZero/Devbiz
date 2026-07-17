@@ -44,6 +44,12 @@
   };
 
   Camera.prototype.update = function (dt) {
+    // Ease the punch back down toward neutral. Previously targetZoom had no
+    // decay of its own — zoom only ever chased targetZoom, and nothing ever
+    // pulled targetZoom back to 1 — so a single big-hit punchZoom() left the
+    // view zoomed in for the rest of the session. This restores the "punch
+    // in fast, relax slow" feel the docstring above already promised.
+    this.targetZoom = Util.lerp(this.targetZoom, 1, 1 - Math.pow(0.15, dt));
     this.zoom = Util.lerp(this.zoom, this.targetZoom, 1 - Math.pow(0.01, dt));
     // Ease the focus back to the screen center as zoom relaxes.
     this.focusX = Util.lerp(this.focusX, this.viewW / 2, 1 - Math.pow(0.2, dt));

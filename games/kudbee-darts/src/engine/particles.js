@@ -63,6 +63,18 @@
     this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.16, size: 22, color: color || '#39e6ff', glow: true });
   };
 
+  /* Dart in-flight trail: glowing particles following the dart trajectory. */
+  Particles.prototype.trail = function (x, y, vx, vy, color) {
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed < 100) return;
+    const trailColor = color || '#39e6ff';
+    this.emit({
+      x: x + Util.rand(-3, 3), y: y + Util.rand(-3, 3),
+      vx: -vx * 0.08 + Util.rand(-20, 20), vy: -vy * 0.08 + Util.rand(-20, 20),
+      life: 0.15, size: 1.5, color: trailColor, glow: true, drag: 2,
+    });
+  };
+
   /* An expanding shockwave ring (Darts-of-Fury style hit feedback). */
   Particles.prototype.shockwave = function (x, y, color, r1, life, lw) {
     this.emit({
@@ -103,6 +115,26 @@
 
   Particles.prototype.spark = function (x, y, color) {
     this.burst(x, y, color || '#9fefff', 8, 200, { glow: true, life: 0.3, size: 2 });
+  };
+
+  /* A genuine miss: a duller, grayer puff with no glow and no score color —
+   * so a whiff on the surround reads as "that didn't count", not a hit. */
+  Particles.prototype.dust = function (x, y, count) {
+    this.burst(x, y, '#8a93ad', count || 8, 90, { life: 0.4, size: 2.2, gravity: 60, drag: 2 });
+  };
+
+  /* Slow rising ember wisps — the bullseye's hot little flourish, layered on
+   * top of scoreBurst (not a replacement for it). */
+  Particles.prototype.smoke = function (x, y, color, count) {
+    color = color || '#ff5d3c';
+    for (let i = 0; i < (count || 5); i++) {
+      this.emit({
+        x: x + Util.rand(-5, 5), y: y - Util.rand(0, 4),
+        vx: Util.rand(-10, 10), vy: -Util.rand(24, 46),
+        life: Util.rand(0.5, 0.8), size: Util.rand(4, 8),
+        color: color, gravity: -14, drag: 1.6, glow: true,
+      });
+    }
   };
 
   /* Tumbling square "bricks" knocked off the board/segment on a hit — the

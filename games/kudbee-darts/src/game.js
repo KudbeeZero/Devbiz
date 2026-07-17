@@ -13,6 +13,7 @@
 
   const VIEW_W = 960;
   const VIEW_H = 720;
+  const DART_SCALE = 1.4;
   const C = {
     cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2',
     gold: '#ffd34d', ember: '#ff5d3c', text: '#cfe9ff', dim: '#7d8aa8',
@@ -60,9 +61,17 @@
     this.mode = null;
     this.dartsThisTurn = 0;
     this.stuckDarts = [];
+    // Genuine misses don't stick — they tumble off-board instead (see
+    // _spawnBounceDart / _drawBounceDarts). Separate from stuckDarts so a
+    // per-turn clear doesn't cut a still-animating bounce short.
+    this.bounceDarts = [];
     this.aiTimer = 0;
     this.isLadder = false;
     this.ladderRank = 0;
+    // Lets a checkout/180 hold its slow-mo for a beat before the normal
+    // per-frame ease-back (below) resumes — so the biggest moments don't get
+    // cut short by the same recovery rate as an ordinary big hit.
+    this._slowmoHoldT = 0;
 
     // UI feedback.
     this.callout = null;        // { text, life }
@@ -134,12 +143,35 @@
       this.boardScale = Util.lerp(this.boardScale, 1, 1 - Math.pow(0.001, dt));
     }
 
-    // Ease slow-mo back to normal; animation systems run on scaled time.
-    this.timeScale = Util.approach(this.timeScale, 1, dt * 2.2);
+    // Ease slow-mo back to normal; animation systems run on scaled time. A
+    // checkout/180 can hold this a beat via _slowmoHoldT before the ease-back
+    // resumes, so the celebration isn't clipped short.
+    if (this._slowmoHoldT > 0) this._slowmoHoldT = Math.max(0, this._slowmoHoldT - dt);
+    else this.timeScale = Util.approach(this.timeScale, 1, dt * 2.2);
     const adt = dt * this.timeScale;
     this.particles.update(adt);
     this.camera.update(adt);
-    if (this.dart.state === 'flying') { if (this.dart.update(adt)) this._onDartLand(); }
+    if (this.dart.state === 'flying') {
+      // Emit trail particles during flight.
+      if (!this.reduceMotion && Math.random() < 0.6) {
+        const dartPos = this.dart._getFlightPos && this.dart._getFlightPos();
+        if (dartPos) {
+          const skinCol = (this.dart.skin && this.dart.skin.color) || '#39e6ff';
+          this.particles.trail(dartPos.x, dartPos.y, dartPos.vx || 0, dartPos.vy || 0, skinCol);
+        }
+      }
+      if (this.dart.update(adt)) this._onDartLand();
+    }
+
+    // Tumbling "bounce out" darts from a genuine miss (see _spawnBounceDart).
+    for (let i = this.bounceDarts.length - 1; i >= 0; i--) {
+      const b = this.bounceDarts[i];
+      b.life -= dt;
+      if (b.life <= 0) { this.bounceDarts.splice(i, 1); continue; }
+      b.vy += b.grav * dt;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.rot += b.spin * dt;
+    }
 
     if (this.callout) { this.callout.life -= dt; if (this.callout.life <= 0) this.callout = null; }
     if (this.hitFlash) { this.hitFlash.life -= dt * 1.7; if (this.hitFlash.life <= 0) this.hitFlash = null; }
@@ -249,6 +281,7 @@
     this.current = 0;
     this.dartsThisTurn = 0;
     this.stuckDarts = [];
+    this.bounceDarts = [];
     this.dart.reset();
     this.mode.beginTurn(this.players[0]);
     this.matchResult = null;
@@ -298,15 +331,23 @@
     const opp = this.players[1 - this.current];
     const lx = this.dart.landX, ly = this.dart.landY;
 
-    this.audio.thud();
-    // Impact "thunk" flash — a quick white bloom right at the tip.
-    this.particles.emit({ x: lx, y: ly, vx: 0, vy: 0, life: 0.12, size: 26, color: '#ffffff', glow: true });
+    const isMiss = res.ring === 'miss';
+    if (isMiss) this.audio.clunk(); else this.audio.thud();
+    // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
+    if (!isMiss) {
+      this.particles.impact(lx, ly, skinCol);
+      this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
+    }
     // Stuck dart: tip lands exactly on the scoring point; lean varies by where
     // on the board it landed (+ a hair of jitter) so groups don't look stamped.
     const lean = -Math.PI * 0.78 + (lx - this.board.cx) / this.board.Rpx * 0.14
                + (Math.random() * 2 - 1) * 0.04;
-    this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean });
+    // A genuine miss doesn't stick — it clips off and tumbles away instead of
+    // freezing in a scoring pose (see _spawnBounceDart). Purely cosmetic: the
+    // score is 0 either way, this only changes how the whiff *reads*.
+    if (isMiss) this._spawnBounceDart(lx, ly, cur, lean);
+    else this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time });
     cur.dartsThrown++;
 
     const out = this.mode.applyDart(cur, res, opp);
@@ -326,12 +367,19 @@
       // Chunky "bricks" knocked off the segment — denser on the big hits.
       this.particles.bricks(lx, ly, burstCol, big ? 16 : Math.min(14, 6 + Math.round(res.score / 8)),
         { speed: big ? 300 : 220, size: big ? 9 : 7 });
+      // Bullseye gets its own hot little flourish on top of the burst: a few
+      // rising ember wisps, denser for the inner (50) than the outer (25).
+      if ((res.ring === 'inbull' || res.ring === 'outbull') && !this.reduceMotion) {
+        this.particles.smoke(lx, ly, C.ember, res.ring === 'inbull' ? 7 : 4);
+      }
       // Flag the active scoreboard to pop + shed its own digital bricks.
       cur._scorePop = 1; cur._popCol = burstCol;
       // Light up the exact segment that was hit.
       this.hitFlash = { res: res, life: 1, col: burstCol };
     } else {
-      this.particles.impact(lx, ly, skinCol);  // a miss still throws splinters
+      // A genuine miss: a duller gray puff instead of colorful splinters —
+      // the board didn't register a score, so the fx shouldn't look like it did.
+      this.particles.dust(lx, ly);
     }
     // Haptic thump on phones that support it (denser for the big hits).
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -364,16 +412,55 @@
     }
     if (big) {
       this.timeScale = 0.4;
+      // Note: a checkout (out.win) punches its zoom via _matchWin below,
+      // toward the winning dart itself — not here — since _matchWin fires
+      // in the same tick and would otherwise immediately clobber whatever
+      // target we set on this pass.
       if (!this.reduceMotion) this.camera.punchZoom(1.16, lx, ly);
-      this.camera.shake(0.4);
+      this.camera.shake(out.win ? 0.5 : 0.4);
       this.audio.chime(2);
     } else if (res.score > 0) {
       this.audio.chime(res.ring === 'treble' || res.value === 25 ? 1 : 0);
     }
 
-    if (out.win) { this._matchWin(cur); return; }
+    if (out.win) { this._matchWin(cur, lx, ly); return; }
     if (this.dartsThisTurn >= this.mode.dartsPerTurn) { this._endTurn(); return; }
     this.dart.reset();
+  };
+
+  // A genuine miss (landed beyond the double wire) doesn't stick — it kicks
+  // outward off the surround and tumbles away, instead of freezing in the
+  // same stuck-in-the-board pose a scoring dart gets. Purely cosmetic: the
+  // score was already 0 either way (see _onDartLand); this only changes how
+  // the whiff reads. Physics is simulated inline in _update (this.bounceDarts).
+  Game.prototype._spawnBounceDart = function (x, y, player, ang) {
+    const dx = x - this.board.cx, dy = y - this.board.cy;
+    const dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    const kick = this.reduceMotion ? 0 : Util.rand(70, 150);
+    const life = this.reduceMotion ? 0.28 : 0.65;
+    this.bounceDarts.push({
+      x: x, y: y,
+      vx: (dx / dl) * kick * 0.5 + (this.reduceMotion ? 0 : Util.rand(-30, 30)),
+      vy: this.reduceMotion ? 0 : -Util.rand(60, 120),
+      rot: ang, spin: this.reduceMotion ? 0 : Util.rand(-10, 10),
+      grav: 520,
+      skin: player.skin(), parts: player.dartParts || null,
+      life: life, maxLife: life,
+    });
+  };
+
+  // Draws the tumbling "bounce out" darts spawned above; fades to nothing.
+  Game.prototype._drawBounceDarts = function (ctx) {
+    for (let i = 0; i < this.bounceDarts.length; i++) {
+      const b = this.bounceDarts[i];
+      const k = b.life / b.maxLife;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      this.sprites.drawDart(ctx, 48, b.skin, 0, b.parts);
+      ctx.restore();
+    }
   };
 
   Game.prototype._endTurn = function () {
@@ -391,6 +478,14 @@
         this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 250, 0.8, 5);
         this.particles.shockwave(this.board.cx, this.board.cy, '#ffffff', 160, 0.55, 3);
         this.camera.shake(0.5);
+        // A 180 is a maximum-score turn, not a single dart, so it doesn't
+        // get the per-dart punchZoom in _onDartLand — give it its own
+        // camera push-in + a held slow-mo beat to match the moment.
+        if (!this.reduceMotion) {
+          this.camera.punchZoom(1.12, this.board.cx, this.board.cy - 20);
+          this.timeScale = 0.55;
+          this._slowmoHoldT = 0.35;
+        }
       } else if (ts >= 100) this._say(ts + '!', 1.3);
     } else {
       const ts = cur.scoreState.turnScore;
@@ -418,10 +513,17 @@
   };
 
   // ---- Match over --------------------------------------------------------
-  Game.prototype._matchWin = function (winner) {
+  // `wx`/`wy` are the exact landing point of the winning dart (the checkout
+  // double, the closing mark, ...) when known — the punch zooms toward THAT
+  // shot rather than the board's geometric centre, then the normal focus/
+  // zoom easing in Camera.update carries the view back over the next beat.
+  Game.prototype._matchWin = function (winner, wx, wy) {
     this.state = 'matchOver';
     this.timeScale = 0.5;
-    if (!this.reduceMotion) this.camera.punchZoom(1.1, this.board.cx, this.board.cy);
+    if (!this.reduceMotion) {
+      this.camera.punchZoom(1.16, wx != null ? wx : this.board.cx, wy != null ? wy : this.board.cy);
+      this._slowmoHoldT = 0.35;
+    }
     const cCount = this.reduceMotion ? 26 : 90;
     this.particles.confetti(this.board.cx, this.board.cy, null, cCount);
     // Side cannons for the winning moment.
@@ -525,8 +627,16 @@
     if (this.state === 'play') this._drawCheckoutGuide(ctx);
     for (let i = 0; i < this.stuckDarts.length; i++) {
       const d = this.stuckDarts[i];
-      this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, d.ang, d.parts);
+      // A brief settle wobble right after impact — a quick decaying jiggle
+      // so a fresh stick reads as landing WITH force, not teleporting in.
+      let ang = d.ang;
+      if (!this.reduceMotion && d.landT != null) {
+        const el = this.time - d.landT;
+        ang += Math.sin(el * 46) * Math.max(0, 0.14 - el * 0.6);
+      }
+      this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, ang, d.parts);
     }
+    this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
     this.particles.draw(ctx);
     this.dart.drawReticle(ctx);
@@ -572,7 +682,7 @@
       ctx.save();
       ctx.translate(b.x + b.w / 2, b.y + b.h / 2 + 4);
       ctx.rotate(-Math.PI * 0.25);
-      this.sprites.drawDart(ctx, 46, KD.Sprites.SKINS[b.id.split(':')[1]], 0);
+      this.sprites.drawDart(ctx, 64, KD.Sprites.SKINS[b.id.split(':')[1]], 0);
       ctx.restore();
       if (locked) {
         ctx.fillStyle = '#cfe9ff'; ctx.font = '11px "Space Grotesk", sans-serif';
@@ -617,7 +727,7 @@
     ctx.save();
     ctx.translate(VIEW_W / 2, 530);
     ctx.rotate(-Math.PI * 0.12);
-    this.sprites.drawDart(ctx, 120, skin, 0.4, d.darts);
+    this.sprites.drawDart(ctx, 168, skin, 0.4, d.darts);
     ctx.restore();
     ctx.save();
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
@@ -1208,10 +1318,38 @@
     }
   };
 
+  Game.prototype._tierColor = function (tier) {
+    const colors = { common: '#b4d2ff', uncommon: '#7cffb2', rare: '#ffd34d', epic: '#c46bff' };
+    return colors[tier] || '#39e6ff';
+  };
+
+  Game.prototype._drawStatBars = function (ctx, x, y, speed, stability, slimness) {
+    const stats = [
+      { label: 'SPEED', val: speed, color: '#ff5d3c' },
+      { label: 'STABILITY', val: stability, color: '#7cffb2' },
+      { label: 'SLIMNESS', val: slimness, color: '#39e6ff' }
+    ];
+    ctx.font = '10px "Space Grotesk", sans-serif';
+    ctx.fillStyle = C.dim;
+    stats.forEach((s, i) => {
+      const sy = y + i * 16;
+      ctx.fillText(s.label, x, sy);
+      ctx.fillStyle = 'rgba(180,210,255,0.15)';
+      ctx.fillRect(x + 65, sy - 6, 60, 8);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x + 65, sy - 6, 60 * Math.min(1, s.val * 10), 8);
+      ctx.fillStyle = C.dim;
+    });
+  };
+
   Game.prototype._workshopChip = function (ctx, b) {
     const r = 12;
     const skinCol = (KD.Sprites.SKINS[b.key] || {}).color || C.cyan;
-    const accent = b.group === 'skin' ? skinCol : C.cyan;
+    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
+    const cosmetic = cat[b.key];
+    const tier = cosmetic ? cosmetic.tier : 'common';
+    const tierCol = this._tierColor(tier);
+    const accent = b.group === 'skin' ? skinCol : tierCol;
     ctx.save();
     ctx.globalAlpha = (!b.owned && b.group === 'skin') ? 0.4 : 1;
     ctx.fillStyle = b.sel ? 'rgba(57,230,255,0.13)' : 'rgba(10,16,32,0.6)';
@@ -1220,27 +1358,32 @@
     ctx.strokeStyle = b.sel ? accent : 'rgba(180,210,255,0.2)';
     if (b.sel) { ctx.shadowColor = accent; ctx.shadowBlur = 14; }
     this._roundRect(ctx, b.x, b.y, b.w, b.h, r); ctx.stroke();
+
+    // Rarity badge
+    if (tier !== 'common') {
+      ctx.fillStyle = tierCol;
+      ctx.beginPath(); ctx.arc(b.x + b.w - 10, b.y + 10, 6, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.shadowBlur = 0;
 
     const cx = b.x + b.w / 2;
     // Mini preview.
     if (b.group === 'skin') {
       ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
-      this.sprites.drawDart(ctx, 70, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
+      this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
       ctx.restore();
     } else {
       const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
       const parts = b.group === 'tip' ? { tip: b.key, flight: this.progression.data.darts.flight }
                                        : { tip: this.progression.data.darts.tip, flight: b.key };
       ctx.save(); ctx.translate(cx + 22, b.y + 28); ctx.rotate(Math.PI);
-      this.sprites.drawDart(ctx, 78, skin, 0.2, parts);
+      this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
       ctx.restore();
     }
     // Name.
-    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
     ctx.textAlign = 'center'; ctx.fillStyle = b.sel ? '#fff' : C.text;
     ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText((cat[b.key] || {}).name || b.key, cx, b.y + b.h - 18);
+    ctx.fillText((cosmetic || {}).name || b.key, cx, b.y + b.h - 18);
     // Status line: EQUIPPED / cost / OWNED / LOCKED.
     ctx.font = '11px "Space Grotesk", sans-serif';
     if (b.sel) { ctx.fillStyle = C.green; ctx.fillText('EQUIPPED', cx, b.y + b.h - 5); }
@@ -1275,8 +1418,20 @@
     ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, 420, skin, 0.6, d.darts);
     ctx.restore();
+
+    // Combined stats panel (bottom-right of preview).
+    const skinObj = KD.Sprites.SKINS[d.skins.equipped];
+    const tipObj = KD.Sprites.TIPS[d.darts.tip] || KD.Sprites.TIPS.steel;
+    const flightObj = KD.Sprites.FLIGHTS[d.darts.flight] || KD.Sprites.FLIGHTS.standard;
+    const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
+    const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
+    const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(VIEW_W / 2 + 160, 130, 140, 80); // stat panel bg
+    ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', VIEW_W / 2 + 170, 145);
+    this._drawStatBars(ctx, VIEW_W / 2 + 170, 155, totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';

@@ -270,9 +270,11 @@
   var hover = -1;
   var bx = 0, by = 0, cs = 0;    // board origin + cell size
   var sparks = [];
+  var rings = [], nodeBurst = [], flashT = 0; // rotation pulses + solve shockwave/flash
   // consecutive at-or-under-par (3-star) solves this session; resets on any lesser solve.
   // Session-only (not persisted) — a lightweight skill flourish, not part of the saved star record.
   var flawlessStreak = 0;
+  function easeOutBack(x) { var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
 
   function curMask(i) { return rotCW(baseMasks[i], turns[i]); }
   function logicalMasks() { var a = []; for (var i = 0; i < L.w * L.h; i++) a.push(curMask(i)); return a; }
@@ -287,7 +289,8 @@
     disp = turns.slice(); dispT = turns.slice();
     moves = 0; undoStack = []; solved = false; solvedT = 0; winShown = false;
     cursor.x = L.core % L.w; cursor.y = (L.core / L.w) | 0;
-    sparks.length = 0;
+    sparks.length = 0; rings.length = 0; flashT = 0;
+    nodeBurst = new Array(L.w * L.h).fill(false);
     fl = flood(logicalMasks(), L.w, L.h, L.wrap, L.core);
     layout(); updateHud();
   }
@@ -319,6 +322,14 @@
       S.solve();
       for (var s = 0; s < st; s++) S.star(s);
       showWinSoon(st);
+      nodeBurst = new Array(L.w * L.h).fill(false);
+      if (!reduceMotion) {
+        var cc = tileCenter(L.core);
+        var diag = Math.sqrt(Math.pow(L.w * cs, 2) + Math.pow(L.h * cs, 2));
+        ring(cc.x, cc.y, '196,107,255', diag * 0.58, 0.9);
+        ring(cc.x, cc.y, '57,230,255', diag * 0.72, 1.15);
+        flashT = 1;
+      }
     }
   }
   var winTimer = 0;
@@ -364,7 +375,10 @@
     if (!silent) {
       S.click();
       if (!solved && fl.count > before) S.connect();
-      if (!reduceMotion && fl.count > before) spark(i, '124,255,178');
+      if (!reduceMotion) {
+        if (fl.count > before) { spark(i, '124,255,178'); ringAt(i, '124,255,178', cs * 0.85, 0.4); }
+        else ringAt(i, fl.lit[i] ? '57,230,255' : '111,91,255', cs * 0.55, 0.22);
+      }
     }
     updateHud();
     return true;
@@ -384,6 +398,15 @@
       var a = Math.random() * TAU, sp = 40 + Math.random() * 110;
       sparks.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0.5, life: 0.5, color: color, size: 1.6 + Math.random() * 1.8 });
     }
+  }
+  // expanding ring pulse — used both for the per-tile rotate/connect "click" feedback
+  // and (with a bigger radius) the core shockwave on solve.
+  function ring(cx, cy, color, maxR, life) {
+    rings.push({ x: cx, y: cy, t: 0, life: life || 0.32, color: color, maxR: maxR || cs * 0.6 });
+  }
+  function ringAt(i, color, maxR, life) {
+    var cx = bx + (i % L.w) * cs + cs / 2, cy = by + ((i / L.w) | 0) * cs + cs / 2;
+    ring(cx, cy, color, maxR, life);
   }
 
   // ---------- screens ----------
@@ -562,11 +585,38 @@
 
     for (var i = 0; i < L.w * L.h; i++) drawTile(i);
 
+    // rotation pulses + solve shockwave rings (additive, so overlaps glow instead of muddying)
+    if (rings.length) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (i = 0; i < rings.length; i++) {
+        var rg = rings[i], rp = clamp(rg.t / rg.life, 0, 1), rEase = 1 - Math.pow(1 - rp, 3);
+        var rad = 4 + rg.maxR * rEase;
+        ctx.strokeStyle = 'rgba(' + rg.color + ',' + ((1 - rp) * 0.85).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(1, 3.5 * (1 - rp));
+        ctx.beginPath(); ctx.arc(rg.x, rg.y, rad, 0, TAU); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // sparks
     for (i = 0; i < sparks.length; i++) {
       var p = sparks[i], al = clamp(p.t / p.life, 0, 1);
       ctx.fillStyle = 'rgba(' + p.color + ',' + al.toFixed(3) + ')';
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size * al + 0.3, 0, TAU); ctx.fill();
+    }
+
+    // solve flash — a soft additive burst centered on the board, decaying fast
+    if (flashT > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var fcx = bx + cs * L.w / 2, fcy = by + cs * L.h / 2, fr = cs * Math.max(L.w, L.h) * 0.85;
+      var fg = ctx.createRadialGradient(fcx, fcy, 0, fcx, fcy, fr);
+      fg.addColorStop(0, 'rgba(124,255,178,' + (flashT * 0.3).toFixed(3) + ')');
+      fg.addColorStop(1, 'rgba(124,255,178,0)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
     }
 
     // lit progress bar under the board
@@ -581,13 +631,19 @@
     ctx.fillText(fl.count + ' / ' + totalN + ' powered', bx + bw, by + cs * L.h + 24);
 
     if (solved && !winShown) {
+      var textY = Math.max(60, by - 26);
+      ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = 'rgba(124,255,178,' + clamp(solvedT * 2, 0, 1).toFixed(2) + ')';
       ctx.font = '700 26px "Space Grotesk", sans-serif';
       if (!reduceMotion) { ctx.shadowColor = 'rgba(124,255,178,0.9)'; ctx.shadowBlur = 18; }
       // clamp below the HUD row so short viewports never overlap the moves/par readout
-      ctx.fillText('CIRCUIT ONLINE', W / 2, Math.max(60, by - 26));
-      ctx.shadowBlur = 0;
+      // a quick easeOutBack scale-pop sells the completion moment; instant for reduced motion
+      var pop = reduceMotion ? 1 : easeOutBack(clamp(solvedT * 2.2, 0, 1));
+      ctx.translate(W / 2, textY);
+      ctx.scale(pop, pop);
+      ctx.fillText('CIRCUIT ONLINE', 0, 0);
+      ctx.restore();
     }
   }
 
@@ -610,13 +666,26 @@
         p.t -= dt;
         if (p.t <= 0) sparks.splice(i, 1);
       }
+      for (i = rings.length - 1; i >= 0; i--) {
+        rings[i].t += dt;
+        if (rings[i].t >= rings[i].life) rings.splice(i, 1);
+      }
+      if (flashT > 0) flashT = Math.max(0, flashT - dt * 3.2);
       if (solved) {
         solvedT += dt;
         if (!winShown && solvedT >= winTimer) showWin();
-        if (!reduceMotion && !winShown && Math.random() < dt * 14) {
-          var leaves = [];
-          for (i = 0; i < baseMasks.length; i++) if (popcount(baseMasks[i]) === 1) leaves.push(i);
-          if (leaves.length) spark(leaves[(Math.random() * leaves.length) | 0], '124,255,178');
+        // deterministic wavefront burst: pop a spark+ring at each leaf exactly when the
+        // traveling solve-glow (see wavePulse in drawTile) reaches it, so the "power
+        // flows through" moment fires in step with what's on screen rather than at random.
+        if (!reduceMotion && !winShown) {
+          for (i = 0; i < baseMasks.length; i++) {
+            if (nodeBurst[i] || i === L.core || popcount(baseMasks[i]) !== 1) continue;
+            if (solvedT * 14 - fl.depth[i] > 0) {
+              nodeBurst[i] = true;
+              spark(i, '124,255,178');
+              ringAt(i, '124,255,178', cs * 0.7, 0.4);
+            }
+          }
         }
       }
     }

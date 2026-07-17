@@ -58,18 +58,19 @@ Use **only** these labels:
 
 | ID | Repo | PR | Branch | Lane | Status | Gate | Next Owner Action | Notes |
 |---|---|---|---|---|---|---|---|---|
-| DBZ-059 | Devbiz | TBD | `claude/polish-12-launch-qa` | CI/tests | `PLAN` | CI jobs green on own PR | — | **Polish L12 — Launch QA**: Playwright smoke + Lighthouse budget in CI (advisory), htmlhint/lychee tightening, 404 page. Runs last. See `POLISH_BUILDOUT.md`. |
-| DBZ-058 | Devbiz | TBD | `claude/polish-11-exhibit` | feature | `PLAN` | Owner browser preview (quality bar) | — | **Polish L11 — Museum exhibit prototype** (north-star Phase B): one premium exhibit at `museum/kudbee-contra/`, simulated proof timeline, data-driven. Depends DBZ-051/057. |
-| DBZ-057 | Devbiz | TBD | `claude/polish-10-shared-tokens` | infrastructure | `PLAN` | Render pass on every touched page | — | **Polish L10 — Shared Deep Lab chrome**: extract `assets/kudbee-ui.css` tokens; apply chrome-only to blog/brain/ship-it/lab/tools hubs. Depends DBZ-051. |
-| DBZ-056 | Devbiz | TBD | `claude/polish-09-conversion` | feature | `PLAN` | Browser preview | — | **Polish L09 — Conversion**: form validation/success states, floating CTA pill, FAQ depth, pricing-card microcopy. No price changes. |
-| DBZ-055 | Devbiz | TBD | `claude/polish-08-agent-ux` | feature | `PLAN` | Browser preview | — | **Polish L08 — Agent & terminal UX**: message animations, KB depth + typo tolerance, terminal commands, single endpoint config block (seams for DBZ-039/040). No backend/keys. |
-| DBZ-054 | Devbiz | TBD | `claude/polish-07-arcade-juice` | feature | `PLAN` | 60 FPS profile | — | **Polish L07 — Arcade juice**: animated game thumbnails (IO-gated shared ticker), CRT hover, per-title theming. Reduced-motion = static art. |
-| DBZ-053 | Devbiz | TBD | `claude/polish-06-work-cases` | feature | `PLAN` | Browser preview | — | **Polish L06 — Work case depth**: device-frame case rows, truthful fact chips from `CLIENT_SITES.md`, receipts treatment. |
-| DBZ-052 | Devbiz | TBD | `claude/polish-05-hero-atmosphere` | feature | `PLAN` | 60 FPS trace (4x throttle) | — | **Polish L05 — Hero/atmosphere fidelity**: depth-layered particles, scroll-linked aurora hue bias, hero exit choreography, section lighting. Depends DBZ-051. |
-| DBZ-051 | Devbiz | TBD | `claude/polish-04-motion-tokens` | feature | `PLAN` | Before/after parity captures | — | **Polish L04 — Motion tokens** (north-star Phase A completion): CSS motion tokens, extract `assets/kudbee-motion.css/js`, one rAF scroll bus, view-timeline enhancement. Zero behavior change. |
-| DBZ-050 | Devbiz | TBD | `claude/polish-03-a11y` | a11y | `PLAN` | axe clean + keyboard walkthrough | — | **Polish L03 — A11y hardening**: skip link, drawer focus/inert dialog (match DBZ-034 bar), keyboard-operable labels, contrast AA, canvas aria. |
-| DBZ-049 | Devbiz | TBD | `claude/polish-02-performance` | feature | `PLAN` | Lighthouse ≥95 before/after in PR | — | **Polish L02 — Performance/CWV**: self-hosted fonts, responsive AVIF/WebP images, hero-canvas spatial grid, CLS zero, listener audit. |
-| DBZ-048 | Devbiz | TBD | `claude/polish-01-seo` | feature | `PLAN` | Lighthouse SEO = 100 | — | **Polish L01 — SEO truth pass**: sitemap/robots/llms.txt refresh, BreadcrumbList + games ItemList JSON-LD, real OG hero screenshot. No canonical flip (DBZ-042 HOLD). |
+| DBZ-060 | Devbiz | #145 | (merged) | CI/tests | `MERGED` | — | None | **Coverage-gate flake — fixed, merged 2026-07-17 (run `29582241815`, `success`).** Two independent bugs stacked: (1) `leaderboard/shared/auth.js` genuinely had several thin/conditionally-exercised branches (`frontendApiFromPublishableKey()`, `issuerFromEnv()`'s `CLERK_PUBLISHABLE_KEY` fallback, `resolveAuth()`'s ALGO-failure catch fallthrough, `getKey()`'s JWKS-TTL cache) — fixed with real deterministic tests (`leaderboard/test/{auth,core,http}.test.js` new, `algo-auth.test.js` hardened), raising `leaderboard/shared/**` coverage 87.98%→95.85% lines/statements (confirmed stable across 5 fresh runs). (2) Deeper bug, found *after* step 1's fix still failed CI: `coverage:snapshot -- --check` did an exact `JSON.stringify` match against the committed dashboard snapshot, but branch-coverage counts are genuinely nondeterministic run-to-run at the **integer** level (reproduced: `total.branches.total` measured 267/268/269 across 3 back-to-back identical runs — real V8/c8 instrumentation jitter on the Promise-heavy auth code, not a rounding artifact or a test-quality gap). No amount of test coverage can make an inherently-jittery metric byte-match a fixed snapshot. Fixed `leaderboard/scripts/coverage-snapshot.mjs`'s `--check` to bucket branches to a 5-point tolerance (whole-number rounding alone still flipped near x.5 boundaries — reproduced 3/10 stale failures before widening) while keeping lines/statements/functions at 1-point (never drifted in 30+ runs); raw `counts` excluded from the check entirely. Verified 20/20 pass across a genuinely-fresh (not cached) coverage+check loop, with branches still visibly jittering 89.51–89.59% during those runs. **Confirmed green on GitHub Actions itself** (both push- and pull_request-triggered runs of the job, not just local) as of commit `c1fb668`. Merged 2026-07-17 after owner authorized option A to recover main's green (the docs Green Gate commit had briefly turned `main` red at 87.98% < 88% threshold; PR #145 restored 95.85%).maining step. |
+| DBZ-059 | Devbiz | #123 | (merged) | CI/tests | `MERGED` | — | Manual gate: Safari/Firefox/iOS cross-browser pass (checklist in PR #123) | **Polish L12 — Launch QA**: Playwright smoke + Lighthouse budget in CI (advisory, confirmed green on GitHub Actions run 28813438482), htmlhint `alt-require`, `404.html`, `robots.txt` `/tests/` fencing. Merged 2026-07-06. |
+| DBZ-058 | Devbiz | #122 | (merged) | feature | `MERGED` | — | None | **Polish L11 — Museum exhibit prototype** (north-star Phase B): `museum/kudbee-contra/` — device-frame artifact, simulated read-only proof timeline (every simulated stage labeled, persistent "no wallet/mint/chain" banner), `museum/exhibits.js` data model, one Work-section entry link. Owner reviewed and merged 2026-07-06 (lane spec's default `MANUAL_CHECK` cleared by that review). |
+| DBZ-057 | Devbiz | #121 | (merged) | infrastructure | `MERGED` | — | None | **Polish L10 — Shared Deep Lab chrome**: extracted `assets/kudbee-ui.css` tokens; applied chrome-only to blog/brain/ship-it/lab/tools hubs. Merged 2026-07-06. |
+| DBZ-056 | Devbiz | #120 | (merged) | feature | `MERGED` | — | None | **Polish L09 — Conversion**: form validation/success states, floating CTA pill, FAQ depth, pricing-card microcopy. No price changes. Merged 2026-07-06. |
+| DBZ-055 | Devbiz | #119 | (merged) | feature | `MERGED` | — | None | **Polish L08 — Agent & terminal UX**: message animations, KB depth + typo tolerance, terminal commands, single endpoint config block (seams for DBZ-039/040, endpoints still empty). Merged 2026-07-06. |
+| DBZ-054 | Devbiz | #118 | (merged) | feature | `MERGED` | — | None | **Polish L07 — Arcade juice**: animated game thumbnails (IO-gated shared ticker), CRT hover, per-title theming. Reduced-motion = static art. Merged 2026-07-06. |
+| DBZ-053 | Devbiz | #117 | (merged) | feature | `MERGED` | — | None | **Polish L06 — Work case depth**: device-frame case rows, truthful fact chips from `CLIENT_SITES.md`, receipts treatment. Merged 2026-07-06. |
+| DBZ-052 | Devbiz | #116 | (merged) | feature | `MERGED` | — | None | **Polish L05 — Hero/atmosphere fidelity**: depth-layered particles, scroll-linked aurora hue bias, hero exit choreography, section lighting. Merged 2026-07-06. |
+| DBZ-051 | Devbiz | #115 | (merged) | feature | `MERGED` | — | None | **Polish L04 — Motion tokens** (north-star Phase A completion): CSS motion tokens, extracted `assets/kudbee-motion.css/js`, one rAF scroll bus, view-timeline enhancement. Zero behavior change. Merged 2026-07-06. |
+| DBZ-050 | Devbiz | #114 | (merged) | a11y | `MERGED` | — | None | **Polish L03 — A11y hardening**: skip link, drawer focus/inert dialog (match DBZ-034 bar), keyboard-operable controls, contrast AA, canvas aria. Re-verified live 2026-07-07: fresh axe-core run (WCAG2A/AA+2.1A/AA+best-practice) = 0 violations at 1440px and 390px. Merged 2026-07-06. |
+| DBZ-049 | Devbiz | #113 | (merged) | feature | `MERGED` | — | None | **Polish L02 — Performance/CWV**: self-hosted fonts, responsive AVIF/WebP images, hero-canvas spatial grid, CLS zero, listener audit. Lighthouse mobile Performance 73→95, CLS 0.06→0. Merged 2026-07-06. |
+| DBZ-048 | Devbiz | #112 | (merged) | feature | `MERGED` | — | None | **Polish L01 — SEO truth pass**: sitemap regenerated (23 real URLs), robots.txt fencing extended, llms.txt rewritten, BreadcrumbList + 9-game ItemList JSON-LD, real OG hero screenshot (`assets/og/home.jpg`). No canonical flip (DBZ-042 HOLD). Merged 2026-07-06. Note: OG screenshot predates L05's hero changes and `museum/kudbee-contra/` (added by L11) has no canonical/OG/robots meta or sitemap entry — both minor, logged to BACKLOG.md, not blocking. |
 | DBZ-047 | Devbiz | #109 | (merged) | feature | `MERGED` | — | None | **Cinematic long-scroll redesign** of `index.html` (owner-directed): personal voice, scroll storytelling, live agent + store kept. Merged 2026-07-06 — baseline for the 12-lane polish program (`POLISH_BUILDOUT.md`, DBZ-048..059, PR #110 merged same session). |
 | DBZ-046 | Devbiz | TBD | `claude/website-improvements-6vwv66` | feature | `PLAN` | Browser preview | Review the Ship-it studio | **D1 Ship-it Phase 4**: convert (book-a-call / export) + agent hand-off + polish. See `BUILD_PLAN.md`. |
 | DBZ-045 | Devbiz | TBD | `claude/website-improvements-6vwv66` | feature | `PLAN` | Browser preview | — | **D1 Ship-it Phase 3**: live preview generator (describe business → assembled house-style preview). |
@@ -82,7 +83,7 @@ Use **only** these labels:
 | DBZ-038 | Devbiz | TBD | `claude/website-improvements-6vwv66` | feature | `PLAN` | Browser preview | Review nav/IA changes | **W2 Identity focus**: tighten nav/IA so web-design reads as the #1 business; group secondary surfaces. |
 | DBZ-037 | Devbiz | TBD | `claude/website-improvements-6vwv66` | content | `PLAN` | Owner confirms stats real | Confirm stats/testimonials | **W1 Honest social proof**: reframe unverified "150+/50+/98%" + named testimonials to defensible claims. |
 | DBZ-036 | Devbiz | TBD | `claude/website-improvements-6vwv66` | docs | `BUILDING` | — | Review the plan | **Build program plan** (`docs/BUILD_PLAN.md`) for the improvements/weaknesses/dream-feature loop + this ledger catch-up. Notes PRs #76–#85 merged this session. |
-| DBZ-035 | Devbiz | TBD | `claude/ledger-reconcile-session` | docs | `DRAFT` | Owner review of docs | Review & merge | Third reconciliation: records the 2026-06-20 nav/controls/a11y session — backfills `MERGED` rows DBZ-029..034 and flips DBZ-028 to `MERGED`. Process-only. |
+| DBZ-035 | Devbiz | TBD | (merged, branch gone) | docs | `MERGED` | — | None | Third reconciliation: records the 2026-06-20 nav/controls/a11y session — backfills `MERGED` rows DBZ-029..034 and flips DBZ-028 to `MERGED`. Process-only. Confirmed 2026-07-07: its content is already reflected in this ledger and its branch no longer exists remotely. |
 | DBZ-034 | Devbiz | #49 | (merged) | a11y | `MERGED` | — | Manual gate: screen-reader pass | Accessibility hardening: CSS-label routing made keyboard-operable (tabindex/role/Enter-Space), `aria-current` on active page, mobile drawer = real dialog (focus move/restore, `inert` background focus trap, `aria-expanded`/`aria-modal`), global `:focus-visible` rings. Merged 2026-06-20. |
 | DBZ-033 | Devbiz | #48 | (merged) | feature | `MERGED` | — | Manual gate: mobile touch + Firefox/Safari pass | Controls Phase 3: `.kbd-knob` rotary (SVG gradient arc, drag/wheel/keys, role=slider) + `.kbd-stepper` (number + −/+) + shared `data-kbd-name` link bus, extending `assets/kbd-controls.*`; live showcase at `tools/controls/`. Merged 2026-06-20. |
 | DBZ-032 | Devbiz | #47 | (merged) | CI | `MERGED` | — | Promote to required once clean | CI quality guardrails (`.github/workflows/quality.yml`): lychee internal-link check + htmlhint, **advisory/non-blocking** (`continue-on-error`) to start; `.htmlhintrc` + `.lycheeignore`. Merged 2026-06-20. |
@@ -170,6 +171,72 @@ When a PR merges:
 2. Record the final outcome in **Notes**.
 3. Unsubscribe / stand down from watching it, if applicable.
 4. **Do not** open follow-up work unless explicitly authorized.
+
+---
+
+## Stale branches (merged, remote-delete blocked)
+
+**Known tooling limitation (discovered 2026-07-07, confirmed repeatedly across sessions):**
+this environment's git remote is a local proxy, and `git push origin --delete <branch>`
+consistently fails with `HTTP 403` against it — it is not a permissions/auth problem that
+retrying fixes. The GitHub MCP server also has **no delete-branch/delete-ref tool** (checked
+directly; `create_branch`, `list_branches`, `delete_file`, etc. exist, branch deletion does
+not). **There is currently no tool-based path from any agent session in this environment to
+delete a remote branch.** Do not retry `git push --delete` more than once per branch — it
+will not succeed differently on retry.
+
+**Root-cause fix (owner action, not agent-executable):** enable **"Automatically delete head
+branches"** in the repo's GitHub settings (Settings → General → Pull Requests). This makes
+every future PR merge self-clean with zero agent action — it's the actual fix, not a
+workaround. This has been recommended before (see `PR_FLOW.md`) but as of this writing is
+still not confirmed on. Until it's on, every merged branch accumulates here instead of
+disappearing.
+
+**What agents should do instead:** after a lane merges (PR-merge or direct fast-forward),
+attempt the delete once; if it 403s, add a row below rather than treating it as done or
+retrying in a loop. This table is the actual record of "branches that should not exist
+anymore" — check it before assuming the branch list is clean, and re-attempt deletion here
+first if a future session ever gains a working delete path (a fresh session may have
+different git remote permissions — don't assume this limitation is permanent without
+checking).
+
+| Branch | Merged via | Date noted | Safe to delete? |
+|---|---|---|---|
+| `claude/leaderboard-audit-architecture-r5b2xh` | PR #133 → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/games-studio-roadmap` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/branch-cleanup-ledger` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/coverage-gate-flake-note` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/voidrunner-ship-enemies-fx` | PR #135 → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/csp-report-only-hsts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/fix-modernmed-sw-cache` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-contra` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-darts` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-munch` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-orbital` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-pinball` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-puzzles` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-riff` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-riff-2` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/game-polish-voidrunner` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/github-sentinel-webhook-cache-3hs8ay` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/guitar-hero-combo-research-3asnqb` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/integration` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/personal-website-redesign-yd2a3y` | PR #109 → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/polish-01-seo` through `claude/polish-12-launch-qa` (12 branches) | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/polish-buildout-plan` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/pr-review-roadmap-2xeeer` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/recording-it-pin-cdn` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/security-xss-hardening` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/shared-engine-core` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/site-audit-games-work` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+| `claude/voidrunner-boss` | merged → main | 2026-07-07 (backfilled) | Yes — fully in `main` |
+
+"Backfilled" dates mean the branch was already merged and stale before this table existed —
+found via `git merge-base --is-ancestor origin/<branch> origin/main` across all remote
+branches on 2026-07-07, not merged on that date. New entries should record the actual merge
+date. When the owner (or a future session) does gain a working delete path, clear this table
+in the same PR/commit that does the deleting — don't let it grow stale in the other
+direction.
 
 ---
 

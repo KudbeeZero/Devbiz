@@ -52,7 +52,9 @@ Routing rule of thumb: *permanent rule* → CLAUDE.md · *in-flight state* → B
 
 Append-only. Newest first. Each entry: the trigger → the reflex.
 
-- **2026-07-02** — **No branches left behind:** when a PR/lane closes or merges, delete its branch (local + remote) in the same step. Land verified lanes to `main`, then delete; only a branch with active in-progress work may linger.
+- **2026-07-17** — **Green Gate is a precondition, not a nicety:** run `gh run list --branch main --limit 3` (1) *before* starting any task — if `main` is red/pending, stop and surface it, never build on a red base; (2) *before* claiming a branch is mergeable — rebase/merge `main` into it and confirm the branch's own CI is green; (3) *after* any push/merge/ff into `main` — re-run and confirm the post-push run is `success` before declaring done (see §7b). Local "expected green" is never proof; the real CI run is the only proof.
+- **2026-07-07** — **Branch deletion is currently impossible from this environment** — `git push origin --delete <branch>` reliably 403s against this environment's git proxy (not an auth issue retrying fixes), and the GitHub MCP server has no delete-branch/delete-ref tool. Don't retry the delete more than once. Instead, record the branch in `docs/BUILD_LEDGER.md`'s "Stale branches" table and move on — that table is now the actual record of what should be deleted once a path exists. The real fix is enabling GitHub's **"Automatically delete head branches"** repo setting (owner-only, Settings → General → Pull Requests) — recommend it, don't keep working around its absence. A future session may have a different git remote/tooling — don't assume this is permanent without checking again.
+- **2026-07-02** — **No branches left behind:** when a PR/lane closes or merges, delete its branch (local + remote) in the same step. Land verified lanes to `main`, then delete; only a branch with active in-progress work may linger. *(2026-07-07 update: this remains the goal, but see the entry above — deletion is currently blocked at the tooling level in this environment; log the branch instead of retrying.)*
 - **2026-07-02** — Owner prefers a **commit-streaming workflow**: don't reflexively open a PR per change. Default to one working/integration branch with incremental commits; open a PR only when a real review gate is needed or the owner asks. (See Working Conventions below.)
 - **2026-07-02** — Session **cron jobs are cleared on a model switch** (`/model`). After switching, recreate any watch/check-in cron; never assume it survived.
 - **2026-07-02** — Before extracting "shared" code, **diff the candidates first** — only lift what is genuinely duplicated. (Games engine: only `loop.js` + the `util` core were shared; `input/particles/audio/camera` had legitimately diverged.)
@@ -178,6 +180,26 @@ Use precise language:
 - expected green, not confirmed
 
 Expected green is not green.
+
+### 7b. Green Gate (main must be green — non-negotiable)
+
+`main` is the sole deploy source and must always be green. This is a *precondition*
+for work, not a nice-to-have. The exact check to prove it is the real CI, never a
+local guess:
+
+- **Before starting any task:** run `gh run list --branch main --limit 3` and
+  confirm the latest `main` run is `success`. If `main` is red or the last run is
+  pending/unknown, **stop and surface it** — do not build on a red base, do not
+  proceed as if green. Report the failing run and wait for owner direction.
+- **Before claiming a branch is mergeable:** merge/rebase `main` into the working
+  branch first, then confirm the branch's own CI runs green. A branch green in
+  isolation that hasn't absorbed `main` is not proven-green for `main`.
+- **After any push to, or merge/ff into, `main`:** re-run
+  `gh run list --branch main --limit 3` and confirm the post-push run goes
+  `success`. If it fails, treat it as a live incident: say so in the §7 precise
+  language, do not declare the merge done.
+- Owner approval is still required to merge (§11 / PR_FLOW §5). This gate is about
+  *proving main is green*, not about authorizing the merge itself.
 
 ### 8. Manual Check Rule
 

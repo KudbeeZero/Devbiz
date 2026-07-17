@@ -91,9 +91,49 @@ const outPath = join(outDir, 'coverage-data.json');
 // `generatedAt` (wall-clock) and `commit` (HEAD) move on every run, so they are
 // never part of the freshness contract — only the measured coverage, thresholds,
 // scope and verdict are. `--check` compares just that stable portion.
+//
+// Branch-coverage percentages (and their underlying covered/total counts) are
+// NOT exactly reproducible run-to-run: V8/c8's instrumentation of the
+// Promise/async-heavy code in shared/auth.js and shared/algo-auth.js counts
+// branch points slightly differently depending on microtask timing, so the
+// same commit can report e.g. 267, 268, or 269 total branches across
+// consecutive `npm run coverage` runs (confirmed empirically — lines,
+// statements, and functions do NOT drift, only branches). A committed
+// snapshot compared byte-for-byte against a fresh run can therefore never
+// reliably match, which is exactly what was making CI's `coverage:snapshot
+// -- --check` step flaky independent of the actual coverage gate (DBZ-060).
+//
+// The fix: `--check` only needs to agree with the committed snapshot on what
+// the gate/dashboard verdict actually depends on — thresholds, scope, the
+// pass/fail verdict, and the coverage numbers rounded to a tolerance wide
+// enough to absorb the measured jitter. Raw covered/total counts drift at
+// the integer level too and aren't part of that contract, so they're
+// excluded from the comparison entirely. The WRITTEN file (plain
+// `coverage:snapshot`, no `--check`) is unaffected — it still stores
+// full-precision percentages and counts for the dashboard.
+//
+// Plain whole-number rounding (bucket width 1) was tried first and is NOT
+// enough: branches coverage on this codebase sits within ~0.1pt of a
+// literal x.5 rounding boundary (observed range 89.47%-89.59%), so
+// Math.round() alone still flips between 89 and 90 across otherwise-
+// identical runs (reproduced: 3 stale failures out of 7 fresh loop
+// iterations with bucket width 1). lines/statements/functions, by
+// contrast, were byte-identical across every run measured (12+ runs,
+// local + here) — no drift at all — so they keep whole-number precision.
+// Branches gets a much wider bucket (5 points) to comfortably clear its
+// observed jitter with margin, while still catching a genuine regression
+// (branches has 29+ points of headroom above its 60% threshold here, so
+// bucketing that coarsely doesn't risk masking a real threshold breach).
+const BUCKET_WIDTH = { lines: 1, statements: 1, functions: 1, branches: 5 };
+const bucket = (n, width) => Math.round(n / width) * width;
 const stable = (o) => {
-  const { generatedAt, commit, ...rest } = o;
-  return JSON.stringify(rest);
+  const { generatedAt, commit, total, totalCounts, files, ...rest } = o;
+  const roundedTotal = Object.fromEntries(METRICS.map((m) => [m, bucket(total[m], BUCKET_WIDTH[m])]));
+  const roundedFiles = files.map(({ path, metrics }) => ({
+    path,
+    metrics: Object.fromEntries(METRICS.map((m) => [m, bucket(metrics[m], BUCKET_WIDTH[m])])),
+  }));
+  return JSON.stringify({ ...rest, total: roundedTotal, files: roundedFiles });
 };
 
 if (process.argv.includes('--check')) {
