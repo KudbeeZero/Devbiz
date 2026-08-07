@@ -210,6 +210,16 @@
   var gate = document.getElementById('gate');
   var overOv = document.getElementById('over');
 
+  // ---- bloom pipeline: offscreen canvas for additive glow compositing ----
+  // All emissive elements (engines, lasers, explosions, pickups, ship glow) are
+  // drawn to this offscreen buffer at half-res, then composited back onto the main
+  // canvas with 'lighter' blend + CSS blur filter. This gives every light source a
+  // soft HDR bloom halo without per-element shadowBlur (which kills perf at scale).
+  var bloomCvs = document.createElement('canvas');
+  var bCtx = bloomCvs.getContext('2d');
+  var BLOOM_SCALE = 0.5;                       // half-res for perf; CSS blur smooths it
+  var bloomReady = false;
+
   // ---- canvas sizing ----
   var W = 0, H = 0, DPR = 1, cx = 0, cy = 0, FOCAL = 600, MINSCALE = 1;
   function resize() {
@@ -221,6 +231,9 @@
     cx = W / 2; cy = H * 0.46;                 // vanishing point a touch above center
     FOCAL = Math.max(420, Math.min(W, H) * 0.95);
     MINSCALE = Math.max(W, H);                 // for clamping huge near-plane sprites
+    // resize bloom buffer
+    bloomCvs.width = Math.round(W * BLOOM_SCALE); bloomCvs.height = Math.round(H * BLOOM_SCALE);
+    bloomReady = true;
   }
   window.addEventListener('resize', resize);
 
@@ -1062,11 +1075,111 @@
     drawPops();
     ctx.restore();
 
+    // ---- bloom composite: additive glow from offscreen buffer ----
+    if (bloomReady && !reduceMotion) drawBloomPass(now, sx, sy);
+
     drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
+    drawCinematicVignette();    // lens vignette + chromatic edge fringe at speed
     drawHitFlash();             // screen-space damage vignette (impact readability for the bigger ship)
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
     drawCallout(now);
+  }
+
+  // ---- bloom pass: render emissive glow sources to offscreen buffer, composite back ----
+  function drawBloomPass(now, sx, sy) {
+    var bw = bloomCvs.width, bh = bloomCvs.height;
+    bCtx.clearRect(0, 0, bw, bh);
+    bCtx.save();
+    bCtx.scale(BLOOM_SCALE, BLOOM_SCALE);
+    bCtx.translate(sx, sy);
+
+    // ship engine glow
+    if (state !== 'gate') {
+      var bx = cx, by = cy + Math.min(W, H) * 0.30;
+      var thrust = 0.55 + boost * 0.7;
+      for (var e = -1; e <= 1; e += 2) {
+        var ex = bx + e * 15 * (Math.min(W, H) / 840 * 1.3);
+        var ey = by + 24 * (Math.min(W, H) / 840 * 1.3);
+        var gr = bCtx.createRadialGradient(ex, ey, 0, ex, ey, 40 + boost * 60);
+        gr.addColorStop(0, 'rgba(120,255,200,' + (0.6 + boost * 0.3).toFixed(2) + ')');
+        gr.addColorStop(1, 'rgba(120,255,200,0)');
+        bCtx.fillStyle = gr; bCtx.beginPath(); bCtx.arc(ex, ey, 40 + boost * 60, 0, TAU); bCtx.fill();
+      }
+    }
+
+    // bullet trails
+    bCtx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < bullets.length; i++) {
+      var bu = bullets[i], p = project(bu.x, bu.y, bu.z);
+      var w = Math.max(3, p.sc * 12);
+      var bg2 = bCtx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, w * 2.5);
+      bg2.addColorStop(0, 'rgba(120,255,200,0.7)'); bg2.addColorStop(1, 'rgba(120,255,200,0)');
+      bCtx.fillStyle = bg2; bCtx.beginPath(); bCtx.arc(p.sx, p.sy, w * 2.5, 0, TAU); bCtx.fill();
+    }
+    // enemy bullet glow
+    for (var eb = 0; eb < ebullets.length; eb++) {
+      var ebb = ebullets[eb], ep = project(ebb.x, ebb.y, ebb.z);
+      var ew = Math.max(3, ep.sc * 10);
+      var eg = bCtx.createRadialGradient(ep.sx, ep.sy, 0, ep.sx, ep.sy, ew * 2);
+      eg.addColorStop(0, 'rgba(255,120,90,0.6)'); eg.addColorStop(1, 'rgba(255,120,90,0)');
+      bCtx.fillStyle = eg; bCtx.beginPath(); bCtx.arc(ep.sx, ep.sy, ew * 2, 0, TAU); bCtx.fill();
+    }
+
+    // particle glow (only bright ones)
+    for (var pp = 0; pp < PMAX; pp++) {
+      var q = P[pp]; if (q.life <= 0.3) continue;
+      var pg = bCtx.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.sz * 4);
+      pg.addColorStop(0, q.col.replace(')', ',' + (q.life * 0.5).toFixed(2) + ')').replace('rgb', 'rgba'));
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      bCtx.fillStyle = pg; bCtx.beginPath(); bCtx.arc(q.x, q.y, q.sz * 4, 0, TAU); bCtx.fill();
+    }
+
+    // ring/shockwave glow
+    for (var ri = 0; ri < rings.length; ri++) {
+      var rg = rings[ri], k = rg.life / rg.max, e = 1 - k;
+      var rr = 6 + rg.r1 * e * (2 - e);
+      var rgg = bCtx.createRadialGradient(rg.x, rg.y, rr * 0.5, rg.x, rg.y, rr * 1.5);
+      rgg.addColorStop(0, rg.col.replace(')', ',' + (k * 0.4).toFixed(2) + ')').replace('rgb', 'rgba'));
+      rgg.addColorStop(1, 'rgba(0,0,0,0)');
+      bCtx.fillStyle = rgg; bCtx.beginPath(); bCtx.arc(rg.x, rg.y, rr * 1.5, 0, TAU); bCtx.fill();
+    }
+
+    // boss core glow
+    if (boss && boss.alive) {
+      var bp = project(boss.x, boss.y, boss.z);
+      var bR = Math.min(MINSCALE, boss.r * bp.sc);
+      var bgr = bCtx.createRadialGradient(bp.sx, bp.sy, 0, bp.sx, bp.sy, bR * 1.2);
+      bgr.addColorStop(0, 'rgba(255,93,60,0.5)'); bgr.addColorStop(1, 'rgba(255,93,60,0)');
+      bCtx.fillStyle = bgr; bCtx.beginPath(); bCtx.arc(bp.sx, bp.sy, bR * 1.2, 0, TAU); bCtx.fill();
+    }
+
+    // powerup glow
+    for (var pu = 0; pu < powerups.length; pu++) {
+      var pw = powerups[pu], pp2 = project(pw.x, pw.y, pw.z);
+      var pR = Math.min(MINSCALE, pw.r * pp2.sc);
+      var col2 = puCol(pw.type);
+      var rgb2 = col2.charAt(0) === '#' ? hexRGB(col2) : col2;
+      var pug = bCtx.createRadialGradient(pp2.sx, pp2.sy, 0, pp2.sx, pp2.sy, pR * 2.5);
+      pug.addColorStop(0, 'rgba(' + rgb2 + ',0.5)'); pug.addColorStop(1, 'rgba(' + rgb2 + ',0)');
+      bCtx.fillStyle = pug; bCtx.beginPath(); bCtx.arc(pp2.sx, pp2.sy, pR * 2.5, 0, TAU); bCtx.fill();
+    }
+
+    bCtx.restore();
+
+    // composite bloom onto main canvas with additive blend
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.filter = 'blur(8px)';
+    ctx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, W, H);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 0.5;
+    ctx.filter = 'blur(20px)';
+    ctx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, W, H);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
   }
   // brief screen-space damage vignette on a hit — reads as impact even where the
   // particle burst lands off-frame; single quick fade, skipped under reduced motion.
@@ -1134,6 +1247,31 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
+  }
+  // cinematic vignette + chromatic edge tint — gives the viewport a lens-like feel,
+  // darkening corners and adding a subtle color fringe at the edges during high speed.
+  // Skipped entirely under reduced motion since it's pure atmosphere.
+  function drawCinematicVignette() {
+    if (reduceMotion) return;
+    var intensity = 0.35 + boost * 0.25 + (afterburner ? 0.15 : 0);
+    var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.35, cx, cy, Math.max(W, H) * 0.82);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.7, 'rgba(0,0,8,' + (intensity * 0.3).toFixed(2) + ')');
+    vg.addColorStop(1, 'rgba(0,0,12,' + intensity.toFixed(2) + ')');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // chromatic edge fringe — subtle blue/red separation at extreme edges during warp
+    if (boost > 0.3 || afterburner) {
+      var fringeA = (boost * 0.08 + (afterburner ? 0.06 : 0));
+      var fw = Math.max(W, H) * 0.06;
+      // left edge — blue tint
+      var lg = ctx.createLinearGradient(0, 0, fw, 0);
+      lg.addColorStop(0, 'rgba(60,100,255,' + fringeA.toFixed(2) + ')'); lg.addColorStop(1, 'rgba(60,100,255,0)');
+      ctx.fillStyle = lg; ctx.fillRect(0, 0, fw, H);
+      // right edge — red tint
+      var rg = ctx.createLinearGradient(W - fw, 0, W, 0);
+      rg.addColorStop(0, 'rgba(255,80,60,0)'); rg.addColorStop(1, 'rgba(255,80,60,' + fringeA.toFixed(2) + ')');
+      ctx.fillStyle = rg; ctx.fillRect(W - fw, 0, fw, H);
+    }
   }
   function drawCallout(now) {
     if (co.life <= 0) return;
@@ -1253,13 +1391,25 @@
   }
   // ---- per-type enemy silhouettes (each ctx already translated to the enemy's screen pos) ----
   function drawDrone(en, R, depth) {
-    // menacing arrowhead, pointing down toward you (the original enemy shape)
+    // menacing arrowhead with panel detail and glowing core
     ctx.beginPath();
     ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.lineTo(R * 0.32, -R * 0.32);
     ctx.lineTo(0, -R * 0.72); ctx.lineTo(-R * 0.32, -R * 0.32); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.closePath();
-    ctx.fillStyle = 'rgba(30,12,14,0.94)'; ctx.fill();
+    var dg = ctx.createLinearGradient(0, -R * 0.7, 0, R);
+    dg.addColorStop(0, 'rgba(40,18,22,0.96)'); dg.addColorStop(1, 'rgba(20,8,10,0.94)');
+    ctx.fillStyle = dg; ctx.fill();
     ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
-    ctx.fillStyle = 'rgba(255,150,90,0.95)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(2, R * 0.16), 0, TAU); ctx.fill();
+    // panel lines
+    ctx.strokeStyle = 'rgba(255,122,93,0.2)'; ctx.lineWidth = Math.max(0.5, R * 0.03);
+    ctx.beginPath(); ctx.moveTo(0, -R * 0.5); ctx.lineTo(0, R * 0.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-R * 0.5, -R * 0.2); ctx.lineTo(R * 0.5, -R * 0.2); ctx.stroke();
+    // glowing reactor core
+    ctx.globalCompositeOperation = 'lighter';
+    var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 180 + en.phase);
+    var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.25);
+    cg.addColorStop(0, 'rgba(255,150,90,' + (0.9 * pulse).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,100,60,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.25, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
   }
   function drawInterceptor(en, R, depth) {
     // needle-thin dart that banks into its juke direction, trailing thin ion streaks
@@ -1397,13 +1547,15 @@
     // ---- twin engine exhaust (always, behind hull) ----
     var flick = 0.8 + 0.2 * Math.sin(now / 40) + Math.random() * 0.12;
     var thrust = (0.55 + boost * 0.7) * flick;
-    // afterburner: a hotter white-blue core + a much longer trail on top of the normal
-    // boost exhaust, so lighting it reads as a distinct "rocket booster" moment rather
-    // than just a bigger version of the continuously-held boost flame.
     var abK = afterburner ? (0.85 + 0.15 * Math.sin(now / 35)) : 0;
     ctx.globalCompositeOperation = 'lighter';
     for (var e = -1; e <= 1; e += 2) {
       var ex = e * 15;
+      // engine nacelle housing
+      ctx.fillStyle = 'rgba(30,40,60,0.9)';
+      ctx.beginPath(); ctx.moveTo(ex - 8, 16); ctx.lineTo(ex + 8, 16); ctx.lineTo(ex + 6, 28); ctx.lineTo(ex - 6, 28); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(57,230,255,0.4)'; ctx.lineWidth = 0.8; ctx.stroke();
+      // main engine glow
       var eg = ctx.createRadialGradient(ex, 24, 0, ex, 24, 30 + boost * 46 + abK * 26);
       eg.addColorStop(0, 'rgba(120,255,200,' + (0.55 + boost * 0.4).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(120,255,200,0)');
       ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, 24, 30 + boost * 46 + abK * 26, 0, TAU); ctx.fill();
@@ -1413,13 +1565,9 @@
       ctx.fillStyle = 'rgba(57,230,255,' + (0.5 * flick).toFixed(2) + ')';
       ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 40, ex + 3, 22); ctx.closePath(); ctx.fill();
       if (abK > 0) {
-        // white-hot afterburner core spike, riding inside the normal flame
         ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * abK).toFixed(2) + ')';
         ctx.beginPath(); ctx.moveTo(ex - 2, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 78, ex + 2, 22); ctx.closePath(); ctx.fill();
       }
-      // long soft vapor trail — persistent thrust wash behind the flame tongue,
-      // stretches with speed/boost (skipped under reduced motion); afterburner
-      // stretches it much further and shifts it hot white-blue.
       if (!reduceMotion) {
         var trailLen = 46 + boost * 90 + Math.min(60, speed * 0.05) + abK * 140;
         var trailCol = abK > 0 ? '210,245,255' : '120,255,200';
@@ -1432,7 +1580,7 @@
     ctx.globalCompositeOperation = 'source-over';
 
     if (!blink) {
-      // ---- swept wings (tilt with bank for a 3D feel) ----
+      // ---- swept wings with panel detail ----
       ctx.save(); ctx.transform(1, 0, roll * 0.5, 1, 0, 0);
       var wg = ctx.createLinearGradient(0, 0, 0, 22);
       wg.addColorStop(0, '#5a7bc0'); wg.addColorStop(1, '#2c3e6e');
@@ -1441,39 +1589,66 @@
       ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-44, 22); ctx.lineTo(-30, 26); ctx.lineTo(-4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
       // right wing
       ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(44, 22); ctx.lineTo(30, 26); ctx.lineTo(4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // panel lines on wings
+      ctx.strokeStyle = 'rgba(57,230,255,0.2)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(-10, 4); ctx.lineTo(-36, 22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10, 4); ctx.lineTo(36, 22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-20, 12); ctx.lineTo(-32, 24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, 12); ctx.lineTo(32, 24); ctx.stroke();
       // wingtip cannon lights
       ctx.fillStyle = muzzle > 0 ? '#eafff5' : 'rgba(124,255,178,0.85)';
       ctx.beginPath(); ctx.arc(-40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.arc(40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.fill();
       ctx.restore();
 
-      // ---- central fuselage ----
+      // ---- central fuselage with panel detail ----
       ctx.beginPath();
       ctx.moveTo(0, -36); ctx.lineTo(10, -6); ctx.lineTo(14, 22); ctx.lineTo(6, 28); ctx.lineTo(0, 24);
       ctx.lineTo(-6, 28); ctx.lineTo(-14, 22); ctx.lineTo(-10, -6); ctx.closePath();
       var hg = ctx.createLinearGradient(0, -36, 0, 28);
-      hg.addColorStop(0, '#eaf7ff'); hg.addColorStop(0.5, '#aac6ee'); hg.addColorStop(1, '#46689f');
+      hg.addColorStop(0, '#eaf7ff'); hg.addColorStop(0.3, '#c0d8f0'); hg.addColorStop(0.5, '#aac6ee'); hg.addColorStop(0.8, '#6888b8'); hg.addColorStop(1, '#46689f');
       ctx.fillStyle = hg; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = '#39e6ff'; ctx.stroke();
       // spine highlight
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, 18); ctx.stroke();
+      // panel lines across fuselage
+      ctx.strokeStyle = 'rgba(57,230,255,0.15)'; ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-10, 2); ctx.lineTo(10, 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-12, 14); ctx.lineTo(12, 14); ctx.stroke();
+      // intake vents (small dark rectangles on sides)
+      ctx.fillStyle = 'rgba(10,20,40,0.8)';
+      ctx.fillRect(-13, -4, 4, 8); ctx.fillRect(9, -4, 4, 8);
+      ctx.strokeStyle = 'rgba(57,230,255,0.3)'; ctx.lineWidth = 0.5;
+      ctx.strokeRect(-13, -4, 4, 8); ctx.strokeRect(9, -4, 4, 8);
       // ---- glowing cockpit canopy ----
       ctx.globalCompositeOperation = 'lighter';
       var cg = ctx.createRadialGradient(0, -8, 0, 0, -8, 12);
-      cg.addColorStop(0, 'rgba(120,240,255,0.95)'); cg.addColorStop(1, 'rgba(57,160,255,0)');
+      cg.addColorStop(0, 'rgba(120,240,255,0.95)'); cg.addColorStop(0.6, 'rgba(80,200,255,0.5)'); cg.addColorStop(1, 'rgba(57,160,255,0)');
       ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -8, 7, 14, 0, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = '#0a1c3a'; ctx.beginPath(); ctx.ellipse(0, -10, 4, 9, 0, 0, TAU); ctx.fill();
+      // canopy frame highlight
+      ctx.strokeStyle = 'rgba(120,240,255,0.4)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.ellipse(0, -10, 4.5, 9.5, 0, 0, TAU); ctx.stroke();
     }
 
-    // ---- shield bubble while invulnerable ----
+    // ---- shield energy field while invulnerable ----
     if (iframes > 0) {
       var sa = 0.25 + 0.2 * Math.sin(now / 70);
-      ctx.strokeStyle = 'rgba(57,230,255,' + sa.toFixed(2) + ')'; ctx.lineWidth = 2;
+      // hex-grid shield pattern
+      ctx.strokeStyle = 'rgba(57,230,255,' + sa.toFixed(2) + ')'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(0, -2, 46, 0, TAU); ctx.stroke();
+      // energy arcs
+      ctx.strokeStyle = 'rgba(120,240,255,' + (sa * 0.7).toFixed(2) + ')'; ctx.lineWidth = 1;
+      for (var arc = 0; arc < 6; arc++) {
+        var aa = (arc / 6) * TAU + now / 400;
+        ctx.beginPath(); ctx.arc(0, -2, 42, aa, aa + 0.5); ctx.stroke();
+      }
       ctx.globalCompositeOperation = 'lighter';
-      var sg = ctx.createRadialGradient(0, -2, 30, 0, -2, 50);
-      sg.addColorStop(0, 'rgba(57,230,255,0)'); sg.addColorStop(1, 'rgba(57,230,255,' + (sa * 0.6).toFixed(2) + ')');
-      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, -2, 50, 0, TAU); ctx.fill();
+      var sg = ctx.createRadialGradient(0, -2, 20, 0, -2, 52);
+      sg.addColorStop(0, 'rgba(57,230,255,0)'); sg.addColorStop(0.7, 'rgba(57,230,255,' + (sa * 0.3).toFixed(2) + ')');
+      sg.addColorStop(1, 'rgba(57,230,255,' + (sa * 0.6).toFixed(2) + ')');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, -2, 52, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
     ctx.restore();
@@ -1483,6 +1658,14 @@
     ctx.strokeStyle = 'rgba(124,255,178,0.5)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(rp.sx, rp.sy, 10, 0, TAU); ctx.moveTo(rp.sx - 16, rp.sy); ctx.lineTo(rp.sx - 5, rp.sy);
     ctx.moveTo(rp.sx + 16, rp.sy); ctx.lineTo(rp.sx + 5, rp.sy); ctx.stroke();
+    // reticle glow
+    if (!reduceMotion) {
+      ctx.globalCompositeOperation = 'lighter';
+      var rg2 = ctx.createRadialGradient(rp.sx, rp.sy, 0, rp.sx, rp.sy, 18);
+      rg2.addColorStop(0, 'rgba(124,255,178,0.15)'); rg2.addColorStop(1, 'rgba(124,255,178,0)');
+      ctx.fillStyle = rg2; ctx.beginPath(); ctx.arc(rp.sx, rp.sy, 18, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
   }
 
   function drawPops() {
