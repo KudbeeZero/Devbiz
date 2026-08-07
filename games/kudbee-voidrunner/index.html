@@ -1343,29 +1343,53 @@
     var p = project(boss.x, boss.y, boss.z), R = Math.min(MINSCALE, boss.r * p.sc);
     if (R < 2) return;
     ctx.save(); ctx.translate(p.sx, p.sy);
+    // outer glow halo
     ctx.globalCompositeOperation = 'lighter';
     var g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.6);
     g.addColorStop(0, 'rgba(255,93,60,' + (0.16 + Math.min(0.6, boss.hitFlash * 3)).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,93,60,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.6, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
-    // wide angular dreadnought hull
+    // wide angular dreadnought hull with gradient
     ctx.beginPath();
     ctx.moveTo(-R, -R * 0.2); ctx.lineTo(-R * 0.5, -R * 0.58); ctx.lineTo(R * 0.5, -R * 0.58); ctx.lineTo(R, -R * 0.2);
     ctx.lineTo(R * 0.62, R * 0.46); ctx.lineTo(-R * 0.62, R * 0.46); ctx.closePath();
-    ctx.fillStyle = boss.hitFlash > 0 ? '#5a2a26' : 'rgba(24,15,19,0.96)'; ctx.fill();
+    var hg = ctx.createLinearGradient(0, -R * 0.58, 0, R * 0.46);
+    hg.addColorStop(0, boss.hitFlash > 0 ? '#6a3a36' : 'rgba(34,22,26,0.96)');
+    hg.addColorStop(0.5, boss.hitFlash > 0 ? '#5a2a26' : 'rgba(24,15,19,0.96)');
+    hg.addColorStop(1, boss.hitFlash > 0 ? '#4a1a16' : 'rgba(18,10,14,0.96)');
+    ctx.fillStyle = hg; ctx.fill();
     ctx.lineWidth = Math.max(2, R * 0.035); ctx.strokeStyle = '#ff7a5d'; ctx.stroke();
-    // armor ribs
-    ctx.strokeStyle = 'rgba(255,122,93,0.4)'; ctx.lineWidth = Math.max(1, R * 0.02);
-    for (var rib = -2; rib <= 2; rib++) { ctx.beginPath(); ctx.moveTo(rib * R * 0.3, -R * 0.5); ctx.lineTo(rib * R * 0.34, R * 0.4); ctx.stroke(); }
-    // cannon pods
+    // armor ribs with gradient
+    for (var rib = -2; rib <= 2; rib++) {
+      var ribA = 0.25 + Math.abs(rib) * 0.05;
+      ctx.strokeStyle = 'rgba(255,122,93,' + ribA.toFixed(2) + ')'; ctx.lineWidth = Math.max(1, R * 0.02);
+      ctx.beginPath(); ctx.moveTo(rib * R * 0.3, -R * 0.5); ctx.lineTo(rib * R * 0.34, R * 0.4); ctx.stroke();
+    }
+    // horizontal panel lines
+    ctx.strokeStyle = 'rgba(255,122,93,0.12)'; ctx.lineWidth = Math.max(0.5, R * 0.012);
+    ctx.beginPath(); ctx.moveTo(-R * 0.8, -R * 0.1); ctx.lineTo(R * 0.8, -R * 0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-R * 0.7, R * 0.2); ctx.lineTo(R * 0.7, R * 0.2); ctx.stroke();
+    // cannon pods with muzzle detail
     ctx.fillStyle = 'rgba(40,22,26,0.96)';
     ctx.fillRect(-R * 0.98, -R * 0.16, R * 0.3, R * 0.42); ctx.fillRect(R * 0.68, -R * 0.16, R * 0.3, R * 0.42);
-    // glowing core (the weak point)
+    ctx.strokeStyle = 'rgba(255,122,93,0.5)'; ctx.lineWidth = Math.max(1, R * 0.02);
+    ctx.strokeRect(-R * 0.98, -R * 0.16, R * 0.3, R * 0.42); ctx.strokeRect(R * 0.68, -R * 0.16, R * 0.3, R * 0.42);
+    // cannon muzzle glow
     ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,140,80,0.35)';
+    ctx.beginPath(); ctx.arc(-R * 0.83, R * 0.28, R * 0.06, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(R * 0.83, R * 0.28, R * 0.06, 0, TAU); ctx.fill();
+    // glowing core (the weak point) — multi-ring pulsing reactor
     var cpulse = 0.6 + 0.4 * Math.sin(performance.now() / 170);
     var cg = ctx.createRadialGradient(0, -R * 0.04, 0, 0, -R * 0.04, R * 0.42);
-    cg.addColorStop(0, 'rgba(255,214,96,' + cpulse.toFixed(2) + ')'); cg.addColorStop(0.55, 'rgba(255,120,60,0.5)'); cg.addColorStop(1, 'rgba(255,93,60,0)');
+    cg.addColorStop(0, 'rgba(255,214,96,' + (0.95 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(0.4, 'rgba(255,160,60,' + (0.6 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(0.7, 'rgba(255,120,60,' + (0.3 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(1, 'rgba(255,93,60,0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.04, R * 0.42, 0, TAU); ctx.fill();
+    // core ring detail
+    ctx.strokeStyle = 'rgba(255,200,100,' + (0.3 * cpulse).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.8, R * 0.015);
+    ctx.beginPath(); ctx.arc(0, -R * 0.04, R * 0.22, 0, TAU); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
@@ -1412,44 +1436,78 @@
     ctx.globalCompositeOperation = 'source-over';
   }
   function drawInterceptor(en, R, depth) {
-    // needle-thin dart that banks into its juke direction, trailing thin ion streaks
+    // needle-thin dart with ion trail streaks and pulsing core
     var tilt = clamp((en.vx || 0) / 260, -0.6, 0.6);
     ctx.save(); ctx.rotate(tilt);
+    // ion trail streaks behind the interceptor
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = 'rgba(255,61,240,' + (0.35 + depth * 0.25).toFixed(2) + ')';
     ctx.lineWidth = Math.max(1, R * 0.06); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(-R * 0.22, -R * 0.3); ctx.lineTo(-R * 0.42, -R * 1.35); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(R * 0.22, -R * 0.3); ctx.lineTo(R * 0.42, -R * 1.35); ctx.stroke();
+    // secondary faint trails
+    ctx.strokeStyle = 'rgba(255,61,240,' + (0.15 + depth * 0.1).toFixed(2) + ')';
+    ctx.lineWidth = Math.max(0.5, R * 0.03);
+    ctx.beginPath(); ctx.moveTo(-R * 0.15, -R * 0.2); ctx.lineTo(-R * 0.28, -R * 1.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(R * 0.15, -R * 0.2); ctx.lineTo(R * 0.28, -R * 1.1); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
+    // hull
     ctx.beginPath();
     ctx.moveTo(0, R * 1.05); ctx.lineTo(R * 0.34, -R * 0.15); ctx.lineTo(R * 0.14, -R * 0.75);
     ctx.lineTo(0, -R * 0.5); ctx.lineTo(-R * 0.14, -R * 0.75); ctx.lineTo(-R * 0.34, -R * 0.15); ctx.closePath();
-    ctx.fillStyle = 'rgba(28,10,32,0.94)'; ctx.fill();
+    var ig = ctx.createLinearGradient(0, -R * 0.75, 0, R);
+    ig.addColorStop(0, 'rgba(38,14,42,0.96)'); ig.addColorStop(1, 'rgba(18,6,22,0.94)');
+    ctx.fillStyle = ig; ctx.fill();
     ctx.lineWidth = Math.max(1.2, R * 0.09); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.65 + depth * 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+    // panel line
+    ctx.strokeStyle = 'rgba(255,61,240,0.15)'; ctx.lineWidth = Math.max(0.4, R * 0.025);
+    ctx.beginPath(); ctx.moveTo(0, -R * 0.4); ctx.lineTo(0, R * 0.7); ctx.stroke();
+    // reactor core
     ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = 'rgba(255,150,255,0.9)'; ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(1.6, R * 0.12), 0, TAU); ctx.fill();
+    var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 140 + en.phase);
+    ctx.fillStyle = 'rgba(255,150,255,' + (0.9 * pulse).toFixed(2) + ')';
+    ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(1.6, R * 0.14), 0, TAU); ctx.fill();
+    var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.22);
+    cg.addColorStop(0, 'rgba(255,100,240,' + (0.5 * pulse).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,61,240,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.22, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   function drawGunship(en, R, depth) {
-    // squat armored hex hull with twin side cannon pods + a pulsing power core
+    // squat armored hex hull with twin side cannon pods + pulsing power core + panel detail
     ctx.beginPath();
     ctx.moveTo(-R * 0.9, -R * 0.1); ctx.lineTo(-R * 0.5, -R * 0.55); ctx.lineTo(R * 0.5, -R * 0.55);
     ctx.lineTo(R * 0.9, -R * 0.1); ctx.lineTo(R * 0.62, R * 0.5); ctx.lineTo(-R * 0.62, R * 0.5); ctx.closePath();
-    ctx.fillStyle = 'rgba(34,26,10,0.94)'; ctx.fill();
+    var gg = ctx.createLinearGradient(0, -R * 0.55, 0, R * 0.5);
+    gg.addColorStop(0, 'rgba(44,34,14,0.96)'); gg.addColorStop(1, 'rgba(24,18,6,0.94)');
+    ctx.fillStyle = gg; ctx.fill();
     ctx.lineWidth = Math.max(1.6, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+    // armor panel lines
+    ctx.strokeStyle = 'rgba(255,211,77,0.15)'; ctx.lineWidth = Math.max(0.5, R * 0.025);
+    ctx.beginPath(); ctx.moveTo(-R * 0.6, -R * 0.3); ctx.lineTo(R * 0.6, -R * 0.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-R * 0.7, R * 0.1); ctx.lineTo(R * 0.7, R * 0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -R * 0.5); ctx.lineTo(0, R * 0.45); ctx.stroke();
+    // cannon pods
     ctx.fillStyle = 'rgba(50,38,14,0.95)';
     ctx.fillRect(-R * 0.98, -R * 0.15, R * 0.28, R * 0.5); ctx.fillRect(R * 0.7, -R * 0.15, R * 0.28, R * 0.5);
     ctx.strokeStyle = en.col; ctx.lineWidth = Math.max(1, R * 0.05);
     ctx.strokeRect(-R * 0.98, -R * 0.15, R * 0.28, R * 0.5); ctx.strokeRect(R * 0.7, -R * 0.15, R * 0.28, R * 0.5);
+    // cannon muzzle glow
     ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,200,80,0.4)';
+    ctx.beginPath(); ctx.arc(-R * 0.84, R * 0.38, R * 0.08, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(R * 0.84, R * 0.38, R * 0.08, 0, TAU); ctx.fill();
+    // pulsing power core
     var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 220 + en.phase);
-    ctx.fillStyle = 'rgba(255,220,120,' + pulse.toFixed(2) + ')';
-    ctx.beginPath(); ctx.arc(0, -R * 0.05, Math.max(2, R * 0.18), 0, TAU); ctx.fill();
+    var cg = ctx.createRadialGradient(0, -R * 0.05, 0, 0, -R * 0.05, R * 0.28);
+    cg.addColorStop(0, 'rgba(255,220,120,' + (0.9 * pulse).toFixed(2) + ')');
+    cg.addColorStop(0.5, 'rgba(255,180,60,' + (0.4 * pulse).toFixed(2) + ')');
+    cg.addColorStop(1, 'rgba(255,140,30,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.05, R * 0.28, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
   function drawTurret(en, R, depth) {
-    // radial spiked mine that slowly rotates in place, with a pulsing core "eye"
+    // radial spiked mine with rotating spikes, pulsing core eye, and energy arcs
     ctx.save(); ctx.rotate(en.phase * 0.6);
     ctx.strokeStyle = en.col; ctx.lineWidth = Math.max(1.2, R * 0.07); ctx.globalAlpha = 0.55 + depth * 0.35;
     var spikes = 6;
@@ -1457,16 +1515,30 @@
       var a = (s / spikes) * TAU;
       ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.5, Math.sin(a) * R * 0.5);
       ctx.lineTo(Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05); ctx.stroke();
+      // spike tip glow
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(124,255,178,' + (0.3 + depth * 0.2).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05, R * 0.06, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
     }
     ctx.globalAlpha = 1;
+    // inner hull
     ctx.beginPath(); ctx.arc(0, 0, R * 0.55, 0, TAU);
-    ctx.fillStyle = 'rgba(10,28,22,0.94)'; ctx.fill();
+    var tg = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.55);
+    tg.addColorStop(0, 'rgba(16,38,30,0.96)'); tg.addColorStop(1, 'rgba(8,20,16,0.94)');
+    ctx.fillStyle = tg; ctx.fill();
     ctx.lineWidth = Math.max(1.4, R * 0.07); ctx.strokeStyle = en.col; ctx.stroke();
+    // inner ring detail
+    ctx.strokeStyle = 'rgba(124,255,178,0.2)'; ctx.lineWidth = Math.max(0.5, R * 0.03);
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.35, 0, TAU); ctx.stroke();
     ctx.restore();
+    // pulsing core eye (not rotated — stays readable)
     ctx.globalCompositeOperation = 'lighter';
     var pulse2 = 0.55 + 0.45 * Math.sin(performance.now() / 160 + en.phase);
     var cg = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.4);
-    cg.addColorStop(0, 'rgba(160,255,210,' + pulse2.toFixed(2) + ')'); cg.addColorStop(1, 'rgba(124,255,178,0)');
+    cg.addColorStop(0, 'rgba(160,255,210,' + (0.9 * pulse2).toFixed(2) + ')');
+    cg.addColorStop(0.5, 'rgba(124,255,178,' + (0.4 * pulse2).toFixed(2) + ')');
+    cg.addColorStop(1, 'rgba(124,255,178,0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R * 0.4, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
