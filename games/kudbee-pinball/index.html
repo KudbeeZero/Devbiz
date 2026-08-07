@@ -178,6 +178,15 @@
   var SPEED_CAP = 3200;         // px/s
   var WALL_REST = 0.35, WALL_FRIC = 0.018;
 
+  // ---- dynamic difficulty: levels change the table ----
+  var portalBumper = null;
+  var PORTAL_R = 30;
+  var levelTransT = 0, prevLevel = 1;
+  var tableHue = 0, targetHue = 0;
+  var tableFlash = 0;
+  function levelGrav() { return 1 + Math.max(0, (level || 1) - 1) * 0.12; }
+  function levelKick() { return 1 + Math.max(0, (level || 1) - 1) * 0.08; }
+
   // ---- skill shot (plunger lanes) ----
   // Three top rollover lanes. Plunge power selects which one the ball drops
   // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
@@ -260,6 +269,9 @@
     seg(LIN, 200, LIN, 1320);                              // lane inner / playfield-right — OPEN above y=200
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
+    // upper-right corner wedge: closes the dead pocket above the deflector so a ball
+    // can't wedge between the cabinet wall and the deflector (infinite bounce loop)
+    seg(800, 182, 846, 132, { rest: 0.35, fric: 0.03 });
     // ---- lower funnel toward the flippers ----
     // Left funnel's mouth used to be nearly 2x as wide as the right's (235px vs 135px,
     // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
@@ -376,6 +388,10 @@
     ];
     for (var li = 0; li < lampSpec.length; li++) lamps.push({ x: lampSpec[li][0], y: lampSpec[li][1], col: lampSpec[li][2], ph: li * 0.6 });
 
+    // portal bumper — placed in the upper-center; active at level 5+
+    bumpers.push({ x: 450, y: 280, r: PORTAL_R, rest: 0, kick: 0, kind: 'portal', flash: 0, col: '#ff6ec7' });
+    portalBumper = bumpers[bumpers.length - 1];
+
     // flippers
     flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);   // angles in radians (down-right rest → up)
     flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
@@ -398,7 +414,7 @@
     comboN = 0; comboT = 0; saveT = 0;                        // combo chain + save window reset per serve
     comboKinds.length = 0; comboTripleAwarded = false;
     if (!keep) { kickL = true; kickR = true; }                 // outlane kickbacks reload each fresh ball (a saved re-serve keeps whatever's left)
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: !!keep });
+    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: !!keep });
   }
 
   // floating score callout (skill shot / big events)
@@ -436,7 +452,7 @@
   var leftRamp = null, rightRamp = null;             // side loop-ramp triggers (mirror the center `ramp`)
   var kickZoneL = null, kickZoneR = null;            // outlane kickback trigger boxes
   var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
-  var TILT_MAX = 4, STUCK_EJECT_S = 7;              // nudges-before-tilt; seconds-up-top before an auto free
+  var TILT_MAX = 4, STUCK_EJECT_S = 4;              // nudges-before-tilt; seconds-up-top before an auto free
   var comboN = 0, comboT = 0, bestCombo = 0;        // chained-shot combo (targets/loops/skill within a window)
   var comboKinds = [], comboTripleAwarded = false;  // shot-kind history for the current chain (named combos)
   var COMBO_WINDOW = 4;                             // seconds to keep a chain alive
@@ -458,6 +474,7 @@
     skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true; extraBallsAwarded = 0;
     lockedBalls = 0; multiballActive = false;
+    levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -481,19 +498,20 @@
       // tangential friction
       var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
       b.vx -= fric * tvx; b.vy -= fric * tvy;
-      if (kick) { b.vx += nx * kick; b.vy += ny * kick; if (sling) onSling(qx, qy); }
+      if (kick) { var ek = kick * levelKick(); b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
     return true;
   }
   function resolveCircle(b, c) {
     var dx = b.x - c.x, dy = b.y - c.y, d = len(dx, dy), rr = b.r + c.r;
     if (d >= rr) return false;
+    if (c.kind === 'portal' && level >= 5 && !(b.portalCd > 0)) { onPortal(b, c); return true; }
     var nx = d > 0.0001 ? dx / d : 0, ny = d > 0.0001 ? dy / d : -1;
     b.x += nx * (rr - d); b.y += ny * (rr - d);
     var vn = b.vx * nx + b.vy * ny;
     if (vn < 0) {
       b.vx -= (1 + c.rest) * vn * nx; b.vy -= (1 + c.rest) * vn * ny;
-      if (c.kick) { b.vx += nx * c.kick; b.vy += ny * c.kick; onBumper(c); }
+      if (c.kick) { var ek = c.kick * levelKick(); b.vx += nx * ek; b.vy += ny * ek; onBumper(c); }
     }
     return true;
   }
@@ -552,10 +570,21 @@
 
   // ===== scoring events (all points scale by the playfield multiplier) =====
   function addScore(n) {
-    var prevLevel = level;
+    var prev = level;
     score += n * mult;
     level = 1 + Math.floor(score / 50000);  // level increases every 50k
-    if (level > prevLevel) { sfx('mult'); shake = Math.min(shake + 0.6, 1.8); }
+    if (level > prev) {
+      sfx('mult');
+      shake = Math.min(shake + 0.6, 1.8);
+      levelTransT = 1.5;
+      prevLevel = prev;
+      targetHue = clamp((level - 1) / 9, 0, 1);
+      tableFlash = 0.8;
+      callout('LEVEL ' + level, level >= 5 ? 'DANGER ZONE' : 'TABLE UPGRADE', level >= 5 ? '#ff5d3c' : '#ffd34d');
+      burst(VW / 2, VH * 0.4, '#ffffff', 24, 600);
+      burst(VW / 2, VH * 0.4, level >= 5 ? '#ff5d3c' : '#ffd34d', 36, 520);
+      if (level >= 5) { burst(VW / 2, VH * 0.4, '#ff6ec7', 20, 440); }
+    }
     scoreFlash = 1;
   }
   // `quiet`: skip the callout (still bumps the multiplier/sfx/shake/burst) — used when a
@@ -704,7 +733,7 @@
       callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX, '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, lowT: 0, trail: [], noSave: true });
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
       // lock quota filled — release every locked ball at once. Real multiball: the physics
       // step already iterates `balls` as an array and onDrain() already only ends the ball
@@ -729,7 +758,7 @@
           // the saucer — without this, one of the two balls would fall straight back in and
           // silently re-lock itself before either physics or the player got a look at it).
           x: saucer.x + (Math.random() - 0.5) * 40, y: saucer.y - 60, vx: Math.sin(a) * 220, vy: -560 - Math.random() * 120,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, saucerCd: 1.2, lowT: 0, trail: [], noSave: true
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0, saucerCd: 1.2, lowT: 0, trail: [], noSave: true
         });
       }
     }
@@ -755,6 +784,17 @@
     burst(c.x, c.y, c.col || '#39e6ff', 12, 360);
   }
   function onSling(x, y) { addScore(25); bonusU += 1; sfx('sling'); shake = Math.min(shake + 0.12, 1.0); burst(x, y, '#c46bff', 8, 320); }
+  function onPortal(b, c) {
+    var ex = 220 + Math.random() * 460, ey = 600 + Math.random() * 500;
+    burst(c.x, c.y, '#ff6ec7', 20, 420);
+    b.x = ex; b.y = ey; b.vx = (Math.random() - 0.5) * 700; b.vy = -400 - Math.random() * 500;
+    b.trail.length = 0; b.portalCd = 0.6;
+    burst(ex, ey, '#ff6ec7', 20, 420);
+    addScore(2000); bonusU += 10; sfx('ramp');
+    callout('WARP!', '+' + (2000 * mult).toLocaleString(), '#ff6ec7');
+    shake = Math.min(shake + 0.4, 1.5);
+    c.flash = 1;
+  }
 
   // ===== physics step =====
   function physStep(h) {
@@ -771,7 +811,7 @@
         continue;
       }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
-      b.vy += (climbing ? LANE_G : G) * h;              // lighter gravity in the lane so power maps cleanly
+      b.vy += (climbing ? LANE_G : G * levelGrav()) * h;              // lighter gravity in the lane so power maps cleanly
       // shooter-lane exit: a launched ball that clears the lane is routed over the top and
       // DROPPED through the skill lane its plunge power selected (see enterFromLane()).
       if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
@@ -942,6 +982,9 @@
     // fx decay
     shake *= Math.pow(0.0009, dt);
     if (co.life > 0) co.life -= dt;
+    if (levelTransT > 0) levelTransT = Math.max(0, levelTransT - dt);
+    if (tableFlash > 0) tableFlash = Math.max(0, tableFlash - dt * 2);
+    tableHue += (targetHue - tableHue) * Math.min(1, dt * 3);
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
@@ -950,6 +993,7 @@
       if (balls[bk].lRampCd > 0) balls[bk].lRampCd -= dt;
       if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
       if (balls[bk].saucerCd > 0) balls[bk].saucerCd -= dt;
+      if (balls[bk].portalCd > 0) balls[bk].portalCd -= dt;
     }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
@@ -972,11 +1016,22 @@
   function L2Sx(x) { return OX + x * SC; }
   function L2Sy(y) { return OY + y * SC; }
   function draw(now) {
-    ctx.fillStyle = '#04040c'; ctx.fillRect(0, 0, W, H);
-    // backdrop glow
+    // Level-shifted background: cool indigo/cyan at low levels → warm amber/ember at high
+    var hueBlend = tableHue;
+    var bgR = Math.round(5 + hueBlend * 18), bgG = Math.round(5 + hueBlend * 10), bgB = Math.round(12 + hueBlend * -4);
+    ctx.fillStyle = 'rgb(' + bgR + ',' + bgG + ',' + bgB + ')'; ctx.fillRect(0, 0, W, H);
+    // backdrop glow — shifts from violet at low levels to amber at high
+    var glowR0 = Math.round(111 + hueBlend * 144), glowG0 = Math.round(91 + hueBlend * 74), glowB0 = Math.round(255 + hueBlend * -178);
     var bg = ctx.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H) * 0.7);
-    bg.addColorStop(0, 'rgba(111,91,255,0.10)'); bg.addColorStop(1, 'rgba(4,4,12,0)');
+    bg.addColorStop(0, 'rgba(' + glowR0 + ',' + glowG0 + ',' + glowB0 + ',0.10)');
+    bg.addColorStop(1, 'rgba(4,4,12,0)');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // table-wide flash on level-up
+    if (tableFlash > 0 && !reduceMotion) {
+      var tfR = Math.round(255 + (glowR0 - 255) * 0.3), tfG = Math.round(211 + (glowG0 - 211) * 0.3), tfB = Math.round(77 + (glowB0 - 77) * 0.3);
+      ctx.fillStyle = 'rgba(' + tfR + ',' + tfG + ',' + tfB + ',' + (tableFlash * 0.15).toFixed(2) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
 
     ctx.save();
     var sx = 0, sy = 0;
@@ -987,7 +1042,9 @@
     ctx.fillStyle = 'rgba(10,14,30,0.55)';
     roundRect(ctx, 40, 90, 830, 1340, 24); ctx.fill();
 
-    drawLamps();
+        drawLamps();
+        drawPortal();
+        drawLevelTrans();
 
     // segments (neon)
     ctx.lineCap = 'round';
@@ -1089,7 +1146,13 @@
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < lamps.length; i++) {
       var lp = lamps[i], rgb = hexToRgb(lp.col);
-      var pu = reduceMotion ? 0.5 : 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t / 600 + lp.ph));
+      // Proximity lighting: lamps glow brighter as a ball nears them
+      var proxBoost = 0;
+      for (var bi = 0; bi < balls.length; bi++) {
+        var bdx = balls[bi].x - lp.x, bdy = balls[bi].y - lp.y;
+        var bd = Math.sqrt(bdx * bdx + bdy * bdy); if (bd < 140) proxBoost = Math.max(proxBoost, (1 - bd / 140) * 0.5);
+      }
+      var pu = reduceMotion ? 0.5 : 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t / 600 + lp.ph)) + proxBoost;
       var g = ctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, 26);
       g.addColorStop(0, 'rgba(' + rgb + ',' + (0.28 * pu).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lp.x, lp.y, 26, 0, TAU); ctx.fill();
@@ -1149,6 +1212,37 @@
     drawOneRamp(leftRamp, '196,107,255');
     drawOneRamp(rightRamp, '255,211,77');
     ctx.globalCompositeOperation = 'source-over';
+  }
+  function drawPortal() {
+    if (level < 5) return;
+    var c = portalBumper; if (!c) return;
+    var t = performance.now();
+    var pulse = 0.5 + 0.5 * Math.sin(t / 200), flash = c.flash || 0;
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 2.5 + flash * 20);
+    g.addColorStop(0, 'rgba(255,110,199,' + (0.30 + flash * 0.4 + pulse * 0.12).toFixed(2) + ')');
+    g.addColorStop(1, 'rgba(255,110,199,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 2.5 + flash * 20, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(t / 600);
+    ctx.strokeStyle = 'rgba(255,110,199,' + (0.55 + pulse * 0.35).toFixed(2) + ')';
+    ctx.lineWidth = 3.5; ctx.setLineDash([14, 9]);
+    ctx.beginPath(); ctx.arc(0, 0, c.r, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.4 + pulse * 0.3).toFixed(2) + ')';
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, c.r + 4, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+  function drawLevelTrans() {
+    if (levelTransT <= 0 || reduceMotion) return;
+    var prog = 1 - levelTransT / 1.5;
+    var alpha = levelTransT / 1.5;
+    var rr = 60 + prog * 380;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = level >= 5 ? 'rgba(255,93,60,' + (0.8 * alpha).toFixed(2) + ')' : 'rgba(255,211,77,' + (0.8 * alpha).toFixed(2) + ')';
+    ctx.lineWidth = 3 + prog * 5;
+    ctx.beginPath(); ctx.arc(VW / 2, VH * 0.4, rr, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   // outlane kickback lamps — bright + pulsing while loaded, dim once spent
   function drawKickback() {
@@ -1247,10 +1341,16 @@
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '600 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
     ctx.fillText('BALL ' + ballNum + ' / ' + (3 + extraBallsAwarded), W - pad, ry);
-    // Level display (space-themed)
+    // Level display (space-themed) with progress bar
     var levelCol = level >= 5 ? '#ff5d3c' : (level >= 3 ? '#ffd34d' : '#39e6ff');
     ctx.fillStyle = levelCol; ctx.font = '700 ' + Math.round(mn * 0.026) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('LEVEL ' + level, W - pad, ry - Math.round(mn * 0.045));
+    // Level progress bar: how close to the next 50k threshold
+    var lvlBase = (level - 1) * 50000, lvlNext = level * 50000;
+    var lvlProg = clamp((score - lvlBase) / 50000, 0, 1);
+    var lbw = Math.round(mn * 0.12), lbh = 3;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(W - pad - lbw, ry - Math.round(mn * 0.025), lbw, lbh);
+    ctx.fillStyle = levelCol; ctx.fillRect(W - pad - lbw, ry - Math.round(mn * 0.025), lbw * lvlProg, lbh);
     ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.026));
     // playfield multiplier (top-center)
