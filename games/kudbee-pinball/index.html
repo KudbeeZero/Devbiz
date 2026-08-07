@@ -211,6 +211,15 @@
   }
   var wizardKickMult = 1;                                                   // 2× during wizard mode
 
+  // ---- visual juice: hit-stop, color washes, enhanced feedback ----
+  var hitStopT = 0;                                                          // freeze-frame duration (s)
+  var colorWashR = 0, colorWashG = 0, colorWashB = 0, colorWashA = 0;       // full-table color overlay
+  function triggerHitStop(dur) { if (!reduceMotion) hitStopT = Math.max(hitStopT, dur); }
+  function colorWash(r, g, b, a) {
+    if (reduceMotion) return;
+    colorWashR = r; colorWashG = g; colorWashB = b; colorWashA = Math.max(colorWashA, a);
+  }
+
   // ---- skill shot (plunger lanes) ----
   // Three top rollover lanes. Plunge power selects which one the ball drops
   // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
@@ -504,6 +513,7 @@
     missionMult = 1; missionGravMod = 1;
     wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
     tripleLoopDone = false; hasSeenMultiball = false; wizardKickMult = 1;
+    hitStopT = 0; colorWashR = 0; colorWashG = 0; colorWashB = 0; colorWashA = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -614,6 +624,8 @@
       burst(VW / 2, VH * 0.4, '#ffffff', 24, 600);
       burst(VW / 2, VH * 0.4, level >= 5 ? '#ff5d3c' : '#ffd34d', 36, 520);
       if (level >= 5) { burst(VW / 2, VH * 0.4, '#ff6ec7', 20, 440); }
+      triggerHitStop(0.08);
+      colorWash(level >= 5 ? 255 : 255, level >= 5 ? 93 : 211, level >= 5 ? 60 : 77, 1.0);
     }
     scoreFlash = 1;
   }
@@ -738,6 +750,7 @@
     var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
     burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
+    triggerHitStop(0.05); colorWash(57, 230, 255, 0.7);   // hit-stop + cyan wash on loop
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
     else if (!chained) callout('LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), '#39e6ff');
@@ -752,6 +765,7 @@
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
     burst(r.x, r.y0, col, 22, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
     shake = Math.min(shake + 0.35, 1.4);
+    triggerHitStop(0.05);
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
     else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), col);
@@ -781,6 +795,7 @@
       sfx('multiball');
       burst(saucer.x, saucer.y, '#ffd34d', 26, 620); burst(saucer.x, saucer.y, '#39e6ff', 20, 560); burst(saucer.x, saucer.y, '#c46bff', 20, 600);
       shake = Math.min(shake + 0.8, 1.9);
+      triggerHitStop(0.12); colorWash(255, 211, 77, 1.2);  // multiball: freeze + gold table wash
       // NOTE: deliberately does NOT also park a ball in the shooter lane here. onDrain() only
       // runs its "end of ball" logic (bonus payout / ballsLeft-- / next serve) once
       // balls.length hits 0 — a permanently-parked lane ball would never drain on its own and
@@ -865,6 +880,7 @@
     shake = 1.8;
     burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ff6ec7', 30, 600);
     burst(VW / 2, VH * 0.4, '#ffffff', 20, 500);
+    triggerHitStop(0.15); colorWash(255, 211, 77, 1.5);   // wizard: big freeze + gold wash
   }
   function activateMission(idx) {
     var m = MISSION_DEFS[idx];
@@ -1070,9 +1086,12 @@
     rafId = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     if (state === 'play') {
-      acc += dt;
-      var guard = 0;
-      while (acc >= PH && guard < 600) { physStep(PH); acc -= PH; guard++; }
+      if (hitStopT > 0) { hitStopT -= dt; }
+      else {
+        acc += dt;
+        var guard = 0;
+        while (acc >= PH && guard < 600) { physStep(PH); acc -= PH; guard++; }
+      }
     }
     // Mission tick: check triggers, count down, handle completion
     tickMissions(dt);
@@ -1084,6 +1103,7 @@
     if (missionFlash > 0) missionFlash = Math.max(0, missionFlash - dt * 2);
     if (wizardFlash > 0) wizardFlash = Math.max(0, wizardFlash - dt * 2);
     tableHue += (targetHue - tableHue) * Math.min(1, dt * 3);
+    if (colorWashA > 0) colorWashA = Math.max(0, colorWashA - dt * 2.5);
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
@@ -1192,6 +1212,12 @@
     ctx.globalCompositeOperation = 'lighter';
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life <= 0) continue; ctx.fillStyle = q.col; ctx.globalAlpha = Math.max(0, q.life); ctx.beginPath(); ctx.arc(q.x, q.y, q.sz, 0, TAU); ctx.fill(); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+
+    // color wash overlay — full-table tint for special moments
+    if (colorWashA > 0 && !reduceMotion) {
+      ctx.fillStyle = 'rgba(' + colorWashR + ',' + colorWashG + ',' + colorWashB + ',' + (colorWashA * 0.18).toFixed(2) + ')';
+      ctx.fillRect(40, 90, 830, 1340);
+    }
 
     drawCallout(now);
     if (debug) drawDebug();
