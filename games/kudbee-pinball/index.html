@@ -659,11 +659,26 @@
   // Named combo patterns, checked in priority order against the current unbroken chain:
   //  - TRIPLE LOOP: all 3 ramps hit within one chain (any order) — the rare, big one.
   //  - LOOP-TO-LOOP: the last two shots were both ramps back-to-back.
-  //  - RAMP -> BANK: a ramp shot linked directly with a drop-target hit, either order.
+  //  - RAMP → BANK: a ramp shot linked directly with a drop-target hit, either order.
+  //  - RAMP MASTER: 3+ consecutive ramp shots of any kind.
+  //  - TARGET STORM: 3+ consecutive target/drop hits.
+  //  - SHOT SAMPLER: 4+ unique shot kinds in the chain.
   // Each pays a flat bonus on TOP of the normal 250×comboN scaling, with its own callout
   // text/color so a player can tell at a glance which shot pattern just paid off.
   function comboSpecial() {
     var n = comboKinds.length, last = comboKinds[n - 1], prev = n >= 2 ? comboKinds[n - 2] : null;
+    // Specialist: consecutive same-kind chains
+    if (!comboTripleAwarded && n >= 3 && consecutiveSameKind(comboKinds[n - 1], 3) && isRampKind(last)) {
+      return { name: 'RAMP MASTER', bonus: 2500, col: '#39ffe0', rainbow: true };
+    }
+    if (n >= 3 && consecutiveSameKind(last, 3) && (last === 'drop' || last === 'target')) {
+      return { name: 'TARGET STORM', bonus: 2000, col: '#ff8a3c' };
+    }
+    // Variety: hit many different shot kinds in one chain
+    if (n >= 5 && uniqueComboKinds() >= 4) {
+      return { name: 'SHOT SAMPLER', bonus: 1800, col: '#c46bff', rainbow: true };
+    }
+    // Classic named patterns (from prior architecture)
     if (!comboTripleAwarded && RAMP_KINDS.every(function (k) { return comboKinds.indexOf(k) !== -1; })) {
       comboTripleAwarded = true; tripleLoopDone = true;
       return { name: 'TRIPLE LOOP!', bonus: 3000, col: '#ffd34d', rainbow: true };
@@ -672,10 +687,39 @@
     if (prev != null && ((isRampKind(last) && prev === 'drop') || (last === 'drop' && isRampKind(prev)))) return { name: 'RAMP → BANK ×' + comboN, bonus: 900, col: '#ff8a3c' };
     return null;
   }
-  // Generic (un-named) chain tiers escalate in both label and color as it grows, so a long
+  function consecutiveSameKind(kind, n) {
+    var len = comboKinds.length; if (len < n) return false;
+    for (var i = len - n; i < len; i++) if (comboKinds[i] !== kind) return false;
+    return true;
+  }
+  function uniqueComboKinds() {
+    var seen = {}; for (var i = 0; i < comboKinds.length; i++) seen[comboKinds[i]] = true;
+    return Object.keys(seen).length;
+}
+
+// Generic (un-named) chain tiers escalate in both label and color as it grows, so a long
   // chain reads as visibly hotter even without hitting one of the named patterns above.
-  function comboTierLabel(n) { return (n >= 6 ? 'COMBO FRENZY' : (n >= 4 ? 'COMBO STREAK' : 'COMBO')) + ' ×' + n; }
-  function comboTierColor(n) { return n >= 6 ? '#ff5d3c' : (n >= 4 ? '#ff4d9e' : '#c46bff'); }
+  // Icons give visual branching: ramp-heavy chains get », target-heavy get ◆, mixed get ⁂.
+  function comboTierLabel(n) {
+    if (n >= 9)  return 'COMBO APEX ×' + n;
+    if (n >= 7)  return 'COMBO SURGE ×' + n;
+    if (n >= 6)  return 'COMBO FRENZY ×' + n;
+    if (n >= 4)  return 'COMBO STREAK ×' + n;
+    return 'COMBO ×' + n;
+  }
+  function comboTierColor(n) { return n >= 7 ? '#ffffff' : (n >= 6 ? '#ff5d3c' : (n >= 4 ? '#ff4d9e' : '#c46bff')); }
+  function comboChainIcon() {
+    // Determine dominant flavor of the current chain
+    var ramps = 0, targets = 0, len = comboKinds.length;
+    for (var i = 0; i < len; i++) {
+      if (isRampKind(comboKinds[i])) ramps++;
+      else if (comboKinds[i] === 'target' || comboKinds[i] === 'drop') targets++;
+    }
+    if (ramps > len * 0.6) return '\u00BB';                              // » ramp-heavy
+    if (targets > len * 0.6) return '\u25C6';                            // ◆ target-heavy
+    if (len >= 4 && ramps > 0 && targets > 0) return '\u2042';           // ⁂ mixed
+    return '\u25B8';                                                      // ▸ default
+  }
   // Returns true iff it just displayed its own callout (an active chain, comboN>=2) — callers
   // use this to skip their own generic flavor-text callout so it can't stomp a more exciting
   // named/tiered combo message that landed in the same instant (see bumpMult's `quiet` param).
@@ -1524,10 +1568,11 @@
       }
       // live combo chain: label + draining timer bar under the multiplier
       if (comboN >= 2 && comboT > 0) {
-        var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.14;
+        var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.16;
         var chudCol = comboTierColor(comboN);
         ctx.fillStyle = chudCol; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
-        ctx.fillText(comboTierLabel(comboN), mx, cyy);
+        var icon = comboChainIcon();
+        ctx.fillText(icon + ' ' + comboTierLabel(comboN), mx, cyy);
         ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw, 4);
         ctx.fillStyle = hexToRgba(chudCol, 0.9);
         ctx.fillRect(mx - cbw / 2, cyy + Math.round(mn * 0.028), cbw * clamp(comboT / COMBO_WINDOW, 0, 1), 4);
