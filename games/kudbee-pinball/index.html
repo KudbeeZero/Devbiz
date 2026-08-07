@@ -200,6 +200,17 @@
   var missionTriggered = [false, false, false], missionComplete = [false, false, false];
   var missionMult = 1, missionGravMod = 1;                                 // set during missions (asteroid → score 2×, warp → gravity ½)
 
+  // ---- wizard mode: SUPERNOVA — 60s ultimate frenzy ----
+  var wizardActive = false, wizardTimer = 0, wizardDone = false;
+  var WIZARD_DURATION = 60, wizardFlash = 0;
+  var tripleLoopDone = false, hasSeenMultiball = false;                     // prerequisite trackers
+  var WIZARD_MULT = 5;                                                       // all scoring ×5 in wizard mode
+  function wizardReady() {
+    return !wizardDone && level >= 5 && hasSeenMultiball && tripleLoopDone &&
+           missionComplete[0] && missionComplete[1] && missionComplete[2];
+  }
+  var wizardKickMult = 1;                                                   // 2× during wizard mode
+
   // ---- skill shot (plunger lanes) ----
   // Three top rollover lanes. Plunge power selects which one the ball drops
   // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
@@ -491,6 +502,8 @@
     missionActive = -1; missionTimer = 0; missionFlash = 0;
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
     missionMult = 1; missionGravMod = 1;
+    wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
+    tripleLoopDone = false; hasSeenMultiball = false; wizardKickMult = 1;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -514,7 +527,7 @@
       // tangential friction
       var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
       b.vx -= fric * tvx; b.vy -= fric * tvy;
-      if (kick) { var ek = kick * levelKick(); b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
+      if (kick) { var ek = kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
     return true;
   }
@@ -527,7 +540,7 @@
     var vn = b.vx * nx + b.vy * ny;
     if (vn < 0) {
       b.vx -= (1 + c.rest) * vn * nx; b.vy -= (1 + c.rest) * vn * ny;
-      if (c.kick) { var ek = c.kick * levelKick(); b.vx += nx * ek; b.vy += ny * ek; onBumper(c); }
+      if (c.kick) { var ek = c.kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; onBumper(c); }
     }
     return true;
   }
@@ -587,7 +600,8 @@
   // ===== scoring events (all points scale by the playfield multiplier) =====
   function addScore(n) {
     var prev = level;
-    score += n * mult * missionMult;
+    var wizMult = wizardActive ? WIZARD_MULT : 1;
+    score += n * mult * missionMult * wizMult;
     level = 1 + Math.floor(score / 50000);  // level increases every 50k
     if (level > prev) {
       sfx('mult');
@@ -639,7 +653,7 @@
   function comboSpecial() {
     var n = comboKinds.length, last = comboKinds[n - 1], prev = n >= 2 ? comboKinds[n - 2] : null;
     if (!comboTripleAwarded && RAMP_KINDS.every(function (k) { return comboKinds.indexOf(k) !== -1; })) {
-      comboTripleAwarded = true;
+      comboTripleAwarded = true; tripleLoopDone = true;
       return { name: 'TRIPLE LOOP!', bonus: 3000, col: '#ffd34d', rainbow: true };
     }
     if (prev != null && isRampKind(last) && isRampKind(prev)) return { name: 'LOOP-TO-LOOP ×' + comboN, bonus: 750, col: '#39ffe0' };
@@ -762,7 +776,7 @@
       // step already iterates `balls` as an array and onDrain() already only ends the ball
       // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
-      lockedBalls = 0; multiballActive = true;
+      lockedBalls = 0; multiballActive = true; hasSeenMultiball = true;
       callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
       sfx('multiball');
       burst(saucer.x, saucer.y, '#ffd34d', 26, 620); burst(saucer.x, saucer.y, '#39e6ff', 20, 560); burst(saucer.x, saucer.y, '#c46bff', 20, 600);
@@ -821,20 +835,36 @@
 
   // ---- mission system tick ----
   function tickMissions(dt) {
+    // Wizard mode activation check
+    if (!wizardActive && !wizardDone && wizardReady()) activateWizard();
+    if (wizardActive) {
+      wizardTimer -= dt;
+      if (wizardTimer <= 0) { wizardActive = false; wizardDone = true; wizardKickMult = 1;
+        callout('SUPERNOVA END', 'wizard complete!', '#ffd34d'); sfx('multiball');
+        burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ffffff', 24, 560); }
+    }
     if (missionActive >= 0) {
       missionTimer -= dt;
       if (missionTimer <= 0) onMissionDone();
-      // update active mission effects
       if (missionActive === 0) missionMult = 2;                                // Asteroid Field: 2× score
       if (missionActive === 1) missionGravMod = 0.5;                           // Warp Speed: half gravity
-    } else {
-      // no active mission — check for trigger
+    } else if (!wizardActive) {
       for (var i = 0; i < MISSION_DEFS.length; i++) {
         if (missionTriggered[i] || missionComplete[i]) continue;
         if (MISSION_DEFS[i].check()) activateMission(i);
       }
       missionMult = 1; missionGravMod = 1;
     }
+  }
+  function activateWizard() {
+    wizardActive = true; wizardTimer = WIZARD_DURATION; wizardFlash = 1;
+    wizardKickMult = 2;                                             // double bumper kick force
+    saveT = WIZARD_DURATION + 5;                                     // permanent ball save throughout
+    callout('SUPERNOVA!', '5× SCORE · 60 SECONDS', '#ffd34d');
+    sfx('multiball');
+    shake = 1.8;
+    burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ff6ec7', 30, 600);
+    burst(VW / 2, VH * 0.4, '#ffffff', 20, 500);
   }
   function activateMission(idx) {
     var m = MISSION_DEFS[idx];
@@ -1052,6 +1082,7 @@
     if (levelTransT > 0) levelTransT = Math.max(0, levelTransT - dt);
     if (tableFlash > 0) tableFlash = Math.max(0, tableFlash - dt * 2);
     if (missionFlash > 0) missionFlash = Math.max(0, missionFlash - dt * 2);
+    if (wizardFlash > 0) wizardFlash = Math.max(0, wizardFlash - dt * 2);
     tableHue += (targetHue - tableHue) * Math.min(1, dt * 3);
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
@@ -1099,6 +1130,15 @@
       var tfR = Math.round(255 + (glowR0 - 255) * 0.3), tfG = Math.round(211 + (glowG0 - 211) * 0.3), tfB = Math.round(77 + (glowB0 - 77) * 0.3);
       ctx.fillStyle = 'rgba(' + tfR + ',' + tfG + ',' + tfB + ',' + (tableFlash * 0.15).toFixed(2) + ')';
       ctx.fillRect(0, 0, W, H);
+    }
+    // Wizard mode pulsating gold border
+    if (wizardActive && !reduceMotion) {
+      var wt = performance.now();
+      var wpulse = 0.5 + 0.5 * Math.sin(wt / 300);
+      var wa = 0.25 + wpulse * 0.15;
+      ctx.strokeStyle = 'rgba(255,211,77,' + wa.toFixed(2) + ')';
+      ctx.lineWidth = 3 + wpulse * 3;
+      roundRect(ctx, OX + 10, OY + 10, VW * SC - 20, VH * SC - 20, 16); ctx.stroke();
     }
 
     ctx.save();
@@ -1425,7 +1465,19 @@
     if (state === 'play') {
       var mx = W / 2, my = pad, ms = 1 + multFlash * 0.45;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillStyle = mult > 1 ? '#ffd34d' : '#5a6276';
+      // Wizard mode: replace multiplier with SUPERNOVA display
+      if (wizardActive) {
+        var wt2 = performance.now(), wp2 = 0.5 + 0.5 * Math.sin(wt2 / 200);
+        ctx.fillStyle = '#ffd34d'; ctx.shadowColor = '#ffd34d';
+        ctx.shadowBlur = 14 + wp2 * 14;
+        ctx.font = '700 ' + Math.round(mn * 0.045) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText('★ SUPERNOVA ★', mx, my);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(mn * 0.03) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText(Math.ceil(wizardTimer) + 's', mx, my + Math.round(mn * 0.048));
+        ctx.fillStyle = '#ff6ec7'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
+        ctx.fillText(WIZARD_MULT + '× SCORE · BALL SAVE · SUPER KICK', mx, my + Math.round(mn * 0.075));
+      } else {
       if (mult > 1 && !reduceMotion) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10 + multFlash * 18; }
       ctx.font = '700 ' + Math.round(mn * 0.05 * ms) + 'px "Space Grotesk", sans-serif';
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
@@ -1464,6 +1516,7 @@
         ctx.globalCompositeOperation = 'source-over';
       }
       ctx.textAlign = 'left';
+      }
     }
     // charge meter — banded by the lane each power range drops into (lit band highlighted)
     if (state === 'play' && balls.length && balls[0].inLane) {
