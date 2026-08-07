@@ -1,0 +1,20 @@
+# Kudbee Voidrunner — Wingman agent (Cloudflare Worker)
+# Deploy: `cd games/kudbee-voidrunner/wingman && wrangler deploy`
+# The worker serves /wingman/* for the live SIMURGH tactical agent.
+name = "voidrunner-wingman"
+compatibility_date = "2026-05-21"
+main = "worker.js"
+
+# [vars]
+# AI_MODE = "engine"            # 'off' | 'engine' | 'fancy' (needs AI binding for 'fancy')
+# ALLOWED_ORIGINS = "*"
+
+# Optional Workers AI binding for the tone pass (removes the comment to enable).
+# [ai]
+# binding = "AI"
+
+# Optional D1 for milestone memory (apply schema.sql once if you use it).
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "voidrunner-wingman"
+# database_id = "REPLACE_ME"

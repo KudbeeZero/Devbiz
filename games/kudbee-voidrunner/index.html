@@ -454,6 +454,88 @@
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
+
+  // ---- debris chunks: spinning polygon fragments that fly out and tumble when
+  // an object (rock / enemy / boss / ship) is destroyed. Screen-space, short-lived,
+  // gravity-free — they just tumble + scale down, adding satisfying physical rubble
+  // to every explosion without affecting gameplay. Skipped under reduced motion. ----
+  var debris = [];
+  function spawnDebris(x, y, col, n, speed, size) {
+    if (reduceMotion) { n = Math.min(n, 4); }
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * TAU, s = speed * (0.4 + Math.random() * 0.8);
+      var verts = 3 + (Math.random() * 2 | 0), size2 = size * (0.5 + Math.random() * 0.8);
+      debris.push({
+        x: x + rand(-8, 8), y: y + rand(-8, 8),
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.8 + Math.random() * 0.6, max: 0,
+        rot: Math.random() * TAU, spin: rand(-8, 8),
+        col: col, size: size2, shape: verts
+      });
+      debris[debris.length - 1].max = debris[debris.length - 1].life;
+    }
+    if (debris.length > 40) debris.splice(0, debris.length - 40);
+  }
+  function updateDebris(dt) {
+    for (var i = debris.length - 1; i >= 0; i--) {
+      var d = debris[i];
+      d.life -= dt;
+      d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 260 * dt;   // brief gravity tug for grounded feel
+      d.rot += d.spin * dt;
+      d.vx *= Math.pow(0.9, dt * 60); d.vy *= Math.pow(0.9, dt * 60);
+      if (d.life <= 0) debris.splice(i, 1);
+    }
+  }
+  function drawDebris() {
+    if (!debris.length || reduceMotion) return;
+    ctx.globalCompositeOperation = 'source-over';
+    for (var i = 0; i < debris.length; i++) {
+      var d = debris[i], a = clamp(d.life / d.max, 0, 1), fs = d.size * clamp(d.life * 2, 0, 1);
+      ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = d.col; ctx.beginPath();
+      for (var v = 0; v < d.shape; v++) {
+        var ang = (v / d.shape) * TAU;
+        var vx = Math.cos(ang) * fs, vy = Math.sin(ang) * fs;
+        if (v === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+  }
+
+  // ---- lens flare: a tiny horizontal spring streak + colored disc drawn on bright
+  // sources (ship engines, powerups, boss core) to sell "the void is full of light".
+  // Screen-space, non-interactive, purely decorative. Skipped under reduced motion. ----
+  function drawLensFlare(x, y, colRGB, size, ang) {
+    if (reduceMotion) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(x, y);
+    // horizontal spring streak (lens anamorphic flare)
+    var sg = ctx.createLinearGradient(-size * 2.4, 0, size * 2.4, 0);
+    sg.addColorStop(0, 'rgba(' + colRGB + ',0)');
+    sg.addColorStop(0.5, 'rgba(' + colRGB + ',0.28)');
+    sg.addColorStop(1, 'rgba(' + colRGB + ',0)');
+    ctx.strokeStyle = sg; ctx.lineWidth = Math.max(1, size * 0.12);
+    ctx.beginPath(); ctx.moveTo(-size * 2.4, 0); ctx.lineTo(size * 2.4, 0); ctx.stroke();
+    // ghost discs at multiples along the axis
+    var depthColors = [
+      [-1.8, 0.14, 0.5], [-1.2, 0.22, 0.7], [-0.6, 0.32, 1.0], [1.4, 0.18, 0.6]
+    ];
+    for (var i = 0; i < depthColors.length; i++) {
+      var gx = size * depthColors[i][0], gA = depthColors[i][1], gS = size * depthColors[i][2];
+      var gg = ctx.createRadialGradient(gx, 0, 0, gx, 0, gS);
+      gg.addColorStop(0, 'rgba(' + colRGB + ',' + gA.toFixed(2) + ')'); gg.addColorStop(1, 'rgba(' + colRGB + ',0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(gx, 0, gS, 0, TAU); ctx.fill();
+    }
+    // hot core
+    var hg = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+    hg.addColorStop(0, 'rgba(255,255,255,0.55)'); hg.addColorStop(0.4, 'rgba(' + colRGB + ',0.3)'); hg.addColorStop(1, 'rgba(' + colRGB + ',0)');
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, size, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
   function makeRock(z) {
     // a chunky vector asteroid: a noisy polygon silhouette + a spin
     var verts = 7 + (Math.random() * 5 | 0), shape = [];
@@ -532,6 +614,8 @@
     for (var i = 0; i < 7; i++) burst(sp.sx + rand(-70, 70), sp.sy + rand(-70, 70), ['#ff5d3c', '#ffd34d', '#fff'][i % 3], 24, 560);
     ring(sp.sx, sp.sy, '#ffd34d', 240, 0.9, 5);
     ring(sp.sx, sp.sy, '#ffffff', 150, 0.7, 3);
+    spawnDebris(sp.sx, sp.sy, '#ff8a5a', 16, 620, 18);                        // heavy dreadnought shrapnel
+    spawnDebris(sp.sx, sp.sy, '#ffd34d', 10, 480, 12);
     score += 6000; shake = Math.min(shake + 1.7, 1.9); combo = 0;
     flash(6000, sp.sx, sp.sy); callout('CAPITAL SHIP DOWN', '+6,000', '#ffd34d'); SFX.bossDown();
     wave++; nextBossDist = dist + 1600 + wave * 400; boss = null;
@@ -560,6 +644,7 @@
       burst(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 34 : 26, en.type === 'interceptor' ? 620 : 520);
       burst(sp.sx, sp.sy, '#fff', 12, 320);
       ring(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 120 : 95, en.type === 'gunship' ? 0.7 : 0.55, en.type === 'gunship' ? 4.5 : 3.5);
+      spawnDebris(sp.sx, sp.sy, en.col, en.type === 'gunship' ? 8 : 5, en.type === 'gunship' ? 480 : 360, Math.max(5, en.r * 0.2));
       if (en.type === 'turret') ring(sp.sx, sp.sy, '#ffffff', 130, 0.5, 2.5);   // extra pulse for the mine's spike ring
       flash(gain, sp.sx, sp.sy); SFX.enemyKill();
       // the chain weapon's own kills don't refill its meter — only regular combat does,
@@ -666,6 +751,8 @@
   // burst, a double shockwave, and a harder shake — right before the overlay.
   function shipDestroyed(x, y) {
     for (var i = 0; i < 4; i++) burst(x + rand(-24, 24), y + rand(-24, 24), ['#ff5d3c', '#ffd34d', '#fff', '#39e6ff'][i], 20, 480);
+    spawnDebris(x, y, '#5a7bc0', 14, 540, 14);                 // your own ship breaks apart
+    spawnDebris(x, y, '#ffd34d', 6, 420, 10);
     ring(x, y, '#ff5d3c', 180, 0.8, 5);
     ring(x, y, '#ffffff', 110, 0.6, 3);
     shake = Math.min(shake + 1.2, 1.9);
@@ -752,6 +839,7 @@
     chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
+    debris.length = 0;
     comets.length = 0; cometT = rand(12, 18);
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     initStars();
@@ -919,6 +1007,7 @@
 
     // particles
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= dt * 1.4; } }
+    updateDebris(dt);                            // tumbling explosion rubble
     shake *= Math.pow(0.0015, dt);
   }
 
@@ -932,6 +1021,7 @@
       burst(sp.sx, sp.sy, '#ffd34d', 22, 460); burst(sp.sx, sp.sy, '#fff', 10, 300);
       burst(sp.sx, sp.sy, t.col, 8, 150);                       // slow lingering debris chunks
       ring(sp.sx, sp.sy, t.col, 50 + t.r * 0.7, 0.5);           // shockwave
+      spawnDebris(sp.sx, sp.sy, t.col, t.r > 70 ? 7 : 4, t.r > 70 ? 420 : 300, Math.max(5, t.r * 0.22));  // physical rubble
       if (t.r > 70) ring(sp.sx, sp.sy, '#ffd34d', 110, 0.65, 4);
       // remove it next frame by marking; splice here
       var idx = rocks.indexOf(t); if (idx >= 0) rocks.splice(idx, 1);
@@ -1069,9 +1159,11 @@
     drawBullets();
     drawEbullets();
     drawParticles();
+    drawDebris();
     drawRings();
     drawChainBeam();
     if (state !== 'gate') drawShip();
+    drawLensFlares();
     drawPops();
     ctx.restore();
 
@@ -1737,6 +1829,40 @@
       rg2.addColorStop(0, 'rgba(124,255,178,0.15)'); rg2.addColorStop(1, 'rgba(124,255,178,0)');
       ctx.fillStyle = rg2; ctx.beginPath(); ctx.arc(rp.sx, rp.sy, 18, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  // ---- lens flares on the brightest spots (ship engines, nearest powerups,
+  // boss core) — anamorphic streak + ghost discs to sell "the void is full of
+  // light". Screen-space, pure decoration. Skipped under reduced motion. ----
+  function drawLensFlares() {
+    if (reduceMotion || state === 'gate') return;
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    var S = Math.min(W, H) / 840 * 1.3;
+    // player ship engines
+    var boostK = afterburner ? 1 : (boost > 0.05 ? 0.6 : 0.25);
+    var fx = bx - 15 * S + Math.sin(performance.now() / 40) * 2;
+    var fsize = (16 + boost * 20) * S * (0.8 + 0.2 * Math.sin(performance.now() / 90));
+    if (boostK > 0.2) drawLensFlare(fx, by + 26 * S, '124,255,178', fsize * 0.6, 0);
+    drawLensFlare(bx + 15 * S, by + 26 * S, '57,230,255', fsize * 0.6, 0.05);
+    // boss core
+    if (boss && boss.alive) {
+      var bp = project(boss.x, boss.y, boss.z);
+      drawLensFlare(bp.sx, bp.sy, '255,150,80', Math.max(6, boss.r * bp.sc * 0.22), 0.4);
+    }
+    // nearest powerup
+    if (powerups.length) {
+      var nearest = null, nd = Infinity;
+      for (var i = 0; i < powerups.length; i++) {
+        var pwp = project(powerups[i].x, powerups[i].y, powerups[i].z);
+        var dd = (pwp.sx - bx) * (pwp.sx - bx) + (pwp.sy - by) * (pwp.sy - by);
+        if (dd < nd) { nd = dd; nearest = powerups[i]; }
+      }
+      if (nearest) {
+        var np = project(nearest.x, nearest.y, nearest.z);
+        var rgb = nearest.type === 'shield' ? '57,230,255' : nearest.type === 'rapid' ? '255,211,77' : '124,255,178';
+        drawLensFlare(np.sx, np.sy, rgb, Math.max(5, nearest.r * np.sc * 0.4), 0.2);
+      }
     }
   }
 
