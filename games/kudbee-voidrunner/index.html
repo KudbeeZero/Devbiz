@@ -69,6 +69,22 @@
   .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none;
     white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  /* ===== SIMURGH wingman HUD — a live tactical overlay from the agent cloud ===== */
+  .wingman { position:absolute; bottom:54px; left:14px; z-index:20; pointer-events:none;
+    max-width:min(330px, 46vw); text-align:left; }
+  .wm-label { font-family:"Space Grotesk","Inter",sans-serif; font-weight:700; font-size:9px;
+    letter-spacing:0.28em; text-transform:uppercase; color:#39ffe0; opacity:0.85;
+    text-shadow:0 0 10px rgba(57,255,224,0.5); margin-bottom:5px; }
+  .wm-line { font-family:"Space Grotesk","Inter",sans-serif; font-weight:500; font-size:13px;
+    line-height:1.35; color:#e6f7ff; text-shadow:0 0 12px rgba(0,0,0,0.6);
+    background:rgba(8,14,30,0.5); border-left:2px solid #39e6ff; border-radius:4px;
+    padding:7px 11px; backdrop-filter:blur(4px); transition:color 0.25s, border-color 0.25s;
+    min-height:18px; }
+  .wm-com { height:2px; margin-top:6px; background:rgba(255,255,255,0.12); border-radius:99px;
+    transition:width 0.35s ease, background 0.35s; }
+  .wingman.link-up .wm-com { width:100%; }
+  .wingman.link-down .wm-com { width:18%; background:#5a6276; }
+  @media (pointer:coarse){ .wingman { bottom:64px; } }
   /* short viewports (landscape phones): the gate/game-over panel can be taller than the
      screen, so it scrolls instead of clipping — but tighten spacing first so the common
      cases (launch button, restart button) fit without needing a scroll at all. */
@@ -183,6 +199,12 @@
   </div>
 
   <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain (once charged)</div>
+
+  <div class="wingman" id="wingman" aria-live="polite">
+    <div class="wm-label">SIMURGH · WINGMAN</div>
+    <div class="wm-line" id="wmLine">Awaiting telemetry…</div>
+    <div class="wm-com" id="wmCom" aria-hidden="true"></div>
+  </div>
 </div>
 
 <script>
@@ -2048,6 +2070,92 @@
     introAudio.addEventListener('ended', endIntro, { once: true });
   }
   intro.addEventListener('pointerdown', function () { runIntro(); });
+
+  // ===== SIMURGH wingman — live tactical agent from the serverless cloud =====
+  // Captures a throttled snapshot of the run every WINGMAN_INTERVAL seconds and
+  // POSTs it to the wingman Worker (/wingman/tactical). The Worker's deterministic
+  // brain returns one prioritized tactical line rendered in the wingman HUD. If the
+  // Worker is unreachable (not deployed / offline), the game keeps running and the
+  // HUD shows a quiet "link down" state — the wingman is strictly additive.
+  var wingmanUrl = window.KUDBEE && window.KUDBEE.wingmanUrl ? window.KUDBEE.wingmanUrl : '/wingman/tactical';
+  var wingmanEl = document.getElementById('wingman');
+  var wmLineEl = document.getElementById('wmLine');
+  var wmRemoteLo = 0;                       // last-sent depth, for distance-gating
+  var wmLastReq = 0;                        // next allowed request time
+  var wmFallback = '<span style="color:#7c8aa0">No agent link — flying solo. Hold the line, pilot.</span>';
+  var WINGMAN_INTERVAL = 2500;               // ms between tactical pings
+
+  function wingmanTakeInbound() {
+    var S = Math.min(W, H);
+    // Count threats near the player plane for the agent's risk read
+    var threats = 0;
+    for (var ti = 0; ti < enemies.length; ti++) { var te = enemies[ti]; if (te.alive && te.z < 700) threats++; }
+    var rocksNear = 0;
+    for (var ri2 = 0; ri2 < rocks.length; ri2++) { var rk2 = rocks[ri2]; if (rk2.alive && rk2.z < 300) rocksNear++; }
+    return {
+      distance: Math.round(dist),
+      shields: shields,
+      maxShields: MAXSHIELD,
+      combo: Math.max(0, combo),
+      bossActive: !!(boss && boss.alive),
+      bossHp: boss && boss.alive ? clamp(boss.hp / boss.maxHp, 0, 1) : 0,
+      chainReady: chainMeter >= CHAIN_MAX,
+      rapidActive: rapidT > 0,
+      tripleActive: tripleT > 0,
+      afterburner: !!afterburner,
+      threatCount: threats,
+      rocksNear: rocksNear,
+      sinceMilestone: Math.max(0, dist - wmRemoteLo),
+    };
+  }
+  function wingmanRender(line) {
+    if (!wmLineEl) return;
+    var colMap = { danger: '#39e6ff', boss: '#ff5d3c', chain: '#39ffe0', momentum: '#ffd34d', powerup: '#7CFFb2', boost: '#ffffff', coach: '#7c8aa0' };
+    var c = colMap[line && line.kind] || (line && line.col) || '#39e6ff';
+    wmLineEl.style.borderLeftColor = c;
+    wmLineEl.style.color = '#e6f7ff';
+    wmLineEl.textContent = line ? line.text : '';
+    if (wingmanEl) wingmanEl.classList.add('link-up');
+    if (wingmanEl) wingmanEl.classList.remove('link-down');
+  }
+  function wingmanFallback() {
+    if (!wmLineEl) return;
+    wmLineEl.innerHTML = wmRemoteLo > 0 && dist - wmRemoteLo > 220
+      ? wmFallback
+      : '<span style="color:#5a6276">SIMURGH offline — telemetry paused.</span>';
+    if (wingmanEl) { wingmanEl.classList.remove('link-up'); wingmanEl.classList.add('link-down'); }
+  }
+  function wingmanPing() {
+    var now = performance.now();
+    if (now < wmLastReq || document.hidden) return;
+    wmLastReq = now + WINGMAN_INTERVAL;
+    var snapshot = wingmanTakeInbound();
+    var ctrl = null;
+    try { ctrl = new AbortController(); } catch (_) {}
+    fetch(wingmanUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(snapshot),
+      signal: ctrl ? ctrl.signal : undefined,
+    }).then(function (r) {
+      if (!r.ok) throw new Error('wingman ' + r.status);
+      return r.json();
+    }).then(function (data) {
+      if (data && data.ok && data.line) { wmRemoteLo = snapshot.distance; wingmanRender(data.line); }
+      else wingmanFallback();
+    }).catch(function () { wingmanFallback(); });
+  }
+  // Tick the wingman every second-ish (throttled internally to WINGMAN_INTERVAL)
+  setInterval(function () { if (state === 'play') wingmanPing(); }, 1000);
+  // a cautious warm-up ping once the run actually starts
+  var _wmStarted = false;
+  var _wmStartWrap = start;
+  start = function () {
+    _wmStarted = true; wmRemoteLo = 0; wmLastReq = 0;
+    if (wmLineEl) wmLineEl.textContent = 'SIMURGH scanning the field…';
+    if (wingmanEl) { wingmanEl.classList.remove('link-down'); wingmanEl.classList.add('link-up'); }
+    return _wmStartWrap.apply(this, arguments);
+  };
 
   // ===== boot =====
   resize(); initStars(); initSpaceDressing();
