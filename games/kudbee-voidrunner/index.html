@@ -2218,7 +2218,13 @@
     get chainDmg() { return CHAIN_DMG; }, get chainRadius() { return CHAIN_RADIUS; },
     forceChainReady: function () { chainMeter = CHAIN_MAX; },
     fireChain: function () { fireChain(); },
-    get lastChain() { return lastChainResult; }
+    get lastChain() { return lastChainResult; },
+    // ---- SIMURGH wingman hooks ----
+    get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
+    wingmanTakeInbound: function () { return wingmanTakeInbound(); },
+    wingmanPing: function () { wingmanPing(); },
+    wingmanFallback: function () { wingmanFallback(); },
+    wingmanRender: function (line) { wingmanRender(line); }
   };
 })();
 </script>
