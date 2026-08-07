@@ -2075,14 +2075,14 @@
   // Captures a throttled snapshot of the run every WINGMAN_INTERVAL seconds and
   // POSTs it to the wingman Worker (/wingman/tactical). The Worker's deterministic
   // brain returns one prioritized tactical line rendered in the wingman HUD. If the
-  // Worker is unreachable (not deployed / offline), the game keeps running and the
-  // HUD shows a quiet "link down" state — the wingman is strictly additive.
+  // Worker is unreachable (not deployed / offline), the SAME brain runs locally
+  // (wingmanLocalEvaluate) so the pilot ALWAYS gets live coaching — the cloud is the
+  // preferred channel, never a hard dependency.
   var wingmanUrl = window.KUDBEE && window.KUDBEE.wingmanUrl ? window.KUDBEE.wingmanUrl : '/wingman/tactical';
   var wingmanEl = document.getElementById('wingman');
   var wmLineEl = document.getElementById('wmLine');
   var wmRemoteLo = 0;                       // last-sent depth, for distance-gating
   var wmLastReq = 0;                        // next allowed request time
-  var wmFallback = '<span style="color:#7c8aa0">No agent link — flying solo. Hold the line, pilot.</span>';
   var WINGMAN_INTERVAL = 2500;               // ms between tactical pings
 
   function wingmanTakeInbound() {
@@ -2118,12 +2118,59 @@
     if (wingmanEl) wingmanEl.classList.add('link-up');
     if (wingmanEl) wingmanEl.classList.remove('link-down');
   }
+
+  // ---- LOCAL wingman brain (offline fallback) ----
+  // The same deterministic tactical logic normally served by the Worker, bundled
+  // here so the pilot ALWAYS gets live coaching — on the cloud when the Worker is
+  // up, and locally when it's not. This is a faithful port of wingman/tactics.js
+  // (evaluate()), manually kept in sync so both paths speak the same advice.
+  function _wmNum(v) { var n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? n : 0; }
+  function wingmanLocalEvaluate(snap) {
+    var dist = _wmNum(snap && snap.distance), shields = _wmNum(snap && snap.shields);
+    var maxShields = _wmNum(snap && snap.maxShields) || 5;
+    var combo = _wmNum(snap && snap.combo);
+    var bossHp = _wmNum(snap && snap.bossHp);
+    var threatCount = _wmNum(snap && snap.threatCount), rocksNear = _wmNum(snap && snap.rocksNear);
+    var since = _wmNum(snap && snap.sinceMilestone);
+    var cands = [];
+    // life-saving
+    if (shields <= 1) cands.push({ urgency: 0.98, text: 'Integrity critical — hug a shield pickup, now!', col: '#39e6ff' });
+    if (rocksNear > 0 && shields <= 2 && !snap.bossActive) cands.push({ urgency: 0.92, text: 'Rocks closing — bank wide, don\u2019t hold the line.', col: '#39e6ff' });
+    if (threatCount >= 4 && shields <= 2) cands.push({ urgency: 0.9, text: 'Enemy swarm on damaged hull — pick orbits, not a dogfight.', col: '#ff5d3c' });
+    // chain / momentum
+    if (snap && snap.chainReady && !snap.bossActive) cands.push({ urgency: 0.78, text: 'Chain beam ready — line up the whole field first.', col: '#39ffe0' });
+    if (combo >= 8) cands.push({ urgency: 0.7, text: combo + '× chain roaring — keep the rhythm, don\u2019t get greedy.', col: '#ffd34d' });
+    else if (combo >= 4) cands.push({ urgency: 0.55, text: combo + '× combo — chain a pickup before it cools.', col: '#ffd34d' });
+    // boss
+    if (snap && snap.bossActive) {
+      if (bossHp > 0.6) cands.push({ urgency: 0.72, text: 'Capital ship — break its volleys, plink the core in the gaps.', col: '#ff5d3c' });
+      else if (bossHp > 0.3) cands.push({ urgency: 0.82, text: 'Capital ship wearing down — floor it for the corefinisher.', col: '#ff5d3c' });
+      else cands.push({ urgency: 0.9, text: 'Core exposed — center its fire, end it!', col: '#ff5d3c' });
+    }
+    // loadout
+    if (snap && snap.rapidActive) cands.push({ urgency: 0.4, text: 'Rapid fire live — hold the trigger, volume is king.', col: '#ffd34d' });
+    if (snap && snap.tripleActive) cands.push({ urgency: 0.42, text: 'Triple shot active — spread down the barrel at clusters.', col: '#7CFFb2' });
+    if (snap && snap.afterburner) cands.push({ urgency: 0.5, text: 'Afterburner burning — break contact, then re-engage clean.', col: '#ffffff' });
+    // coaching
+    if (since > 120) cands.push({ urgency: 0.22, text: 'Quiet stretch at ' + Math.round(dist) + ' km — save the boost ahead.', col: '#7c8aa0' });
+    else if (dist > 0 && dist < 400) cands.push({ urgency: 0.2, text: 'Into the belt — steady hands, Simurgh has your six.', col: '#7c8aa0' });
+    else cands.push({ urgency: 0.18, text: 'Locked on. Keep the throttle hot, pilot.', col: '#7c8aa0' });
+    cands.sort(function (a, b) { return b.urgency - a.urgency; });
+    var colMap = { '#39e6ff': 'danger', '#ff5d3c': 'boss', '#39ffe0': 'chain', '#ffd34d': 'momentum', '#7CFFb2': 'powerup', '#ffffff': 'boost' };
+    return { text: cands[0].text, col: cands[0].col, urgency: cands[0].urgency, kind: colMap[cands[0].col] || 'coach' };
+  }
+  // run the local brain directly — used when the Worker is unreachable
+  function wingmanLocal() {
+    var snapshot = wingmanTakeInbound();
+    wmRemoteLo = snapshot.distance;                 // local brain still tracks milestones
+    wingmanRender(wingmanLocalEvaluate(snapshot));
+  }
   function wingmanFallback() {
-    if (!wmLineEl) return;
-    wmLineEl.innerHTML = wmRemoteLo > 0 && dist - wmRemoteLo > 220
-      ? wmFallback
-      : '<span style="color:#5a6276">SIMURGH offline — telemetry paused.</span>';
-    if (wingmanEl) { wingmanEl.classList.remove('link-up'); wingmanEl.classList.add('link-down'); }
+    // Replace the 'offline' message with LIVE LOCAL coaching — the pilot is never
+    // left hanging; they just get the same advice from the bundled brain instead.
+    wingmanLocal();
+    if (wingmanEl) wingmanEl.classList.remove('link-up');
+    if (wingmanEl) wingmanEl.classList.add('link-down');
   }
   function wingmanPing() {
     var now = performance.now();
@@ -2224,7 +2271,9 @@
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
     wingmanPing: function () { wingmanPing(); },
     wingmanFallback: function () { wingmanFallback(); },
-    wingmanRender: function (line) { wingmanRender(line); }
+    wingmanRender: function (line) { wingmanRender(line); },
+    wingmanLocalEvaluate: function (snap) { return wingmanLocalEvaluate(snap); },
+    wingmanLocal: function () { wingmanLocal(); }
   };
 })();
 </script>
