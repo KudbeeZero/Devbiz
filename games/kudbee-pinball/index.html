@@ -187,6 +187,19 @@
   function levelGrav() { return 1 + Math.max(0, (level || 1) - 1) * 0.12; }
   function levelKick() { return 1 + Math.max(0, (level || 1) - 1) * 0.08; }
 
+  // ---- mission system: 3 timed objectives, one active at a time ----
+  var MISSION_DEFS = [
+    { id: 'asteroid', name: 'ASTEROID FIELD', icon: '\u2B21', desc: '2\u00D7 score \u00B7 bumpers enlarged', DUR: 25, reward: '+2 mult', col: '#39e6ff',
+      check: function() { return rampShots >= 6; } },
+    { id: 'warp', name: 'WARP SPEED', icon: '\u27A4', desc: '\u00BD gravity \u00B7 ramps 3\u00D7 \u00B7 ball save', DUR: 20, reward: 'Extra ball', col: '#c46bff',
+      check: function() { return comboN >= 5; } },
+    { id: 'targetLock', name: 'TARGET LOCK', icon: '\u25CE', desc: 'drops reset \u00B7 chain bonus \u00B7 1.5\u00D7', DUR: 30, reward: '+3 mult', col: '#ffd34d',
+      check: function() { for (var i = 0; i < rollovers.length; i++) if (!rollovers[i].lit) return false; return true; } }
+  ];
+  var missionActive = -1, missionTimer = 0, missionFlash = 0;
+  var missionTriggered = [false, false, false], missionComplete = [false, false, false];
+  var missionMult = 1, missionGravMod = 1;                                 // set during missions (asteroid → score 2×, warp → gravity ½)
+
   // ---- skill shot (plunger lanes) ----
   // Three top rollover lanes. Plunge power selects which one the ball drops
   // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
@@ -475,6 +488,9 @@
     kickL = true; kickR = true; extraBallsAwarded = 0;
     lockedBalls = 0; multiballActive = false;
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
+    missionActive = -1; missionTimer = 0; missionFlash = 0;
+    missionTriggered = [false, false, false]; missionComplete = [false, false, false];
+    missionMult = 1; missionGravMod = 1;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
     buildTable(); spawnBallInLane();
   }
@@ -571,7 +587,7 @@
   // ===== scoring events (all points scale by the playfield multiplier) =====
   function addScore(n) {
     var prev = level;
-    score += n * mult;
+    score += n * mult * missionMult;
     level = 1 + Math.floor(score / 50000);  // level increases every 50k
     if (level > prev) {
       sfx('mult');
@@ -687,7 +703,12 @@
     burst(t.x, t.y, t.color, 12, 360);
     if (t.kind === 'drop') {
       t.down = true;
-      if (bankComplete('D')) { addScore(5000); bumpMult('DROP BANK!', t.x, t.y); resetBank('D', true); }
+      if (bankComplete('D')) {
+        addScore(5000 + (missionActive === 2 ? 3500 : 0));           // Target Lock: extra chain bonus
+        bumpMult('DROP BANK!', t.x, t.y);
+        resetBank('D', true);
+        if (missionActive === 2) { addScore(1500); callout('CHAIN BONUS!', '+' + (1500 * mult).toLocaleString(), '#ffd34d'); burst(t.x, t.y, '#ffd34d', 18, 440); }
+      }
     } else {
       t.lit = true;
       if (bankComplete(t.grp)) { addScore(2500); bumpMult(t.grp === 'L' ? 'LEFT BANK!' : 'RIGHT BANK!', t.x, t.y); resetBank(t.grp, false); }
@@ -699,25 +720,27 @@
     if (all) { addScore(3000); bumpMult('K · U · D', r.x, r.y); for (var j = 0; j < rollovers.length; j++) rollovers[j].lit = false; }
   }
   function onRamp(b) {
+    var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
-    addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
+    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
     burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
-    else if (!chained) callout('LOOP!', '+' + (1000 * mult).toLocaleString(), '#39e6ff');
+    else if (!chained) callout('LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), '#39e6ff');
   }
   // Side loop ramps — same trick as the center loop: a hard upward shot through the
   // gate teleports the ball to the top of the field with a scatter, minus the physical
   // "tube" (this table draws loops the same way the center one always has).
   function onSideRamp(b, r) {
+    var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var col = r.side < 0 ? '#c46bff' : '#ffd34d';
     var chained = comboHit(r.x, r.y0, r.side < 0 ? 'rampL' : 'rampR');
-    addScore(1000); rampShots++; bonusU += 12; sfx('ramp');
+    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
     burst(r.x, r.y0, col, 22, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
     shake = Math.min(shake + 0.35, 1.4);
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
-    else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * mult).toLocaleString(), col);
+    else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), col);
   }
   // Ball-lock saucer — captures the ball outright (it's removed from live physics, not
   // bounced) and serves a fresh one from the shooter lane so play continues without costing
@@ -796,6 +819,48 @@
     c.flash = 1;
   }
 
+  // ---- mission system tick ----
+  function tickMissions(dt) {
+    if (missionActive >= 0) {
+      missionTimer -= dt;
+      if (missionTimer <= 0) onMissionDone();
+      // update active mission effects
+      if (missionActive === 0) missionMult = 2;                                // Asteroid Field: 2× score
+      if (missionActive === 1) missionGravMod = 0.5;                           // Warp Speed: half gravity
+    } else {
+      // no active mission — check for trigger
+      for (var i = 0; i < MISSION_DEFS.length; i++) {
+        if (missionTriggered[i] || missionComplete[i]) continue;
+        if (MISSION_DEFS[i].check()) activateMission(i);
+      }
+      missionMult = 1; missionGravMod = 1;
+    }
+  }
+  function activateMission(idx) {
+    var m = MISSION_DEFS[idx];
+    missionActive = idx; missionTimer = m.DUR; missionTriggered[idx] = true; missionFlash = 1;
+    missionMult = idx === 0 ? 2 : 1;
+    missionGravMod = idx === 1 ? 0.5 : 1;
+    callout(m.name, m.desc, m.col);
+    sfx('mult');
+    shake = Math.min(shake + 0.5, 1.5);
+    burst(VW / 2, 700, m.col, 28, 500); burst(VW / 2, 700, '#ffffff', 14, 400);
+  }
+  function onMissionDone() {
+    var idx = missionActive, m = MISSION_DEFS[idx];
+    missionComplete[idx] = true; missionActive = -1; missionTimer = 0;
+    missionMult = 1; missionGravMod = 1; missionFlash = 0.5;
+    callout(m.reward, 'MISSION COMPLETE', m.col);
+    sfx('skill');
+    burst(VW / 2, 700, m.col, 30, 560); burst(VW / 2, 700, '#ffffff', 16, 420);
+    // Award
+    switch (idx) {
+      case 0: mult = Math.min(6, mult + 2); multFlash = 1; break;             // +2 multiplier
+      case 1: awardExtraBall('warp speed'); break;                            // extra ball
+      case 2: mult = Math.min(6, mult + 3); multFlash = 1; break;             // +3 multiplier
+    }
+  }
+
   // ===== physics step =====
   function physStep(h) {
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }   // over-nudged → flippers dead until this ball drains
@@ -811,7 +876,7 @@
         continue;
       }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
-      b.vy += (climbing ? LANE_G : G * levelGrav()) * h;              // lighter gravity in the lane so power maps cleanly
+      b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
       // shooter-lane exit: a launched ball that clears the lane is routed over the top and
       // DROPPED through the skill lane its plunge power selected (see enterFromLane()).
       if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
@@ -979,11 +1044,14 @@
       var guard = 0;
       while (acc >= PH && guard < 600) { physStep(PH); acc -= PH; guard++; }
     }
+    // Mission tick: check triggers, count down, handle completion
+    tickMissions(dt);
     // fx decay
     shake *= Math.pow(0.0009, dt);
     if (co.life > 0) co.life -= dt;
     if (levelTransT > 0) levelTransT = Math.max(0, levelTransT - dt);
     if (tableFlash > 0) tableFlash = Math.max(0, tableFlash - dt * 2);
+    if (missionFlash > 0) missionFlash = Math.max(0, missionFlash - dt * 2);
     tableHue += (targetHue - tableHue) * Math.min(1, dt * 3);
     for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
@@ -1363,6 +1431,19 @@
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
       ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
       ctx.fillText('MULTIPLIER', mx, my + Math.round(mn * 0.052));
+      // mission bar — active mission with countdown timer
+      if (missionActive >= 0 && missionTimer > 0) {
+        var mDef = MISSION_DEFS[missionActive];
+        var myy = my + Math.round(mn * 0.074), mbw = mn * 0.22;
+        var mFlashA = missionFlash > 0 ? 0.5 + 0.5 * Math.sin(performance.now() / 120) * missionFlash : 0;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - mbw / 2, myy, mbw, 22, 6); ctx.fill();
+        ctx.fillStyle = mDef.col; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText(mDef.icon + ' ' + mDef.name + ' ' + Math.ceil(missionTimer) + 's', mx, myy + 2);
+        // mission timer ring around the HUD
+        var ringR = mn * 0.11;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(mx, my + mn * 0.04, ringR, -Math.PI / 2, -Math.PI / 2 + TAU * (missionTimer / MISSION_DEFS[missionActive].DUR)); ctx.stroke();
+      }
       // live combo chain: label + draining timer bar under the multiplier
       if (comboN >= 2 && comboT > 0) {
         var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.14;
