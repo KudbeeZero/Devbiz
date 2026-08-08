@@ -668,7 +668,12 @@
     en.hp -= dmg || 1; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
     if (en.hp <= 0) {
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
-      combo++; comboT = 2.2; var gain = (en.scoreBase || 250) * Math.max(1, combo); score += gain;
+      combo++; comboT = 2.2;
+      // arcade chain escalation: every 4 rapid kills bumps the score multiplier
+      chainMultT = 3.2;
+      var newTier = Math.min(5, 1 + Math.floor(combo / 4));
+      if (newTier > chainMult) { chainMult = newTier; chainMilestone = combo; chainMultFlash = 1; SFX.volley(); }
+      var gain = (en.scoreBase || 250) * chainMult; score += gain;
       shake = Math.min(shake + (en.type === 'gunship' ? 0.55 : en.type === 'turret' ? 0.5 : 0.4), 1.4);
       // kill FX tuned per type — heavier types get a bigger/slower burst + ring,
       // following the same tiering spawnBoss()/bossDefeated() already use for the boss.
@@ -776,6 +781,8 @@
   function playerHit(x, y) {
     if (iframes > 0) return;
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); hitFlashT = 0.32; SFX.playerHit();
+    // taking a hit resets the chain multiplier — arcade risk/reward
+    if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -841,6 +848,10 @@
   // ===== game state =====
   var state = 'gate';
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0;
+  // ---- arcade chain multiplier: kills within the window stack a score multiplier
+  // (×1 → ×5) that resets on taking damage. Each new tier pops a combo-esc label, so
+  // fast, clean clearing reads as building real heat — classic coin-op escalation.
+  var chainMult = 1, chainMilestone = 0, chainMultFlash = 0, chainMultT = 0;
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -897,6 +908,7 @@
 
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
+    chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1031,6 +1043,9 @@
   function update(dt) {
     speed = curSpeed();
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
+    // arcade chain: the multiplier resets if you go quiet (no kill in the window)
+    if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
+    if (chainMultFlash > 0) chainMultFlash = Math.max(0, chainMultFlash - dt * 2);
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
     // afterburner: pinning boost at max for AB_HOLD seconds kicks in the genuine
@@ -1226,6 +1241,7 @@
   function hitShip(rk) {
     rk.alive = false; var idx = rocks.indexOf(rk); if (idx >= 0) rocks.splice(idx, 1);
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); hitFlashT = 0.32; SFX.playerHit();
+    if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
     var sp = project(rk.x, rk.y, rk.z); burst(sp.sx, sp.sy, '#ff5d3c', 30, 560);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -2241,6 +2257,17 @@
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.017) + 'px Inter, sans-serif';
     ctx.fillText('SCORE', pad, pad + Math.round(Math.min(W, H) * 0.052));
     if (combo > 1) { ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.02) + 'px "Space Grotesk", sans-serif'; ctx.fillText('×' + combo + ' chain', pad, pad + Math.round(Math.min(W, H) * 0.075)); }
+    if (chainMult > 1 && state === 'play') {
+      var cmx = pad + Math.round(Math.min(W, H) * 0.16), cmStep = Math.round(Math.min(W, H) * 0.02);
+      // small "×N" multiplier badge that pops on new tiers
+      ctx.fillStyle = chainMult >= 4 ? '#ff5d3c' : chainMult >= 3 ? '#ffd34d' : '#7CFFb2';
+      if (chainMultFlash > 0 && !reduceMotion) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10; }
+      ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.028 + chainMultFlash * 4) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText('×' + chainMult, cmx, pad);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.013) + 'px Inter, sans-serif';
+      ctx.fillText('CHAIN', cmx, pad + Math.round(Math.min(W, H) * 0.032));
+    }
     // depth (right)
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.03) + 'px "Space Grotesk", sans-serif';
@@ -2646,6 +2673,8 @@
     forceMissileCrate: function () { powerups.push({ type: 'missile', x: camX, y: camY, z: 120, r: 30, rot: 0, alive: true }); return powerups[powerups.length - 1]; },
     // ---- zone / sector hooks ----
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
+    // ---- arcade chain multiplier hooks ----
+    get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
