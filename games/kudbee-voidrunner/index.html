@@ -712,6 +712,7 @@
     en.hp -= dmg || 1; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
     if (en.hp <= 0) {
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
+      if (challenge) challengeKill('enemy');
       combo++; comboT = 2.2;
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
@@ -924,6 +925,47 @@
   var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
   var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
+  // ---- arcade challenge events: periodic timed clear-objectives (infestation /
+  // rock storm) that pay a bonus if cleared in time. Gives the run short-term goals.
+  var challenge = null;   // { kind:'infestation'|'rockStorm', need:int, progress:int, time:sec, base:int }
+  var challengeNext = 1800, challengeFlash = 0;
+  function startChallenge() {
+    if (!challenge && state === 'play') {
+      var kind = Math.random() < 0.5 ? 'infestation' : 'rockStorm';
+      var need = 5 + (wave * 2 | 0);
+      if (kind === 'infestation') challenge = { kind: kind, need: need, progress: 0, time: 24, base: 3000 };
+      else challenge = { kind: kind, need: Math.max(6, need), progress: 0, time: 26, base: 2500 };
+      challengeFlash = 1;
+      callout(kind === 'infestation' ? 'CHALLENGE · INFESTATION' : 'CHALLENGE · ROCK STORM',
+        'clear ' + challenge.need + ' targets in ' + challenge.time + 's', '#7CFFb2');
+      SFX.zone();
+    }
+  }
+  function tickChallenge(dt) {
+    if (!challenge) return;
+    challenge.time -= dt;
+    if (challenge.time <= 0) {
+      callout('CHALLENGE FAILED', 'no bonus', '#ff5d3c');
+      challenge = null; challengeNext = dist + 1400;
+      return;
+    }
+    if (challenge.progress >= challenge.need) {
+      var bonus = challenge.base * (Math.max(1, Math.ceil(challenge.time)));
+      score += bonus;
+      var pp = project(camX, camY, 240); flashText('+'+bonus.toLocaleString(), pp.sx, pp.sy, '#7CFFb2');
+      burst(W / 2, cy, '#7CFFb2', 30, 500);
+      callout('CHALLENGE COMPLETE', '+' + bonus.toLocaleString(), '#7CFFb2');
+      SFX.volley(); punch(0.7);
+      challenge = null; challengeNext = dist + 1400;
+    }
+  }
+  function challengeKill(type) {
+    if (!challenge) return;
+    if ((challenge.kind === 'infestation' && type !== 'rock') ||
+        (challenge.kind === 'rockStorm' && type === 'rock')) {
+      challenge.progress++;
+    }
+  }
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -983,6 +1025,7 @@
     chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
     runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
     damageDir = -1; damageDirT = 0;
+    challenge = null; challengeNext = 1800; challengeFlash = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1160,6 +1203,11 @@
     if (zoneHint > 0) zoneHint = Math.max(0, zoneHint - dt * 0.5);
     zoneTintCur = ZONES[zoneIdx];
 
+    // arcade challenge events — a timed clear-objective that pays off if met in time
+    if (challengeFlash > 0) challengeFlash = Math.max(0, challengeFlash - dt * 2);
+    if (!challenge && dist >= challengeNext && !boss) { challengeNext = dist + 2000; startChallenge(); }
+    tickChallenge(dt);
+
     // starfield stream
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i]; s.z -= speed * dt;
@@ -1311,6 +1359,7 @@
     burst(sp.sx, sp.sy, t.col, 10, 260); SFX.hit();
     if (t.hp <= 0) {
       t.alive = false; combo++; comboT = 2.2; SFX.rock(t.r > 70);
+      if (challenge) challengeKill('rock');
       var gain = 100 * (t.r > 70 ? 2 : 1) * Math.max(1, combo);
       score += gain; shake = Math.min(shake + 0.35, 1.3);
       burst(sp.sx, sp.sy, '#ffd34d', 22, 460); burst(sp.sx, sp.sy, '#fff', 10, 300);
@@ -2502,6 +2551,7 @@
     if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
     drawMissileHUD();
+    drawChallengeHUD();
     drawChainMeter();
   }
 
@@ -2525,6 +2575,29 @@
     ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('MSL', sx, sy - sR * 2.2);
+  }
+
+  // --- arcade challenge HUD: a live progress banner with countdown bar ---
+  function drawChallengeHUD() {
+    if (!challenge || state !== 'play') return;
+    var pad = Math.round(Math.min(W, H) * 0.035);
+    var c = challenge;
+    var label = c.kind === 'infestation' ? 'INFESTATION' : 'ROCK STORM';
+    var bx = pad, by = pad + Math.round(Math.min(W, H) * 0.11), bw = Math.min(W * 0.4, 240), bh = 7;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#7CFFb2'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('CHALLENGE · ' + label, bx, by);
+    ctx.fillStyle = '#cfe9ff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.02) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(c.progress + '/' + c.need, bx + bw, by);
+    // progress bar
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(bx, by + Math.round(Math.min(W, H) * 0.024), bw, bh);
+    ctx.fillStyle = '#7CFFb2'; ctx.fillRect(bx, by + Math.round(Math.min(W, H) * 0.024), bw * clamp(c.progress / c.need, 0, 1), bh);
+    // countdown (on the right, turns red when low)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = c.time <= 6 ? '#ff5d3c' : '#8a93a8';
+    ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(Math.ceil(c.time) + 's', W - pad, pad + Math.round(Math.min(W, H) * 0.11));
+    ctx.textAlign = 'left';
   }
 
   // chain-weapon readout: a bottom-center gauge that fills from kills and pulses
@@ -2862,7 +2935,7 @@
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
-    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); }, get runStats() { return runStats; },
+    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },     get runStats() { return runStats; }, startChallenge: function () { startChallenge(); }, get challenge() { return challenge; }, challengeKill: function (t) { challengeKill(t); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
