@@ -2387,7 +2387,10 @@
     var S = Math.min(W, H) / 840 * 1.3;                                       // scale ship to viewport (1.3x — owner asked for bigger)
     var blink = iframes > 0 && (Math.floor(now / 90) % 2 === 0);
     var roll = clamp(bank * 2.2, -0.5, 0.5);                                  // exaggerated banking roll
-    ctx.save(); ctx.translate(bx, by); ctx.rotate(bank); ctx.scale(S, S);
+    ctx.save(); ctx.translate(bx, by);
+    // under thrust the hull pitches forward + stretches along its axis (diving feel)
+    var thrustLean = boost * 0.10 + (afterburner ? 0.06 : 0);
+    ctx.rotate(bank); ctx.scale(S, S); ctx.transform(1, thrustLean, 0, 1 - thrustLean * 1.4, 0, 0);
 
     // ---- twin engine exhaust (always, behind hull) ----
     var flick = 0.8 + 0.2 * Math.sin(now / 40) + Math.random() * 0.12;
