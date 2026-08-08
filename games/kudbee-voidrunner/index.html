@@ -258,13 +258,12 @@
   var TAU = Math.PI * 2;
   // reduce-motion: follows OS by default, but the pause overlay can force it on/off.
   var rmOverride = null;   // null=auto (OS), true=force on, false=force off
-  var reduceMotion = true;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function applyReducedMotion() {
-    var os = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var os = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var next = rmOverride != null ? !!rmOverride : os;
-    if (next !== reduceMotion) { reduceMotion = next; if (stars.length) initStars(); }
+    if (next !== reduceMotion) { reduceMotion = next; if (stars && stars.length) initStars(); }
   }
-  applyReducedMotion();
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d', { alpha: false });
