@@ -182,7 +182,7 @@
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
       <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and fly through the glowing pickups — <b style="color:#39e6ff">shields</b>, <b style="color:#ffd34d">rapid fire</b>, <b style="color:#7CFFb2">triple shot</b> — to blast deeper into the void.</p>
       <div class="badge">Outer-space flyer</div>
-      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · <b>V</b> fire a homing missile (auto-lock) · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the gauges to chain or launch a missile</p>
+      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · <b>V</b> fire a homing missile (auto-lock) · <b>X</b> dash (brief i-frames) · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the gauges to chain/launch/dash</p>
       <div class="ov-stats hidden" id="gateStats"></div>
       <button class="btn" id="startBtn">▶ Launch</button>
       <div class="ov-foot">Desktop &amp; mobile · 60fps neon · headfirst into the asteroid belt</div>
@@ -205,7 +205,7 @@
     </div>
   </div>
 
-  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile</div>
+  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile · X dash</div>
 
   <div class="wingman" id="wingman" aria-live="polite">
     <div class="wm-label">SIMURGH · WINGMAN</div>
@@ -339,6 +339,7 @@
     missileHit: function () { noiseHit(0.4, 0.5, 1000); tone(150, 0.3, 'sine', 0.22, 50); },
     volley: function () { tone(520, 0.08, 'triangle', 0.16, null, 0); tone(660, 0.08, 'triangle', 0.16, null, 0.06); tone(880, 0.12, 'triangle', 0.18, null, 0.12); },
     frenzy: function () { tone(392, 0.12, 'sawtooth', 0.2, null, 0); tone(587, 0.12, 'sawtooth', 0.2, null, 0.08); tone(784, 0.2, 'sawtooth', 0.24, null, 0.16); noiseHit(0.3, 0.3, 2400, 'highpass'); },
+    dash: function () { tone(700, 0.1, 'triangle', 0.16, 200); noiseHit(0.12, 0.16, 4000, 'highpass'); },
     zone: function () { tone(440, 0.4, 'triangle', 0.18, 220); tone(660, 0.3, 'triangle', 0.14, 120, 0.08); },
     afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
@@ -369,6 +370,11 @@
 
   // player steering offset (the field shifts opposite to this)
   var camX = 0, camY = 0, camVX = 0, camVY = 0, bank = 0;
+  // ---- dash / blink: a quick i-frame burst that hurls the ship along the current
+  // steering vector. Adds a dodge layer beyond just repositioning — spend it to
+  // knife through a swarm that normally clips you. Cooldown gates spam.
+  var dashT = 0, dashCd = 0, dashFx = 0;
+  var DASH_DUR = 0.24, DASH_CD = 1.1, DASH_POW = 1500;
   var STEER = 1500, STEER_DAMP = 0.86, CAM_LIM = WORLD * 0.92;
 
   // ===== entities (pooled-ish) =====
@@ -1070,6 +1076,7 @@
     chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
     missiles.length = 0; missileAmmo = MSL_AMMO_MAX; missileCd = 0; missileLockId = null;
     camX = camY = camVX = camVY = bank = 0;
+    dashT = 0; dashCd = 0; dashFx = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0; plasmaWaves.length = 0;
     debris.length = 0;
     comets.length = 0; cometT = rand(12, 18);
@@ -1244,6 +1251,19 @@
     camX = clamp(camX + camVX * dt, -CAM_LIM, CAM_LIM);
     camY = clamp(camY + camVY * dt, -CAM_LIM, CAM_LIM);
     bank += ((-camVX * 0.0011) - bank) * Math.min(1, dt * 8);
+
+    // dash: apply the i-frame burst while active, cool the timer otherwise
+    if (dashCd > 0) dashCd -= dt;
+    if (dashT > 0) {
+      dashT -= dt;
+      // hurl the ship along the steering input, or forward if none held
+      var dvx = ax, dvy = ay;
+      if (dvx === 0 && dvy === 0) { dvx = 0; dvy = -1; }   // no input → dash "up"/ahead
+      camVX = clamp(camVX + dvx * DASH_POW * dt, -1.4, 1.4);
+      camVY = clamp(camVY + dvy * DASH_POW * dt, -1.4, 1.4);
+      iframes = Math.max(iframes, 0.18);                    // i-frames through the dash
+      dashFx = 1;
+    } else if (dashFx > 0) dashFx = Math.max(0, dashFx - dt * 3);
 
     dist += speed * dt * 0.06;
     score += speed * dt * 0.05;
@@ -1436,6 +1456,15 @@
 
   // impact zoom punch — call for heavy moments; decays over ~0.25s
   function punch(p) { if (!reduceMotion) zoom = Math.max(zoom, p || 0.8); }
+  // dash trigger — a quick i-frame burst along the held steering direction
+  function doDash() {
+    if (state !== 'play' || dashCd > 0 || dashT > 0) return;
+    dashT = DASH_DUR; dashCd = DASH_CD; iframes = Math.max(iframes, 0.2);
+    if (SFX.dash) SFX.dash(); else SFX.missile();
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    burst(bx, by, '#9be8ff', 18, 420);
+    ring(bx, by, '#39e6ff', 70, 0.4, 3);
+  }
   // hit-stop freeze — a short physics pause for a heavy beat; skips under reduced motion
   function freeze(f) { if (!reduceMotion) hitStop = Math.max(hitStop, f || 0.06); }
 
@@ -1694,6 +1723,7 @@
     if (bloomReady && !reduceMotion) drawBloomPass(now, sx, sy);
 
     drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
+    drawDashFX();               // dash speed-lines while the i-frame burst is lit
     drawCinematicVignette();    // lens vignette + chromatic edge fringe at speed
     drawStageFlash();           // combo-stage full-screen tint pulse
     drawLowHealthWarning();     // pulsing red border when shields are critical
@@ -1904,6 +1934,23 @@
   // a hot cyan-white edge glow, distinct from the ordinary star-streak warp effect
   // that kicks in at any high boost/speed. Purely cosmetic (the speed bonus lives in
   // curSpeed()), so fully skipped under reduced motion.
+  function drawDashFX() {
+    if ((dashT <= 0 && dashFx <= 0) || reduceMotion) return;
+    var a = dashT > 0 ? clamp(dashT / DASH_DUR, 0, 1) : dashFx;
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    var n = 16, reach = Math.max(W, H) * 0.5;
+    for (var i = 0; i < n; i++) {
+      var ang = (i / n) * TAU;
+      var x1 = bx + Math.cos(ang) * 30, y1 = by + Math.sin(ang) * 30;
+      var x2 = bx + Math.cos(ang) * (reach * (0.4 + 0.6 * a)), y2 = by + Math.sin(ang) * (reach * (0.4 + 0.6 * a));
+      var g = ctx.createLinearGradient(x1, y1, x2, y2);
+      g.addColorStop(0, 'rgba(155,232,255,' + (0.55 * a).toFixed(2) + ')'); g.addColorStop(1, 'rgba(57,230,255,0)');
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.restore();
+  }
   function drawAfterburnerFX() {
     if (!afterburner || reduceMotion) return;
     var now = performance.now(), pulse = 0.7 + 0.3 * Math.sin(now / 55);
@@ -2799,6 +2846,21 @@
     ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('MSL', sx, sy - sR * 2.2);
+    // dash readout + cooldown — bottom-right near the ship
+    var dx2 = W - pad - Math.min(W, H) * 0.12, dy2 = H - pad;
+    var ready = dashCd <= 0 && dashT <= 0;
+    ctx.fillStyle = ready ? '#9be8ff' : '#5a6276';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('DASH', dx2, dy2 - sR * 2.2);
+    if (!ready) {
+      var dw = Math.min(W, H) * 0.09, dh = 4;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(dx2, dy2 - sR * 0.4, dw, dh);
+      ctx.fillStyle = '#9be8ff'; ctx.fillRect(dx2, dy2 - sR * 0.4, dw * clamp(1 - dashCd / DASH_CD, 0, 1), dh);
+    } else {
+      ctx.fillStyle = 'rgba(155,232,255,0.5)';
+      ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.013) + 'px Inter, sans-serif';
+      ctx.fillText('X', dx2 + Math.min(W, H) * 0.02, dy2 - sR * 2.0);
+    }
   }
 
   // --- arcade challenge HUD: a live progress banner with countdown bar ---
@@ -2892,6 +2954,7 @@
     if (e.key === 'm' || e.key === 'M') { audioInit(); audioResume(); setMuted(!muted); return; }
     if ((e.key === 'c' || e.key === 'C') && state === 'play') { fireChain(); e.preventDefault(); return; }
     if ((e.key === 'v' || e.key === 'V' || e.key === 'q' || e.key === 'Q') && state === 'play') { fireMissile(); e.preventDefault(); return; }
+    if ((e.key === 'x' || e.key === 'X') && state === 'play') { doDash(); e.preventDefault(); return; }
     if (state !== 'play') return;
     setKey(e, true);
   });
@@ -2902,6 +2965,10 @@
   function missileRect() {
     var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
     return { x: cx - w / 2 - Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
+  }
+  function dashRect() {
+    var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
+    return { x: cx - w / 2 + Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
   }
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
@@ -2919,6 +2986,11 @@
       if (e.clientX >= mr.x - 10 && e.clientX <= mr.x + mr.w + 10 && e.clientY >= mr.y - 22 && e.clientY <= mr.y + mr.h + 10) {
         fireMissile(); return;
       }
+    }
+    // tapping the dash gauge dashes (matches X on desktop)
+    var drr = dashRect();
+    if (e.clientX >= drr.x - 10 && e.clientX <= drr.x + drr.w + 10 && e.clientY >= drr.y - 22 && e.clientY <= drr.y + drr.h + 10) {
+      doDash(); return;
     }
     dragId = e.pointerId; lastFx = e.clientX; lastFy = e.clientY; autofire = true; fire();
   }, { passive: true });
@@ -3188,6 +3260,7 @@
     stageCallout: function (n, col) { stageCallout(n, cx, cy, col || '#ffd34d'); }, get stageFlash() { return stageFlash; },
     get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
     get plasmaT() { return plasmaT; }, get plasmaWaves() { return plasmaWaves; }, forcePlasma: function () { plasmaT = PLASMA_DUR; },
+    doDash: function () { doDash(); }, get dashCd() { return dashCd; }, get dashT() { return dashT; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
