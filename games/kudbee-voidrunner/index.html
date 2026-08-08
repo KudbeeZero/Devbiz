@@ -609,6 +609,7 @@
       default: // 'drone'
         en.type = 'drone'; en.r = 32; en.hp = 2; en.col = '#ff7a5d'; en.scoreBase = 250; en.fireT = rand(0.8, 1.8);
     }
+    en.maxHp = en.hp;                  // track damage for the crackling-spark state
     en.glowRGB = hexRGB(en.col);
     return en;
   }
@@ -1524,38 +1525,65 @@
       else if (en.type === 'gunship') drawGunship(en, R, depth);
       else if (en.type === 'turret') drawTurret(en, R, depth);
       else drawDrone(en, R, depth);
+      // damage-state sparkle — crackling electric arcs when the hull is damaged
+      if (!reduceMotion && en.maxHp > 1 && en.hp < en.maxHp) {
+        var dmg = clamp(en.hp / en.maxHp, 0, 1);
+        var sparkK = (1 - dmg) * (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(performance.now() / 70 + en.phase)));
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(200,240,255,' + (sparkK * 0.8).toFixed(2) + ')';
+        ctx.lineWidth = Math.max(0.6, R * 0.04); ctx.lineCap = 'round';
+        for (var sp2 = 0; sp2 < 2; sp2++) {
+          var ang = Math.random() * TAU, rr2 = R * rand(0.5, 0.95);
+          var xx = Math.cos(ang) * rr2, yy = Math.sin(ang) * rr2;
+          var ang2 = Math.random() * TAU, rr3 = R * rand(0.5, 0.95);
+          ctx.beginPath(); ctx.moveTo(xx, yy);
+          ctx.lineTo(xx + Math.cos(ang2) * R * 0.5, yy + Math.sin(ang2) * R * 0.5); ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
       ctx.restore();
     }
   }
   // ---- per-type enemy silhouettes (each ctx already translated to the enemy's screen pos) ----
   function drawDrone(en, R, depth) {
-    // menacing arrowhead with panel detail and glowing core
+    // menacing arrowhead with rim lighting, panel detail and glowing core
     ctx.beginPath();
     ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.lineTo(R * 0.32, -R * 0.32);
     ctx.lineTo(0, -R * 0.72); ctx.lineTo(-R * 0.32, -R * 0.32); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.closePath();
     var dg = ctx.createLinearGradient(0, -R * 0.7, 0, R);
-    dg.addColorStop(0, 'rgba(40,18,22,0.96)'); dg.addColorStop(1, 'rgba(20,8,10,0.94)');
+    dg.addColorStop(0, 'rgba(40,18,22,0.96)'); dg.addColorStop(0.6, 'rgba(26,11,14,0.95)'); dg.addColorStop(1, 'rgba(18,7,9,0.94)');
     ctx.fillStyle = dg; ctx.fill();
     ctx.lineWidth = Math.max(1.4, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+    // leading-edge rim light (bright along the swept front edges)
+    ctx.strokeStyle = 'rgba(255,140,90,' + (0.5 + depth * 0.3).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.6, R * 0.035);
+    ctx.beginPath(); ctx.moveTo(0, R); ctx.lineTo(R * 0.92, -R * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, R); ctx.lineTo(-R * 0.92, -R * 0.55); ctx.stroke();
     // panel lines
     ctx.strokeStyle = 'rgba(255,122,93,0.2)'; ctx.lineWidth = Math.max(0.5, R * 0.03);
     ctx.beginPath(); ctx.moveTo(0, -R * 0.5); ctx.lineTo(0, R * 0.6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-R * 0.5, -R * 0.2); ctx.lineTo(R * 0.5, -R * 0.2); ctx.stroke();
-    // glowing reactor core
+    // rear engine exhaust (small ember trail off the bottom tip)
     ctx.globalCompositeOperation = 'lighter';
+    var exPulse = 0.5 + 0.5 * Math.sin(performance.now() / 90 + en.phase);
+    ctx.fillStyle = 'rgba(255,140,80,' + (0.4 + 0.3 * exPulse).toFixed(2) + ')';
+    ctx.beginPath(); ctx.moveTo(-R * 0.12, R * 0.9); ctx.quadraticCurveTo(0, R * 1.35 + R * 0.25 * exPulse, R * 0.12, R * 0.9); ctx.closePath(); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // glowing reactor core
     var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 180 + en.phase);
     var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.25);
     cg.addColorStop(0, 'rgba(255,150,90,' + (0.9 * pulse).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,100,60,0)');
+    ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.25, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
   function drawInterceptor(en, R, depth) {
-    // needle-thin dart with ion trail streaks and pulsing core
+    // needle-thin dart with animated ion trail + hot engine flame + pulsing core
     var tilt = clamp((en.vx || 0) / 260, -0.6, 0.6);
     ctx.save(); ctx.rotate(tilt);
-    // ion trail streaks behind the interceptor
+    // ion trail streaks behind the interceptor (animated shimmer)
+    var shimmer = 0.5 + 0.5 * Math.sin(performance.now() / 80 + en.phase);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(255,61,240,' + (0.35 + depth * 0.25).toFixed(2) + ')';
+    ctx.strokeStyle = 'rgba(255,61,240,' + (0.35 + depth * 0.25 + shimmer * 0.2).toFixed(2) + ')';
     ctx.lineWidth = Math.max(1, R * 0.06); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(-R * 0.22, -R * 0.3); ctx.lineTo(-R * 0.42, -R * 1.35); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(R * 0.22, -R * 0.3); ctx.lineTo(R * 0.42, -R * 1.35); ctx.stroke();
@@ -1564,21 +1592,29 @@
     ctx.lineWidth = Math.max(0.5, R * 0.03);
     ctx.beginPath(); ctx.moveTo(-R * 0.15, -R * 0.2); ctx.lineTo(-R * 0.28, -R * 1.1); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(R * 0.15, -R * 0.2); ctx.lineTo(R * 0.28, -R * 1.1); ctx.stroke();
+    // hot engine flame off the rear tail
+    var exPulse = 0.6 + 0.4 * Math.sin(performance.now() / 60 + en.phase);
+    ctx.fillStyle = 'rgba(255,120,220,' + (0.5 + 0.3 * exPulse).toFixed(2) + ')';
+    ctx.beginPath(); ctx.moveTo(-R * 0.1, R * 0.9); ctx.quadraticCurveTo(0, R * 1.3 + R * 0.3 * exPulse, R * 0.1, R * 0.9); ctx.closePath(); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     // hull
     ctx.beginPath();
     ctx.moveTo(0, R * 1.05); ctx.lineTo(R * 0.34, -R * 0.15); ctx.lineTo(R * 0.14, -R * 0.75);
     ctx.lineTo(0, -R * 0.5); ctx.lineTo(-R * 0.14, -R * 0.75); ctx.lineTo(-R * 0.34, -R * 0.15); ctx.closePath();
     var ig = ctx.createLinearGradient(0, -R * 0.75, 0, R);
-    ig.addColorStop(0, 'rgba(38,14,42,0.96)'); ig.addColorStop(1, 'rgba(18,6,22,0.94)');
+    ig.addColorStop(0, 'rgba(38,14,42,0.96)'); ig.addColorStop(0.6, 'rgba(24,9,28,0.95)'); ig.addColorStop(1, 'rgba(16,5,20,0.94)');
     ctx.fillStyle = ig; ctx.fill();
     ctx.lineWidth = Math.max(1.2, R * 0.09); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.65 + depth * 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+    // leading-edge rim light
+    ctx.strokeStyle = 'rgba(255,120,240,' + (0.5 + depth * 0.3).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.5, R * 0.03);
+    ctx.beginPath(); ctx.moveTo(0, R * 0.9); ctx.lineTo(R * 0.3, -R * 0.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, R * 0.9); ctx.lineTo(-R * 0.3, -R * 0.3); ctx.stroke();
     // panel line
     ctx.strokeStyle = 'rgba(255,61,240,0.15)'; ctx.lineWidth = Math.max(0.4, R * 0.025);
     ctx.beginPath(); ctx.moveTo(0, -R * 0.4); ctx.lineTo(0, R * 0.7); ctx.stroke();
     // reactor core
-    ctx.globalCompositeOperation = 'lighter';
     var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 140 + en.phase);
+    ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = 'rgba(255,150,255,' + (0.9 * pulse).toFixed(2) + ')';
     ctx.beginPath(); ctx.arc(0, -R * 0.1, Math.max(1.6, R * 0.14), 0, TAU); ctx.fill();
     var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.22);
@@ -1588,19 +1624,30 @@
     ctx.restore();
   }
   function drawGunship(en, R, depth) {
-    // squat armored hex hull with twin side cannon pods + pulsing power core + panel detail
+    // squat armored hex hull with rear engine trail, rim light, cannon pods + power core
     ctx.beginPath();
     ctx.moveTo(-R * 0.9, -R * 0.1); ctx.lineTo(-R * 0.5, -R * 0.55); ctx.lineTo(R * 0.5, -R * 0.55);
     ctx.lineTo(R * 0.9, -R * 0.1); ctx.lineTo(R * 0.62, R * 0.5); ctx.lineTo(-R * 0.62, R * 0.5); ctx.closePath();
     var gg = ctx.createLinearGradient(0, -R * 0.55, 0, R * 0.5);
-    gg.addColorStop(0, 'rgba(44,34,14,0.96)'); gg.addColorStop(1, 'rgba(24,18,6,0.94)');
+    gg.addColorStop(0, 'rgba(44,34,14,0.96)'); gg.addColorStop(0.6, 'rgba(32,24,10,0.95)'); gg.addColorStop(1, 'rgba(22,16,6,0.94)');
     ctx.fillStyle = gg; ctx.fill();
     ctx.lineWidth = Math.max(1.6, R * 0.08); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.6 + depth * 0.4; ctx.stroke(); ctx.globalAlpha = 1;
+    // leading-edge rim light (top swept armor)
+    ctx.strokeStyle = 'rgba(255,211,77,' + (0.5 + depth * 0.3).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.6, R * 0.035);
+    ctx.beginPath(); ctx.moveTo(-R * 0.5, -R * 0.55); ctx.lineTo(R * 0.5, -R * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-R * 0.9, -R * 0.1); ctx.lineTo(-R * 0.5, -R * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(R * 0.9, -R * 0.1); ctx.lineTo(R * 0.5, -R * 0.55); ctx.stroke();
     // armor panel lines
     ctx.strokeStyle = 'rgba(255,211,77,0.15)'; ctx.lineWidth = Math.max(0.5, R * 0.025);
     ctx.beginPath(); ctx.moveTo(-R * 0.6, -R * 0.3); ctx.lineTo(R * 0.6, -R * 0.3); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-R * 0.7, R * 0.1); ctx.lineTo(R * 0.7, R * 0.1); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, -R * 0.5); ctx.lineTo(0, R * 0.45); ctx.stroke();
+    // rear engine trail (amber embers off the back hull)
+    var exPulse = 0.6 + 0.4 * Math.sin(performance.now() / 100 + en.phase);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,190,100,' + (0.4 + 0.25 * exPulse).toFixed(2) + ')';
+    ctx.beginPath(); ctx.moveTo(-R * 0.2, R * 0.42); ctx.lineTo(-R * 0.08, R * 0.78); ctx.lineTo(R * 0.08, R * 0.78); ctx.lineTo(R * 0.2, R * 0.42); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     // cannon pods
     ctx.fillStyle = 'rgba(50,38,14,0.95)';
     ctx.fillRect(-R * 0.98, -R * 0.15, R * 0.28, R * 0.5); ctx.fillRect(R * 0.7, -R * 0.15, R * 0.28, R * 0.5);
@@ -1621,25 +1668,31 @@
     ctx.globalCompositeOperation = 'source-over';
   }
   function drawTurret(en, R, depth) {
-    // radial spiked mine with rotating spikes, pulsing core eye, and energy arcs
+    // radial spiked mine with rim-lit spikes, outer energy ring, pulsing core eye
     ctx.save(); ctx.rotate(en.phase * 0.6);
     ctx.strokeStyle = en.col; ctx.lineWidth = Math.max(1.2, R * 0.07); ctx.globalAlpha = 0.55 + depth * 0.35;
     var spikes = 6;
     for (var s = 0; s < spikes; s++) {
       var a = (s / spikes) * TAU;
       ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.5, Math.sin(a) * R * 0.5);
-      ctx.lineTo(Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05); ctx.stroke();
+      ctx.lineTo(Math.cos(a) * R * 1.07, Math.sin(a) * R * 1.07); ctx.stroke();
+      // spike leading-edge rim light (bright inner face toward the core)
+      ctx.strokeStyle = 'rgba(124,255,178,' + (0.4 + depth * 0.2).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.5, R * 0.025);
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.5, Math.sin(a) * R * 0.5); ctx.lineTo(Math.cos(a - 0.12) * R * 1.07, Math.sin(a - 0.12) * R * 1.07); ctx.stroke();
       // spike tip glow
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = 'rgba(124,255,178,' + (0.3 + depth * 0.2).toFixed(2) + ')';
-      ctx.beginPath(); ctx.arc(Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05, R * 0.06, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(Math.cos(a) * R * 1.07, Math.sin(a) * R * 1.07, R * 0.06, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
     ctx.globalAlpha = 1;
+    // outer energy ring (rotating, between spikes and core)
+    ctx.strokeStyle = 'rgba(124,255,178,0.25)'; ctx.lineWidth = Math.max(0.5, R * 0.02);
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.72, 0, TAU); ctx.stroke();
     // inner hull
     ctx.beginPath(); ctx.arc(0, 0, R * 0.55, 0, TAU);
     var tg = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.55);
-    tg.addColorStop(0, 'rgba(16,38,30,0.96)'); tg.addColorStop(1, 'rgba(8,20,16,0.94)');
+    tg.addColorStop(0, 'rgba(16,38,30,0.96)'); tg.addColorStop(0.6, 'rgba(12,28,22,0.95)'); tg.addColorStop(1, 'rgba(8,20,16,0.94)');
     ctx.fillStyle = tg; ctx.fill();
     ctx.lineWidth = Math.max(1.4, R * 0.07); ctx.strokeStyle = en.col; ctx.stroke();
     // inner ring detail
@@ -1737,22 +1790,36 @@
     ctx.globalCompositeOperation = 'lighter';
     for (var e = -1; e <= 1; e += 2) {
       var ex = e * 15;
-      // engine nacelle housing
+      // engine nacelle housing (metallic + cyan trim)
       ctx.fillStyle = 'rgba(30,40,60,0.9)';
       ctx.beginPath(); ctx.moveTo(ex - 8, 16); ctx.lineTo(ex + 8, 16); ctx.lineTo(ex + 6, 28); ctx.lineTo(ex - 6, 28); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = 'rgba(57,230,255,0.4)'; ctx.lineWidth = 0.8; ctx.stroke();
-      // main engine glow
+      // engine exhaust core — layered combustion: blue base ring → white-hot centre
+      var coreR = 6 + boost * 4 + abK * 2;
+      // outer blue combustion ring
+      var blueRing = ctx.createRadialGradient(ex, 24, 0, ex, 24, coreR * 2.4);
+      blueRing.addColorStop(0, 'rgba(80,160,255,' + (0.7 * flick).toFixed(2) + ')');
+      blueRing.addColorStop(0.4, 'rgba(120,220,255,' + (0.5 * flick).toFixed(2) + ')');
+      blueRing.addColorStop(1, 'rgba(120,220,255,0)');
+      ctx.fillStyle = blueRing; ctx.beginPath(); ctx.arc(ex, 24, coreR * 2.4, 0, TAU); ctx.fill();
+      // main engine glow (wide soft halo)
       var eg = ctx.createRadialGradient(ex, 24, 0, ex, 24, 30 + boost * 46 + abK * 26);
       eg.addColorStop(0, 'rgba(120,255,200,' + (0.55 + boost * 0.4).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(120,255,200,0)');
       ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, 24, 30 + boost * 46 + abK * 26, 0, TAU); ctx.fill();
-      // flame tongue
-      ctx.fillStyle = 'rgba(180,255,225,' + (0.7 * flick).toFixed(2) + ')';
-      ctx.beginPath(); ctx.moveTo(ex - 6, 20); ctx.quadraticCurveTo(ex, 30 + thrust * 60, ex + 6, 20); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(57,230,255,' + (0.5 * flick).toFixed(2) + ')';
-      ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 40, ex + 3, 22); ctx.closePath(); ctx.fill();
+      // flame tongue — layered: outer green, mid cyan, hot white core
+      ctx.fillStyle = 'rgba(80,255,190,' + (0.8 * flick).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(ex - 7, 20); ctx.quadraticCurveTo(ex, 32 + thrust * 62, ex + 7, 20); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(120,255,200,' + (0.7 * flick).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(ex - 5, 21); ctx.quadraticCurveTo(ex, 31 + thrust * 48, ex + 5, 21); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(57,230,255,' + (0.6 * flick).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(ex - 3, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 36, ex + 3, 22); ctx.closePath(); ctx.fill();
       if (abK > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * abK).toFixed(2) + ')';
+        // white-hot afterburner core spike
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * abK).toFixed(2) + ')';
         ctx.beginPath(); ctx.moveTo(ex - 2, 22); ctx.quadraticCurveTo(ex, 30 + thrust * 78, ex + 2, 22); ctx.closePath(); ctx.fill();
+        // afterburner mach-cone ring at the nozzle
+        ctx.strokeStyle = 'rgba(210,245,255,' + (0.6 * abK).toFixed(2) + ')'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.ellipse(ex, 26, 6, 2.2, 0, 0, TAU); ctx.stroke();
       }
       if (!reduceMotion) {
         var trailLen = 46 + boost * 90 + Math.min(60, speed * 0.05) + abK * 140;
@@ -1766,15 +1833,19 @@
     ctx.globalCompositeOperation = 'source-over';
 
     if (!blink) {
-      // ---- swept wings with panel detail ----
+      // ---- swept wings with leading-edge lighting ----
       ctx.save(); ctx.transform(1, 0, roll * 0.5, 1, 0, 0);
       var wg = ctx.createLinearGradient(0, 0, 0, 22);
-      wg.addColorStop(0, '#5a7bc0'); wg.addColorStop(1, '#2c3e6e');
+      wg.addColorStop(0, '#5a7bc0'); wg.addColorStop(0.4, '#43659f'); wg.addColorStop(0.8, '#2c3e6e'); wg.addColorStop(1, '#1d2c52');
       ctx.fillStyle = wg; ctx.strokeStyle = 'rgba(57,230,255,0.7)'; ctx.lineWidth = 1.6;
       // left wing
       ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-44, 22); ctx.lineTo(-30, 26); ctx.lineTo(-4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
       // right wing
       ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(44, 22); ctx.lineTo(30, 26); ctx.lineTo(4, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // leading-edge glow (cyan, lit along the swept front edges)
+      ctx.strokeStyle = 'rgba(57,230,255,0.55)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-44, 22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(44, 22); ctx.stroke();
       // panel lines on wings
       ctx.strokeStyle = 'rgba(57,230,255,0.2)'; ctx.lineWidth = 0.6;
       ctx.beginPath(); ctx.moveTo(-10, 4); ctx.lineTo(-36, 22); ctx.stroke();
@@ -1784,9 +1855,17 @@
       // wingtip cannon lights
       ctx.fillStyle = muzzle > 0 ? '#eafff5' : 'rgba(124,255,178,0.85)';
       ctx.beginPath(); ctx.arc(-40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.arc(40, 22, muzzle > 0 ? 5 : 2.4, 0, TAU); ctx.fill();
+      // nav lights — blinking port (red) / starboard (green), classic aircraft marker
+      var navBlink = Math.floor(now / 650) % 2 === 0;
+      if (navBlink) {
+        ctx.fillStyle = 'rgba(255,60,80,0.95)'; ctx.beginPath(); ctx.arc(-3, 25, 2.2, 0, TAU); ctx.fill();
+      }
+      if (navBlink) {
+        ctx.fillStyle = 'rgba(60,255,140,0.95)'; ctx.beginPath(); ctx.arc(3, 25, 2.2, 0, TAU); ctx.fill();
+      }
       ctx.restore();
 
-      // ---- central fuselage with panel detail ----
+      // ---- central fuselage with rim lighting + panel detail ----
       ctx.beginPath();
       ctx.moveTo(0, -36); ctx.lineTo(10, -6); ctx.lineTo(14, 22); ctx.lineTo(6, 28); ctx.lineTo(0, 24);
       ctx.lineTo(-6, 28); ctx.lineTo(-14, 22); ctx.lineTo(-10, -6); ctx.closePath();
@@ -1794,6 +1873,9 @@
       hg.addColorStop(0, '#eaf7ff'); hg.addColorStop(0.3, '#c0d8f0'); hg.addColorStop(0.5, '#aac6ee'); hg.addColorStop(0.8, '#6888b8'); hg.addColorStop(1, '#46689f');
       ctx.fillStyle = hg; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = '#39e6ff'; ctx.stroke();
+      // rim light on the top spine — a bright specular edge that turns the hull pop
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(0, -36); ctx.lineTo(9, -8); ctx.stroke();
       // spine highlight
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, 18); ctx.stroke();
       // panel lines across fuselage
@@ -1806,13 +1888,17 @@
       ctx.fillRect(-13, -4, 4, 8); ctx.fillRect(9, -4, 4, 8);
       ctx.strokeStyle = 'rgba(57,230,255,0.3)'; ctx.lineWidth = 0.5;
       ctx.strokeRect(-13, -4, 4, 8); ctx.strokeRect(9, -4, 4, 8);
-      // ---- glowing cockpit canopy ----
+      // ---- glowing cockpit canopy with glass reflection ----
       ctx.globalCompositeOperation = 'lighter';
       var cg = ctx.createRadialGradient(0, -8, 0, 0, -8, 12);
       cg.addColorStop(0, 'rgba(120,240,255,0.95)'); cg.addColorStop(0.6, 'rgba(80,200,255,0.5)'); cg.addColorStop(1, 'rgba(57,160,255,0)');
       ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -8, 7, 14, 0, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = '#0a1c3a'; ctx.beginPath(); ctx.ellipse(0, -10, 4, 9, 0, 0, TAU); ctx.fill();
+      // canopy glass specular reflection — a curved white sheen (off-center highlight)
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.beginPath(); ctx.ellipse(-1.5, -12, 1.4, 4.5, -0.3, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-1.2, -8.5, 1.1, 2.6, -0.2, 0, TAU); ctx.fill();
       // canopy frame highlight
       ctx.strokeStyle = 'rgba(120,240,255,0.4)'; ctx.lineWidth = 0.8;
       ctx.beginPath(); ctx.ellipse(0, -10, 4.5, 9.5, 0, 0, TAU); ctx.stroke();
