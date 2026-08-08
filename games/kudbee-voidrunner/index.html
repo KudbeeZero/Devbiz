@@ -781,8 +781,9 @@
   function playerHit(x, y) {
     if (iframes > 0) return;
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); hitFlashT = 0.32; SFX.playerHit();
-    // taking a hit resets the chain multiplier — arcade risk/reward
+    // taking a hit resets the chain + close-call streak — arcade risk/reward
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
+    nearMissStreak = 0;
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -834,13 +835,16 @@
   // The pop anchors just off the ship toward the passing rock (projecting at
   // the player plane would fling it off-screen).
   function nearMiss(rk) {
-    var bonus = rk.r > 70 ? 50 : 25;
+    // arcade close-call streak: consecutive grazes escalate the bonus (25 → 40 → 60 → 100)
+    var streak = Math.min(4, nearMissStreak + 1); nearMissStreak = streak;
+    var bonus = rk.r > 70 ? 50 + (streak - 1) * 15 : 25 + (streak - 1) * 15;
     score += bonus;
     var bx = cx, by = cy + Math.min(W, H) * 0.30;
     var dxw = rk.x - camX, dyw = rk.y - camY, dl = Math.sqrt(dxw * dxw + dyw * dyw) || 1;
-    flashText('NEAR MISS +' + bonus,
+    flashText((streak > 1 ? 'CLOSE CALL ×' + streak + '  ' : '') + '+'+bonus,
       clamp(bx + (dxw / dl) * 140, 100, W - 100),
-      clamp(by - 60 + (dyw / dl) * 90, 60, H - 60), '#39e6ff');
+      clamp(by - 60 + (dyw / dl) * 90, 60, H - 60), streak >= 3 ? '#7CFFb2' : '#39e6ff');
+    if (streak >= 3) punch(0.3);
     shake = Math.min(shake + 0.12, 1.2);
     noiseHit(0.14, 0.12, 3400, 'highpass');
   }
@@ -852,6 +856,7 @@
   // (×1 → ×5) that resets on taking damage. Each new tier pops a combo-esc label, so
   // fast, clean clearing reads as building real heat — classic coin-op escalation.
   var chainMult = 1, chainMilestone = 0, chainMultFlash = 0, chainMultT = 0;
+  var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -908,7 +913,7 @@
 
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
-    chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0;
+    chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1242,6 +1247,7 @@
     rk.alive = false; var idx = rocks.indexOf(rk); if (idx >= 0) rocks.splice(idx, 1);
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); hitFlashT = 0.32; SFX.playerHit();
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
+    nearMissStreak = 0;
     var sp = project(rk.x, rk.y, rk.z); burst(sp.sx, sp.sy, '#ff5d3c', 30, 560);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -2675,6 +2681,7 @@
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
+    get nearMissStreak() { return nearMissStreak; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
