@@ -845,6 +845,9 @@
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
     nearMissStreak = 0;
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
+    // screen-edge hit-direction wedge
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    damageDir = Math.atan2(sp.sy - by, sp.sx - bx); damageDirT = 0.9;
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
   }
@@ -920,6 +923,7 @@
   var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
   var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
+  var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -978,6 +982,7 @@
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
     chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
     runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
+    damageDir = -1; damageDirT = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1115,6 +1120,7 @@
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
+    if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
     if (chainMultFlash > 0) chainMultFlash = Math.max(0, chainMultFlash - dt * 2);
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
@@ -1605,6 +1611,28 @@
     var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
     vg.addColorStop(0, 'rgba(255,60,50,0)'); vg.addColorStop(1, 'rgba(255,40,30,' + (fa * 0.35).toFixed(2) + ')');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // screen-edge wedge pointing at where the hit came from
+    if (damageDirT > 0) {
+      var da = clamp(damageDirT / 0.9, 0, 1);
+      var margin = 40, centerX = W / 2, centerY = H / 2;
+      var len = Math.sqrt(centerX * centerX + centerY * centerY) + margin;
+      var ex = cx + Math.cos(damageDir) * len, ey = cy + Math.sin(damageDir) * len;
+      // clamp to a point on the viewport edge
+      var t = Infinity;
+      if (Math.cos(damageDir) > 0.0001) t = Math.min(t, (W - margin - cx) / Math.cos(damageDir));
+      else if (Math.cos(damageDir) < -0.0001) t = Math.min(t, (margin - cx) / Math.cos(damageDir));
+      if (Math.sin(damageDir) > 0.0001) t = Math.min(t, (H - margin - cy) / Math.sin(damageDir));
+      else if (Math.sin(damageDir) < -0.0001) t = Math.min(t, (margin - cy) / Math.sin(damageDir));
+      if (isFinite(t) && t > 0) { ex = cx + Math.cos(damageDir) * t; ey = cy + Math.sin(damageDir) * t; }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.translate(ex, ey); ctx.rotate(damageDir + Math.PI / 2);
+      ctx.fillStyle = 'rgba(255,60,50,' + (0.5 * da).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, 20); ctx.lineTo(10, 20); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = da; ctx.strokeStyle = '#ffb1a8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 26); ctx.stroke();
+      ctx.restore();
+    }
   }
   // the chain weapon's payoff shot: a bright core beam from the ship's forward point
   // through every hit enemy (far → near), plus a per-hit flash that reveals on a
