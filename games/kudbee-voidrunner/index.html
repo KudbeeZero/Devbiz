@@ -598,7 +598,8 @@
       drone: 10,
       interceptor: dist > 350 ? 6 + Math.min(6, wave * 1.2) : 0,
       gunship: dist > 900 ? 4 + Math.min(8, wave * 1.5) : 0,
-      turret: dist > 650 ? 5 + Math.min(6, wave * 1.2) : 0
+      turret: dist > 650 ? 5 + Math.min(6, wave * 1.2) : 0,
+      seeker: dist > 600 ? 7 + Math.min(7, wave * 1.2) : 0
     };
     var total = 0, k;
     for (k in w) total += w[k];
@@ -623,6 +624,11 @@
         en.r = 40; en.hp = 3; en.col = '#7CFFb2'; en.scoreBase = 360;
         en.driftX = en.x; en.driftY = en.y; en.fireT = rand(1.8, 2.6);
         break;
+      case 'seeker':
+        // kamikaze diver: fast, single-hp, closes straight at the player and doesn't shoot
+        en.r = 20; en.hp = 1; en.col = '#ff4df0'; en.scoreBase = 350;
+        en.seekGain = 0; en.sway = Math.random() * TAU;
+        break;
       default: // 'drone'
         en.type = 'drone'; en.r = 32; en.hp = 2; en.col = '#ff7a5d'; en.scoreBase = 250; en.fireT = rand(0.8, 1.8);
     }
@@ -632,17 +638,41 @@
   }
   function spawnEnemy() { enemies.push(makeEnemy()); }
 
-  // ===== boss: a capital ship that holds at engage range, weaves, and unloads volleys =====
+  // ===== boss: a capital ship that holds at engage range, weaves, and unloads volleys.
+  // Boss VARIANT rotates each wave for variety (and pairs with the sector palette):
+  //   titan    — slow, heavy HP, steady murder-ball volleys
+  //   reaper   — hunched scythe, faster weave, thinner but meaner
+  //   voidlord — arrogant, radial star-burst attack the player must thread
+  // =====
+  function bossVariant() {
+    var idx = wave % 3;
+    return idx === 1 ? 'reaper' : (idx === 2 ? 'voidlord' : 'titan');
+  }
   function spawnBoss() {
-    boss = { x: 0, y: -40, z: FAR, r: 150, hp: 34 + Math.floor(dist / 700) + wave * 8, maxHp: 1, fireT: 1.8, phase: 0, hitFlash: 0, alive: true };
+    var type = bossVariant();
+    var hpBase = type === 'titan' ? 52 : type === 'reaper' ? 40 : 46;
+    boss = { type: type, x: 0, y: -40, z: FAR, r: 150, hp: hpBase + Math.floor(dist / 700) + wave * 8, maxHp: 1, fireT: 1.6, phase: 0, hitFlash: 0, alive: true };
     boss.maxHp = boss.hp;
-    callout('CAPITAL SHIP', 'blast the core', '#ff5d3c'); shake = Math.min(shake + 0.6, 1.7); freeze(0.07); punch(0.8);
+    var nm = { titan: 'CAPITAL SHIP · TITAN', reaper: 'REAVER · THE REAPER', voidlord: 'VOIDLORD ENGAGED' }[type] || 'CAPITAL SHIP';
+    callout(nm, 'blast the core', '#ff5d3c'); shake = Math.min(shake + 0.6, 1.7); freeze(0.07); punch(0.8);
   }
   function bossVolley() {
     var sp = project(boss.x, boss.y, boss.z);
     var n = 3 + Math.min(3, Math.floor(dist / 2500));
     for (var i = 0; i < n; i++) ebullets.push({ x: boss.x + (i - (n - 1) / 2) * 46, y: boss.y + 40, z: boss.z, life: 1 });
     burst(sp.sx, sp.sy, '#ff9a7a', 6, 200);
+  }
+  // boss-radial: the Vodland unloads a ring of bolts the player threads between
+  function bossRadial() {
+    if (!boss) return;
+    var sp = project(boss.x, boss.y, boss.z);
+    var n = 12;
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * TAU + boss.phase * 0.4;
+      ebullets.push({ x: boss.x + Math.cos(a) * boss.r, y: boss.y + Math.sin(a) * boss.r, z: boss.z, life: 1 });
+    }
+    burst(sp.sx, sp.sy, '#ffb07a', 18, 240);
+    callout('VOID BURST', 'thread the gaps', '#c46bff');
   }
   function hitBoss() {
     boss.hp--; boss.hitFlash = 0.12; score += 20;
@@ -682,6 +712,7 @@
     en.hp -= dmg || 1; var sp = project(en.x, en.y, en.z); burst(sp.sx, sp.sy, en.col, 9, 280); SFX.hit();
     if (en.hp <= 0) {
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
+      if (challenge) challengeKill('enemy');
       combo++; comboT = 2.2;
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
@@ -775,6 +806,20 @@
         en.x += (en.driftX - en.x) * Math.min(1, dt * 0.6); en.y += (en.driftY - en.y) * Math.min(1, dt * 0.6);
         break;
       }
+      case 'seeker': {
+        // fast closer that homes straight at the pilot; correction sharpens as it nears
+        en.sway += dt * 30;
+        var sx = en.sway;                                  // damped approach with a light corkscrew
+        en.z -= (speed * 0.92) * dt;
+        var honX = camX + Math.sin(sx) * 40, honY = camY * 0.5 + Math.cos(sx * 0.7) * 30;
+        var tight = clamp((FAR - en.z) / FAR, 0, 1);       // 0 far → 1 near
+        var corr = 130 + tight * 420;
+        var pxs = en.x, pys = en.y;
+        en.x += clamp((honX - en.x) / 40, -1, 1) * corr * dt;
+        en.y += clamp((honY - en.y) / 40, -1, 1) * corr * dt;
+        en.vx = dt > 0 ? (en.x - pxs) / dt : 0; en.vy = dt > 0 ? (en.y - pys) / dt : 0;
+        break;
+      }
       default: { // 'drone' — the original smooth sine-weave homing toward a moving target point
         en.z -= (speed * 0.55) * dt;
         var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
@@ -784,6 +829,7 @@
   }
   // per-type attack pattern — single homing bolt vs. multi-bolt spread/radial volleys.
   function updateEnemyFire(en, dt) {
+    if (en.type === 'seeker') return;    // kamikaze diver doesn't shoot — the dive is the weapon
     if (!(en.z > 120 && en.z < 950)) return;
     en.fireT -= dt; if (en.fireT > 0) return;
     switch (en.type) {
@@ -800,6 +846,9 @@
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
     nearMissStreak = 0;
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
+    // screen-edge hit-direction wedge
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    damageDir = Math.atan2(sp.sy - by, sp.sx - bx); damageDirT = 0.9;
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
   }
@@ -875,6 +924,48 @@
   var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
   var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
+  var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
+  // ---- arcade challenge events: periodic timed clear-objectives (infestation /
+  // rock storm) that pay a bonus if cleared in time. Gives the run short-term goals.
+  var challenge = null;   // { kind:'infestation'|'rockStorm', need:int, progress:int, time:sec, base:int }
+  var challengeNext = 1800, challengeFlash = 0;
+  function startChallenge() {
+    if (!challenge && state === 'play') {
+      var kind = Math.random() < 0.5 ? 'infestation' : 'rockStorm';
+      var need = 5 + (wave * 2 | 0);
+      if (kind === 'infestation') challenge = { kind: kind, need: need, progress: 0, time: 24, base: 3000 };
+      else challenge = { kind: kind, need: Math.max(6, need), progress: 0, time: 26, base: 2500 };
+      challengeFlash = 1;
+      callout(kind === 'infestation' ? 'CHALLENGE · INFESTATION' : 'CHALLENGE · ROCK STORM',
+        'clear ' + challenge.need + ' targets in ' + challenge.time + 's', '#7CFFb2');
+      SFX.zone();
+    }
+  }
+  function tickChallenge(dt) {
+    if (!challenge) return;
+    challenge.time -= dt;
+    if (challenge.time <= 0) {
+      callout('CHALLENGE FAILED', 'no bonus', '#ff5d3c');
+      challenge = null; challengeNext = dist + 1400;
+      return;
+    }
+    if (challenge.progress >= challenge.need) {
+      var bonus = challenge.base * (Math.max(1, Math.ceil(challenge.time)));
+      score += bonus;
+      var pp = project(camX, camY, 240); flashText('+'+bonus.toLocaleString(), pp.sx, pp.sy, '#7CFFb2');
+      burst(W / 2, cy, '#7CFFb2', 30, 500);
+      callout('CHALLENGE COMPLETE', '+' + bonus.toLocaleString(), '#7CFFb2');
+      SFX.volley(); punch(0.7);
+      challenge = null; challengeNext = dist + 1400;
+    }
+  }
+  function challengeKill(type) {
+    if (!challenge) return;
+    if ((challenge.kind === 'infestation' && type !== 'rock') ||
+        (challenge.kind === 'rockStorm' && type === 'rock')) {
+      challenge.progress++;
+    }
+  }
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -933,6 +1024,8 @@
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
     chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
     runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
+    damageDir = -1; damageDirT = 0;
+    challenge = null; challengeNext = 1800; challengeFlash = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1070,6 +1163,7 @@
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
+    if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
     if (chainMultFlash > 0) chainMultFlash = Math.max(0, chainMultFlash - dt * 2);
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
     boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
@@ -1109,6 +1203,11 @@
     if (zoneHint > 0) zoneHint = Math.max(0, zoneHint - dt * 0.5);
     zoneTintCur = ZONES[zoneIdx];
 
+    // arcade challenge events — a timed clear-objective that pays off if met in time
+    if (challengeFlash > 0) challengeFlash = Math.max(0, challengeFlash - dt * 2);
+    if (!challenge && dist >= challengeNext && !boss) { challengeNext = dist + 2000; startChallenge(); }
+    tickChallenge(dt);
+
     // starfield stream
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i]; s.z -= speed * dt;
@@ -1136,10 +1235,17 @@
       else if (dist >= nextBossDist) { bossPending = true; bossWarn = 2.2; callout('⚠ WARNING', 'capital ship inbound', '#ff5d3c'); shake = Math.min(shake + 0.4, 1.4); SFX.bossWarn(); }
     } else {
       boss.z += (460 - boss.z) * Math.min(1, dt * 0.9);        // descend to engage range and hold
-      boss.phase += dt * 0.7;
-      boss.x = Math.cos(boss.phase) * 210; boss.y = -40 + Math.sin(boss.phase * 0.85) * 80;
+      boss.phase += dt * (boss.type === 'reaper' ? 1.1 : 0.7);   // reaper weaves faster
+      var weaveAmp = boss.type === 'titan' ? 150 : 210;          // titan stays centred, others sweep wider
+      boss.x = Math.cos(boss.phase) * weaveAmp;
+      boss.y = -40 + Math.sin(boss.phase * 0.85) * (boss.type === 'voidlord' ? 110 : 80);
       if (boss.hitFlash > 0) boss.hitFlash -= dt;
-      boss.fireT -= dt; if (boss.fireT <= 0 && boss.z < 700) { boss.fireT = Math.max(0.85, 1.6 - wave * 0.15); bossVolley(); }
+      boss.fireT -= dt;
+      if (boss.fireT <= 0 && boss.z < 700) {
+        // voidlord occasionally unloads a radial star-burst — the player threads the gaps
+        if (boss.type === 'voidlord' && Math.random() < 0.4) { boss.fireT = 1.9; bossRadial(); }
+        else { boss.fireT = Math.max(0.85, (boss.type === 'titan' ? 1.5 : 1.3) - wave * 0.15); bossVolley(); }
+      }
     }
 
     // power-ups drift in (held back during boss fights), gently home so they're catchable
@@ -1253,6 +1359,7 @@
     burst(sp.sx, sp.sy, t.col, 10, 260); SFX.hit();
     if (t.hp <= 0) {
       t.alive = false; combo++; comboT = 2.2; SFX.rock(t.r > 70);
+      if (challenge) challengeKill('rock');
       var gain = 100 * (t.r > 70 ? 2 : 1) * Math.max(1, combo);
       score += gain; shake = Math.min(shake + 0.35, 1.3);
       burst(sp.sx, sp.sy, '#ffd34d', 22, 460); burst(sp.sx, sp.sy, '#fff', 10, 300);
@@ -1553,6 +1660,28 @@
     var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
     vg.addColorStop(0, 'rgba(255,60,50,0)'); vg.addColorStop(1, 'rgba(255,40,30,' + (fa * 0.35).toFixed(2) + ')');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // screen-edge wedge pointing at where the hit came from
+    if (damageDirT > 0) {
+      var da = clamp(damageDirT / 0.9, 0, 1);
+      var margin = 40, centerX = W / 2, centerY = H / 2;
+      var len = Math.sqrt(centerX * centerX + centerY * centerY) + margin;
+      var ex = cx + Math.cos(damageDir) * len, ey = cy + Math.sin(damageDir) * len;
+      // clamp to a point on the viewport edge
+      var t = Infinity;
+      if (Math.cos(damageDir) > 0.0001) t = Math.min(t, (W - margin - cx) / Math.cos(damageDir));
+      else if (Math.cos(damageDir) < -0.0001) t = Math.min(t, (margin - cx) / Math.cos(damageDir));
+      if (Math.sin(damageDir) > 0.0001) t = Math.min(t, (H - margin - cy) / Math.sin(damageDir));
+      else if (Math.sin(damageDir) < -0.0001) t = Math.min(t, (margin - cy) / Math.sin(damageDir));
+      if (isFinite(t) && t > 0) { ex = cx + Math.cos(damageDir) * t; ey = cy + Math.sin(damageDir) * t; }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.translate(ex, ey); ctx.rotate(damageDir + Math.PI / 2);
+      ctx.fillStyle = 'rgba(255,60,50,' + (0.5 * da).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, 20); ctx.lineTo(10, 20); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = da; ctx.strokeStyle = '#ffb1a8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 26); ctx.stroke();
+      ctx.restore();
+    }
   }
   // the chain weapon's payoff shot: a bright core beam from the ship's forward point
   // through every hit enemy (far → near), plus a per-hit flash that reveals on a
@@ -1734,7 +1863,24 @@
     hg.addColorStop(0.5, boss.hitFlash > 0 ? '#5a2a26' : 'rgba(24,15,19,0.96)');
     hg.addColorStop(1, boss.hitFlash > 0 ? '#4a1a16' : 'rgba(18,10,14,0.96)');
     ctx.fillStyle = hg; ctx.fill();
-    ctx.lineWidth = Math.max(2, R * 0.035); ctx.strokeStyle = '#ff7a5d'; ctx.stroke();
+    var bt = boss.type || 'titan';
+    ctx.lineWidth = Math.max(2, R * 0.035);
+    // variant accent line / silhouette
+    if (bt === 'reaper') {
+      // hunched scythe: tall swept horn wings above the wide hull
+      ctx.strokeStyle = '#ff3de0'; ctx.lineWidth = Math.max(1.6, R * 0.03);
+      ctx.beginPath(); ctx.moveTo(-R * 0.5, -R * 0.55); ctx.quadraticCurveTo(-R * 0.6, -R * 1.0, -R * 0.2, -R * 1.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(R * 0.5, -R * 0.55); ctx.quadraticCurveTo(R * 0.6, -R * 1.0, R * 0.2, -R * 1.05); ctx.stroke();
+    } else if (bt === 'voidlord') {
+      // radiant ring at the hull waist
+      ctx.strokeStyle = '#c46bff'; ctx.lineWidth = Math.max(1.4, R * 0.02);
+      ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.55, 0, TAU); ctx.stroke();
+    } else {
+      // titan: extra heavy top plate
+      ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = Math.max(1.4, R * 0.03);
+      ctx.beginPath(); ctx.moveTo(-R * 0.28, -R * 0.85); ctx.lineTo(R * 0.28, -R * 0.85); ctx.stroke();
+    }
+    ctx.strokeStyle = '#ff7a5d'; ctx.lineWidth = Math.max(2, R * 0.035); ctx.stroke();
     // armor ribs with gradient
     for (var rib = -2; rib <= 2; rib++) {
       var ribA = 0.25 + Math.abs(rib) * 0.05;
@@ -1755,13 +1901,16 @@
     ctx.fillStyle = 'rgba(255,140,80,0.35)';
     ctx.beginPath(); ctx.arc(-R * 0.83, R * 0.28, R * 0.06, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.arc(R * 0.83, R * 0.28, R * 0.06, 0, TAU); ctx.fill();
-    // glowing core (the weak point) — multi-ring pulsing reactor
+    // glowing core (the weak point) — multi-ring pulsing reactor, variant-tinted
     var cpulse = 0.6 + 0.4 * Math.sin(performance.now() / 170);
+    var cCore = bt === 'reaper' ? '255,61,128' : bt === 'voidlord' ? '196,107,255' : '255,214,96';
+    var cMid  = bt === 'reaper' ? '255,61,192' : bt === 'voidlord' ? '168,80,255' : '255,160,60';
+    var cEdg  = bt === 'reaper' ? '255,93,220' : bt === 'voidlord' ? '124,80,255' : '255,120,60';
     var cg = ctx.createRadialGradient(0, -R * 0.04, 0, 0, -R * 0.04, R * 0.42);
-    cg.addColorStop(0, 'rgba(255,214,96,' + (0.95 * cpulse).toFixed(2) + ')');
-    cg.addColorStop(0.4, 'rgba(255,160,60,' + (0.6 * cpulse).toFixed(2) + ')');
-    cg.addColorStop(0.7, 'rgba(255,120,60,' + (0.3 * cpulse).toFixed(2) + ')');
-    cg.addColorStop(1, 'rgba(255,93,60,0)');
+    cg.addColorStop(0, 'rgba(' + cCore + ',' + (0.95 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(0.4, 'rgba(' + cMid + ',' + (0.6 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(0.7, 'rgba(' + cEdg + ',' + (0.3 * cpulse).toFixed(2) + ')');
+    cg.addColorStop(1, 'rgba(' + cEdg + ',0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.04, R * 0.42, 0, TAU); ctx.fill();
     // core ring detail
     ctx.strokeStyle = 'rgba(255,200,100,' + (0.3 * cpulse).toFixed(2) + ')'; ctx.lineWidth = Math.max(0.8, R * 0.015);
@@ -1785,6 +1934,7 @@
       if (en.type === 'interceptor') drawInterceptor(en, R, depth);
       else if (en.type === 'gunship') drawGunship(en, R, depth);
       else if (en.type === 'turret') drawTurret(en, R, depth);
+      else if (en.type === 'seeker') drawSeeker(en, R, depth);
       else drawDrone(en, R, depth);
       // damage-state sparkle — crackling electric arcs when the hull is damaged
       if (!reduceMotion && en.maxHp > 1 && en.hp < en.maxHp) {
@@ -1881,6 +2031,40 @@
     var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.22);
     cg.addColorStop(0, 'rgba(255,100,240,' + (0.5 * pulse).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,61,240,0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.22, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+  function drawSeeker(en, R, depth) {
+    // hot kamikaze dart: a spiky arrowhead with a bright warning core + thrusting tail.
+    // It tilts into its dive and leaves a rising magenta contrail behind.
+    var tight = clamp((FAR - en.z) / FAR, 0, 1);
+    ctx.save();
+    var tilt = clamp((en.vx || 0) / 260, -0.5, 0.5);
+    ctx.rotate(tilt);
+    // rising contrail off the tail
+    ctx.globalCompositeOperation = 'lighter';
+    var cLen = (26 + tight * 60);
+    var cg = ctx.createLinearGradient(0, R * 0.9, 0, R * 0.9 + cLen);
+    cg.addColorStop(0, 'rgba(255,4,240,' + (0.5 + tight * 0.3).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,4,240,0)');
+    ctx.strokeStyle = cg; ctx.lineWidth = Math.max(1.5, R * 0.14); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, R * 0.9); ctx.lineTo(0, R * 0.9 + cLen); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    // hull — spiky arrowhead
+    ctx.beginPath();
+    ctx.moveTo(0, R); ctx.lineTo(R * 0.85, -R * 0.4); ctx.lineTo(R * 0.3, -R * 0.15);
+    ctx.lineTo(0, -R * 0.62); ctx.lineTo(-R * 0.3, -R * 0.15); ctx.lineTo(-R * 0.85, -R * 0.4); ctx.closePath();
+    var hg = ctx.createLinearGradient(0, -R * 0.6, 0, R);
+    hg.addColorStop(0, 'rgba(60,14,40,0.97)'); hg.addColorStop(1, 'rgba(30,6,22,0.96)');
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.lineWidth = Math.max(1.5, R * 0.1); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.7 + depth * 0.3; ctx.stroke(); ctx.globalAlpha = 1;
+    // warning eye where the core spins
+    ctx.globalCompositeOperation = 'lighter';
+    var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 120 + en.phase);
+    var core = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.3);
+    core.addColorStop(0, 'rgba(255,120,255,' + (0.9 * pulse).toFixed(2) + ')');
+    core.addColorStop(0.6, 'rgba(255,60,220,' + (0.4 * pulse).toFixed(2) + ')');
+    core.addColorStop(1, 'rgba(255,4,240,0)');
+    ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.3, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
@@ -2367,6 +2551,7 @@
     if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
     drawMissileHUD();
+    drawChallengeHUD();
     drawChainMeter();
   }
 
@@ -2390,6 +2575,29 @@
     ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('MSL', sx, sy - sR * 2.2);
+  }
+
+  // --- arcade challenge HUD: a live progress banner with countdown bar ---
+  function drawChallengeHUD() {
+    if (!challenge || state !== 'play') return;
+    var pad = Math.round(Math.min(W, H) * 0.035);
+    var c = challenge;
+    var label = c.kind === 'infestation' ? 'INFESTATION' : 'ROCK STORM';
+    var bx = pad, by = pad + Math.round(Math.min(W, H) * 0.11), bw = Math.min(W * 0.4, 240), bh = 7;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#7CFFb2'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('CHALLENGE · ' + label, bx, by);
+    ctx.fillStyle = '#cfe9ff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.02) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(c.progress + '/' + c.need, bx + bw, by);
+    // progress bar
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(bx, by + Math.round(Math.min(W, H) * 0.024), bw, bh);
+    ctx.fillStyle = '#7CFFb2'; ctx.fillRect(bx, by + Math.round(Math.min(W, H) * 0.024), bw * clamp(c.progress / c.need, 0, 1), bh);
+    // countdown (on the right, turns red when low)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = c.time <= 6 ? '#ff5d3c' : '#8a93a8';
+    ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(Math.ceil(c.time) + 's', W - pad, pad + Math.round(Math.min(W, H) * 0.11));
+    ctx.textAlign = 'left';
   }
 
   // chain-weapon readout: a bottom-center gauge that fills from kills and pulses
@@ -2676,7 +2884,7 @@
     rocks: function () { return rocks; }, bullets: function () { return bullets; },
     enemies: function () { return enemies; }, ebullets: function () { return ebullets; },
     ship: function () { return { camX: camX, camY: camY }; },
-    get bossActive() { return !!boss; }, get bossHp() { return boss ? boss.hp : 0; }, get wave() { return wave; },
+    get bossActive() { return boss ? boss.alive : false; }, get bossHp() { return boss ? boss.hp : 0; }, get bossType() { return boss ? boss.type : null; }, get wave() { return wave; },
     forceBoss: function () { bossPending = false; bossWarn = 0; nextBossDist = dist; spawnBoss(); boss.z = 480; },
     get introDone() { return introDone; }, get introStarted() { return introStarted; }, triggerIntro: function () { runIntro(); }, endIntro: function () { endIntro(); },
     start: start, fire: fire, update: function (dt) { update(dt); },
@@ -2727,7 +2935,7 @@
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
-    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); }, get runStats() { return runStats; },
+    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },     get runStats() { return runStats; }, startChallenge: function () { startChallenge(); }, get challenge() { return challenge; }, challengeKill: function (t) { challengeKill(t); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
