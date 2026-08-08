@@ -325,6 +325,7 @@
     chain: function () { tone(240, 0.16, 'sawtooth', 0.22, 900, 0); tone(720, 0.24, 'triangle', 0.18, 1400, 0.05); noiseHit(0.35, 0.34, 3000, 'highpass'); },
     missile: function () { noiseHit(0.14, 0.22, 3200, 'highpass'); tone(520, 0.16, 'sawtooth', 0.14, 1300); },
     missileHit: function () { noiseHit(0.4, 0.5, 1000); tone(150, 0.3, 'sine', 0.22, 50); },
+    volley: function () { tone(520, 0.08, 'triangle', 0.16, null, 0); tone(660, 0.08, 'triangle', 0.16, null, 0.06); tone(880, 0.12, 'triangle', 0.18, null, 0.12); },
     zone: function () { tone(440, 0.4, 'triangle', 0.18, 220); tone(660, 0.3, 'triangle', 0.14, 120, 0.08); },
     afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
@@ -948,18 +949,49 @@
   }
   function fireMissile() {
     if (state !== 'play' || missileAmmo <= 0 || missileCd > 0) return;
-    var target = acquireMissileTarget();
-    if (!target) return;
-    missileAmmo--; missileCd = MSL_FIRE_CD;
-    var side = Math.random() < 0.5 ? -1 : 1;
-    missiles.push({
-      x: camX + side * 40, y: camY + 30, z: NEAR + 30, side: side,
-      vx: 0, vy: -40, target: target.obj, targetId: target.id,
-      life: 4.5, col: '#ffb36b', gravCd: 0, hitFlash: 0
-    });
-    shake = Math.min(shake + 0.12, 1.0);
-    if (SFX.missile) SFX.missile();
+    // Arcade barrage: when the stash is fat the button volleys up to 3 seekers at
+    // once, spreading across distinct targets/redeploying onto the same lock. This
+    // spends the stash faster but is a satisfying alpha-strike — pure arcade payoff.
+    var count = missileAmmo >= 3 ? 3 : (missileAmmo >= 2 ? 2 : 1);
+    var primary = acquireMissileTarget();
+    if (!primary) return;
+    missileAmmo -= count; missileCd = MSL_FIRE_CD;
+    // Build up to `count` target slots: primary first, then the next closest distinct object.
+    var slots = [primary];
+    var others = acquireMissileBarrage(count - 1, primary.obj);
+    for (var si = 0; si < others.length; si++) slots.push(others[si]);
+    while (slots.length < count) slots.push(primary);                        // reuse the lock to fill the volley
+    for (var fi = 0; fi < slots.length; fi++) {
+      var t = slots[fi];
+      var side = fi % 2 === 0 ? 1 : -1;
+      missiles.push({
+        x: camX + side * 40, y: camY + 30 + fi * -12, z: NEAR + 30, side: side,
+        vx: 0, vy: -40, target: t.obj, targetId: t.id,
+        life: 4.5, col: '#ffb36b', gravCd: 0, hitFlash: 0
+      });
+    }
+    shake = Math.min(shake + 0.12 + count * 0.04, 1.2);
+    if (count >= 3) { punch(0.35); callout('MISSILE VOLLEY ×' + count, 'seekers away', '#ffb36b'); if (SFX.volley) SFX.volley(); }
+    else if (SFX.missile) SFX.missile();
     else SFX.fire();
+  }
+  // collect up to n additional distinct targets (falling back to the primary)
+  function acquireMissileBarrage(n, excludeObj) {
+    var out = [];
+    var pool = [];
+    // gather candidates sorted by proximity, skipping the exclude object
+    var cands = [];
+    for (var i = 0; i < enemies.length; i++) {
+      var en = enemies[i]; if (!en.alive || en === excludeObj || en.z < NEAR + 10 || en.z > FAR) continue;
+      cands.push({ obj: en, d: en.z + Math.abs(en.x - camX) + Math.abs(en.y - camY) });
+    }
+    for (var r = 0; r < rocks.length; r++) {
+      var rk = rocks[r]; if (!rk.alive || rk === excludeObj || rk.z < NEAR + 10 || rk.z > FAR) continue;
+      cands.push({ obj: rk, d: rk.z + Math.abs(rk.x - camX) * 0.6 + Math.abs(rk.y - camY) * 0.6 });
+    }
+    cands.sort(function (a, b) { return a.d - b.d; });
+    for (var c = 0; c < cands.length && out.length < n; c++) out.push({ obj: cands[c].obj, id: 'x' + c });
+    return out;
   }
 
   // ===== power-ups: collectible buffs that stream in like rocks =====
@@ -1127,6 +1159,7 @@
           burst(mspr.sx, mspr.sy, '#ffb36b', 22, 560); burst(mspr.sx, mspr.sy, '#ffd34d', 14, 400);
           ring(mspr.sx, mspr.sy, '#ffb36b', 90, 0.55, 4);
           shake = Math.min(shake + 0.5, 1.4); SFX.missileHit(); punch(0.5);
+          score += 200; flashText('+200 SEEKER', mspr.sx, mspr.sy, '#ffd34d'); // missile impact bonus pop
           if (tgt === boss) hitBoss();
           else if (tgt.type === 'bumper') {} // safety
           else if (tgt.type) hitEnemy(tgt, MSL_DMG);
