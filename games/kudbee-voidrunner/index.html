@@ -338,6 +338,7 @@
     missile: function () { noiseHit(0.14, 0.22, 3200, 'highpass'); tone(520, 0.16, 'sawtooth', 0.14, 1300); },
     missileHit: function () { noiseHit(0.4, 0.5, 1000); tone(150, 0.3, 'sine', 0.22, 50); },
     volley: function () { tone(520, 0.08, 'triangle', 0.16, null, 0); tone(660, 0.08, 'triangle', 0.16, null, 0.06); tone(880, 0.12, 'triangle', 0.18, null, 0.12); },
+    frenzy: function () { tone(392, 0.12, 'sawtooth', 0.2, null, 0); tone(587, 0.12, 'sawtooth', 0.2, null, 0.08); tone(784, 0.2, 'sawtooth', 0.24, null, 0.16); noiseHit(0.3, 0.3, 2400, 'highpass'); },
     zone: function () { tone(440, 0.4, 'triangle', 0.18, 220); tone(660, 0.3, 'triangle', 0.14, 120, 0.08); },
     afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
@@ -724,8 +725,13 @@
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
       var newTier = Math.min(5, 1 + Math.floor(combo / 4));
-      if (newTier > chainMult) { chainMult = newTier; chainMilestone = combo; chainMultFlash = 1; if (chainMult > runStats.maxChain) runStats.maxChain = chainMult; SFX.volley(); }
-      var gain = (en.scoreBase || 250) * chainMult; score += gain;
+      if (newTier > chainMult) { chainMult = newTier; chainMilestone = combo; chainMultFlash = 1; if (chainMult > runStats.maxChain) runStats.maxChain = chainMult; SFX.volley(); punch(0.3); }
+      // combo STAGE: named escalation at milestone combos with a growing screen effect
+      if (combo === 6) stageCallout('BLAZING', sp.sx, sp.sy, '#ff5d3c');
+      else if (combo === 12) stageCallout('DEADLY', sp.sx, sp.sy, '#c46bff');
+      else if (combo === 20) stageCallout('APEX ACES', sp.sx, sp.sy, '#ffd34d');
+      else if (combo === 30) stageCallout('LEGEND', sp.sx, sp.sy, '#7CFFb2');
+      var gain = (en.scoreBase || 250) * chainMult; score += gain * scoreMult();
       shake = Math.min(shake + (en.type === 'gunship' ? 0.55 : en.type === 'turret' ? 0.5 : 0.4), 1.4);
       // kill FX tuned per type — heavier types get a bigger/slower burst + ring,
       // following the same tiering spawnBoss()/bossDefeated() already use for the boss.
@@ -851,7 +857,7 @@
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 0.9, 1.8); hitFlashT = 0.32; SFX.playerHit();
     // taking a hit resets the chain + close-call streak — arcade risk/reward
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
-    nearMissStreak = 0;
+    nearMissStreak = 0; frenzy = 0; frenzyHeat = 0;   // damage resets heat + any active overdrive
     var sp = project(x, y, 50); burst(sp.sx, sp.sy, '#ff5d3c', 24, 480);
     // screen-edge hit-direction wedge
     var bx = cx, by = cy + Math.min(W, H) * 0.30;
@@ -910,6 +916,7 @@
     var streak = Math.min(4, nearMissStreak + 1); nearMissStreak = streak;
     if (streak > runStats.maxNearMiss) runStats.maxNearMiss = streak;
     var bonus = rk.r > 70 ? 50 + (streak - 1) * 15 : 25 + (streak - 1) * 15;
+    bonus *= scoreMult();
     score += bonus;
     var bx = cx, by = cy + Math.min(W, H) * 0.30;
     var dxw = rk.x - camX, dyw = rk.y - camY, dl = Math.sqrt(dxw * dxw + dyw * dyw) || 1;
@@ -930,6 +937,11 @@
   var chainMult = 1, chainMilestone = 0, chainMultFlash = 0, chainMultT = 0;
   var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
   var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
+  // ---- FRENZY heat meter: builds while the chain stays hot (combo ≥ 8); at full it
+  // unleashes a short 2× OVERDRIVE (boost meter free + all score doubled). Resets the
+  // meter on damage — another arcade risk/reward layer on top of the chain multiplier.
+  var frenzyHeat = 0, frenzyMax = 100, frenzy = 0;
+  function scoreMult() { return frenzy > 0 ? 2 : 1; }   // FRENZY overdrive doubles all score
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
   var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
   // ---- arcade challenge events: periodic timed clear-objectives (infestation /
@@ -958,6 +970,7 @@
     }
     if (challenge.progress >= challenge.need) {
       var bonus = challenge.base * (Math.max(1, Math.ceil(challenge.time)));
+      bonus *= scoreMult();
       score += bonus;
       var pp = project(camX, camY, 240); flashText('+'+bonus.toLocaleString(), pp.sx, pp.sy, '#7CFFb2');
       burst(W / 2, cy, '#7CFFb2', 30, 500);
@@ -1033,6 +1046,8 @@
     runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
     damageDir = -1; damageDirT = 0;
     challenge = null; challengeNext = 1800; challengeFlash = 0;
+    stageFlash = 0; stageColor = '#ffd34d';
+    frenzyHeat = 0; frenzy = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1171,9 +1186,19 @@
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
     if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
+    if (stageFlash > 0) stageFlash = Math.max(0, stageFlash - dt * 1.6);
+    // FRENZY heat: a hot combo (≥8) charges the overdrive; full heat unleashes it
+    if (frenzy > 0) {
+      frenzy -= dt; if (frenzy <= 0) { frenzy = 0; callout('FRENZY END', 'overdrive fading', '#ff8a3c'); }
+    } else if (combo >= 8) {
+      frenzyHeat = Math.min(frenzyMax, frenzyHeat + dt * 14);
+      if (frenzyHeat >= frenzyMax) triggerFrenzy();
+    } else if (frenzyHeat > 0) {
+      frenzyHeat = Math.max(0, frenzyHeat - dt * 6);   // cools when the chain lapses
+    }
     if (chainMultFlash > 0) chainMultFlash = Math.max(0, chainMultFlash - dt * 2);
     if (keys.fire) fire();                                // hold to autofire (fire() self-gates on the cooldown)
-    boost = (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2));
+    boost = (frenzy > 0 ? 1 : (keys.boost ? Math.min(1, boost + dt * 3) : Math.max(0, boost - dt * 2)));   // FRENZY overdrive keeps the booster pinned
     // afterburner: pinning boost at max for AB_HOLD seconds kicks in the genuine
     // "rocket booster" state (curSpeed() picks this up next tick); dropping boost
     // even briefly resets the hold timer, so it has to be earned by committing to it.
@@ -1312,7 +1337,7 @@
           burst(mspr.sx, mspr.sy, '#ffb36b', 22, 560); burst(mspr.sx, mspr.sy, '#ffd34d', 14, 400);
           ring(mspr.sx, mspr.sy, '#ffb36b', 90, 0.55, 4);
           shake = Math.min(shake + 0.5, 1.4); SFX.missileHit(); punch(0.5);
-          score += 200; flashText('+200 SEEKER', mspr.sx, mspr.sy, '#ffd34d'); // missile impact bonus pop
+          score += 200 * scoreMult(); flashText('+200 SEEKER', mspr.sx, mspr.sy, '#ffd34d'); // missile impact bonus pop
           if (tgt === boss) hitBoss();
           else if (tgt.type === 'bumper') {} // safety
           else if (tgt.type) hitEnemy(tgt, MSL_DMG);
@@ -1368,7 +1393,7 @@
       t.alive = false; combo++; comboT = 2.2; SFX.rock(t.r > 70);
       if (challenge) challengeKill('rock');
       var gain = 100 * (t.r > 70 ? 2 : 1) * Math.max(1, combo);
-      score += gain; shake = Math.min(shake + 0.35, 1.3);
+      score += gain * scoreMult(); shake = Math.min(shake + 0.35, 1.3);
       burst(sp.sx, sp.sy, '#ffd34d', 22, 460); burst(sp.sx, sp.sy, '#fff', 10, 300);
       burst(sp.sx, sp.sy, t.col, 8, 150);                       // slow lingering debris chunks
       ring(sp.sx, sp.sy, t.col, 50 + t.r * 0.7, 0.5);           // shockwave
@@ -1383,7 +1408,7 @@
     rk.alive = false; var idx = rocks.indexOf(rk); if (idx >= 0) rocks.splice(idx, 1);
     shields--; iframes = 1.4; combo = 0; shake = Math.min(shake + 1.0, 1.8); hitFlashT = 0.32; SFX.playerHit();
     if (chainMult > 1) { chainMult = 1; chainMultT = 0; callout('CHAIN RESET', 'multiplier lost', '#ff5d3c'); }
-    nearMissStreak = 0;
+    nearMissStreak = 0; frenzy = 0; frenzyHeat = 0;
     var sp = project(rk.x, rk.y, rk.z); burst(sp.sx, sp.sy, '#ff5d3c', 30, 560);
     ring(sp.sx, sp.sy, '#39e6ff', 110, 0.5, 4);
     if (shields <= 0) { shipDestroyed(sp.sx, sp.sy); gameOver(); }
@@ -1403,6 +1428,23 @@
   // centered callout banner (boss warnings / big events)
   var co = { life: 0, text: '', sub: '', col: '#ffd34d' };
   function callout(t, s, c) { co.text = t; co.sub = s || ''; co.col = c || '#ffd34d'; co.life = 1.9; }
+  // big combo-stage callout + escalating screen effect (full-screen tint, burst, punch)
+  var stageFlash = 0, stageColor = '#ffd34d';
+  function stageCallout(name, x, y, col) {
+    stageFlash = 1.3; stageColor = col; freeze(0.05); punch(0.7);
+    burst(x, y, col, 26, 520); ring(x, y, col, 130, 0.6, 4);
+    co.text = name + ' COMBO'; co.sub = 'keep it alive'; co.col = col; co.life = 2.1;
+    SFX.volley();
+  }
+  function triggerFrenzy() {
+    if (frenzy > 0) return;
+    frenzy = 6; frenzyHeat = 0;
+    freeze(0.12); punch(1.3);
+    burst(W / 2, cy, '#ff8a3c', 40, 600); burst(W / 2, cy, '#ffd34d', 28, 500);
+    ring(W / 2, cy, '#ff8a3c', 220, 0.8, 5);
+    callout('FRENZY ×2 OVERDRIVE', 'free boost · double score', '#ff8a3c');
+    if (SFX.frenzy) SFX.frenzy(); else SFX.volley();
+  }
 
   // ===== local leaderboard — top-10, persisted to localStorage =====
   var SCORES_KEY = 'kudbee.voidrunner.scores', INIT_KEY = 'kudbee.voidrunner.initials';
@@ -1599,6 +1641,8 @@
 
     drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
     drawCinematicVignette();    // lens vignette + chromatic edge fringe at speed
+    drawStageFlash();           // combo-stage full-screen tint pulse
+    drawLowHealthWarning();     // pulsing red border when shields are critical
     drawHitFlash();             // screen-space damage vignette (impact readability for the bigger ship)
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
@@ -1710,6 +1754,29 @@
   }
   // brief screen-space damage vignette on a hit — reads as impact even where the
   // particle burst lands off-frame; single quick fade, skipped under reduced motion.
+  function drawStageFlash() {
+    if (stageFlash <= 0 || reduceMotion) return;
+    var sa = clamp(stageFlash / 1.3, 0, 1);
+    var c = stageColor || '#ffd34d';
+    var r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+    var tg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.8);
+    tg.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    tg.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.18 * sa).toFixed(2) + ')');
+    ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H);
+  }
+  // critical-shield warning: a pulsing red border that builds as shields drop to 1
+  function drawLowHealthWarning() {
+    if (state !== 'play' || shields > 1 || reduceMotion) return;
+    var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+    var edge = 8 + pulse * 6;
+    var g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.4, cx, cy, Math.max(W, H) * 0.75);
+    var a = 0.12 + pulse * 0.1;
+    g.addColorStop(0, 'rgba(255,40,30,0)'); g.addColorStop(0.75, 'rgba(255,40,30,' + (a * 0.5).toFixed(2) + ')');
+    g.addColorStop(1, 'rgba(255,30,24,' + a.toFixed(2) + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,60,50,' + (0.5 + pulse * 0.4).toFixed(2) + ')'; ctx.lineWidth = edge;
+    ctx.strokeRect(edge / 2, edge / 2, W - edge, H - edge);
+  }
   function drawHitFlash() {
     if (hitFlashT <= 0 || reduceMotion) return;
     var fa = clamp(hitFlashT / 0.32, 0, 1);
@@ -2334,7 +2401,10 @@
     var S = Math.min(W, H) / 840 * 1.3;                                       // scale ship to viewport (1.3x — owner asked for bigger)
     var blink = iframes > 0 && (Math.floor(now / 90) % 2 === 0);
     var roll = clamp(bank * 2.2, -0.5, 0.5);                                  // exaggerated banking roll
-    ctx.save(); ctx.translate(bx, by); ctx.rotate(bank); ctx.scale(S, S);
+    ctx.save(); ctx.translate(bx, by);
+    // under thrust the hull pitches forward + stretches along its axis (diving feel)
+    var thrustLean = boost * 0.10 + (afterburner ? 0.06 : 0);
+    ctx.rotate(bank); ctx.scale(S, S); ctx.transform(1, thrustLean, 0, 1 - thrustLean * 1.4, 0, 0);
 
     // ---- twin engine exhaust (always, behind hull) ----
     var flick = 0.8 + 0.2 * Math.sin(now / 40) + Math.random() * 0.12;
@@ -2608,6 +2678,7 @@
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
     drawMissileHUD();
     drawChallengeHUD();
+    drawFrenzyHUD();
     drawChainMeter();
   }
 
@@ -2653,6 +2724,27 @@
     ctx.fillStyle = c.time <= 6 ? '#ff5d3c' : '#8a93a8';
     ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText(Math.ceil(c.time) + 's', W - pad, pad + Math.round(Math.min(W, H) * 0.11));
+    ctx.textAlign = 'left';
+  }
+
+  // --- FRENZY heat meter: thin bar under the score that fills while a hot combo
+  // (≥8) runs; shows the overdrive as a full 'FRENZY ×2' segment with countdown. ---
+  function drawFrenzyHUD() {
+    if (state !== 'play') return;
+    var pad = Math.round(Math.min(W, H) * 0.035);
+    var bw = Math.min(W * 0.34, 200), bh = 5, bx2 = pad, by2 = pad + Math.round(Math.min(W, H) * 0.058);
+    if (frenzy > 0) {
+      var fa2 = 0.5 + 0.5 * Math.sin(performance.now() / 220);
+      ctx.fillStyle = 'rgba(255,138,60,' + (0.25 + fa2 * 0.15).toFixed(2) + ')'; ctx.fillRect(bx2, by2, bw, bh);
+      ctx.fillStyle = '#ff8a3c'; ctx.fillRect(bx2, by2, bw * clamp(frenzy / 6, 0, 1), bh);
+      ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText('FRENZY ×2 · ' + frenzy.toFixed(1) + 's', bx2, by2 - Math.round(Math.min(W, H) * 0.008));
+    } else if (frenzyHeat > 0 && combo >= 8) {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(bx2, by2, bw, bh);
+      ctx.fillStyle = '#ff8a3c'; ctx.fillRect(bx2, by2, bw * clamp(frenzyHeat / frenzyMax, 0, 1), bh);
+      ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.013) + 'px Inter, sans-serif';
+      ctx.fillText('FRENZY HEAT ' + Math.round(frenzyHeat) + '%', bx2, by2 - Math.round(Math.min(W, H) * 0.008));
+    }
     ctx.textAlign = 'left';
   }
 
@@ -2995,6 +3087,8 @@
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
     get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },     get runStats() { return runStats; }, startChallenge: function () { startChallenge(); }, get challenge() { return challenge; }, challengeKill: function (t) { challengeKill(t); },
+    stageCallout: function (n, col) { stageCallout(n, cx, cy, col || '#ffd34d'); }, get stageFlash() { return stageFlash; },
+    get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
