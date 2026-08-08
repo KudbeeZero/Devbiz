@@ -366,7 +366,15 @@
   function initStars() {
     stars.length = 0;
     var n = reduceMotion ? 120 : 260;
-    for (var i = 0; i < n; i++) stars.push({ x: rand(-WORLD * 1.7, WORLD * 1.7), y: rand(-WORLD * 1.2, WORLD * 1.2), z: rand(NEAR, FAR), s: rand(0.6, 1.8) });
+    // A small chance of a colored accent star (cyan/violet/amber) so the field
+    // isn't a flat white monotone — same depth/twinkle shape, just a tint.
+    var pool = ['200,222,255', '180,210,255', '255,255,255', '214,240,255', '160,220,255'];
+    var accPool = ['120,220,255', '196,160,255', '255,211,150'];
+    for (var i = 0; i < n; i++) {
+      var accR = i % 11 === 0;   // ~1-in-11 are colored accents
+      var rgb = accR ? accPool[Math.random() * accPool.length | 0] : pool[Math.random() * pool.length | 0];
+      stars.push({ x: rand(-WORLD * 1.7, WORLD * 1.7), y: rand(-WORLD * 1.2, WORLD * 1.2), z: rand(NEAR, FAR), s: rand(0.6, 1.8), rgb: rgb, tw: Math.random() * TAU });
+    }
   }
 
   // ---- deep-space dressing: drifting nebulae + a far dust layer ----
@@ -1616,20 +1624,32 @@
 
   function drawStars() {
     var warp = boost > 0.05 || speed > 700;
+    var now = performance.now();
     ctx.lineCap = 'round';
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i], p = project(s.x, s.y, s.z);
       if (p.sx < -40 || p.sx > W + 40 || p.sy < -40 || p.sy > H + 40) continue;
       var a = clamp((FAR - s.z) / FAR, 0, 1) * 0.9;
+      // subtle twinkle for accent stars (cheap sine against a per-star phase)
+      if (!warp && !reduceMotion && i % 11 === 0) a *= (0.65 + 0.35 * Math.sin(now / 800 + s.tw));
+      var rgb = s.rgb || '200,222,255';
       if (warp && !reduceMotion) {
         var p2 = project(s.x, s.y, Math.min(FAR, s.z + speed * 0.045));
-        ctx.strokeStyle = 'rgba(180,210,255,' + (a * (0.4 + boost * 0.5)).toFixed(2) + ')';
+        ctx.strokeStyle = 'rgba(' + rgb + ',' + (a * (0.4 + boost * 0.5)).toFixed(2) + ')';
         ctx.lineWidth = Math.max(0.6, p.sc * s.s * 1.4);
         ctx.beginPath(); ctx.moveTo(p2.sx, p2.sy); ctx.lineTo(p.sx, p.sy); ctx.stroke();
       } else {
-        ctx.fillStyle = 'rgba(200,222,255,' + a.toFixed(2) + ')';
+        ctx.fillStyle = 'rgba(' + rgb + ',' + a.toFixed(2) + ')';
         var rsz = Math.max(0.6, p.sc * s.s * 1.3);
         ctx.beginPath(); ctx.arc(p.sx, p.sy, rsz, 0, TAU); ctx.fill();
+        // soft halo on the occasional accent star
+        if (i % 17 === 0) {
+          ctx.globalCompositeOperation = 'lighter';
+          var hg = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, rsz * 4);
+          hg.addColorStop(0, 'rgba(' + rgb + ',' + (a * 0.25).toFixed(2) + ')'); hg.addColorStop(1, 'rgba(' + rgb + ',0)');
+          ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(p.sx, p.sy, rsz * 4, 0, TAU); ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+        }
       }
     }
   }
