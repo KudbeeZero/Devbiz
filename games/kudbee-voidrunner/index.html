@@ -176,7 +176,7 @@
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
       <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and fly through the glowing pickups — <b style="color:#39e6ff">shields</b>, <b style="color:#ffd34d">rapid fire</b>, <b style="color:#7CFFb2">triple shot</b> — to blast deeper into the void.</p>
       <div class="badge">Outer-space flyer</div>
-      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the charged gauge to chain</p>
+      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · <b>V</b> fire a homing missile (auto-lock) · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the gauges to chain or launch a missile</p>
       <div class="ov-stats hidden" id="gateStats"></div>
       <button class="btn" id="startBtn">▶ Launch</button>
       <div class="ov-foot">Desktop &amp; mobile · 60fps neon · headfirst into the asteroid belt</div>
@@ -198,7 +198,7 @@
     </div>
   </div>
 
-  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain (once charged)</div>
+  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile</div>
 
   <div class="wingman" id="wingman" aria-live="polite">
     <div class="wm-label">SIMURGH · WINGMAN</div>
@@ -323,6 +323,9 @@
     bossDown: function () { noiseHit(0.8, 0.6, 700); tone(150, 0.7, 'sawtooth', 0.3, 40); tone(300, 0.7, 'square', 0.16, 60, 0.05); },
     over: function () { tone(420, 0.7, 'sawtooth', 0.22, 70); tone(280, 0.9, 'triangle', 0.16, 50, 0.08); },
     chain: function () { tone(240, 0.16, 'sawtooth', 0.22, 900, 0); tone(720, 0.24, 'triangle', 0.18, 1400, 0.05); noiseHit(0.35, 0.34, 3000, 'highpass'); },
+    missile: function () { noiseHit(0.14, 0.22, 3200, 'highpass'); tone(520, 0.16, 'sawtooth', 0.14, 1300); },
+    missileHit: function () { noiseHit(0.4, 0.5, 1000); tone(150, 0.3, 'sine', 0.22, 50); },
+    zone: function () { tone(440, 0.4, 'triangle', 0.18, 220); tone(660, 0.3, 'triangle', 0.14, 120, 0.08); },
     afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
   // a continuous low engine drone that tracks speed + boost
@@ -673,6 +676,7 @@
       // the chain weapon's own kills don't refill its meter — only regular combat does,
       // so triggering it is always paid for out of prior kills, never self-sustaining.
       if (!chaining) chainMeter = Math.min(CHAIN_MAX, chainMeter + CHAIN_CHARGE);
+      if (!chaining && missileAmmo < MSL_AMMO_MAX) missileAmmo = Math.min(MSL_AMMO_MAX, missileAmmo + MSL_KILL_REFUND);   // kills refund a missile
     }
   }
 
@@ -829,6 +833,24 @@
   var state = 'gate';
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0;
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
+
+  // ---- zone progression: named sectors the pilot dives through, each with a
+  // flavor callout + a subtle background hue. Purely atmospheric + pacing, no
+  // scoring change — it makes the deepening dive read as a voyage, not a treadmill.
+  var ZONES = [
+    { at: 0,    name: 'Asteroid Drift',   desc: 'the belt opens', tint: '80,70,150' },
+    { at: 1500, name: 'Remnant Field',    desc: 'drift of dead hulls', tint: '120,80,60' },
+    { at: 3500, name: 'Ghost Nebula',     desc: 'the void breathes', tint: '90,60,140' },
+    { at: 6000, name: 'Reaver Reach',     desc: 'hostiles denser now', tint: '140,40,50' },
+    { at: 9000, name: 'The Endless Dark', desc: 'no stars past here', tint: '30,30,60' }
+  ];
+  var zoneIdx = 0, zoneHint = 0;   // current zone + a short residual tint blend
+  var zoneTintCur = null;          // current zone (cached vector color for the backdrop)
+  function zoneTintHex(rgb) {      // accepts a comma rgb int triple → hex for callouts
+    var p = String(rgb).split(',').map(function (n) { return parseInt(n, 10); });
+    var h = function (v) { v = Math.max(0, Math.min(255, v || 0)); return (v < 16 ? '0' : '') + v.toString(16); };
+    return '#' + h(p[0]) + h(p[1]) + h(p[2]);
+  }
   // power-ups: drifting pickups you fly into — shield repair, rapid fire, triple shot
   var powerups = [], powerT = 11, rapidT = 0, tripleT = 0;
   var MAXSHIELD = 5, RAPID_DUR = 7.5, TRIPLE_DUR = 7.5;
@@ -849,6 +871,15 @@
   // kills the chain itself causes, so a chain can't refill itself mid-swing.
   var chainMeter = 0, CHAIN_MAX = 100, CHAIN_CHARGE = 16, CHAIN_DMG = 3, CHAIN_RADIUS = 110;
   var chaining = false, chainBeam = null, lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
+
+  // ---- homing missile weapon: a lock-on secondary that fires guided fire-and-forget
+  // missiles off a limited magazine. Replenishes slowly and on enemy kills. Each
+  // missile steers toward its acquired target in world space (homing on x/y, closing
+  // on z), so it curves through the belt like a real seeker instead of flying straight.
+  var missiles = [];
+  var missileAmmo = 6, missileCd = 0, missileLockId = null;
+  var MSL_AMMO_MAX = 6, MSL_RELOAD_MS = 1.6, MSL_KILL_REFUND = 1;   // per-kill ammo back
+  var MSL_FIRE_CD = 0.45, MSL_STEER = 6.5, MSL_SPEED = 1500, MSL_DMG = 4;
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
   var BASE_SPEED = 360, MAX_SPEED = 1700;
@@ -857,9 +888,11 @@
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
+    zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
     boostFullT = 0; afterburner = false;
     chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
+    missiles.length = 0; missileAmmo = MSL_AMMO_MAX; missileCd = 0; missileLockId = null;
     camX = camY = camVX = camVY = bank = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
     debris.length = 0;
@@ -877,6 +910,47 @@
     bullets.push({ x: camX + 26, y: camY + 36, z: NEAR + 26, life: 1 });
     if (tripleT > 0) bullets.push({ x: camX, y: camY + 30, z: NEAR + 26, life: 1 });  // triple-shot adds a centre bolt
     shake = Math.min(shake + 0.05, 0.5); muzzle = 0.09; SFX.fire();
+  }
+
+  // ---- fire-and-forget homing missile ----
+  // Locks the nearest viable target within the missile's engagement frustum and
+  // launches a seeker from a wingtip that steers onto it (see updateMissiles).
+  // Fires only when the missileCd has cooled and a shot is in the magazine.
+  function acquireMissileTarget() {
+    var best = null, bestScore = Infinity;
+    var lockId = 0;
+    // prefer enemies over rocks, weighted strongly by depth proximity (near = hotter)
+    for (var i = 0; i < enemies.length; i++) {
+      var en = enemies[i]; if (!en.alive || en.z < NEAR + 10 || en.z > FAR) continue;
+      var dx = en.x - camX, dy = en.y - camY;
+      var score = 12000 / Math.max(60, en.z) + Math.abs(dx) * 0.3 + Math.abs(dy) * 0.3;
+      if (en.type === 'gunship' || en.type === 'turret') score -= 4000;      // heavy targets = juicer locks
+      if (score < bestScore) { bestScore = score; best = en; lockId = 'e' + i; }
+    }
+    if (!best) {
+      for (var r = 0; r < rocks.length; r++) {
+        var rk = rocks[r]; if (!rk.alive || rk.z < NEAR + 10 || rk.z > FAR) continue;
+        var rdx = rk.x - camX, rdy = rk.y - camY;
+        var rscore = 3000 / Math.max(60, rk.z) + Math.abs(rdx) * 0.4 + Math.abs(rdy) * 0.4 + rk.r * 2;
+        if (rscore < bestScore) { bestScore = rscore; best = rk; lockId = 'r' + r; }
+      }
+    }
+    return best ? { obj: best, id: lockId } : null;
+  }
+  function fireMissile() {
+    if (state !== 'play' || missileAmmo <= 0 || missileCd > 0) return;
+    var target = acquireMissileTarget();
+    if (!target) return;
+    missileAmmo--; missileCd = MSL_FIRE_CD;
+    var side = Math.random() < 0.5 ? -1 : 1;
+    missiles.push({
+      x: camX + side * 40, y: camY + 30, z: NEAR + 30, side: side,
+      vx: 0, vy: -40, target: target.obj, targetId: target.id,
+      life: 4.5, col: '#ffb36b', gravCd: 0, hitFlash: 0
+    });
+    shake = Math.min(shake + 0.12, 1.0);
+    if (SFX.missile) SFX.missile();
+    else SFX.fire();
   }
 
   // ===== power-ups: collectible buffs that stream in like rocks =====
@@ -933,6 +1007,19 @@
 
     dist += speed * dt * 0.06;
     score += speed * dt * 0.05;
+
+    // zone progression — announce + tint when crossing into a new sector
+    while (zoneIdx < ZONES.length - 1 && dist >= ZONES[zoneIdx + 1].at) {
+      zoneIdx++;
+      var z = ZONES[zoneIdx];
+      callout(z.name, z.desc, zoneTintHex(z.tint));
+      zoneHint = 1;
+      shake = Math.min(shake + 0.3, 1.4);
+      if (SFX.zone) SFX.zone(); else SFX.power('rapid');
+      burst(W / 2, cy, zoneTintHex(z.tint), 18, 320);
+    }
+    if (zoneHint > 0) zoneHint = Math.max(0, zoneHint - dt * 0.5);
+    zoneTintCur = ZONES[zoneIdx];
 
     // starfield stream
     for (var i = 0; i < stars.length; i++) {
@@ -1000,6 +1087,38 @@
         var bx = eb.x - camX, by = eb.y - camY;
         if (bx * bx + by * by < 44 * 44) { ebullets.splice(fb, 1); playerHit(eb.x, eb.y); }
       }
+    }
+
+    // homing missiles: steer onto their acquired target in world space, then hit
+    missileCd -= dt;
+    if (missileAmmo < MSL_AMMO_MAX) missileAmmo += dt / MSL_RELOAD_MS;    // slow passive reload
+    for (var mi = missiles.length - 1; mi >= 0; mi--) {
+      var msl = missiles[mi];
+      msl.life -= dt;
+      var tgt = msl.target;
+      if (!tgt || !tgt.alive) { missiles.splice(mi, 1); continue; }        // target gone → missile fizzles
+      msl.z -= MSL_SPEED * dt;                                             // close along the belt
+      // homing: steer toward the target's world x/y (damped pursuit)
+      msl.vx += clamp((tgt.x - msl.x) / 40, -1, 1) * MSL_STEER * 140 * dt;
+      msl.vy += clamp((tgt.y - msl.y) / 40, -1, 1) * MSL_STEER * 110 * dt;
+      msl.vx *= Math.pow(0.2, dt); msl.vy *= Math.pow(0.2, dt);           // settle toward the pursuit vector
+      msl.x += msl.vx * dt; msl.y += msl.vy * dt;
+      // impact: same plane as target and close enough → damage it
+      if (Math.abs(msl.z - tgt.z) < 90 && msl.life < 4.4) {
+        var mdx = tgt.x - msl.x, mdy = tgt.y - msl.y, mR = (tgt.r || 30) + 20;
+        if (mdx * mdx + mdy * mdy < mR * mR) {
+          var mspr = project(msl.x, msl.y, msl.z);
+          burst(mspr.sx, mspr.sy, '#ffb36b', 22, 560); burst(mspr.sx, mspr.sy, '#ffd34d', 14, 400);
+          ring(mspr.sx, mspr.sy, '#ffb36b', 90, 0.55, 4);
+          shake = Math.min(shake + 0.5, 1.4); SFX.missileHit();
+          if (tgt === boss) hitBoss();
+          else if (tgt.type === 'bumper') {} // safety
+          else if (tgt.type) hitEnemy(tgt, MSL_DMG);
+          else { tgt.hp = 0; hitRock(tgt); }   // a missile shatters a rock cleanly
+          missiles.splice(mi, 1);
+        }
+      }
+      if (msl.life <= 0 || msl.z < NEAR - 20) missiles.splice(mi, 1);
     }
 
     // player bullets travel forward, hitting rocks then enemies
@@ -1164,8 +1283,13 @@
   function draw(now) {
     // deep-space backdrop
     ctx.fillStyle = '#03030a'; ctx.fillRect(0, 0, W, H);
+    var zR = 40, zG = 30, zB = 90;
+    if (zoneTintCur) { var zp = zoneTintCur.tint.split(',').map(function (n) { return parseInt(n, 10); }); zR = zp[0] || 40; zG = zp[1] || 30; zB = zp[2] || 90; }
+    var zoneBoost = zoneHint > 0 && !reduceMotion ? (1 + zoneHint * 0.5) : 1;
     var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.85);
-    bg.addColorStop(0, 'rgba(40,30,90,0.30)'); bg.addColorStop(0.5, 'rgba(14,12,40,0.16)'); bg.addColorStop(1, 'rgba(3,3,10,0)');
+    bg.addColorStop(0, 'rgba(' + zR + ',' + zG + ',' + zB + ',' + (0.30 * zoneBoost).toFixed(2) + ')');
+    bg.addColorStop(0.5, 'rgba(' + Math.round(zR * 0.4) + ',' + Math.round(zG * 0.4) + ',' + Math.round(zB * 0.4) + ',0.16)');
+    bg.addColorStop(1, 'rgba(3,3,10,0)');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     drawSpaceDressing(now);                    // nebulae + far dust, behind everything
 
@@ -1180,6 +1304,8 @@
     drawEnemies();
     drawPowerups();
     drawBullets();
+    drawMissiles();
+    drawMissileReticle();
     drawEbullets();
     drawParticles();
     drawDebris();
@@ -1239,6 +1365,14 @@
       var eg = bCtx.createRadialGradient(ep.sx, ep.sy, 0, ep.sx, ep.sy, ew * 2);
       eg.addColorStop(0, 'rgba(255,120,90,0.6)'); eg.addColorStop(1, 'rgba(255,120,90,0)');
       bCtx.fillStyle = eg; bCtx.beginPath(); bCtx.arc(ep.sx, ep.sy, ew * 2, 0, TAU); bCtx.fill();
+    }
+    // missile glow — hot amber seeker halo
+    for (var mi2 = 0; mi2 < missiles.length; mi2++) {
+      var msl2 = missiles[mi2], mp = project(msl2.x, msl2.y, msl2.z);
+      var mw2 = Math.max(4, mp.sc * 16);
+      var mg = bCtx.createRadialGradient(mp.sx, mp.sy, 0, mp.sx, mp.sy, mw2 * 2);
+      mg.addColorStop(0, 'rgba(255,179,107,0.7)'); mg.addColorStop(1, 'rgba(255,124,60,0)');
+      bCtx.fillStyle = mg; bCtx.beginPath(); bCtx.arc(mp.sx, mp.sy, mw2 * 2, 0, TAU); bCtx.fill();
     }
 
     // particle glow (only bright ones)
@@ -1757,6 +1891,48 @@
     }
     ctx.globalCompositeOperation = 'source-over';
   }
+  function drawMissiles() {
+    if (!missiles.length) return;
+    var now = performance.now();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < missiles.length; i++) {
+      var msl = missiles[i], p = project(msl.x, msl.y, msl.z);
+      var w = Math.max(2, p.sc * 8);
+      // exhaust flame off the tail (into the belt, away from the nose)
+      var tail = project(msl.x - msl.vx * 0.04, msl.y - msl.vy * 0.04 + 6, msl.z + 55);
+      var flick = 0.6 + 0.4 * Math.sin(now / 45 + i);
+      ctx.strokeStyle = 'rgba(255,179,107,' + (0.7 * flick).toFixed(2) + ')'; ctx.lineWidth = w * 0.8; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(tail.sx, tail.sy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,124,60,' + (0.5 * flick).toFixed(2) + ')'; ctx.lineWidth = w * 0.4;
+      ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(tail.sx, tail.sy); ctx.stroke();
+      // missile body
+      ctx.fillStyle = '#cfe9ff'; ctx.beginPath(); ctx.ellipse(p.sx, p.sy, w * 0.5, w * 0.28, 0, 0, TAU); ctx.fill();
+      // glowing seeker nose
+      var ng = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, w * 1.2);
+      ng.addColorStop(0, 'rgba(255,220,160,0.9)'); ng.addColorStop(1, 'rgba(255,179,107,0)');
+      ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(p.sx, p.sy, w * 1.2, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // lock-on reticle: a pulsing amber diamond on the target the next missile would
+  // acquire, so firing feels intentional. Only shows when the magazine isn't empty.
+  function drawMissileReticle() {
+    if (state !== 'play' || missileAmmo <= 0) return;
+    var t = acquireMissileTarget();
+    if (!t) return;
+    var p = project(t.obj.x, t.obj.y, t.obj.z);
+    if (p.sx < -60 || p.sx > W + 60 || p.sy < -60 || p.sy > H + 60) return;
+    var now = performance.now();
+    var R = Math.max(10, (t.obj.r || 30) * p.sc + 6 + Math.sin(now / 180) * 3);
+    ctx.strokeStyle = 'rgba(255,179,107,0.9)'; ctx.lineWidth = 1.5; ctx.fillStyle = 'rgba(255,179,107,0.15)';
+    ctx.save(); ctx.translate(p.sx, p.sy);
+    ctx.beginPath(); ctx.moveTo(0, -R); ctx.lineTo(R, 0); ctx.lineTo(0, R); ctx.lineTo(-R, 0); ctx.closePath();
+    ctx.stroke();
+    // corner ticks for a crisp lock feel
+    ctx.beginPath(); ctx.moveTo(-R * 1.3, -R * 0.4); ctx.lineTo(-R * 1.3, -R * 1.3); ctx.lineTo(-R * 0.4, -R * 1.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(R * 1.3, -R * 0.4); ctx.lineTo(R * 1.3, -R * 1.3); ctx.lineTo(R * 0.4, -R * 1.3); ctx.stroke();
+    ctx.restore();
+  }
   function drawBullets() {
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < bullets.length; i++) {
@@ -2002,6 +2178,11 @@
     ctx.fillText(Math.round(dist).toLocaleString() + ' km', W - pad, pad);
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
     ctx.fillText('DEPTH', W - pad, pad + Math.round(Math.min(W, H) * 0.034));
+    // current sector name (subtle, colored to the zone)
+    if (zoneTintCur) {
+      ctx.fillStyle = 'rgba(' + zoneTintCur.tint + ',0.9)'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(zoneTintCur.name, W - pad, pad + Math.round(Math.min(W, H) * 0.056));
+    }
     if (best > 0) {
       ctx.fillStyle = Math.round(score) > best ? '#7CFFb2' : '#5a6276';
       ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
@@ -2037,7 +2218,30 @@
     if (rapidT > 0) meter('RAPID', rapidT / RAPID_DUR, '#ffd34d');
     if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    drawMissileHUD();
     drawChainMeter();
+  }
+
+  // ---- homing missile HUD: ammo pips + reload progress (bottom-left under shields) ----
+  function drawMissileHUD() {
+    if (state !== 'play') return;
+    var pad = Math.round(Math.min(W, H) * 0.035);
+    var sy = H - pad, sR = Math.max(6, Math.min(W, H) * 0.014);
+    var ammoInt = Math.floor(missileAmmo);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.014) + 'px Inter, sans-serif';
+    // place at bottom-left, offset right of the shields block
+    var sx = pad + sR * 3;
+    for (var a = 0; a < MSL_AMMO_MAX; a++) {
+      var on = a < ammoInt;
+      ctx.globalAlpha = on ? 1 : 0.25;
+      ctx.fillStyle = on ? '#ffb36b' : '#8a93a8';
+      ctx.beginPath(); ctx.arc(sx + a * sR * 2.2, sy - sR * 0.4, sR * 0.7, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('MSL', sx, sy - sR * 2.2);
   }
 
   // chain-weapon readout: a bottom-center gauge that fills from kills and pulses
@@ -2086,6 +2290,7 @@
     if (e.key === 'Enter' && state !== 'play') { start(); return; }
     if (e.key === 'm' || e.key === 'M') { audioInit(); audioResume(); setMuted(!muted); return; }
     if ((e.key === 'c' || e.key === 'C') && state === 'play') { fireChain(); e.preventDefault(); return; }
+    if ((e.key === 'v' || e.key === 'V' || e.key === 'q' || e.key === 'Q') && state === 'play') { fireMissile(); e.preventDefault(); return; }
     if (state !== 'play') return;
     setKey(e, true);
   });
@@ -2093,6 +2298,10 @@
 
   // touch: drag to steer (relative), tap to fire, hold = autofire
   var dragId = null, lastFx = 0, lastFy = 0, autofire = false;
+  function missileRect() {
+    var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
+    return { x: cx - w / 2 - Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
+  }
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
     // tapping the chain gauge fires the chain weapon instead of steering/autofire —
@@ -2101,6 +2310,13 @@
       var cr = chainMeterRect();
       if (e.clientX >= cr.x - 10 && e.clientX <= cr.x + cr.w + 10 && e.clientY >= cr.y - 22 && e.clientY <= cr.y + cr.h + 10) {
         fireChain(); return;
+      }
+    }
+    // tapping the missile gauge fires a homing missile (matches V on desktop)
+    if (missileAmmo > 0) {
+      var mr = missileRect();
+      if (e.clientX >= mr.x - 10 && e.clientX <= mr.x + mr.w + 10 && e.clientY >= mr.y - 22 && e.clientY <= mr.y + mr.h + 10) {
+        fireMissile(); return;
       }
     }
     dragId = e.pointerId; lastFx = e.clientX; lastFy = e.clientY; autofire = true; fire();
@@ -2352,6 +2568,13 @@
     forceChainReady: function () { chainMeter = CHAIN_MAX; },
     fireChain: function () { fireChain(); },
     get lastChain() { return lastChainResult; },
+    // ---- homing missile hooks ----
+    get missileAmmo() { return missileAmmo; }, get missileMax() { return MSL_AMMO_MAX; }, missiles: function () { return missiles; },
+    fireMissile: function () { fireMissile(); },
+    forceMissileAmmo: function (n) { missileAmmo = clamp(n >= 0 ? n : MSL_AMMO_MAX, 0, MSL_AMMO_MAX); },
+    acquireMissileTarget: function () { return acquireMissileTarget(); },
+    // ---- zone / sector hooks ----
+    get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
