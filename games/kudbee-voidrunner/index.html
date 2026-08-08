@@ -598,7 +598,8 @@
       drone: 10,
       interceptor: dist > 350 ? 6 + Math.min(6, wave * 1.2) : 0,
       gunship: dist > 900 ? 4 + Math.min(8, wave * 1.5) : 0,
-      turret: dist > 650 ? 5 + Math.min(6, wave * 1.2) : 0
+      turret: dist > 650 ? 5 + Math.min(6, wave * 1.2) : 0,
+      seeker: dist > 600 ? 7 + Math.min(7, wave * 1.2) : 0
     };
     var total = 0, k;
     for (k in w) total += w[k];
@@ -622,6 +623,11 @@
       case 'turret':
         en.r = 40; en.hp = 3; en.col = '#7CFFb2'; en.scoreBase = 360;
         en.driftX = en.x; en.driftY = en.y; en.fireT = rand(1.8, 2.6);
+        break;
+      case 'seeker':
+        // kamikaze diver: fast, single-hp, closes straight at the player and doesn't shoot
+        en.r = 20; en.hp = 1; en.col = '#ff4df0'; en.scoreBase = 350;
+        en.seekGain = 0; en.sway = Math.random() * TAU;
         break;
       default: // 'drone'
         en.type = 'drone'; en.r = 32; en.hp = 2; en.col = '#ff7a5d'; en.scoreBase = 250; en.fireT = rand(0.8, 1.8);
@@ -799,6 +805,20 @@
         en.x += (en.driftX - en.x) * Math.min(1, dt * 0.6); en.y += (en.driftY - en.y) * Math.min(1, dt * 0.6);
         break;
       }
+      case 'seeker': {
+        // fast closer that homes straight at the pilot; correction sharpens as it nears
+        en.sway += dt * 30;
+        var sx = en.sway;                                  // damped approach with a light corkscrew
+        en.z -= (speed * 0.92) * dt;
+        var honX = camX + Math.sin(sx) * 40, honY = camY * 0.5 + Math.cos(sx * 0.7) * 30;
+        var tight = clamp((FAR - en.z) / FAR, 0, 1);       // 0 far → 1 near
+        var corr = 130 + tight * 420;
+        var pxs = en.x, pys = en.y;
+        en.x += clamp((honX - en.x) / 40, -1, 1) * corr * dt;
+        en.y += clamp((honY - en.y) / 40, -1, 1) * corr * dt;
+        en.vx = dt > 0 ? (en.x - pxs) / dt : 0; en.vy = dt > 0 ? (en.y - pys) / dt : 0;
+        break;
+      }
       default: { // 'drone' — the original smooth sine-weave homing toward a moving target point
         en.z -= (speed * 0.55) * dt;
         var tgX = camX + Math.cos(en.phase) * 170, tgY = camY * 0.5 + Math.sin(en.phase * 0.8) * 90;
@@ -808,6 +828,7 @@
   }
   // per-type attack pattern — single homing bolt vs. multi-bolt spread/radial volleys.
   function updateEnemyFire(en, dt) {
+    if (en.type === 'seeker') return;    // kamikaze diver doesn't shoot — the dive is the weapon
     if (!(en.z > 120 && en.z < 950)) return;
     en.fireT -= dt; if (en.fireT > 0) return;
     switch (en.type) {
@@ -1836,6 +1857,7 @@
       if (en.type === 'interceptor') drawInterceptor(en, R, depth);
       else if (en.type === 'gunship') drawGunship(en, R, depth);
       else if (en.type === 'turret') drawTurret(en, R, depth);
+      else if (en.type === 'seeker') drawSeeker(en, R, depth);
       else drawDrone(en, R, depth);
       // damage-state sparkle — crackling electric arcs when the hull is damaged
       if (!reduceMotion && en.maxHp > 1 && en.hp < en.maxHp) {
@@ -1932,6 +1954,40 @@
     var cg = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.22);
     cg.addColorStop(0, 'rgba(255,100,240,' + (0.5 * pulse).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,61,240,0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.22, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+  function drawSeeker(en, R, depth) {
+    // hot kamikaze dart: a spiky arrowhead with a bright warning core + thrusting tail.
+    // It tilts into its dive and leaves a rising magenta contrail behind.
+    var tight = clamp((FAR - en.z) / FAR, 0, 1);
+    ctx.save();
+    var tilt = clamp((en.vx || 0) / 260, -0.5, 0.5);
+    ctx.rotate(tilt);
+    // rising contrail off the tail
+    ctx.globalCompositeOperation = 'lighter';
+    var cLen = (26 + tight * 60);
+    var cg = ctx.createLinearGradient(0, R * 0.9, 0, R * 0.9 + cLen);
+    cg.addColorStop(0, 'rgba(255,4,240,' + (0.5 + tight * 0.3).toFixed(2) + ')'); cg.addColorStop(1, 'rgba(255,4,240,0)');
+    ctx.strokeStyle = cg; ctx.lineWidth = Math.max(1.5, R * 0.14); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, R * 0.9); ctx.lineTo(0, R * 0.9 + cLen); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    // hull — spiky arrowhead
+    ctx.beginPath();
+    ctx.moveTo(0, R); ctx.lineTo(R * 0.85, -R * 0.4); ctx.lineTo(R * 0.3, -R * 0.15);
+    ctx.lineTo(0, -R * 0.62); ctx.lineTo(-R * 0.3, -R * 0.15); ctx.lineTo(-R * 0.85, -R * 0.4); ctx.closePath();
+    var hg = ctx.createLinearGradient(0, -R * 0.6, 0, R);
+    hg.addColorStop(0, 'rgba(60,14,40,0.97)'); hg.addColorStop(1, 'rgba(30,6,22,0.96)');
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.lineWidth = Math.max(1.5, R * 0.1); ctx.strokeStyle = en.col; ctx.globalAlpha = 0.7 + depth * 0.3; ctx.stroke(); ctx.globalAlpha = 1;
+    // warning eye where the core spins
+    ctx.globalCompositeOperation = 'lighter';
+    var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 120 + en.phase);
+    var core = ctx.createRadialGradient(0, -R * 0.1, 0, 0, -R * 0.1, R * 0.3);
+    core.addColorStop(0, 'rgba(255,120,255,' + (0.9 * pulse).toFixed(2) + ')');
+    core.addColorStop(0.6, 'rgba(255,60,220,' + (0.4 * pulse).toFixed(2) + ')');
+    core.addColorStop(1, 'rgba(255,4,240,0)');
+    ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, -R * 0.1, R * 0.3, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
