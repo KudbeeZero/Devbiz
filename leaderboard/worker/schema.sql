@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS scores (
   score         INTEGER NOT NULL DEFAULT 0,
   bestCombo     INTEGER NOT NULL DEFAULT 0,
   accuracy      INTEGER NOT NULL DEFAULT 0,
+  -- Kudbee Voidrunner metrics (score/bestCombo are reused above; dist is new)
+  dist          INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (game, user_id)
 );
 
@@ -27,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_scores_bestStreak   ON scores (game, bestStreak  
 CREATE INDEX IF NOT EXISTS idx_scores_score        ON scores (game, score        DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_bestCombo    ON scores (game, bestCombo    DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_accuracy     ON scores (game, accuracy     DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_dist         ON scores (game, dist         DESC);
 
 -- ── Migration for an ALREADY-DEPLOYED database (run ONCE; CREATE TABLE above
 --    only applies to a fresh DB). D1/SQLite has no "ADD COLUMN IF NOT EXISTS",
@@ -35,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_scores_accuracy     ON scores (game, accuracy    
 --      ALTER TABLE scores ADD COLUMN score     INTEGER NOT NULL DEFAULT 0;
 --      ALTER TABLE scores ADD COLUMN bestCombo INTEGER NOT NULL DEFAULT 0;
 --      ALTER TABLE scores ADD COLUMN accuracy  INTEGER NOT NULL DEFAULT 0;
+--      ALTER TABLE scores ADD COLUMN dist      INTEGER NOT NULL DEFAULT 0;  -- voidrunner (run once)

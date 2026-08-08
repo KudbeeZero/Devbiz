@@ -63,6 +63,8 @@
   .board li .nm { flex:1; font-family:"Space Grotesk"; font-weight:600; letter-spacing:0.14em; }
   .board li .sc { font-variant-numeric:tabular-nums; color:#9bb3c8; }
   .board li.me .sc { color:#7CFFb2; }
+  .board h3 .lb-online { color:#7CFFb2; font-weight:700; }
+  .board p.muted { color:#5a6276; font-size:12.5px; text-align:center; }
   .ov-foot { margin-top:16px; font-size:11px; color:#5a6276; }
   .ov-stats { margin-top:16px; font-size:12px; letter-spacing:0.08em; color:#7c8aa0; font-variant-numeric:tabular-nums; }
   .ov-stats b { color:#7CFFb2; font-weight:600; }
@@ -211,6 +213,11 @@
     <div class="wm-com" id="wmCom" aria-hidden="true"></div>
   </div>
 </div>
+
+<!-- Online leaderboard (cloud Worker + D1). Demo-mode SDK: players type a name,
+     no wallet; posts degrade to the local top-10 when the Worker is unreachable. -->
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'voidrunner' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 
 <script>
 /* ===========================================================================
@@ -1417,7 +1424,9 @@
     var entry = { name: sanitizeInitials(name), score: pendingScore, dist: pendingDist }, list = loadScores();
     try { localStorage.setItem(INIT_KEY, entry.name); } catch (e) {}
     list.push(entry); list.sort(function (a, b) { return b.score - a.score; }); list = list.slice(0, 10);
-    saveScores(list); pendingScore = -1;
+    saveScores(list);
+    lbPostScore(entry.name);           // also try to post the run to the cloud leaderboard
+    pendingScore = -1;
     return list.indexOf(entry);
   }
   function renderBoard(highlight) {
@@ -1431,6 +1440,53 @@
         '</span><span class="nm">' + list[i].name + '</span><span class="sc">' + list[i].score.toLocaleString() + '</span></li>';
     }
     board.innerHTML = html + '</ol>';
+  }
+
+  // ===== cloud leaderboard (kd-leaderboard.js SDK → Worker + D1) =====
+  // Loads the top board from the cloud and posts a run. Gracefully degrades to
+  // the local top-10 above when the SDK/Worker is unreachable — the game never
+  // breaks because the cloud is down.
+  var lb = null, lbPosted = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard) { lbFallbackBoard(); return; }
+    try {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { lb = c; lbLoadBoard(); })
+        .catch(function () { lbFallbackBoard(); });
+    } catch (e) { lbFallbackBoard(); }
+  }
+  function lbLoadBoard() {
+    if (!lb) return;
+    lb.leaderboard('score', 10).then(function (d) {
+      var entries = d && d.entries;
+      lbRenderBoard(entries);
+    }).catch(function () { lbFallbackBoard(); });
+  }
+  function lbRenderBoard(entries) {
+    var board = document.getElementById('board'); if (!board) return;
+    if (!entries || !entries.length) { board.className = 'board empty'; board.innerHTML = '<p class="muted">Be the first pilot on the online board.</p>'; return; }
+    board.className = 'board';
+    var html = '<h3>Top Pilots <span class="lb-online">online</span></h3><ol>';
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      var nm = e.name || 'Anonymous';
+      if (e.you) nm = '▲ ' + nm;
+      html += '<li' + (e.you ? ' class="me"' : '') + '><span class="rk">' + (e.rank != null ? e.rank : i + 1) +
+        '</span><span class="nm">' + nm + '</span><span class="sc">' + (e.value || 0).toLocaleString() + '</span></li>';
+    }
+    board.innerHTML = html + '</ol>';
+  }
+  function lbFallbackBoard() {           // cloud unavailable → show the local top-10
+    var board = document.getElementById('board'); if (!board) return;
+    renderBoard(-1);
+  }
+  function lbPostScore(name) {
+    if (!lb || lbPosted || pendingScore < 0) return;   // post once per run / only on real runs
+    lbPosted = true;
+    var nm = (lb.user && lb.user() && lb.user().name) || (name && name.trim()) || 'Pilot';
+    lb.submit(nm, { score: pendingScore, bestCombo: runStats.maxChain, dist: Math.round(pendingDist) })
+      .then(function (res) { lbLoadBoard(); })
+      .catch(function () { /* cloud offline — local board already saved */ });
   }
 
   function gameOver() {
@@ -2865,6 +2921,7 @@
 
   // ===== boot =====
   resize(); initStars(); initSpaceDressing();
+  lbBoot();                 // online leaderboard (degrades to local board if offline)
 
   // title panel: recall your best run + the reigning top pilot
   (function () {
@@ -2913,6 +2970,8 @@
     comets: function () { return comets; }, forceComet: function () { spawnComet(); return comets[comets.length - 1]; },
     get muted() { return muted; }, get audioReady() { return !!AC; }, setMuted: setMuted, sfx: SFX,
     getScores: function () { return loadScores(); },
+    // ---- cloud leaderboard hooks ----
+    get lbLinked() { return !!lb; }, lbLoadBoard: function () { lbLoadBoard(); }, lbPostScore: function (nm) { lbPostScore(nm); }, lbBoot: function () { lbBoot(); },
     clearScores: function () { try { localStorage.removeItem(SCORES_KEY); } catch (e) {} },
     submitScore: function (name, s, d) { pendingScore = Math.max(0, Math.round(s)); pendingDist = Math.round(d || 0); return commitScore(name); },
     scoreQualifies: function (s) { return scoreQualifies(s, loadScores()); },

@@ -95,6 +95,12 @@ shows a Top-10). To make Riff scores record online:
    studio origin to the Worker (then `API_BASE: ''` works same-origin).
 Until then the game degrades gracefully — local best only, posts fail quietly.
 
+**Kudbee Voidrunner is also wired in** (`games/kudbee-voidrunner/`). It reuses
+the `score`/`bestCombo` columns and adds a new `dist` (depth) metric. On an
+already-deployed D1, run the one-time `ALTER TABLE scores ADD COLUMN dist`
+migration at the bottom of `schema.sql` (plus its index) exactly once, matching
+steps 1–2 for Riff.
+
 `rating` mirrors the in-game formula so the page and the game agree:
 `1180 + level*38 + ladderRank*150 + bestStreak*22 + wins*6`.
 
