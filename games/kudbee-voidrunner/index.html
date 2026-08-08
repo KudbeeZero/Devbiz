@@ -49,6 +49,11 @@
   .btn-sm { margin-left:10px; vertical-align:middle; padding:11px 20px; border:none; border-radius:999px; cursor:pointer;
     background:linear-gradient(135deg,#39e6ff,#6f5bff 55%,#c46bff); color:#04040a; font-family:"Space Grotesk"; font-weight:700; font-size:14px; }
   .btn-sm:hover { filter:brightness(1.06); }
+  .pause-toggles { display:flex; gap:22px; justify-content:center; margin:18px 0 6px; flex-wrap:wrap; }
+  .pause-toggles label { display:flex; align-items:center; gap:7px; font-size:13px; color:#cfe9ff; cursor:pointer;
+    font-family:"Space Grotesk"; font-weight:600; letter-spacing:0.04em; }
+  .pause-toggles input { accent-color:#39e6ff; width:16px; height:16px; cursor:pointer; }
+  .ov-sub { margin:6px auto 4px; }
   .board { margin:18px auto 4px; max-width:300px; text-align:left; }
   /* run-summary stats strip on the game-over screen (arcade finish card) */
   .ov-stats { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center;
@@ -182,7 +187,7 @@
       <h1>Kudbee <span class="grad">Voidrunner</span></h1>
       <p><b>Asteroid Dive.</b> Punch through the belt at warp speed. Dodge the rocks, gun down enemy fighters before they gun you, and fly through the glowing pickups — <b style="color:#39e6ff">shields</b>, <b style="color:#ffd34d">rapid fire</b>, <b style="color:#7CFFb2">triple shot</b> — to blast deeper into the void.</p>
       <div class="badge">Outer-space flyer</div>
-      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · <b>V</b> fire a homing missile (auto-lock) · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the gauges to chain or launch a missile</p>
+      <p style="font-size:12px;margin-top:12px"><b>← → ↑ ↓ / WASD</b> steer · <b>Space</b> fire · <b>Shift</b> boost (hold at max for an afterburner) · <b>C</b> unleash the chain beam once charged · <b>V</b> fire a homing missile (auto-lock) · <b>X</b> dash (brief i-frames) · on touch, <b>drag</b> to steer, <b>tap</b> to fire &amp; tap the gauges to chain/launch/dash</p>
       <div class="ov-stats hidden" id="gateStats"></div>
       <button class="btn" id="startBtn">▶ Launch</button>
       <div class="ov-foot">Desktop &amp; mobile · 60fps neon · headfirst into the asteroid belt</div>
@@ -205,7 +210,21 @@
     </div>
   </div>
 
-  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile</div>
+  <div class="overlay hidden" id="pause">
+    <div class="ov-inner">
+      <div class="kicker">Paused</div>
+      <h1 class="grad" style="font-size:34px;line-height:1.05">Take a breath, pilot.</h1>
+      <p class="ov-sub" id="pauseSub">Simurgh stands down.</p>
+      <div class="pause-toggles">
+        <label><input type="checkbox" id="paMute"> Sound off</label>
+        <label><input type="checkbox" id="paRm"> Reduced motion</label>
+      </div>
+      <button class="btn" id="resumeBtn" type="button" style="margin-top:6px">Resume</button>
+      <div style="margin-top:12px"><button class="btn-sm" id="quitPauseBtn" type="button">Quit to menu</button></div>
+    </div>
+  </div>
+
+  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile · X dash</div>
 
   <div class="wingman" id="wingman" aria-live="polite">
     <div class="wm-label">SIMURGH · WINGMAN</div>
@@ -237,7 +256,14 @@
 (function () {
   'use strict';
   var TAU = Math.PI * 2;
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // reduce-motion: follows OS by default, but the pause overlay can force it on/off.
+  var rmOverride = null;   // null=auto (OS), true=force on, false=force off
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function applyReducedMotion() {
+    var os = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var next = rmOverride != null ? !!rmOverride : os;
+    if (next !== reduceMotion) { reduceMotion = next; if (stars && stars.length) initStars(); }
+  }
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d', { alpha: false });
@@ -328,6 +354,7 @@
     hit: function () { noiseHit(0.12, 0.22, 2600, 'highpass'); },
     rock: function (big) { noiseHit(big ? 0.42 : 0.26, big ? 0.5 : 0.34, big ? 820 : 1200); if (big) tone(110, 0.34, 'sine', 0.22, 48); },
     enemyKill: function () { noiseHit(0.3, 0.42, 1500); tone(210, 0.22, 'triangle', 0.16, 80); },
+    killArc: function () { var n = arguments.length ? Number(arguments[0]) || 1 : 1, cm = arguments.length > 1 ? Number(arguments[1]) || 1 : 1; var p = 440 * Math.pow(1.06, n) * (1 + (cm - 1) * 0.35); tone(p, 0.09, 'triangle', 0.14, null, 0); },
     playerHit: function () { noiseHit(0.5, 0.5, 520); tone(90, 0.42, 'sawtooth', 0.26, 38); },
     power: function (type) { var b = type === 'shield' ? 523 : type === 'rapid' ? 659 : 587; tone(b, 0.09, 'triangle', 0.16, null, 0); tone(b * 1.26, 0.09, 'triangle', 0.16, null, 0.07); tone(b * 1.5, 0.13, 'triangle', 0.18, null, 0.14); },
     bossWarn: function () { tone(190, 0.45, 'sawtooth', 0.18, 150, 0); tone(190, 0.45, 'sawtooth', 0.18, 150, 0.28); },
@@ -339,6 +366,7 @@
     missileHit: function () { noiseHit(0.4, 0.5, 1000); tone(150, 0.3, 'sine', 0.22, 50); },
     volley: function () { tone(520, 0.08, 'triangle', 0.16, null, 0); tone(660, 0.08, 'triangle', 0.16, null, 0.06); tone(880, 0.12, 'triangle', 0.18, null, 0.12); },
     frenzy: function () { tone(392, 0.12, 'sawtooth', 0.2, null, 0); tone(587, 0.12, 'sawtooth', 0.2, null, 0.08); tone(784, 0.2, 'sawtooth', 0.24, null, 0.16); noiseHit(0.3, 0.3, 2400, 'highpass'); },
+    dash: function () { tone(700, 0.1, 'triangle', 0.16, 200); noiseHit(0.12, 0.16, 4000, 'highpass'); },
     zone: function () { tone(440, 0.4, 'triangle', 0.18, 220); tone(660, 0.3, 'triangle', 0.14, 120, 0.08); },
     afterburner: function () { tone(160, 0.3, 'sawtooth', 0.16, 60, 0); tone(80, 0.4, 'sine', 0.2, 40, 0.04); }
   };
@@ -369,6 +397,11 @@
 
   // player steering offset (the field shifts opposite to this)
   var camX = 0, camY = 0, camVX = 0, camVY = 0, bank = 0;
+  // ---- dash / blink: a quick i-frame burst that hurls the ship along the current
+  // steering vector. Adds a dodge layer beyond just repositioning — spend it to
+  // knife through a swarm that normally clips you. Cooldown gates spam.
+  var dashT = 0, dashCd = 0, dashFx = 0;
+  var DASH_DUR = 0.24, DASH_CD = 1.1, DASH_POW = 1500;
   var STEER = 1500, STEER_DAMP = 0.86, CAM_LIM = WORLD * 0.92;
 
   // ===== entities (pooled-ish) =====
@@ -722,6 +755,9 @@
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
       if (challenge) challengeKill('enemy');
       combo++; comboT = 2.2;
+      // arcade kill-arc pitch: rapid kills climb a note scale (coin-op payoff)
+      killStreakT = 1.0; killStreakN = Math.min(8, killStreakN + 1);
+      if (SFX.killArc) SFX.killArc(killStreakN, chainMult);
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
       var newTier = Math.min(5, 1 + Math.floor(combo / 4));
@@ -944,6 +980,7 @@
 
   // ===== game state =====
   var state = 'gate';
+  var paused = false;
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0;
   // ---- arcade chain multiplier: kills within the window stack a score multiplier
   // (×1 → ×5) that resets on taking damage. Each new tier pops a combo-esc label, so
@@ -956,6 +993,7 @@
   // meter on damage — another arcade risk/reward layer on top of the chain multiplier.
   var frenzyHeat = 0, frenzyMax = 100, frenzy = 0;
   function scoreMult() { return frenzy > 0 ? 2 : 1; }   // FRENZY overdrive doubles all score
+  var killStreakT = 0, killStreakN = 0;                 // arcade coin-op pitch climb on rapid kills
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
   var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
   // ---- arcade challenge events: periodic timed clear-objectives (infestation /
@@ -1062,7 +1100,7 @@
     damageDir = -1; damageDirT = 0;
     challenge = null; challengeNext = 1800; challengeFlash = 0;
     stageFlash = 0; stageColor = '#ffd34d';
-    frenzyHeat = 0; frenzy = 0;
+    frenzyHeat = 0; frenzy = 0; killStreakT = 0; killStreakN = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0; plasmaT = 0;
@@ -1070,6 +1108,7 @@
     chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
     missiles.length = 0; missileAmmo = MSL_AMMO_MAX; missileCd = 0; missileLockId = null;
     camX = camY = camVX = camVY = bank = 0;
+    dashT = 0; dashCd = 0; dashFx = 0;
     rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0; plasmaWaves.length = 0;
     debris.length = 0;
     comets.length = 0; cometT = rand(12, 18);
@@ -1211,6 +1250,7 @@
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; plasmaT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
+    if (killStreakT > 0) { killStreakT -= dt; if (killStreakT <= 0) killStreakN = 0; }
     if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
     if (stageFlash > 0) stageFlash = Math.max(0, stageFlash - dt * 1.6);
     // FRENZY heat: a hot combo (≥8) charges the overdrive; full heat unleashes it
@@ -1244,6 +1284,19 @@
     camX = clamp(camX + camVX * dt, -CAM_LIM, CAM_LIM);
     camY = clamp(camY + camVY * dt, -CAM_LIM, CAM_LIM);
     bank += ((-camVX * 0.0011) - bank) * Math.min(1, dt * 8);
+
+    // dash: apply the i-frame burst while active, cool the timer otherwise
+    if (dashCd > 0) dashCd -= dt;
+    if (dashT > 0) {
+      dashT -= dt;
+      // hurl the ship along the steering input, or forward if none held
+      var dvx = ax, dvy = ay;
+      if (dvx === 0 && dvy === 0) { dvx = 0; dvy = -1; }   // no input → dash "up"/ahead
+      camVX = clamp(camVX + dvx * DASH_POW * dt, -1.4, 1.4);
+      camVY = clamp(camVY + dvy * DASH_POW * dt, -1.4, 1.4);
+      iframes = Math.max(iframes, 0.18);                    // i-frames through the dash
+      dashFx = 1;
+    } else if (dashFx > 0) dashFx = Math.max(0, dashFx - dt * 3);
 
     dist += speed * dt * 0.06;
     score += speed * dt * 0.05;
@@ -1436,6 +1489,15 @@
 
   // impact zoom punch — call for heavy moments; decays over ~0.25s
   function punch(p) { if (!reduceMotion) zoom = Math.max(zoom, p || 0.8); }
+  // dash trigger — a quick i-frame burst along the held steering direction
+  function doDash() {
+    if (state !== 'play' || dashCd > 0 || dashT > 0) return;
+    dashT = DASH_DUR; dashCd = DASH_CD; iframes = Math.max(iframes, 0.2);
+    if (SFX.dash) SFX.dash(); else SFX.missile();
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    burst(bx, by, '#9be8ff', 18, 420);
+    ring(bx, by, '#39e6ff', 70, 0.4, 3);
+  }
   // hit-stop freeze — a short physics pause for a heavy beat; skips under reduced motion
   function freeze(f) { if (!reduceMotion) hitStop = Math.max(hitStop, f || 0.06); }
 
@@ -1632,12 +1694,33 @@
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
   }
+  function togglePause() {
+    if (state !== 'play') return;
+    paused = !paused;
+    var ov = document.getElementById('pause'), paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
+    if (!ov) return;
+    ov.classList.toggle('hidden', !paused);
+    if (paused) {
+      enginePause();
+      if (paMute) paMute.checked = !!muted;
+      if (paRm) paRm.checked = rmOverride === true;
+    } else { engineResume(); }
+  }
+  function enginePause() { try { if (AC && engGain) engGain.gain.setTargetAtTime(0.0001, AC.currentTime, 0.05); } catch (e) {} }
+  function engineResume() { try { if (AC && engGain) engGain.gain.setTargetAtTime(muted ? 0 : 0.05, AC.currentTime, 0.15); } catch (e) {} }
+  function resumeBtnH() { if (paused) togglePause(); }
+  function quitToIntro() {
+    paused = false; state = 'gate';
+    var ov = document.getElementById('pause'); if (ov) ov.classList.add('hidden');
+    gate.classList.remove('hidden'); overOv.classList.add('hidden');
+    engineStop();
+  }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     // hit-stop: brief physics freeze on heavy moments (sparks/glow keep animating)
     if (hitStop > 0) { hitStop = Math.max(0, hitStop - dt); }
-    else if (state === 'play') { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
+    else if (state === 'play' && !paused) { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
     for (var i = 0; i < pops.length; i++) pops[i].life -= dt * 0.9;
     if (co.life > 0) co.life -= dt;
     while (pops.length && pops[0].life <= 0) pops.shift();
@@ -1694,6 +1777,7 @@
     if (bloomReady && !reduceMotion) drawBloomPass(now, sx, sy);
 
     drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
+    drawDashFX();               // dash speed-lines while the i-frame burst is lit
     drawCinematicVignette();    // lens vignette + chromatic edge fringe at speed
     drawStageFlash();           // combo-stage full-screen tint pulse
     drawLowHealthWarning();     // pulsing red border when shields are critical
@@ -1904,6 +1988,23 @@
   // a hot cyan-white edge glow, distinct from the ordinary star-streak warp effect
   // that kicks in at any high boost/speed. Purely cosmetic (the speed bonus lives in
   // curSpeed()), so fully skipped under reduced motion.
+  function drawDashFX() {
+    if ((dashT <= 0 && dashFx <= 0) || reduceMotion) return;
+    var a = dashT > 0 ? clamp(dashT / DASH_DUR, 0, 1) : dashFx;
+    var bx = cx, by = cy + Math.min(W, H) * 0.30;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    var n = 16, reach = Math.max(W, H) * 0.5;
+    for (var i = 0; i < n; i++) {
+      var ang = (i / n) * TAU;
+      var x1 = bx + Math.cos(ang) * 30, y1 = by + Math.sin(ang) * 30;
+      var x2 = bx + Math.cos(ang) * (reach * (0.4 + 0.6 * a)), y2 = by + Math.sin(ang) * (reach * (0.4 + 0.6 * a));
+      var g = ctx.createLinearGradient(x1, y1, x2, y2);
+      g.addColorStop(0, 'rgba(155,232,255,' + (0.55 * a).toFixed(2) + ')'); g.addColorStop(1, 'rgba(57,230,255,0)');
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.restore();
+  }
   function drawAfterburnerFX() {
     if (!afterburner || reduceMotion) return;
     var now = performance.now(), pulse = 0.7 + 0.3 * Math.sin(now / 55);
@@ -2799,6 +2900,21 @@
     ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('MSL', sx, sy - sR * 2.2);
+    // dash readout + cooldown — bottom-right near the ship
+    var dx2 = W - pad - Math.min(W, H) * 0.12, dy2 = H - pad;
+    var ready = dashCd <= 0 && dashT <= 0;
+    ctx.fillStyle = ready ? '#9be8ff' : '#5a6276';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('DASH', dx2, dy2 - sR * 2.2);
+    if (!ready) {
+      var dw = Math.min(W, H) * 0.09, dh = 4;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(dx2, dy2 - sR * 0.4, dw, dh);
+      ctx.fillStyle = '#9be8ff'; ctx.fillRect(dx2, dy2 - sR * 0.4, dw * clamp(1 - dashCd / DASH_CD, 0, 1), dh);
+    } else {
+      ctx.fillStyle = 'rgba(155,232,255,0.5)';
+      ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.013) + 'px Inter, sans-serif';
+      ctx.fillText('X', dx2 + Math.min(W, H) * 0.02, dy2 - sR * 2.0);
+    }
   }
 
   // --- arcade challenge HUD: a live progress banner with countdown bar ---
@@ -2887,10 +3003,12 @@
     else if (k === ' ') { if (on) fire(); keys.fire = on; e.preventDefault(); }
   }
   window.addEventListener('keydown', function (e) {
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && state === 'play') { togglePause(); e.preventDefault(); return; }
     if (!introDone) { runIntro(); e.preventDefault(); return; }   // the boot intro eats the first keypress
     if (e.key === 'Enter' && state !== 'play') { start(); return; }
     if (e.key === 'm' || e.key === 'M') { audioInit(); audioResume(); setMuted(!muted); return; }
     if ((e.key === 'c' || e.key === 'C') && state === 'play') { fireChain(); e.preventDefault(); return; }
+    if ((e.key === 'x' || e.key === 'X') && state === 'play') { doDash(); e.preventDefault(); return; }
     if ((e.key === 'v' || e.key === 'V' || e.key === 'q' || e.key === 'Q') && state === 'play') { fireMissile(); e.preventDefault(); return; }
     if (state !== 'play') return;
     setKey(e, true);
@@ -2902,6 +3020,10 @@
   function missileRect() {
     var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
     return { x: cx - w / 2 - Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
+  }
+  function dashRect() {
+    var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
+    return { x: cx - w / 2 + Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
   }
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
@@ -2920,6 +3042,11 @@
         fireMissile(); return;
       }
     }
+    // tapping the dash gauge dashes (matches X on desktop)
+    var drr = dashRect();
+    if (e.clientX >= drr.x - 10 && e.clientX <= drr.x + drr.w + 10 && e.clientY >= drr.y - 22 && e.clientY <= drr.y + drr.h + 10) {
+      doDash(); return;
+    }
     dragId = e.pointerId; lastFx = e.clientX; lastFy = e.clientY; autofire = true; fire();
   }, { passive: true });
   canvas.addEventListener('pointermove', function (e) {
@@ -2931,13 +3058,19 @@
   canvas.addEventListener('pointerup', endDrag, { passive: true });
   canvas.addEventListener('pointercancel', endDrag, { passive: true });
   // autofire while held
-  setInterval(function () { if (autofire && state === 'play') fire(); }, 150);
+  setInterval(function () { if (autofire && state === 'play' && !paused) fire(); }, 150);
 
   document.getElementById('startBtn').addEventListener('click', start);
   document.getElementById('againBtn').addEventListener('click', start);
   var muteBtn = document.getElementById('muteBtn');
   if (muteBtn) muteBtn.addEventListener('click', function (e) { e.stopPropagation(); audioInit(); audioResume(); setMuted(!muted); });
   setMuted(muted);   // sync the button glyph with the stored preference
+
+  document.getElementById('resumeBtn').addEventListener('click', resumeBtnH);
+  document.getElementById('quitPauseBtn').addEventListener('click', quitToIntro);
+  var paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
+  if (paMute) paMute.addEventListener('change', function () { setMuted(paMute.checked); });
+  if (paRm) paRm.addEventListener('change', function () { rmOverride = paRm.checked; applyReducedMotion(); });
 
   // leaderboard initials entry wiring
   var nameEntryEl = document.getElementById('nameEntry'), initialsInput = document.getElementById('initials'), saveBtn = document.getElementById('saveScore');
@@ -3188,6 +3321,8 @@
     stageCallout: function (n, col) { stageCallout(n, cx, cy, col || '#ffd34d'); }, get stageFlash() { return stageFlash; },
     get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
     get plasmaT() { return plasmaT; }, get plasmaWaves() { return plasmaWaves; }, forcePlasma: function () { plasmaT = PLASMA_DUR; },
+    doDash: function () { doDash(); }, get dashCd() { return dashCd; }, get dashT() { return dashT; },
+    get paused() { return paused; }, togglePause: function () { togglePause(); }, setReducedMotion: function (v) { rmOverride = !!v; applyReducedMotion(); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
