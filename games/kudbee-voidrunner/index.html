@@ -49,6 +49,11 @@
   .btn-sm { margin-left:10px; vertical-align:middle; padding:11px 20px; border:none; border-radius:999px; cursor:pointer;
     background:linear-gradient(135deg,#39e6ff,#6f5bff 55%,#c46bff); color:#04040a; font-family:"Space Grotesk"; font-weight:700; font-size:14px; }
   .btn-sm:hover { filter:brightness(1.06); }
+  .pause-toggles { display:flex; gap:22px; justify-content:center; margin:18px 0 6px; flex-wrap:wrap; }
+  .pause-toggles label { display:flex; align-items:center; gap:7px; font-size:13px; color:#cfe9ff; cursor:pointer;
+    font-family:"Space Grotesk"; font-weight:600; letter-spacing:0.04em; }
+  .pause-toggles input { accent-color:#39e6ff; width:16px; height:16px; cursor:pointer; }
+  .ov-sub { margin:6px auto 4px; }
   .board { margin:18px auto 4px; max-width:300px; text-align:left; }
   /* run-summary stats strip on the game-over screen (arcade finish card) */
   .ov-stats { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center;
@@ -205,6 +210,20 @@
     </div>
   </div>
 
+  <div class="overlay hidden" id="pause">
+    <div class="ov-inner">
+      <div class="kicker">Paused</div>
+      <h1 class="grad" style="font-size:34px;line-height:1.05">Take a breath, pilot.</h1>
+      <p class="ov-sub" id="pauseSub">Simurgh stands down.</p>
+      <div class="pause-toggles">
+        <label><input type="checkbox" id="paMute"> Sound off</label>
+        <label><input type="checkbox" id="paRm"> Reduced motion</label>
+      </div>
+      <button class="btn" id="resumeBtn" type="button" style="margin-top:6px">Resume</button>
+      <div style="margin-top:12px"><button class="btn-sm" id="quitPauseBtn" type="button">Quit to menu</button></div>
+    </div>
+  </div>
+
   <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile · X dash</div>
 
   <div class="wingman" id="wingman" aria-live="polite">
@@ -237,7 +256,15 @@
 (function () {
   'use strict';
   var TAU = Math.PI * 2;
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // reduce-motion: follows OS by default, but the pause overlay can force it on/off.
+  var rmOverride = null;   // null=auto (OS), true=force on, false=force off
+  var reduceMotion = true;
+  function applyReducedMotion() {
+    var os = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var next = rmOverride != null ? !!rmOverride : os;
+    if (next !== reduceMotion) { reduceMotion = next; if (stars.length) initStars(); }
+  }
+  applyReducedMotion();
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d', { alpha: false });
@@ -950,6 +977,7 @@
 
   // ===== game state =====
   var state = 'gate';
+  var paused = false;
   var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0;
   // ---- arcade chain multiplier: kills within the window stack a score multiplier
   // (×1 → ×5) that resets on taking damage. Each new tier pops a combo-esc label, so
@@ -1661,12 +1689,33 @@
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
   }
+  function togglePause() {
+    if (state !== 'play') return;
+    paused = !paused;
+    var ov = document.getElementById('pause'), paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
+    if (!ov) return;
+    ov.classList.toggle('hidden', !paused);
+    if (paused) {
+      enginePause();
+      if (paMute) paMute.checked = !!muted;
+      if (paRm) paRm.checked = rmOverride === true;
+    } else { engineResume(); }
+  }
+  function enginePause() { try { if (AC && engGain) engGain.gain.setTargetAtTime(0.0001, AC.currentTime, 0.05); } catch (e) {} }
+  function engineResume() { try { if (AC && engGain) engGain.gain.setTargetAtTime(muted ? 0 : 0.05, AC.currentTime, 0.15); } catch (e) {} }
+  function resumeBtnH() { if (paused) togglePause(); }
+  function quitToIntro() {
+    paused = false; state = 'gate';
+    var ov = document.getElementById('pause'); if (ov) ov.classList.add('hidden');
+    gate.classList.remove('hidden'); overOv.classList.add('hidden');
+    engineStop();
+  }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     // hit-stop: brief physics freeze on heavy moments (sparks/glow keep animating)
     if (hitStop > 0) { hitStop = Math.max(0, hitStop - dt); }
-    else if (state === 'play') { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
+    else if (state === 'play' && !paused) { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
     for (var i = 0; i < pops.length; i++) pops[i].life -= dt * 0.9;
     if (co.life > 0) co.life -= dt;
     while (pops.length && pops[0].life <= 0) pops.shift();
@@ -2949,12 +2998,13 @@
     else if (k === ' ') { if (on) fire(); keys.fire = on; e.preventDefault(); }
   }
   window.addEventListener('keydown', function (e) {
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && state === 'play') { togglePause(); e.preventDefault(); return; }
     if (!introDone) { runIntro(); e.preventDefault(); return; }   // the boot intro eats the first keypress
     if (e.key === 'Enter' && state !== 'play') { start(); return; }
     if (e.key === 'm' || e.key === 'M') { audioInit(); audioResume(); setMuted(!muted); return; }
     if ((e.key === 'c' || e.key === 'C') && state === 'play') { fireChain(); e.preventDefault(); return; }
-    if ((e.key === 'v' || e.key === 'V' || e.key === 'q' || e.key === 'Q') && state === 'play') { fireMissile(); e.preventDefault(); return; }
     if ((e.key === 'x' || e.key === 'X') && state === 'play') { doDash(); e.preventDefault(); return; }
+    if ((e.key === 'v' || e.key === 'V' || e.key === 'q' || e.key === 'Q') && state === 'play') { fireMissile(); e.preventDefault(); return; }
     if (state !== 'play') return;
     setKey(e, true);
   });
@@ -3003,13 +3053,19 @@
   canvas.addEventListener('pointerup', endDrag, { passive: true });
   canvas.addEventListener('pointercancel', endDrag, { passive: true });
   // autofire while held
-  setInterval(function () { if (autofire && state === 'play') fire(); }, 150);
+  setInterval(function () { if (autofire && state === 'play' && !paused) fire(); }, 150);
 
   document.getElementById('startBtn').addEventListener('click', start);
   document.getElementById('againBtn').addEventListener('click', start);
   var muteBtn = document.getElementById('muteBtn');
   if (muteBtn) muteBtn.addEventListener('click', function (e) { e.stopPropagation(); audioInit(); audioResume(); setMuted(!muted); });
   setMuted(muted);   // sync the button glyph with the stored preference
+
+  document.getElementById('resumeBtn').addEventListener('click', resumeBtnH);
+  document.getElementById('quitPauseBtn').addEventListener('click', quitToIntro);
+  var paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
+  if (paMute) paMute.addEventListener('change', function () { setMuted(paMute.checked); });
+  if (paRm) paRm.addEventListener('change', function () { rmOverride = paRm.checked; applyReducedMotion(); });
 
   // leaderboard initials entry wiring
   var nameEntryEl = document.getElementById('nameEntry'), initialsInput = document.getElementById('initials'), saveBtn = document.getElementById('saveScore');
@@ -3261,6 +3317,7 @@
     get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
     get plasmaT() { return plasmaT; }, get plasmaWaves() { return plasmaWaves; }, forcePlasma: function () { plasmaT = PLASMA_DUR; },
     doDash: function () { doDash(); }, get dashCd() { return dashCd; }, get dashT() { return dashT; },
+    get paused() { return paused; }, togglePause: function () { togglePause(); }, setReducedMotion: function (v) { rmOverride = !!v; applyReducedMotion(); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
