@@ -1046,7 +1046,11 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     .nav-links { display: none; }
     .burger { display: inline-flex; }
     .panel { grid-template-columns: 1fr; }
-    .panel .p-visual { min-height: 220px; }
+    /* Keep the panel thumbnails a clean, phone-friendly landscape crop when the
+       panel stacks to one column. A raw min-height alone lets the artwork fill a
+       full-width short strip that reads as detached from its card on mobile — an
+       explicit 16/9 aspect-ratio keeps the canvas a tidy, framed landscape tile. */
+    .panel .p-visual { min-height: 200px; aspect-ratio: 16/9; width: 100%; }
     .story .grid { grid-template-columns: 1fr; }
     .story .stage { order: -1; aspect-ratio: 16/9; }
     .agents-split, .store-layout { grid-template-columns: 1fr; }
