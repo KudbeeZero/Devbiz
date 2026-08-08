@@ -372,7 +372,7 @@
   var STEER = 1500, STEER_DAMP = 0.86, CAM_LIM = WORLD * 0.92;
 
   // ===== entities (pooled-ish) =====
-  var stars = [], rocks = [], bullets = [], enemies = [], ebullets = [];
+  var stars = [], rocks = [], bullets = [], enemies = [], ebullets = [], plasmaWaves = [];
   var PMAX = reduceMotion ? 70 : 260, P = new Array(PMAX), pHead = 0;
   for (var i = 0; i < PMAX; i++) P[i] = { life: 0, x: 0, y: 0, vx: 0, vy: 0, col: '#fff', sz: 2 };
 
@@ -1020,7 +1020,8 @@
     return '#' + h(p[0]) + h(p[1]) + h(p[2]);
   }
   // power-ups: drifting pickups you fly into — shield repair, rapid fire, triple shot
-  var powerups = [], powerT = 11, rapidT = 0, tripleT = 0;
+  var powerups = [], powerT = 11, rapidT = 0, tripleT = 0, plasmaT = 0;
+  var PLASMA_DUR = 6;   // plasma wave overcharge window (see fire() + plasmaWaves)
   var MAXSHIELD = 5, RAPID_DUR = 7.5, TRIPLE_DUR = 7.5;
   var keys = {};
 
@@ -1064,12 +1065,12 @@
     frenzyHeat = 0; frenzy = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
-    powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
+    powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0; plasmaT = 0;
     boostFullT = 0; afterburner = false;
     chainMeter = 0; chaining = false; chainBeam = null; lastChainResult = { hitCount: 0, killCount: 0, comboBefore: 0, comboAfter: 0 };
     missiles.length = 0; missileAmmo = MSL_AMMO_MAX; missileCd = 0; missileLockId = null;
     camX = camY = camVX = camVY = bank = 0;
-    rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0;
+    rocks.length = 0; bullets.length = 0; enemies.length = 0; ebullets.length = 0; plasmaWaves.length = 0;
     debris.length = 0;
     comets.length = 0; cometT = rand(12, 18);
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -1080,6 +1081,12 @@
   function fire() {
     if (state !== 'play' || fireCd > 0) return;
     fireCd = rapidT > 0 ? 0.075 : 0.14;                  // rapid-fire pickup halves the cooldown
+    if (plasmaT > 0) {                                     // PLASMA WAVE: a wide piercing bar, not bolts
+      var py0 = camY + 26;
+      plasmaWaves.push({ x: camX, y: py0, z: NEAR + 26, w: 320, life: 1.4 });
+      shake = Math.min(shake + 0.2, 1.0); muzzle = 0.12; if (SFX.missile) SFX.missile(); else SFX.fire();
+      return;
+    }
     // two converging bolts from the wingtips, aimed straight down the barrel
     bullets.push({ x: camX - 26, y: camY + 36, z: NEAR + 26, life: 1 });
     bullets.push({ x: camX + 26, y: camY + 36, z: NEAR + 26, life: 1 });
@@ -1162,12 +1169,13 @@
 
   // ===== power-ups: collectible buffs that stream in like rocks =====
   function spawnPowerup() {
-    // bias toward shields when you're hurting; missile crates are an arcade-ish
-    // reward that keeps the stash topped up; otherwise even spread across the rest.
+    // bias toward shields when you're hurting; missile crates + plasma wave are the
+    // arcade-rich rewards; otherwise even spread across the rest.
     var roll = Math.random(), type;
-    if (shields <= 1) type = roll < 0.5 ? 'shield' : (roll < 0.7 ? 'missile' : (roll < 0.85 ? 'rapid' : 'triple'));
-    else if (roll < 0.18) type = 'missile';
-    else type = roll < 0.42 ? 'shield' : (roll < 0.71 ? 'rapid' : 'triple');
+    if (shields <= 1) type = roll < 0.45 ? 'shield' : (roll < 0.62 ? 'missile' : (roll < 0.75 ? 'plasma' : (roll < 0.88 ? 'rapid' : 'triple')));
+    else if (roll < 0.14) type = 'plasma';
+    else if (roll < 0.3) type = 'missile';
+    else type = roll < 0.54 ? 'shield' : (roll < 0.74 ? 'rapid' : (roll < 0.9 ? 'triple' : 'plasma'));
     powerups.push({ type: type, x: rand(-WORLD * 0.7, WORLD * 0.7), y: rand(-WORLD * 0.5, WORLD * 0.5),
       z: FAR + rand(0, 160), r: 30, rot: 0, alive: true });
   }
@@ -1185,6 +1193,10 @@
     } else if (pu.type === 'rapid') {
       rapidT = RAPID_DUR; callout('RAPID FIRE', 'guns overcharged', '#ffd34d');
       burst(sp.sx, sp.sy, '#ffd34d', 22, 420);
+    } else if (pu.type === 'plasma') {
+      plasmaT = PLASMA_DUR; callout('PLASMA WAVE', 'wide-beam ray offline-safe', '#39ffe0');
+      burst(sp.sx, sp.sy, '#39ffe0', 26, 460); flash(800, sp.sx, sp.sy); SFX.missile();
+      co.text = 'PLASMA WAVE'; co.sub = 'wide beam · scorches a lane'; co.col = '#39ffe0'; co.life = 1.9;
     } else {
       tripleT = TRIPLE_DUR; callout('TRIPLE SHOT', 'spread cannons online', '#7CFFb2');
       burst(sp.sx, sp.sy, '#7CFFb2', 22, 420);
@@ -1196,7 +1208,7 @@
   // ===== update =====
   function update(dt) {
     speed = curSpeed();
-    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
+    fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; plasmaT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
     if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
@@ -1369,6 +1381,24 @@
         }
       }
       if (msl.life <= 0 || msl.z < NEAR - 20) missiles.splice(mi, 1);
+    }
+
+    // plasma waves — a wide piercing bar that scorches everything in its lane once each
+    for (var pw = plasmaWaves.length - 1; pw >= 0; pw--) {
+      var wv = plasmaWaves[pw];
+      wv.z += (speed + 1900) * dt; wv.life -= dt;
+      if (wv.z > FAR || wv.life <= 0) { plasmaWaves.splice(pw, 1); continue; }
+      if (!wv.hitSet) wv.hitSet = {};
+      for (var r2 = 0; r2 < rocks.length; r2++) {
+        var rk = rocks[r2]; if (!rk.alive || wv.hitSet['r' + r2]) continue;
+        if (Math.abs(rk.z - wv.z) < 90 && Math.abs(rk.x - wv.x) < wv.w / 2 + rk.r) { wv.hitSet['r' + r2] = 1; rk.hp = 0; hitRock(rk); }
+      }
+      for (var e2 = 0; e2 < enemies.length; e2++) {
+        var en2 = enemies[e2]; if (!en2.alive || wv.hitSet['e' + e2]) continue;
+        if (Math.abs(en2.z - wv.z) < 90 && Math.abs(en2.x - wv.x) < wv.w / 2 + en2.r) { wv.hitSet['e' + e2] = 1; hitEnemy(en2, 2); }
+      }
+      var wsp = project(wv.x, wv.y, wv.z);
+      burst(wsp.sx, wsp.sy, '#39ffe0', 4, 220);
     }
 
     // player bullets travel forward, hitting rocks then enemies
@@ -1647,6 +1677,7 @@
     drawEnemies();
     drawPowerups();
     drawBullets();
+    drawPlasmaWaves();
     drawMissiles();
     drawMissileReticle();
     drawEbullets();
@@ -1718,6 +1749,14 @@
       var mg = bCtx.createRadialGradient(mp.sx, mp.sy, 0, mp.sx, mp.sy, mw2 * 2);
       mg.addColorStop(0, 'rgba(255,179,107,0.7)'); mg.addColorStop(1, 'rgba(255,124,60,0)');
       bCtx.fillStyle = mg; bCtx.beginPath(); bCtx.arc(mp.sx, mp.sy, mw2 * 2, 0, TAU); bCtx.fill();
+    }
+    // plasma wave glow — wide turquoise scorch band
+    for (var pw2 = 0; pw2 < plasmaWaves.length; pw2++) {
+      var wv2 = plasmaWaves[pw2], ppw = project(wv2.x, wv2.y, wv2.z);
+      var halfW2 = Math.max(50, (wv2.w / 2) * ppw.sc), hh2 = Math.max(6, 10 * ppw.sc);
+      var pg2 = bCtx.createLinearGradient(ppw.sx - halfW2, 0, ppw.sx + halfW2, 0);
+      pg2.addColorStop(0, 'rgba(57,255,224,0)'); pg2.addColorStop(0.5, 'rgba(57,255,224,0.6)'); pg2.addColorStop(1, 'rgba(57,255,224,0)');
+      bCtx.fillStyle = pg2; bCtx.fillRect(ppw.sx - halfW2, ppw.sy - hh2, halfW2 * 2, hh2 * 2);
     }
 
     // particle glow (only bright ones)
@@ -2303,8 +2342,8 @@
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R * 0.4, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
-  function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : t === 'missile' ? '#ffb36b' : '#7CFFb2'; }
-  function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : t === 'missile' ? 'rgba(255,179,107,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
+  function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : t === 'missile' ? '#ffb36b' : t === 'plasma' ? '#39ffe0' : '#7CFFb2'; }
+  function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : t === 'missile' ? 'rgba(255,179,107,' + a + ')' : t === 'plasma' ? 'rgba(57,255,224,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
   function drawPowerups() {
     var order = powerups.slice().sort(function (a, b) { return b.z - a.z; });
     for (var i = 0; i < order.length; i++) {
@@ -2343,6 +2382,11 @@
         ctx.beginPath(); ctx.moveTo(R * 0.16, R * 0.2); ctx.lineTo(R * 0.34, R * 0.5); ctx.lineTo(R * 0.05, R * 0.34); ctx.stroke();
         // nose tip
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-R * 0.16, -R * 0.3); ctx.lineTo(0, -R * 0.6); ctx.lineTo(R * 0.16, -R * 0.3); ctx.closePath(); ctx.fill();
+      } else if (pw.type === 'plasma') {
+        // a wide scorching bar / wave glyph
+        ctx.fillStyle = col; ctx.globalAlpha = 0.95;
+        ctx.fillRect(-R * 0.62, -R * 0.16, R * 1.24, R * 0.26);
+        ctx.fillStyle = '#eafffb'; ctx.fillRect(-R * 0.62, -R * 0.07, R * 1.24, R * 0.1);
       } else {
         for (var k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * R * 0.34, -R * 0.42); ctx.lineTo(k * R * 0.34, R * 0.42); ctx.stroke(); }
       }
@@ -2411,6 +2455,29 @@
       ctx.strokeStyle = 'rgba(120,255,200,0.9)'; ctx.lineWidth = w; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(p2.sx, p2.sy); ctx.lineTo(p.sx, p.sy); ctx.stroke();
       ctx.fillStyle = '#eafff5'; ctx.beginPath(); ctx.arc(p.sx, p.sy, w * 0.6, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawPlasmaWaves() {
+    if (!plasmaWaves.length) return;
+    var now = performance.now();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < plasmaWaves.length; i++) {
+      var wv = plasmaWaves[i], p = project(wv.x, wv.y, wv.z);
+      var halfW = Math.max(40, (wv.w / 2) * p.sc);
+      var hh = Math.max(3, 6 * p.sc);
+      // horizontal scorching bar with a hot centre
+      var fade = clamp(wv.life / 1.4, 0, 1), flick = 0.5 + 0.5 * Math.sin(now / 40 + i);
+      var g = ctx.createLinearGradient(p.sx - halfW, 0, p.sx + halfW, 0);
+      g.addColorStop(0, 'rgba(57,255,224,0)');
+      g.addColorStop(0.3, 'rgba(57,255,224,' + (0.7 * fade * flick).toFixed(2) + ')');
+      g.addColorStop(0.7, 'rgba(57,255,224,' + (0.7 * fade * flick).toFixed(2) + ')');
+      g.addColorStop(1, 'rgba(57,255,224,0)');
+      ctx.fillStyle = g; ctx.fillRect(p.sx - halfW, p.sy - hh, halfW * 2, hh * 2);
+      // core line
+      ctx.fillStyle = 'rgba(220,255,250,' + (0.85 * fade).toFixed(2) + ')';
+      ctx.fillRect(p.sx - halfW, p.sy - hh * 0.3, halfW * 2, hh * 0.6);
     }
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -2704,6 +2771,7 @@
     if (boost > 0.02) meter(afterburner ? 'AFTERBURNER' : 'BOOST', boost, afterburner ? '#ffffff' : '#7CFFb2');
     if (rapidT > 0) meter('RAPID', rapidT / RAPID_DUR, '#ffd34d');
     if (tripleT > 0) meter('TRIPLE', tripleT / TRIPLE_DUR, '#39e6ff');
+    if (plasmaT > 0) meter('PLASMA', plasmaT / PLASMA_DUR, '#39ffe0');
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
     drawMissileHUD();
     drawChallengeHUD();
@@ -2938,6 +3006,7 @@
       missileAmmo: Math.floor(missileAmmo),
       rapidActive: rapidT > 0,
       tripleActive: tripleT > 0,
+      plasmaActive: plasmaT > 0,
       afterburner: !!afterburner,
       threatCount: threats,
       rocksNear: rocksNear,
@@ -3118,6 +3187,7 @@
     get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },     get runStats() { return runStats; }, startChallenge: function () { startChallenge(); }, get challenge() { return challenge; }, challengeKill: function (t) { challengeKill(t); },
     stageCallout: function (n, col) { stageCallout(n, cx, cy, col || '#ffd34d'); }, get stageFlash() { return stageFlash; },
     get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
+    get plasmaT() { return plasmaT; }, get plasmaWaves() { return plasmaWaves; }, forcePlasma: function () { plasmaT = PLASMA_DUR; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
