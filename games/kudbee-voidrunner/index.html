@@ -800,8 +800,22 @@
           en.jukeT = rand(0.22, 0.5);
           en.jukeX = camX + rand(-260, 260); en.jukeY = camY * 0.5 + rand(-170, 170);
         }
-        en.x += clamp((en.jukeX - en.x) / 40, -1, 1) * 260 * dt;
-        en.y += clamp((en.jukeY - en.y) / 40, -1, 1) * 220 * dt;
+        // dodge behaviour: when a player bullet is closing on this plane, veer
+        // perpendicular to its path so you have to lead the shot.
+        var dodgeX = 0, dodgeY = 0, dodgeR = 120;
+        for (var dbi = 0; dbi < bullets.length; dbi++) {
+          var db = bullets[dbi];
+          if (Math.abs(db.z - en.z) < 140) {
+            var bdx = db.x - en.x, bdy = db.y - en.y, bd2 = bdx * bdx + bdy * bdy;
+            if (bd2 < dodgeR * dodgeR && bd2 > 1) {
+              var dl = Math.sqrt(bd2);
+              dodgeX -= (bdy / dl) * 140; dodgeY += (bdx / dl) * 140;   // perpendicular escape
+            }
+          }
+        }
+        var dxv = (en.jukeX - en.x) / 40 + dodgeX * 0.012, dyv = (en.jukeY - en.y) / 40 + dodgeY * 0.012;
+        en.x += clamp(dxv, -1, 1) * 260 * dt;
+        en.y += clamp(dyv, -1, 1) * 220 * dt;
         en.vx = dt > 0 ? (en.x - px) / dt : 0; en.vy = dt > 0 ? (en.y - py) / dt : 0;   // for the drawn tilt/trail
         break;
       }
