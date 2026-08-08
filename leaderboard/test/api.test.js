@@ -215,3 +215,42 @@ test('clerk: valid RS256 token verifies; expired rejected', async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+// voidrunner: score + depth (dist) metrics rank by score; dist column clamps.
+test('voidrunner: score + dist metrics submit, validate and rank', async () => {
+  // Validation: unknown dropped, dist clamped to its max.
+  const m = sanitizeMetrics('voidrunner', { score: 123456, dist: 99999, bestCombo: 7, junk: 1 });
+  assert.equal(m.score, 123456);
+  assert.equal(m.dist, 99999);
+  assert.equal(m.bestCombo, 7);
+  assert.equal(m.junk, undefined);
+
+  const store = memStore();
+  await runApi(store, {}, {
+    method: 'POST', path: '/api/scores', query: new URLSearchParams(),
+    headers: demoHeaders('nova', 'Nova'),
+    body: { game: 'voidrunner', metrics: { score: 50000, dist: 180, bestCombo: 3 } },
+  });
+  const r = await runApi(store, {}, {
+    method: 'POST', path: '/api/scores', query: new URLSearchParams(),
+    headers: demoHeaders('echo', 'Echo'),
+    body: { game: 'voidrunner', metrics: { score: 161545, dist: 620, bestCombo: 5 } },
+  });
+  assert.equal(r.body.ranks.score, 1);                 // Echo tops the score board
+
+  const lb = await runApi(store, {}, {
+    method: 'GET', path: '/api/leaderboard',
+    query: new URLSearchParams({ game: 'voidrunner', metric: 'score' }),
+    headers: demoHeaders('nova', 'Nova'),
+  });
+  assert.equal(lb.body.metric, 'score');
+  assert.equal(lb.body.entries[0].name, 'Echo');
+  assert.equal(lb.body.entries[0].value, 161545);
+
+  const byDist = await runApi(store, {}, {
+    method: 'GET', path: '/api/leaderboard',
+    query: new URLSearchParams({ game: 'voidrunner', metric: 'dist' }),
+    headers: demoHeaders('nova', 'Nova'),
+  });
+  assert.equal(byDist.body.entries[0].name, 'Echo');   // Echo also dives deepest
+});

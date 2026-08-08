@@ -45,6 +45,15 @@ export const GAMES = {
       accuracy:  { label: 'Accuracy',   dir: 'max', min: 0, max: 100, rank: true },
     },
   },
+  voidrunner: {
+    label: 'Kudbee Voidrunner',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9,  rank: true },
+      bestCombo: { label: 'Max chain',  dir: 'max', min: 0, max: 1e6,  rank: true },
+      dist:      { label: 'Depth (km)', dir: 'max', min: 0, max: 1e7,  rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }

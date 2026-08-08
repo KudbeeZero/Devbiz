@@ -42,7 +42,7 @@ test('GET /api/health returns ok + the game catalog', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
   assert.equal(r.body.service, 'kudbee-leaderboard');
-  assert.deepEqual(r.body.games.sort(), Object.keys(gameDef('darts') ? { darts: 1, riff: 1, riff2: 1 } : {}).sort());
+  assert.deepEqual(r.body.games.sort(), Object.keys(gameDef('darts') ? { darts: 1, riff: 1, riff2: 1, voidrunner: 1 } : {}).sort());
   assert.ok(r.body.games.includes('darts'));
 });
 
