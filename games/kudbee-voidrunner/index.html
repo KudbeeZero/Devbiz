@@ -631,7 +631,7 @@
   function spawnBoss() {
     boss = { x: 0, y: -40, z: FAR, r: 150, hp: 34 + Math.floor(dist / 700) + wave * 8, maxHp: 1, fireT: 1.8, phase: 0, hitFlash: 0, alive: true };
     boss.maxHp = boss.hp;
-    callout('CAPITAL SHIP', 'blast the core', '#ff5d3c'); shake = Math.min(shake + 0.6, 1.7);
+    callout('CAPITAL SHIP', 'blast the core', '#ff5d3c'); shake = Math.min(shake + 0.6, 1.7); freeze(0.07); punch(0.8);
   }
   function bossVolley() {
     var sp = project(boss.x, boss.y, boss.z);
@@ -652,6 +652,7 @@
     spawnDebris(sp.sx, sp.sy, '#ff8a5a', 16, 620, 18);                        // heavy dreadnought shrapnel
     spawnDebris(sp.sx, sp.sy, '#ffd34d', 10, 480, 12);
     score += 6000; shake = Math.min(shake + 1.7, 1.9); combo = 0;
+    freeze(0.12); punch(1.2);   // heavy freeze + zoom on the capital-ship kill
     // arcade reward: a full seal of missile crates streams out of the wreck
     for (var mc = 0; mc < 3; mc++) {
       powerups.push({ type: 'missile', x: boss.x + rand(-40, 40), y: boss.y + rand(-30, 30), z: Math.max(NEAR + 60, boss.z + 200 + mc * 60), r: 30, rot: 0, alive: true });
@@ -712,6 +713,7 @@
   function fireChain() {
     if (state !== 'play' || chainMeter < CHAIN_MAX) return;
     chainMeter = 0;
+    freeze(0.05); punch(0.6);   // chain beam lands with a beat
     var targets = [];
     for (var i = 0; i < enemies.length; i++) {
       var en = enemies[i]; if (!en.alive) continue;
@@ -865,6 +867,7 @@
   // fast, clean clearing reads as building real heat — classic coin-op escalation.
   var chainMult = 1, chainMilestone = 0, chainMultFlash = 0, chainMultT = 0;
   var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
+  var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -921,7 +924,7 @@
 
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
-    chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0;
+    chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1233,6 +1236,8 @@
 
   // impact zoom punch — call for heavy moments; decays over ~0.25s
   function punch(p) { if (!reduceMotion) zoom = Math.max(zoom, p || 0.8); }
+  // hit-stop freeze — a short physics pause for a heavy beat; skips under reduced motion
+  function freeze(f) { if (!reduceMotion) hitStop = Math.max(hitStop, f || 0.06); }
 
   function hitRock(t) {
     t.hp--; var sp = project(t.x, t.y, t.z);
@@ -1353,7 +1358,9 @@
   function frame(now) {
     rafId = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    if (state === 'play') { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
+    // hit-stop: brief physics freeze on heavy moments (sparks/glow keep animating)
+    if (hitStop > 0) { hitStop = Math.max(0, hitStop - dt); }
+    else if (state === 'play') { acc += dt; var guard = 0; while (acc >= PH && guard < 400) { update(PH); acc -= PH; guard++; } }
     for (var i = 0; i < pops.length; i++) pops[i].life -= dt * 0.9;
     if (co.life > 0) co.life -= dt;
     while (pops.length && pops[0].life <= 0) pops.shift();
@@ -2701,7 +2708,7 @@
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
-    get nearMissStreak() { return nearMissStreak; },
+    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
