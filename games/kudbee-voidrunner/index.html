@@ -831,7 +831,7 @@
 
   // ===== game state =====
   var state = 'gate';
-  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0;
+  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0;
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -886,7 +886,7 @@
   function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620 + (afterburner ? AB_SPEED_BONUS : 0); }
 
   function resetGame() {
-    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0;
+    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -1110,7 +1110,7 @@
           var mspr = project(msl.x, msl.y, msl.z);
           burst(mspr.sx, mspr.sy, '#ffb36b', 22, 560); burst(mspr.sx, mspr.sy, '#ffd34d', 14, 400);
           ring(mspr.sx, mspr.sy, '#ffb36b', 90, 0.55, 4);
-          shake = Math.min(shake + 0.5, 1.4); SFX.missileHit();
+          shake = Math.min(shake + 0.5, 1.4); SFX.missileHit(); punch(0.5);
           if (tgt === boss) hitBoss();
           else if (tgt.type === 'bumper') {} // safety
           else if (tgt.type) hitEnemy(tgt, MSL_DMG);
@@ -1151,7 +1151,11 @@
     for (var p = 0; p < PMAX; p++) { var q = P[p]; if (q.life > 0) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= dt * 1.4; } }
     updateDebris(dt);                            // tumbling explosion rubble
     shake *= Math.pow(0.0015, dt);
+    if (zoom > 0) zoom = Math.max(0, zoom - dt * 4);   // impact zoom decays fast
   }
+
+  // impact zoom punch — call for heavy moments; decays over ~0.25s
+  function punch(p) { if (!reduceMotion) zoom = Math.max(zoom, p || 0.8); }
 
   function hitRock(t) {
     t.hp--; var sp = project(t.x, t.y, t.z);
@@ -1297,6 +1301,12 @@
     var sx = 0, sy = 0;
     if (shake > 0.01 && !reduceMotion) { var m = shake * 9; sx = (Math.random() - 0.5) * m; sy = (Math.random() - 0.5) * m; }
     ctx.translate(sx, sy);
+    // impact zoom — a brief FOV punch around the ship for heavy moments (boss,
+    // chain beam, big kills). Decays in frame().
+    if (zoom > 0.001 && !reduceMotion) {
+      var zs = 1 + zoom * 0.06;
+      ctx.translate(cx, cy); ctx.scale(zs, zs); ctx.translate(-cx, -cy);
+    }
 
     drawStars();
     drawRocks();
