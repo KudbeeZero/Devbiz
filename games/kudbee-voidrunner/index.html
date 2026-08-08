@@ -50,6 +50,10 @@
     background:linear-gradient(135deg,#39e6ff,#6f5bff 55%,#c46bff); color:#04040a; font-family:"Space Grotesk"; font-weight:700; font-size:14px; }
   .btn-sm:hover { filter:brightness(1.06); }
   .board { margin:18px auto 4px; max-width:300px; text-align:left; }
+  /* run-summary stats strip on the game-over screen (arcade finish card) */
+  .ov-stats { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center;
+    margin:14px auto 4px; max-width:300px; color:#8a93a8; font-size:12.5px; }
+  .ov-stats b { color:#cfe9ff; font-weight:700; }
   .board.empty { display:none; }
   .board h3 { font-family:"Space Grotesk"; font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:#7c8aa0; text-align:center; margin-bottom:10px; }
   .board ol { list-style:none; margin:0; padding:0; }
@@ -188,6 +192,7 @@
       <div class="kicker" id="oKick">Ship destroyed</div>
       <h1 class="grad" id="oScore">0</h1>
       <p id="oSub">Good run.</p>
+      <div class="ov-stats" id="oStats"></div>
       <div class="name-entry hidden" id="nameEntry">
         <label for="initials">⬡ New high score — enter your initials</label>
         <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Your initials" />
@@ -681,7 +686,7 @@
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
       var newTier = Math.min(5, 1 + Math.floor(combo / 4));
-      if (newTier > chainMult) { chainMult = newTier; chainMilestone = combo; chainMultFlash = 1; SFX.volley(); }
+      if (newTier > chainMult) { chainMult = newTier; chainMilestone = combo; chainMultFlash = 1; if (chainMult > runStats.maxChain) runStats.maxChain = chainMult; SFX.volley(); }
       var gain = (en.scoreBase || 250) * chainMult; score += gain;
       shake = Math.min(shake + (en.type === 'gunship' ? 0.55 : en.type === 'turret' ? 0.5 : 0.4), 1.4);
       // kill FX tuned per type — heavier types get a bigger/slower burst + ring,
@@ -847,6 +852,7 @@
   function nearMiss(rk) {
     // arcade close-call streak: consecutive grazes escalate the bonus (25 → 40 → 60 → 100)
     var streak = Math.min(4, nearMissStreak + 1); nearMissStreak = streak;
+    if (streak > runStats.maxNearMiss) runStats.maxNearMiss = streak;
     var bonus = rk.r > 70 ? 50 + (streak - 1) * 15 : 25 + (streak - 1) * 15;
     score += bonus;
     var bx = cx, by = cy + Math.min(W, H) * 0.30;
@@ -868,6 +874,7 @@
   var chainMult = 1, chainMilestone = 0, chainMultFlash = 0, chainMultT = 0;
   var nearMissStreak = 0;   // arcade close-call streak (resets on damage)
   var hitStop = 0;          // freeze-frame (s) that pauses physics for heavy hits
+  var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
   var boss = null, bossWarn = 0, bossPending = false, nextBossDist = 1200, wave = 0;
 
   // ---- zone progression: named sectors the pilot dives through, each with a
@@ -925,6 +932,7 @@
   function resetGame() {
     score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
     chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
+    runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0;
@@ -984,6 +992,7 @@
     var primary = acquireMissileTarget();
     if (!primary) return;
     missileAmmo -= count; missileCd = MSL_FIRE_CD;
+    runStats.missilesFired += count;
     // Build up to `count` target slots: primary first, then the next closest distinct object.
     var slots = [primary];
     var others = acquireMissileBarrage(count - 1, primary.obj);
@@ -1324,6 +1333,16 @@
     document.getElementById('oScore').textContent = score.toLocaleString();
     document.getElementById('oKick').textContent = 'Ship destroyed · ' + Math.round(dist) + ' km deep';
     document.getElementById('oSub').textContent = 'Score ' + score.toLocaleString() + ' · best ' + best.toLocaleString();
+    // arcade finish card — a compact run-summary strip
+    var statsEl = document.getElementById('oStats');
+    if (statsEl) {
+      var rz = zoneTintCur ? zoneTintCur.name : 'Asteroid Drift';
+      statsEl.innerHTML =
+        '<span>Sector <b>' + rz + '</b></span>' +
+        '<span>Missiles <b>' + runStats.missilesFired + '</b></span>' +
+        '<span>Max chain <b>×' + runStats.maxChain + '</b></span>' +
+        '<span>Close-calls <b>×' + runStats.maxNearMiss + '</b></span>';
+    }
     // leaderboard: offer initials entry when this run cracks the top 10
     var list = loadScores(), entry = document.getElementById('nameEntry'), inp = document.getElementById('initials');
     if (scoreQualifies(score, list)) {
@@ -2708,7 +2727,7 @@
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- arcade chain multiplier hooks ----
     get chainMult() { return chainMult; }, get chainCombo() { return combo; }, forceChainTier: function (t) { chainMult = clamp(t || 5, 1, 5); chainMultFlash = 1; },
-    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); },
+    get nearMissStreak() { return nearMissStreak; }, freeze: function (f) { freeze(f); }, punch: function (p) { punch(p); }, get runStats() { return runStats; },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
