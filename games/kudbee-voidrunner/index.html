@@ -1642,6 +1642,7 @@
     drawAfterburnerFX();        // screen-space warp streaks while the booster is lit
     drawCinematicVignette();    // lens vignette + chromatic edge fringe at speed
     drawStageFlash();           // combo-stage full-screen tint pulse
+    drawLowHealthWarning();     // pulsing red border when shields are critical
     drawHitFlash();             // screen-space damage vignette (impact readability for the bigger ship)
     if (state !== 'gate') drawHUD();
     else drawIdle(now);
@@ -1762,6 +1763,19 @@
     tg.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',0)');
     tg.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.18 * sa).toFixed(2) + ')');
     ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H);
+  }
+  // critical-shield warning: a pulsing red border that builds as shields drop to 1
+  function drawLowHealthWarning() {
+    if (state !== 'play' || shields > 1 || reduceMotion) return;
+    var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+    var edge = 8 + pulse * 6;
+    var g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.4, cx, cy, Math.max(W, H) * 0.75);
+    var a = 0.12 + pulse * 0.1;
+    g.addColorStop(0, 'rgba(255,40,30,0)'); g.addColorStop(0.75, 'rgba(255,40,30,' + (a * 0.5).toFixed(2) + ')');
+    g.addColorStop(1, 'rgba(255,30,24,' + a.toFixed(2) + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,60,50,' + (0.5 + pulse * 0.4).toFixed(2) + ')'; ctx.lineWidth = edge;
+    ctx.strokeRect(edge / 2, edge / 2, W - edge, H - edge);
   }
   function drawHitFlash() {
     if (hitFlashT <= 0 || reduceMotion) return;
