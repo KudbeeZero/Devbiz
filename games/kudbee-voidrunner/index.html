@@ -355,6 +355,7 @@
     hit: function () { noiseHit(0.12, 0.22, 2600, 'highpass'); },
     rock: function (big) { noiseHit(big ? 0.42 : 0.26, big ? 0.5 : 0.34, big ? 820 : 1200); if (big) tone(110, 0.34, 'sine', 0.22, 48); },
     enemyKill: function () { noiseHit(0.3, 0.42, 1500); tone(210, 0.22, 'triangle', 0.16, 80); },
+    killArc: function () { var n = arguments.length ? Number(arguments[0]) || 1 : 1, cm = arguments.length > 1 ? Number(arguments[1]) || 1 : 1; var p = 440 * Math.pow(1.06, n) * (1 + (cm - 1) * 0.35); tone(p, 0.09, 'triangle', 0.14, null, 0); },
     playerHit: function () { noiseHit(0.5, 0.5, 520); tone(90, 0.42, 'sawtooth', 0.26, 38); },
     power: function (type) { var b = type === 'shield' ? 523 : type === 'rapid' ? 659 : 587; tone(b, 0.09, 'triangle', 0.16, null, 0); tone(b * 1.26, 0.09, 'triangle', 0.16, null, 0.07); tone(b * 1.5, 0.13, 'triangle', 0.18, null, 0.14); },
     bossWarn: function () { tone(190, 0.45, 'sawtooth', 0.18, 150, 0); tone(190, 0.45, 'sawtooth', 0.18, 150, 0.28); },
@@ -755,6 +756,9 @@
       en.alive = false; var idx = enemies.indexOf(en); if (idx >= 0) enemies.splice(idx, 1);
       if (challenge) challengeKill('enemy');
       combo++; comboT = 2.2;
+      // arcade kill-arc pitch: rapid kills climb a note scale (coin-op payoff)
+      killStreakT = 1.0; killStreakN = Math.min(8, killStreakN + 1);
+      if (SFX.killArc) SFX.killArc(killStreakN, chainMult);
       // arcade chain escalation: every 4 rapid kills bumps the score multiplier
       chainMultT = 3.2;
       var newTier = Math.min(5, 1 + Math.floor(combo / 4));
@@ -990,6 +994,7 @@
   // meter on damage — another arcade risk/reward layer on top of the chain multiplier.
   var frenzyHeat = 0, frenzyMax = 100, frenzy = 0;
   function scoreMult() { return frenzy > 0 ? 2 : 1; }   // FRENZY overdrive doubles all score
+  var killStreakT = 0, killStreakN = 0;                 // arcade coin-op pitch climb on rapid kills
   var runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
   var damageDir = -1, damageDirT = 0;   // screen-edge hit-direction wedge (angle, timer)
   // ---- arcade challenge events: periodic timed clear-objectives (infestation /
@@ -1096,7 +1101,7 @@
     damageDir = -1; damageDirT = 0;
     challenge = null; challengeNext = 1800; challengeFlash = 0;
     stageFlash = 0; stageColor = '#ffd34d';
-    frenzyHeat = 0; frenzy = 0;
+    frenzyHeat = 0; frenzy = 0; killStreakT = 0; killStreakN = 0;
     boss = null; bossWarn = 0; bossPending = false; nextBossDist = 1200; wave = 0;
     zoneIdx = 0; zoneHint = 0;
     powerups.length = 0; powerT = 11; rapidT = 0; tripleT = 0; plasmaT = 0;
@@ -1246,6 +1251,7 @@
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; plasmaT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
     if (chainMultT > 0) { chainMultT -= dt; if (chainMultT <= 0 && chainMult > 1) { chainMult = 1; chainMultT = 0; } }
+    if (killStreakT > 0) { killStreakT -= dt; if (killStreakT <= 0) killStreakN = 0; }
     if (damageDirT > 0) { damageDirT -= dt; if (damageDirT <= 0) damageDir = -1; }
     if (stageFlash > 0) stageFlash = Math.max(0, stageFlash - dt * 1.6);
     // FRENZY heat: a hot combo (≥8) charges the overdrive; full heat unleashes it
