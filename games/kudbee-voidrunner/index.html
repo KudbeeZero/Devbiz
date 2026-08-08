@@ -643,7 +643,11 @@
     spawnDebris(sp.sx, sp.sy, '#ff8a5a', 16, 620, 18);                        // heavy dreadnought shrapnel
     spawnDebris(sp.sx, sp.sy, '#ffd34d', 10, 480, 12);
     score += 6000; shake = Math.min(shake + 1.7, 1.9); combo = 0;
-    flash(6000, sp.sx, sp.sy); callout('CAPITAL SHIP DOWN', '+6,000', '#ffd34d'); SFX.bossDown();
+    // arcade reward: a full seal of missile crates streams out of the wreck
+    for (var mc = 0; mc < 3; mc++) {
+      powerups.push({ type: 'missile', x: boss.x + rand(-40, 40), y: boss.y + rand(-30, 30), z: Math.max(NEAR + 60, boss.z + 200 + mc * 60), r: 30, rot: 0, alive: true });
+    }
+    flash(6000, sp.sx, sp.sy); callout('CAPITAL SHIP DOWN', '+6,000 · MSL CRATES', '#ffd34d'); SFX.bossDown();
     wave++; nextBossDist = dist + 1600 + wave * 400; boss = null;
   }
   function enemyFire(en) {
@@ -677,6 +681,10 @@
       // so triggering it is always paid for out of prior kills, never self-sustaining.
       if (!chaining) chainMeter = Math.min(CHAIN_MAX, chainMeter + CHAIN_CHARGE);
       if (!chaining && missileAmmo < MSL_AMMO_MAX) missileAmmo = Math.min(MSL_AMMO_MAX, missileAmmo + MSL_KILL_REFUND);   // kills refund a missile
+      // arcade loop: bigger kills sometimes pop a missile crate into play
+      if (!chaining && (en.type === 'gunship' || en.type === 'turret' || Math.random() < 0.12)) {
+        powerups.push({ type: 'missile', x: en.x, y: en.y, z: Math.max(NEAR + 60, en.z + 260), r: 30, rot: 0, alive: true });
+      }
     }
   }
 
@@ -879,6 +887,7 @@
   var missiles = [];
   var missileAmmo = 6, missileCd = 0, missileLockId = null;
   var MSL_AMMO_MAX = 6, MSL_RELOAD_MS = 1.6, MSL_KILL_REFUND = 1;   // per-kill ammo back
+  var MSL_PICKUP_QTY = 3, MSL_PICKUP_OVER = 4;                     // crate fills +3, can overfill to max+4
   var MSL_FIRE_CD = 0.45, MSL_STEER = 6.5, MSL_SPEED = 1500, MSL_DMG = 4;
   try { best = parseInt(localStorage.getItem('kudbee.voidrunner.best') || '0', 10) || 0; } catch (e) {}
 
@@ -955,10 +964,12 @@
 
   // ===== power-ups: collectible buffs that stream in like rocks =====
   function spawnPowerup() {
-    // bias toward shields when you're hurting, otherwise even spread across the three
+    // bias toward shields when you're hurting; missile crates are an arcade-ish
+    // reward that keeps the stash topped up; otherwise even spread across the rest.
     var roll = Math.random(), type;
-    if (shields <= 1) type = roll < 0.6 ? 'shield' : (roll < 0.8 ? 'rapid' : 'triple');
-    else type = roll < 0.34 ? 'shield' : (roll < 0.67 ? 'rapid' : 'triple');
+    if (shields <= 1) type = roll < 0.5 ? 'shield' : (roll < 0.7 ? 'missile' : (roll < 0.85 ? 'rapid' : 'triple'));
+    else if (roll < 0.18) type = 'missile';
+    else type = roll < 0.42 ? 'shield' : (roll < 0.71 ? 'rapid' : 'triple');
     powerups.push({ type: type, x: rand(-WORLD * 0.7, WORLD * 0.7), y: rand(-WORLD * 0.5, WORLD * 0.5),
       z: FAR + rand(0, 160), r: 30, rot: 0, alive: true });
   }
@@ -968,6 +979,11 @@
       if (shields < MAXSHIELD) { shields++; callout('SHIELD +1', 'integrity restored', '#39e6ff'); }
       else { score += 500; flash(500, sp.sx, sp.sy); callout('SHIELD MAX', '+500', '#39e6ff'); }
       burst(sp.sx, sp.sy, '#39e6ff', 22, 420);
+    } else if (pu.type === 'missile') {
+      missileAmmo = Math.min(MSL_AMMO_MAX + MSL_PICKUP_OVER, missileAmmo + MSL_PICKUP_QTY);
+      var mcol = '#ffb36b'; callout('MISSILE STASH +' + MSL_PICKUP_QTY, 'seekers loaded', mcol);
+      burst(sp.sx, sp.sy, mcol, 22, 460); flash(250 * MSL_PICKUP_QTY, sp.sx, sp.sy);
+      shake = Math.min(shake + 0.35, 1.2); SFX.missile();
     } else if (pu.type === 'rapid') {
       rapidT = RAPID_DUR; callout('RAPID FIRE', 'guns overcharged', '#ffd34d');
       burst(sp.sx, sp.sy, '#ffd34d', 22, 420);
@@ -1853,8 +1869,8 @@
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R * 0.4, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
-  function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : '#7CFFb2'; }
-  function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
+  function puCol(t) { return t === 'shield' ? '#39e6ff' : t === 'rapid' ? '#ffd34d' : t === 'missile' ? '#ffb36b' : '#7CFFb2'; }
+  function puGlow(t, a) { return t === 'shield' ? 'rgba(57,230,255,' + a + ')' : t === 'rapid' ? 'rgba(255,211,77,' + a + ')' : t === 'missile' ? 'rgba(255,179,107,' + a + ')' : 'rgba(124,255,178,' + a + ')'; }
   function drawPowerups() {
     var order = powerups.slice().sort(function (a, b) { return b.z - a.z; });
     for (var i = 0; i < order.length; i++) {
@@ -1883,6 +1899,16 @@
       } else if (pw.type === 'rapid') {
         ctx.beginPath(); ctx.moveTo(R * 0.16, -R * 0.55); ctx.lineTo(-R * 0.22, R * 0.06); ctx.lineTo(R * 0.0, R * 0.06);
         ctx.lineTo(-R * 0.16, R * 0.55); ctx.lineTo(R * 0.26, -R * 0.12); ctx.lineTo(R * 0.02, -R * 0.12); ctx.closePath(); ctx.fill();
+      } else if (pw.type === 'missile') {
+        // a small upright missile: fins + cylindrical body + pointed nose
+        ctx.fillStyle = col; ctx.globalAlpha = 0.95;
+        ctx.beginPath(); ctx.ellipse(0, 0, R * 0.16, R * 0.5, 0, 0, TAU); ctx.fill();
+        // fins
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.2, R * 0.06);
+        ctx.beginPath(); ctx.moveTo(-R * 0.16, R * 0.2); ctx.lineTo(-R * 0.34, R * 0.5); ctx.lineTo(-R * 0.05, R * 0.34); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(R * 0.16, R * 0.2); ctx.lineTo(R * 0.34, R * 0.5); ctx.lineTo(R * 0.05, R * 0.34); ctx.stroke();
+        // nose tip
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-R * 0.16, -R * 0.3); ctx.lineTo(0, -R * 0.6); ctx.lineTo(R * 0.16, -R * 0.3); ctx.closePath(); ctx.fill();
       } else {
         for (var k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * R * 0.34, -R * 0.42); ctx.lineTo(k * R * 0.34, R * 0.42); ctx.stroke(); }
       }
@@ -2412,6 +2438,7 @@
       bossActive: !!(boss && boss.alive),
       bossHp: boss && boss.alive ? clamp(boss.hp / boss.maxHp, 0, 1) : 0,
       chainReady: chainMeter >= CHAIN_MAX,
+      missileAmmo: Math.floor(missileAmmo),
       rapidActive: rapidT > 0,
       tripleActive: tripleT > 0,
       afterburner: !!afterburner,
@@ -2583,6 +2610,7 @@
     fireMissile: function () { fireMissile(); },
     forceMissileAmmo: function (n) { missileAmmo = clamp(n >= 0 ? n : MSL_AMMO_MAX, 0, MSL_AMMO_MAX); },
     acquireMissileTarget: function () { return acquireMissileTarget(); },
+    forceMissileCrate: function () { powerups.push({ type: 'missile', x: camX, y: camY, z: 120, r: 30, rot: 0, alive: true }); return powerups[powerups.length - 1]; },
     // ---- zone / sector hooks ----
     get zoneIdx() { return zoneIdx; }, get zone() { return zoneTintCur; },
     // ---- SIMURGH wingman hooks ----
