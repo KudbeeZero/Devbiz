@@ -1900,6 +1900,36 @@
   (function idle() { if (state === 'gate') { draw(performance.now()); requestAnimationFrame(idle); } })();
   window.addEventListener('resize', function () { if (state !== 'play') draw(performance.now()); });
 
+  // ===== KUDBEE Studio Hub integration =====
+  // If the Hub SDK is present, pinball pushes scores + level-ups into the
+  // central profile. Runs standalone (no SDK) with zero errors.
+  (function () {
+    var _studioLoad = function () {
+      var s = document.createElement('script');
+      s.src = '../studio/studio-sdk.js';
+      s.onload = function () {
+        if (window.KDStudio) {
+          KDStudio.install && KDStudio.install('pinball');
+          KDStudio.BUS && KDStudio.BUS.on('track', function () {});
+        }
+      };
+      document.head.appendChild(s);
+    };
+    // push a score into the hub on game over (best per run)
+    var _lastScore = 0;
+    var _origGameOver = gameOver;
+    gameOver = function () {
+      _origGameOver();
+      try {
+        if (window.KDStudio && score > _lastScore) {
+          _lastScore = score;
+          KDStudio.track && KDStudio.track('pinball', 'score', score);
+        }
+      } catch (e) {}
+    };
+    if (document.readyState === 'complete') _studioLoad(); else window.addEventListener('load', _studioLoad);
+  })();
+
   // expose for headless verification
   window.PINBALL = {
     get state() { return state; }, get score() { return score; }, get balls() { return balls; },
