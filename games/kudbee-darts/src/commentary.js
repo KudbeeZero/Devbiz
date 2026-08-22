@@ -88,10 +88,35 @@
   function CommentaryEngine(game) {
     this.game = game;
     this.enabled = true;
-    this.backend = WebSpeechBackend;
     this._counters = {};
+    // Use the swappable TTS module if it loaded, else fall back to Web Speech.
+    if (window.KD && KD.TTS) {
+      // Default to Web Speech (zero-setup). Call useHTTP(url, voice) to switch to
+      // a self-hosted Kokoro/Chatterbox server at runtime.
+      this.backend = KD.TTS.webSpeech();
+    } else {
+      this.backend = WebSpeechBackend;
+    }
     if (this.backend.init) this.backend.init();
   }
+
+  // Switch to a self-hosted OpenAI-compatible TTS server (Kokoro/Chatterbox/MOSS).
+  // usage: commentary.useHTTP('http://localhost:8880', 'af_heart')
+  CommentaryEngine.prototype.useHTTP = function (url, voice) {
+    if (window.KD && KD.TTS) {
+      this.backend = KD.TTS.http({ url: url, voice: voice });
+      return this.backend.available || this.backend._fallback;
+    }
+    return false;
+  };
+
+  // Switch back to the browser's built-in Web Speech.
+  CommentaryEngine.prototype.useWebSpeech = function () {
+    if (window.KD && KD.TTS) this.backend = KD.TTS.webSpeech();
+    else { this.backend = WebSpeechBackend; this.backend.init(); }
+  };
+
+  CommentaryEngine.prototype.backendName = function () { return (this.backend && this.backend.name) || 'web-speech'; };
 
   CommentaryEngine.prototype._say = function (text, priority) {
     if (!this.enabled || !text) return;

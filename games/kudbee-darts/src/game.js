@@ -125,7 +125,24 @@
         this.commentary.setEnabled(on);
         this._say(on ? 'COMMENTARY ON' : 'COMMENTARY OFF', 1.0, on ? '#7CFFb2' : '#ff5d3c');
       }
+      // 'T' toggles the TTS voice backend (web speech <-> last http server).
+      if (e.code === 'KeyT' && this.commentary) {
+        if (this.commentary.backendName && this.commentary.backendName() === 'web-speech') {
+          if (this._ttsURL) { this.commentary.useHTTP(this._ttsURL, this._ttsVoice); this._say('TTS: remote voice', 1.0, '#7CFFb2'); }
+          else this._say('Set ?tts=host:voice first', 1.0, '#ffd34d');
+        } else {
+          this.commentary.useWebSpeech(); this._say('TTS: built-in voice', 1.0, '#7CFFb2');
+        }
+      }
     });
+  };
+
+  // Configure a self-hosted TTS backend from outside (e.g. from the boot script
+  // reading a ?tts=host:voice URL param). Returns true if set.
+  Game.prototype.configureTTS = function (url, voice) {
+    this._ttsURL = url; this._ttsVoice = voice || 'af_heart';
+    if (this.commentary) { this.commentary.useHTTP(this._ttsURL, this._ttsVoice); }
+    return true;
   };
 
   // ====================================================================

@@ -85,12 +85,28 @@
 <script src="src/modes/x01.js"></script>
 <script src="src/modes/cricket.js"></script>
 <script src="src/progression.js"></script>
+<script src="src/tts-backend.js"></script>
 <script src="src/commentary.js"></script>
 <script src="src/game.js"></script>
 <script>
   (function () {
     var canvas = document.getElementById('game');
     var game = new KD.Game({ canvas: canvas });
+
+    // Optional ?tts=host:voice auto-configures a self-hosted Kokoro/Chatterbox
+    // server for the commentary voice. Example:
+    //   .../index.html?tts=localhost:8880:af_heart
+    // Falls back to the browser's built-in voice if the server is unreachable.
+    try {
+      var m = location.search.match(/[?&]tts=([^&]+)/);
+      if (m) {
+        var parts = decodeURIComponent(m[1]).split(':');
+        var host = parts[0] || 'localhost:8880';
+        var voice = parts[1] || 'af_heart';
+        if (!/^https?:\/\//.test(host)) host = 'http://' + host;
+        game.configureTTS(host, voice);
+      }
+    } catch (e) {}
 
     // Load the asset manifest (procedural fallback if absent), then start.
     game.sprites.load('assets/manifest.json').then(function () {
