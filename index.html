@@ -685,6 +685,9 @@ html:not(.js) .story .pin-outer { height: auto; }
 .gcard .g-art { display: block; position: relative; aspect-ratio: 16/9; overflow: hidden; }
 .gcard .g-art canvas, .gcard .g-art img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--mo-dur-8) var(--ease); }
 .gcard:hover .g-art canvas, .gcard:hover .g-art img, .gcard:focus-visible .g-art canvas, .gcard:focus-visible .g-art img { transform: scale(1.06); }
+/* Hub card art: an animated dot-grid constellation that drifts on hover. */
+.hub-dots { position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 30%, rgba(196,107,255,0.5) 2px, transparent 2px), radial-gradient(circle at 70% 20%, rgba(57,230,255,0.5) 2px, transparent 2px), radial-gradient(circle at 40% 70%, rgba(124,255,178,0.5) 2px, transparent 2px), radial-gradient(circle at 80% 65%, rgba(255,211,77,0.5) 2px, transparent 2px), radial-gradient(circle at 15% 80%, rgba(196,107,255,0.4) 2px, transparent 2px), radial-gradient(circle at 60% 45%, rgba(57,230,255,0.35) 1.5px, transparent 1.5px), radial-gradient(circle at 85% 85%, rgba(124,255,178,0.35) 1.5px, transparent 1.5px); background-size: 100% 100%; transition: transform 0.6s var(--ease), background-position 0.6s var(--ease); }
+.gcard:hover .hub-dots { transform: scale(1.08); }
 /* CRT hover treatment — scanline + a soft per-title bloom, CSS-only. Sits
    above the canvas/img (pseudo-elements paint last) and is fully inert
    (opacity 0, pointer-events none) until hover/focus. */
@@ -1093,6 +1096,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         <li><a href="#services">Services</a></li>
         <li><a href="#agents">Agents</a></li>
         <li><a href="#games">Games</a></li>
+        <li><a href="studio/index.html">Hub</a></li>
         <li><a href="#pricing">Pricing</a></li>
         <li><a href="#doctrine">Doctrine</a></li>
     </ul>
@@ -1112,6 +1116,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     <a href="#services">Services <span class="arr">→</span></a>
     <a href="#agents">AI Agents <span class="arr">→</span></a>
     <a href="#games">Games <span class="arr">→</span></a>
+    <a href="studio/index.html">Studio Hub <span class="arr">→</span></a>
     <a href="#lab">The Lab <span class="arr">→</span></a>
     <a href="#pricing">Pricing <span class="arr">→</span></a>
     <a href="#doctrine">Doctrine <span class="arr">→</span></a>
@@ -1388,6 +1393,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="game-grid">
+            <a class="gcard" data-rv style="--acc-rgb:196,107,255" href="studio/index.html"><span class="g-art" style="background:linear-gradient(135deg,#1a1040,#05050f)"><span class="hub-dots" aria-hidden="true"></span><span class="g-badge" style="--c:var(--magenta)">Command</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Studio Hub</h3><span class="g-cat">Your profile · economy · AI rivals · live leaderboards</span></span></a>
             <a class="gcard" data-rv style="--acc-rgb:57,230,255" href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Darts</h3><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
             <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:255,211,77" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff</h3><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
             <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff II</h3><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
@@ -1722,7 +1728,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
                 <p>A one-person creative dev studio — stunning websites, teams trained on AI, and original games.</p>
             </div>
             <div class="f-col"><h3>Studio</h3><a href="#work">Work</a><a href="#services">Services</a><a href="#agents">AI Agents</a><a href="#pricing">Pricing</a><a href="#doctrine">Doctrine</a><a href="#contact">Contact</a></div>
-            <div class="f-col"><h3>Play</h3><a href="games/kudbee-contra/index.html">Kudbee Contra</a><a href="games/kudbee-darts/index.html">Kudbee Darts</a><a href="games/kudbee-munch/index.html">Kudbee Munch</a><a href="games/kudbee-orbital/index.html">Kudbee Orbital</a><a href="games/kudbee-puzzles/index.html">Kudbee Puzzles</a><a href="games/kudbee-riff/index.html">Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a></div>
+            <div class="f-col"><h3>Play</h3><a href="studio/index.html">Studio Hub</a><a href="games/kudbee-contra/index.html">Kudbee Contra</a><a href="games/kudbee-darts/index.html">Kudbee Darts</a><a href="games/kudbee-munch/index.html">Kudbee Munch</a><a href="games/kudbee-orbital/index.html">Kudbee Orbital</a><a href="games/kudbee-puzzles/index.html">Kudbee Puzzles</a><a href="games/kudbee-riff/index.html">Kudbee Riff</a><a href="games/kudbee-riff-2/index.html">Kudbee Riff II</a><a href="games/kudbee-pinball/index.html">Kudbee Pinball</a><a href="games/kudbee-voidrunner/index.html">Kudbee Voidrunner</a><a href="leaderboard/public/leaderboard.html">🏆 Online League</a></div>
             <div class="f-col"><h3>Beyond</h3><a href="ship-it/">Ship-it</a><a href="brain/">Build Your Own Brain</a><a href="blog/">Articles</a><a href="lab/">The Lab</a><a href="tools/kudbee-scribe/index.html">Scribe</a><a href="https://github.com/KudbeeZero" target="_blank" rel="noopener">GitHub</a><a href="mailto:kudbeezero@gmail.com">kudbeezero@gmail.com</a></div>
         </div>
         <div class="f-bottom">
