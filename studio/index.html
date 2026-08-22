@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#05050f">
+<title>KUDBEE Studio Hub — Command Center</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* boot flash: hide until SDK ready to avoid FOUC */
+  body { opacity: 0; animation: fadein 0.5s ease 0.1s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark"></div>
+    <div>
+      <div>KUDBEE <span style="color:var(--accent)">Studio</span></div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+  </div>
+  <div class="top-spacer"></div>
+  <div class="hud-chip"><span class="k">Level</span><span class="v" id="h-level">—</span></div>
+  <div class="hud-chip"><span class="k">Credits</span><span class="v" id="h-credits">—</span></div>
+  <div class="hud-chip"><span class="k">Player</span><span class="v" id="h-name">—</span></div>
+  <button class="btn" id="btn-skin" title="Cycle skin">◐ Skin</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ===== Row 1: Terraforming + Architecture ===== -->
+  <div class="grid grid-main section-gap">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Terraforming — Table Evolution</div>
+      <div class="terra-card">
+        <div class="terra-ring-wrap"><canvas id="terra-ring" width="160" height="160"></canvas></div>
+        <div style="flex:1">
+          <div class="terra-stage" id="terra-name">—</div>
+          <div class="terra-tag" id="terra-tag">—</div>
+          <div class="muted" id="terra-stage-num">—</div>
+          <div class="terra-energy-track"><div class="terra-energy" id="terra-energy"></div></div>
+          <div class="xp-row">
+            <div class="xp-track"><div class="xp-bar" id="xp-bar"></div></div>
+            <span class="xp-text" id="xp-text">—</span>
+          </div>
+          <div class="terra-pips" id="terra-pips"></div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:14px;font-size:11px">
+        As you level up, your studio <i>terraforms</b>: each stage wakes new infrastructure —
+        plugins unlock, AI agents become available, the chain wallet connects, and the
+        Stake Hall opens for competitive wagers.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Architecture — The Cube</div>
+      <canvas id="constellation" class="chart-h-lg" style="height:240px"></canvas>
+      <p class="muted" style="margin-top:8px;font-size:11px">
+        Every node is a real primitive: D1 · KV · R2 · Workers · Solana · Algorand · Agents.
+        Pulses travel along active links. This is the Rubik's cube layer — plug any game in,
+        and it inherits the whole stack.
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== Row 2: Stats + Charts ===== -->
+  <div class="grid grid-4 section-gap">
+    <div class="card stat-tile"><div class="v" id="stat-plays">0</div><div class="k">Total Plays</div></div>
+    <div class="card stat-tile"><div class="v" id="stat-score">0</div><div class="k">Total Score</div></div>
+    <div class="card stat-tile"><div class="v" id="stat-best">0</div><div class="k">Best Single Run</div></div>
+    <div class="card stat-tile"><div class="v" id="stat-fav">—</div><div class="k">Favorite Game</div></div>
+  </div>
+
+  <div class="grid grid-2 section-gap">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Score Distribution</div>
+      <canvas id="bar-plays" class="chart-h"></canvas>
+      <div class="legend"><span><i style="background:#39e6ff"></i>Pinball</span><span><i style="background:#7CFFb2"></i>Darts</span><span><i style="background:#ffd34d"></i>Orbital</span><span><i style="background:#c46bff"></i>Circuit</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Game Balance — Radar</div>
+      <canvas id="radar" class="chart-h"></canvas>
+      <div class="muted" style="margin-top:6px;font-size:11px">How evenly you play across the studio catalog.</div>
+    </div>
+  </div>
+
+  <!-- ===== Row 3: Plugin Rack ===== -->
+  <div class="card section-gap">
+    <div class="card-title"><span class="dot"></span> Plugin Rack — Install &amp; Activate</div>
+    <div class="muted" style="font-size:11px;margin-bottom:12px">Each plugin is a real integration. Install to wire it into your hub. <span style="color:var(--gold)">Gate-tagged</span> plugins connect to owner-only services (chain, AI keys, payments).</div>
+    <div id="plugin-rack"></div>
+  </div>
+
+  <!-- ===== Row 4: Leaderboard + Agents ===== -->
+  <div class="grid grid-main section-gap">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Competition — Spliced Leaderboard</div>
+      <div class="board-controls" style="margin-bottom:12px">
+        <button id="board-pin">Pinball</button><button id="board-dart">Darts</button>
+        <button id="board-orb">Orbital</button><button id="board-puz">Circuit</button>
+        <span style="flex:1"></span>
+        <button id="board-all" class="active">All-time</button><button id="board-week">Weekly</button><button id="board-day">Daily</button>
+      </div>
+      <div id="board-body"></div>
+      <div class="muted" style="margin-top:10px;font-size:11px">
+        AI rivals (✺) grind alongside you. Boards splice by time window so there's
+        always a winnable path — never one intimidating wall of all-time scores.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> AI Agent Bay</div>
+      <div class="muted" style="font-size:11px;margin-bottom:12px">Spawn autonomous rivals that compete across your games. <span style="color:var(--muted)">Real AI (LLM) = owner gate.</span></div>
+      <div id="agent-list"></div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-spawn">+ Spawn Rival</button>
+        <button class="btn" id="btn-clear-agents">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Row 5: Economy + Wallet + Challenges ===== -->
+  <div class="grid grid-3 section-gap">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Economy — Credits</div>
+      <canvas id="spark-credits" class="chart-h" style="height:90px"></canvas>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" id="btn-wager">Wager 10%</button>
+        <button class="btn" id="btn-sim">Simulate Score</button>
+      </div>
+      <div class="muted" style="margin-top:8px;font-size:11px">Credits power stakes, wagers, and progression. <span style="color:var(--gold)">Real money = owner gate.</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Chain Wallet — Solana · Algorand</div>
+      <div class="wallet-row"><span class="lbl">Address</span><span class="val addr" id="w-addr">—</span></div>
+      <div class="wallet-row"><span class="lbl">KUDBEE</span><span class="val" id="w-kdb">—</span></div>
+      <div class="wallet-row"><span class="lbl">SOL (sim)</span><span class="val" id="w-sol">—</span></div>
+      <div class="wallet-row"><span class="lbl">ALGO (sim)</span><span class="val" id="w-algo">—</span></div>
+      <div class="muted" style="margin-top:8px;font-size:11px">Wallet is simulated locally. <span style="color:var(--gold)">Real chain connection = owner gate.</span> On-chain: Anchor (Solana) · AlgoKit (Algorand).</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Challenges</div>
+      <div id="challenge-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== Row 6: Integrations ===== -->
+  <div class="card section-gap">
+    <div class="card-title"><span class="dot"></span> Integration Layer — Kilo · MCP · SDK · Chain</div>
+    <div class="muted" style="font-size:11px;margin-bottom:12px">Status of every external service the studio plugs into. Kilo CLI is your operator terminal. MCP exposes studio tools to AI agents. The SDK is what games import to push stats here.</div>
+    <div id="integrations"></div>
+  </div>
+
+  <p class="muted" style="text-align:center;padding:20px 0;font-size:11px">
+    KUDBEE Studio Hub · zero-build static · Cloudflare Pages edge · v1 — all data local until you connect real services.
+  </p>
+</div>
+
+<!-- Agent panel: slides in from the right. The brain of the Hub. -->
+<div id="agent-panel" class="agent-panel">
+  <div class="agent-head">
+    <div class="agent-avatar">✺</div>
+    <div>
+      <div class="agent-name">Studio Agent</div>
+      <div class="agent-sub">deterministic analytics · local</div>
+    </div>
+    <button id="agent-close" class="agent-close">✕</button>
+  </div>
+  <div id="agent-card" class="agent-card"></div>
+  <div id="agent-daily" class="agent-daily"></div>
+  <div class="agent-log" id="agent-log"></div>
+  <div class="agent-input-row">
+    <input id="agent-input" placeholder="Ask: daily challenge, coaching, trends…" />
+    <button id="agent-send">➤</button>
+  </div>
+</div>
+<button id="agent-fab" class="agent-fab" title="Studio Agent">✺</button>
+
+<div class="toast" id="toast"></div>
+
+<script src="studio-sdk.js"></script>
+<script src="analytics.js"></script>
+<script src="agent.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

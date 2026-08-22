@@ -1571,5 +1571,30 @@
     ctx.textAlign = 'left';
   };
 
+  // ===== KUDBEE Studio Hub integration =====
+  // If the Hub SDK is present, darts pushes scores + level-ups into the
+  // central profile. Runs standalone (no SDK) with zero errors.
+  (function () {
+    var _pushDarts = function () {
+      try {
+        if (!window.KDStudio) return;
+        KDStudio.install && KDStudio.install('darts');
+        var prog = (window.KD && KD.Progression) ? new KD.Progression().data : null;
+        if (!prog) return;
+        var xp = (prog.level || 1) * 100 + (prog.stats && prog.stats.x01 ? prog.stats.x01.total180s * 200 : 0);
+        KDStudio.profile().name = prog.name || KDStudio.profile().name;
+        KDStudio.track && KDStudio.track('darts', 'score', (prog.stats && prog.stats.x01 ? prog.stats.x01.won * 500 : 0) + xp);
+        if (prog.coins) KDStudio.addCredits(Math.floor((prog.coins - (KDStudio._lastCoins || 0))));
+        KDStudio._lastCoins = prog.coins;
+      } catch (e) {}
+    };
+    var _load = function () {
+      if (window.KDStudio) { _pushDarts(); return; }
+      var s = document.createElement('script'); s.src = '../studio/studio-sdk.js';
+      s.onload = _pushDarts; document.head.appendChild(s);
+    };
+    window.addEventListener('load', function () { setTimeout(_load, 500); });
+  })();
+
   KD.Game = Game;
 })(window.KD = window.KD || {});

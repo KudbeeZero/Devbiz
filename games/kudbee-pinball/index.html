@@ -67,9 +67,9 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
-        <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
+        <p><b>Starbreak 2.5D.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b>. Build COMBOS to light the <b>K·U·D·B·B flippers</b> — flip every letter, then collect the jackpot. Find the <b>secret pockets</b> hidden in the dead space, ride the <b>rescue bumpers</b> off the outlanes, and trigger <b>MULTIBALL</b> from a roaming saucer. Fresh serves get a short <b>ball save</b> + <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
+        <div class="badge">2.5D depth · KUDBB flippers · rescue bumpers · secret pockets · multiball</div>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — aim for a PERFECT LAUNCH) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
         <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
@@ -742,6 +742,8 @@
         burst(x, y, col, 24 + comboN * 2, 420 + comboN * 20);
         burst(x, y, '#ffffff', 16, 500);
         shake = Math.min(shake + 0.8, 1.9);
+        comboScreenFlash = 1;                 // full-table flash on big combos (2.5D juice)
+        digitalGlitchIntensity = Math.min(0.6, comboN * 0.06);
       }
       if (special && special.rainbow) {                     // TRIPLE LOOP: a jackpot-grade flourish
         burst(x, y, '#39e6ff', 16, 420); burst(x, y, '#c46bff', 16, 460); burst(x, y, '#ffd34d', 18, 500);
@@ -835,6 +837,7 @@
       // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
       lockedBalls = 0; multiballActive = true; hasSeenMultiball = true;
+      saucerMoving = true; saucerMovePattern = 0;          // roaming capture pocket during multiball
       callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
       sfx('multiball');
       burst(saucer.x, saucer.y, '#ffd34d', 26, 620); burst(saucer.x, saucer.y, '#39e6ff', 20, 560); burst(saucer.x, saucer.y, '#c46bff', 20, 600);
@@ -864,6 +867,7 @@
   // reload on the next fresh ball.
   function onKickback(b, side) {
     if (side < 0) kickL = false; else kickR = false;
+    sessionStats.ballsSaved++;
     var col = '#7CFFb2';
     addScore(250); bonusU += 4; sfx('kick');
     burst(b.x, b.y, col, 20, 520); burst(b.x, b.y, '#ffffff', 10, 300);     // shockwave: green save-flash + a hot white core
@@ -967,6 +971,39 @@
       }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
       b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
+      // ---- drain-prevention assist (the core fix for "ball just goes to the side") ----
+      // A gentle, level-scaled pull toward center + away from the outlane mouths keeps a
+      // ball that strays wide from draining instantly, without fighting the player's shots.
+      if (!climbing && b.y > 700 && !b.inLane) {
+        var cx = VW / 2;
+        var toC = cx - b.x;
+        centerGravity = 90 + level * 8;
+        b.vx += toC * centerGravity * h * 0.0016;
+        // outlane magnetism: if a kickback is still loaded and the ball is near that outlane,
+        // nudge it back inward so the kickback actually gets used instead of a silent drain.
+        if (kickL && b.x < 230 && b.y > 1300) b.vx += 130 * h;
+        if (kickR && b.x > 670 && b.y > 1300) b.vx -= 130 * h;
+        // flipper magnet: when low and slow, bias the ball toward the flipper line so a
+        // near-miss becomes a catchable shot.
+        if (b.y > 1240 && Math.abs(b.vy) < 600) b.vy -= 40 * h;
+      }
+      // ---- moving saucer (multiball): drift the capture pocket toward a roaming target ----
+      if (saucerMoving && saucer) {
+        saucer.x += (saucerMoveTarget.x - saucer.x) * Math.min(1, saucerMoveSpeed * h);
+        saucer.y += (saucerMoveTarget.y - saucer.y) * Math.min(1, saucerMoveSpeed * h);
+      }
+      // ---- secret areas: passing through one reveals it once and pays a one-time bonus ----
+      for (var sa = 0; sa < secretAreas.length; sa++) {
+        var area = secretAreas[sa]; if (area.discovered) continue;
+        var dxa = b.x - area.x, dya = b.y - area.y;
+        if (dxa * dxa + dya * dya < area.r * area.r) {
+          area.discovered = true; sessionStats.secretsFound++;
+          addScore(area.reward);
+          callout('SECRET FOUND!', '+' + (area.reward * mult).toLocaleString(), '#ff6ec7');
+          sfx('multiball'); shake = Math.min(shake + 0.7, 1.8);
+          burst(area.x, area.y, '#ff6ec7', 28, 520); burst(area.x, area.y, '#ffffff', 14, 360);
+        }
+      }
       // shooter-lane exit: a launched ball that clears the lane is routed over the top and
       // DROPPED through the skill lane its plunge power selected (see enterFromLane()).
       if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
@@ -1022,7 +1059,11 @@
   function launch() {
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
-    b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+    // "perfect launch" window: charging to ~the lit lane's band gives a tiny boost + bonus,
+    // so there's a learnable skill to the plunge on top of the skill-shot it sets up.
+    var perfect = Math.abs(charge - (0.45 + skillLit * (0.817 - 0.45) / 2)) < 0.06;
+    if (perfect) { sessionStats.perfectLaunches++; addScore(1000); callout('PERFECT LAUNCH!', '+1000', '#7CFFb2'); burst(450, 1320, '#7CFFb2', 18, 400); }
+    b.vy = -(620 + charge * 1700) * (perfect ? 1.04 : 1); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
     sfx('launch');
   }
 
@@ -1039,8 +1080,11 @@
     }
     if (!hit) return;
     tilt += 1.4; tiltFlash = 1; shake = Math.min(shake + 0.5, 1.6); sfx('nudgeS');
+    tiltDirection = dir; consecutiveNudges++;
+    // warn the player when they're one nudge from TILT, so the penalty feels fair, not random.
+    if (tilt >= TILT_MAX - 1.4 && tilt < TILT_MAX) { tiltWarningFlash = 1; callout('CAREFUL!', 'one nudge from TILT', '#ffd34d'); }
     if (tilt >= TILT_MAX) {
-      tilted = true; callout('TILT', 'flippers dead', '#ff5d3c'); sfx('tilt');
+      tilted = true; sessionStats.tiltCount++; callout('TILT', 'flippers dead', '#ff5d3c'); sfx('tilt');
       flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0;
       // tilt gets its own harsh, table-wide look — a dead-ember shockwave at every live ball,
       // distinct from every other event's particles (no other event bursts red/ember + this wide).
@@ -1082,9 +1126,10 @@
     sfx('drain');
     if (balls.length > 0) return;             // multiball: only count when the last ball drains
     multiballActive = false;                  // multiball ends once every ball is gone
+    saucerMoving = false; saucerMovePattern = 0;  // re-center the capture pocket (resetGame realigns)
     // ball save: a fresh serve that drains inside the grace window comes right back
     if (saveT > 0 && !tilted) {
-      saveT = 0; sfx('save');
+      saveT = 0; sfx('save'); sessionStats.ballsSaved++;
       callout('BALL SAVED', 'shoot again', '#7CFFb2');
       spawnBallInLane(true);
       return;
@@ -1161,8 +1206,20 @@
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
+    if (tiltWarningFlash > 0) tiltWarningFlash = Math.max(0, tiltWarningFlash - dt * 3);
     if (comboT > 0) { comboT -= dt; if (comboT <= 0) comboN = 0; }  // combo chain expires
     if (comboExplosion > 0 && !reduceMotion) comboExplosion = Math.max(0, comboExplosion - dt * 2);
+    if (comboScreenFlash > 0) comboScreenFlash = Math.max(0, comboScreenFlash - dt * 2.5);
+    if (digitalGlitchIntensity > 0) digitalGlitchIntensity = Math.max(0, digitalGlitchIntensity - dt * 1.5);
+    if (chromaticAberration > 0) chromaticAberration = Math.max(0, chromaticAberration - dt * 2);
+    if (screenShakeIntensity > 0) screenShakeIntensity = Math.max(0, screenShakeIntensity - dt * 2);
+    // moving saucer pattern (multiball): roam the capture pocket so a player can't camp it
+    if (saucerMoving && saucer && state === 'play') {
+      saucerMovePattern += dt;
+      var pat = saucerMovePattern;
+      saucerMoveTarget.x = 450 + Math.sin(pat * 0.8) * 300;
+      saucerMoveTarget.y = 940 + Math.sin(pat * 1.3) * 120;
+    }
     if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); }
     if (reduceMotion) { dispScore = score; scoreFlash = 0; }        // count-up is a flourish; skip it
     else {
@@ -1178,11 +1235,103 @@
   var debug = false;
   function L2Sx(x) { return OX + x * SC; }
   function L2Sy(y) { return OY + y * SC; }
+
+  // 2.5D parallax depth layers — provide a sense of depth behind the playfield.
+  // Each layer scrolls at its own speed (proportional to ball position), so the
+  // table reads as a window into a deeper space — not a flat plane.
+  function drawDepthLayers() {
+    if (reduceMotion) return;
+    var t = performance.now();
+    // compute offset from the average ball position (or center if no balls)
+    var bx = VW / 2, by = VH / 2;
+    if (balls.length) { bx = balls[0].x; by = balls[0].y; }
+    var offX = (bx - VW / 2) / VW;   // -0.5..0.5
+    var offY = (by - VH / 2) / VH;
+    for (var i = 0; i < depthLayers.length; i++) {
+      var L = depthLayers[i];
+      var px = -offX * 60 * L.speed * (i + 1);
+      var py = -offY * 40 * L.speed * (i + 1);
+      ctx.save();
+      ctx.globalAlpha = L.opacity * (0.6 + 0.4 * (1 - i / depthLayers.length));
+      if (i === 0) { // stars
+        ctx.fillStyle = L.color;
+        for (var s = 0; s < 60; s++) {
+          var sx = (s * 137.5 + px * 2 + t * 0.002) % VW;
+          var sy = (s * 239.3 + py * 2 + t * 0.001) % VH;
+          var r = (s % 3) * 0.6 + 0.4;
+          ctx.globalAlpha = L.opacity * (0.4 + 0.6 * Math.abs(Math.sin(t * 0.001 + s)));
+          ctx.fillRect(sx, sy, r, r);
+        }
+      } else if (i === 1) { // nebula blobs
+        ctx.globalCompositeOperation = 'lighter';
+        for (var n = 0; n < 5; n++) {
+          var nx = ((n * 200 + px * 3) % (VW + 400)) - 200;
+          var ny = ((n * 170 + py * 3 + t * 0.005) % (VH + 400)) - 200;
+          var ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, 160 * L.scale);
+          ng.addColorStop(0, 'rgba(120,80,200,0.10)');
+          ng.addColorStop(1, 'rgba(120,80,200,0)');
+          ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(nx, ny, 160 * L.scale, 0, TAU); ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      } else if (i === 2) { // grid floor (perspective-ish)
+        ctx.strokeStyle = 'rgba(57,230,255,0.10)'; ctx.lineWidth = 1;
+        var gy = (t * 0.02 + py * 4) % 60;
+        for (var gy0 = -60; gy0 < VH; gy0 += 60) {
+          var ly = gy0 + gy;
+          ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(VW, ly); ctx.stroke();
+        }
+        for (var gx = -60; gx < VW; gx += 60) {
+          var lx = gx + px * 3;
+          ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, VH); ctx.stroke();
+        }
+      } else { // floating particles
+        ctx.fillStyle = L.color;
+        for (var p2 = 0; p2 < 24; p2++) {
+          var fx = (p2 * 91.7 + px * 5 + t * 0.01) % VW;
+          var fy = (p2 * 53.3 + py * 5 + t * 0.013) % VH;
+          ctx.globalAlpha = L.opacity * (0.3 + 0.7 * Math.abs(Math.sin(t * 0.002 + p2)));
+          ctx.beginPath(); ctx.arc(fx, fy, 1.5, 0, TAU); ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // Digital screen overlay: scanlines + subtle pixel grid + chromatic vignette so the
+  // table reads like a glowing CRT / arcade marquee rather than a flat canvas.
+  function drawDigitalScreen() {
+    if (reduceMotion) return;
+    var t = performance.now();
+    // scanlines
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = scanlineIntensity + digitalGlitchIntensity * 0.2;
+    var step = 3;
+    var shift = (t * 0.02) % step;
+    for (var y = 0; y < H; y += step) {
+      ctx.fillStyle = (Math.floor(y / step) % 2 === 0) ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.03)';
+      ctx.fillRect(0, y + shift, W, 1);
+    }
+    // pixel grid
+    ctx.globalAlpha = pixelGridIntensity;
+    ctx.strokeStyle = 'rgba(120,200,255,0.06)'; ctx.lineWidth = 1;
+    for (var gx = 0; gx < W; gx += 8) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (var gy = 0; gy < H; gy += 8) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+    ctx.restore();
+    // vignette for depth
+    var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,' + (vignetteIntensity + comboScreenFlash * 0.2).toFixed(2) + ')');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+
   function draw(now) {
     // Level-shifted background: cool indigo/cyan at low levels → warm amber/ember at high
     var hueBlend = tableHue;
     var bgR = Math.round(5 + hueBlend * 18), bgG = Math.round(5 + hueBlend * 10), bgB = Math.round(12 + hueBlend * -4);
     ctx.fillStyle = 'rgb(' + bgR + ',' + bgG + ',' + bgB + ')'; ctx.fillRect(0, 0, W, H);
+    // 2.5D depth: parallax background layers (computed from ball position)
+    drawDepthLayers();
     // backdrop glow — shifts from violet at low levels to amber at high
     var glowR0 = Math.round(111 + hueBlend * 144), glowG0 = Math.round(91 + hueBlend * 74), glowB0 = Math.round(255 + hueBlend * -178);
     var bg = ctx.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H) * 0.7);
@@ -1244,7 +1393,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer(); drawSecrets();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
     drawBallSave();
@@ -1266,6 +1415,9 @@
     drawCallout(now);
     if (debug) drawDebug();
     ctx.restore();
+
+    // 2.5D depth: digital screen overlay (scanlines/vignette) drawn on top of the playfield
+    if (state === 'play' || state === 'over') drawDigitalScreen();
 
     drawHUD();
   }
@@ -1467,6 +1619,34 @@
         ctx.fillStyle = i < lockedBalls ? 'rgba(57,255,224,0.95)' : 'rgba(57,255,224,0.25)';
         ctx.beginPath(); ctx.arc(px, py, 4, 0, TAU); ctx.fill();
       }
+    }
+  }
+  // Secret/hidden areas — before discovery they read as a faint shimmer in dead space;
+  // once found they flash open and stay marked so the player knows the hiding spot exists.
+  function drawSecrets() {
+    var t = performance.now();
+    for (var i = 0; i < secretAreas.length; i++) {
+      var a = secretAreas[i];
+      ctx.globalCompositeOperation = 'lighter';
+      if (!a.discovered) {
+        var sh = 0.25 + 0.2 * (0.5 + 0.5 * Math.sin(t / 700 + i));
+        var g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r);
+        g.addColorStop(0, 'rgba(255,110,199,' + sh.toFixed(2) + ')');
+        g.addColorStop(1, 'rgba(255,110,199,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = 'rgba(255,110,199,0.25)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 0.6, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        var g2 = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.4);
+        g2.addColorStop(0, 'rgba(255,110,199,0.30)'); g2.addColorStop(1, 'rgba(255,110,199,0)');
+        ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.4, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(255,110,199,0.9)'; ctx.font = '700 14px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('✦', a.x, a.y); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
+      ctx.globalCompositeOperation = 'source-over';
     }
   }
   function drawFlipper(f) {
@@ -1719,6 +1899,36 @@
   // idle render so the table shows behind the gate
   (function idle() { if (state === 'gate') { draw(performance.now()); requestAnimationFrame(idle); } })();
   window.addEventListener('resize', function () { if (state !== 'play') draw(performance.now()); });
+
+  // ===== KUDBEE Studio Hub integration =====
+  // If the Hub SDK is present, pinball pushes scores + level-ups into the
+  // central profile. Runs standalone (no SDK) with zero errors.
+  (function () {
+    var _studioLoad = function () {
+      var s = document.createElement('script');
+      s.src = '../studio/studio-sdk.js';
+      s.onload = function () {
+        if (window.KDStudio) {
+          KDStudio.install && KDStudio.install('pinball');
+          KDStudio.BUS && KDStudio.BUS.on('track', function () {});
+        }
+      };
+      document.head.appendChild(s);
+    };
+    // push a score into the hub on game over (best per run)
+    var _lastScore = 0;
+    var _origGameOver = gameOver;
+    gameOver = function () {
+      _origGameOver();
+      try {
+        if (window.KDStudio && score > _lastScore) {
+          _lastScore = score;
+          KDStudio.track && KDStudio.track('pinball', 'score', score);
+        }
+      } catch (e) {}
+    };
+    if (document.readyState === 'complete') _studioLoad(); else window.addEventListener('load', _studioLoad);
+  })();
 
   // expose for headless verification
   window.PINBALL = {
