@@ -54,6 +54,16 @@
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
   .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  /* Tighter spacing + scroll for long gate text on short/narrow screens (phones). */
+  @media (max-height:520px), (max-width:380px){
+    .overlay{ padding:14px; overflow-y:auto; place-items:start center; }
+    .ov-inner h1{ font-size:clamp(22px,7vmin,40px); margin:6px 0 4px; }
+    .ov-inner p{ font-size:12px; }
+    .btn{ margin-top:14px; padding:12px 22px; font-size:14px; }
+    .badge{ margin-top:6px; }
+    .ov-foot{ margin-top:10px; }
+    .gate-shortcut{ display:none; }
+  }
 </style>
 </head>
 <body>
@@ -67,9 +77,9 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Pinball</div>
         <h1>Kudbee <span class="grad">Pinball</span></h1>
-        <p><b>Starbreak 2.5D.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b>. Build COMBOS to light the <b>K·U·D·B·B flippers</b> — flip every letter, then collect the jackpot. Find the <b>secret pockets</b> hidden in the dead space, ride the <b>rescue bumpers</b> off the outlanes, and trigger <b>MULTIBALL</b> from a roaming saucer. Fresh serves get a short <b>ball save</b> + <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
+        <p><b>Starbreak 2.5D.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b>. Build COMBOS to light the <b>K·U·D·B·B flippers</b> — flip every letter, then collect the jackpot. Find the <b>secret pockets</b>, ride the <b>rescue bumpers</b> off the outlanes, and trigger <b>MULTIBALL</b>. Fresh serves get a short <b>ball save</b> + <b>kickback</b>.</p>
         <div class="badge">2.5D depth · KUDBB flippers · rescue bumpers · secret pockets · multiball</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — aim for a PERFECT LAUNCH) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
+        <p class="gate-shortcut" style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge — aim for a PERFECT LAUNCH) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
         <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
@@ -1157,15 +1167,15 @@
       if (!climbing && b.y > 700 && !b.inLane) {
         var cx = VW / 2;
         var toC = cx - b.x;
-        centerGravity = 90 + level * 8;
-        b.vx += toC * centerGravity * h * 0.0016;
+        centerGravity = 120 + level * 10;
+        b.vx += toC * centerGravity * h * 0.0022;
         // outlane magnetism: if a kickback is still loaded and the ball is near that outlane,
         // nudge it back inward so the kickback actually gets used instead of a silent drain.
-        if (kickL && b.x < 230 && b.y > 1300) b.vx += 130 * h;
-        if (kickR && b.x > 670 && b.y > 1300) b.vx -= 130 * h;
+        if (kickL && b.x < 230 && b.y > 1300) b.vx += 180 * h;
+        if (kickR && b.x > 670 && b.y > 1300) b.vx -= 180 * h;
         // flipper magnet: when low and slow, bias the ball toward the flipper line so a
         // near-miss becomes a catchable shot.
-        if (b.y > 1240 && Math.abs(b.vy) < 600) b.vy -= 40 * h;
+        if (b.y > 1240 && Math.abs(b.vy) < 600) b.vy -= 55 * h;
       }
       // ---- moving saucer (multiball): drift the capture pocket toward a roaming target ----
       if (saucerMoving && saucer) {
