@@ -162,10 +162,31 @@
   </p>
 </div>
 
+<!-- Agent panel: slides in from the right. The brain of the Hub. -->
+<div id="agent-panel" class="agent-panel">
+  <div class="agent-head">
+    <div class="agent-avatar">✺</div>
+    <div>
+      <div class="agent-name">Studio Agent</div>
+      <div class="agent-sub">deterministic analytics · local</div>
+    </div>
+    <button id="agent-close" class="agent-close">✕</button>
+  </div>
+  <div id="agent-card" class="agent-card"></div>
+  <div id="agent-daily" class="agent-daily"></div>
+  <div class="agent-log" id="agent-log"></div>
+  <div class="agent-input-row">
+    <input id="agent-input" placeholder="Ask: daily challenge, coaching, trends…" />
+    <button id="agent-send">➤</button>
+  </div>
+</div>
+<button id="agent-fab" class="agent-fab" title="Studio Agent">✺</button>
+
 <div class="toast" id="toast"></div>
 
 <script src="studio-sdk.js"></script>
 <script src="analytics.js"></script>
+<script src="agent.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

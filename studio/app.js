@@ -214,9 +214,39 @@
     var t = $('toast'); if (!t) return; t.textContent = msg; t.classList.add('show');
     clearTimeout(flash._t); flash._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
   }
+
+  // ---- Studio Agent panel (coaching + chat + daily challenge) ----
+  function agentSay(role, text) {
+    var log = $('agent-log'); if (!log) return;
+    var m = el('div', 'al-msg ' + (role === 'u' ? 'u' : 'a'));
+    m.textContent = text; log.appendChild(m); log.scrollTop = log.scrollHeight;
+  }
+  function renderAgentPanel() {
+    if (!window.Agent) return;
+    // coaching card
+    var card = $('agent-card'); if (card) {
+      var c = Agent.card();
+      card.innerHTML = '<div class="ac-title">' + esc(c.title) + '</div><div class="ac-body">' + esc(c.body) + '</div>';
+    }
+    // daily challenge
+    var daily = $('agent-daily'); if (daily) {
+      var d = Agent.daily();
+      daily.innerHTML = '<div class="ad-k">DAILY CHALLENGE</div><div class="ad-v">' + esc(d.text) + ' <span style="color:var(--accent)">(+' + d.xp + ' XP)</span></div>';
+    }
+  }
+  function agentChat() {
+    var inp = $('agent-input'); if (!inp) return;
+    var text = inp.value.trim(); if (!text) return;
+    agentSay('u', text); inp.value = '';
+    var reply = Agent.chat(text);
+    setTimeout(function () { agentSay('a', reply); }, 250);
+  }
+  function openAgent() { var p = $('agent-panel'); if (p) p.classList.add('open'); renderAgentPanel(); }
+  function closeAgent() { var p = ('agent-panel') ? $('agent-panel') : null; if (p) p.classList.remove('open'); }
+
   function cycleSkin() {
     var ss = S.skins(), cur = S.profile().skin, idx = ss.findIndex(function (s) { return s.id === cur; });
-    S.skin(ss[(idx + 1) % ss.length].id); render();
+    S.skin(ss[(idx + 1) % ss.length].id); render(); renderAgentPanel();
   }
 
   // ---- boot ---------------------------------------------------------------
@@ -238,6 +268,13 @@
     });
     // agent tick loop (rivals grind)
     setInterval(function () { S.tickAgents(); if ($('agent-list')) render(); }, 4000);
+    // agent panel
+    if ($('agent-fab')) $('agent-fab').onclick = openAgent;
+    if ($('agent-close')) $('agent-close').onclick = closeAgent;
+    if ($('agent-send')) $('agent-send').onclick = agentChat;
+    if ($('agent-input')) $('agent-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') agentChat(); });
+    // agent greeting
+    setTimeout(function () { if (window.Agent) agentSay('a', 'Hey — I\'m your Studio Agent. Ask me about your coaching, trends, or daily challenge.'); }, 600);
     window.addEventListener('resize', drawConstellation);
   });
 })();
