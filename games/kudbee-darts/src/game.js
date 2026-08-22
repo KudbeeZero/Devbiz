@@ -339,10 +339,15 @@
       this.particles.impact(lx, ly, skinCol);
       this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
     }
-    // Stuck dart: tip lands exactly on the scoring point; lean varies by where
-    // on the board it landed (+ a hair of jitter) so groups don't look stamped.
-    const lean = -Math.PI * 0.78 + (lx - this.board.cx) / this.board.Rpx * 0.14
-               + (Math.random() * 2 - 1) * 0.04;
+    // Stuck dart: lean derives from the actual throw trajectory (hand -> landing),
+    // NOT a constant. A right flick sticks pointing right; down sticks pointing down.
+    // _fromX/_fromY is the hand position set in dart._releaseAt(); tip points along
+    // that travel direction, tilted slightly downward for a natural "embedded" read.
+    const hx = this.dart._fromX || (this.board.cx + 64);
+    const hy = this.dart._fromY || (this.board.cy + 200);
+    const throwAng = Math.atan2(ly - hy, lx - hx);
+    // tip embeds along the incoming direction, +0.18 rad downward pitch for weight
+    const lean = throwAng + 0.18 + (Math.random() * 2 - 1) * 0.04;
     // A genuine miss doesn't stick — it clips off and tumbles away instead of
     // freezing in a scoring pose (see _spawnBounceDart). Purely cosmetic: the
     // score is 0 either way, this only changes how the whiff *reads*.
