@@ -54,6 +54,22 @@
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
   .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  /* KUDBEE intro / attract overlay */
+  #intro { position:absolute; inset:0; z-index:40; display:grid; place-items:center; text-align:center; padding:24px;
+    background:radial-gradient(circle at 50% 40%, rgba(111,91,255,0.18), rgba(4,4,12,0.96) 70%);
+    backdrop-filter:blur(3px); transition:opacity 0.6s ease; }
+  #intro.hide{ opacity:0; pointer-events:none; }
+  .intro-logo{ position:relative; width:90px; height:90px; margin-bottom:20px; }
+  .intro-logo .ring{ position:absolute; inset:0; border-radius:50%; border:2px solid rgba(111,91,255,0.5); animation:introSpin 6s linear infinite; }
+  .intro-logo .ring.r2{ inset:10px; border-color:rgba(57,230,255,0.5); animation-duration:8s; animation-direction:reverse; }
+  .intro-logo .ring.r3{ inset:20px; border-color:rgba(124,255,178,0.5); animation-duration:4s; }
+  .intro-logo .core{ position:absolute; inset:30px; border-radius:50%; background:radial-gradient(circle,#7CFFb2,#04040c); display:grid; place-items:center; font-weight:700; font-size:18px; color:#04040c; box-shadow:0 0 30px rgba(124,255,178,0.6); }
+  @keyframes introSpin{ to{ transform:rotate(360deg); } }
+  .intro-title{ font-size:clamp(28px,7vmin,46px); font-weight:700; letter-spacing:-0.02em; text-shadow:0 0 20px rgba(111,91,255,0.5); }
+  .intro-title .studio{ display:block; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#9fb6c8; margin-top:6px; text-shadow:none; }
+  .intro-tag{ margin-top:14px; font-size:12px; color:#7CFFb2; letter-spacing:0.12em; text-transform:uppercase; opacity:0.9; }
+  .intro-press{ margin-top:28px; font-size:12px; color:#9fb6c8; letter-spacing:0.1em; animation:introPulse 1.8s ease-in-out infinite; }
+  @keyframes introPulse{ 0%,100%{ opacity:0.4; } 50%{ opacity:1; } }
   /* Tighter spacing + scroll for long gate text on short/narrow screens (phones). */
   @media (max-height:520px), (max-width:380px){
     .overlay{ padding:14px; overflow-y:auto; place-items:start center; }
@@ -72,6 +88,13 @@
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
     <canvas id="game"></canvas>
+    <!-- KUDBEE intro / attract -->
+    <div id="intro">
+      <div class="intro-logo"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">K</div></div>
+      <div class="intro-title">KUDBEE<span class="studio">Studios</span></div>
+      <div class="intro-tag">Starbreak · Neon Pinball</div>
+      <div class="intro-press">tap to enter</div>
+    </div>
 
     <div class="overlay" id="gate">
       <div class="ov-inner">
@@ -246,6 +269,25 @@
   var ctx = canvas.getContext('2d', { alpha: false });
   var gate = document.getElementById('gate');
   var overOv = document.getElementById('over');
+  var intro = document.getElementById('intro');
+
+  // ---- KUDBEE intro / attract flow ----
+  var started = false;
+  function dismissIntro() {
+    if (started) return;
+    started = true;
+    if (intro) intro.classList.add('hide');
+    setTimeout(function () { if (intro) intro.style.display = 'none'; }, 650);
+    audioInit();
+  }
+  if (intro) {
+    intro.addEventListener('click', dismissIntro);
+    intro.addEventListener('pointerdown', dismissIntro);
+  }
+  var introKey = function (e) {
+    if (!started && intro && intro.style.display !== 'none') dismissIntro();
+  };
+  window.addEventListener('keydown', introKey);
 
   // ---- canvas sizing ----
   var W = 0, H = 0, DPR = 1, SC = 1, OX = 0, OY = 0;   // SC = logical→css scale, OX/OY letterbox offset
