@@ -27,15 +27,24 @@
       radial-gradient(circle at 50% 0%, rgba(57,230,255,0.10), transparent 60%),
       #05050f;
   }
-  /* Near-square frame so the dartboard reads large (logical 960x720 -> 1.333). */
+  /* Near-square frame so the dartboard reads large (logical 960x720 -> 1.333).
+     On mobile landscape it fills width with a small safe-area margin; on
+     desktop it caps at the viewport height so it never overflows. */
   #frame {
     position: relative;
-    width: min(100vw, calc(100vh * 1.3333));
-    height: min(100vh, calc(100vw / 1.3333));
+    width: min(calc(100vw - 16px), calc(100vh * 1.3333));
+    height: min(calc(100vh - 16px), calc((100vw - 16px) / 1.3333));
     box-shadow: 0 0 60px rgba(57,230,255,0.18), inset 0 0 0 1px rgba(57,230,255,0.12);
     border-radius: 8px;
     overflow: hidden;
     background: #05050f;
+  }
+  @media (orientation: landscape) and (pointer: coarse) {
+    #frame {
+      width: min(calc(100vw - 8px), calc((100vh - 8px) * 1.3333));
+      height: min(calc(100vh - 8px), calc((100vw - 8px) / 1.3333));
+      border-radius: 6px;
+    }
   }
   canvas {
     display: block; width: 100%; height: 100%;
@@ -57,15 +66,96 @@
     pointer-events: none;
   }
   @media (pointer: coarse) { .hint { display: none; } }
+
+  /* ---- KUDBEE intro / attract overlay ---- */
+  #intro {
+    position: fixed; inset: 0; z-index: 80;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(circle at 50% 40%, rgba(57,230,255,0.12), #05050f 70%);
+    transition: opacity 0.6s ease;
+  }
+  #intro.hide { opacity: 0; pointer-events: none; }
+  .intro-logo {
+    position: relative; width: 120px; height: 120px; margin-bottom: 28px;
+  }
+  .intro-logo .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid rgba(57,230,255,0.5);
+    animation: introSpin 6s linear infinite;
+  }
+  .intro-logo .ring.r2 { inset: 12px; border-color: rgba(196,107,255,0.5); animation-duration: 8s; animation-direction: reverse; }
+  .intro-logo .ring.r3 { inset: 24px; border-color: rgba(124,255,178,0.5); animation-duration: 4s; }
+  .intro-logo .core {
+    position: absolute; inset: 38px; border-radius: 50%;
+    background: radial-gradient(circle, #39e6ff, #05050f);
+    display: grid; place-items: center; font-weight: 700; font-size: 22px; color: #05050f;
+    box-shadow: 0 0 40px rgba(57,230,255,0.6);
+  }
+  @keyframes introSpin { to { transform: rotate(360deg); } }
+  .intro-title {
+    font-size: 42px; font-weight: 700; letter-spacing: 0.02em;
+    text-shadow: 0 0 24px rgba(57,230,255,0.5);
+  }
+  .intro-title .studio { display: block; font-size: 14px; letter-spacing: 0.35em; text-transform: uppercase; color: #9fb6c8; margin-top: 8px; text-shadow: none; }
+  .intro-tag { margin-top: 18px; font-size: 13px; color: #7CFFb2; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.9; }
+  .intro-press {
+    margin-top: 40px; font-size: 13px; color: #9fb6c8; letter-spacing: 0.1em;
+    animation: introPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes introPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* ---- orientation gate (portrait lock) ---- */
+  #gate {
+    position: fixed; inset: 0; z-index: 90;
+    display: none; align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(circle at 50% 40%, rgba(57,230,255,0.10), #05050f 70%);
+    text-align: center; padding: 24px;
+  }
+  #gate.show { display: flex; }
+  .gate-phone {
+    width: 54px; height: 92px; border: 3px solid #39e6ff; border-radius: 12px; margin-bottom: 26px;
+    position: relative; animation: gateRotate 2.4s ease-in-out infinite;
+    box-shadow: 0 0 24px rgba(57,230,255,0.4);
+  }
+  .gate-phone::after {
+    content: ''; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 4px; border-radius: 2px; background: #39e6ff;
+  }
+  @keyframes gateRotate {
+    0%, 10% { transform: rotate(0deg); }
+    40%, 60% { transform: rotate(90deg); }
+    90%, 100% { transform: rotate(0deg); }
+  }
+  .gate-title { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+  .gate-sub { font-size: 13px; color: #9fb6c8; max-width: 280px; line-height: 1.5; }
 </style>
 </head>
 <body>
+  <!-- KUDBEE intro / attract screen -->
+  <div id="intro">
+    <div class="intro-logo">
+      <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
+      <div class="core">K</div>
+    </div>
+    <div class="intro-title">KUDBEE<span class="studio">Studios</span></div>
+    <div class="intro-tag">Bullseye League</div>
+    <div class="intro-press">tap to enter</div>
+  </div>
+
+  <!-- Portrait orientation gate -->
+  <div id="gate">
+    <div class="gate-phone"></div>
+    <div class="gate-title">Rotate your device</div>
+    <div class="gate-sub">Bullseye League plays in landscape mode for the best flick experience.</div>
+  </div>
+
 <div id="stage">
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <canvas id="game" width="960" height="720"></canvas>
-    <div class="hint">drag to aim · swipe-release to throw · P pause · M mute · ~ FPS</div>
+    <div class="hint">drag to aim · swipe-release to throw · P pause · M mute · C commentary · ~ FPS</div>
   </div>
+</div>
 </div>
 
 <!-- Engine + game modules loaded as ordered classic scripts (no bundler).
@@ -90,6 +180,41 @@
   (function () {
     var canvas = document.getElementById('game');
     var game = new KD.Game({ canvas: canvas });
+    var intro = document.getElementById('intro');
+    var gate = document.getElementById('gate');
+
+    // ---- orientation gate (portrait lock on touch devices) ----
+    var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    function checkOrientation() {
+      if (!isTouch) { gate && gate.classList.remove('show'); return; }
+      // show gate when portrait (height > width)
+      if (window.innerHeight > window.innerWidth) gate && gate.classList.add('show');
+      else gate && gate.classList.remove('show');
+    }
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', function () { setTimeout(checkOrientation, 200); });
+
+    // ---- KUDBEE intro / attract flow ----
+    var started = false;
+    function dismissIntro() {
+      if (started) return;
+      started = true;
+      if (intro) intro.classList.add('hide');
+      setTimeout(function () { if (intro) intro.style.display = 'none'; }, 650);
+      // unlock audio right at game start
+      game.audio.unlock();
+      if (!game.progression.data.settings.sound) game.audio.setEnabled(false);
+    }
+    // tap or key to enter
+    intro && intro.addEventListener('click', dismissIntro);
+    var enterHandler = function (e) {
+      if (!started && intro && intro.style.display !== 'none') {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        dismissIntro();
+      }
+    };
+    window.addEventListener('keydown', enterHandler);
 
     // Load the asset manifest (procedural fallback if absent), then start.
     game.sprites.load('assets/manifest.json').then(function () {
