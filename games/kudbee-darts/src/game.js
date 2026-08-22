@@ -43,6 +43,9 @@
     this.board.layout(480, 296, 232);
     this.progression = new KD.Progression();
     this.dart = new KD.Dart(this);
+    // Commentary engine — event-driven play-by-play. Uses the browser's built-in
+    // Web Speech API (zero deps). Swappable backend for Kokoro/Chatterbox later.
+    this.commentary = (window.KD && KD.CommentaryEngine) ? new KD.CommentaryEngine(this) : null;
     this.humanSigma = 0.030;   // a touch more scatter -> aim matters more
 
     // Menu selection.
@@ -115,6 +118,12 @@
         this.audio.setEnabled(on);
         this.progression.data.settings.sound = on;
         this.progression.save();
+      }
+      // 'C' toggles play-by-play commentary.
+      if (e.code === 'KeyC' && this.commentary) {
+        const on = !this.commentary.isEnabled();
+        this.commentary.setEnabled(on);
+        this._say(on ? 'COMMENTARY ON' : 'COMMENTARY OFF', 1.0, on ? '#7CFFb2' : '#ff5d3c');
       }
     });
   };
@@ -412,9 +421,12 @@
     if (out.bust) {
       this.audio.bust();
       this._say('BUST', 1.3, C.ember);
+      if (this.commentary) this.commentary.onBust();
       this._endTurn();
       return;
     }
+    // commentary callout for this dart
+    if (this.commentary) this.commentary.onDart(res, out);
     if (big) {
       this.timeScale = 0.4;
       // Note: a checkout (out.win) punches its zoom via _matchWin below,
@@ -478,6 +490,7 @@
         cur.t180++;
         this._say('180!', 1.9);
         this.audio.cheer();
+        if (this.commentary) this.commentary.on180();
         this.particles.confetti(this.board.cx, this.board.cy - 30,
           ['#ffd34d', '#fff0bf', '#7CFFb2', '#39e6ff'], this.reduceMotion ? 24 : 80);
         this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 250, 0.8, 5);
@@ -536,6 +549,7 @@
     this.particles.confetti(this.board.cx + 260, this.board.cy - 110, null, Math.round(cCount * 0.6));
     this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 300, 0.9, 5);
     this.audio.cheer();
+    if (this.commentary) { this.commentary.onWin(); if (won) this.commentary.onMatchWin(); }
 
     const human = this.players[0];
     const won = winner === human;
