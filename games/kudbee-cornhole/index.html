@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#05050f">
+<title>Kudbee Cornhole — Neon Bag Toss</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#05050f;color:#cfe9ff;font-family:"Space Grotesk","Inter",system-ui,sans-serif;overflow:hidden}
+#stage{position:relative;width:100vw;height:100vh;display:grid;place-items:center}
+#frame{position:relative;width:min(100vw,calc(100vh*1.4));height:min(100vh,calc(100vw/1.4));box-shadow:0 0 60px rgba(255,140,40,0.18),inset 0 0 0 1px rgba(255,160,60,0.12);border-radius:8px;overflow:hidden;background:#0a0d14}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:10;font-size:11px;color:#6a7a8a;pointer-events:none}
+@media(pointer:coarse){.hint{display:none}}
+.back-link{position:absolute;top:10px;left:12px;z-index:30;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#9fb6c8;text-decoration:none;padding:6px 10px;border:1px solid rgba(159,182,200,0.25);border-radius:6px;background:rgba(5,5,15,0.5);backdrop-filter:blur(6px)}
+.snd-btn{position:absolute;top:10px;right:12px;z-index:30;background:rgba(5,5,15,0.6);border:1px solid rgba(255,160,60,0.3);color:#ffa040;border-radius:6px;width:34px;height:34px;font-size:16px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <a class="back-link" href="../../index.html#games">&larr; Studio</a>
+    <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">&#128266;</button>
+    <canvas id="game" width="960" height="680"></canvas>
+    <div class="hint">drag back from the bag &amp; release to throw &middot; aim for the hole (3 pts) or the board (1 pt) &middot; M mute</div>
+  </div>
+</div>
+<script src="../shared/engine/core-util.js"></script>
+<script src="game.js"></script>
+<script>
+(function(){
+  var canvas=document.getElementById('game');
+  var game=new KC.Game({canvas:canvas});
+  game.start();
+  var sndBtn=document.getElementById('sndBtn');
+  function toggle(){game.audio.toggle();sndBtn.setAttribute('aria-pressed',String(game.audio.enabled));}
+  window.addEventListener('keydown',function(e){ if(e.code==='KeyM')toggle(); });
+  sndBtn.onclick=toggle;
+})();
+</script>
+</body>
+</html>
