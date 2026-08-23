@@ -1650,6 +1650,7 @@
     state = 'over'; SFX.over(); engineStop();
     score = Math.round(score);
     if (score > best) { best = score; try { localStorage.setItem('kudbee.voidrunner.best', String(best)); } catch (e) {} }
+    try { if (window.__kbTrackScore) window.__kbTrackScore(score); } catch (e) {}
     document.getElementById('oScore').textContent = score.toLocaleString();
     document.getElementById('oKick').textContent = 'Ship destroyed · ' + Math.round(dist) + ' km deep';
     document.getElementById('oSub').textContent = 'Score ' + score.toLocaleString() + ' · best ' + best.toLocaleString();
@@ -3106,6 +3107,23 @@
     introAudio.addEventListener('ended', endIntro, { once: true });
   }
   intro.addEventListener('pointerdown', function () { runIntro(); });
+
+  // ===== KUDBEE Studio Hub stats hook =====
+  // Push run scores into the central Hub profile (studio-sdk.js). Standalone-safe:
+  // if the SDK isn't present the game is unaffected. Tracks the best score per session.
+  (function () {
+    var _hubLoad = function () {
+      var s = document.createElement('script'); s.src = '../studio/studio-sdk.js';
+      s.onload = function () { if (window.KDStudio) { KDStudio.install && KDStudio.install('orbital'); } };
+      document.head.appendChild(s);
+    };
+    var _lastScore = 0;
+    var _origStart = start;
+    window.__kbTrackScore = function (sc) {
+      try { if (window.KDStudio && sc > _lastScore) { _lastScore = sc; KDStudio.track && KDStudio.track('orbital', 'score', sc); } } catch (e) {}
+    };
+    if (document.readyState === 'complete') _hubLoad(); else window.addEventListener('load', _hubLoad);
+  })();
 
   // ===== SIMURGH wingman — live tactical agent from the serverless cloud =====
   // Captures a throttled snapshot of the run every WINGMAN_INTERVAL seconds and
