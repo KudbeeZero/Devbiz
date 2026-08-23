@@ -33,6 +33,23 @@
     overflow: hidden;
     background: #05050f;
   }
+  /* KUDBEE intro / attract overlay */
+  #intro { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(circle at 50% 40%, rgba(57,230,255,0.16), rgba(4,4,12,0.96) 70%);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); transition: opacity 0.6s ease; }
+  #intro.hide { opacity: 0; pointer-events: none; }
+  .intro-logo { position: relative; width: 90px; height: 90px; margin-bottom: 20px; }
+  .intro-logo .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(111,91,255,0.5); animation: introSpin 6s linear infinite; }
+  .intro-logo .ring.r2 { inset: 10px; border-color: rgba(57,230,255,0.5); animation-duration: 8s; animation-direction: reverse; }
+  .intro-logo .ring.r3 { inset: 20px; border-color: rgba(124,255,178,0.5); animation-duration: 4s; }
+  .intro-logo .core { position: absolute; inset: 30px; border-radius: 50%; background: radial-gradient(circle, #7CFFb2, #04040c);
+    display: grid; place-items: center; font-weight: 700; font-size: 18px; color: #04040c; box-shadow: 0 0 30px rgba(124,255,178,0.6); }
+  @keyframes introSpin { to { transform: rotate(360deg); } }
+  .intro-title { font-size: clamp(28px, 7vmin, 46px); font-weight: 700; letter-spacing: -0.02em; text-shadow: 0 0 20px rgba(57,230,255,0.5); }
+  .intro-title .studio { display: block; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #9fb6c8; margin-top: 6px; text-shadow: none; }
+  .intro-tag { margin-top: 14px; font-size: 12px; color: #39e6ff; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.9; }
+  .intro-press { margin-top: 28px; font-size: 12px; color: #9fb6c8; letter-spacing: 0.1em; animation: introPulse 1.8s ease-in-out infinite; }
+  @keyframes introPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
   canvas {
     display: block; width: 100%; height: 100%;
     image-rendering: optimizeQuality;
@@ -88,6 +105,13 @@
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <canvas id="game" width="960" height="600"></canvas>
+    <!-- KUDBEE intro / attract -->
+    <div id="intro">
+      <div class="intro-logo"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">K</div></div>
+      <div class="intro-title">KUDBEE<span class="studio">Studios</span></div>
+      <div class="intro-tag">Contra — Neon Jungle</div>
+      <div class="intro-press">tap to enter</div>
+    </div>
 
     <!-- On-screen touch controls (mobile). data-action maps to engine/input.js.
          Move + jump only; the gun auto-fires on touch devices. -->
@@ -134,6 +158,18 @@
     var game = new KC.Game({ canvas: canvas, touchRoot: touchRoot });
     window.__kcGame = game; // debug/testing handle (no gameplay effect)
 
+    // ===== KUDBEE intro / attract flow =====
+    var intro = document.getElementById('intro');
+    var introDone = false;
+    function dismissIntro() {
+      if (introDone) return; introDone = true;
+      if (intro) { intro.classList.add('hide'); setTimeout(function () { if (intro) intro.style.display = 'none'; }, 650); }
+      audioUnlock();
+    }
+    if (intro) { intro.addEventListener('click', dismissIntro); intro.addEventListener('pointerdown', dismissIntro); }
+    window.addEventListener('keydown', function (e) { if (!introDone && intro && intro.style.display !== 'none') dismissIntro(); });
+    function audioUnlock() { game.audio.unlock(); }
+
     // Mobile: auto-fire so you only steer + jump (no fire button to juggle).
     var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     game.autoFire = coarse;
@@ -151,6 +187,27 @@
     game.sprites.load('assets/manifest.json').then(function () {
       game.start();
     });
+
+    // ===== KUDBEE Studio Hub stats hook =====
+    (function () {
+      var _hubLoad = function () {
+        var s = document.createElement('script'); s.src = '../studio/studio-sdk.js';
+        s.onload = function () { if (window.KDStudio) { KDStudio.install && KDStudio.install('contra'); } };
+        document.head.appendChild(s);
+      };
+      if (document.readyState === 'complete') _hubLoad(); else window.addEventListener('load', _hubLoad);
+      var _lastTracked = 0;
+      setInterval(function () {
+        try {
+          if (!window.KDStudio) return;
+          var st = game.state;
+          if ((st === 'gameover' || st === 'win') && game.score > _lastTracked) {
+            _lastTracked = game.score; KDStudio.track && KDStudio.track('contra', 'score', game.score);
+          }
+          if (st === 'menu') _lastTracked = 0;
+        } catch (e) {}
+      }, 500);
+    })();
 
     // Unlock audio on first interaction (browser autoplay policy).
     var unlock = function () { game.audio.unlock(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
