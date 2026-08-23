@@ -65,6 +65,12 @@
     // _spawnBounceDart / _drawBounceDarts). Separate from stuckDarts so a
     // per-turn clear doesn't cut a still-animating bounce short.
     this.bounceDarts = [];
+    // Dart-grouping (muscle memory): the running cluster center of the human's
+    // landed darts this turn. Non-null => subsequent darts get pulled toward it,
+    // so grooving a line (rushing the trebles) reads as skillfully tight. Reset
+    // every turn. Only affects the human; the AI throws true to its own target.
+    this._groupCenter = null;
+    this._groupStrength = 0;     // 0..1, grows as the player stacks darts on target
     this.aiTimer = 0;
     this.isLadder = false;
     this.ladderRank = 0;
@@ -355,6 +361,16 @@
     else this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time });
     cur.dartsThrown++;
 
+    // Dart-grouping (muscle memory): a scoring human dart updates the turn's
+    // cluster center so subsequent darts groove toward it. Stronger the more you
+    // stack — landing T20 then T20 pulls the third in tight for a realistic 180.
+    // Misses/busts break the groove (reset), just like a real broken rhythm.
+    if (!cur.isAI && !isMiss && !out.bust && res.score > 0) {
+      if (!this._groupCenter) this._groupCenter = { x: lx, y: ly };
+      else { this._groupCenter.x = this._groupCenter.x * 0.6 + lx * 0.4; this._groupCenter.y = this._groupCenter.y * 0.6 + ly * 0.4; }
+      this._groupStrength = Math.min(0.55, this._groupStrength + 0.18);
+    }
+
     const out = this.mode.applyDart(cur, res, opp);
     this.dartsThisTurn++;
 
@@ -509,6 +525,7 @@
 
   Game.prototype._nextTurn = function () {
     this.stuckDarts = [];
+    this._groupCenter = null; this._groupStrength = 0;   // fresh groove each turn
     this.current = 1 - this.current;
     this.mode.beginTurn(this.players[this.current]);
     this.dartsThisTurn = 0;
