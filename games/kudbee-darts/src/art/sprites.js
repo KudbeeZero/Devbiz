@@ -148,6 +148,16 @@
    * jitter is supplied by the caller so a grouping never looks rubber-stamped. */
   Sprites.prototype.drawStuckDart = function (ctx, x, y, skin, ang, parts) {
     if (ang == null) ang = -Math.PI * 0.78;
+    // Contact shadow: a soft dark ellipse pressed against the board right at the
+    // tip, so the dart reads as EMBEDDED in the surface, not floating above it.
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 7, 3, ang, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
