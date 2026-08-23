@@ -186,9 +186,24 @@
   // Shared landing + flight kickoff for human and AI.
   Dart.prototype._releaseAt = function (lx, ly, sigma) {
     const Rpx = this.game.board.Rpx;
-    const sx = Util.gaussian() * sigma * Rpx;
-    const sy = Util.gaussian() * sigma * Rpx;
-    let landX = lx + sx, landY = ly + sy;
+    const cx = this.game.board.cx, cy = this.game.board.cy;
+
+    // Directional scatter: real darts misses are predominantly TANGENTIAL — into
+    // the neighbouring wedges (aim at T20, miss into 5 or 1) — not isotropic.
+    // Decompose the Gaussian jitter into tangential (large) + radial (small)
+    // axes relative to the board centre, so misses read like real ones.
+    const dx = lx - cx, dy = ly - cy;
+    const rad = Math.sqrt(dx * dx + dy * dy) || 1;
+    const tx = -dy / rad, ty = dx / rad;       // unit tangent (clockwise)
+    const rx = dx / rad, ry = dy / rad;        // unit radial (outward)
+    const gTang = Util.gaussian();
+    const gRad = Util.gaussian();
+    const tangSigma = sigma * 1.25;             // wide into adjacent wedges
+    const radSigma = sigma * 0.45;              // tight in/out (less depth error)
+    const jx = tx * gTang * tangSigma * Rpx + rx * gRad * radSigma * Rpx;
+    const jy = ty * gTang * tangSigma * Rpx + ry * gRad * radSigma * Rpx;
+
+    let landX = lx + jx, landY = ly + jy;
 
     // Dart grouping (muscle memory): if the player has already landed a dart this
     // turn, pull this landing toward that cluster center. The longer the groove,
