@@ -48,6 +48,23 @@
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.55), rgba(3,3,10,0.93));
     backdrop-filter:blur(3px); transition:opacity 0.4s ease; }
   .overlay.hidden { opacity:0; pointer-events:none; }
+  /* KUDBEE intro / attract overlay */
+  #intro { position:absolute; inset:0; z-index:40; display:grid; place-items:center; text-align:center; padding:24px;
+    background:radial-gradient(circle at 50% 40%, rgba(255,211,77,0.16), rgba(4,4,12,0.96) 70%);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); transition:opacity 0.6s ease; }
+  #intro.hide { opacity:0; pointer-events:none; }
+  .intro-logo { position:relative; width:90px; height:90px; margin-bottom:20px; }
+  .intro-logo .ring { position:absolute; inset:0; border-radius:50%; border:2px solid rgba(111,91,255,0.5); animation:introSpin 6s linear infinite; }
+  .intro-logo .ring.r2 { inset:10px; border-color:rgba(57,230,255,0.5); animation-duration:8s; animation-direction:reverse; }
+  .intro-logo .ring.r3 { inset:20px; border-color:rgba(124,255,178,0.5); animation-duration:4s; }
+  .intro-logo .core { position:absolute; inset:30px; border-radius:50%; background:radial-gradient(circle,#7CFFb2,#04040c);
+    display:grid; place-items:center; font-weight:700; font-size:18px; color:#04040c; box-shadow:0 0 30px rgba(124,255,178,0.6); }
+  @keyframes introSpin { to { transform:rotate(360deg); } }
+  .intro-title { font-size:clamp(28px,7vmin,46px); font-weight:700; letter-spacing:-0.02em; text-shadow:0 0 20px rgba(255,211,77,0.5); }
+  .intro-title .studio { display:block; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#9fb6c8; margin-top:6px; text-shadow:none; }
+  .intro-tag { margin-top:14px; font-size:12px; color:#ffd34d; letter-spacing:0.12em; text-transform:uppercase; opacity:0.9; }
+  .intro-press { margin-top:28px; font-size:12px; color:#9fb6c8; letter-spacing:0.1em; animation:introPulse 1.8s ease-in-out infinite; }
+  @keyframes introPulse { 0%,100%{ opacity:0.4; } 50%{ opacity:1; } }
   .ov-inner { max-width:440px; }
   .kicker { font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); }
   .ov-inner h1 { font-size:clamp(30px,8vw,52px); line-height:1.02; font-weight:700; color:#fff; margin:10px 0 4px; letter-spacing:-0.02em; }
@@ -102,6 +119,13 @@
         <p class="nocanvas">Kudbee Munch needs a browser with canvas support. Please update your browser to play.</p>
       </canvas>
       <div class="scanlines" aria-hidden="true"></div>
+      <!-- KUDBEE intro / attract -->
+      <div id="intro">
+        <div class="intro-logo"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">K</div></div>
+        <div class="intro-title">KUDBEE<span class="studio">Studios</span></div>
+        <div class="intro-tag">Munch — Windy City</div>
+        <div class="intro-press">tap to enter</div>
+      </div>
 
       <div class="overlay" id="gate">
         <div class="ov-inner">
@@ -963,7 +987,18 @@
 
   /* ============================== STATE FLOW ============================== */
   var gate = document.getElementById('gate'), overOv = document.getElementById('over'),
-      pauseOv = document.getElementById('pauseOv');
+      pauseOv = document.getElementById('pauseOv'),
+      intro = document.getElementById('intro');
+
+  // ---- KUDBEE intro / attract flow ----
+  var introDone = false;
+  function dismissIntro() {
+    if (introDone) return;
+    introDone = true;
+    if (intro) { intro.classList.add('hide'); setTimeout(function () { if (intro) intro.style.display = 'none'; }, 650); }
+  }
+  if (intro) { intro.addEventListener('click', dismissIntro); intro.addEventListener('pointerdown', dismissIntro); }
+  window.addEventListener('keydown', function (e) { if (!introDone && intro && intro.style.display !== 'none') dismissIntro(); });
 
   function resetPositions() {
     P.tx = SPAWN.c; P.ty = SPAWN.r; P.px = 0; P.dir = 2; P.moving = false; P.munch = 0; P.trailCd = 0;
