@@ -465,7 +465,19 @@
 
   Game.prototype._updateResult = function (dt) {
     if (this._pointer().justDown) { this.state = 'menu'; this.audio.uiTick(); }
+    // track score to the Hub once, on first entering result
+    if (!this._hubTracked) {
+      this._hubTracked = true;
+      try { if (window.KDStudio) KDStudio.track && KDStudio.track('cricket', 'score', this.runs); } catch (e) {}
+    }
   };
+
+  // ===== KUDBEE Studio Hub stats hook =====
+  // Standalone-safe: loads studio-sdk.js if present and installs the cricket plugin.
+  (function () {
+    if (document.readyState === 'complete') { var s = document.createElement('script'); s.src = '../studio/studio-sdk.js'; s.onload = function () { if (window.KDStudio) KDStudio.install && KDStudio.install('cricket'); }; document.head.appendChild(s); }
+    else window.addEventListener('load', function () { var s = document.createElement('script'); s.src = '../studio/studio-sdk.js'; s.onload = function () { if (window.KDStudio) KDStudio.install && KDStudio.install('cricket'); }; document.head.appendChild(s); });
+  })();
 
   KC.Game = Game;
   KC.Input = Input;
