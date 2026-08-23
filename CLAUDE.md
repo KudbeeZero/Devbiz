@@ -35,7 +35,7 @@ holds the relevant memory; end it by writing back what changed.
 | **Cerebellum** — procedural reflexes (learned) | Habits distilled from repetition & fixed mistakes | **Reflexes log** (below) | Write when something is learned the *second* time. |
 | **Amygdala** — guardrails / risk | Owner-only gates, `OWNER-OK` token, private surfaces | §11 below, **`docs/PRIVATE_TESTING_GATE.md`** | Never auto-cross. Read before any risky/irreversible action. |
 | **Motor cortex** — execution surfaces | Where changes actually land | `index.html`, `games/` (+ `games/shared/engine/`), `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Read the file before editing (Doctrine §D). |
-| **Sensory cortex** — external signals | How the brain perceives the outside | GitHub webhooks/CI, Cloudflare/Vercel deploys, **`ops/github-sentinel/`** | Treat bot/deploy comments as signal, act only when actionable (§6). |
+| **Sensory cortex** — external signals | How the brain perceives the outside | Cloudflare/Vercel deploys, **`ops/github-sentinel/`** | Treat deploy comments as signal, act only when actionable (§6). |
 | **Corpus callosum** — the index/router | Which memory holds what | *this table* + `docs/` | Consult when unsure where a memory belongs. |
 
 ### Memory discipline (the save-triggers)
@@ -52,7 +52,7 @@ Routing rule of thumb: *permanent rule* → CLAUDE.md · *in-flight state* → B
 
 Append-only. Newest first. Each entry: the trigger → the reflex.
 
-- **2026-07-17** — **Green Gate is a precondition, not a nicety:** run `gh run list --branch main --limit 3` (1) *before* starting any task — if `main` is red/pending, stop and surface it, never build on a red base; (2) *before* claiming a branch is mergeable — rebase/merge `main` into it and confirm the branch's own CI is green; (3) *after* any push/merge/ff into `main` — re-run and confirm the post-push run is `success` before declaring done (see §7b). Local "expected green" is never proof; the real CI run is the only proof.
+- **2026-07-17** — **Green Gate is a precondition, not a nicety:** CI workflows have been *removed* from this repo (see `claude/remove-ci-workflows`) to avoid billing stalls — there is no CI to check. Verify `main` is locally sane before building on it: run the project's local lint/typecheck/test commands and confirm they pass before declaring a base sound. Local verification is the only gate now — there is no remote CI run to wait on, and you must never block work waiting for a CI job that will never execute (see §7b).
 - **2026-07-07** — **Branch deletion is currently impossible from this environment** — `git push origin --delete <branch>` reliably 403s against this environment's git proxy (not an auth issue retrying fixes), and the GitHub MCP server has no delete-branch/delete-ref tool. Don't retry the delete more than once. Instead, record the branch in `docs/BUILD_LEDGER.md`'s "Stale branches" table and move on — that table is now the actual record of what should be deleted once a path exists. The real fix is enabling GitHub's **"Automatically delete head branches"** repo setting (owner-only, Settings → General → Pull Requests) — recommend it, don't keep working around its absence. A future session may have a different git remote/tooling — don't assume this is permanent without checking again.
 - **2026-07-02** — **No branches left behind:** when a PR/lane closes or merges, delete its branch (local + remote) in the same step. Land verified lanes to `main`, then delete; only a branch with active in-progress work may linger. *(2026-07-07 update: this remains the goal, but see the entry above — deletion is currently blocked at the tooling level in this environment; log the branch instead of retrying.)*
 - **2026-07-02** — Owner prefers a **commit-streaming workflow**: don't reflexively open a PR per change. Default to one working/integration branch with incremental commits; open a PR only when a real review gate is needed or the owner asks. (See Working Conventions below.)
@@ -84,7 +84,7 @@ see what is ready to merge, waiting, blocked, or must not be touched.
   owner authorization for that specific PR. Mark `APPROVED` only when the
   merge-readiness rule in the ledger is fully met.
 
-Keep ledger updates on a docs/process lane — never bundled into feature or CI PRs.
+Keep ledger updates on a docs/process lane — never bundled into feature PRs.
 
 ## PR FLOW RULES
 
@@ -102,8 +102,6 @@ Every PR must have one lane only:
 
 - docs/process
 - infrastructure
-- CI/workflows
-- tests/coverage
 - bug fix
 - feature
 - security/privacy
@@ -149,8 +147,7 @@ A PR may move to `AWAITING_AUDIT` only after:
 
 Do not merge automatically.
 
-Merge requires explicit owner approval. Even if CI is green, wait for owner review/merge
-instruction.
+Merge requires explicit owner approval.
 
 ### 6. Watcher Rule
 
@@ -158,7 +155,6 @@ If assigned to watch a PR, stay quiet unless something actionable happens.
 
 Surface only:
 
-- CI failure
 - review comment
 - merge conflict
 - preview/deploy issue
@@ -172,34 +168,30 @@ Never claim green unless the exact check completed successfully.
 
 Use precise language:
 
-- local passed, CI pending
-- CI green
+- local passed, no CI configured
 - Cloudflare deployed
-- no CI configured
 - manual preview passed
-- expected green, not confirmed
 
-Expected green is not green.
+"Expected green" is not green.
 
 ### 7b. Green Gate (main must be green — non-negotiable)
 
 `main` is the sole deploy source and must always be green. This is a *precondition*
-for work, not a nice-to-have. The exact check to prove it is the real CI, never a
-local guess:
+for work, not a nice-to-have. **CI workflows have been removed from this repo**
+(see the `claude/remove-ci-workflows` branch) to avoid billing stalls — there is no
+remote CI to check, and you must never block work waiting for a CI job that will
+never execute. The gate is now **local verification only**:
 
-- **Before starting any task:** run `gh run list --branch main --limit 3` and
-  confirm the latest `main` run is `success`. If `main` is red or the last run is
-  pending/unknown, **stop and surface it** — do not build on a red base, do not
-  proceed as if green. Report the failing run and wait for owner direction.
+- **Before starting any task:** verify `main` is locally sound — run the project's
+  local lint/typecheck/test commands and confirm they pass before declaring a base
+  sound. Do not build on a base you haven't verified locally.
 - **Before claiming a branch is mergeable:** merge/rebase `main` into the working
-  branch first, then confirm the branch's own CI runs green. A branch green in
-  isolation that hasn't absorbed `main` is not proven-green for `main`.
-- **After any push to, or merge/ff into, `main`:** re-run
-  `gh run list --branch main --limit 3` and confirm the post-push run goes
-  `success`. If it fails, treat it as a live incident: say so in the §7 precise
-  language, do not declare the merge done.
-- Owner approval is still required to merge (§11 / PR_FLOW §5). This gate is about
-  *proving main is green*, not about authorizing the merge itself.
+  branch first, then confirm the branch's own local checks pass.
+- **After any push to, or merge/ff into, `main`:** re-run local verification and
+  confirm `main` is still sane before declaring the merge done.
+- Owner approval is still required to merge (§11 / PR_FLOW §5).
+- **Use precise language** (§7): say "local passed, no CI configured" — never claim
+  "CI green" or "expected green." Expected green is not green.
 
 ### 8. Manual Check Rule
 
