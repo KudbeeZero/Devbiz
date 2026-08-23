@@ -309,7 +309,12 @@
         const pt = this.board.targetPoint(label);
         this.dart.skin = cur.skin();
         this.dart.parts = cur.dartParts || null;
-        this.dart.setAI(pt.x, pt.y, cur.sigma);
+        // Pressure: weaker AIs choke on checkouts — open their grouping the closer
+        // they get to zero, so comebacks happen and the opponent feels human.
+        const rem = cur.scoreState && cur.scoreState.remaining;
+        const dartsLeft = this.mode.dartsPerTurn - this.dartsThisTurn;
+        const sigma = cur.sigma * cur.pressureFactor(rem, dartsLeft);
+        this.dart.setAI(pt.x, pt.y, sigma);
         this.aiTimer = cur.thinkTime;
       } else if (this.dart.state === 'aiming') {
         this.aiTimer -= dt;
