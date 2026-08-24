@@ -89,11 +89,10 @@
   // INPUT — slingshot drag: press on bag, drag back, release to throw.
   // ===================================================================
   function Input(canvas) {
-    this.canvas = canvas; this.pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0 };
-    this.justDown = false; this.justUp = false;
+    this.canvas = canvas; this.pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0, justDown: false, justUp: false };
     const toL = (cx, cy) => { const r = canvas.getBoundingClientRect(); return { x: (cx - r.left) * (canvas.width / r.width), y: (cy - r.top) * (canvas.height / r.height) }; };
     const self = this;
-    const down = (cx, cy) => { const p = toL(cx, cy); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.justDown = true; };
+    const down = (cx, cy) => { const p = toL(cx, cy); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.pointer.justDown = true; };
     const move = (cx, cy) => { if (self.pointer.down) { const p = toL(cx, cy); self.pointer.x = p.x; self.pointer.y = p.y; } };
     const up = () => { if (self.pointer.down) { self.pointer.down = false; self.justUp = true; } };
     if (window.PointerEvent) {
@@ -105,7 +104,7 @@
       window.addEventListener('mousemove', e => { move(e.clientX, e.clientY); });
       window.addEventListener('mouseup', up);
     }
-    this.endFrame = function () { this.justDown = false; this.justUp = false; };
+    this.endFrame = function () { this.pointer.justDown = false; this.pointer.justUp = false; };
   }
 
   // ===================================================================
