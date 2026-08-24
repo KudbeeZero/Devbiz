@@ -36,7 +36,16 @@
     s180:      ['One hundred and eighty!', 'A maximum!', 'Absolutely magnificent, one eighty!', 'A perfect visit!'],
     checkout:  ['And it is a finish!', 'He takes the leg!', 'What a checkout!', 'That wraps it up!'],
     legWin:    ['He takes the leg!', 'Leg to him!', 'That is the leg.', 'He seals the leg.'],
-    matchWin:  ['Game shot! He takes the match!', 'What a performance, match winner!', 'He is done! The match is his!']
+    matchWin:  ['Game shot! He takes the match!', 'What a performance, match winner!', 'He is done! The match is his!'],
+    // Rich additions:
+    nearMiss:  ['So close!', 'Just wide!', 'A hair away!', 'Nearly there!', 'Right on the wire!', 'That was tight!'],
+    edge:      ['Right on the edge!', 'Skims the wire!', 'Clips the double wire!'],
+    clutch:    ['Ice in his veins!', 'He holds his nerve!', 'Big moment, big dart!', 'Under pressure, delivers!'],
+    streak:    ['He cannot miss!', 'On fire!', 'Unstoppable!', 'In the zone!', 'A red-hot run!'],
+    drySpell:  ['He will want that back.', 'Out of rhythm.', 'Finding it tough right now.', 'The scoring has dried up.'],
+    setup:     ['Sets it up nicely.', 'Leaves himself on a finish.', 'A setup dart.', 'Right where he wanted it.'],
+    recovery:  ['Back on track.', 'Responds in kind.', 'Answers the pressure.', 'Comes back strong.'],
+    fastLeg:   ['This could be a quick leg!', 'Away in a hurry!', 'Blistering pace!']
   };
 
   function pick(pool, key) {
@@ -179,6 +188,54 @@
   };
 
   CommentaryEngine.prototype.isEnabled = function () { return this.enabled; };
+
+  // ---- richer contextual events ------------------------------------------
+
+  // A near-miss: the dart landed in a single right next to a treble/double the
+  // player was likely attacking. `aimLabel` is what the AI/human was throwing at
+  // (e.g. 'T20'); if the result is the neighbouring single, call it tight.
+  CommentaryEngine.prototype.onNearMiss = function (aimLabel) {
+    if (!this.enabled || !aimLabel) return;
+    this._say(this._line(Math.random() < 0.5 ? 'nearMiss' : 'edge'), 'med');
+  };
+
+  // Hot streak: 2+ big hits in a row. Strength grows the callout.
+  CommentaryEngine.prototype.onStreak = function (n) {
+    if (!this.enabled) return;
+    if (n >= 4) this._say(this._line('streak'), 'high');
+    else if (n === 3) this._say(this._line('streak'), 'med');
+    else this._say(this._line('streak'), 'low');
+  };
+
+  // Clutch: a checkout landed under pressure (opponent close, or tight finish).
+  CommentaryEngine.prototype.onClutch = function () {
+    if (!this.enabled) return;
+    this._say(this._line('clutch'), 'high');
+  };
+
+  // Setup dart: left a clean finish (remaining is now a known checkout number).
+  CommentaryEngine.prototype.onSetup = function () {
+    if (!this.enabled) return;
+    this._say(this._line('setup'), 'low');
+  };
+
+  // Dry spell: several scoring darts missed in a row.
+  CommentaryEngine.prototype.onDrySpell = function () {
+    if (!this.enabled) return;
+    this._say(this._line('drySpell'), 'med');
+  };
+
+  // Recovery: scored big right after a dry spell / opponent pressure.
+  CommentaryEngine.prototype.onRecovery = function () {
+    if (!this.enabled) return;
+    this._say(this._line('recovery'), 'med');
+  };
+
+  // Fast leg: the scoring pace is blistering.
+  CommentaryEngine.prototype.onFastLeg = function () {
+    if (!this.enabled) return;
+    this._say(this._line('fastLeg'), 'med');
+  };
 
   KD.CommentaryEngine = CommentaryEngine;
 })(window.KD = window.KD || {});

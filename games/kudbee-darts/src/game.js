@@ -330,6 +330,7 @@
         this.dart.skin = cur.skin();
         this.dart.parts = cur.dartParts || null;
         this.dart.setAI(pt.x, pt.y, cur.sigma);
+        this._aimLabel = label;            // expose intended target for near-miss commentary
         this.aiTimer = cur.thinkTime;
       } else if (this.dart.state === 'aiming') {
         this.aiTimer -= dt;
@@ -444,6 +445,37 @@
     }
     // commentary callout for this dart
     if (this.commentary) this.commentary.onDart(res, out);
+
+    // Track per-turn scoring drought for dry-spell / recovery commentary.
+    if (res.score === 0 && !out.bust) { cur._turnDry = (cur._turnDry || 0) + 1; this._hadDry = this._hadDry || cur._turnDry >= 3; }
+    else { cur._turnDry = 0; }
+
+    // Richer contextual commentary: near-miss, setup, clutch, dry spell.
+    if (this.commentary && !out.bust) {
+      // Near-miss: a single landed right beside the treble/double being attacked.
+      if (res.ring === 'single' && this._aimLabel) {
+        const al = this._aimLabel.toUpperCase();
+        if ((al[0] === 'T' || al[0] === 'D') && String(res.value) === al.slice(1)) {
+          this.commentary.onNearMiss(al);
+        }
+      }
+      // Setup dart: just left a clean checkout (remaining is a 2-dart-or-less out).
+      if (this.mode.id === 'x01' && !out.win && cur.scoreState) {
+        const rem = cur.scoreState.remaining;
+        if (rem <= 170 && rem > 110 && (rem % 2 === 0 || rem - 50 <= 40)) {
+          this.commentary.onSetup();
+        }
+      }
+      // Clutch: finished a leg under pressure (opponent also has a leg, or fast leg).
+      if (out.win && this.players[(1 - this.current)].legs >= 1) {
+        this.commentary.onClutch();
+      }
+      // Streak callout (mirrors the hot-streak toast).
+      if (cur.hotStreak >= 2 && !out.bust) this.commentary.onStreak(cur.hotStreak);
+      // Dry spell: 3+ darts this turn with no score.
+      if (cur._turnDry >= 3 && res.score === 0) this.commentary.onDrySpell();
+      if (cur._turnDry === 0 && res.score >= 40 && this._hadDry) this.commentary.onRecovery();
+    }
     if (big) {
       this.timeScale = 0.4;
       // Note: a checkout (out.win) punches its zoom via _matchWin below,
@@ -529,6 +561,10 @@
     this.turnEndTimer = 1.5;
     this.banner = cur.name + (this.mode.id === 'x01' ? ' scored ' + cur.scoreState.turnScore : '');
     this.state = 'turnEnd';
+    // reset per-turn commentary state
+    this.players.forEach(function (pl) { pl._turnDry = 0; });
+    this._hadDry = false;
+    this._aimLabel = null;
   };
 
   Game.prototype._updateTurnEnd = function (dt) {
