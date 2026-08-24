@@ -109,21 +109,21 @@
   // INPUT — unified pointer (aim direction from drag vector / swipe).
   // ===================================================================
   function Input(canvas) {
-    this.canvas = canvas; this.pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0, dx: 0, dy: 0 };
-    this.justDown = false; this.justUp = false; this.aimAng = -Math.PI / 2; this.aimLen = 0;
+    this.canvas = canvas; this.pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0, dx: 0, dy: 0, justDown: false, justUp: false };
+    this.aimAng = -Math.PI / 2; this.aimLen = 0;
     const now = () => (window.performance ? performance.now() : Date.now()) / 1000;
     const toL = (cx, cy) => { const r = canvas.getBoundingClientRect(); return { x: (cx - r.left) * (canvas.width / r.width), y: (cy - r.top) * (canvas.height / r.height) }; };
     const self = this;
     if (window.PointerEvent) {
-      canvas.addEventListener('pointerdown', e => { e.preventDefault(); const p = toL(e.clientX, e.clientY); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.pointer.dx = 0; self.pointer.dy = 0; self.justDown = true; });
+      canvas.addEventListener('pointerdown', e => { e.preventDefault(); const p = toL(e.clientX, e.clientY); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.pointer.dx = 0; self.pointer.dy = 0; self.pointer.justDown = true; });
       canvas.addEventListener('pointermove', e => { e.preventDefault(); if (self.pointer.down) { const p = toL(e.clientX, e.clientY); self.pointer.dx = p.x - self.pointer.sx; self.pointer.dy = p.y - self.pointer.sy; self.pointer.x = p.x; self.pointer.y = p.y; self.aimAng = Math.atan2(self.pointer.dy, self.pointer.dx); self.aimLen = KC.Util.clamp(Math.hypot(self.pointer.dx, self.pointer.dy) / 120, 0, 1); } }, { passive: false });
-      window.addEventListener('pointerup', () => { if (self.pointer.down) { self.pointer.down = false; self.justUp = true; } });
+      window.addEventListener('pointerup', () => { if (self.pointer.down) { self.pointer.down = false; self.pointer.justUp = true; } });
     } else {
-      canvas.addEventListener('mousedown', e => { const p = toL(e.clientX, e.clientY); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.justDown = true; });
+      canvas.addEventListener('mousedown', e => { const p = toL(e.clientX, e.clientY); self.pointer.down = true; self.pointer.sx = self.pointer.x = p.x; self.pointer.sy = self.pointer.y = p.y; self.pointer.justDown = true; });
       window.addEventListener('mousemove', e => { if (self.pointer.down) { const p = toL(e.clientX, e.clientY); self.pointer.dx = p.x - self.pointer.sx; self.pointer.dy = p.y - self.pointer.sy; self.pointer.x = p.x; self.pointer.y = p.y; } });
-      window.addEventListener('mouseup', () => { self.pointer.down = false; self.justUp = true; });
+      window.addEventListener('mouseup', () => { self.pointer.down = false; self.pointer.justUp = true; });
     }
-    this.endFrame = function () { this.justDown = false; this.justUp = false; };
+    this.endFrame = function () { this.pointer.justDown = false; this.pointer.justUp = false; };
   }
 
   // ===================================================================
