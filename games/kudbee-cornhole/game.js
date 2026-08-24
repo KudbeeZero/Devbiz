@@ -124,7 +124,7 @@
     this.aiming = false; this.power = 0; this.aimAng = -0.4;
     this.score = 0; this.round = 0; this.maxRounds = 8; this.bagsLeft = 8;
     this.phase = 'aim';          // aim | fly | settle
-    this.banner = ''; this.flash = 0; this.shake = 0; this.lastPts = 0;
+    this.banner = ''; this.flash = 0; this.shake = 0; this.lastPts = 0; this._scorePops = [];
   };
   Game.prototype.start = function () { this._last = performance.now() / 1000; requestAnimationFrame(this._frame.bind(this)); };
 
@@ -137,6 +137,11 @@
   Game.prototype.update = function (dt) {
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 1.5);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2);
+    // score pops
+    for (let i = this._scorePops.length - 1; i >= 0; i--) {
+      const p = this._scorePops[i]; p.life -= dt; p.y += p.vy * dt; p.vy *= 0.92;
+      if (p.life <= 0) this._scorePops.splice(i, 1);
+    }
     if (this.state === 'menu') { if (this.input.pointer.justDown) { this.audio.uiTick(); this.state = 'play'; this.reset(); } }
     else if (this.state === 'play') this._updatePlay(dt);
     else if (this.state === 'over') { if (this.input.pointer.justDown) { this.audio.uiTick(); this.reset(); this.state = 'play'; } }
@@ -217,6 +222,7 @@
     this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
     if (pts >= 3) this.audio.holeDrop(); this.audio.scoreJingle(pts);
     this.bag.gone = true;
+    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: '+' + pts, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };
 
@@ -246,7 +252,7 @@
     ctx.save(); ctx.translate(sx, sy);
     this._drawScene(ctx);
     if (this.state === 'menu') this._drawMenu(ctx);
-    else { this._drawHUD(ctx); this._drawBag(ctx); }
+    else { this._drawHUD(ctx); this._drawBag(ctx); this._drawScorePops(ctx); }
     if (this.state === 'over') this._drawOver(ctx);
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,211,77,' + (this.flash * 0.25).toFixed(2) + ')'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); }
     ctx.restore();
@@ -322,6 +328,17 @@
     // throw line marker
     ctx.fillStyle = 'rgba(255,160,60,0.4)';
     ctx.fillRect(120, GROUND_Y - 80, 4, 80);
+  };
+
+  Game.prototype._drawScorePops = function (ctx) {
+    ctx.textAlign = 'center';
+    for (const p of this._scorePops) {
+      const a = KC.Util.clamp(p.life / 1.4, 0, 1);
+      ctx.globalAlpha = a; ctx.font = 'bold 30px "Space Grotesk",sans-serif';
+      ctx.fillStyle = p.col; ctx.shadowColor = p.col; ctx.shadowBlur = 16;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.textAlign = 'left';
   };
 
   Game.prototype._drawMenu = function (ctx) {
