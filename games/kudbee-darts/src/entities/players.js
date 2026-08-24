@@ -91,6 +91,27 @@
     return this.ambition === 0 ? '' + n : 'T' + n;
   };
 
+  // Effective scatter under pressure. Real players (especially weaker ones) choke
+  // when on a checkout — their grouping opens up the closer they get to zero.
+  // Returns a multiplier on base sigma: ~1.0 when safe, up to ~2.2 for a Rookie
+  // on a two-dart finish. Legends stay ice-cool (smallest bump). When not on a
+  // checkout the multiplier is 1 (no effect).
+  AIPlayer.prototype.pressureFactor = function (remaining, dartsLeft) {
+    if (this.ambition >= 2) {
+      // Legends barely choke — only flinch on a tight one-dart out.
+      if (remaining <= 40 && dartsLeft === 1) return 1.15;
+      return 1.0;
+    }
+    // On a checkout = within 170 and reachable this turn.
+    const onCheckout = remaining <= 170 && remaining >= 2;
+    if (!onCheckout) return 1.0;
+    // Closer to the money = tighter the pressure. 170 (start) -> ~1.0, single-dart outs -> peak.
+    const proximity = 1 - Math.min(1, (remaining - 2) / 170); // 0 at 170, 1 at 2
+    const dartsPressure = dartsLeft === 1 ? 1.3 : dartsLeft === 2 ? 1.1 : 1.0;
+    const tierPanic = this.ambition === 0 ? 2.2 : 1.6;  // Rookies panic most
+    return 1 + proximity * (tierPanic - 1) * dartsPressure;
+  };
+
   Player.TIERS = TIERS;
   KD.Player = Player;
   KD.AIPlayer = AIPlayer;

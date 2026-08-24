@@ -29,6 +29,8 @@
     this.game = game;
     this.state = 'ready';      // ready | aiming | flying | done
     this.aimX = 0; this.aimY = 0;
+    this._swayX = 0; this._swayY = 0;   // live hand-tremor offset (logical px)
+    this._swayPhase = Math.random() * Math.PI * 2;
     this.sigma = 0.022;        // base landing scatter (board-radius units)
     this.isAI = false;
 
@@ -69,6 +71,8 @@
   Dart.prototype.beginAim = function (px, py) {
     const p = this._clampToBoard(px, py);
     this.aimX = p.x; this.aimY = p.y;
+    this._swayPhase = Math.random() * Math.PI * 2;   // fresh tremor each throw
+    this._swayX = 0; this._swayY = 0;
     this.isAI = false;
     this.power = 0;
     this.tooSoft = false;
@@ -83,6 +87,21 @@
     // Live power read-out from the pointer's smoothed speed.
     const spd = (this.game.input.pointer.speed) || 0;
     this.power = Util.lerp(this.power, Math.min(1.7, spd / IDEAL_SPEED), 1 - Math.pow(0.02, dt));
+
+    // Hand-tremor sway: a subtle multi-frequency tremor a real throw has. Two
+    // incommensurate sines give it an organic, non-repetitive drift. Amplitude is
+    // small (a few logical px) so it reads as "steady your hand" skill, not noise.
+    // Grows very slightly the longer you hold (fatigue), rewarding commitment.
+    if (!this.game.reduceMotion) {
+      this._swayPhase += dt;
+      const hold = Math.min(1, this._swayPhase / 2.2);
+      const amp = (0.6 + hold * 0.7) * (this.game.board.Rpx / 232);
+      const a = this._swayPhase;
+      this._swayX = (Math.sin(a * 7.3) * 0.7 + Math.sin(a * 4.1 + 1.3) * 0.3) * amp;
+      this._swayY = (Math.sin(a * 6.1 + 0.7) * 0.7 + Math.sin(a * 3.7 + 2.1) * 0.3) * amp;
+    } else {
+      this._swayX = 0; this._swayY = 0;
+    }
   };
 
   // ---- AI aiming ---------------------------------------------------------
@@ -112,7 +131,7 @@
       return null;
     }
 
-    let lx = this.aimX, ly = this.aimY;
+    let lx = this.aimX + this._swayX, ly = this.aimY + this._swayY;
     const cx = this.game.board.cx, cy = this.game.board.cy;
 
     // Power: release speed vs the ideal flick.
@@ -167,10 +186,38 @@
   // Shared landing + flight kickoff for human and AI.
   Dart.prototype._releaseAt = function (lx, ly, sigma) {
     const Rpx = this.game.board.Rpx;
-    const sx = Util.gaussian() * sigma * Rpx;
-    const sy = Util.gaussian() * sigma * Rpx;
-    this.landX = lx + sx;
-    this.landY = ly + sy;
+    const cx = this.game.board.cx, cy = this.game.board.cy;
+
+    // Directional scatter: real darts misses are predominantly TANGENTIAL — into
+    // the neighbouring wedges (aim at T20, miss into 5 or 1) — not isotropic.
+    // Decompose the Gaussian jitter into tangential (large) + radial (small)
+    // axes relative to the board centre, so misses read like real ones.
+    const dx = lx - cx, dy = ly - cy;
+    const rad = Math.sqrt(dx * dx + dy * dy) || 1;
+    const tx = -dy / rad, ty = dx / rad;       // unit tangent (clockwise)
+    const rx = dx / rad, ry = dy / rad;        // unit radial (outward)
+    const gTang = Util.gaussian();
+    const gRad = Util.gaussian();
+    const tangSigma = sigma * 1.25;             // wide into adjacent wedges
+    const radSigma = sigma * 0.45;              // tight in/out (less depth error)
+    const jx = tx * gTang * tangSigma * Rpx + rx * gRad * radSigma * Rpx;
+    const jy = ty * gTang * tangSigma * Rpx + ry * gRad * radSigma * Rpx;
+
+    let landX = lx + jx, landY = ly + jy;
+
+    // Dart grouping (muscle memory): if the player has already landed a dart this
+    // turn, pull this landing toward that cluster center. The longer the groove,
+    // the stronger the pull — so stacking T20s feels tight and skillful. The AI
+    // throws true to its target (no grouping), keeping its skill honest to sigma.
+    const gc = this.game._groupCenter;
+    if (!this.isAI && gc && this.game._groupStrength > 0) {
+      const g = this.game._groupStrength;     // 0..~0.55
+      landX = landX * (1 - g) + gc.x * g;
+      landY = landY * (1 - g) + gc.y * g;
+    }
+
+    this.landX = landX;
+    this.landY = landY;
     this.result = this.game.board.hitTest(this.landX, this.landY);
 
     // Cosmetic flight: from the player's hand (just right of the oche centre)
@@ -258,7 +305,9 @@
     // Bot is throwing…"), so it was hard to read where the AI was even aiming.
     if (this.isAI) { this.drawAIReticle(ctx); return; }
 
-    const p = { x: this.aimX, y: this.aimY };
+    // Draw the reticle at the swayed aim point so the player SEES the hand
+    // tremor and learns to time the throw when it's centered — the core skill.
+    const p = { x: this.aimX + this._swayX, y: this.aimY + this._swayY };
     const res = this.game.board.hitTest(p.x, p.y);
     const t = this.game.time;
     const pulse = 0.5 + 0.5 * Math.sin(t * 6);
