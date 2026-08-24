@@ -245,11 +245,14 @@
   Game.prototype._releaseBall = function () {
     this.ballX = VIEW_W / 2 + this.bowlLine * 80; this.ballY = 70;
     this.ballVX = this.bowlSwing * 60; this.ballVY = (VIEW_H * 0.40) / this.flightDur;
-    this.audio.tap();
+    this._trail = []; this.audio.tap();
   };
 
   Game.prototype._moveBall = function (dt) {
     this.ballX += this.ballVX * dt; this.ballY += this.ballVY * dt;
+    // trail sample
+    this._trail.push({ x: this.ballX, y: this.ballY });
+    if (this._trail.length > 14) this._trail.shift();
     // bounce once partway down
     if (this.ballY > VIEW_H * 0.52 && !this._bounced) { this._bounced = true; this.ballVY *= 0.85; this.audio.tap(); }
   };
@@ -333,55 +336,90 @@
   };
 
   Game.prototype._drawGround = function (ctx) {
-    // neon field
+    // deep neon sky
     const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-    g.addColorStop(0, '#0a1028'); g.addColorStop(0.5, '#080b1c'); g.addColorStop(1, '#06091a');
+    g.addColorStop(0, '#0a1430'); g.addColorStop(0.45, '#070b1c'); g.addColorStop(1, '#04060f');
     ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    // pitch strip
-    ctx.fillStyle = '#10183a'; ctx.fillRect(VIEW_W / 2 - 36, 40, 72, VIEW_H - 120);
-    ctx.strokeStyle = 'rgba(57,230,255,0.25)'; ctx.lineWidth = 2;
+    // distant glow halo behind the ground
+    const halo = ctx.createRadialGradient(VIEW_W / 2, VIEW_H * 0.46, 30, VIEW_W / 2, VIEW_H * 0.46, 360);
+    halo.addColorStop(0, 'rgba(57,230,255,0.12)'); halo.addColorStop(1, 'rgba(57,230,255,0)');
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    // pitch strip with glow
+    ctx.save();
+    ctx.shadowColor = 'rgba(57,230,255,0.4)'; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#101a40'; ctx.fillRect(VIEW_W / 2 - 36, 40, 72, VIEW_H - 120);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(57,230,255,0.4)'; ctx.lineWidth = 2;
     ctx.strokeRect(VIEW_W / 2 - 36, 40, 72, VIEW_H - 120);
-    // creases
+    // creases with glow
+    ctx.save(); ctx.shadowColor = C.cyan; ctx.shadowBlur = 8; ctx.strokeStyle = 'rgba(124,255,178,0.7)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(VIEW_W / 2 - 36, VIEW_H * 0.78); ctx.lineTo(VIEW_W / 2 + 36, VIEW_H * 0.78); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(VIEW_W / 2 - 36, 70); ctx.lineTo(VIEW_W / 2 + 36, 70); ctx.stroke();
-    // fielding circle (30-yard)
-    ctx.beginPath(); ctx.ellipse(VIEW_W / 2, VIEW_H * 0.46, 220, 150, 0, 0, TAU); ctx.strokeStyle = 'rgba(196,107,255,0.2)'; ctx.stroke();
-    // boundary
-    ctx.beginPath(); ctx.ellipse(VIEW_W / 2, VIEW_H * 0.46, 320, 250, 0, 0, TAU); ctx.strokeStyle = 'rgba(255,211,77,0.25)'; ctx.lineWidth = 3; ctx.stroke();
-    // glow orbs at boundary (fielders)
+    ctx.restore();
+    // 30-yard circle
+    ctx.beginPath(); ctx.ellipse(VIEW_W / 2, VIEW_H * 0.46, 220, 150, 0, 0, TAU); ctx.strokeStyle = 'rgba(196,107,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // boundary with glow + dashed pulse
+    ctx.save(); ctx.shadowColor = C.gold; ctx.shadowBlur = 14; ctx.strokeStyle = 'rgba(255,211,77,0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(VIEW_W / 2, VIEW_H * 0.46, 320, 250, 0, 0, TAU); ctx.stroke();
+    ctx.restore();
+    // animated fielders (pulse + glow)
+    const t = this.time;
     for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * TAU * 0.86 - TAU * 0.07;
-      const r = 280; const fx = VIEW_W / 2 + Math.cos(a) * r * 1.1, fy = VIEW_H * 0.46 + Math.sin(a) * r * 0.78;
-      ctx.beginPath(); ctx.arc(fx, fy, 5, 0, TAU); ctx.fillStyle = 'rgba(124,255,178,0.7)'; ctx.fill();
+      const a = (i / 9) * TAU * 0.86 - TAU * 0.07 + Math.sin(t * 0.6 + i) * 0.02;
+      const rr = 280 + Math.sin(t * 1.5 + i * 0.7) * 4;
+      const fx = VIEW_W / 2 + Math.cos(a) * rr * 1.1, fy = VIEW_H * 0.46 + Math.sin(a) * rr * 0.78;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 3 + i);
+      ctx.save(); ctx.shadowColor = C.green; ctx.shadowBlur = 8 + pulse * 8;
+      ctx.beginPath(); ctx.arc(fx, fy, 4 + pulse * 1.5, 0, TAU);
+      ctx.fillStyle = 'rgba(124,255,178,' + (0.5 + pulse * 0.4) + ')'; ctx.fill();
+      ctx.restore();
     }
   };
 
   Game.prototype._drawPlay = function (ctx) {
-    // bowler
+    // bowler (glowing)
+    ctx.save(); ctx.shadowColor = this.opp.col || C.violet; ctx.shadowBlur = 14;
     ctx.fillStyle = this.opp.col || C.violet;
-    ctx.beginPath(); ctx.arc(VIEW_W / 2 + this.bowlLine * 60, 90, 9, 0, TAU); ctx.fill();
-    // batsman
+    ctx.beginPath(); ctx.arc(VIEW_W / 2 + this.bowlLine * 60, 90, 10, 0, TAU); ctx.fill();
+    ctx.restore();
+    // batsman (glowing)
+    ctx.save(); ctx.shadowColor = this.team.col || C.cyan; ctx.shadowBlur = 14;
     ctx.fillStyle = this.team.col || C.cyan;
-    ctx.beginPath(); ctx.arc(VIEW_W / 2, VIEW_H * 0.82, 10, 0, TAU); ctx.fill();
-    // stumps
-    ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(VIEW_W / 2, VIEW_H * 0.82, 11, 0, TAU); ctx.fill();
+    ctx.restore();
+    // stumps (glow)
+    ctx.save(); ctx.shadowColor = C.gold; ctx.shadowBlur = 8; ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2.5;
     for (const ox of [-6, 0, 6]) { ctx.beginPath(); ctx.moveTo(VIEW_W / 2 + ox, VIEW_H * 0.74); ctx.lineTo(VIEW_W / 2 + ox, VIEW_H * 0.80); ctx.stroke(); }
+    ctx.restore();
 
-    // ball in flight
+    // ball trail + ball in flight
     if (this.phase === 'flight' || this.phase === 'runup') {
-      ctx.fillStyle = '#ff3c5d'; ctx.beginPath(); ctx.arc(this.ballX, this.ballY, 5, 0, TAU); ctx.fill();
-      // sweet-spot ring at contact zone — the timing guide
-      const cy = VIEW_H * 0.76;
-      ctx.strokeStyle = this.sweetRing < 16 ? C.green : C.cyan; ctx.lineWidth = 3; ctx.globalAlpha = 0.85;
-      ctx.beginPath(); ctx.arc(this.aimX, cy, this.sweetRing, 0, TAU); ctx.stroke();
+      // trail
+      for (let i = 0; i < this._trail.length; i++) {
+        const p = this._trail[i]; const a = (i / this._trail.length) * 0.5;
+        ctx.globalAlpha = a; ctx.fillStyle = '#ff6a3c';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3 * (i / this._trail.length) + 1, 0, TAU); ctx.fill();
+      }
       ctx.globalAlpha = 1;
+      // ball with glow
+      ctx.save(); ctx.shadowColor = '#ff3c5d'; ctx.shadowBlur = 14;
+      ctx.fillStyle = '#ff3c5d'; ctx.beginPath(); ctx.arc(this.ballX, this.ballY, 5, 0, TAU); ctx.fill();
+      ctx.restore();
+      // sweet-spot ring at contact zone — the timing guide (pulsing)
+      const cy = VIEW_H * 0.76;
+      const sweet = this.sweetRing < 16;
+      ctx.save(); ctx.shadowColor = sweet ? C.green : C.cyan; ctx.shadowBlur = sweet ? 16 : 8;
+      ctx.strokeStyle = sweet ? C.green : C.cyan; ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.arc(this.aimX, cy, this.sweetRing, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.restore();
     }
     // aim guide (drag direction)
     if (this.input.pointer.down && this.input.pointer.aimLen > 0.05) {
       const a = this.input.pointer.aimAng, l = 60;
+      ctx.save(); ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
       ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.globalAlpha = 0.7;
       ctx.beginPath(); ctx.moveTo(this.aimX, VIEW_H * 0.82); ctx.lineTo(this.aimX + Math.cos(a) * l, VIEW_H * 0.82 + Math.sin(a) * l); ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1; ctx.restore();
     }
     this._drawHUD(ctx);
     if (this.banner) { ctx.fillStyle = C.text; ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.textAlign = 'center'; ctx.shadowColor = C.cyan; ctx.shadowBlur = 16; ctx.fillText(this.banner, VIEW_W / 2, 40); ctx.shadowBlur = 0; ctx.textAlign = 'left'; }
