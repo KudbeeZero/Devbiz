@@ -270,6 +270,7 @@
 
   var currentNode = 'awakening';
   var choicesMade = [];
+  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var chapters = [
     { title: 'Chapter 1', label: 'The Awakening' },
@@ -573,16 +574,14 @@
     requestAnimationFrame(animate);
     var t = performance.now() * 0.001;
     if (threeReady) {
-      camera.position.x = Math.sin(t * 0.15) * 0.6;
-      camera.position.y = Math.sin(t * 0.12) * 0.3;
+      camera.position.x = reducedMotion ? 0 : Math.sin(t * 0.15) * 0.6;
+      camera.position.y = reducedMotion ? 0 : Math.sin(t * 0.12) * 0.3;
       camera.lookAt(0, 0, 0);
-      backdrop.rotation.z = Math.sin(t * 0.05) * 0.01;
-      nebula.position.x = Math.sin(t * 0.03) * 0.4;
-      nebula.position.y = Math.cos(t * 0.025) * 0.3;
-      stars.rotation.y = t * 0.008;
-      orb.position.y = 1.5 + Math.sin(t * 0.8) * 0.3;
-      orb.position.x = Math.sin(t * 0.5) * 0.5;
-      if (fireflies) {
+      backdrop.rotation.z = reducedMotion ? 0 : Math.sin(t * 0.05) * 0.01;
+      nebula.position.x = reducedMotion ? 0 : Math.sin(t * 0.03) * 0.4;
+      nebula.position.y = reducedMotion ? 0 : Math.cos(t * 0.025) * 0.3;
+      stars.rotation.y = reducedMotion ? 0 : t * 0.008;
+      if (fireflies && !reducedMotion) {
         var pos = fireflies.geometry.attributes.position;
         for (var i = 0; i < pos.count; i++) {
           var x = pos.getX(i) + Math.sin(t * 0.5 + i) * 0.002;
