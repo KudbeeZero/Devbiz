@@ -284,7 +284,6 @@
 
   // ===== input =====
   var running = false, rafId = 0, lastT = 0;
-  document.getElementById('startBtn')?.addEventListener('click', start);
   document.getElementById('nextBtn').addEventListener('click', function() { audioInit(); nextScene(); });
   document.getElementById('prevBtn').addEventListener('click', function() { audioInit(); prevScene(); });
   document.getElementById('replayBtn').addEventListener('click', start);
