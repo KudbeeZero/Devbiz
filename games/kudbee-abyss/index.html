@@ -248,6 +248,7 @@
     var Ctor = window.AudioContext || window.webkitAudioContext; if (!Ctor) return;
     try { AC = new Ctor(); } catch (e) { return; }
     mGain = AC.createGain(); mGain.gain.value = muted ? 0 : 0.25; mGain.connect(AC.destination);
+    startAmbient();
   }
   function setMuted(m) {
     muted = m; if (mGain) mGain.gain.value = muted ? 0 : 0.25;
@@ -277,6 +278,35 @@
       case 'chapter': tone(220, 0.25, 'sine', 0.18, 880); tone(330, 0.25, 'sine', 0.12, 1320, 0.08); break;
       case 'end': tone(110, 0.8, 'sine', 0.18, 55); tone(165, 0.6, 'sine', 0.12, 82, 0.1); break;
     }
+  }
+
+  // ===== ambient drone =====
+  var ambientOsc = null, ambientGain = null, ambientLfo = null;
+  function startAmbient() {
+    if (!AC || ambientOsc) return;
+    ambientOsc = AC.createOscillator();
+    ambientOsc.type = 'sine';
+    ambientOsc.frequency.value = 55;
+    ambientGain = AC.createGain();
+    ambientGain.gain.value = 0.04;
+    ambientLfo = AC.createOscillator();
+    ambientLfo.type = 'sine';
+    ambientLfo.frequency.value = 0.1;
+    var lfoGain = AC.createGain();
+    lfoGain.gain.value = 10;
+    ambientLfo.connect(lfoGain);
+    lfoGain.connect(ambientOsc.frequency);
+    ambientOsc.connect(ambientGain);
+    ambientGain.connect(AC.destination);
+    ambientOsc.start();
+    ambientLfo.start();
+  }
+  function setAmbient(chapter) {
+    if (!ambientOsc) return;
+    var freq = 55;
+    if (chapter === 'Chapter 2') freq = 65;
+    if (chapter === 'Chapter 3' || chapter === 'The End') freq = 75;
+    ambientOsc.frequency.setTargetAtTime(freq, AC.currentTime, 0.5);
   }
 
   // ===== three.js scene =====
@@ -394,6 +424,8 @@
       sfx('end');
       return;
     }
+    startAmbient();
+    setAmbient(node.chapter);
     document.getElementById('hint').style.display = 'block';
     for (var i = 0; i < node.choices.length; i++) {
       var btn = document.createElement('button');
