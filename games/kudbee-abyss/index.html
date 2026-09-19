@@ -310,7 +310,7 @@
   }
 
   // ===== three.js scene =====
-  var scene, camera, renderer, backdrop, stars, orb;
+  var scene, camera, renderer, backdrop, stars, orb, fireflies;
   var threeReady = false;
   var artImg = new Image();
   artImg.src = 'assets/character/queen.png';
@@ -386,6 +386,22 @@
     var starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.09, transparent: true, opacity: 0.75 });
     stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
+
+    // fireflies
+    var flyGeo = new THREE.BufferGeometry();
+    var flyCount = 60;
+    var flyPos = new Float32Array(flyCount * 3);
+    var flySpeed = new Float32Array(flyCount);
+    for (var i = 0; i < flyCount; i++) {
+      flyPos[i * 3] = (Math.random() - 0.5) * 20;
+      flyPos[i * 3 + 1] = (Math.random() - 0.5) * 12;
+      flyPos[i * 3 + 2] = -5 - Math.random() * 10;
+      flySpeed[i] = 0.5 + Math.random() * 1.5;
+    }
+    flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
+    var flyMat = new THREE.PointsMaterial({ color: 0x7cffb2, size: 0.12, transparent: true, opacity: 0.8 });
+    var fireflies = new THREE.Points(flyGeo, flyMat);
+    scene.add(fireflies);
 
     // floating orb
     var orbGeo = new THREE.SphereGeometry(0.35, 32, 32);
@@ -481,6 +497,15 @@
       stars.rotation.y = t * 0.008;
       orb.position.y = 1.5 + Math.sin(t * 0.8) * 0.3;
       orb.position.x = Math.sin(t * 0.5) * 0.5;
+      if (fireflies) {
+        var pos = fireflies.geometry.attributes.position;
+        for (var i = 0; i < pos.count; i++) {
+          var x = pos.getX(i) + Math.sin(t * 0.5 + i) * 0.002;
+          var y = pos.getY(i) + Math.cos(t * 0.4 + i * 0.5) * 0.002;
+          pos.setX(i, x); pos.setY(i, y);
+        }
+        pos.needsUpdate = true;
+      }
       renderer.render(scene, camera);
     }
   }
