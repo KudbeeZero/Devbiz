@@ -313,6 +313,23 @@
     pink.position.set(5, -2, 4);
     scene.add(pink);
 
+    // nebula parallax layer
+    var nebulaCanvas = document.createElement('canvas');
+    nebulaCanvas.width = 512; nebulaCanvas.height = 512;
+    var nctx = nebulaCanvas.getContext('2d');
+    var ng = nctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+    ng.addColorStop(0, 'rgba(106,15,204,0.5)');
+    ng.addColorStop(0.5, 'rgba(57,230,255,0.15)');
+    ng.addColorStop(1, 'rgba(5,3,26,0)');
+    nctx.fillStyle = ng;
+    nctx.fillRect(0, 0, 512, 512);
+    var nebulaTex = new THREE.CanvasTexture(nebulaCanvas);
+    var nebulaGeo = new THREE.PlaneGeometry(30, 22);
+    var nebulaMat = new THREE.MeshBasicMaterial({ map: nebulaTex, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+    var nebula = new THREE.Mesh(nebulaGeo, nebulaMat);
+    nebula.position.z = -22;
+    scene.add(nebula);
+
     // backdrop image
     var tex = new THREE.Texture(artImg);
     tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -418,6 +435,8 @@
       camera.position.y = Math.sin(t * 0.12) * 0.3;
       camera.lookAt(0, 0, 0);
       backdrop.rotation.z = Math.sin(t * 0.05) * 0.01;
+      nebula.position.x = Math.sin(t * 0.03) * 0.4;
+      nebula.position.y = Math.cos(t * 0.025) * 0.3;
       stars.rotation.y = t * 0.008;
       orb.position.y = 1.5 + Math.sin(t * 0.8) * 0.3;
       orb.position.x = Math.sin(t * 0.5) * 0.5;
