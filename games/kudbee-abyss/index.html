@@ -441,6 +441,7 @@
     var node = storyNodes[nodeId];
     if (!node) return;
     currentNode = nodeId;
+    try { localStorage.setItem('kudbee.abyss.node', nodeId); } catch (e) {}
     document.getElementById('chapterLabel').textContent = node.chapter;
     document.getElementById('chapterTitle').textContent = node.label;
     var pos = speakerPosition(node.speaker);
@@ -476,7 +477,9 @@
     flashTransition(function () {
       document.getElementById('end').classList.add('hidden');
       document.getElementById('gate').classList.remove('hidden');
-      renderNode('awakening');
+      var saved = null;
+      try { saved = localStorage.getItem('kudbee.abyss.node'); } catch (e) {}
+      renderNode(saved && storyNodes[saved] ? saved : 'awakening');
     });
   }
 
