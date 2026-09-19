@@ -70,6 +70,8 @@
   .preloader .pl-bar { width:min(220px,60vw); height:1px; background:var(--border); position:relative; overflow:hidden; }
   .preloader .pl-bar span { position:absolute; inset:0; background:var(--grad); transform:scaleX(0); transform-origin:left; transition:transform 0.8s var(--mo-ease-out); }
   @media (prefers-reduced-motion: reduce) { .preloader .pl-bar span { transition:none; } }
+  /* scene transition flash */
+  #flash { position:absolute; inset:0; z-index:40; background:#05031a; opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
 </style>
 </head>
 <body>
@@ -77,6 +79,7 @@
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
+    <div id="flash"></div>
     <div class="preloader" id="preloader">
       <div class="pl-logo">Abyss <em>·</em> Gate</div>
       <div class="pl-bar"><span id="plBar"></span></div>
@@ -309,6 +312,16 @@
     ambientOsc.frequency.setTargetAtTime(freq, AC.currentTime, 0.5);
   }
 
+  function flashTransition(callback) {
+    var flash = document.getElementById('flash');
+    if (!flash) { callback(); return; }
+    flash.style.opacity = '1';
+    setTimeout(function () {
+      callback();
+      setTimeout(function () { flash.style.opacity = '0'; }, 80);
+    }, 220);
+  }
+
   // ===== three.js scene =====
   var scene, camera, renderer, backdrop, stars, orb, fireflies;
   var threeReady = false;
@@ -448,7 +461,7 @@
       btn.className = 'choice-btn';
       btn.type = 'button';
       btn.textContent = node.choices[i].label;
-      btn.addEventListener('click', function (next) { return function () { audioInit(); sfx('choice'); renderNode(next); }; }(node.choices[i].next));
+      btn.addEventListener('click', function (next) { return function () { audioInit(); flashTransition(function () { sfx('choice'); renderNode(next); }); }; }(node.choices[i].next));
       choicesEl.appendChild(btn);
     }
     if (node.choices.length === 1) {
@@ -460,9 +473,11 @@
 
   function startStory() {
     audioInit();
-    document.getElementById('end').classList.add('hidden');
-    document.getElementById('gate').classList.remove('hidden');
-    renderNode('awakening');
+    flashTransition(function () {
+      document.getElementById('end').classList.add('hidden');
+      document.getElementById('gate').classList.remove('hidden');
+      renderNode('awakening');
+    });
   }
 
   // ===== input =====
