@@ -529,7 +529,17 @@
     var rr = b.r + segR;
     if (d >= rr) return false;
     var nx, ny;
-    if (d > 0.0001) { nx = dx / d; ny = dy / d; } else { nx = 0; ny = -1; }
+    if (d > 0.0001) { nx = dx / d; ny = dy / d; }
+    else {
+      // Ball center is exactly on the segment line — normal direction is ambiguous.
+      // Derive it from the ball's velocity so it always points back into the
+      // playfield (opposite to motion). A fixed (0,-1) "up" default let a ball
+      // moving UP pass straight through the top wall / deflector and leak out
+      // the right side of the table.
+      var sp = len(b.vx, b.vy);
+      if (sp > 0.0001) { nx = -b.vx / sp; ny = -b.vy / sp; }
+      else { nx = 0; ny = -1; }
+    }
     b.x += nx * (rr - d); b.y += ny * (rr - d);                 // depenetrate
     // relative velocity vs (optionally) a moving surface
     var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
