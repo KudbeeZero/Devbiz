@@ -303,8 +303,10 @@
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
     // upper-right corner wedge: closes the dead pocket above the deflector so a ball
-    // can't wedge between the cabinet wall and the deflector (infinite bounce loop)
-    seg(800, 182, 846, 132, { rest: 0.35, fric: 0.03 });
+    // can't wedge between the cabinet wall and the deflector (infinite bounce loop).
+    // Fixed: wedge now connects cabinet wall to deflector without intersecting it.
+    // At y=160, deflector x ≈ 754; cabinet wall at x=862. Horizontal segment across pocket.
+    seg(862, 160, 754, 160, { rest: 0.35, fric: 0.03 });
     // ---- lower funnel toward the flippers ----
     // Left funnel's mouth used to be nearly 2x as wide as the right's (235px vs 135px,
     // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
