@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  :root { --cyan:#39e6ff; --violet:#c46bff; --green:#7CFFb2; --amber:#ffd34d; --ember:#ff5d3c; --pink:#ff6ec7; --ink:#05031a; }
+  :root { --cyan:#39e6ff; --violet:#c46bff; --green:#7CFFb2; --amber:#ffd34d; --ember:#ff5d3c; --pink:#ff6ec7; --ink:#05031a; --mo-dur-2:0.3s; --mo-ease-out:cubic-bezier(0.22,1,0.36,1); }
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { height:100%; background:var(--ink); color:#cfe9ff; font-family:"Inter",system-ui,sans-serif;
     overflow:hidden; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
@@ -359,7 +359,7 @@
   }
 
   // ===== three.js scene =====
-  var scene, camera, renderer, backdrop, stars, orb, fireflies;
+  var scene, camera, renderer, backdrop, stars, orb, fireflies, nebula;
   var threeReady = false;
   var artImg = new Image();
   artImg.src = 'assets/character/queen.png';
@@ -509,14 +509,19 @@
     if (node.chapter === 'Chapter 2' || node.chapter === 'Chapter 3' || node.chapter === 'The End') sfx('chapter');
   }
 
-  function startStory() {
+  function startStory(replay) {
     audioInit();
+    if (replay) {
+      choicesMade = [];
+      try { localStorage.removeItem('kudbee.abyss.node'); } catch (e) {}
+    }
     flashTransition(function () {
       document.getElementById('end').classList.add('hidden');
       document.getElementById('gate').classList.remove('hidden');
       var saved = null;
       try { saved = localStorage.getItem('kudbee.abyss.node'); } catch (e) {}
-      renderNode(saved && storyNodes[saved] ? saved : 'awakening');
+      var startNode = (replay || !saved || !storyNodes[saved]) ? 'awakening' : saved;
+      renderNode(startNode);
     });
   }
 
@@ -546,7 +551,7 @@
   document.getElementById('mapClose').addEventListener('click', function () { document.getElementById('map').classList.add('hidden'); });
 
   // ===== input =====
-  document.getElementById('replayBtn').addEventListener('click', startStory);
+  document.getElementById('replayBtn').addEventListener('click', function () { startStory(true); });
   document.getElementById('shareBtn').addEventListener('click', function () {
     var text = 'I explored Kudbee Abyss — The Guardian\'s Gate and made ' + choicesMade.length + ' choices. Play at https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html';
     if (navigator.clipboard) {
