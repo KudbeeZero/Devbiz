@@ -31,8 +31,15 @@
   .snd-btn:hover { color:#fff; border-color:var(--cyan); }
   .overlay { position:absolute; inset:0; z-index:25; display:grid; place-items:center; text-align:center; padding:24px;
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,3,26,0.70), rgba(3,0,10,0.96));
-    backdrop-filter:blur(3px); transition:opacity 0.5s ease; }
+    backdrop-filter:blur(3px); transition:opacity 0.5s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .overlay.hidden { opacity:0; pointer-events:none; }
+  @media (max-width: 640px) {
+    .overlay { place-items:start start; padding:18px; }
+    .ov-inner { max-width:100%; }
+    .ov-inner h1 { font-size:clamp(24px,8vmin,40px); }
+    .ov-inner p { font-size:14px; }
+    .btn { padding:14px 24px; font-size:15px; }
+  }
   .ov-inner { width:100%; min-width:0; max-width:520px; }
   .kicker { font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); }
   .ov-inner h1 { font-size:clamp(28px,8vmin,56px); line-height:1.02; font-weight:700; color:#fff; margin:10px 0 6px; letter-spacing:-0.02em; word-break:break-word; }
@@ -65,10 +72,10 @@
       <div class="ov-inner">
         <div class="kicker">⬡ Kudbee Games · Abyss</div>
         <h1>Abyss <span class="grad">Guardian</span></h1>
-        <p><b>The Guardian's Gate.</b> The masked queen awakens on a desolate alien world. Through the violet haze she sees two figures: a small creature cowering behind a crystal pillar, and a towering guardian that stands watch over the abyss. Her flute — the only thing she remembers — begins to hum with forgotten power.</p>
-        <p style="font-size:12px;margin-top:12px"><b>A / D</b> or <b>← / →</b> move · <b>W</b> or <b>↑</b> jump · <b>J</b> or <b>tap low-right</b> basic attack · <b>K</b> or <b>tap upper-right</b> flute song · <b>Enter</b> interact · <b>M</b> sound</p>
+        <p><b>The Guardian's Gate.</b> The masked queen awakens on a desolate alien world. Through the violet haze she sees two figures: a small creature cowering behind a crystal pillar, and a towering guardian that stands watch over the abyss. Her flute — the only thing she remembers — begins to hum with forgotten power. The song wants to take her somewhere. She has to follow it.</p>
+        <p style="font-size:12px;margin-top:12px"><b>A / D</b> or <b>← / →</b> move · <b>W</b> or <b>↑</b> jump · <b>J</b> or <b>tap low-right</b> attack · <b>K</b> or <b>tap upper-right</b> flute song · <b>Enter</b> interact · <b>M</b> sound</p>
         <button class="btn" id="startBtn">▶ Begin Journey</button>
-        <p class="ov-foot">Desktop &amp; mobile · original Kudbee story · all art &amp; sound procedural</p>
+        <p class="ov-foot">Desktop &amp; mobile · original Kudbee story · all art &amp; sound procedural · tap the screen to start</p>
       </div>
     </div>
 
@@ -243,11 +250,11 @@
   var gameState = 'gate';
   var dialogues = {
     intro: [
-      { s: 'NARRATOR', t: 'Consciousness returns in fragments. The void whispers your name, but you cannot remember it. All that remains is the weight of the flute at your back, and the echo of its song in your blood.' },
-      { s: 'QUEEN', t: 'Where is this place? The sky bleeds violet, and the stones beneath me hum with an alien resonance. I... I do not know who I am. But my hands remember.' },
-      { s: 'NARRATOR', t: 'She rises. Before her stretches an alien landscape — crystalline spires jut from the cracked earth, and in the distance, two figures wait in the haze.' },
-      { s: 'QUEEN', t: 'There. Behind that pillar — something small, crouched in fear. And further still, a figure so tall it seems carved from the night itself. It watches.' },
-      { s: 'NARRATOR', t: 'The flute begins to sing. A low, resonant note that builds into a crescendo. Memory flows like starlight: a queen, a kingdom, a betrayal, an exile. The song is a key, and it remembers the lock.' }
+      { s: 'NARRATOR', t: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.' },
+      { s: 'QUEEN', t: 'Where is this place? The sky bleeds violet, and the stones beneath me hum with an alien resonance. I do not know who I am. But my hands remember.' },
+      { s: 'NARRATOR', t: 'She rises. Crystalline spires jut from cracked earth, and in the haze two figures wait — one small, one towering.' },
+      { s: 'QUEEN', t: 'There. Behind that pillar, something cowering in fear. Further still, a guardian carved from night. It watches me.' },
+      { s: 'NARRATOR', t: 'The flute begins to sing. A low note, building to a crescendo. Memory flows like starlight: a queen, a kingdom, a betrayal, an exile. The song is a key, and it remembers the lock.' }
     ],
     companion: [
       { s: 'QUEEN', t: 'Child-thing, do not hide. I mean you no harm. My flute... it calls to yours, does it not?' },
