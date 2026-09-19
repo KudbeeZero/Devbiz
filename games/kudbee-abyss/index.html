@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#05031a">
-<meta name="description" content="Kudbee Abyss — a 3D story game in three chapters. The masked queen awakens on a mysterious alien world, guided by a small creature and led to the Guardian's Gate. Art by Desiree Design.">
+<meta name="description" content="Kudbee Abyss — an interactive 3D story. Answer questions, choose your path, and experience a dark sci-fi fantasy journey. Art by Desiree Design.">
 <title>Kudbee Abyss — The Guardian's Gate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,10 +35,12 @@
     padding:24px; background:radial-gradient(900px 600px at 50% 35%, rgba(10,3,26,0.70), rgba(3,0,10,0.96));
     backdrop-filter:blur(3px); transition:opacity 0.5s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .overlay.hidden { opacity:0; pointer-events:none; }
-  .page { position:relative; width:100%; max-width:640px; text-align:center;
+  .page { position:relative; width:100%; max-width:680px; text-align:center;
     background:linear-gradient(160deg, rgba(15,12,35,0.92), rgba(8,6,20,0.96));
     border:1px solid rgba(196,107,255,0.22); border-radius:22px; padding:clamp(24px,5vw,44px);
-    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 60px rgba(111,91,255,0.12); }
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 60px rgba(111,91,255,0.12);
+    animation:pageIn 0.6s var(--mo-ease-out) both; }
+  @keyframes pageIn { from { opacity:0; transform:translateY(18px) scale(0.98); } to { opacity:1; transform:none; } }
   @media (max-width: 640px) {
     .overlay { padding:18px; }
     .page { padding:22px 18px; border-radius:18px; }
@@ -49,14 +51,13 @@
   .chapter-title { margin-top:6px; font:600 clamp(14px,3.5vw,18px)/1.4 var(--fd); letter-spacing:0.04em; color:var(--violet); text-transform:uppercase; }
   .story-text { margin-top:22px; color:#e8eef8; font-size:clamp(15px,3.8vw,18px); line-height:1.65; max-width:520px; margin-left:auto; margin-right:auto; }
   .speaker { font-family:"Space Grotesk"; font-weight:700; color:var(--cyan); font-size:13px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; }
+  .choices { margin-top:26px; display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .choice-btn { width:100%; max-width:460px; padding:16px 22px; border-radius:999px; border:1px solid rgba(196,107,255,0.35);
+    background:rgba(255,255,255,0.06); color:#fff; font:600 15px/1.3 var(--fd); cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:12px; transition:transform var(--mo-dur-2) var(--mo-ease-out), background var(--mo-dur-2), border-color var(--mo-dur-2), box-shadow var(--mo-dur-2); }
+  .choice-btn::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--grad); box-shadow:0 0 10px var(--glow); flex:none; }
+  .choice-btn:hover, .choice-btn:focus-visible { transform:translateY(-3px); background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); box-shadow:0 16px 40px -12px rgba(111,91,255,0.45); outline:none; }
   .hint { margin-top:22px; font-size:12px; color:#5a6276; letter-spacing:0.05em; }
-  .story-actions { margin-top:26px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-  .btn { display:inline-flex; align-items:center; gap:10px; padding:14px 26px; border:none; border-radius:999px;
-    cursor:pointer; background:linear-gradient(135deg,#39e6ff,#6f5bff 50%,#c46bff); color:#05031a;
-    font-family:"Space Grotesk"; font-weight:700; font-size:15px; box-shadow:0 12px 34px -10px rgba(111,91,255,0.7); }
-  .btn:hover { filter:brightness(1.06); }
-  .btn.secondary { background:rgba(255,255,255,0.08); color:#cfe9ff; border:1px solid rgba(255,255,255,0.14); box-shadow:none; }
-  .page-indicator { margin-top:18px; font:600 11px/1 var(--fd); letter-spacing:0.2em; color:#5a6276; text-transform:uppercase; }
   @media (pointer:coarse){ .hint { display:none; } }
 </style>
 </head>
@@ -73,12 +74,8 @@
         <div class="chapter-label" id="chapterLabel">Chapter 1</div>
         <div class="chapter-title" id="chapterTitle">The Awakening</div>
         <div class="story-text" id="storyText"></div>
-        <div class="hint" id="hint">Press Enter or tap Next to continue</div>
-        <div class="story-actions">
-          <button class="btn secondary" id="prevBtn" type="button">← Prev</button>
-          <button class="btn" id="nextBtn" type="button">Next →</button>
-        </div>
-        <div class="page-indicator" id="pageIndicator">1 / 1</div>
+        <div class="choices" id="choices"></div>
+        <div class="hint" id="hint">Choose your path — every answer leads somewhere new</div>
       </div>
     </div>
 
@@ -86,8 +83,8 @@
       <div class="page">
         <div class="kicker">The End</div>
         <div class="chapter-label">The Guardian's Gate</div>
-        <p class="story-text" style="margin-top:22px">The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — another echo called her name.</p>
-        <div class="story-actions">
+        <p class="story-text" style="margin-top:22px">The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — and another echo called her name.</p>
+        <div class="choices">
           <button class="btn" id="replayBtn" type="button">▶ Play Again</button>
         </div>
       </div>
@@ -99,46 +96,134 @@
 (function () {
   'use strict';
 
-  // ===== story data =====
-  var chapters = [
-    {
-      title: 'Chapter 1',
+  // ===== story nodes =====
+  var storyNodes = {
+    awakening: {
+      chapter: 'Chapter 1',
       label: 'The Awakening',
-      scenes: [
-        { s: 'NARRATOR', t: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.' },
-        { s: 'QUEEN', t: 'Where is this place? The sky bleeds violet, and the stones beneath me hum with an alien resonance. I do not know who I am. But my hands remember.' },
-        { s: 'NARRATOR', t: 'She rises. Crystalline spires jut from cracked earth, and in the haze two figures wait — one small, one towering.' },
-        { s: 'QUEEN', t: 'There. Behind that pillar, something cowering in fear. Further still, a guardian carved from night. It watches me.' },
-        { s: 'NARRATOR', t: 'The flute begins to sing. A low note, building to a crescendo. Memory flows like starlight: a queen, a kingdom, a betrayal, an exile. The song is a key, and it remembers the lock.' }
+      speaker: 'NARRATOR',
+      text: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.',
+      choices: [
+        { label: 'Follow the flute', next: 'queen_flute' },
+        { label: 'Listen to the stones', next: 'queen_stones' }
       ]
     },
-    {
-      title: 'Chapter 2',
+    queen_flute: {
+      chapter: 'Chapter 1',
+      label: 'The Awakening',
+      speaker: 'QUEEN',
+      text: 'The flute hums louder. It wants to take me somewhere. I can feel a path in the violet haze — not a road, but a resonance only I can hear.',
+      choices: [
+        { label: 'Climb the broken spire', next: 'spire' },
+        { label: 'Call to the small creature', next: 'vey_follow' }
+      ]
+    },
+    queen_stones: {
+      chapter: 'Chapter 1',
+      label: 'The Awakening',
+      speaker: 'QUEEN',
+      text: 'The stones beneath me speak in cold frequencies. Something tall stands beyond the pillar — not a threat, but a question.',
+      choices: [
+        { label: 'Approach the guardian', next: 'guardian_approach' },
+        { label: 'Ask Vey to guide me', next: 'vey_guardian' }
+      ]
+    },
+    spire: {
+      chapter: 'Chapter 2',
       label: 'The Companion',
-      scenes: [
-        { s: 'QUEEN', t: 'Child-thing, do not hide. I mean you no harm. My flute... it calls to yours, does it not?' },
-        { s: 'CREATURE', t: 'The song-mark! You bear the Echo-Flute of the First Court. My name is Vey — I was left here to guard the gate. The corruption... it took the Guardian. It must be undone.' },
-        { s: 'QUEEN', t: 'The Guardian. It stands at the precipice, does it not? A sentinel turned to shadow. Can it be saved?' },
-        { s: 'VEY', t: 'Only if its heart still remembers. Strike its shield first — the flute\'s resonance breaks what the corruption binds. But beware: once the shield falls, the true guardian emerges.' },
-        { s: 'QUEEN', t: 'Then I will play the Song of Recall. But I need the Resonance Crystal to amplify the flute — it sits atop the broken spire, past the pillars of old.' },
-        { s: 'VEY', t: 'I will follow. But the Guardian stirs as you approach. It will not wait for you to be ready.' }
+      speaker: 'NARRATOR',
+      text: 'The spire crumbles under each step. At the top, a crystal pulses like a heartbeat. The song in her flute answers it.',
+      choices: [
+        { label: 'Take the crystal', next: 'crystal' },
+        { label: 'Offer the flute instead', next: 'flute_offering' }
       ]
     },
-    {
-      title: 'Chapter 3',
-      label: "The Guardian's Gate",
-      scenes: [
-        { s: 'QUEEN', t: 'The crystal hums against my flute. The song grows stronger. I can feel the Guardian\'s awareness turning toward me.' },
-        { s: 'VEY', t: 'Behind me. It sees you now. Be still — it does not come to destroy. It comes to remember.' },
-        { s: 'GUARDIAN', t: '...you... carry the echo... my lady... the corruption... it burns...' },
-        { s: 'QUEEN', t: 'I remember now. You were my captain, my shield, my brother. The crown of shadows deceived you. Let me free you.' },
-        { s: 'GUARDIAN', t: 'The song... it remembers everything...' },
-        { s: 'NARRATOR', t: 'The gate opens. The corruption dissipates. At last, peace.' },
-        { s: 'QUEEN', t: 'The flute falls silent. But I know now — I am the Queen of the Void Court. And this is but the first gate.' },
-        { s: 'NARRATOR', t: 'And so the Queen, with flute and memory, restored what was lost. Yet in the distance, another gate shimmered — and another echo called her name.' }
+    vey_follow: {
+      chapter: 'Chapter 2',
+      label: 'The Companion',
+      speaker: 'VEY',
+      text: 'I follow, low and quick. The Guardian stirs, but it does not attack. It is waiting — the same patience it had before the corruption.',
+      choices: [
+        { label: 'Confront the guardian', next: 'guardian_approach' },
+        { label: 'Hide and watch', next: 'hide' }
       ]
+    },
+    vey_guardian: {
+      chapter: 'Chapter 2',
+      label: 'The Companion',
+      speaker: 'VEY',
+      text: 'I tell the Guardian everything. It listens with a face that used to smile. The corruption burns, but memory is stronger.',
+      choices: [
+        { label: 'Reach out your hand', next: 'reconcile' },
+        { label: 'Play the Song of Recall', next: 'flute_play' }
+      ]
+    },
+    guardian_approach: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'GUARDIAN',
+      text: '...you... carry the echo... my lady... the corruption... it burns... but the song remembers what I have forgotten.',
+      choices: [
+        { label: 'Embrace the Guardian', next: 'reconcile' },
+        { label: 'Play the flute', next: 'flute_play' }
+      ]
+    },
+    crystal: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'QUEEN',
+      text: 'The crystal hums against my flute. The song grows stronger. I can feel the Guardian\'s awareness turning toward me — not to fight, but to be remembered.',
+      choices: [
+        { label: 'Reach out', next: 'reconcile' },
+        { label: 'Play the Song of Recall', next: 'flute_play' }
+      ]
+    },
+    flute_offering: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'NARRATOR',
+      text: 'She offers the flute to the spire. The crystal accepts, and the melody becomes a bridge of light between them.',
+      choices: [
+        { label: 'Walk through the light', next: 'reconcile' }
+      ]
+    },
+    hide: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'VEY',
+      text: 'We watch. The Guardian kneels. The crown of shadows falls away like dust. It was never waiting to fight — only to be seen.',
+      choices: [
+        { label: 'Step forward', next: 'reconcile' }
+      ]
+    },
+    reconcile: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'QUEEN',
+      text: 'I remember now. You were my captain, my shield, my brother. The crown of shadows deceived you. Let me free you.',
+      choices: [
+        { label: 'Open the gate', next: 'gate_opens' }
+      ]
+    },
+    flute_play: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'GUARDIAN',
+      text: 'The song... it remembers everything... The gate opens. The corruption dissipates. At last, peace.',
+      choices: [
+        { label: 'Walk into the dawn', next: 'gate_opens' }
+      ]
+    },
+    gate_opens: {
+      chapter: 'The End',
+      label: "The Guardian's Gate",
+      speaker: 'NARRATOR',
+      text: 'The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — and another echo called her name.',
+      choices: []
     }
-  ];
+  };
+
+  var currentNode = 'awakening';
 
   // ===== audio =====
   var AC = null, mGain = null, muted = false;
@@ -173,35 +258,17 @@
     if (now - (sfxLast[name] || 0) < 25) return; sfxLast[name] = now;
     switch (name) {
       case 'page': tone(440, 0.12, 'sine', 0.12, 660); tone(660, 0.1, 'sine', 0.08, 990, 0.05); break;
+      case 'choice': tone(330, 0.15, 'sine', 0.14, 880); tone(550, 0.12, 'sine', 0.1, 1100, 0.05); break;
       case 'chapter': tone(220, 0.25, 'sine', 0.18, 880); tone(330, 0.25, 'sine', 0.12, 1320, 0.08); break;
       case 'end': tone(110, 0.8, 'sine', 0.18, 55); tone(165, 0.6, 'sine', 0.12, 82, 0.1); break;
     }
   }
 
   // ===== three.js scene =====
-  var scene, camera, renderer, queenPlane, leftPlane, rightPlane, stars;
+  var scene, camera, renderer, backdrop, stars, orb;
   var threeReady = false;
   var artImg = new Image();
   artImg.src = 'assets/character/queen.png';
-
-  function cropTexture(img, sx, sy, sw, sh) {
-    var tex = new THREE.Texture(img);
-    tex.offset.set(sx / img.width, sy / img.height);
-    tex.repeat.set(sw / img.width, sh / img.height);
-    tex.center.set(0.5, 0.5);
-    tex.needsUpdate = true;
-    return tex;
-  }
-
-  function createCharacterPlane(tex, width, height, x, z) {
-    var geo = new THREE.PlaneGeometry(width, height);
-    var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
-    var mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, 0, z);
-    mesh.visible = false;
-    scene.add(mesh);
-    return mesh;
-  }
 
   function initThree() {
     if (typeof THREE === 'undefined' || !artImg.complete) return;
@@ -211,7 +278,7 @@
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05031a);
-    scene.fog = new THREE.FogExp2(0x05031a, 0.018);
+    scene.fog = new THREE.FogExp2(0x05031a, 0.012);
 
     camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
     camera.position.set(0, 0, 7);
@@ -226,103 +293,88 @@
     var dir = new THREE.DirectionalLight(0xc46bff, 1.0);
     dir.position.set(5, 5, 5);
     scene.add(dir);
-    var cyan = new THREE.PointLight(0x39e6ff, 1.2, 20);
-    cyan.position.set(-4, 2, 3);
+    var cyan = new THREE.PointLight(0x39e6ff, 1.4, 25);
+    cyan.position.set(-5, 3, 4);
     scene.add(cyan);
+    var pink = new THREE.PointLight(0xff6ec7, 1.0, 25);
+    pink.position.set(5, -2, 4);
+    scene.add(pink);
+
+    // backdrop image
+    var tex = new THREE.Texture(artImg);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.needsUpdate = true;
+    var backGeo = new THREE.PlaneGeometry(22, 16.5);
+    var backMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    backdrop = new THREE.Mesh(backGeo, backMat);
+    backdrop.position.z = -16;
+    scene.add(backdrop);
 
     // stars
     var starGeo = new THREE.BufferGeometry();
-    var starCount = 250;
+    var starCount = 300;
     var positions = new Float32Array(starCount * 3);
     for (var i = 0; i < starCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 24;
-      positions[i * 3 + 2] = -10 - Math.random() * 20;
+      positions[i * 3] = (Math.random() - 0.5) * 50;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+      positions[i * 3 + 2] = -12 - Math.random() * 25;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    var starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.08, transparent: true, opacity: 0.7 });
+    var starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.09, transparent: true, opacity: 0.75 });
     stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
-    // character planes
-    var queenTex = cropTexture(artImg, 300, 0, 486, 1448);
-    var leftTex = cropTexture(artImg, 0, 300, 300, 900);
-    var rightTex = cropTexture(artImg, 786, 300, 300, 900);
-    queenPlane = createCharacterPlane(queenTex, 2.4, 7.2, -1.2, 0);
-    leftPlane = createCharacterPlane(leftTex, 1.4, 4.2, -3.5, -1);
-    rightPlane = createCharacterPlane(rightTex, 1.4, 4.2, 3.5, -1);
+    // floating orb
+    var orbGeo = new THREE.SphereGeometry(0.35, 32, 32);
+    var orbMat = new THREE.MeshBasicMaterial({ color: 0xc46bff, transparent: true, opacity: 0.8 });
+    orb = new THREE.Mesh(orbGeo, orbMat);
+    orb.position.set(0, 1.5, -2);
+    scene.add(orb);
 
     threeReady = true;
   }
 
-  function showCharacter(speaker) {
-    if (!threeReady) return;
-    queenPlane.visible = false;
-    leftPlane.visible = false;
-    rightPlane.visible = false;
-    if (speaker === 'QUEEN' || speaker === 'NARRATOR') queenPlane.visible = true;
-    else if (speaker === 'CREATURE' || speaker === 'VEY') leftPlane.visible = true;
-    else if (speaker === 'GUARDIAN') rightPlane.visible = true;
-  }
-
-  // ===== story state =====
-  var currentChapter = 0, currentScene = 0;
-
-  function chapterCount() { return chapters.length; }
-  function sceneCount() { return chapters[currentChapter].scenes.length; }
-
-  function renderScene() {
-    var ch = chapters[currentChapter];
-    var sc = ch.scenes[currentScene];
-    document.getElementById('chapterLabel').textContent = ch.title;
-    document.getElementById('chapterTitle').textContent = ch.label;
-    document.getElementById('storyText').innerHTML = '<div class="speaker">' + sc.s + '</div>' + sc.t;
-    document.getElementById('pageIndicator').textContent = (currentScene + 1) + ' / ' + sceneCount();
-    document.getElementById('prevBtn').style.visibility = (currentChapter === 0 && currentScene === 0) ? 'hidden' : 'visible';
-    document.getElementById('nextBtn').textContent = (currentChapter === chapterCount() - 1 && currentScene === sceneCount() - 1) ? 'Finish →' : 'Next →';
-    showCharacter(sc.s);
-    sfx('page');
-  }
-
-  function nextScene() {
-    if (currentChapter === chapterCount() - 1 && currentScene === sceneCount() - 1) {
+  // ===== story navigation =====
+  function renderNode(nodeId) {
+    var node = storyNodes[nodeId];
+    if (!node) return;
+    currentNode = nodeId;
+    document.getElementById('chapterLabel').textContent = node.chapter;
+    document.getElementById('chapterTitle').textContent = node.label;
+    document.getElementById('storyText').innerHTML = '<div class="speaker">' + node.speaker + '</div>' + node.text;
+    var choicesEl = document.getElementById('choices');
+    choicesEl.innerHTML = '';
+    if (node.choices.length === 0) {
       document.getElementById('gate').classList.add('hidden');
       document.getElementById('end').classList.remove('hidden');
       sfx('end');
       return;
     }
-    if (currentScene < sceneCount() - 1) {
-      currentScene++;
-    } else {
-      currentChapter++;
-      currentScene = 0;
-      sfx('chapter');
+    document.getElementById('hint').style.display = 'block';
+    for (var i = 0; i < node.choices.length; i++) {
+      var btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.type = 'button';
+      btn.textContent = node.choices[i].label;
+      btn.addEventListener('click', function (next) { return function () { audioInit(); sfx('choice'); renderNode(next); }; }(node.choices[i].next));
+      choicesEl.appendChild(btn);
     }
-    renderScene();
-  }
-
-  function prevScene() {
-    if (currentScene > 0) {
-      currentScene--;
-    } else if (currentChapter > 0) {
-      currentChapter--;
-      currentScene = chapters[currentChapter].scenes.length - 1;
+    if (node.choices.length === 1) {
+      var single = choicesEl.querySelector('.choice-btn');
+      if (single) single.textContent = node.choices[0].label + ' — continue';
     }
-    renderScene();
+    if (node.chapter === 'Chapter 2' || node.chapter === 'Chapter 3' || node.chapter === 'The End') sfx('chapter');
   }
 
   function startStory() {
     audioInit();
-    currentChapter = 0;
-    currentScene = 0;
     document.getElementById('end').classList.add('hidden');
     document.getElementById('gate').classList.remove('hidden');
-    renderScene();
+    renderNode('awakening');
   }
 
   // ===== input =====
-  document.getElementById('nextBtn').addEventListener('click', function() { audioInit(); nextScene(); });
-  document.getElementById('prevBtn').addEventListener('click', function() { audioInit(); prevScene(); });
   document.getElementById('replayBtn').addEventListener('click', startStory);
   document.getElementById('sndBtn').addEventListener('click', function() { audioInit(); setMuted(!muted); });
   setMuted(muted);
@@ -334,8 +386,6 @@
       if (k === 'enter') { e.preventDefault(); startStory(); }
       return;
     }
-    if (k === 'arrowright' || k === ' ') { e.preventDefault(); audioInit(); nextScene(); }
-    if (k === 'arrowleft') { e.preventDefault(); audioInit(); prevScene(); }
   });
 
   // ===== init =====
@@ -347,13 +397,13 @@
     requestAnimationFrame(animate);
     var t = performance.now() * 0.001;
     if (threeReady) {
-      queenPlane.rotation.y = Math.sin(t * 0.4) * 0.05;
-      leftPlane.rotation.y = Math.sin(t * 0.5 + 1) * 0.05;
-      rightPlane.rotation.y = Math.sin(t * 0.5 + 2) * 0.05;
-      queenPlane.position.y = Math.sin(t * 0.8) * 0.05;
-      leftPlane.position.y = Math.sin(t * 0.9 + 1) * 0.05;
-      rightPlane.position.y = Math.sin(t * 0.9 + 2) * 0.05;
-      stars.rotation.y = t * 0.01;
+      camera.position.x = Math.sin(t * 0.15) * 0.6;
+      camera.position.y = Math.sin(t * 0.12) * 0.3;
+      camera.lookAt(0, 0, 0);
+      backdrop.rotation.z = Math.sin(t * 0.05) * 0.01;
+      stars.rotation.y = t * 0.008;
+      orb.position.y = 1.5 + Math.sin(t * 0.8) * 0.3;
+      orb.position.x = Math.sin(t * 0.5) * 0.5;
       renderer.render(scene, camera);
     }
   }
