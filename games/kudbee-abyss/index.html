@@ -60,6 +60,10 @@
   .choice-btn::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--grad); box-shadow:0 0 10px var(--glow); flex:none; }
   .choice-btn:hover, .choice-btn:focus-visible { transform:translateY(-3px); background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); box-shadow:0 16px 40px -12px rgba(111,91,255,0.45); outline:none; }
   .hint { margin-top:22px; font-size:12px; color:#5a6276; letter-spacing:0.05em; }
+  .stats { margin-top:18px; font-size:13px; color:#b8c1d9; }
+  .stats b { color:var(--cyan); }
+  .share-btn { margin-top:14px; padding:10px 22px; border-radius:999px; border:1px solid rgba(196,107,255,0.35); background:rgba(255,255,255,0.06); color:#fff; font:600 14px/1.3 var(--fd); cursor:pointer; }
+  .share-btn:hover { background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); }
   @media (pointer:coarse){ .hint { display:none; } }
 
   /* preloader */
@@ -113,7 +117,9 @@
         <div class="kicker">The End</div>
         <div class="chapter-label">The Guardian's Gate</div>
         <p class="story-text" style="margin-top:22px">The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — and another echo called her name.</p>
+        <div class="stats" id="endStats"></div>
         <div class="choices">
+          <button class="share-btn" id="shareBtn" type="button">Share your journey</button>
           <button class="btn" id="replayBtn" type="button">▶ Play Again</button>
         </div>
       </div>
@@ -263,6 +269,7 @@
   };
 
   var currentNode = 'awakening';
+  var choicesMade = [];
 
   var chapters = [
     { title: 'Chapter 1', label: 'The Awakening' },
@@ -479,6 +486,7 @@
     if (node.choices.length === 0) {
       document.getElementById('gate').classList.add('hidden');
       document.getElementById('end').classList.remove('hidden');
+      document.getElementById('endStats').innerHTML = 'Choices made: <b>' + choicesMade.length + '</b> · Final chapter: <b>' + node.chapter + '</b>';
       sfx('end');
       return;
     }
@@ -490,7 +498,7 @@
       btn.className = 'choice-btn';
       btn.type = 'button';
       btn.textContent = node.choices[i].label;
-      btn.addEventListener('click', function (next) { return function () { audioInit(); flashTransition(function () { sfx('choice'); renderNode(next); }); }; }(node.choices[i].next));
+      btn.addEventListener('click', function (next, label) { return function () { audioInit(); choicesMade.push(label); flashTransition(function () { sfx('choice'); renderNode(next); }); }; }(node.choices[i].next, node.choices[i].label));
       choicesEl.appendChild(btn);
     }
     if (node.choices.length === 1) {
@@ -538,6 +546,12 @@
 
   // ===== input =====
   document.getElementById('replayBtn').addEventListener('click', startStory);
+  document.getElementById('shareBtn').addEventListener('click', function () {
+    var text = 'I explored Kudbee Abyss — The Guardian\'s Gate and made ' + choicesMade.length + ' choices. Play at https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    }
+  });
   document.getElementById('sndBtn').addEventListener('click', function() { audioInit(); setMuted(!muted); });
   setMuted(muted);
 
