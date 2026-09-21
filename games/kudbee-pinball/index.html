@@ -54,6 +54,15 @@
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
   .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  .lb-wrap ul { list-style:none; padding:0; margin:0; }
+  .lb-wrap li { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(138,147,168,0.15); font-size:14px; }
+  .lb-wrap li:last-child { border-bottom:none; }
+  .lb-wrap .lb-name { color:#cfe9ff; font-weight:500; }
+  .lb-wrap .lb-val { color:#ffd34d; font-family:"Space Grotesk"; font-weight:700; margin-left:12px; }
+  .lb-wrap .lb-you { background:rgba(57,230,255,0.08); border-radius:6px; padding:8px 10px; margin:0 -10px; }
+  .lb-wrap .lb-empty { text-align:center; color:#5a6276; padding:16px 0 !important; }
+  .lb-head { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#39e6ff; margin-bottom:8px; }
+  .lb-status { font-weight:400; color:#8a93a8; }
 </style>
 </head>
 <body>
@@ -82,12 +91,29 @@
         <h1 class="grad" id="oScore">0</h1>
         <p id="oSub">Nice run.</p>
         <button class="btn" id="againBtn">Play again</button>
+
+        <div class="lb-wrap" style="margin-top:24px;text-align:left;">
+          <div class="lb-head" style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#39e6ff;margin-bottom:8px;">
+            🏆 Online leaderboard <span id="lbStatus" class="lb-status" style="font-weight:400;color:#8a93a8;"></span>
+          </div>
+          <ul id="lbResultsList" style="list-style:none;padding:0;margin:0;max-height:220px;overflow:auto;"></ul>
+          <button class="btn" id="lbPostBtn" style="margin-top:12px;width:100%;display:none;">Post your score</button>
+        </div>
       </div>
     </div>
 
     <div class="hint">Z / . flippers · Space launch · X / C nudge · M sound · ~ debug</div>
   </div>
 </div>
+
+<!-- Online leaderboard — reuses the repo's Kudbee Leaderboard service. Runs in
+     demo mode by default (no auth, localStorage-backed names). Once the leaderboard
+     Worker is deployed and reachable: set API_BASE to that Worker URL (e.g.
+     https://kudbee-leaderboard.<acct>.workers.dev) or route the /api/* paths
+     through your edge. The SDK posts and loads top-10 quietly.
+     See leaderboard/README.md. -->
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'pinball' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 
 <script>
 /* ===========================================================================
@@ -498,6 +524,9 @@
   var skillStreak = 0, bestSkillStreak = 0, SKILL_STREAK_CAP = 3;
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
+  // ---- leaderboard (demo-mode SDK; degrades to local-only) ----
+  var lb = null, lbBusy = false, maxMultiballBalls = 0;
+
   function resetGame() {
     score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
     level = 1; comboExplosion = 0;
@@ -506,7 +535,7 @@
     comboKinds.length = 0; comboTripleAwarded = false;
     skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true; extraBallsAwarded = 0;
-    lockedBalls = 0; multiballActive = false;
+    lockedBalls = 0; multiballActive = false; maxMultiballBalls = 0;
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     missionActive = -1; missionTimer = 0; missionFlash = 0;
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
@@ -834,6 +863,7 @@
       // step already iterates `balls` as an array and onDrain() already only ends the ball
       // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
+      if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
       lockedBalls = 0; multiballActive = true; hasSeenMultiball = true;
       callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
       sfx('multiball');
@@ -1118,6 +1148,66 @@
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
+    lbLoadTop();
+  }
+
+  // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
+  function lbBoot() {
+    if (!window.KDLeaderboard) {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+      return;
+    }
+    try {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { lb = c; lbLoadTop(); })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  function lbLoadTop() {
+    if (!lb) return;
+    lb.leaderboard('score', 10).then(function (d) {
+      lbRender('lbResultsList', d.entries, 10);
+      var btn = document.getElementById('lbPostBtn'); if (btn) btn.style.display = '';
+    }).catch(function () {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+    });
+  }
+  function lbRender(id, entries, max) {
+    var el = document.getElementById(id); if (!el) return;
+    if (!entries || !entries.length) { lbEmpty(id, 'be the first to post'); return; }
+    el.innerHTML = '';
+    for (var i = 0; i < Math.min(max, entries.length); i++) {
+      var e = entries[i], li = document.createElement('li');
+      if (e.you) li.className = 'lb-you';
+      var nm = document.createElement('span'); nm.className = 'lb-name'; nm.textContent = e.name;
+      var vl = document.createElement('span'); vl.className = 'lb-val'; vl.textContent = (e.value || 0).toLocaleString();
+      li.appendChild(nm); li.appendChild(vl); el.appendChild(li);
+    }
+  }
+  function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty" style="color:#8a93a8;font-size:13px;padding:8px 0;">' + msg + '</li>'; }
+  function lbPost() {
+    var status = function (m) { var s = document.getElementById('lbStatus'); if (s) s.textContent = m; };
+    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (lbBusy) return;
+    var submit = function () {
+      lbBusy = true; status('posting…');
+      var nm = (lb.user() && lb.user().name) || 'Player';
+      var modesCompleted = 0; for (var mi = 0; mi < missionComplete.length; mi++) if (missionComplete[mi]) modesCompleted++;
+      lb.submit(nm, { score: score, bestMultiball: maxMultiballBalls, modesCompleted: modesCompleted }).then(function (res) {
+        lbBusy = false;
+        var rk = res && res.ranks && res.ranks.score;
+        status(rk ? 'posted — you\'re #' + rk + '!' : 'posted!');
+        lbLoadTop();
+      }).catch(function (err) {
+        lbBusy = false;
+        status(err && err.status === 401 ? 'pick a name to post' : 'could not post (offline)');
+      });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); })
+        .catch(function () { status('could not post — try again'); });
+    } else submit();
   }
 
   // ===== loop (fixed timestep, accumulator) =====
@@ -1125,6 +1215,7 @@
   function start() {
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
+    lbBoot();
   }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
@@ -1686,6 +1777,7 @@
   document.getElementById('startBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('againBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('sndBtn').addEventListener('click', function () { audioInit(); setMuted(!muted); });
+  document.getElementById('lbPostBtn').addEventListener('click', function () { audioInit(); lbPost(); });
   setMuted(muted);                          // sync the 🔊/🔇 icon with the stored preference
   (function () {                            // show the stored best on the attract screen
     var el = document.getElementById('gBest');

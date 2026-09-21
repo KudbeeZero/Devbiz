@@ -54,6 +54,15 @@ export const GAMES = {
       dist:      { label: 'Depth (km)', dir: 'max', min: 0, max: 1e7,  rank: true },
     },
   },
+  pinball: {
+    label: 'Kudbee Pinball — Starbreak',
+    primary: 'score',
+    metrics: {
+      score:         { label: 'Score',           dir: 'max', min: 0, max: 1e9,  rank: true },
+      bestMultiball: { label: 'Max Multiball',   dir: 'max', min: 0, max: 10,   rank: true },
+      modesCompleted:{ label: 'Modes Completed', dir: 'max', min: 0, max: 10,   rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }
