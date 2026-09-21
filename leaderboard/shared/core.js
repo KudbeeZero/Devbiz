@@ -49,9 +49,11 @@ export const GAMES = {
     label: 'Kudbee Voidrunner',
     primary: 'score',
     metrics: {
-      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9,  rank: true },
-      bestCombo: { label: 'Max chain',  dir: 'max', min: 0, max: 1e6,  rank: true },
-      dist:      { label: 'Depth (km)', dir: 'max', min: 0, max: 1e7,  rank: true },
+      score:         { label: 'Score',           dir: 'max', min: 0, max: 1e9,  rank: true },
+      bestCombo:     { label: 'Max Chain',       dir: 'max', min: 0, max: 1e6,  rank: true },
+      dist:          { label: 'Depth (km)',      dir: 'max', min: 0, max: 1e7,  rank: true },
+      waveSurvived:  { label: 'Waves Survived',  dir: 'max', min: 0, max: 1e4,  rank: true },
+      bestTime:      { label: 'Best Time (s)',   dir: 'max', min: 0, max: 1e6,  rank: true },
     },
   },
   pinball: {
