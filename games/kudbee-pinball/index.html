@@ -451,6 +451,12 @@
     //      Player must nudge or hit targets to free it. Awards big bonus while captive. ----
     captiveZone = { x: 200, y: 1100, r: 60, active: false, captiveBall: null, bonusTimer: 0, bonusPerSec: 500 };
 
+    // ---- VORTEX: upper playfield wormhole that catches balls, spins them, ejects with bonus ----
+    vortex = { x: 450, y: 400, r: 55, active: false, capturedBall: null, spinT: 0, spinMax: 2.0, cooldown: 0 };
+
+    // ---- POP-UP POST: near flippers, rises to catch ball, holds briefly, kicks back ----
+    popUpPost = { x: 450, y: 1220, r: 18, raised: false, raiseTimer: 0, raiseDuration: 1.5, cooldown: 0, capturedBall: null };
+
     // ---- decorative colored light inserts (fill the open regions, pure render) ----
     var lampSpec = [
       [150, 670, '#39e6ff'], [150, 840, '#7CFFb2'], [720, 670, '#ffd34d'], [720, 840, '#c46bff'],
@@ -552,6 +558,8 @@
     if (saucerR) { saucerR.locks = 0; }
     if (magnet) { magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; magnet.capturedBall = null; }
     if (captiveZone) { captiveZone.active = false; captiveZone.captiveBall = null; captiveZone.bonusTimer = 0; }
+    if (vortex) { vortex.active = false; vortex.spinT = 0; vortex.cooldown = 0; vortex.capturedBall = null; }
+    if (popUpPost) { popUpPost.raised = false; popUpPost.raiseTimer = 0; popUpPost.cooldown = 0; popUpPost.capturedBall = null; }
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     missionActive = -1; missionTimer = 0; missionFlash = 0;
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
@@ -642,7 +650,10 @@
   // ball-vs-ball (for future multiball; cheap, runs now harmlessly)
   function ballVsBall() {
     for (var i = 0; i < balls.length; i++) for (var j = i + 1; j < balls.length; j++) {
-      var a = balls[i], b = balls[j], dx = b.x - a.x, dy = b.y - a.y, d = len(dx, dy), rr = a.r + b.r;
+      var a = balls[i], b = balls[j];
+      // Skip collision if either ball has multiball immunity (freshly released)
+      if ((a.mbImmune || 0) > 0 || (b.mbImmune || 0) > 0) continue;
+      var dx = b.x - a.x, dy = b.y - a.y, d = len(dx, dy), rr = a.r + b.r;
       if (d > 0 && d < rr) {
         var nx = dx / d, ny = dy / d, push = (rr - d) / 2;
         a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push;
@@ -892,20 +903,17 @@
       // would silently wedge that check forever. All `releaseCount` balls play out and the
       // normal single-ball serve resumes exactly the way it already does once the last one
       // actually drains.
-      // Spread balls out in a fan pattern so they don't spawn on top of each other
-      var spreadAngles = [-0.6, -0.3, 0, 0.3, 0.6];
+      // Spread balls out in a wide fan pattern so they don't cluster on right side
+      var spreadAngles = [-1.0, -0.6, -0.2, 0.2, 0.6, 1.0];
       for (var i = 0; i < releaseCount; i++) {
         var angleIdx = i % spreadAngles.length;
-        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.3;
-        // Stagger spawn Y positions slightly to prevent immediate collisions
-        var spawnY = saucer.y - 60 - (Math.floor(i / spreadAngles.length) * 25);
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
+        // Stagger spawn Y positions to prevent stacking
+        var spawnY = saucer.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
+        // Add multiball immunity so new balls don't immediately collide with each other
         balls.push({
-          // saucerCd: a brief immunity window so a released ball can clear the saucer's own
-          // capture radius before it's eligible to be re-locked (it spawns almost on top of
-          // the saucer — without this, one of the two balls would fall straight back in and
-          // silently re-lock itself before either physics or the player got a look at it).
-          x: saucer.x + Math.sin(a) * 50, y: spawnY, vx: Math.sin(a) * 300, vy: -560 - Math.random() * 120,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0, saucerCd: 1.5, lowT: 0, trail: [], noSave: true
+          x: saucer.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
         });
       }
     }
@@ -934,14 +942,15 @@
       burst(saucerR.x, saucerR.y, '#ffd34d', 26, 620); burst(saucerR.x, saucerR.y, '#ff6ec7', 20, 560);
       shake = Math.min(shake + 0.8, 1.9);
       triggerHitStop(0.12); colorWash(255, 211, 77, 1.2);
-      var spreadAngles = [-0.6, -0.3, 0, 0.3, 0.6];
+      // Wide fan spread from right saucer
+      var spreadAngles = [-0.8, -0.4, 0, 0.4, 0.8];
       for (var i = 0; i < releaseCount; i++) {
         var angleIdx = i % spreadAngles.length;
-        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.3;
-        var spawnY = saucerR.y - 60 - (Math.floor(i / spreadAngles.length) * 25);
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
+        var spawnY = saucerR.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
         balls.push({
-          x: saucerR.x + Math.sin(a) * 50, y: spawnY, vx: Math.sin(a) * 300, vy: -560 - Math.random() * 120,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0, saucerCd: 1.5, lowT: 0, trail: [], noSave: true
+          x: saucerR.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
         });
       }
     }
@@ -1150,6 +1159,61 @@
       }
       // magnet cooldown
       if (magnet && magnet.cooldown > 0) magnet.cooldown -= h;
+      // VORTEX: wormhole catches balls, spins them, ejects with big bonus
+      if (vortex && !vortex.capturedBall && vortex.cooldown <= 0) {
+        var vdx = b.x - vortex.x, vdy = b.y - vortex.y;
+        if (vdx * vdx + vdy * vdy < vortex.r * vortex.r && Math.abs(b.vy) < 400) {
+          vortex.capturedBall = b; vortex.active = true; vortex.spinT = 0;
+          b.vx = 0; b.vy = 0; vortex.cooldown = 5;
+          sfx('lock'); callout('VORTEX CAPTURE', 'charging...', '#ff6ec7');
+        }
+      }
+      if (vortex && vortex.capturedBall === b) {
+        vortex.spinT += h;
+        var spinAngle = vortex.spinT * 8; // spin fast
+        var orbitR = 30 + vortex.spinT * 15; // spiral outward
+        b.x = vortex.x + Math.cos(spinAngle) * orbitR;
+        b.y = vortex.y + Math.sin(spinAngle) * orbitR;
+        if (vortex.spinT >= vortex.spinMax) {
+          // eject at high speed in random upward direction
+          var ejectAngle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+          b.vx = Math.cos(ejectAngle) * 500; b.vy = Math.sin(ejectAngle) * 500;
+          addScore(3000); bonusU += 20; sfx('ramp');
+          burst(vortex.x, vortex.y, '#ff6ec7', 24, 600); burst(vortex.x, vortex.y, '#ffffff', 12, 400);
+          callout('VORTEX EJECT', '+3000', '#ff6ec7');
+          vortex.capturedBall = null; vortex.active = false;
+        } else {
+          continue; // skip physics while in vortex
+        }
+      }
+      // POP-UP POST: rises to catch ball near flippers, kicks back
+      if (popUpPost && !popUpPost.raised && popUpPost.cooldown <= 0) {
+        var pdx = b.x - popUpPost.x, pdy = b.y - popUpPost.y;
+        if (pdx * pdx + pdy * pdy < (popUpPost.r + 30) * (popUpPost.r + 30) && b.vy > 100) {
+          popUpPost.raised = true; popUpPost.raiseTimer = 0; popUpPost.capturedBall = b;
+          popUpPost.cooldown = 4;
+          b.vx *= 0.3; b.vy = -200; // pop up
+          sfx('bumper'); callout('POP-UP POST', 'caught!', '#ffd34d');
+        }
+      }
+      if (popUpPost && popUpPost.capturedBall === b) {
+        popUpPost.raiseTimer += h;
+        b.x = popUpPost.x; b.y = popUpPost.y - popUpPost.r - b.r - 2;
+        b.vx = 0; b.vy = 0;
+        if (popUpPost.raiseTimer >= popUpPost.raiseDuration) {
+          // kick ball back into play
+          var kickAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+          b.vx = Math.cos(kickAngle) * 450; b.vy = Math.sin(kickAngle) * 450;
+          addScore(1000); bonusU += 8; sfx('kick');
+          burst(popUpPost.x, popUpPost.y, '#ffd34d', 16, 450);
+          callout('POST KICK', '+1000', '#ffd34d');
+          popUpPost.capturedBall = null; popUpPost.raised = false;
+        } else {
+          continue;
+        }
+      }
+      if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown -= h;
+      if (vortex && vortex.cooldown > 0) vortex.cooldown -= h;
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -1367,6 +1431,7 @@
       if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
       if (balls[bk].saucerCd > 0) balls[bk].saucerCd -= dt;
       if (balls[bk].portalCd > 0) balls[bk].portalCd -= dt;
+      if (balls[bk].mbImmune > 0) balls[bk].mbImmune = Math.max(0, balls[bk].mbImmune - dt);
     }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
@@ -1454,7 +1519,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer(); drawSaucerR(); drawMagnet(); drawCaptiveZone();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer(); drawSaucerR(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
     drawBallSave();
@@ -1772,6 +1837,90 @@
       ctx.beginPath(); ctx.arc(captiveZone.x, captiveZone.y, captiveZone.r, 0, TAU); ctx.stroke();
       ctx.fillStyle = 'rgba(124,255,178,0.5)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('CAPTIVE ZONE', captiveZone.x, captiveZone.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // VORTEX — swirling wormhole, pink/purple
+  function drawVortex() {
+    if (!vortex) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t / 150));
+    if (vortex.active && vortex.capturedBall) {
+      // spinning — multiple rotating rings
+      ctx.globalCompositeOperation = 'lighter';
+      for (var ring = 0; ring < 3; ring++) {
+        var rot = t / 200 + ring * 2;
+        var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r * (1.0 + ring * 0.3));
+        g.addColorStop(0, 'rgba(255,110,199,' + (0.25 + pulse * 0.15).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,110,199,0)');
+        ctx.fillStyle = g; ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(rot);
+        ctx.beginPath(); ctx.arc(0, 0, vortex.r * (1.0 + ring * 0.3), 0, TAU); ctx.fill(); ctx.restore();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255,110,199,' + (0.9 + pulse * 0.1).toFixed(2) + ')'; ctx.lineWidth = 3;
+      ctx.setLineDash([12, 8]); ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(t / 100);
+      ctx.beginPath(); ctx.arc(0, 0, vortex.r, 0, TAU); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,110,199,0.95)'; ctx.font = '700 11px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('VORTEX', vortex.x, vortex.y - 8);
+      ctx.font = '600 9px Inter'; ctx.fillText('SPINNING...', vortex.x, vortex.y + 10);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else if (vortex.cooldown > 0) {
+      // cooldown — dim
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r);
+      g.addColorStop(0, 'rgba(255,110,199,0.06)'); g.addColorStop(1, 'rgba(255,110,199,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255,110,199,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r, 0, TAU); ctx.stroke();
+    } else {
+      // ready — pulsing wormhole
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r * 1.3);
+      g.addColorStop(0, 'rgba(196,107,255,' + (0.15 + pulse * 0.12).toFixed(2) + ')'); g.addColorStop(1, 'rgba(196,107,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r * 1.3, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(196,107,255,' + (0.6 + pulse * 0.3).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.setLineDash([10, 6]); ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(-t / 300);
+      ctx.beginPath(); ctx.arc(0, 0, vortex.r, 0, TAU); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(196,107,255,0.8)'; ctx.font = '700 10px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('VORTEX', vortex.x, vortex.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // POP-UP POST — amber/gold post near flippers
+  function drawPopUpPost() {
+    if (!popUpPost) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 250));
+    if (popUpPost.raised && popUpPost.capturedBall) {
+      // raised with ball on top
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(popUpPost.x, popUpPost.y - popUpPost.r - 16, 0, popUpPost.x, popUpPost.y - popUpPost.r - 16, 20);
+      g.addColorStop(0, 'rgba(255,211,77,' + (0.3 + pulse * 0.2).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,211,77,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - popUpPost.r - 16, 20, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // post shaft
+      ctx.fillStyle = 'rgba(255,211,77,0.9)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - 16, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - 16, popUpPost.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,211,77,0.9)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('POST', popUpPost.x, popUpPost.y - 16);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else if (popUpPost.cooldown > 0) {
+      // cooldown — flush with playfield
+      ctx.fillStyle = 'rgba(255,211,77,0.2)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,0.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.stroke();
+    } else {
+      // ready — slightly raised indicator
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(popUpPost.x, popUpPost.y, 0, popUpPost.x, popUpPost.y, popUpPost.r * 1.5);
+      g.addColorStop(0, 'rgba(255,211,77,' + (0.12 + pulse * 0.1).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,211,77,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r * 1.5, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(255,211,77,0.5)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,' + (0.5 + pulse * 0.3).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,211,77,0.7)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('POST', popUpPost.x, popUpPost.y);
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
   }
