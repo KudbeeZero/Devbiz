@@ -54,6 +54,15 @@
     color:#04040c; background:var(--amber); padding:3px 9px; border-radius:999px; }
   .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:10; font-size:11px; color:#45586a; pointer-events:none; }
   @media (pointer:coarse){ .hint{ display:none; } }
+  .lb-wrap ul { list-style:none; padding:0; margin:0; }
+  .lb-wrap li { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(138,147,168,0.15); font-size:14px; }
+  .lb-wrap li:last-child { border-bottom:none; }
+  .lb-wrap .lb-name { color:#cfe9ff; font-weight:500; }
+  .lb-wrap .lb-val { color:#ffd34d; font-family:"Space Grotesk"; font-weight:700; margin-left:12px; }
+  .lb-wrap .lb-you { background:rgba(57,230,255,0.08); border-radius:6px; padding:8px 10px; margin:0 -10px; }
+  .lb-wrap .lb-empty { text-align:center; color:#5a6276; padding:16px 0 !important; }
+  .lb-head { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#39e6ff; margin-bottom:8px; }
+  .lb-status { font-weight:400; color:#8a93a8; }
 </style>
 </head>
 <body>
@@ -82,12 +91,29 @@
         <h1 class="grad" id="oScore">0</h1>
         <p id="oSub">Nice run.</p>
         <button class="btn" id="againBtn">Play again</button>
+
+        <div class="lb-wrap" style="margin-top:24px;text-align:left;">
+          <div class="lb-head" style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#39e6ff;margin-bottom:8px;">
+            🏆 Online leaderboard <span id="lbStatus" class="lb-status" style="font-weight:400;color:#8a93a8;"></span>
+          </div>
+          <ul id="lbResultsList" style="list-style:none;padding:0;margin:0;max-height:220px;overflow:auto;"></ul>
+          <button class="btn" id="lbPostBtn" style="margin-top:12px;width:100%;display:none;">Post your score</button>
+        </div>
       </div>
     </div>
 
     <div class="hint">Z / . flippers · Space launch · X / C nudge · M sound · ~ debug</div>
   </div>
 </div>
+
+<!-- Online leaderboard — reuses the repo's Kudbee Leaderboard service. Runs in
+     demo mode by default (no auth, localStorage-backed names). Once the leaderboard
+     Worker is deployed and reachable: set API_BASE to that Worker URL (e.g.
+     https://kudbee-leaderboard.<acct>.workers.dev) or route the /api/* paths
+     through your edge. The SDK posts and loads top-10 quietly.
+     See leaderboard/README.md. -->
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'pinball' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 
 <script>
 /* ===========================================================================
@@ -261,6 +287,11 @@
   var segs = [], bumpers = [], targets = [], rollovers = [], lamps = [];
   var ramp = null;                           // center loop-ramp trigger
   var saucer = null;                         // ball-lock saucer (captures a ball, feeds multiball)
+  var saucerR = null;                        // secondary lock saucer (Dual Lock)
+  var magnet = null;                         // electromagnet hold zone
+  var captiveZone = null;                    // captive ball gravity well
+  var vortex = null;                         // upper playfield wormhole
+  var popUpPost = null;                      // pop-up post near flippers
   function seg(ax, ay, bx, by, o) { o = o || {}; segs.push({ ax: ax, ay: ay, bx: bx, by: by, r: o.r || 0, rest: o.rest == null ? WALL_REST : o.rest, fric: o.fric == null ? WALL_FRIC : o.fric, kick: o.kick || 0, sling: o.sling || false }); }
   // standup / drop targets (circle colliders that score + light up). grp groups them into a bank.
   function target(x, y, kind, color, grp) { targets.push({ x: x, y: y, r: 17, rest: 0.55, kind: kind, color: color, grp: grp, down: false, lit: false, flash: 0 }); }
@@ -412,6 +443,25 @@
     //      Lock 2 and the 3rd catch launches MULTIBALL — see onSaucer(). ----
     saucer = { x: 450, y: 940, r: 24 };
 
+    // ---- secondary lock saucer (right side): "Dual Lock" — harder shot, awards bonus +
+    //      advances toward multiball independently. When both locks are filled, triggers
+    //      a 3-ball multiball. ----
+    saucerR = { x: 700, y: 880, r: 20, locks: 0, maxLocks: 2 };
+
+    // ---- magnet hold (electromagnet): upper-right zone that catches ball, holds it
+    //      briefly, then fires it back with bonus. Great for control + scoring. ----
+    magnet = { x: 720, y: 400, r: 50, active: false, holdT: 0, holdMax: 1.5, cooldown: 0, capturedBall: null };
+
+    // ---- captive ball zone: a "gravity well" in the lower-left that traps a ball.
+    //      Player must nudge or hit targets to free it. Awards big bonus while captive. ----
+    captiveZone = { x: 200, y: 1100, r: 60, active: false, captiveBall: null, bonusTimer: 0, bonusPerSec: 500 };
+
+    // ---- VORTEX: upper playfield wormhole that catches balls, spins them, ejects with bonus ----
+    vortex = { x: 450, y: 400, r: 55, active: false, capturedBall: null, spinT: 0, spinMax: 2.0, cooldown: 0 };
+
+    // ---- POP-UP POST: near flippers, rises to catch ball, holds briefly, kicks back ----
+    popUpPost = { x: 450, y: 1220, r: 18, raised: false, raiseTimer: 0, raiseDuration: 1.5, cooldown: 0, capturedBall: null };
+
     // ---- decorative colored light inserts (fill the open regions, pure render) ----
     var lampSpec = [
       [150, 670, '#39e6ff'], [150, 840, '#7CFFb2'], [720, 670, '#ffd34d'], [720, 840, '#c46bff'],
@@ -476,6 +526,8 @@
   // physics engine's existing multi-ball support (see ballVsBall() and onDrain()'s
   // `balls.length > 0` guard, both already written to handle >1 simultaneous ball).
   var lockedBalls = 0, LOCK_MAX = 2, multiballActive = false;
+  // Super lock system: combine locks from all features for SUPER MULTIBALL
+  var superLocks = 0, SUPER_LOCK_MAX = 5, superMultiballReady = false; // main(2) + right(2) + vortex(1)
   // Extra balls: a classic pinball award (adds to ballsLeft instead of ending the game) hooked
   // into milestones the table already tracks — no parallel scoring system, just a bonus payout
   // on top of events that already exist. Capped so it stays a rare "you earned this" moment.
@@ -498,6 +550,9 @@
   var skillStreak = 0, bestSkillStreak = 0, SKILL_STREAK_CAP = 3;
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
+  // ---- leaderboard (demo-mode SDK; degrades to local-only) ----
+  var lb = null, lbBusy = false, maxMultiballBalls = 0;
+
   function resetGame() {
     score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
     level = 1; comboExplosion = 0;
@@ -506,7 +561,13 @@
     comboKinds.length = 0; comboTripleAwarded = false;
     skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true; extraBallsAwarded = 0;
-    lockedBalls = 0; multiballActive = false;
+    lockedBalls = 0; multiballActive = false; maxMultiballBalls = 0;
+    superLocks = 0; superMultiballReady = false;
+    if (saucerR) { saucerR.locks = 0; }
+    if (magnet) { magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; magnet.capturedBall = null; }
+    if (captiveZone) { captiveZone.active = false; captiveZone.captiveBall = null; captiveZone.bonusTimer = 0; }
+    if (vortex) { vortex.active = false; vortex.spinT = 0; vortex.cooldown = 0; vortex.capturedBall = null; }
+    if (popUpPost) { popUpPost.raised = false; popUpPost.raiseTimer = 0; popUpPost.cooldown = 0; popUpPost.capturedBall = null; }
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     missionActive = -1; missionTimer = 0; missionFlash = 0;
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
@@ -597,7 +658,10 @@
   // ball-vs-ball (for future multiball; cheap, runs now harmlessly)
   function ballVsBall() {
     for (var i = 0; i < balls.length; i++) for (var j = i + 1; j < balls.length; j++) {
-      var a = balls[i], b = balls[j], dx = b.x - a.x, dy = b.y - a.y, d = len(dx, dy), rr = a.r + b.r;
+      var a = balls[i], b = balls[j];
+      // Skip collision if either ball has multiball immunity (freshly released)
+      if ((a.mbImmune || 0) > 0 || (b.mbImmune || 0) > 0) continue;
+      var dx = b.x - a.x, dy = b.y - a.y, d = len(dx, dy), rr = a.r + b.r;
       if (d > 0 && d < rr) {
         var nx = dx / d, ny = dy / d, push = (rr - d) / 2;
         a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push;
@@ -824,16 +888,18 @@
     burst(saucer.x, saucer.y, '#39ffe0', 10, 160); burst(saucer.x, saucer.y, '#ffffff', 6, 90);  // tight, "sucked-in" flourish (low speed, small count) vs. every outward-exploding burst elsewhere
     shake = Math.min(shake + 0.25, 1.3);
     if (lockedBalls < LOCK_MAX - 1) {
-      lockedBalls++;
-      callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX, '#39ffe0');
+      lockedBalls++; superLocks++;
+      callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
       balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
-      // lock quota filled — release every locked ball at once. Real multiball: the physics
-      // step already iterates `balls` as an array and onDrain() already only ends the ball
-      // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
+      // lock quota filled — check for SUPER MULTIBALL
+      superLocks++;
+      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      // normal multiball
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
+      if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
       lockedBalls = 0; multiballActive = true; hasSeenMultiball = true;
       callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
       sfx('multiball');
@@ -846,15 +912,53 @@
       // would silently wedge that check forever. All `releaseCount` balls play out and the
       // normal single-ball serve resumes exactly the way it already does once the last one
       // actually drains.
+      // Spread balls out in a wide fan pattern so they don't cluster on right side
+      var spreadAngles = [-1.0, -0.6, -0.2, 0.2, 0.6, 1.0];
       for (var i = 0; i < releaseCount; i++) {
-        var a = (Math.random() - 0.5) * 1.4;
+        var angleIdx = i % spreadAngles.length;
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
+        // Stagger spawn Y positions to prevent stacking
+        var spawnY = saucer.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
+        // Add multiball immunity so new balls don't immediately collide with each other
         balls.push({
-          // saucerCd: a brief immunity window so a released ball can clear the saucer's own
-          // capture radius before it's eligible to be re-locked (it spawns almost on top of
-          // the saucer — without this, one of the two balls would fall straight back in and
-          // silently re-lock itself before either physics or the player got a look at it).
-          x: saucer.x + (Math.random() - 0.5) * 40, y: saucer.y - 60, vx: Math.sin(a) * 220, vy: -560 - Math.random() * 120,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0, saucerCd: 1.2, lowT: 0, trail: [], noSave: true
+          x: saucer.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
+        });
+      }
+    }
+  }
+  // Secondary lock saucer (right side) — independent lock progress, harder shot
+  function onSaucerR(b, bi) {
+    balls.splice(bi, 1);
+    addScore(2000); bonusU += 15; sfx('lock');
+    burst(saucerR.x, saucerR.y, '#ff6ec7', 10, 160); burst(saucerR.x, saucerR.y, '#ffffff', 6, 90);
+    shake = Math.min(shake + 0.3, 1.4);
+    if (saucerR.locks < saucerR.maxLocks - 1) {
+      saucerR.locks++; superLocks++;
+      callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
+    } else {
+      // both right locks filled — check for SUPER MULTIBALL
+      saucerR.locks = 0; superLocks++;
+      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      // normal multiball
+      var releaseCount = saucerR.maxLocks;
+      if (lockedBalls > 0) { releaseCount += lockedBalls; lockedBalls = 0; }
+      if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
+      multiballActive = true; hasSeenMultiball = true;
+      callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
+      sfx('multiball');
+      burst(saucerR.x, saucerR.y, '#ffd34d', 26, 620); burst(saucerR.x, saucerR.y, '#ff6ec7', 20, 560);
+      shake = Math.min(shake + 0.8, 1.9);
+      triggerHitStop(0.12); colorWash(255, 211, 77, 1.2);
+      var spreadAngles = [-0.8, -0.4, 0, 0.4, 0.8];
+      for (var i = 0; i < releaseCount; i++) {
+        var angleIdx = i % spreadAngles.length;
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
+        var spawnY = saucerR.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
+        balls.push({
+          x: saucerR.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
         });
       }
     }
@@ -890,6 +994,33 @@
     callout('WARP!', '+' + (2000 * mult).toLocaleString(), '#ff6ec7');
     shake = Math.min(shake + 0.4, 1.5);
     c.flash = 1;
+  }
+
+  // SUPER MULTIBALL: 5+ balls, all locks filled — ultimate frenzy
+  function triggerSuperMultiball() {
+    superMultiballReady = true; superLocks = 0; // reset for next cycle
+    var releaseCount = 5; // always 5 balls for super multiball
+    if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
+    lockedBalls = 0; saucerR.locks = 0; multiballActive = true; hasSeenMultiball = true;
+    callout('SUPER MULTIBALL!', '×' + releaseCount + ' BALLS — JACKPOTS EVERYWHERE', '#ffd34d');
+    sfx('multiball');
+    // Epic visual
+    burst(saucer.x, saucer.y, '#ffd34d', 40, 800); burst(saucer.x, saucer.y, '#ff6ec7', 30, 700);
+    burst(saucer.x, saucer.y, '#39e6ff', 30, 700); burst(saucer.x, saucer.y, '#c46bff', 30, 700);
+    burst(saucerR.x, saucerR.y, '#ffd34d', 40, 800); burst(vortex.x, vortex.y, '#ff6ec7', 30, 700);
+    shake = 2.0; triggerHitStop(0.2); colorWash(255, 211, 77, 2.0);
+    // Award instant super jackpot
+    addScore(50000); bonusU += 50;
+    // Release 5 balls in a star pattern
+    var spreadAngles = [-1.2, -0.6, 0, 0.6, 1.2];
+    for (var i = 0; i < releaseCount; i++) {
+      var a = spreadAngles[i] + (Math.random() - 0.5) * 0.2;
+      var spawnY = saucer.y - 50 - (i % 2) * 25;
+      balls.push({
+        x: saucer.x + Math.sin(a) * 70, y: spawnY, vx: Math.sin(a) * 400, vy: -600 - Math.random() * 200,
+        r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 1.0, lRampCd: 1.0, rRampCd: 1.0, portalCd: 0, saucerCd: 3.0, lowT: 0, trail: [], noSave: true, mbImmune: 1.2
+      });
+    }
   }
 
   // ---- mission system tick ----
@@ -1001,6 +1132,127 @@
       // saucerCd guards a ball that just got released FROM the saucer (multiball) so it can't
       // fall straight back in a frame later and immediately re-lock itself.
       if (saucer && (b.saucerCd || 0) <= 0) { var sadx = b.x - saucer.x, sady = b.y - saucer.y; if (sadx * sadx + sady * sady < saucer.r * saucer.r) { onSaucer(b, bi); continue; } }
+      // secondary lock saucer (right side) — independent lock progress for multiball
+      if (saucerR && (b.saucerCd || 0) <= 0) { var sadx = b.x - saucerR.x, sady = b.y - saucerR.y; if (sadx * sadx + sady * sady < saucerR.r * saucerR.r) { onSaucerR(b, bi); continue; } }
+      // magnet hold: electromagnet — only catches balls shot UPWARD into it with speed (skill shot)
+      // Prevents accidental catches during multiball chaos
+      if (magnet && !magnet.capturedBall && magnet.cooldown <= 0 && !multiballActive) {
+        var mdx = b.x - magnet.x, mdy = b.y - magnet.y;
+        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -300) { // only catch FAST upward shots
+          magnet.capturedBall = b; magnet.active = true; magnet.holdT = 0;
+          b.vx = 0; b.vy = 0; magnet.cooldown = 3;
+          sfx('lock'); callout('MAGNET LOCK', 'charging...', '#c46bff');
+        }
+      }
+      // process magnet hold
+      if (magnet && magnet.capturedBall === b) {
+        magnet.holdT += h;
+        if (magnet.holdT >= magnet.holdMax) { // release after hold time
+          var angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8; // fire mostly upward
+          b.vx = Math.cos(angle) * 400; b.vy = Math.sin(angle) * 400;
+          addScore(1500); bonusU += 10; sfx('ramp');
+          burst(magnet.x, magnet.y, '#c46bff', 18, 500);
+          callout('MAGNET LAUNCH', '+1500', '#c46bff');
+          magnet.capturedBall = null; magnet.active = false;
+        } else {
+          // hold ball at magnet position
+          b.x = magnet.x; b.y = magnet.y; b.vx = 0; b.vy = 0;
+          continue; // skip rest of physics for this ball while held
+        }
+      }
+      // captive ball zone: gravity well traps ball, awards bonus over time
+      if (captiveZone && !captiveZone.captiveBall) {
+        var cdx = b.x - captiveZone.x, cdy = b.y - captiveZone.y;
+        if (cdx * cdx + cdy * cdy < captiveZone.r * captiveZone.r && b.vy > 50) {
+          captiveZone.captiveBall = b; captiveZone.active = true; captiveZone.bonusTimer = 0;
+          sfx('lock'); callout('CAPTIVE BALL', 'nudge to free!', '#7CFFb2');
+        }
+      }
+      if (captiveZone && captiveZone.captiveBall === b) {
+        captiveZone.bonusTimer += h;
+        if (captiveZone.bonusTimer >= 1.0) { // award bonus every second
+          addScore(captiveZone.bonusPerSec); bonusU += 8;
+          burst(captiveZone.x, captiveZone.y, '#7CFFb2', 10, 300);
+          captiveZone.bonusTimer = 0;
+        }
+        // nudge or strong flipper hit frees the ball
+        var freed = false;
+        if (tilt > 0.5) freed = true; // nudging helps
+        // check if ball has enough energy to escape
+        if (len(b.vx, b.vy) > 300) freed = true;
+        if (freed) {
+          var angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.0;
+          b.vx = Math.cos(angle) * 350; b.vy = Math.sin(angle) * 350;
+          addScore(2000); bonusU += 15; sfx('ramp');
+          callout('CAPTIVE FREED', '+2000', '#7CFFb2');
+          captiveZone.captiveBall = null; captiveZone.active = false;
+        } else {
+          // keep ball in zone with gentle pull toward center
+          var pullX = (captiveZone.x - b.x) * 2, pullY = (captiveZone.y - b.y) * 2;
+          b.vx += pullX * h; b.vy += pullY * h;
+          continue;
+        }
+      }
+      // magnet cooldown
+      if (magnet && magnet.cooldown > 0) magnet.cooldown -= h;
+      // VORTEX: wormhole catches balls, spins them, ejects with big bonus
+      if (vortex && !vortex.capturedBall && vortex.cooldown <= 0) {
+        var vdx = b.x - vortex.x, vdy = b.y - vortex.y;
+        if (vdx * vdx + vdy * vdy < vortex.r * vortex.r && Math.abs(b.vy) < 400) {
+          vortex.capturedBall = b; vortex.active = true; vortex.spinT = 0;
+          b.vx = 0; b.vy = 0; vortex.cooldown = 5;
+          sfx('lock'); callout('VORTEX CAPTURE', 'charging...', '#ff6ec7');
+        }
+      }
+      if (vortex && vortex.capturedBall === b) {
+        vortex.spinT += h;
+        var spinAngle = vortex.spinT * 8; // spin fast
+        var orbitR = 30 + vortex.spinT * 15; // spiral outward
+        b.x = vortex.x + Math.cos(spinAngle) * orbitR;
+        b.y = vortex.y + Math.sin(spinAngle) * orbitR;
+        if (vortex.spinT >= vortex.spinMax) {
+          // eject at high speed in random upward direction
+          var ejectAngle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+          b.vx = Math.cos(ejectAngle) * 500; b.vy = Math.sin(ejectAngle) * 500;
+          addScore(3000); bonusU += 20; sfx('ramp');
+          burst(vortex.x, vortex.y, '#ff6ec7', 24, 600); burst(vortex.x, vortex.y, '#ffffff', 12, 400);
+          callout('VORTEX EJECT', '+3000', '#ff6ec7');
+          // vortex counts as 1 super lock
+          superLocks++;
+          if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); }
+          vortex.capturedBall = null; vortex.active = false;
+        } else {
+          continue; // skip physics while in vortex
+        }
+      }
+      // POP-UP POST: rises to catch ball near flippers, kicks back
+      if (popUpPost && !popUpPost.raised && popUpPost.cooldown <= 0) {
+        var pdx = b.x - popUpPost.x, pdy = b.y - popUpPost.y;
+        if (pdx * pdx + pdy * pdy < (popUpPost.r + 30) * (popUpPost.r + 30) && b.vy > 100) {
+          popUpPost.raised = true; popUpPost.raiseTimer = 0; popUpPost.capturedBall = b;
+          popUpPost.cooldown = 4;
+          b.vx *= 0.3; b.vy = -200; // pop up
+          sfx('bumper'); callout('POP-UP POST', 'caught!', '#ffd34d');
+        }
+      }
+      if (popUpPost && popUpPost.capturedBall === b) {
+        popUpPost.raiseTimer += h;
+        b.x = popUpPost.x; b.y = popUpPost.y - popUpPost.r - b.r - 2;
+        b.vx = 0; b.vy = 0;
+        if (popUpPost.raiseTimer >= popUpPost.raiseDuration) {
+          // kick ball back into play
+          var kickAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+          b.vx = Math.cos(kickAngle) * 450; b.vy = Math.sin(kickAngle) * 450;
+          addScore(1000); bonusU += 8; sfx('kick');
+          burst(popUpPost.x, popUpPost.y, '#ffd34d', 16, 450);
+          callout('POST KICK', '+1000', '#ffd34d');
+          popUpPost.capturedBall = null; popUpPost.raised = false;
+        } else {
+          continue;
+        }
+      }
+      if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown -= h;
+      if (vortex && vortex.cooldown > 0) vortex.cooldown -= h;
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -1118,6 +1370,66 @@
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
+    lbLoadTop();
+  }
+
+  // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
+  function lbBoot() {
+    if (!window.KDLeaderboard) {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+      return;
+    }
+    try {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { lb = c; lbLoadTop(); })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  function lbLoadTop() {
+    if (!lb) return;
+    lb.leaderboard('score', 10).then(function (d) {
+      lbRender('lbResultsList', d.entries, 10);
+      var btn = document.getElementById('lbPostBtn'); if (btn) btn.style.display = '';
+    }).catch(function () {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+    });
+  }
+  function lbRender(id, entries, max) {
+    var el = document.getElementById(id); if (!el) return;
+    if (!entries || !entries.length) { lbEmpty(id, 'be the first to post'); return; }
+    el.innerHTML = '';
+    for (var i = 0; i < Math.min(max, entries.length); i++) {
+      var e = entries[i], li = document.createElement('li');
+      if (e.you) li.className = 'lb-you';
+      var nm = document.createElement('span'); nm.className = 'lb-name'; nm.textContent = e.name;
+      var vl = document.createElement('span'); vl.className = 'lb-val'; vl.textContent = (e.value || 0).toLocaleString();
+      li.appendChild(nm); li.appendChild(vl); el.appendChild(li);
+    }
+  }
+  function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty" style="color:#8a93a8;font-size:13px;padding:8px 0;">' + msg + '</li>'; }
+  function lbPost() {
+    var status = function (m) { var s = document.getElementById('lbStatus'); if (s) s.textContent = m; };
+    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (lbBusy) return;
+    var submit = function () {
+      lbBusy = true; status('posting…');
+      var nm = (lb.user() && lb.user().name) || 'Player';
+      var modesCompleted = 0; for (var mi = 0; mi < missionComplete.length; mi++) if (missionComplete[mi]) modesCompleted++;
+      lb.submit(nm, { score: score, bestMultiball: maxMultiballBalls, modesCompleted: modesCompleted }).then(function (res) {
+        lbBusy = false;
+        var rk = res && res.ranks && res.ranks.score;
+        status(rk ? 'posted — you\'re #' + rk + '!' : 'posted!');
+        lbLoadTop();
+      }).catch(function (err) {
+        lbBusy = false;
+        status(err && err.status === 401 ? 'pick a name to post' : 'could not post (offline)');
+      });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); })
+        .catch(function () { status('could not post — try again'); });
+    } else submit();
   }
 
   // ===== loop (fixed timestep, accumulator) =====
@@ -1125,6 +1437,7 @@
   function start() {
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
+    lbBoot();
   }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
@@ -1157,6 +1470,7 @@
       if (balls[bk].rRampCd > 0) balls[bk].rRampCd -= dt;
       if (balls[bk].saucerCd > 0) balls[bk].saucerCd -= dt;
       if (balls[bk].portalCd > 0) balls[bk].portalCd -= dt;
+      if (balls[bk].mbImmune > 0) balls[bk].mbImmune = Math.max(0, balls[bk].mbImmune - dt);
     }
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
@@ -1244,7 +1558,7 @@
       ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
     }
 
-    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer();
+    drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawSaucer(); drawSaucerR(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR);
     drawBallSave();
@@ -1469,6 +1783,186 @@
       }
     }
   }
+  // secondary lock saucer (right side) — magenta/pink theme
+  function drawSaucerR() {
+    if (!saucerR) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.6 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 400));
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(saucerR.x, saucerR.y, 0, saucerR.x, saucerR.y, saucerR.r * 2.2);
+    g.addColorStop(0, 'rgba(255,110,199,' + (0.16 + pulse * 0.12).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,110,199,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(saucerR.x, saucerR.y, saucerR.r * 2.2, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(2,4,10,0.85)'; ctx.beginPath(); ctx.arc(saucerR.x, saucerR.y, saucerR.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,110,199,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(saucerR.x, saucerR.y, saucerR.r, 0, TAU); ctx.stroke();
+    // lock-progress pips
+    for (var i = 0; i < saucerR.maxLocks; i++) {
+      var ang = -Math.PI / 2 + (i - (saucerR.maxLocks - 1) / 2) * 0.7;
+      var px = saucerR.x + Math.cos(ang) * (saucerR.r + 10), py = saucerR.y + Math.sin(ang) * (saucerR.r + 10);
+      ctx.fillStyle = i < saucerR.locks ? 'rgba(255,110,199,0.95)' : 'rgba(255,110,199,0.25)';
+      ctx.beginPath(); ctx.arc(px, py, 4, 0, TAU); ctx.fill();
+    }
+  }
+  // magnet hold (electromagnet) — cyan/purple pulsing field
+  function drawMagnet() {
+    if (!magnet) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t / 200));
+    if (magnet.active && magnet.capturedBall) {
+      // holding ball — bright pulsing field
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(magnet.x, magnet.y, 0, magnet.x, magnet.y, magnet.r * 1.5);
+      g.addColorStop(0, 'rgba(196,107,255,' + (0.4 + pulse * 0.3).toFixed(2) + ')'); g.addColorStop(1, 'rgba(196,107,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r * 1.5, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(196,107,255,' + (0.8 + pulse * 0.2).toFixed(2) + ')'; ctx.lineWidth = 4;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      // "HOLD" text
+      ctx.fillStyle = 'rgba(196,107,255,0.9)'; ctx.font = '700 12px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('HOLD', magnet.x, magnet.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else if (magnet.cooldown > 0) {
+      // cooldown — dim
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(magnet.x, magnet.y, 0, magnet.x, magnet.y, magnet.r);
+      g.addColorStop(0, 'rgba(196,107,255,0.08)'); g.addColorStop(1, 'rgba(196,107,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(196,107,255,0.3)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r, 0, TAU); ctx.stroke();
+    } else {
+      // ready — pulsing ready indicator
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(magnet.x, magnet.y, 0, magnet.x, magnet.y, magnet.r * 1.2);
+      g.addColorStop(0, 'rgba(57,230,255,' + (0.12 + pulse * 0.1).toFixed(2) + ')'); g.addColorStop(1, 'rgba(57,230,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r * 1.2, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(57,230,255,' + (0.5 + pulse * 0.3).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(magnet.x, magnet.y, magnet.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(57,230,255,0.7)'; ctx.font = '700 10px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('MAGNET', magnet.x, magnet.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // captive ball zone — green gravity well
+  function drawCaptiveZone() {
+    if (!captiveZone) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t / 300));
+    if (captiveZone.active && captiveZone.captiveBall) {
+      // ball captive — bright green field with timer
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(captiveZone.x, captiveZone.y, 0, captiveZone.x, captiveZone.y, captiveZone.r * 1.3);
+      g.addColorStop(0, 'rgba(124,255,178,' + (0.3 + pulse * 0.2).toFixed(2) + ')'); g.addColorStop(1, 'rgba(124,255,178,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(captiveZone.x, captiveZone.y, captiveZone.r * 1.3, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(124,255,178,' + (0.8 + pulse * 0.2).toFixed(2) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(captiveZone.x, captiveZone.y, captiveZone.r, 0, TAU); ctx.stroke();
+      // "CAPTIVE" text with bonus rate
+      ctx.fillStyle = 'rgba(124,255,178,0.9)'; ctx.font = '700 11px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('CAPTIVE', captiveZone.x, captiveZone.y - 8);
+      ctx.font = '600 9px Inter'; ctx.fillText('+' + (captiveZone.bonusPerSec / 1000).toFixed(1) + 'k/s', captiveZone.x, captiveZone.y + 10);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else {
+      // ready — subtle green glow
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(captiveZone.x, captiveZone.y, 0, captiveZone.x, captiveZone.y, captiveZone.r);
+      g.addColorStop(0, 'rgba(124,255,178,' + (0.08 + pulse * 0.06).toFixed(2) + ')'); g.addColorStop(1, 'rgba(124,255,178,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(captiveZone.x, captiveZone.y, captiveZone.r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(124,255,178,' + (0.3 + pulse * 0.2).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(captiveZone.x, captiveZone.y, captiveZone.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(124,255,178,0.5)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('CAPTIVE ZONE', captiveZone.x, captiveZone.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // VORTEX — swirling wormhole, pink/purple
+  function drawVortex() {
+    if (!vortex) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t / 150));
+    if (vortex.active && vortex.capturedBall) {
+      // spinning — multiple rotating rings
+      ctx.globalCompositeOperation = 'lighter';
+      for (var ring = 0; ring < 3; ring++) {
+        var rot = t / 200 + ring * 2;
+        var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r * (1.0 + ring * 0.3));
+        g.addColorStop(0, 'rgba(255,110,199,' + (0.25 + pulse * 0.15).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,110,199,0)');
+        ctx.fillStyle = g; ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(rot);
+        ctx.beginPath(); ctx.arc(0, 0, vortex.r * (1.0 + ring * 0.3), 0, TAU); ctx.fill(); ctx.restore();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255,110,199,' + (0.9 + pulse * 0.1).toFixed(2) + ')'; ctx.lineWidth = 3;
+      ctx.setLineDash([12, 8]); ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(t / 100);
+      ctx.beginPath(); ctx.arc(0, 0, vortex.r, 0, TAU); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,110,199,0.95)'; ctx.font = '700 11px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('VORTEX', vortex.x, vortex.y - 8);
+      ctx.font = '600 9px Inter'; ctx.fillText('SPINNING...', vortex.x, vortex.y + 10);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else if (vortex.cooldown > 0) {
+      // cooldown — dim
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r);
+      g.addColorStop(0, 'rgba(255,110,199,0.06)'); g.addColorStop(1, 'rgba(255,110,199,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255,110,199,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r, 0, TAU); ctx.stroke();
+    } else {
+      // ready — pulsing wormhole
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(vortex.x, vortex.y, 0, vortex.x, vortex.y, vortex.r * 1.3);
+      g.addColorStop(0, 'rgba(196,107,255,' + (0.15 + pulse * 0.12).toFixed(2) + ')'); g.addColorStop(1, 'rgba(196,107,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(vortex.x, vortex.y, vortex.r * 1.3, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(196,107,255,' + (0.6 + pulse * 0.3).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.setLineDash([10, 6]); ctx.save(); ctx.translate(vortex.x, vortex.y); ctx.rotate(-t / 300);
+      ctx.beginPath(); ctx.arc(0, 0, vortex.r, 0, TAU); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(196,107,255,0.8)'; ctx.font = '700 10px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('VORTEX', vortex.x, vortex.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // POP-UP POST — amber/gold post near flippers
+  function drawPopUpPost() {
+    if (!popUpPost) return;
+    var t = performance.now();
+    var pulse = reduceMotion ? 0.5 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 250));
+    if (popUpPost.raised && popUpPost.capturedBall) {
+      // raised with ball on top
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(popUpPost.x, popUpPost.y - popUpPost.r - 16, 0, popUpPost.x, popUpPost.y - popUpPost.r - 16, 20);
+      g.addColorStop(0, 'rgba(255,211,77,' + (0.3 + pulse * 0.2).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,211,77,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - popUpPost.r - 16, 20, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // post shaft
+      ctx.fillStyle = 'rgba(255,211,77,0.9)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - 16, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y - 16, popUpPost.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,211,77,0.9)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('POST', popUpPost.x, popUpPost.y - 16);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else if (popUpPost.cooldown > 0) {
+      // cooldown — flush with playfield
+      ctx.fillStyle = 'rgba(255,211,77,0.2)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,0.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.stroke();
+    } else {
+      // ready — slightly raised indicator
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(popUpPost.x, popUpPost.y, 0, popUpPost.x, popUpPost.y, popUpPost.r * 1.5);
+      g.addColorStop(0, 'rgba(255,211,77,' + (0.12 + pulse * 0.1).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,211,77,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r * 1.5, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(255,211,77,0.5)'; ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,211,77,' + (0.5 + pulse * 0.3).toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(popUpPost.x, popUpPost.y, popUpPost.r, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,211,77,0.7)'; ctx.font = '700 9px "Space Grotesk"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('POST', popUpPost.x, popUpPost.y);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  }
   function drawFlipper(f) {
     var tip = f.tip(), fl = f.flash || 0;
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
@@ -1586,6 +2080,17 @@
         ctx.beginPath(); ctx.arc(mx, my + Math.round(mn * 0.04), explosionR, 0, TAU); ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
       }
+      // Super lock progress — shows progress toward SUPER MULTIBALL
+      if (superLocks > 0 && superLocks < SUPER_LOCK_MAX) {
+        var sly = my + Math.round(mn * 0.11), slbw = mn * 0.18;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - slbw / 2, sly, slbw, 18, 6); ctx.fill();
+        ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(mn * 0.018) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText('★ SUPER LOCK ' + superLocks + '/' + SUPER_LOCK_MAX + ' ★', mx, sly + 1);
+        // progress bar
+        var prog = superLocks / SUPER_LOCK_MAX;
+        ctx.fillStyle = 'rgba(255,211,77,0.2)'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, slbw - 4, 3);
+        ctx.fillStyle = '#ffd34d'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, (slbw - 4) * prog, 3);
+      }
       ctx.textAlign = 'left';
       }
     }
@@ -1686,6 +2191,7 @@
   document.getElementById('startBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('againBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('sndBtn').addEventListener('click', function () { audioInit(); setMuted(!muted); });
+  document.getElementById('lbPostBtn').addEventListener('click', function () { audioInit(); lbPost(); });
   setMuted(muted);                          // sync the 🔊/🔇 icon with the stored preference
   (function () {                            // show the stored best on the attract screen
     var el = document.getElementById('gBest');
