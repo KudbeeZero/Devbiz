@@ -334,8 +334,10 @@
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
     // upper-right corner wedge: closes the dead pocket above the deflector so a ball
-    // can't wedge between the cabinet wall and the deflector (infinite bounce loop)
-    seg(800, 182, 846, 132, { rest: 0.35, fric: 0.03 });
+    // can't wedge between the cabinet wall and the deflector (infinite bounce loop).
+    // Fixed: wedge now connects cabinet wall to deflector without intersecting it.
+    // At y=160, deflector x ≈ 754; cabinet wall at x=862. Horizontal segment across pocket.
+    seg(862, 160, 754, 160, { rest: 0.35, fric: 0.03 });
     // ---- lower funnel toward the flippers ----
     // Left funnel's mouth used to be nearly 2x as wide as the right's (235px vs 135px,
     // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
@@ -580,6 +582,49 @@
   }
 
   // ===== collision resolution (circle vs segment/capsule/circle) =====
+  // Swept-circle vs segment: returns the earliest hit time t in [0,1] for a ball
+  // moving (vx,vy) over a dt window, or -1 if no hit. VPX / Ten-Minute-Physics pattern:
+  // resolve at hit time instead of post-overlap so a fast plunge can't tunnel the top rail.
+  function sweptSeg(b, ax, ay, bx, by, segR, dt) {
+    var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
+    // relative motion: treat segment as stationary, ball sweeps from p to p+v*dt
+    var px = b.x, py = b.y, vx = b.vx * dt, vy = b.vy * dt;
+    var rr = b.r + segR;
+    // project ball start onto segment
+    var t = clamp(((px - ax) * ex + (py - ay) * ey) / el2, 0, 1);
+    var qx = ax + ex * t, qy = ay + ey * t;
+    var dx = px - qx, dy = py - qy;
+    // quadratic in tau: |d + tau*(v - proj(v))|^2 = rr^2
+    var pvx = (vx * ex + vy * ey) / el2; var pvy = (pvx * ex + pvy * ey); // unused
+    var rvx = vx - pvx * ex, rvy = vy - pvx * ey;
+    var a = rvx * rvx + rvy * rvy;
+    var c = dx * dx + dy * dy - rr * rr;
+    if (a < 1e-9) { if (c <= 0) return 0; return -1; }
+    var bb = dx * rvx + dy * rvy;
+    var disc = bb * bb - a * c;
+    if (disc < 0) return -1;
+    var sq = Math.sqrt(disc);
+    var t1 = (-bb - sq) / a, t2 = (-bb + sq) / a;
+    if (t1 >= 0 && t1 <= 1) return t1;
+    if (t2 >= 0 && t2 <= 1) return t2;
+    return -1;
+  }
+  // Segment contact normal policy (geometric-first, velocity-only as last resort):
+  //   1. Primary normal n = normalize(-(by-ay), bx-ax) — the segment's own outward
+  //      direction, independent of where the ball happens to sit.
+  //   2. Flip n so it points from the surface TOWARD the ball (n·(ball-mid) > 0),
+  //      i.e. the playfield side. This is what makes a one-way gate work: a ball
+  //      coming DOWN the shooter lane hits the gate's up-facing surface and is
+  //      reflected back down, never sucked through into the plunger.
+  //   3. If n·v >= 0 the ball is already moving away — but we still depenetrated —
+  //      so fall back to -normalize(v) ONLY while the ball is actually approaching
+  //      (|v| > eps). Never hardcode (0,-1): that let an upward plunge tunnel the
+  //      top rail and leak out the right cabinet edge.
+  //   4. One-frame contact blacklist: if we just resolved this same segment last
+  //      sub-step with a nearly-opposite normal, skip it this pass. Breaks the
+  //      deflector↔cabinet bounce loop at x≈831 without softening either wall.
+  var LAST_HIT = {}, LAST_HIT_EPS = 1e-4;
+  function segKey(ax, ay, bx, by) { return ax + ',' + ay + ',' + bx + ',' + by; }
   function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY) {
     var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
     var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
@@ -587,8 +632,35 @@
     var dx = b.x - qx, dy = b.y - qy, d = len(dx, dy);
     var rr = b.r + segR;
     if (d >= rr) return false;
+    var key = segKey(ax, ay, bx, by);
+    // one-frame contact blacklist: skip immediate re-resolution with opposite n
+    var lh = LAST_HIT[key];
+    if (lh && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
+      var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
+      if (rvx * lh.nx + rvy * lh.ny > -0.05) return false;
+    }
     var nx, ny;
-    if (d > 0.0001) { nx = dx / d; ny = dy / d; } else { nx = 0; ny = -1; }
+    if (d > 0.0001) {
+      // geometric normal: perpendicular to the segment, pointing toward the ball
+      nx = -ey; ny = ex;
+      var ml = Math.sqrt(nx * nx + ny * ny) || 1;
+      nx /= ml; ny /= ml;
+      // flip so n points from surface toward ball (playfield side)
+      var mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
+      // if the ball is already separating, fall back to velocity so it still gets
+      // pushed back into the field (a grazing hit on the deflector face)
+      var sp = len(b.vx, b.vy);
+      if (sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
+        nx = -b.vx / sp; ny = -b.vy / sp;
+      }
+    } else {
+      // ball center exactly on the segment line — derive from velocity
+      var sp = len(b.vx, b.vy);
+      if (sp > 0.0001) { nx = -b.vx / sp; ny = -b.vy / sp; }
+      else { nx = 0; ny = -1; }
+    }
+    LAST_HIT[key] = { x: b.x, y: b.y, nx: nx, ny: ny };
     b.x += nx * (rr - d); b.y += ny * (rr - d);                 // depenetrate
     // relative velocity vs (optionally) a moving surface
     var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
@@ -1106,14 +1178,31 @@
       // micro sub-steps so the ball never moves > r/2 before resolving.
       // The flippers' swept angle is interpolated across the same sub-steps so a
       // fast-swinging flipper can't rotate through the ball inside one phys step.
-      var move = len(b.vx, b.vy) * h;
+      // Each sub-step is itself time-of-impact: the swept circle is tested against
+      // every segment and the FIRST hit is resolved at its exact hit time, then the
+      // remainder of the sub-step is re-tried. Post-overlap (move-then-resolve) alone
+      // let a fast plunge tunnel the top rail — TOI closes that.
+      var move = len(b.vx, b.vy) * hh;
       var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
-      var hh = h / steps;
+      var hh2 = hh / steps;
       for (var s = 0; s < steps; s++) {
         var fr = (s + 1) / steps;
         flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
         flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
-        b.x += b.vx * hh; b.y += b.vy * hh;
+        var rem = hh2;
+        while (rem > 0) {
+          var hitSeg = null, hitT = 1, hitNx = 0, hitNy = 0, hitQx = 0, hitQy = 0;
+          for (var si = 0; si < segs.length; si++) {
+            var ss = segs[si];
+            var ht = sweptSeg(b, ss.ax, ss.ay, ss.bx, ss.by, ss.r, rem);
+            if (ht >= 0 && ht < hitT) { hitSeg = ss; hitT = ht; }
+          }
+          if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
+          b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
+          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling);
+          rem *= (1 - hitT);
+          if (rem < 0.0002) rem = 0;
+        }
         resolveAll(b);
         if (b.y > DRAIN_Y) break;
       }
