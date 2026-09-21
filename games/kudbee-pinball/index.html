@@ -287,6 +287,11 @@
   var segs = [], bumpers = [], targets = [], rollovers = [], lamps = [];
   var ramp = null;                           // center loop-ramp trigger
   var saucer = null;                         // ball-lock saucer (captures a ball, feeds multiball)
+  var saucerR = null;                        // secondary lock saucer (Dual Lock)
+  var magnet = null;                         // electromagnet hold zone
+  var captiveZone = null;                    // captive ball gravity well
+  var vortex = null;                         // upper playfield wormhole
+  var popUpPost = null;                      // pop-up post near flippers
   function seg(ax, ay, bx, by, o) { o = o || {}; segs.push({ ax: ax, ay: ay, bx: bx, by: by, r: o.r || 0, rest: o.rest == null ? WALL_REST : o.rest, fric: o.fric == null ? WALL_FRIC : o.fric, kick: o.kick || 0, sling: o.sling || false }); }
   // standup / drop targets (circle colliders that score + light up). grp groups them into a bank.
   function target(x, y, kind, color, grp) { targets.push({ x: x, y: y, r: 17, rest: 0.55, kind: kind, color: color, grp: grp, down: false, lit: false, flash: 0 }); }
