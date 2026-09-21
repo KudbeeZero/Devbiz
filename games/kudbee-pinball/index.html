@@ -521,6 +521,8 @@
   // physics engine's existing multi-ball support (see ballVsBall() and onDrain()'s
   // `balls.length > 0` guard, both already written to handle >1 simultaneous ball).
   var lockedBalls = 0, LOCK_MAX = 2, multiballActive = false;
+  // Super lock system: combine locks from all features for SUPER MULTIBALL
+  var superLocks = 0, SUPER_LOCK_MAX = 5, superMultiballReady = false; // main(2) + right(2) + vortex(1)
   // Extra balls: a classic pinball award (adds to ballsLeft instead of ending the game) hooked
   // into milestones the table already tracks — no parallel scoring system, just a bonus payout
   // on top of events that already exist. Capped so it stays a rare "you earned this" moment.
@@ -555,6 +557,7 @@
     skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true; extraBallsAwarded = 0;
     lockedBalls = 0; multiballActive = false; maxMultiballBalls = 0;
+    superLocks = 0; superMultiballReady = false;
     if (saucerR) { saucerR.locks = 0; }
     if (magnet) { magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; magnet.capturedBall = null; }
     if (captiveZone) { captiveZone.active = false; captiveZone.captiveBall = null; captiveZone.bonusTimer = 0; }
@@ -880,15 +883,16 @@
     burst(saucer.x, saucer.y, '#39ffe0', 10, 160); burst(saucer.x, saucer.y, '#ffffff', 6, 90);  // tight, "sucked-in" flourish (low speed, small count) vs. every outward-exploding burst elsewhere
     shake = Math.min(shake + 0.25, 1.3);
     if (lockedBalls < LOCK_MAX - 1) {
-      lockedBalls++;
-      callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX, '#39ffe0');
+      lockedBalls++; superLocks++;
+      callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
       balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
-      // lock quota filled — release every locked ball at once. Real multiball: the physics
-      // step already iterates `balls` as an array and onDrain() already only ends the ball
-      // when balls.length hits 0, so N simultaneous balls "just works" once they exist.
+      // lock quota filled — check for SUPER MULTIBALL
+      superLocks++;
+      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      // normal multiball
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
       if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
       lockedBalls = 0; multiballActive = true; hasSeenMultiball = true;
@@ -925,24 +929,23 @@
     burst(saucerR.x, saucerR.y, '#ff6ec7', 10, 160); burst(saucerR.x, saucerR.y, '#ffffff', 6, 90);
     shake = Math.min(shake + 0.3, 1.4);
     if (saucerR.locks < saucerR.maxLocks - 1) {
-      saucerR.locks++;
-      callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks, '#ff6ec7');
+      saucerR.locks++; superLocks++;
+      callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
       balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
-      // both right locks filled — add to main multiball or trigger 3-ball multiball
-      var releaseCount = saucerR.locks + 1;
-      if (lockedBalls > 0) { // main lock also has balls
-        releaseCount += lockedBalls;
-        lockedBalls = 0;
-      }
+      // both right locks filled — check for SUPER MULTIBALL
+      saucerR.locks = 0; superLocks++;
+      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      // normal multiball
+      var releaseCount = saucerR.maxLocks;
+      if (lockedBalls > 0) { releaseCount += lockedBalls; lockedBalls = 0; }
       if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
-      saucerR.locks = 0; multiballActive = true; hasSeenMultiball = true;
+      multiballActive = true; hasSeenMultiball = true;
       callout('MULTIBALL!', '×' + releaseCount + ' balls', '#ffd34d');
       sfx('multiball');
       burst(saucerR.x, saucerR.y, '#ffd34d', 26, 620); burst(saucerR.x, saucerR.y, '#ff6ec7', 20, 560);
       shake = Math.min(shake + 0.8, 1.9);
       triggerHitStop(0.12); colorWash(255, 211, 77, 1.2);
-      // Wide fan spread from right saucer
       var spreadAngles = [-0.8, -0.4, 0, 0.4, 0.8];
       for (var i = 0; i < releaseCount; i++) {
         var angleIdx = i % spreadAngles.length;
@@ -986,6 +989,33 @@
     callout('WARP!', '+' + (2000 * mult).toLocaleString(), '#ff6ec7');
     shake = Math.min(shake + 0.4, 1.5);
     c.flash = 1;
+  }
+
+  // SUPER MULTIBALL: 5+ balls, all locks filled — ultimate frenzy
+  function triggerSuperMultiball() {
+    superMultiballReady = true; superLocks = 0; // reset for next cycle
+    var releaseCount = 5; // always 5 balls for super multiball
+    if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
+    lockedBalls = 0; saucerR.locks = 0; multiballActive = true; hasSeenMultiball = true;
+    callout('SUPER MULTIBALL!', '×' + releaseCount + ' BALLS — JACKPOTS EVERYWHERE', '#ffd34d');
+    sfx('multiball');
+    // Epic visual
+    burst(saucer.x, saucer.y, '#ffd34d', 40, 800); burst(saucer.x, saucer.y, '#ff6ec7', 30, 700);
+    burst(saucer.x, saucer.y, '#39e6ff', 30, 700); burst(saucer.x, saucer.y, '#c46bff', 30, 700);
+    burst(saucerR.x, saucerR.y, '#ffd34d', 40, 800); burst(vortex.x, vortex.y, '#ff6ec7', 30, 700);
+    shake = 2.0; triggerHitStop(0.2); colorWash(255, 211, 77, 2.0);
+    // Award instant super jackpot
+    addScore(50000); bonusU += 50;
+    // Release 5 balls in a star pattern
+    var spreadAngles = [-1.2, -0.6, 0, 0.6, 1.2];
+    for (var i = 0; i < releaseCount; i++) {
+      var a = spreadAngles[i] + (Math.random() - 0.5) * 0.2;
+      var spawnY = saucer.y - 50 - (i % 2) * 25;
+      balls.push({
+        x: saucer.x + Math.sin(a) * 70, y: spawnY, vx: Math.sin(a) * 400, vy: -600 - Math.random() * 200,
+        r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 1.0, lRampCd: 1.0, rRampCd: 1.0, portalCd: 0, saucerCd: 3.0, lowT: 0, trail: [], noSave: true, mbImmune: 1.2
+      });
+    }
   }
 
   // ---- mission system tick ----
@@ -1099,13 +1129,14 @@
       if (saucer && (b.saucerCd || 0) <= 0) { var sadx = b.x - saucer.x, sady = b.y - saucer.y; if (sadx * sadx + sady * sady < saucer.r * saucer.r) { onSaucer(b, bi); continue; } }
       // secondary lock saucer (right side) — independent lock progress for multiball
       if (saucerR && (b.saucerCd || 0) <= 0) { var sadx = b.x - saucerR.x, sady = b.y - saucerR.y; if (sadx * sadx + sady * sady < saucerR.r * saucerR.r) { onSaucerR(b, bi); continue; } }
-      // magnet hold: electromagnet catches ball, holds it, then fires it back with bonus
-      if (magnet && !magnet.capturedBall && magnet.cooldown <= 0) {
+      // magnet hold: electromagnet — only catches balls shot UPWARD into it with speed (skill shot)
+      // Prevents accidental catches during multiball chaos
+      if (magnet && !magnet.capturedBall && magnet.cooldown <= 0 && !multiballActive) {
         var mdx = b.x - magnet.x, mdy = b.y - magnet.y;
-        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < 200) { // catch slow-moving balls
+        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -300) { // only catch FAST upward shots
           magnet.capturedBall = b; magnet.active = true; magnet.holdT = 0;
-          b.vx = 0; b.vy = 0; magnet.cooldown = 3; // 3s cooldown after release
-          sfx('lock'); callout('MAGNET HOLD', 'charging...', '#c46bff');
+          b.vx = 0; b.vy = 0; magnet.cooldown = 3;
+          sfx('lock'); callout('MAGNET LOCK', 'charging...', '#c46bff');
         }
       }
       // process magnet hold
@@ -1181,6 +1212,9 @@
           addScore(3000); bonusU += 20; sfx('ramp');
           burst(vortex.x, vortex.y, '#ff6ec7', 24, 600); burst(vortex.x, vortex.y, '#ffffff', 12, 400);
           callout('VORTEX EJECT', '+3000', '#ff6ec7');
+          // vortex counts as 1 super lock
+          superLocks++;
+          if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); }
           vortex.capturedBall = null; vortex.active = false;
         } else {
           continue; // skip physics while in vortex
@@ -2040,6 +2074,17 @@
         ctx.fillStyle = 'rgba(255,' + Math.round(93 + comboExplosion * 100) + ',60,' + explosionAlpha + ')';
         ctx.beginPath(); ctx.arc(mx, my + Math.round(mn * 0.04), explosionR, 0, TAU); ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
+      }
+      // Super lock progress — shows progress toward SUPER MULTIBALL
+      if (superLocks > 0 && superLocks < SUPER_LOCK_MAX) {
+        var sly = my + Math.round(mn * 0.11), slbw = mn * 0.18;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - slbw / 2, sly, slbw, 18, 6); ctx.fill();
+        ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(mn * 0.018) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText('★ SUPER LOCK ' + superLocks + '/' + SUPER_LOCK_MAX + ' ★', mx, sly + 1);
+        // progress bar
+        var prog = superLocks / SUPER_LOCK_MAX;
+        ctx.fillStyle = 'rgba(255,211,77,0.2)'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, slbw - 4, 3);
+        ctx.fillStyle = '#ffd34d'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, (slbw - 4) * prog, 3);
       }
       ctx.textAlign = 'left';
       }
