@@ -161,6 +161,34 @@
       this.newBest = true;
       try { window.localStorage.setItem('kudbee-contra.best', String(this.best)); } catch (e) { /* ignore */ }
     }
+    this._lbPost();
+  };
+
+  // ---- online leaderboard (kd-leaderboard.js SDK → Worker + D1) ----
+  Game.prototype._lbPost = function () {
+    var self = this;
+    if (!window.KDLeaderboard) return;
+    if (!this._lb) {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { self._lb = c; self._lbPost(); })
+        .catch(function () {});
+      return;
+    }
+    var lb = this._lb;
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Operative';
+      lb.submit(nm, {
+        score: self.score || 0,
+        bestCombo: self.bestCombo || 0,
+        kills: self.kills || 0,
+        waves: 0,
+      }).catch(function () { /* cloud offline — local best already saved */ });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); })
+        .catch(function () {});
+    } else submit();
   };
 
   // Charge the OVERDRIVE meter (drives the K9 companion special).

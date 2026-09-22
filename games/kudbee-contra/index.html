@@ -126,8 +126,10 @@
 <script src="src/entities/player.js"></script>
 <script src="src/entities/enemies.js"></script>
 <script src="src/entities/companion.js"></script>
-<script src="src/game.js"></script>
-<script>
+  <script src="src/game.js"></script>
+  <script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'contra' };</script>
+  <script src="../../leaderboard/client/kd-leaderboard.js"></script>
+  <script>
   (function () {
     var canvas = document.getElementById('game');
     var touchRoot = document.getElementById('touch');

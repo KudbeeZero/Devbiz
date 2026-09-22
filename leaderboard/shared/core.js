@@ -49,9 +49,11 @@ export const GAMES = {
     label: 'Kudbee Voidrunner',
     primary: 'score',
     metrics: {
-      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9,  rank: true },
-      bestCombo: { label: 'Max chain',  dir: 'max', min: 0, max: 1e6,  rank: true },
-      dist:      { label: 'Depth (km)', dir: 'max', min: 0, max: 1e7,  rank: true },
+      score:         { label: 'Score',           dir: 'max', min: 0, max: 1e9,  rank: true },
+      bestCombo:     { label: 'Max Chain',       dir: 'max', min: 0, max: 1e6,  rank: true },
+      dist:          { label: 'Depth (km)',      dir: 'max', min: 0, max: 1e7,  rank: true },
+      waveSurvived:  { label: 'Waves Survived',  dir: 'max', min: 0, max: 1e4,  rank: true },
+      bestTime:      { label: 'Best Time (s)',   dir: 'max', min: 0, max: 1e6,  rank: true },
     },
   },
   pinball: {
@@ -61,6 +63,43 @@ export const GAMES = {
       score:         { label: 'Score',           dir: 'max', min: 0, max: 1e9,  rank: true },
       bestMultiball: { label: 'Max Multiball',   dir: 'max', min: 0, max: 10,   rank: true },
       modesCompleted:{ label: 'Modes Completed', dir: 'max', min: 0, max: 10,   rank: true },
+    },
+  },
+  contra: {
+    label: 'Kudbee Contra',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      bestCombo: { label: 'Max Combo',  dir: 'max', min: 0, max: 1e6, rank: true },
+      waves:     { label: 'Waves',      dir: 'max', min: 0, max: 1e4, rank: true },
+      kills:     { label: 'Kills',      dir: 'max', min: 0, max: 1e6, rank: true },
+    },
+  },
+  munch: {
+    label: 'Kudbee Munch',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      level:     { label: 'Level',      dir: 'max', min: 0, max: 1e4, rank: true },
+      chipsEaten:{ label: 'Chips',      dir: 'max', min: 0, max: 1e9, rank: true },
+    },
+  },
+  orbital: {
+    label: 'Kudbee Orbital',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      kills:     { label: 'Kills',      dir: 'max', min: 0, max: 1e6, rank: true },
+      wave:      { label: 'Wave',       dir: 'max', min: 0, max: 1e4, rank: true },
+    },
+  },
+  puzzles: {
+    label: 'Kudbee Puzzles',
+    primary: 'boardsSolved',
+    metrics: {
+      boardsSolved:  { label: 'Boards Solved', dir: 'max', min: 0, max: 1e6, rank: true },
+      bestMoves:     { label: 'Best Moves',    dir: 'min', min: 0, max: 1e6, rank: true },
+      flawlessStreak:{ label: 'Flawless Streak', dir: 'max', min: 0, max: 1e4, rank: true },
     },
   },
 };
