@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#05031a">
+<meta name="description" content="Kudbee Abyss — an interactive 3D story. Answer questions, choose your path, and experience a dark sci-fi fantasy journey. Art by Desiree Design.">
+<title>Kudbee Abyss — The Guardian's Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root { --cyan:#39e6ff; --violet:#c46bff; --green:#7CFFb2; --amber:#ffd34d; --ember:#ff5d3c; --pink:#ff6ec7; --ink:#05031a; --mo-dur-2:0.3s; --mo-ease-out:cubic-bezier(0.22,1,0.36,1); --fd:'Space Grotesk', system-ui, sans-serif; --fb:'Inter', system-ui, sans-serif; --grad:linear-gradient(120deg,#6af0ff,#9b8cff 55%,#d79bff); --glow:rgba(111,91,255,0.35); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; background:var(--ink); color:#cfe9ff; font-family:"Inter",system-ui,sans-serif;
+    overflow:hidden; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 0%, rgba(106,15,204,0.12), transparent 60%), var(--ink); }
+  #frame { position:relative; width:min(100vw, calc(100vh * 1.5)); height:min(100vh, calc(100vw / 1.5));
+    box-shadow:0 0 80px rgba(106,15,204,0.30), inset 0 0 0 1px rgba(57,230,255,0.12);
+    border-radius:14px; overflow:hidden; background:#05031a; }
+  #three-canvas { position:absolute; inset:0; z-index:0; }
+  #three-canvas canvas { display:block; width:100%; height:100%; }
+  .back-link { position:absolute; top:10px; left:12px; z-index:30; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; color:#9fb6c8; text-decoration:none; padding:6px 10px;
+    border:1px solid rgba(159,182,200,0.25); border-radius:6px; background:rgba(10,3,26,0.5); backdrop-filter:blur(6px); }
+  .back-link:hover { color:#fff; border-color:var(--cyan); }
+  .snd-btn { position:absolute; top:10px; right:12px; z-index:30; font-size:14px; line-height:1;
+    color:#9fb6c8; padding:6px 10px; border:1px solid rgba(159,182,200,0.25); border-radius:6px;
+    background:rgba(10,3,26,0.5); backdrop-filter:blur(6px); cursor:pointer; }
+  .snd-btn:hover { color:#fff; border-color:var(--cyan); }
+
+  .overlay { position:absolute; inset:0; z-index:25; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:radial-gradient(900px 600px at 50% 35%, rgba(10,3,26,0.70), rgba(3,0,10,0.96));
+    backdrop-filter:blur(3px); transition:opacity 0.5s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .overlay.hidden { opacity:0; pointer-events:none; }
+  .page { position:relative; width:100%; max-width:680px; text-align:center;
+    background:linear-gradient(160deg, rgba(15,12,35,0.92), rgba(8,6,20,0.96));
+    border:1px solid rgba(196,107,255,0.22); border-radius:22px; padding:clamp(24px,5vw,44px);
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 60px rgba(111,91,255,0.12);
+    animation:pageIn 0.6s var(--mo-ease-out) both; }
+  @keyframes pageIn { from { opacity:0; transform:translateY(18px) scale(0.98); } to { opacity:1; transform:none; } }
+  @media (max-width: 640px) {
+    .overlay { padding:18px; }
+    .page { padding:22px 18px; border-radius:18px; }
+  }
+
+  .kicker { font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); }
+  .chapter-label { margin-top:10px; font:700 clamp(22px,6vw,34px)/1.1 var(--fd); letter-spacing:-0.02em; color:#fff; }
+  .chapter-title { margin-top:6px; font:600 clamp(14px,3.5vw,18px)/1.4 var(--fd); letter-spacing:0.04em; color:var(--violet); text-transform:uppercase; }
+  .story-text { margin-top:22px; color:#e8eef8; font-size:clamp(15px,3.8vw,18px); line-height:1.65; max-width:520px; margin-left:auto; margin-right:auto; }
+  .speaker { font-family:"Space Grotesk"; font-weight:700; color:var(--cyan); font-size:13px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; }
+  .portrait { width:64px; height:64px; border-radius:50%; object-fit:cover; object-position:30% 0; border:1px solid rgba(57,230,255,0.35); box-shadow:0 0 20px rgba(57,230,255,0.15); margin:0 auto 12px; display:block; }
+  @media (max-width: 640px) { .portrait { width:52px; height:52px; } }
+  .choices { margin-top:26px; display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .choice-btn { width:100%; max-width:460px; padding:16px 22px; border-radius:999px; border:1px solid rgba(196,107,255,0.35);
+    background:rgba(255,255,255,0.06); color:#fff; font:600 15px/1.3 var(--fd); cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:12px; transition:transform var(--mo-dur-2) var(--mo-ease-out), background var(--mo-dur-2), border-color var(--mo-dur-2), box-shadow var(--mo-dur-2); }
+  .choice-btn::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--grad); box-shadow:0 0 10px var(--glow); flex:none; }
+  .choice-btn:hover, .choice-btn:focus-visible { transform:translateY(-3px); background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); box-shadow:0 16px 40px -12px rgba(111,91,255,0.45); outline:none; }
+  .hint { margin-top:22px; font-size:12px; color:#5a6276; letter-spacing:0.05em; }
+  .stats { margin-top:18px; font-size:13px; color:#b8c1d9; }
+  .stats b { color:var(--cyan); }
+  .share-btn { margin-top:14px; padding:10px 22px; border-radius:999px; border:1px solid rgba(196,107,255,0.35); background:rgba(255,255,255,0.06); color:#fff; font:600 14px/1.3 var(--fd); cursor:pointer; }
+  .share-btn:hover { background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); }
+  @media (pointer:coarse){ .hint { display:none; } }
+
+  /* preloader */
+  .preloader { position:absolute; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--ink); transition:opacity 0.6s ease, visibility 0.6s; }
+  .preloader.done { opacity:0; visibility:hidden; pointer-events:none; }
+  .preloader .pl-logo { font:700 clamp(24px,5vw,40px)/1 var(--fd); letter-spacing:-0.03em; }
+  .preloader .pl-logo em { font-style:normal; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .preloader .pl-bar { width:min(220px,60vw); height:1px; background:var(--border); position:relative; overflow:hidden; }
+  .preloader .pl-bar span { position:absolute; inset:0; background:var(--grad); transform:scaleX(0); transform-origin:left; transition:transform 0.8s var(--mo-ease-out); }
+  @media (prefers-reduced-motion: reduce) { .preloader .pl-bar span { transition:none; } }
+  /* scene transition flash */
+  #flash { position:absolute; inset:0; z-index:40; background:#05031a; opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
+  /* chapter map */
+  .map-btn { position:absolute; top:10px; left:70px; z-index:30; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:#9fb6c8; background:rgba(10,3,26,0.5); border:1px solid rgba(159,182,200,0.25); border-radius:6px; padding:6px 10px; cursor:pointer; backdrop-filter:blur(6px); }
+  .map-btn:hover { color:#fff; border-color:var(--cyan); }
+  #map { position:absolute; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(5,3,26,0.92); backdrop-filter:blur(6px); transition:opacity 0.3s ease; }
+  #map.hidden { opacity:0; pointer-events:none; }
+  .map-page { width:100%; max-width:520px; text-align:center; }
+  .map-page h2 { font:700 22px/1.1 var(--fd); margin-bottom:18px; }
+  .map-list { display:flex; flex-direction:column; gap:10px; }
+  .map-item { width:100%; padding:14px 18px; border-radius:12px; border:1px solid rgba(196,107,255,0.25); background:rgba(255,255,255,0.05); color:#fff; font:600 15px/1.3 var(--fd); cursor:pointer; transition:background 0.2s, border-color 0.2s; }
+  .map-item:hover { background:rgba(196,107,255,0.18); border-color:rgba(196,107,255,0.6); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <a class="back-link" href="../../index.html#games">&larr; Studio</a>
+    <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
+    <button class="map-btn" id="mapBtn">Map</button>
+    <div id="flash"></div>
+    <div class="preloader" id="preloader">
+      <div class="pl-logo">Abyss <em>·</em> Gate</div>
+      <div class="pl-bar"><span id="plBar"></span></div>
+    </div>
+    <div id="three-canvas"></div>
+
+    <div class="overlay" id="gate">
+      <div class="page" id="page">
+        <div class="kicker">⬡ Kudbee Games · Abyss</div>
+        <div class="chapter-label" id="chapterLabel">Chapter 1</div>
+        <div class="chapter-title" id="chapterTitle">The Awakening</div>
+        <div class="story-text" id="storyText"></div>
+        <div class="choices" id="choices"></div>
+        <div class="hint" id="hint">Choose your path — every answer leads somewhere new</div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="end">
+      <div class="page">
+        <div class="kicker">The End</div>
+        <div class="chapter-label">The Guardian's Gate</div>
+        <p class="story-text" style="margin-top:22px">The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — and another echo called her name.</p>
+        <div class="stats" id="endStats"></div>
+        <div class="choices">
+          <button class="share-btn" id="shareBtn" type="button">Share your journey</button>
+          <button class="btn" id="replayBtn" type="button">▶ Play Again</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="map">
+      <div class="map-page">
+        <h2>Chapters</h2>
+        <div class="map-list" id="mapList"></div>
+        <div class="choices" style="margin-top:18px">
+          <button class="btn secondary" id="mapClose" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== story nodes =====
+  var storyNodes = {
+    awakening: {
+      chapter: 'Chapter 1',
+      label: 'The Awakening',
+      speaker: 'NARRATOR',
+      text: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.',
+      choices: [
+        { label: 'Follow the flute', next: 'queen_flute' },
+        { label: 'Listen to the stones', next: 'queen_stones' }
+      ]
+    },
+    queen_flute: {
+      chapter: 'Chapter 1',
+      label: 'The Awakening',
+      speaker: 'QUEEN',
+      text: 'The flute hums louder. It wants to take me somewhere. I can feel a path in the violet haze — not a road, but a resonance only I can hear.',
+      choices: [
+        { label: 'Climb the broken spire', next: 'spire' },
+        { label: 'Call to the small creature', next: 'vey_follow' }
+      ]
+    },
+    queen_stones: {
+      chapter: 'Chapter 1',
+      label: 'The Awakening',
+      speaker: 'QUEEN',
+      text: 'The stones beneath me speak in cold frequencies. Something tall stands beyond the pillar — not a threat, but a question.',
+      choices: [
+        { label: 'Approach the guardian', next: 'guardian_approach' },
+        { label: 'Ask Vey to guide me', next: 'vey_guardian' }
+      ]
+    },
+    spire: {
+      chapter: 'Chapter 2',
+      label: 'The Companion',
+      speaker: 'NARRATOR',
+      text: 'The spire crumbles under each step. At the top, a crystal pulses like a heartbeat. The song in her flute answers it.',
+      choices: [
+        { label: 'Take the crystal', next: 'crystal' },
+        { label: 'Offer the flute instead', next: 'flute_offering' }
+      ]
+    },
+    vey_follow: {
+      chapter: 'Chapter 2',
+      label: 'The Companion',
+      speaker: 'VEY',
+      text: 'I follow, low and quick. The Guardian stirs, but it does not attack. It is waiting — the same patience it had before the corruption.',
+      choices: [
+        { label: 'Confront the guardian', next: 'guardian_approach' },
+        { label: 'Hide and watch', next: 'hide' }
+      ]
+    },
+    vey_guardian: {
+      chapter: 'Chapter 2',
+      label: 'The Companion',
+      speaker: 'VEY',
+      text: 'I tell the Guardian everything. It listens with a face that used to smile. The corruption burns, but memory is stronger.',
+      choices: [
+        { label: 'Reach out your hand', next: 'reconcile' },
+        { label: 'Play the Song of Recall', next: 'flute_play' }
+      ]
+    },
+    guardian_approach: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'GUARDIAN',
+      text: '...you... carry the echo... my lady... the corruption... it burns... but the song remembers what I have forgotten.',
+      choices: [
+        { label: 'Embrace the Guardian', next: 'reconcile' },
+        { label: 'Play the flute', next: 'flute_play' }
+      ]
+    },
+    crystal: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'QUEEN',
+      text: 'The crystal hums against my flute. The song grows stronger. I can feel the Guardian\'s awareness turning toward me — not to fight, but to be remembered.',
+      choices: [
+        { label: 'Reach out', next: 'reconcile' },
+        { label: 'Play the Song of Recall', next: 'flute_play' }
+      ]
+    },
+    flute_offering: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'NARRATOR',
+      text: 'She offers the flute to the spire. The crystal accepts, and the melody becomes a bridge of light between them.',
+      choices: [
+        { label: 'Walk through the light', next: 'reconcile' }
+      ]
+    },
+    hide: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'VEY',
+      text: 'We watch. The Guardian kneels. The crown of shadows falls away like dust. It was never waiting to fight — only to be seen.',
+      choices: [
+        { label: 'Step forward', next: 'reconcile' }
+      ]
+    },
+    reconcile: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'QUEEN',
+      text: 'I remember now. You were my captain, my shield, my brother. The crown of shadows deceived you. Let me free you.',
+      choices: [
+        { label: 'Open the gate', next: 'gate_opens' }
+      ]
+    },
+    flute_play: {
+      chapter: 'Chapter 3',
+      label: "The Guardian's Gate",
+      speaker: 'GUARDIAN',
+      text: 'The song... it remembers everything... The gate opens. The corruption dissipates. At last, peace.',
+      choices: [
+        { label: 'Walk into the dawn', next: 'gate_opens' }
+      ]
+    },
+    gate_opens: {
+      chapter: 'The End',
+      label: "The Guardian's Gate",
+      speaker: 'NARRATOR',
+      text: 'The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered — and another echo called her name.',
+      choices: []
+    }
+  };
+
+  var currentNode = 'awakening';
+  var choicesMade = [];
+  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var chapters = [
+    { title: 'Chapter 1', label: 'The Awakening' },
+    { title: 'Chapter 2', label: 'The Companion' },
+    { title: 'Chapter 3', label: "The Guardian's Gate" },
+    { title: 'The End', label: "The Guardian's Gate" }
+  ];
+
+  // ===== audio =====
+  var AC = null, mGain = null, muted = false;
+  try { muted = localStorage.getItem('kudbee.abyss.muted') === '1'; } catch (e) {}
+  function audioInit() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    var Ctor = window.AudioContext || window.webkitAudioContext; if (!Ctor) return;
+    try { AC = new Ctor(); } catch (e) { return; }
+    mGain = AC.createGain(); mGain.gain.value = muted ? 0 : 0.25; mGain.connect(AC.destination);
+    startAmbient();
+  }
+  function setMuted(m) {
+    muted = m; if (mGain) mGain.gain.value = muted ? 0 : 0.25;
+    try { localStorage.setItem('kudbee.abyss.muted', muted ? '1' : '0'); } catch (e) {}
+    var btn = document.getElementById('sndBtn');
+    if (btn) { btn.textContent = muted ? '🔇' : '🔊'; btn.setAttribute('aria-pressed', muted ? 'true' : 'false'); }
+  }
+  function tone(freq, dur, type, vol, slideTo, at) {
+    if (!AC || muted) return;
+    var t = AC.currentTime + (at || 0);
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(mGain); o.start(t); o.stop(t + dur + 0.03);
+  }
+  var sfxLast = {};
+  function sfx(name) {
+    if (!AC || muted) return;
+    var now = performance.now();
+    if (now - (sfxLast[name] || 0) < 25) return; sfxLast[name] = now;
+    switch (name) {
+      case 'page': tone(440, 0.12, 'sine', 0.12, 660); tone(660, 0.1, 'sine', 0.08, 990, 0.05); break;
+      case 'choice': tone(330, 0.15, 'sine', 0.14, 880); tone(550, 0.12, 'sine', 0.1, 1100, 0.05); break;
+      case 'chapter': tone(220, 0.25, 'sine', 0.18, 880); tone(330, 0.25, 'sine', 0.12, 1320, 0.08); break;
+      case 'end': tone(110, 0.8, 'sine', 0.18, 55); tone(165, 0.6, 'sine', 0.12, 82, 0.1); break;
+    }
+  }
+
+  // ===== ambient drone =====
+  var ambientOsc = null, ambientGain = null, ambientLfo = null;
+  function startAmbient() {
+    if (!AC || ambientOsc) return;
+    ambientOsc = AC.createOscillator();
+    ambientOsc.type = 'sine';
+    ambientOsc.frequency.value = 55;
+    ambientGain = AC.createGain();
+    ambientGain.gain.value = 0.04;
+    ambientLfo = AC.createOscillator();
+    ambientLfo.type = 'sine';
+    ambientLfo.frequency.value = 0.1;
+    var lfoGain = AC.createGain();
+    lfoGain.gain.value = 10;
+    ambientLfo.connect(lfoGain);
+    lfoGain.connect(ambientOsc.frequency);
+    ambientOsc.connect(ambientGain);
+    ambientGain.connect(AC.destination);
+    ambientOsc.start();
+    ambientLfo.start();
+  }
+  function setAmbient(chapter) {
+    if (!ambientOsc) return;
+    var freq = 55;
+    if (chapter === 'Chapter 2') freq = 65;
+    if (chapter === 'Chapter 3' || chapter === 'The End') freq = 75;
+    ambientOsc.frequency.setTargetAtTime(freq, AC.currentTime, 0.5);
+  }
+
+  function flashTransition(callback) {
+    var flash = document.getElementById('flash');
+    if (!flash) { callback(); return; }
+    flash.style.opacity = '1';
+    setTimeout(function () {
+      callback();
+      setTimeout(function () { flash.style.opacity = '0'; }, 80);
+    }, 220);
+  }
+
+  // ===== three.js scene =====
+  var scene, camera, renderer, backdrop, stars, orb, fireflies, nebula;
+  var threeReady = false;
+  var artImg = new Image();
+  artImg.src = 'assets/character/queen.png';
+
+  function initThree() {
+    if (typeof THREE === 'undefined' || !artImg.complete) return;
+    var container = document.getElementById('three-canvas');
+    var rect = container.getBoundingClientRect();
+    var W = rect.width, H = rect.height;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05031a);
+    scene.fog = new THREE.FogExp2(0x05031a, 0.012);
+
+    camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
+    camera.position.set(0, 0, 7);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    var ambient = new THREE.AmbientLight(0x404060, 1.2);
+    scene.add(ambient);
+    var dir = new THREE.DirectionalLight(0xc46bff, 1.0);
+    dir.position.set(5, 5, 5);
+    scene.add(dir);
+    var cyan = new THREE.PointLight(0x39e6ff, 1.4, 25);
+    cyan.position.set(-5, 3, 4);
+    scene.add(cyan);
+    var pink = new THREE.PointLight(0xff6ec7, 1.0, 25);
+    pink.position.set(5, -2, 4);
+    scene.add(pink);
+
+    // nebula parallax layer
+    var nebulaCanvas = document.createElement('canvas');
+    nebulaCanvas.width = 512; nebulaCanvas.height = 512;
+    var nctx = nebulaCanvas.getContext('2d');
+    var ng = nctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+    ng.addColorStop(0, 'rgba(106,15,204,0.5)');
+    ng.addColorStop(0.5, 'rgba(57,230,255,0.15)');
+    ng.addColorStop(1, 'rgba(5,3,26,0)');
+    nctx.fillStyle = ng;
+    nctx.fillRect(0, 0, 512, 512);
+    var nebulaTex = new THREE.CanvasTexture(nebulaCanvas);
+    var nebulaGeo = new THREE.PlaneGeometry(30, 22);
+    var nebulaMat = new THREE.MeshBasicMaterial({ map: nebulaTex, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+    var nebula = new THREE.Mesh(nebulaGeo, nebulaMat);
+    nebula.position.z = -22;
+    scene.add(nebula);
+
+    // backdrop image
+    var tex = new THREE.Texture(artImg);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.needsUpdate = true;
+    var backGeo = new THREE.PlaneGeometry(22, 16.5);
+    var backMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    backdrop = new THREE.Mesh(backGeo, backMat);
+    backdrop.position.z = -16;
+    scene.add(backdrop);
+
+    // stars
+    var starGeo = new THREE.BufferGeometry();
+    var starCount = 300;
+    var positions = new Float32Array(starCount * 3);
+    for (var i = 0; i < starCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 50;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+      positions[i * 3 + 2] = -12 - Math.random() * 25;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    var starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.09, transparent: true, opacity: 0.75 });
+    stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // fireflies
+    var flyGeo = new THREE.BufferGeometry();
+    var flyCount = 60;
+    var flyPos = new Float32Array(flyCount * 3);
+    var flySpeed = new Float32Array(flyCount);
+    for (var i = 0; i < flyCount; i++) {
+      flyPos[i * 3] = (Math.random() - 0.5) * 20;
+      flyPos[i * 3 + 1] = (Math.random() - 0.5) * 12;
+      flyPos[i * 3 + 2] = -5 - Math.random() * 10;
+      flySpeed[i] = 0.5 + Math.random() * 1.5;
+    }
+    flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
+    var flyMat = new THREE.PointsMaterial({ color: 0x7cffb2, size: 0.12, transparent: true, opacity: 0.8 });
+    var fireflies = new THREE.Points(flyGeo, flyMat);
+    scene.add(fireflies);
+
+    // floating orb
+    var orbGeo = new THREE.SphereGeometry(0.35, 32, 32);
+    var orbMat = new THREE.MeshBasicMaterial({ color: 0xc46bff, transparent: true, opacity: 0.8 });
+    orb = new THREE.Mesh(orbGeo, orbMat);
+    orb.position.set(0, 1.5, -2);
+    scene.add(orb);
+
+    threeReady = true;
+    var plBar = document.getElementById('plBar');
+    var preloader = document.getElementById('preloader');
+    if (plBar) plBar.style.transform = 'scaleX(1)';
+    setTimeout(function () { if (preloader) preloader.classList.add('done'); }, 500);
+  }
+
+  function speakerPosition(speaker) {
+    if (speaker === 'GUARDIAN') return '72% 30%';
+    if (speaker === 'CREATURE' || speaker === 'VEY') return '0% 30%';
+    return '30% 0';
+  }
+
+  // ===== story navigation =====
+  function renderNode(nodeId) {
+    var node = storyNodes[nodeId];
+    if (!node) return;
+    currentNode = nodeId;
+    try { localStorage.setItem('kudbee.abyss.node', nodeId); } catch (e) {}
+    document.getElementById('chapterLabel').textContent = node.chapter;
+    document.getElementById('chapterTitle').textContent = node.label;
+    var pos = speakerPosition(node.speaker);
+    document.getElementById('storyText').innerHTML = '<img class="portrait" src="assets/character/queen.png" alt="" style="object-position:' + pos + '"><div class="speaker">' + node.speaker + '</div>' + node.text;
+    var choicesEl = document.getElementById('choices');
+    choicesEl.innerHTML = '';
+    if (node.choices.length === 0) {
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('end').classList.remove('hidden');
+      document.getElementById('endStats').innerHTML = 'Choices made: <b>' + choicesMade.length + '</b> · Final chapter: <b>' + node.chapter + '</b>';
+      sfx('end');
+      return;
+    }
+    startAmbient();
+    setAmbient(node.chapter);
+    document.getElementById('hint').style.display = 'block';
+    for (var i = 0; i < node.choices.length; i++) {
+      var btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.type = 'button';
+      btn.textContent = node.choices[i].label;
+      btn.addEventListener('click', function (next, label) { return function () { audioInit(); choicesMade.push(label); flashTransition(function () { sfx('choice'); renderNode(next); }); }; }(node.choices[i].next, node.choices[i].label));
+      choicesEl.appendChild(btn);
+    }
+    if (node.choices.length === 1) {
+      var single = choicesEl.querySelector('.choice-btn');
+      if (single) single.textContent = node.choices[0].label + ' — continue';
+    }
+    if (node.chapter === 'Chapter 2' || node.chapter === 'Chapter 3' || node.chapter === 'The End') sfx('chapter');
+  }
+
+  function startStory(replay) {
+    audioInit();
+    if (replay) {
+      choicesMade = [];
+      try { localStorage.removeItem('kudbee.abyss.node'); } catch (e) {}
+    }
+    flashTransition(function () {
+      document.getElementById('end').classList.add('hidden');
+      document.getElementById('gate').classList.remove('hidden');
+      var saved = null;
+      try { saved = localStorage.getItem('kudbee.abyss.node'); } catch (e) {}
+      var startNode = (replay || !saved || !storyNodes[saved]) ? 'awakening' : saved;
+      renderNode(startNode);
+    });
+  }
+
+  // ===== chapter map =====
+  function buildMap() {
+    var list = document.getElementById('mapList');
+    if (!list) return;
+    list.innerHTML = '';
+    for (var i = 0; i < chapters.length; i++) {
+      (function (ch) {
+        var btn = document.createElement('button');
+        btn.className = 'map-item';
+        btn.textContent = ch.title + ' — ' + ch.label;
+        btn.addEventListener('click', function () {
+          document.getElementById('map').classList.add('hidden');
+          var firstId = null;
+          for (var id in storyNodes) {
+            if (storyNodes[id].chapter === ch.title) { firstId = id; break; }
+          }
+          flashTransition(function () { renderNode(firstId || 'awakening'); });
+        });
+        list.appendChild(btn);
+      })(chapters[i]);
+    }
+  }
+  document.getElementById('mapBtn').addEventListener('click', function () { buildMap(); document.getElementById('map').classList.remove('hidden'); });
+  document.getElementById('mapClose').addEventListener('click', function () { document.getElementById('map').classList.add('hidden'); });
+
+  // ===== input =====
+  document.getElementById('replayBtn').addEventListener('click', function () { startStory(true); });
+  document.getElementById('shareBtn').addEventListener('click', function () {
+    var text = 'I explored Kudbee Abyss — The Guardian\'s Gate and made ' + choicesMade.length + ' choices. Play at https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    }
+  });
+  document.getElementById('sndBtn').addEventListener('click', function() { audioInit(); setMuted(!muted); });
+  setMuted(muted);
+
+  window.addEventListener('keydown', function(e) {
+    var k = e.key.toLowerCase();
+    if (k === 'm' && !e.repeat) { setMuted(!muted); e.preventDefault(); return; }
+    if (document.getElementById('gate').classList.contains('hidden')) {
+      if (k === 'enter') { e.preventDefault(); startStory(); }
+      return;
+    }
+  });
+
+  // ===== init =====
+  artImg.onload = initThree;
+  initThree();
+
+  // ===== loop =====
+  function animate() {
+    requestAnimationFrame(animate);
+    var t = performance.now() * 0.001;
+    if (threeReady) {
+      camera.position.x = reducedMotion ? 0 : Math.sin(t * 0.15) * 0.6;
+      camera.position.y = reducedMotion ? 0 : Math.sin(t * 0.12) * 0.3;
+      camera.lookAt(0, 0, 0);
+      backdrop.rotation.z = reducedMotion ? 0 : Math.sin(t * 0.05) * 0.01;
+      nebula.position.x = reducedMotion ? 0 : Math.sin(t * 0.03) * 0.4;
+      nebula.position.y = reducedMotion ? 0 : Math.cos(t * 0.025) * 0.3;
+      stars.rotation.y = reducedMotion ? 0 : t * 0.008;
+      if (fireflies && !reducedMotion) {
+        var pos = fireflies.geometry.attributes.position;
+        for (var i = 0; i < pos.count; i++) {
+          var x = pos.getX(i) + Math.sin(t * 0.5 + i) * 0.002;
+          var y = pos.getY(i) + Math.cos(t * 0.4 + i * 0.5) * 0.002;
+          pos.setX(i, x); pos.setY(i, y);
+        }
+        pos.needsUpdate = true;
+      }
+      renderer.render(scene, camera);
+    }
+  }
+  animate();
+
+  window.addEventListener('resize', function() {
+    if (!threeReady) return;
+    var container = document.getElementById('three-canvas');
+    var rect = container.getBoundingClientRect();
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(rect.width, rect.height);
+  });
+})();
+</script>
+</body>
+</html>

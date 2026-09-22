@@ -154,6 +154,8 @@
   </div>
 </div>
 
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'munch' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1019,6 +1021,7 @@
     document.getElementById('oCloseCalls').textContent = String(closeCalls);
     document.getElementById('oKick').textContent = score >= best && score > 0 ? 'New best — the grid remembers' : 'Grid secured by the drones';
     overOv.classList.remove('hidden');
+    lbPost(score, level, chipsEaten);
   }
 
   function collide() {
@@ -1428,6 +1431,36 @@
   requestAnimationFrame(function () { fitCanvas(); });
   updateHUD();
   rafId = requestAnimationFrame(frame);
+
+  /* ============================== ONLINE LEADERBOARD ============================== */
+  // kd-leaderboard.js SDK → Worker + D1. Posts match results after game over.
+  // Demo mode works immediately (name prompt); full online when Worker is deployed.
+  var lb = null, lbBusy = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard) return;
+    if (lb) return;
+    window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+      .then(function (c) { lb = c; })
+      .catch(function () {});
+  }
+  function lbPost(sc, lv, chips) {
+    if (!window.KDLeaderboard) return;
+    if (!lb) { lbBoot(); return; }
+    if (lbBusy) return;
+    lbBusy = true;
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Beezer';
+      lb.submit(nm, { score: sc || 0, level: lv || 0, chipsEaten: chips || 0 })
+        .then(function () { lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    } else submit();
+  }
+  lbBoot();
 
   /* ============================== TEST HOOK ============================== */
   // Small read-mostly handle used by the studio's automated Playwright checks.

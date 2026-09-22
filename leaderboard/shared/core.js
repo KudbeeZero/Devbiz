@@ -65,6 +65,43 @@ export const GAMES = {
       modesCompleted:{ label: 'Modes Completed', dir: 'max', min: 0, max: 10,   rank: true },
     },
   },
+  contra: {
+    label: 'Kudbee Contra',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      bestCombo: { label: 'Max Combo',  dir: 'max', min: 0, max: 1e6, rank: true },
+      waves:     { label: 'Waves',      dir: 'max', min: 0, max: 1e4, rank: true },
+      kills:     { label: 'Kills',      dir: 'max', min: 0, max: 1e6, rank: true },
+    },
+  },
+  munch: {
+    label: 'Kudbee Munch',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      level:     { label: 'Level',      dir: 'max', min: 0, max: 1e4, rank: true },
+      chipsEaten:{ label: 'Chips',      dir: 'max', min: 0, max: 1e9, rank: true },
+    },
+  },
+  orbital: {
+    label: 'Kudbee Orbital',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      kills:     { label: 'Kills',      dir: 'max', min: 0, max: 1e6, rank: true },
+      wave:      { label: 'Wave',       dir: 'max', min: 0, max: 1e4, rank: true },
+    },
+  },
+  puzzles: {
+    label: 'Kudbee Puzzles',
+    primary: 'boardsSolved',
+    metrics: {
+      boardsSolved:  { label: 'Boards Solved', dir: 'max', min: 0, max: 1e6, rank: true },
+      bestMoves:     { label: 'Best Moves',    dir: 'min', min: 0, max: 1e6, rank: true },
+      flawlessStreak:{ label: 'Flawless Streak', dir: 'max', min: 0, max: 1e4, rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }
@@ -96,7 +133,8 @@ export function sanitizeMetrics(game, metrics) {
 
 // ---- Ranking -----------------------------------------------------------
 function rankRows(rows, metric) {
-  // rows already sorted desc by metric; assign 1-based competition rank.
+  // rows already sorted by metric (dir from GAMES catalog; max=DESC, min=ASC);
+  // assign 1-based competition rank.
   let rank = 0, prev = null, seen = 0;
   return rows.map((r) => {
     seen++;

@@ -31,9 +31,16 @@ export function createFileStore(path) {
     await rename(tmp, path);
   }
 
+  function getDir(game, metric) {
+    const def = GAMES[game];
+    return (def && def.metrics[metric] && def.metrics[metric].dir) || 'max';
+  }
+
   function sorted(game, metric, limit) {
+    const dir = getDir(game, metric);
     const recs = Object.values(data[game] || {});
-    recs.sort((a, b) => (b[metric] || 0) - (a[metric] || 0) || a.updatedAt - b.updatedAt);
+    const cmp = dir === 'min' ? -1 : 1;  // min: lower first (ASC); max: higher first (DESC)
+    recs.sort((a, b) => cmp * ((b[metric] || 0) - (a[metric] || 0)) || a.updatedAt - b.updatedAt);
     return limit ? recs.slice(0, limit) : recs;
   }
 
@@ -56,9 +63,11 @@ export function createFileStore(path) {
       if (!data[game]) data[game] = {};
       const prev = data[game][userId] || { userId, game };
       const rec = { ...prev, userId, game, name };
-      // Keep the best-ever for each metric (all metrics are dir:'max').
+      // Keep the best-ever for each metric according to dir ('max' or 'min').
       for (const key of Object.keys(metrics)) {
-        rec[key] = Math.max(prev[key] || 0, metrics[key]);
+        const dir = getDir(game, key);
+        if (dir === 'min') rec[key] = Math.min(prev[key] || Infinity, metrics[key]);
+        else rec[key] = Math.max(prev[key] || 0, metrics[key]);
       }
       rec.updatedAt = Date.now();
       data[game][userId] = rec;

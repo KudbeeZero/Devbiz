@@ -76,30 +76,37 @@ no test was backfilled to inflate a number, and there is no fake "80%" claim.
 ## Metrics
 
 Defined once in `shared/core.js`. Per game:
-- **`GAMES.darts`** — rating, bestCheckout, total180s, wins, bestStreak.
+- **`GAMES.darts`** — rating (primary), bestCheckout, total180s, wins, bestStreak.
 - **`GAMES.riff`** — score (primary), bestCombo, accuracy.
+- **`GAMES.riff2`** — score (primary), bestCombo, accuracy.
+- **`GAMES.voidrunner`** — score (primary), bestCombo, dist, waveSurvived, bestTime.
+- **`GAMES.pinball`** — score (primary), bestMultiball, modesCompleted.
+- **`GAMES.contra`** — score (primary), bestCombo, waves, kills.
+- **`GAMES.munch`** — score (primary), level, chipsEaten.
+- **`GAMES.orbital`** — score (primary), kills, wave.
+- **`GAMES.puzzles`** — boardsSolved (primary), bestMoves (lower is better), flawlessStreak.
 
 The server keeps each player's *best-ever* value and clamps inputs to sane
-bounds (e.g. checkout ≤ 170, accuracy ≤ 100). Add a metric there + a column in
-`schema.sql` to extend. Add another game by adding a `GAMES` entry.
+bounds (e.g. checkout ≤ 170, accuracy ≤ 100). Metrics with `dir: 'min'`
+(e.g. puzzles `bestMoves`) keep the lowest value rather than the highest.
+Add a metric there + a column in `schema.sql` to extend. Add another game by
+adding a `GAMES` entry.
 
-**Kudbee Riff is wired in** (`games/kudbee-riff/` posts on the results screen and
-shows a Top-10). To make Riff scores record online:
+**Wired games.** The following games post results to the leaderboard SDK after
+each match/run: **riff**, **riff-2**, **pinball**, **voidrunner**, **darts**,
+**contra**, **munch**, **orbital**, and **puzzles**. Each game sets
+`window.KD_LB_CONFIG = { GAME: '<name>', ... }` and loads
+`leaderboard/client/kd-leaderboard.js`, then calls `lb.submit(name, metrics)`
+after a match. Demo mode works immediately (name prompt); full online when the
+Worker is deployed and `API_BASE` is set. To make scores record online:
 1. Deploy the Worker (see *Deploy to Cloudflare* below) and apply `schema.sql`.
-   On an **already-deployed** D1, also run the one-time migration at the bottom
-   of `schema.sql` (three `ALTER TABLE … ADD COLUMN` lines for score/bestCombo/
-   accuracy), then the new indexes.
-2. Point the game at the API: in `games/kudbee-riff/index.html` set
-   `KD_LB_CONFIG.API_BASE` to your Worker URL (e.g.
-   `https://kudbee-leaderboard.<acct>.workers.dev`) **or** route `/api` on the
-   studio origin to the Worker (then `API_BASE: ''` works same-origin).
-Until then the game degrades gracefully — local best only, posts fail quietly.
-
-**Kudbee Voidrunner is also wired in** (`games/kudbee-voidrunner/`). It reuses
-the `score`/`bestCombo` columns and adds a new `dist` (depth) metric. On an
-already-deployed D1, run the one-time `ALTER TABLE scores ADD COLUMN dist`
-migration at the bottom of `schema.sql` (plus its index) exactly once, matching
-steps 1–2 for Riff.
+   On an **already-deployed** D1, run the one-time migration at the bottom of
+   `schema.sql` (the `ALTER TABLE … ADD COLUMN` lines) for each metric column,
+   then the new indexes.
+2. Point the game at the API: set `KD_LB_CONFIG.API_BASE` to your Worker URL
+   (e.g. `https://kudbee-leaderboard.<acct>.workers.dev`) **or** route `/api`
+   on the studio origin to the Worker (then `API_BASE: ''` works same-origin).
+Until then the games degrade gracefully — local best only, posts fail quietly.
 
 `rating` mirrors the in-game formula so the page and the game agree:
 `1180 + level*38 + ladderRank*150 + bestStreak*22 + wins*6`.

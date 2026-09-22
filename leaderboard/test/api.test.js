@@ -10,15 +10,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runApi } from '../shared/http.js';
 import { resolveAuth, authError } from '../shared/auth.js';
-import { cleanName, sanitizeMetrics } from '../shared/core.js';
+import { cleanName, sanitizeMetrics, GAMES } from '../shared/core.js';
 
 // --- in-memory store implementing the core store interface -------------
 function memStore() {
   const data = { darts: {} };
   return {
     async topByMetric(game, metric, limit) {
+      const dir = (GAMES[game] && GAMES[game].metrics[metric] && GAMES[game].metrics[metric].dir) || 'max';
       const recs = Object.values(data[game] || {});
-      recs.sort((a, b) => (b[metric] || 0) - (a[metric] || 0) || a.updatedAt - b.updatedAt);
+      const cmp = dir === 'min' ? -1 : 1;
+      recs.sort((a, b) => cmp * ((b[metric] || 0) - (a[metric] || 0)) || a.updatedAt - b.updatedAt);
       return recs.slice(0, limit).map((r) => ({ ...r }));
     },
     async getUser(game, id) { const r = (data[game] || {})[id]; return r ? { ...r } : null; },
@@ -27,7 +29,11 @@ function memStore() {
       data[game] = data[game] || {};
       const prev = data[game][id] || { userId: id, game };
       const rec = { ...prev, userId: id, game, name };
-      for (const k of Object.keys(metrics)) rec[k] = Math.max(prev[k] || 0, metrics[k]);
+      for (const k of Object.keys(metrics)) {
+        const dir = (GAMES[game] && GAMES[game].metrics[k] && GAMES[game].metrics[k].dir) || 'max';
+        if (dir === 'min') rec[k] = Math.min(prev[k] != null ? prev[k] : Infinity, metrics[k]);
+        else rec[k] = Math.max(prev[k] || 0, metrics[k]);
+      }
       rec.updatedAt = Date.now() + Math.random();
       data[game][id] = rec;
       return { ...rec };
@@ -252,5 +258,24 @@ test('voidrunner: score + dist metrics submit, validate and rank', async () => {
     query: new URLSearchParams({ game: 'voidrunner', metric: 'dist' }),
     headers: demoHeaders('nova', 'Nova'),
   });
-  assert.equal(byDist.body.entries[0].name, 'Echo');   // Echo also dives deepest
+   assert.equal(byDist.body.entries[0].name, 'Echo');   // Echo also dives deepest
+});
+
+test('dir:min metric (puzzles bestMoves) ranks ascending — lower is better', async () => {
+  const store = memStore();
+  await runApi(store, {}, { method: 'POST', path: '/api/scores', query: new URLSearchParams(), headers: demoHeaders('low', 'Low'), body: { game: 'puzzles', metrics: { boardsSolved: 5, bestMoves: 12 } } });
+  await runApi(store, {}, { method: 'POST', path: '/api/scores', query: new URLSearchParams(), headers: demoHeaders('mid', 'Mid'), body: { game: 'puzzles', metrics: { boardsSolved: 5, bestMoves: 20 } } });
+  await runApi(store, {}, { method: 'POST', path: '/api/scores', query: new URLSearchParams(), headers: demoHeaders('high', 'High'), body: { game: 'puzzles', metrics: { boardsSolved: 5, bestMoves: 8 } } });
+
+  const lb = await runApi(store, {}, { method: 'GET', path: '/api/leaderboard', query: new URLSearchParams({ game: 'puzzles', metric: 'bestMoves' }), auth: null });
+  assert.equal(lb.body.entries[0].name, 'High');   // 8 moves — lowest ranks #1
+  assert.equal(lb.body.entries[0].value, 8);
+  assert.equal(lb.body.entries[1].name, 'Low');    // 12
+  assert.equal(lb.body.entries[2].name, 'Mid');    // 20 — slowest ranks last
+
+  // upsert: submitting a worse (higher) bestMoves must NOT overwrite the existing best
+  await runApi(store, {}, { method: 'POST', path: '/api/scores', query: new URLSearchParams(), headers: demoHeaders('high', 'High'), body: { game: 'puzzles', metrics: { boardsSolved: 6, bestMoves: 15 } } });
+  const highRec = await store.getUser('puzzles', 'demo:high');
+  assert.equal(highRec.bestMoves, 8);   // unchanged — MIN(8, 15) = 8
+  assert.equal(highRec.boardsSolved, 6); // MAX(5, 6) = 6 — max still applies
 });
