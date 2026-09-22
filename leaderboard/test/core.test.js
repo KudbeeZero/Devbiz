@@ -9,14 +9,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runApi } from '../shared/http.js';
-import { handle, gameDef, sanitizeMetrics } from '../shared/core.js';
+import { handle, gameDef, sanitizeMetrics, GAMES } from '../shared/core.js';
 
 function memStore() {
   const data = { darts: {} };
   return {
     async topByMetric(game, metric, limit) {
+      const dir = (GAMES[game] && GAMES[game].metrics[metric] && GAMES[game].metrics[metric].dir) || 'max';
       const recs = Object.values(data[game] || {});
-      recs.sort((a, b) => (b[metric] || 0) - (a[metric] || 0) || a.updatedAt - b.updatedAt);
+      const cmp = dir === 'min' ? -1 : 1;
+      recs.sort((a, b) => cmp * ((b[metric] || 0) - (a[metric] || 0)) || a.updatedAt - b.updatedAt);
       return recs.slice(0, limit).map((r) => ({ ...r }));
     },
     async getUser(game, id) { const r = (data[game] || {})[id]; return r ? { ...r } : null; },
@@ -25,7 +27,11 @@ function memStore() {
       data[game] = data[game] || {};
       const prev = data[game][id] || { userId: id, game };
       const rec = { ...prev, userId: id, game, name };
-      for (const k of Object.keys(metrics)) rec[k] = Math.max(prev[k] || 0, metrics[k]);
+      for (const k of Object.keys(metrics)) {
+        const dir = (GAMES[game] && GAMES[game].metrics[k] && GAMES[game].metrics[k].dir) || 'max';
+        if (dir === 'min') rec[k] = Math.min(prev[k] != null ? prev[k] : Infinity, metrics[k]);
+        else rec[k] = Math.max(prev[k] || 0, metrics[k]);
+      }
       rec.updatedAt = Date.now() + Math.random();
       data[game][id] = rec;
       return { ...rec };
@@ -42,7 +48,7 @@ test('GET /api/health returns ok + the game catalog', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
   assert.equal(r.body.service, 'kudbee-leaderboard');
-  assert.deepEqual(r.body.games.sort(), Object.keys(gameDef('darts') ? { darts: 1, riff: 1, riff2: 1, voidrunner: 1 } : {}).sort());
+  assert.deepEqual(r.body.games.sort(), Object.keys(gameDef('darts') ? { darts: 1, riff: 1, riff2: 1, voidrunner: 1, pinball: 1, contra: 1, munch: 1, orbital: 1, puzzles: 1 } : {}).sort());
   assert.ok(r.body.games.includes('darts'));
 });
 

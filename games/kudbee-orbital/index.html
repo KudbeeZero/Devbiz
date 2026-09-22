@@ -101,6 +101,8 @@
   </div>
 </div>
 
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'orbital' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 <script>
 /* ===========================================================================
  * Kudbee Orbital — zero-gravity twin-stick arena skirmish
@@ -559,6 +561,7 @@
     S.over(); shake(16);
     pauseBtn.style.display = 'none';
     overOv.classList.remove('hidden');
+    lbPost(score, wave, kills);
   }
   function showBest() {
     var el = document.getElementById('gBest');
@@ -1138,6 +1141,34 @@
   }
   resize();
   requestAnimationFrame(frame);
+
+  /* ============================== ONLINE LEADERBOARD ============================== */
+  var lb = null, lbBusy = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard) return;
+    if (lb) return;
+    window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+      .then(function (c) { lb = c; })
+      .catch(function () {});
+  }
+  function lbPost(sc, wv, kl) {
+    if (!window.KDLeaderboard) return;
+    if (!lb) { lbBoot(); return; }
+    if (lbBusy) return;
+    lbBusy = true;
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Pilot';
+      lb.submit(nm, { score: sc || 0, wave: wv || 0, kills: kl || 0 })
+        .then(function () { lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    } else submit();
+  }
+  lbBoot();
 
   // ---------- test hook (harmless in production; used by automated verification) ----------
   window.__test = {

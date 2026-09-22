@@ -127,6 +127,8 @@
   </div>
 </div>
 
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'puzzles' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 <script>
 /* ===========================================================================
  * Kudbee Puzzles — "Circuit"
@@ -260,6 +262,12 @@
     for (var i = 0; i < LEVELS.length; i++) if (!starsFor(i) && unlocked(i)) return i;
     return 0;
   }
+  function countSolved() {
+    var n = 0; for (var k in progress) if (progress[k] > 0) n++; return n;
+  }
+  var bestMoves = 0;
+  try { bestMoves = parseInt(localStorage.getItem('kudbee.puzzles.bestMoves') || '0', 10) || 0; } catch (e) {}
+  function saveBestMoves() { try { localStorage.setItem('kudbee.puzzles.bestMoves', String(bestMoves)); } catch (e) {} }
 
   // ---------- game state ----------
   var screen = 'title';          // title | select | play
@@ -318,10 +326,12 @@
       var st = moves <= L.par ? 3 : moves <= L.par * 2 ? 2 : 1;
       var key = String(lvIndex + 1);
       if ((progress[key] || 0) < st) { progress[key] = st; saveProgress(); }
+      if (bestMoves === 0 || moves < bestMoves) { bestMoves = moves; saveBestMoves(); }
       flawlessStreak = st === 3 ? flawlessStreak + 1 : 0;
       S.solve();
       for (var s = 0; s < st; s++) S.star(s);
       showWinSoon(st);
+      lbPost(countSolved(), bestMoves, flawlessStreak);
       nodeBurst = new Array(L.w * L.h).fill(false);
       if (!reduceMotion) {
         var cc = tileCenter(L.core);
@@ -771,6 +781,34 @@
     /* eslint-disable no-console */
     console.log('var LEVELS=' + JSON.stringify(out).replace(/"(\w+)":/g, '$1:') + ';');
   }
+
+   // ---------- online leaderboard (kd-leaderboard.js SDK → Worker + D1) ----------
+  var lb = null, lbBusy = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard) return;
+    if (lb) return;
+    window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+      .then(function (c) { lb = c; })
+      .catch(function () {});
+  }
+  function lbPost(boards, bm, streak) {
+    if (!window.KDLeaderboard) return;
+    if (!lb) { lbBoot(); return; }
+    if (lbBusy) return;
+    lbBusy = true;
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Circuit';
+      lb.submit(nm, { boardsSolved: boards || 0, bestMoves: bm || 0, flawlessStreak: streak || 0 })
+        .then(function () { lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else lbBusy = false; })
+        .catch(function () { lbBusy = false; });
+    } else submit();
+  }
+  lbBoot();
 
   // ---------- test hook (harmless in production; used by automated verification) ----------
   window.__test = {

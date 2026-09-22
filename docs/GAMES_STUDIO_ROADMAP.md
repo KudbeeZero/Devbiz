@@ -55,12 +55,12 @@ change," which is exactly the kind of thing to flag rather than just do.
    same time so it stops reading as if the local AI-ladder *is* the online leaderboard.
 
 ### Phase C — Wire the four with no online leaderboard yet
-`contra`, `munch`, `orbital`, `puzzles` — each needs a `GAMES.<name>` entry added to
-`leaderboard/shared/core.js` (metric shape per game, e.g. contra: score/wave/kills; munch:
-score/level; orbital: score/wave-survived; puzzles: boards-solved/best-time), a schema
-column set in `worker/schema.sql`, and the same `KD_LB_CONFIG` + SDK script wiring riff
-already demonstrates. Do these as one PR each (or grouped if truly trivial) — don't bundle
-four unrelated games into one lane.
+**DONE (draft PR: N/A on this branch) — see DBZ-065**: `contra`, `munch`, `orbital`, `puzzles`
+each has a `GAMES.<name>` entry in `leaderboard/shared/core.js` (contra:
+score/bestCombo/waves/kills; munch: score/level/chipsEaten; orbital: score/wave/kills;
+puzzles: boardsSolved/bestMoves/flawlessStreak), schema columns + indexes in
+`leaderboard/worker/schema.sql`, and `KD_LB_CONFIG` + SDK script + `_lbPost` wire-up in
+each game. Demo mode works immediately.
 
 ### Phase D — Per-game next-tier ambition (independent of leaderboard work)
 Pulled from what the survey actually found, not invented:
