@@ -133,7 +133,8 @@ export function sanitizeMetrics(game, metrics) {
 
 // ---- Ranking -----------------------------------------------------------
 function rankRows(rows, metric) {
-  // rows already sorted desc by metric; assign 1-based competition rank.
+  // rows already sorted by metric (dir from GAMES catalog; max=DESC, min=ASC);
+  // assign 1-based competition rank.
   let rank = 0, prev = null, seen = 0;
   return rows.map((r) => {
     seen++;

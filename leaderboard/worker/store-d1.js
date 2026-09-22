@@ -9,8 +9,13 @@ import { GAMES } from '../shared/core.js';
 const METRIC_COLS = {
   // game -> [metric column names], derived from the shared catalog.
 };
+const METRIC_DIR = {
+  // game -> { metric: 'max'|'min' }, derived from the shared catalog.
+};
 for (const g of Object.keys(GAMES)) {
   METRIC_COLS[g] = Object.keys(GAMES[g].metrics);
+  METRIC_DIR[g] = {};
+  for (const m of METRIC_COLS[g]) METRIC_DIR[g][m] = GAMES[g].metrics[m].dir || 'max';
 }
 
 function rowToRecord(row) {
@@ -23,9 +28,11 @@ function rowToRecord(row) {
 export function createD1Store(db) {
   return {
     async topByMetric(game, metric, limit) {
-      const safe = (METRIC_COLS[game] || []).includes(metric) ? metric : 'rating';
+      const cols = METRIC_COLS[game] || [];
+      const safe = cols.includes(metric) ? metric : 'rating';
+      const dir = (METRIC_DIR[game] && METRIC_DIR[game][safe]) || 'max';
       const { results } = await db
-        .prepare(`SELECT * FROM scores WHERE game = ? ORDER BY ${safe} DESC, updated_at ASC LIMIT ?`)
+        .prepare(`SELECT * FROM scores WHERE game = ? ORDER BY ${safe} ${dir === 'min' ? 'ASC' : 'DESC'}, updated_at ASC LIMIT ?`)
         .bind(game, limit || 100000)
         .all();
       return (results || []).map(rowToRecord);
@@ -42,16 +49,18 @@ export function createD1Store(db) {
     },
     async upsertScore(game, userId, name, metrics) {
       const cols = (METRIC_COLS[game] || []).filter((c) => metrics[c] != null);
-      // INSERT the row; on conflict keep MAX(existing, incoming) per metric.
-      // excluded.* refers to the values we just tried to insert, so no extra
-      // binds are needed for the UPDATE clause.
+      // INSERT the row; on conflict keep best-ever per metric (MAX for 'max',
+      // MIN for 'min'). excluded.* refers to the values we just tried to insert.
       const insertCols = ['game', 'user_id', 'name', 'updated_at', ...cols];
       const insertVals = [game, userId, name, Date.now(), ...cols.map((c) => metrics[c])];
       const placeholders = insertCols.map(() => '?').join(', ');
       const updateAssign = [
         'name = excluded.name',
         'updated_at = excluded.updated_at',
-        ...cols.map((c) => `${c} = MAX(scores.${c}, excluded.${c})`),
+        ...cols.map((c) => {
+          const dir = (METRIC_DIR[game] && METRIC_DIR[game][c]) || 'max';
+          return dir === 'min' ? `${c} = MIN(scores.${c}, excluded.${c})` : `${c} = MAX(scores.${c}, excluded.${c})`;
+        }),
       ].join(', ');
 
       await db.prepare(
