@@ -1175,10 +1175,6 @@
          b.x = 831;
          continue;
        }
-       // Early-exit: skip swept collision for nearly-motionless resting balls.
-       // Gravity (applied below) will accelerate it back above threshold on the next step
-       // if the ball sits on a slope or is struck.
-       if (len(b.vx, b.vy) < 2) continue;
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
       b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
       // shooter-lane exit: a launched ball that clears the lane is routed over the top and
