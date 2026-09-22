@@ -209,6 +209,7 @@ checking).
 | Branch | Merged via | Date noted | Safe to delete? |
 |---|---|---|---|
 | `claude/leaderboard-audit-architecture-r5b2xh` | PR #133 → main | 2026-07-07 | Yes — fully in `main` |
+| `claude/abyss-prototype` | PR #167 → main | 2026-09-22 | Yes — fully in `main` |
 | `kilo/lucky-wire-mfi` | PR #168 → main | 2026-09-21 | Yes — fully in `main` |
 | `claude/games-studio-roadmap` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/branch-cleanup-ledger` | direct fast-forward → main | 2026-07-07 | Yes — fully in `main` |
