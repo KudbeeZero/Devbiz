@@ -70,6 +70,16 @@
   .board li.me .sc { color:#7CFFb2; }
   .board h3 .lb-online { color:#7CFFb2; font-weight:700; }
   .board p.muted { color:#5a6276; font-size:12.5px; text-align:center; }
+  /* ===== Online leaderboard styles ===== */
+  .lb-wrap ul { list-style:none; padding:0; margin:0; }
+  .lb-wrap li { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(138,147,168,0.15); font-size:14px; }
+  .lb-wrap li:last-child { border-bottom:none; }
+  .lb-wrap .lb-name { color:#cfe9ff; font-weight:500; }
+  .lb-wrap .lb-val { color:#ffd34d; font-family:"Space Grotesk"; font-weight:700; margin-left:12px; }
+  .lb-wrap .lb-you { background:rgba(57,230,255,0.08); border-radius:6px; padding:8px 10px; margin:0 -10px; }
+  .lb-wrap .lb-empty { text-align:center; color:#5a6276; padding:16px 0 !important; }
+  .lb-head { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#39e6ff; margin-bottom:8px; }
+  .lb-status { font-weight:400; color:#8a93a8; }
   .ov-foot { margin-top:16px; font-size:11px; color:#5a6276; }
   .ov-stats { margin-top:16px; font-size:12px; letter-spacing:0.08em; color:#7c8aa0; font-variant-numeric:tabular-nums; }
   .ov-stats b { color:#7CFFb2; font-weight:600; }
@@ -206,6 +216,15 @@
         <button class="btn-sm" id="saveScore" type="button">Save</button>
       </div>
       <div class="board empty" id="board" aria-live="polite"></div>
+
+      <div class="lb-wrap" style="margin-top:24px;text-align:left;">
+        <div class="lb-head" style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#39e6ff;margin-bottom:8px;">
+          🏆 Online leaderboard <span id="lbStatus" class="lb-status" style="font-weight:400;color:#8a93a8;"></span>
+        </div>
+        <ul id="lbResultsList" style="list-style:none;padding:0;margin:0;max-height:220px;overflow:auto;"></ul>
+        <button class="btn" id="lbPostBtn" style="margin-top:12px;width:100%;display:none;">Post your score</button>
+      </div>
+
       <button class="btn" id="againBtn">Fly again</button>
     </div>
   </div>
@@ -981,7 +1000,7 @@
   // ===== game state =====
   var state = 'gate';
   var paused = false;
-  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0;
+  var score = 0, dist = 0, shields = 3, best = 0, speed = 0, boost = 0, fireCd = 0, spawnT = 0, shake = 0, iframes = 0, combo = 0, comboT = 0, enemyT = 0, muzzle = 0, hitFlashT = 0, zoom = 0, runTime = 0;
   // ---- arcade chain multiplier: kills within the window stack a score multiplier
   // (×1 → ×5) that resets on taking damage. Each new tier pops a combo-esc label, so
   // fast, clean clearing reads as building real heat — classic coin-op escalation.
@@ -1094,7 +1113,7 @@
   function curSpeed() { return BASE_SPEED + Math.min(700, dist * 0.05) + boost * 620 + (afterburner ? AB_SPEED_BONUS : 0); }
 
   function resetGame() {
-    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0;
+    score = 0; dist = 0; shields = 3; speed = BASE_SPEED; boost = 0; fireCd = 0; spawnT = 0; shake = 0; iframes = 0; combo = 0; comboT = 0; enemyT = 3; muzzle = 0; hitFlashT = 0; zoom = 0; runTime = 0;
     chainMult = 1; chainMilestone = 0; chainMultFlash = 0; chainMultT = 0; nearMissStreak = 0; hitStop = 0;
     runStats = { missilesFired: 0, maxChain: 1, maxNearMiss: 0 };
     damageDir = -1; damageDirT = 0;
@@ -1246,6 +1265,7 @@
 
   // ===== update =====
   function update(dt) {
+    runTime += dt;
     speed = curSpeed();
     fireCd -= dt; iframes -= dt; comboT -= dt; muzzle -= dt; rapidT -= dt; tripleT -= dt; plasmaT -= dt; hitFlashT -= dt; if (comboT <= 0) combo = 0;
     // arcade chain: the multiplier resets if you go quiet (no kill in the window)
@@ -1599,50 +1619,73 @@
     board.innerHTML = html + '</ol>';
   }
 
-  // ===== cloud leaderboard (kd-leaderboard.js SDK → Worker + D1) =====
-  // Loads the top board from the cloud and posts a run. Gracefully degrades to
-  // the local top-10 above when the SDK/Worker is unreachable — the game never
-  // breaks because the cloud is down.
-  var lb = null, lbPosted = false;
+  // ===== Online leaderboard (demo-mode SDK; degrades to local-only) =====
+  var lb = null, lbBusy = false;
   function lbBoot() {
-    if (!window.KDLeaderboard) { lbFallbackBoard(); return; }
+    if (!window.KDLeaderboard) {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+      return;
+    }
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-        .then(function (c) { lb = c; lbLoadBoard(); })
-        .catch(function () { lbFallbackBoard(); });
-    } catch (e) { lbFallbackBoard(); }
+        .then(function (c) { lb = c; lbLoadTop(); })
+        .catch(function () {});
+    } catch (e) {}
   }
-  function lbLoadBoard() {
+  function lbLoadTop() {
     if (!lb) return;
     lb.leaderboard('score', 10).then(function (d) {
-      var entries = d && d.entries;
-      lbRenderBoard(entries);
-    }).catch(function () { lbFallbackBoard(); });
+      lbRender('lbResultsList', d.entries, 10);
+      var btn = document.getElementById('lbPostBtn'); if (btn) btn.style.display = '';
+    }).catch(function () {
+      lbEmpty('lbResultsList', 'leaderboard offline');
+    });
   }
-  function lbRenderBoard(entries) {
-    var board = document.getElementById('board'); if (!board) return;
-    if (!entries || !entries.length) { board.className = 'board empty'; board.innerHTML = '<p class="muted">Be the first pilot on the online board.</p>'; return; }
-    board.className = 'board';
-    var html = '<h3>Top Pilots <span class="lb-online">online</span></h3><ol>';
-    for (var i = 0; i < entries.length; i++) {
-      var e = entries[i];
-      var nm = e.name || 'Anonymous';
-      if (e.you) nm = '▲ ' + nm;
-      html += '<li' + (e.you ? ' class="me"' : '') + '><span class="rk">' + (e.rank != null ? e.rank : i + 1) +
-        '</span><span class="nm">' + nm + '</span><span class="sc">' + (e.value || 0).toLocaleString() + '</span></li>';
+  function lbRender(id, entries, max) {
+    var el = document.getElementById(id); if (!el) return;
+    if (!entries || !entries.length) { lbEmpty(id, 'be the first to post'); return; }
+    el.innerHTML = '';
+    for (var i = 0; i < Math.min(max, entries.length); i++) {
+      var e = entries[i], li = document.createElement('li');
+      if (e.you) li.className = 'lb-you';
+      var nm = document.createElement('span'); nm.className = 'lb-name'; nm.textContent = e.name;
+      var vl = document.createElement('span'); vl.className = 'lb-val'; vl.textContent = (e.value || 0).toLocaleString();
+      li.appendChild(nm); li.appendChild(vl); el.appendChild(li);
     }
-    board.innerHTML = html + '</ol>';
   }
-  function lbFallbackBoard() {           // cloud unavailable → show the local top-10
-    var board = document.getElementById('board'); if (!board) return;
-    renderBoard(-1);
+  function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty" style="color:#8a93a8;font-size:13px;padding:8px 0;">' + msg + '</li>'; }
+  function lbPost() {
+    var status = function (m) { var s = document.getElementById('lbStatus'); if (s) s.textContent = m; };
+    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (lbBusy) return;
+    var submit = function () {
+      lbBusy = true; status('posting…');
+      var nm = (lb.user() && lb.user().name) || 'Pilot';
+      var bestTime = Math.round(runTime || 0);
+      lb.submit(nm, { score: score, bestCombo: runStats.maxChain, dist: Math.round(dist), waveSurvived: wave, bestTime: bestTime }).then(function (res) {
+        lbBusy = false;
+        var rk = res && res.ranks && res.ranks.score;
+        status(rk ? 'posted — you\'re #' + rk + '!' : 'posted!');
+        lbLoadTop();
+      }).catch(function (err) {
+        lbBusy = false;
+        status(err && err.status === 401 ? 'pick a name to post' : 'could not post (offline)');
+      });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); else status('a name is needed to post'); })
+        .catch(function () { status('could not post — try again'); });
+    } else submit();
   }
+
+  // lbPostScore: used by local leaderboard commitScore to also try cloud post
   function lbPostScore(name) {
-    if (!lb || lbPosted || pendingScore < 0) return;   // post once per run / only on real runs
+    if (!lb || lbPosted || pendingScore < 0) return;
     lbPosted = true;
     var nm = (lb.user && lb.user() && lb.user().name) || (name && name.trim()) || 'Pilot';
-    lb.submit(nm, { score: pendingScore, bestCombo: runStats.maxChain, dist: Math.round(pendingDist) })
-      .then(function (res) { lbLoadBoard(); })
+    lb.submit(nm, { score: pendingScore, bestCombo: runStats.maxChain, dist: Math.round(pendingDist), waveSurvived: wave, bestTime: Math.round(runTime || 0) })
+      .then(function (res) { lbLoadTop(); })
       .catch(function () { /* cloud offline — local board already saved */ });
   }
 
@@ -1677,6 +1720,7 @@
       renderBoard(-1);
     }
     overOv.classList.remove('hidden');
+    lbLoadTop();
   }
 
   // ===== projection =====
@@ -1693,6 +1737,7 @@
     if (nameEntryEl) nameEntryEl.classList.add('hidden');
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
+    lbBoot();
   }
   function togglePause() {
     if (state !== 'play') return;
@@ -3086,6 +3131,10 @@
     initialsInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doSaveScore(); } e.stopPropagation(); });
   }
 
+  // online leaderboard post button
+  var lbPostBtn = document.getElementById('lbPostBtn');
+  if (lbPostBtn) lbPostBtn.addEventListener('click', function () { audioInit(); audioResume(); lbPost(); });
+
   // ===== KUDBEE STUDIOS boot intro =====
   var intro = document.getElementById('intro'), introAudio = document.getElementById('introAudio');
   var introDone = false, introStarted = false, introTimer = 0;
@@ -3294,7 +3343,7 @@
     get muted() { return muted; }, get audioReady() { return !!AC; }, setMuted: setMuted, sfx: SFX,
     getScores: function () { return loadScores(); },
     // ---- cloud leaderboard hooks ----
-    get lbLinked() { return !!lb; }, lbLoadBoard: function () { lbLoadBoard(); }, lbPostScore: function (nm) { lbPostScore(nm); }, lbBoot: function () { lbBoot(); },
+    get lbLinked() { return !!lb; }, lbLoadTop: function () { lbLoadTop(); }, lbPost: function () { lbPost(); }, lbBoot: function () { lbBoot(); },
     clearScores: function () { try { localStorage.removeItem(SCORES_KEY); } catch (e) {} },
     submitScore: function (name, s, d) { pendingScore = Math.max(0, Math.round(s)); pendingDist = Math.round(d || 0); return commitScore(name); },
     scoreQualifies: function (s) { return scoreQualifies(s, loadScores()); },
