@@ -595,6 +595,7 @@
   Game.prototype._lbInit = function () {
     if (!window.KDLeaderboard) return;
     if (this._lb) return;
+    var self = this;
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
         .then(function (c) { self._lb = c; })
@@ -609,14 +610,21 @@
     var x01 = d.stats.x01, cri = d.stats.cricket;
     var wins = x01.won + cri.won;
     var rating = 1180 + d.level * 38 + d.ladderRank * 150 + d.bestStreak * 22 + wins * 6;
-    var name = (lb.user && lb.user() && lb.user().name) || 'Player';
-    lb.submit(name, {
-      rating: rating,
-      bestCheckout: x01.bestCheckout || 0,
-      total180s: x01.total180s || 0,
-      wins: wins,
-      bestStreak: d.bestStreak || 0,
-    }).catch(function () { /* cloud offline — local profile already saved */ });
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Player';
+      lb.submit(nm, {
+        rating: rating,
+        bestCheckout: x01.bestCheckout || 0,
+        total180s: x01.total180s || 0,
+        wins: wins,
+        bestStreak: d.bestStreak || 0,
+      }).catch(function () { /* cloud offline — local profile already saved */ });
+    };
+    if (!lb.isSignedIn()) {
+      lb.signIn()
+        .then(function () { if (lb.isSignedIn()) submit(); })
+        .catch(function () {});
+    } else submit();
   };
 
   Game.prototype._updateMatchOver = function (dt) {
