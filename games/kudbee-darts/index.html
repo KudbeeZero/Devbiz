@@ -68,9 +68,11 @@
   </div>
 </div>
 
-<!-- Engine + game modules loaded as ordered classic scripts (no bundler).
-     Everything attaches to the global window.KD namespace. -->
-<script src="../shared/engine/core-util.js"></script>
+  <!-- Engine + game modules loaded as ordered classic scripts (no bundler).
+       Everything attaches to the global window.KD namespace. -->
+  <script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'darts' };</script>
+  <script src="../../leaderboard/client/kd-leaderboard.js"></script>
+  <script src="../shared/engine/core-util.js"></script>
 <script src="../shared/engine/loop.js"></script>
 <script src="src/engine/util.js"></script>
 <script src="src/engine/loop.js"></script>

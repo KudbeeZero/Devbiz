@@ -100,6 +100,7 @@
   Game.prototype.start = function () {
     this.audio.startMusic();
     this.loop.start();
+    this._lbInit();
   };
 
   // Triggered by Dart.release(): the board lunges in a touch, then snaps back.
@@ -583,6 +584,39 @@
       points: result.points,
     };
     this.matchOverTimer = 0.8;
+
+    // online leaderboard: post the match to the cloud SDK (degrades to local)
+    this._lbPostMatch();
+  };
+
+  // ---- online leaderboard (kd-leaderboard.js SDK → Worker + D1) ----
+  // Posts match results after each game. Demo mode works immediately (name prompt);
+  // full online when the Worker is deployed and API_BASE is configured.
+  Game.prototype._lbInit = function () {
+    if (!window.KDLeaderboard) return;
+    if (this._lb) return;
+    try {
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) { self._lb = c; })
+        .catch(function () {});
+    } catch (e) {}
+  };
+  Game.prototype._lbPostMatch = function () {
+    if (!window.KDLeaderboard) return;
+    if (!this._lb) { this._lbInit(); return; }
+    var self = this, lb = this._lb;
+    var d = this.progression.data;
+    var x01 = d.stats.x01, cri = d.stats.cricket;
+    var wins = x01.won + cri.won;
+    var rating = 1180 + d.level * 38 + d.ladderRank * 150 + d.bestStreak * 22 + wins * 6;
+    var name = (lb.user && lb.user() && lb.user().name) || 'Player';
+    lb.submit(name, {
+      rating: rating,
+      bestCheckout: x01.bestCheckout || 0,
+      total180s: x01.total180s || 0,
+      wins: wins,
+      bestStreak: d.bestStreak || 0,
+    }).catch(function () { /* cloud offline — local profile already saved */ });
   };
 
   Game.prototype._updateMatchOver = function (dt) {

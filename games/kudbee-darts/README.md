@@ -73,6 +73,11 @@ physics, so the game stays fair.
 ladder by a rating derived from your level, ladder progress and streaks — alongside a
 career card (501/Cricket records, 180s, best checkout, streaks, coins).
 
+Match results are also posted to the **Kudbee online leaderboard** via the SDK
+(`leaderboard/client/kd-leaderboard.js`). In demo mode (no auth) you'll be prompted
+for a name after each match; when the Worker is deployed and `API_BASE` is configured,
+scores post to the global top-10 automatically.
+
 ## Architecture
 
 Pure HTML5 Canvas 2D + vanilla JS, **no build step**, classic ordered `<script>` tags
