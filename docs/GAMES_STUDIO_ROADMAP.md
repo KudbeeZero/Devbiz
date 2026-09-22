@@ -25,10 +25,9 @@ inconsistent.**
 |---|---|
 | `riff`, `riff-2` | Fully SDK-wired (`KD_LB_CONFIG` + `client/kd-leaderboard.js`), posts + loads top-10. **Not live** — `API_BASE` is empty, so scores post nowhere yet. Needs the Worker deployed (see `leaderboard/README.md` → *Deploy to Cloudflare*). |
 | `pinball` | **SDK-wired** (merged PR #168): `KD_LB_CONFIG = { GAME: 'pinball' }` + SDK script in `games/kudbee-pinball/index.html`; metrics `score`, `bestMultiball`, `modesCompleted` defined in `leaderboard/shared/core.js`. Game-over overlay shows top-10 + "Post your score" button. Demo mode works immediately. |
-| `voidrunner` | **SDK-wired** (merged PR #169): `KD_LB_CONFIG = { GAME: 'voidrunner' }` + SDK script in `games/kudbee-voidrunner/index.html`; metrics `score`, `bestCombo`, `dist`, `waveSurvived`, `bestTime` in `leaderboard/shared/core.js`. Game-over overlay shows top-10 + "Post your score" button. Demo mode works immediately. Swapped localStorage top-10/initials entry for SDK post/load. |
-| `darts` | Backend is darts-shaped and half-built (`leaderboard/shared/core.js` already defines `GAMES.darts`; the leaderboard portal page defaults to darts). But the game itself has **no SDK call** — syncing today means the player manually visits `leaderboard/public/leaderboard.html`, which reads darts' local profile out of band and requires a manual "Publish your stats" click. Darts' own in-game "🏆 Leaderboard" is a cosmetic local AI-ladder screen, not the online service — worth noting since the README text reads ambiguously on this point. |
-| `voidrunner` | Has its own polished **local** top-10 + 3-initial arcade entry screen already built (`kudbee.voidrunner.scores`/`initials`). This is the easiest of the remaining games to wire — the "you got a good score, enter your name" UX already exists; it just needs the SDK call swapped in underneath instead of `localStorage`. |
-| `contra`, `munch`, `orbital`, `puzzles` | No online leaderboard artifact of any kind — local best/progress only. `contra`'s own `docs/GAME_DESIGN.md` roadmap already names "save/leaderboard" as a named Phase 3 item, so wiring it there has an existing design hook. |
+| `voidrunner` | **SDK-wired** (draft PR #169): `KD_LB_CONFIG = { GAME: 'voidrunner' }` + SDK script in `games/kudbee-voidrunner/index.html`; metrics `score`, `waveSurvived`, `bestTime` defined in `leaderboard/shared/core.js`. Swaps existing local top-10/initials UX for SDK post/load. Demo mode works immediately. |
+| `darts` | **SDK-wired** (draft PR #170): `KD_LB_CONFIG = { GAME: 'darts' }` + SDK script in `games/kudbee-darts/index.html`; `_lbPostMatch` posts `rating`, `bestCheckout`, `total180s`, `wins`, `bestStreak` after each match (metrics already defined in `leaderboard/shared/core.js`). Demo mode works immediately. |
+| `contra`, `munch`, `orbital`, `puzzles` | No online leaderboard yet. `contra`'s own `docs/GAME_DESIGN.md` roadmap already names "save/leaderboard" as a named Phase 3 item, so wiring it there has an existing design hook. |
 
 ## Proposed phases
 
@@ -48,12 +47,12 @@ change," which is exactly the kind of thing to flag rather than just do.
 1. **`voidrunner`**: swap its existing local top-10/initials UX to post through
    `client/kd-leaderboard.js` (`GAME: 'voidrunner'`) instead of `localStorage`, keeping the
    same on-screen initials-entry moment. Lowest-effort win — the UX doesn't need to be
-   designed, just re-plumbed.
+   designed, just re-plumbed. (draft PR #169)
 2. **`darts`**: add the SDK call directly into `games/kudbee-darts/index.html` (matching the
    `GAMES.darts` metric shape that already exists server-side: rating, bestCheckout,
    total180s, wins, bestStreak) so a match auto-posts instead of requiring a manual visit to
    the separate leaderboard portal page. Refresh the README's "Leaderboard" section at the
-   same time so it stops reading as if the local AI-ladder *is* the online leaderboard.
+   same time so it stops reading as if the local AI-ladder *is* the online leaderboard. (draft PR #170)
 
 ### Phase C — Wire the four with no online leaderboard yet
 **DONE (draft PR: N/A on this branch) — see DBZ-065**: `contra`, `munch`, `orbital`, `puzzles`
