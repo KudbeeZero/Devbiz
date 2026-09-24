@@ -78,7 +78,7 @@
         <h1>Kudbee <span class="grad">Pinball</span></h1>
         <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
         <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, <b>hold the right side</b> to charge the plunger, release to launch · tap low to flip · tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
         <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
@@ -2269,7 +2269,23 @@
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
     else if (k === ' ') { charging = false; launch(); }
   });
-  // touch: lower half left/right = flippers; tap up top = NUDGE (toward the tap side); tap lower-right in lane = launch.
+  // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
+  // gets the whole shooter-lane column so hold-to-charge is easy to discover on phones.
+  function launchPointerHit(e, px, py) {
+    if (!balls.length || !balls[0].inLane) return false;
+    var coarse = isCoarse || (e && (e.pointerType === 'touch' || e.pointerType === 'pen'));
+    if (coarse) return px >= W * 0.52;
+    return px > W * 0.55 && py > H * 0.7;
+  }
+  function clearLaunchCharge(abort) {
+    charging = false;
+    if (abort) charge = 0;
+  }
+  function anyLaunchPointer() {
+    for (var id in ptrRole) { if (ptrRole[id] === 'launch') return true; }
+    return false;
+  }
+  // touch: lower half left/right = flippers; tap up top = NUDGE; hold right side (in lane) = plunger.
   // Each pointer's role is tracked by pointerId so two-finger play works: releasing one
   // flipper finger never drops the other (classic multitouch bug, fixed).
   var ptrRole = {};
@@ -2277,19 +2293,27 @@
     audioInit();
     if (state !== 'play') return;
     var r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
+    if (launchPointerHit(e, px, py)) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
     if (py < H * 0.42) { nudge(px < W * 0.5 ? -1 : 1); return; }   // tap the upper playfield to shake a stuck ball loose
     if (px < W / 2) { setFlip(-1, true); ptrRole[e.pointerId] = 'L'; }
     else { setFlip(1, true); ptrRole[e.pointerId] = 'R'; }
   }, { passive: true });
-  function pointerEnd(e) {
+  function pointerEnd(e, abortLaunch) {
     var role = ptrRole[e.pointerId]; delete ptrRole[e.pointerId];
-    if (role === 'launch') { if (charging) { charging = false; launch(); } }
-    else if (role === 'L') setFlip(-1, false);
+    if (role === 'launch') {
+      if (charging) {
+        if (abortLaunch) clearLaunchCharge(true);
+        else { charging = false; launch(); }
+      }
+    } else if (role === 'L') setFlip(-1, false);
     else if (role === 'R') setFlip(1, false);
+    if (!anyLaunchPointer() && charging && abortLaunch) clearLaunchCharge(true);
   }
-  canvas.addEventListener('pointerup', pointerEnd, { passive: true });
-  canvas.addEventListener('pointercancel', pointerEnd, { passive: true });
+  canvas.addEventListener('pointerup', function (e) { pointerEnd(e, false); }, { passive: true });
+  canvas.addEventListener('pointercancel', function (e) { pointerEnd(e, true); }, { passive: true });
+  canvas.addEventListener('pointerleave', function (e) {
+    if (ptrRole[e.pointerId] === 'launch') pointerEnd(e, true);
+  }, { passive: true });
 
   document.getElementById('startBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('againBtn').addEventListener('click', function () { audioInit(); start(); });
@@ -2344,7 +2368,11 @@
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
     start: start, physStep: physStep, launch: launch,
     press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
-    bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y }; }
+    get charging() { return charging; }, get charge() { return charge; },
+    launchPointerHit: function (coarse, px, py) {
+      return launchPointerHit({ pointerType: coarse ? 'touch' : 'mouse' }, px, py);
+    },
+    bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y, W: W, H: H }; }
   };
 })();
 </script>
