@@ -17,4 +17,5 @@ node evaluator.mjs            # writes findings.md + *.png here
 ## Rubric (Phase 1)
 loads · hook present · starts · ball enters the playfield · scoring works ·
 flippers respond · no NaN · ≥45 fps · no real console errors (blocked web-font
-requests are ignored). Extend the rubric as features land.
+requests and `file://` relative `/api/leaderboard` fetch noise are ignored when
+`API_BASE` is empty). Extend the rubric as features land.
