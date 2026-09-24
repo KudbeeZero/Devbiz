@@ -6,15 +6,12 @@
 <meta name="theme-color" content="#05050f">
 <meta name="description" content="Kudbee Pinball — Starbreak. A neon space pinball table by Kudbee Games Studio. Phase-1 physics prototype.">
 <title>Kudbee Pinball — Starbreak</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --cyan:#39e6ff; --violet:#c46bff; --green:#7CFFb2; --amber:#ffd34d; --ember:#ff5d3c; --ink:#05050f; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { height:100%; background:var(--ink); color:#cfe9ff; font-family:"Inter",system-ui,sans-serif;
+  html,body { height:100%; background:var(--ink); color:#cfe9ff; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     overflow:hidden; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
-  h1,.tt { font-family:"Space Grotesk","Inter",sans-serif; }
+  h1,.tt { font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(circle at 50% 0%, rgba(111,91,255,0.12), transparent 60%), var(--ink); }
   /* Tall portrait table (logical 900x1500 → 0.6). */
@@ -47,7 +44,7 @@
   .ov-inner p { color:#9aa3b8; font-size:14px; line-height:1.5; max-width:380px; margin:0 auto; }
   .btn { margin-top:24px; display:inline-flex; align-items:center; gap:10px; padding:15px 28px; border:none; border-radius:999px;
     cursor:pointer; background:linear-gradient(135deg,#39e6ff,#6f5bff 50%,#c46bff); color:#04040a;
-    font-family:"Space Grotesk"; font-weight:700; font-size:16px; box-shadow:0 16px 40px -12px rgba(111,91,255,0.7); }
+    font-family:inherit; font-weight:700; font-size:16px; box-shadow:0 16px 40px -12px rgba(111,91,255,0.7); }
   .btn:hover { filter:brightness(1.06); }
   .ov-foot { margin-top:16px; font-size:11px; color:#5a6276; }
   .badge { display:inline-block; margin-top:10px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
@@ -58,7 +55,7 @@
   .lb-wrap li { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(138,147,168,0.15); font-size:14px; }
   .lb-wrap li:last-child { border-bottom:none; }
   .lb-wrap .lb-name { color:#cfe9ff; font-weight:500; }
-  .lb-wrap .lb-val { color:#ffd34d; font-family:"Space Grotesk"; font-weight:700; margin-left:12px; }
+  .lb-wrap .lb-val { color:#ffd34d; font-weight:700; margin-left:12px; }
   .lb-wrap .lb-you { background:rgba(57,230,255,0.08); border-radius:6px; padding:8px 10px; margin:0 -10px; }
   .lb-wrap .lb-empty { text-align:center; color:#5a6276; padding:16px 0 !important; }
   .lb-head { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#39e6ff; margin-bottom:8px; }
@@ -70,7 +67,7 @@
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
-    <canvas id="game"></canvas>
+    <canvas id="game" tabindex="0" role="application" aria-label="Kudbee Pinball playfield"></canvas>
 
     <div class="overlay" id="gate">
       <div class="ov-inner">
@@ -78,7 +75,7 @@
         <h1>Kudbee <span class="grad">Pinball</span></h1>
         <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
         <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, tap low to flip, tap up top to nudge</p>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, <b>hold the right side</b> to charge the plunger, release to launch · tap low to flip · tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
         <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
@@ -113,7 +110,6 @@
      through your edge. The SDK posts and loads top-10 quietly.
      See leaderboard/README.md. -->
 <script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'pinball' };</script>
-<script src="../../leaderboard/client/kd-leaderboard.js"></script>
 
 <script>
 /* ===========================================================================
@@ -274,6 +270,7 @@
     // fit VW×VH into W×H preserving aspect (frame already ~0.6 so near-exact)
     SC = Math.min(W / VW, H / VH);
     OX = (W - VW * SC) / 2; OY = (H - VH * SC) / 2;
+    if (state !== 'play') { ensureTableBuilt(); draw(performance.now()); }
   }
   window.addEventListener('resize', resize);
 
@@ -560,10 +557,10 @@
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   // ---- leaderboard (demo-mode SDK; degrades to local-only) ----
-  var lb = null, lbBusy = false, maxMultiballBalls = 0;
+  var lb = null, lbBusy = false, lbPostQueued = false, maxMultiballBalls = 0;
 
   function resetGame() {
-    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
+    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; ptrRole = {}; shake = 0;
     level = 1; comboExplosion = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
@@ -602,8 +599,8 @@
     var qx = ax + ex * t, qy = ay + ey * t;
     var dx = px - qx, dy = py - qy;
     // quadratic in tau: |d + tau*(v - proj(v))|^2 = rr^2
-    var pvx = (vx * ex + vy * ey) / el2; var pvy = (pvx * ex + pvy * ey); // unused
-    var rvx = vx - pvx * ex, rvy = vy - pvx * ey;
+    var pvAlong = (vx * ex + vy * ey) / el2;
+    var rvx = vx - pvAlong * ex, rvy = vy - pvAlong * ey;
     var a = rvx * rvx + rvy * rvy;
     var c = dx * dx + dy * dy - rr * rr;
     if (a < 1e-9) { if (c <= 0) return 0; return -1; }
@@ -632,7 +629,7 @@
   //      deflector↔cabinet bounce loop at x≈831 without softening either wall.
   var LAST_HIT = {}, LAST_HIT_EPS = 1e-4;
   function segKey(ax, ay, bx, by) { return ax + ',' + ay + ',' + bx + ',' + by; }
-  function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY) {
+  function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY, frictPass) {
     var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
     var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
     var qx = ax + ex * t, qy = ay + ey * t;
@@ -640,9 +637,13 @@
     var rr = b.r + segR;
     if (d >= rr) return false;
     var key = segKey(ax, ay, bx, by);
+    var pen = rr - d;
     // one-frame contact blacklist: skip immediate re-resolution with opposite n
+    // (deflector↔cabinet at x≈831). Only when essentially separated — any real
+    // penetration must always depenetrate (f7d927d's pen<0.35 gate still skipped
+    // shallow overlaps and glued balls to vertical walls).
     var lh = LAST_HIT[key];
-    if (lh && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
+    if (lh && pen <= 0.012 && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
       var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
       if (rvx * lh.nx + rvy * lh.ny > -0.05) return false;
     }
@@ -655,10 +656,12 @@
       // flip so n points from surface toward ball (playfield side)
       var mx = (ax + bx) / 2, my = (ay + by) / 2;
       if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
-      // if the ball is already separating, fall back to velocity so it still gets
-      // pushed back into the field (a grazing hit on the deflector face)
+      // Grazing/separating deflector hits only when nearly flush. While penetrating,
+      // v·n≥0 is common for wall slides (tangential motion) — swapping to -v̂ then
+      // depenetrates along the slide direction (often ±Y) instead of into the field,
+      // which zeros tangential speed under repeated friction and feels like glue.
       var sp = len(b.vx, b.vy);
-      if (sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
+      if (pen <= 0.012 && sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
         nx = -b.vx / sp; ny = -b.vy / sp;
       }
     } else {
@@ -674,9 +677,13 @@
     var vn = rvx * nx + rvy * ny;
     if (vn < 0) {
       b.vx -= (1 + rest) * vn * nx; b.vy -= (1 + rest) * vn * ny;
-      // tangential friction
-      var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
-      b.vx -= fric * tvx; b.vy -= fric * tvy;
+      // tangential friction once per segment per micro-substep (resolveAll runs 3
+      // iterations; without this, parallel walls shed >85% of speed in one step).
+      if (!frictPass || !frictPass[key]) {
+        if (frictPass) frictPass[key] = true;
+        var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
+        b.vx -= fric * tvx; b.vy -= fric * tvy;
+      }
       if (kick) { var ek = kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
     return true;
@@ -720,14 +727,14 @@
     var qx = f.px + ex * t, qy = f.py + ey * t;
     var pv = flipperPointVel(f, qx, qy);
     var relSp = len(b.vx - pv.x, b.vy - pv.y);        // approach speed before resolution
-    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y);
+    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y, null);
     if (hit && relSp > 260) { f.flash = 1; sfx('thock'); }
     return hit;
   }
 
-  function resolveAll(b) {
+  function resolveAll(b, frictPass) {
     for (var k = 0; k < 3; k++) {            // a few iterations to settle stacked contacts
-      for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling); }
+      for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling, 0, 0, frictPass); }
       for (var j = 0; j < bumpers.length; j++) resolveCircle(b, bumpers[j]);
       for (var ti = 0; ti < targets.length; ti++) resolveTarget(b, targets[ti]);
       resolveFlipper(b, flipL); resolveFlipper(b, flipR);
@@ -1163,6 +1170,7 @@
 
   // ===== physics step =====
   function physStep(h) {
+    if (!flipL || !flipR) return;
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h);
     if (saveT > 0) saveT -= h;                                      // ball-save window ticks down
@@ -1189,11 +1197,12 @@
       // every segment and the FIRST hit is resolved at its exact hit time, then the
       // remainder of the sub-step is re-tried. Post-overlap (move-then-resolve) alone
       // let a fast plunge tunnel the top rail — TOI closes that.
-      var move = len(b.vx, b.vy) * hh;
+      var move = len(b.vx, b.vy) * h;
       var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
-      var hh2 = hh / steps;
+      var hh2 = h / steps;
       for (var s = 0; s < steps; s++) {
         var fr = (s + 1) / steps;
+        var frictPass = {};
         flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
         flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
         var rem = hh2;
@@ -1206,11 +1215,12 @@
           }
           if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
-          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling);
+          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
           rem *= (1 - hitT);
-          if (rem < 0.0002) rem = 0;
+          // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
+          if (hitT < 1e-5 || rem < 0.0002) rem = 0;
         }
-        resolveAll(b);
+        resolveAll(b, frictPass);
         if (b.y > DRAIN_Y) break;
       }
       flipL.a = flipL.endA; flipR.a = flipR.endA;
@@ -1459,6 +1469,7 @@
 
   function gameOver() {
     state = 'over';
+    charging = false; charge = 0; ptrRole = {};
     var isBest = score > 0 && score > best;
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
     dispScore = score;
@@ -1466,20 +1477,51 @@
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
-    lbLoadTop();
+    lbShowOverScreen();
   }
 
   // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
-  function lbBoot() {
-    if (!window.KDLeaderboard) {
-      lbEmpty('lbResultsList', 'leaderboard offline');
+  // SDK is injected on first use so initial load skips an extra parse + network fetch.
+  var lbSdkPromise = null;
+  function loadLeaderboardSdk() {
+    if (window.KDLeaderboard) return Promise.resolve();
+    if (lbSdkPromise) return lbSdkPromise;
+    lbSdkPromise = new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = '../../leaderboard/client/kd-leaderboard.js';
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { resolve(); };
+      document.head.appendChild(s);
+    });
+    return lbSdkPromise;
+  }
+  function lbNetworkOk() {
+    return location.protocol === 'http:' || location.protocol === 'https:';
+  }
+  function lbShowOverScreen() {
+    if (!lbNetworkOk()) {
+      lbEmpty('lbResultsList', 'leaderboard available when hosted on http(s)');
       return;
     }
-    try {
-      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-        .then(function (c) { lb = c; lbLoadTop(); })
-        .catch(function () {});
-    } catch (e) {}
+    lbBoot();
+  }
+  function lbBoot() {
+    if (!lbNetworkOk()) return;
+    loadLeaderboardSdk().then(function () {
+      if (!window.KDLeaderboard) {
+        lbEmpty('lbResultsList', 'leaderboard offline');
+        return;
+      }
+      try {
+        window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+          .then(function (c) {
+            lb = c; lbLoadTop();
+            if (lbPostQueued) { lbPostQueued = false; lbPost(); }
+          })
+          .catch(function () { lbPostQueued = false; });
+      } catch (e) { lbPostQueued = false; }
+    });
   }
   function lbLoadTop() {
     if (!lb) return;
@@ -1505,7 +1547,13 @@
   function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty" style="color:#8a93a8;font-size:13px;padding:8px 0;">' + msg + '</li>'; }
   function lbPost() {
     var status = function (m) { var s = document.getElementById('lbStatus'); if (s) s.textContent = m; };
-    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (!lb) {
+      if (!lbNetworkOk()) { status('leaderboard needs http(s) hosting'); return; }
+      lbPostQueued = true;
+      lbBoot();
+      status('loading leaderboard…');
+      return;
+    }
     if (lbBusy) return;
     var submit = function () {
       lbBusy = true; status('posting…');
@@ -1538,13 +1586,16 @@
    function frame(now) {
      rafId = requestAnimationFrame(frame);
      frameNow = now;
-     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    if (state === 'play') {
+     var hidden = document.hidden;
+     var dt = hidden ? 0 : Math.min(0.05, (now - lastT) / 1000);
+     lastT = now;
+    if (state === 'play' && !hidden) {
       if (hitStopT > 0) { hitStopT -= dt; }
       else {
         acc += dt;
         var guard = 0;
         while (acc >= PH && guard < 5) { physStep(PH); acc -= PH; guard++; }
+        if (guard >= 5) acc = Math.min(acc, PH);
       }
     }
     // Mission tick: check triggers, count down, handle completion
@@ -2066,6 +2117,7 @@
     }
   }
   function drawFlipper(f) {
+    if (!f) return;
     var tip = f.tip(), fl = f.flash || 0;
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
     ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 14 + fl * 22;
@@ -2090,6 +2142,38 @@
     var bg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.4, 1, b.x, b.y, b.r);
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#7fa8d8');
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+  }
+  function plungerAffordanceActive() {
+    if (state !== 'play' || !balls.length || !balls[0].inLane) return false;
+    return isCoarse || charging || anyLaunchPointer();
+  }
+  function drawPlungerAffordance(now) {
+    if (!plungerAffordanceActive()) return;
+    var pad = Math.round(Math.min(W, H) * 0.03);
+    var mn = Math.min(W, H);
+    var t = now || frameNow || 0;
+    var x0 = W * 0.52, w = W - x0;
+    var pulse = reduceMotion ? 0.55 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 320));
+    ctx.fillStyle = 'rgba(57,230,255,' + (charging ? 0.1 : 0.05).toFixed(2) + ')';
+    ctx.fillRect(x0, H * 0.06, w, H * 0.88);
+    ctx.strokeStyle = 'rgba(57,230,255,' + pulse.toFixed(2) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x0, H * 0.08); ctx.lineTo(x0, H * 0.94); ctx.stroke();
+    var ix = x0 + w * 0.5, iy = H - pad - Math.round(mn * 0.14);
+    ctx.fillStyle = 'rgba(196,107,255,0.25)'; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(196,107,255,0.75)'; ctx.lineWidth = 2; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.stroke();
+    if (charging) {
+      ctx.strokeStyle = 'rgba(255,211,77,0.9)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(ix, iy - 10, 18, -Math.PI / 2, -Math.PI / 2 + clamp(charge, 0, 1) * TAU); ctx.stroke();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#cfe9ff';
+    ctx.font = '700 ' + Math.round(mn * 0.024) + 'px system-ui,sans-serif';
+    ctx.fillText(charging ? 'RELEASE' : 'HOLD', ix, H * 0.68);
+    ctx.fillStyle = 'rgba(138,147,168,0.95)';
+    ctx.font = '600 ' + Math.round(mn * 0.017) + 'px system-ui,sans-serif';
+    ctx.fillText(charging ? 'to launch' : 'right side · plunger', ix, H * 0.68 + Math.round(mn * 0.028));
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   }
   function drawHUD() {
     var pad = Math.round(Math.min(W, H) * 0.03);
@@ -2211,9 +2295,13 @@
       }
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff'; ctx.fillRect(cx + cw * clamp(charge, 0, 1) - 1.5, cy - 3, 3, chh + 6);   // live charge marker
-      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-      ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
+      if (!isCoarse) {
+        ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
+        ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
+      }
+      ctx.textAlign = 'left';
     }
+    drawPlungerAffordance(frameNow);
     // tilt / nudge meter (bottom-left): dots fill as you nudge; all red = TILT (flippers dead this ball)
     if (state === 'play' && (tilt > 0.05 || tilted)) {
       var tx = pad, ty = H - pad - 8, dotR = Math.max(4, Math.min(W, H) * 0.011), gap = dotR * 2.7;
@@ -2239,6 +2327,7 @@
   // ===== input =====
   function setFlip(side, on) {
     var f = side < 0 ? flipL : flipR;
+    if (!f) return;
     if (on && !f.pressed && !tilted) {
       f.buf = 0.06;                          // input buffer: even a same-frame tap flips
       if (state === 'play') sfx('flip');
@@ -2266,9 +2355,25 @@
     var k = e.key.toLowerCase();
     if (k === 'arrowleft' || k === 'z' || k === 'a') setFlip(-1, false);
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
-    else if (k === ' ') { charging = false; launch(); }
+    else if (k === ' ') { if (state === 'play') { charging = false; launch(); } else charging = false; }
   });
-  // touch: lower half left/right = flippers; tap up top = NUDGE (toward the tap side); tap lower-right in lane = launch.
+  // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
+  // gets the whole shooter-lane column so hold-to-charge is easy to discover on phones.
+  function launchPointerHit(e, px, py) {
+    if (!balls.length || !balls[0].inLane) return false;
+    var coarse = isCoarse || (e && (e.pointerType === 'touch' || e.pointerType === 'pen'));
+    if (coarse) return px >= W * 0.52;
+    return px > W * 0.55 && py > H * 0.7;
+  }
+  function clearLaunchCharge(abort) {
+    charging = false;
+    if (abort) charge = 0;
+  }
+  function anyLaunchPointer() {
+    for (var id in ptrRole) { if (ptrRole[id] === 'launch') return true; }
+    return false;
+  }
+  // touch: lower half left/right = flippers; tap up top = NUDGE; hold right side (in lane) = plunger.
   // Each pointer's role is tracked by pointerId so two-finger play works: releasing one
   // flipper finger never drops the other (classic multitouch bug, fixed).
   var ptrRole = {};
@@ -2276,19 +2381,27 @@
     audioInit();
     if (state !== 'play') return;
     var r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    if (balls.length && balls[0].inLane && px > W * 0.55 && py > H * 0.7) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
+    if (launchPointerHit(e, px, py)) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
     if (py < H * 0.42) { nudge(px < W * 0.5 ? -1 : 1); return; }   // tap the upper playfield to shake a stuck ball loose
     if (px < W / 2) { setFlip(-1, true); ptrRole[e.pointerId] = 'L'; }
     else { setFlip(1, true); ptrRole[e.pointerId] = 'R'; }
   }, { passive: true });
-  function pointerEnd(e) {
+  function pointerEnd(e, abortLaunch) {
     var role = ptrRole[e.pointerId]; delete ptrRole[e.pointerId];
-    if (role === 'launch') { if (charging) { charging = false; launch(); } }
-    else if (role === 'L') setFlip(-1, false);
+    if (role === 'launch') {
+      if (charging) {
+        if (abortLaunch) clearLaunchCharge(true);
+        else { charging = false; launch(); }
+      }
+    } else if (role === 'L') setFlip(-1, false);
     else if (role === 'R') setFlip(1, false);
+    if (!anyLaunchPointer() && charging && abortLaunch) clearLaunchCharge(true);
   }
-  canvas.addEventListener('pointerup', pointerEnd, { passive: true });
-  canvas.addEventListener('pointercancel', pointerEnd, { passive: true });
+  canvas.addEventListener('pointerup', function (e) { pointerEnd(e, false); }, { passive: true });
+  canvas.addEventListener('pointercancel', function (e) { pointerEnd(e, true); }, { passive: true });
+  canvas.addEventListener('pointerleave', function (e) {
+    if (ptrRole[e.pointerId] === 'launch') pointerEnd(e, true);
+  }, { passive: true });
 
   document.getElementById('startBtn').addEventListener('click', function () { audioInit(); start(); });
   document.getElementById('againBtn').addEventListener('click', function () { audioInit(); start(); });
@@ -2299,7 +2412,9 @@
     var el = document.getElementById('gBest');
     if (el && best > 0) { el.textContent = '★ Best score ' + best.toLocaleString(); el.style.display = 'block'; }
   })();
-  document.addEventListener('visibilitychange', function () { /* loop pauses naturally; state stays */ });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { lastT = performance.now(); acc = 0; }
+  });
 
   // Test/verification hook (harmless in production — read-only introspection plus
   // a couple of deterministic triggers so automated checks don't rely on flaky physics RNG).
@@ -2319,14 +2434,113 @@
     bumperCols: function () { return bumpers.map(function (b) { return { x: b.x, y: b.y, col: b.col || null, kind: b.kind }; }); },
     saucerState: function () { return { saucer: saucer, lockedBalls: lockedBalls, LOCK_MAX: LOCK_MAX, multiballActive: multiballActive, ballCount: balls.length }; },
     fireSaucer: function () { if (balls[0]) onSaucer(balls[0], 0); }
+    ,
+    plungerAffordanceWouldShow: function (coarse) {
+      return state === 'play' && balls.length && balls[0].inLane && !!coarse;
+    },
+    wallSlideLeft: function () {
+      if (!balls[0]) return null;
+      var b = balls[0]; b.inLane = false; b.injected = true;
+      b.x = 78; b.y = 900; b.vx = 40; b.vy = 420;
+      var y0 = b.y;
+      for (var i = 0; i < 150; i++) physStep(PH);
+      return { y: b.y, y0: y0, sp: len(b.vx, b.vy), x: b.x };
+    },
+    ballMaxPen: function (b) {
+      var maxPen = 0;
+      for (var i = 0; i < segs.length; i++) {
+        var s = segs[i], ax = s.ax, ay = s.ay, bx = s.bx, by = s.by;
+        var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
+        var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
+        var qx = ax + ex * t, qy = ay + ey * t;
+        var d = len(b.x - qx, b.y - qy), rr = b.r + (s.r || 0);
+        if (d < rr) maxPen = Math.max(maxPen, rr - d);
+      }
+      return maxPen;
+    },
+    prepBall: function (x, y, vx, vy) {
+      if (!balls[0]) return null;
+      var b = balls[0]; b.inLane = false; b.injected = true;
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0;
+      return b;
+    },
+    runPhysWallRegression: function () {
+      if (state !== 'play' || !balls[0]) return { ok: false, reason: 'not in play', cases: {} };
+      var cases = {}, self = window.__kbTest;
+      function run(id, x, y, vx, vy, steps, pass) {
+        var b = self.prepBall(x, y, vx, vy);
+        var y0 = b.y, x0 = b.x, stuck = 0;
+        for (var i = 0; i < steps; i++) {
+          var px = b.x, py = b.y, psp = len(b.vx, b.vy);
+          physStep(PH);
+          if (len(b.x - px, b.y - py) < 0.03 && Math.abs(len(b.vx, b.vy) - psp) < 2 && psp < 12) stuck++;
+          else stuck = 0;
+          if (stuck > 50) break;
+        }
+        var sp = len(b.vx, b.vy), pen = self.ballMaxPen(b);
+        var ok = stuck <= 50 && pass(b, { sp: sp, pen: pen, x0: x0, y0: y0 });
+        cases[id] = { ok: ok, sp: Math.round(sp), pen: +pen.toFixed(3), x: Math.round(b.x), y: Math.round(b.y), stuck: stuck };
+      }
+      run('leftVerticalSlide', 78, 900, 40, 420, 150, function (b, m) {
+        return b.y > m.y0 + 100 && m.sp > 85 && m.pen < 0.2;
+      });
+      run('rightLaneInner', 785, 680, 420, 60, 80, function (b, m) {
+        return m.sp > 70 && m.pen < 0.25;
+      });
+      run('topDeflectorAngle', 820, 210, -520, 320, 90, function (b, m) {
+        return m.sp > 90 && m.pen < 0.25 && b.x < 850;
+      });
+      run('cornerLeftTop', 74, 118, 15, -90, 100, function (b, m) {
+        return m.sp > 40 && m.pen < 0.22;
+      });
+      run('highNormalLeft', 76, 520, -920, 30, 35, function (b, m) {
+        return m.sp > 200 && m.pen < 0.15;
+      });
+      run('longParallelLeft', 78, 350, 8, 580, 180, function (b, m) {
+        return m.sp > 120 && m.pen < 0.2 && b.y > m.y0 + 60;
+      });
+      run('microSubstepGravity', 78, 750, 0, 0, 120, function (b, m) {
+        return b.vy > 120 && m.sp > 70 && m.pen < 0.2;
+      });
+      run('laneDeflectorTOI', 828, 250, -620, 480, 100, function (b, m) {
+        return m.sp > 90 && m.pen < 0.3;
+      });
+      if (flipL) {
+        var b8 = self.prepBall(340, 1270, -80, -160);
+        flipL.pressed = true; flipL.buf = 0.08;
+        var a0 = flipL.a, stuck8 = 0;
+        for (var j = 0; j < 45; j++) {
+          var px8 = b8.x, py8 = b8.y;
+          physStep(PH);
+          if (len(b8.x - px8, b8.y - py8) < 0.04 && len(b8.vx, b8.vy) < 15) stuck8++;
+          else stuck8 = 0;
+          if (stuck8 > 50) break;
+        }
+        flipL.pressed = false;
+        var sp8 = len(b8.vx, b8.vy), pen8 = self.ballMaxPen(b8);
+        var ok8 = stuck8 <= 50 && (sp8 > 100 || Math.abs(flipL.a - a0) > 0.05) && pen8 < 0.28;
+        cases.flipperNearWall = { ok: ok8, sp: Math.round(sp8), pen: +pen8.toFixed(3), x: Math.round(b8.x), y: Math.round(b8.y), stuck: stuck8 };
+      }
+      var allOk = true;
+      for (var k in cases) { if (!cases[k].ok) allOk = false; }
+      return { ok: allOk, cases: cases };
+    }
   };
 
   // ===== boot =====
+  var tableBuilt = false;
+  function ensureTableBuilt() {
+    if (tableBuilt) return;
+    tableBuilt = true;
+    buildTable();
+  }
+  function bootAttractIdle() {
+    ensureTableBuilt();
+    (function idle() {
+      if (state === 'gate') { draw(frameNow || performance.now()); setTimeout(idle, 400); }
+    })();
+  }
   resize();
-  buildTable();
-  // idle render so the table shows behind the gate
-  (function idle() { if (state === 'gate') { draw(frameNow); setTimeout(idle, 250); } })();
-  window.addEventListener('resize', function () { if (state !== 'play') draw(performance.now()); });
 
   // expose for headless verification
   window.PINBALL = {
@@ -2343,8 +2557,17 @@
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
     start: start, physStep: physStep, launch: launch,
     press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
-    bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y }; }
+    get charging() { return charging; }, get charge() { return charge; },
+    launchPointerHit: function (coarse, px, py) {
+      return launchPointerHit({ pointerType: coarse ? 'touch' : 'mouse' }, px, py);
+    },
+    bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y, W: W, H: H }; },
+    get tableBuilt() { return tableBuilt; },
+    plungerAffordanceActive: plungerAffordanceActive
   };
+
+  var scheduleIdle = window.requestIdleCallback || function (cb) { setTimeout(function () { cb({ didTimeout: true }); }, 1); };
+  scheduleIdle(function () { bootAttractIdle(); }, { timeout: 150 });
 })();
 </script>
 </body>
