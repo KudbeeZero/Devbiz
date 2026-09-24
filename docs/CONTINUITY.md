@@ -2,6 +2,22 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-24 — PR #175 owner gate (implementation frozen; no Cloudflare auth)
+
+**DISCOVERY:** Branch `cursor/leaderboard-api-devbiz-2a63` is **implementation-frozen** at **`3309b29ff8912d16491c810c9dc116dc47f80ea7`**. Unified Worker code is on branch; **PR #175 not open on GitHub** from this environment (ManagePullRequest requires user approval; GitHub MCP `create_pull_request` → 403). **Founder opens manually:** [compare main…branch](https://github.com/KudbeeZero/Devbiz/compare/main...cursor/leaderboard-api-devbiz-2a63?expand=1).
+
+**IMPLEMENTATION:** No further application changes on #175 until owner-gated deploy is proven. D1 plan: **one** database `kudbee-leaderboard`; replace `REPLACE_WITH_YOUR_D1_DATABASE_ID` in root `wrangler.toml` **only** with owner-provided ID (or equivalent dashboard binding); **do not** create a duplicate DB; **do not** commit secrets.
+
+**TEST_VERIFIED:** Unchanged — `leaderboard/` **111/111** at freeze commit. Local passed, no CI configured.
+
+**LIVE_VERIFIED:** **No** — `npx wrangler whoami` → **not authenticated**; no remote D1 create/execute/deploy; no fabricated HTTPS receipts. Production `GET /api/health` on `devbiz.kudbee.workers.dev` still **404** (pre-#175 merge deploy).
+
+**DECISION:** **STOP at owner gate.** No merge, no extra leaderboard feature work while #175 waits. #174 Pinball lane closed (merged).
+
+**NEXT ACTION (owner / founder):** (1) Open PR #175 from compare link. (2) With authorized Cloudflare access: ensure single `kudbee-leaderboard` D1 exists → remote `schema.sql` → set real `database_id` → deploy unified Worker → HTTPS smoke: `GET /api/health`, `GET /api/leaderboard?game=pinball&…`, demo `POST /api/scores`, reload persistence, Pinball game-over → Post Score → reload. (3) Append LIVE receipts to this log; **PRODUCTION READY** only after LIVE VERIFIED + founder review/merge.
+
+**Four-State (PR #175 infra):** CODE COMPLETE **yes** · TEST VERIFIED **yes** · LIVE VERIFIED **no** · PRODUCTION READY **no**.
+
 ## 2026-09-24 — PR #175 devbiz unified Worker (leaderboard API routing)
 
 **DISCOVERY:** Pinball (#174 merged) verified HTTPS gameplay; `kd-leaderboard.js` loads; `GET /api/leaderboard` returned **404** because root `wrangler.toml` was **assets-only** (no `main`, no `/api/*` handler). Intended model per `leaderboard/README.md`: one Worker serves static site + `/api/*` backed by D1 — not a Pinball defect.
