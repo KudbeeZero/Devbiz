@@ -67,7 +67,7 @@
   <div id="frame">
     <a class="back-link" href="../../index.html#games">&larr; Studio</a>
     <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">🔊</button>
-    <canvas id="game"></canvas>
+    <canvas id="game" tabindex="0" role="application" aria-label="Kudbee Pinball playfield"></canvas>
 
     <div class="overlay" id="gate">
       <div class="ov-inner">
@@ -270,6 +270,7 @@
     // fit VW×VH into W×H preserving aspect (frame already ~0.6 so near-exact)
     SC = Math.min(W / VW, H / VH);
     OX = (W - VW * SC) / 2; OY = (H - VH * SC) / 2;
+    if (state !== 'play') { ensureTableBuilt(); draw(performance.now()); }
   }
   window.addEventListener('resize', resize);
 
@@ -556,10 +557,10 @@
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   // ---- leaderboard (demo-mode SDK; degrades to local-only) ----
-  var lb = null, lbBusy = false, maxMultiballBalls = 0;
+  var lb = null, lbBusy = false, lbPostQueued = false, maxMultiballBalls = 0;
 
   function resetGame() {
-    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; shake = 0;
+    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; ptrRole = {}; shake = 0;
     level = 1; comboExplosion = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
@@ -598,8 +599,8 @@
     var qx = ax + ex * t, qy = ay + ey * t;
     var dx = px - qx, dy = py - qy;
     // quadratic in tau: |d + tau*(v - proj(v))|^2 = rr^2
-    var pvx = (vx * ex + vy * ey) / el2; var pvy = (pvx * ex + pvy * ey); // unused
-    var rvx = vx - pvx * ex, rvy = vy - pvx * ey;
+    var pvAlong = (vx * ex + vy * ey) / el2;
+    var rvx = vx - pvAlong * ex, rvy = vy - pvAlong * ey;
     var a = rvx * rvx + rvy * rvy;
     var c = dx * dx + dy * dy - rr * rr;
     if (a < 1e-9) { if (c <= 0) return 0; return -1; }
@@ -1159,6 +1160,7 @@
 
   // ===== physics step =====
   function physStep(h) {
+    if (!flipL || !flipR) return;
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipL.buf = 0; flipR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h);
     if (saveT > 0) saveT -= h;                                      // ball-save window ticks down
@@ -1456,6 +1458,7 @@
 
   function gameOver() {
     state = 'over';
+    charging = false; charge = 0; ptrRole = {};
     var isBest = score > 0 && score > best;
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
     dispScore = score;
@@ -1463,7 +1466,7 @@
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     overOv.classList.remove('hidden');
-    lbLoadTop();
+    lbShowOverScreen();
   }
 
   // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
@@ -1482,7 +1485,18 @@
     });
     return lbSdkPromise;
   }
+  function lbNetworkOk() {
+    return location.protocol === 'http:' || location.protocol === 'https:';
+  }
+  function lbShowOverScreen() {
+    if (!lbNetworkOk()) {
+      lbEmpty('lbResultsList', 'leaderboard available when hosted on http(s)');
+      return;
+    }
+    lbBoot();
+  }
   function lbBoot() {
+    if (!lbNetworkOk()) return;
     loadLeaderboardSdk().then(function () {
       if (!window.KDLeaderboard) {
         lbEmpty('lbResultsList', 'leaderboard offline');
@@ -1490,9 +1504,12 @@
       }
       try {
         window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-          .then(function (c) { lb = c; lbLoadTop(); })
-          .catch(function () {});
-      } catch (e) {}
+          .then(function (c) {
+            lb = c; lbLoadTop();
+            if (lbPostQueued) { lbPostQueued = false; lbPost(); }
+          })
+          .catch(function () { lbPostQueued = false; });
+      } catch (e) { lbPostQueued = false; }
     });
   }
   function lbLoadTop() {
@@ -1520,6 +1537,8 @@
   function lbPost() {
     var status = function (m) { var s = document.getElementById('lbStatus'); if (s) s.textContent = m; };
     if (!lb) {
+      if (!lbNetworkOk()) { status('leaderboard needs http(s) hosting'); return; }
+      lbPostQueued = true;
       lbBoot();
       status('loading leaderboard…');
       return;
@@ -1556,13 +1575,16 @@
    function frame(now) {
      rafId = requestAnimationFrame(frame);
      frameNow = now;
-     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    if (state === 'play') {
+     var hidden = document.hidden;
+     var dt = hidden ? 0 : Math.min(0.05, (now - lastT) / 1000);
+     lastT = now;
+    if (state === 'play' && !hidden) {
       if (hitStopT > 0) { hitStopT -= dt; }
       else {
         acc += dt;
         var guard = 0;
         while (acc >= PH && guard < 5) { physStep(PH); acc -= PH; guard++; }
+        if (guard >= 5) acc = Math.min(acc, PH);
       }
     }
     // Mission tick: check triggers, count down, handle completion
@@ -2084,6 +2106,7 @@
     }
   }
   function drawFlipper(f) {
+    if (!f) return;
     var tip = f.tip(), fl = f.flash || 0;
     ctx.strokeStyle = 'rgba(124,255,178,0.95)'; ctx.lineWidth = f.r * 2; ctx.lineCap = 'round';
     ctx.shadowColor = '#7CFFb2'; ctx.shadowBlur = 14 + fl * 22;
@@ -2110,7 +2133,8 @@
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
   }
   function plungerAffordanceActive() {
-    return state === 'play' && balls.length && balls[0].inLane && isCoarse;
+    if (state !== 'play' || !balls.length || !balls[0].inLane) return false;
+    return isCoarse || charging || anyLaunchPointer();
   }
   function drawPlungerAffordance(now) {
     if (!plungerAffordanceActive()) return;
@@ -2292,6 +2316,7 @@
   // ===== input =====
   function setFlip(side, on) {
     var f = side < 0 ? flipL : flipR;
+    if (!f) return;
     if (on && !f.pressed && !tilted) {
       f.buf = 0.06;                          // input buffer: even a same-frame tap flips
       if (state === 'play') sfx('flip');
@@ -2319,7 +2344,7 @@
     var k = e.key.toLowerCase();
     if (k === 'arrowleft' || k === 'z' || k === 'a') setFlip(-1, false);
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
-    else if (k === ' ') { charging = false; launch(); }
+    else if (k === ' ') { if (state === 'play') { charging = false; launch(); } else charging = false; }
   });
   // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
   // gets the whole shooter-lane column so hold-to-charge is easy to discover on phones.
@@ -2376,7 +2401,9 @@
     var el = document.getElementById('gBest');
     if (el && best > 0) { el.textContent = '★ Best score ' + best.toLocaleString(); el.style.display = 'block'; }
   })();
-  document.addEventListener('visibilitychange', function () { /* loop pauses naturally; state stays */ });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { lastT = performance.now(); acc = 0; }
+  });
 
   // Test/verification hook (harmless in production — read-only introspection plus
   // a couple of deterministic triggers so automated checks don't rely on flaky physics RNG).
@@ -2416,7 +2443,6 @@
     })();
   }
   resize();
-  window.addEventListener('resize', function () { if (state !== 'play') draw(performance.now()); });
 
   // expose for headless verification
   window.PINBALL = {
