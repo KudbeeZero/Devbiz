@@ -82,6 +82,18 @@ rec('scoring-works', maxScore>0, 'max score = '+maxScore+' (launches='+launches+
 rec('flippers-respond', flipMoved, 'flipper angle moved on keypress');
 rec('no-nan', !nan, 'all ball positions finite');
 rec('fps', fps>=45, 'measured ~'+fps.toFixed(0)+' fps');
+const wallSlide = await page.evaluate(() => {
+  var P = window.PINBALL;
+  var b = P.balls[0];
+  if (!b) return { ok: false };
+  b.inLane = false; b.injected = true;
+  b.x = 78; b.y = 900; b.vx = 40; b.vy = 420;
+  var y0 = b.y, x0 = b.x;
+  for (var i = 0; i < 150; i++) P.physStep(1 / 300);
+  var sp = Math.hypot(b.vx, b.vy);
+  return { ok: b.y > y0 + 100 && sp > 85 && b.x >= x0 - 4 && isFinite(b.x) && isFinite(b.y), y: b.y, sp: sp, x: b.x };
+});
+rec('wall-slide-left', wallSlide.ok, 'left-wall slide y=' + (wallSlide.y == null ? 'n/a' : wallSlide.y.toFixed(0)) + ' sp=' + (wallSlide.sp == null ? 'n/a' : wallSlide.sp.toFixed(0)));
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;

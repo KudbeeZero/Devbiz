@@ -2,13 +2,19 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
-## 2026-09-24 — PR #174 single Pinball lane (phys + load-perf stack + left-wall stick)
+## 2026-09-24 — PR #174 wall-glue collision solver fix (replaces f7d927d heuristic)
 
-**LANE:** All Pinball work consolidated on **`cursor/pinball-phys-timestep-fix-2a63`** → [PR #174](https://github.com/KudbeeZero/Devbiz/pull/174). Preserved root commit **`5608b0e`** (`hh`→`h`, TOI overlap guard); cherry-picked touch, load-perf, affordance, hardening, and eval/docs from the former load-perf stack (pinball-only files).
+**DISCOVERY:** Balls “glued” to side walls because (1) **`resolveSeg` velocity-normal override** ran whenever `v·n ≥ 0`, including **tangential slides while still penetrating** — depenetration pushed along ±Y instead of the geometric outward normal, so the ball never left the wall; (2) **contact blacklist** still skipped resolution for penetrations up to **0.35** radius units; (3) **`resolveAll` × 3** re-applied tangential **friction every iteration** on the same segment, compounding to near-zero slide speed (documented failure mode at buildTable comment). The f7d927d **wall-hug timer** masked symptoms; removed.
 
-**LEFT STICK (founder report):** Resting balls wedged on the **left wall / funnel** because `resolveSeg` contact blacklist skipped resolution while still penetrating (`pen = rr - d` large). **Fix:** only apply blacklist when penetration is shallow (`pen < 0.35`); add lower-field **wall-hug** timer (`x < 118`, low speed → gentle eject right/down after ~1.8s).
+**IMPLEMENTATION:** Geometric normal always used when `pen > 0.012`; blacklist skip only when `pen ≤ 0.012`; tangential friction **once per segment per micro-substep** via shared `frictPass`; removed `wallT` eject hack. Evaluator rubric **`wall-slide-left`** (deterministic left-wall slide, y+100 / sp>85).
 
-**TEST_VERIFIED:** Pinball evaluator **13/13**; leaderboard **105/105**. Local passed, no CI configured. **LIVE VERIFIED:** not claimed.
+**TEST_VERIFIED:** Pinball evaluator **14/14** (file://); leaderboard **105/105**; inline IIFE syntax OK; **HTTP preview smoke** (`http://127.0.0.1:8765/...`) — launch enters playfield, `__kbTest.wallSlideLeft` sp≈1129, lazy SDK present, no console errors. Local passed, no CI configured.
+
+**LIVE VERIFIED:** **No** — localhost/preview only; not production deploy or player evidence.
+
+## 2026-09-24 — PR #174 single Pinball lane (phys + load-perf stack)
+
+**LANE:** All Pinball work on **`cursor/pinball-phys-timestep-fix-2a63`** → [PR #174](https://github.com/KudbeeZero/Devbiz/pull/174). Preserved **`5608b0e`**; cherry-picked touch, load-perf, affordance, hardening, eval/docs (pinball-only).
 
 ## 2026-09-24 — Pinball ten-fix hardening batch (load-perf branch)
 

@@ -629,7 +629,7 @@
   //      deflector↔cabinet bounce loop at x≈831 without softening either wall.
   var LAST_HIT = {}, LAST_HIT_EPS = 1e-4;
   function segKey(ax, ay, bx, by) { return ax + ',' + ay + ',' + bx + ',' + by; }
-  function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY) {
+  function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY, frictPass) {
     var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
     var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
     var qx = ax + ex * t, qy = ay + ey * t;
@@ -639,10 +639,11 @@
     var key = segKey(ax, ay, bx, by);
     var pen = rr - d;
     // one-frame contact blacklist: skip immediate re-resolution with opposite n
-    // (deflector↔cabinet at x≈831). Never skip while still penetrating — that
-    // left resting balls wedged on the left wall / funnel with zero depenetrate.
+    // (deflector↔cabinet at x≈831). Only when essentially separated — any real
+    // penetration must always depenetrate (f7d927d's pen<0.35 gate still skipped
+    // shallow overlaps and glued balls to vertical walls).
     var lh = LAST_HIT[key];
-    if (lh && pen < 0.35 && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
+    if (lh && pen <= 0.012 && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
       var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
       if (rvx * lh.nx + rvy * lh.ny > -0.05) return false;
     }
@@ -655,10 +656,12 @@
       // flip so n points from surface toward ball (playfield side)
       var mx = (ax + bx) / 2, my = (ay + by) / 2;
       if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
-      // if the ball is already separating, fall back to velocity so it still gets
-      // pushed back into the field (a grazing hit on the deflector face)
+      // Grazing/separating deflector hits only when nearly flush. While penetrating,
+      // v·n≥0 is common for wall slides (tangential motion) — swapping to -v̂ then
+      // depenetrates along the slide direction (often ±Y) instead of into the field,
+      // which zeros tangential speed under repeated friction and feels like glue.
       var sp = len(b.vx, b.vy);
-      if (sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
+      if (pen <= 0.012 && sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
         nx = -b.vx / sp; ny = -b.vy / sp;
       }
     } else {
@@ -674,9 +677,13 @@
     var vn = rvx * nx + rvy * ny;
     if (vn < 0) {
       b.vx -= (1 + rest) * vn * nx; b.vy -= (1 + rest) * vn * ny;
-      // tangential friction
-      var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
-      b.vx -= fric * tvx; b.vy -= fric * tvy;
+      // tangential friction once per segment per micro-substep (resolveAll runs 3
+      // iterations; without this, parallel walls shed >85% of speed in one step).
+      if (!frictPass || !frictPass[key]) {
+        if (frictPass) frictPass[key] = true;
+        var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
+        b.vx -= fric * tvx; b.vy -= fric * tvy;
+      }
       if (kick) { var ek = kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
     return true;
@@ -720,14 +727,14 @@
     var qx = f.px + ex * t, qy = f.py + ey * t;
     var pv = flipperPointVel(f, qx, qy);
     var relSp = len(b.vx - pv.x, b.vy - pv.y);        // approach speed before resolution
-    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y);
+    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y, null);
     if (hit && relSp > 260) { f.flash = 1; sfx('thock'); }
     return hit;
   }
 
-  function resolveAll(b) {
+  function resolveAll(b, frictPass) {
     for (var k = 0; k < 3; k++) {            // a few iterations to settle stacked contacts
-      for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling); }
+      for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling, 0, 0, frictPass); }
       for (var j = 0; j < bumpers.length; j++) resolveCircle(b, bumpers[j]);
       for (var ti = 0; ti < targets.length; ti++) resolveTarget(b, targets[ti]);
       resolveFlipper(b, flipL); resolveFlipper(b, flipR);
@@ -1195,6 +1202,7 @@
       var hh2 = h / steps;
       for (var s = 0; s < steps; s++) {
         var fr = (s + 1) / steps;
+        var frictPass = {};
         flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
         flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
         var rem = hh2;
@@ -1207,12 +1215,12 @@
           }
           if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
-          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling);
+          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
           rem *= (1 - hitT);
           // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
           if (hitT < 1e-5 || rem < 0.0002) rem = 0;
         }
-        resolveAll(b);
+        resolveAll(b, frictPass);
         if (b.y > DRAIN_Y) break;
       }
       flipL.a = flipL.endA; flipR.a = flipR.endA;
@@ -1355,13 +1363,6 @@
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
-      // lower-field wall hug (left cabinet / funnel): slow creep along a vertical
-      // wall never tripped the upper-only lowT guard — unstick before it feels broken.
-      if (b.x < 118 && len(b.vx, b.vy) < 130) b.wallT = (b.wallT || 0) + h; else b.wallT = 0;
-      if ((b.wallT || 0) > 1.8) {
-        b.wallT = 0; b.vx = Math.max(b.vx, 220); b.vy = Math.max(b.vy, 280);
-        burst(b.x, b.y, '#7CFFb2', 12, 320); callout('FREED', 'off the wall', '#7CFFb2');
-      }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
@@ -2436,6 +2437,14 @@
     ,
     plungerAffordanceWouldShow: function (coarse) {
       return state === 'play' && balls.length && balls[0].inLane && !!coarse;
+    },
+    wallSlideLeft: function () {
+      if (!balls[0]) return null;
+      var b = balls[0]; b.inLane = false; b.injected = true;
+      b.x = 78; b.y = 900; b.vx = 40; b.vy = 420;
+      var y0 = b.y;
+      for (var i = 0; i < 150; i++) physStep(PH);
+      return { y: b.y, y0: y0, sp: len(b.vx, b.vy), x: b.x };
     }
   };
 
