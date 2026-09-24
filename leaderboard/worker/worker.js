@@ -24,6 +24,13 @@ export default {
     if (url.pathname.startsWith('/api/')) {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
+      if (!env.DB) {
+        return new Response(JSON.stringify({ error: 'db_not_bound' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json; charset=utf-8', ...cors },
+        });
+      }
+
       let body = null;
       if (request.method === 'POST') {
         try { body = await request.json(); } catch (_) { body = null; }

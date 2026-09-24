@@ -1,5 +1,18 @@
-name = "devbiz"          # Choose something unique
+name = "devbiz"
 compatibility_date = "2026-05-21"
+main = "worker.js"
 
-# Point to the folder containing your index.html, CSS, JS, images, etc.
-assets = { directory = "./" }   # or "./dist", "./build", "./" etc.
+# Studio site (games, tools, index.html) — non-/api requests fall through to ASSETS.
+assets = { directory = "./", binding = "ASSETS" }
+
+# Same D1 as leaderboard/worker/wrangler.toml — one database for all games.
+# Owner: create once (`npx wrangler d1 create kudbee-leaderboard`), apply schema.sql,
+# paste database_id below OR bind DB in Cloudflare dashboard (Workers → devbiz → Bindings).
+[[d1_databases]]
+binding = "DB"
+database_name = "kudbee-leaderboard"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+ALLOW_DEMO = "1"
+ALLOWED_ORIGINS = "*"

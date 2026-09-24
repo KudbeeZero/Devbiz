@@ -7,8 +7,8 @@
 #      and set CLERK_PUBLISHABLE_KEY below (the issuer/JWKS are derived from it).
 #   4. Deploy:               npx wrangler deploy
 #
-# This Worker can run standalone (API only) or front the studio site by adding
-# an [assets] binding pointing at the repo root.
+# Studio deploy (site + API, same-origin /api for games) uses the repo ROOT
+# wrangler.toml + worker.js. This file is for standalone API-only deploys.
 name = "kudbee-leaderboard"
 main = "worker.js"
 compatibility_date = "2026-05-21"

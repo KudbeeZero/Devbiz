@@ -2,6 +2,18 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-24 — PR #175 devbiz unified Worker (leaderboard API routing)
+
+**DISCOVERY:** Pinball (#174 merged) verified HTTPS gameplay; `kd-leaderboard.js` loads; `GET /api/leaderboard` returned **404** because root `wrangler.toml` was **assets-only** (no `main`, no `/api/*` handler). Intended model per `leaderboard/README.md`: one Worker serves static site + `/api/*` backed by D1 — not a Pinball defect.
+
+**IMPLEMENTATION:** Repo root `worker.js` re-exports `leaderboard/worker/worker.js` (single API implementation). Root `wrangler.toml`: `main`, `assets` binding `ASSETS`, `[[d1_databases]]` `DB` → `kudbee-leaderboard`, demo vars. Worker returns **503 `{ error: db_not_bound }`** when `DB` is missing (clear deploy gap vs silent 404). `leaderboard/test/worker-fetch.test.js` — routing, demo post/load, ASSETS passthrough, db guard (+6 tests). README deploy section updated.
+
+**TEST_VERIFIED:** `leaderboard/` **111/111** (105 prior + 6 worker-fetch); local passed, no CI configured.
+
+**LIVE_VERIFIED:** **No** — this environment has no Cloudflare auth; root `database_id` remains `REPLACE_WITH_YOUR_D1_DATABASE_ID` until owner binds real D1 (create + `schema.sql` + paste ID or dashboard binding). After deploy with DB: expect **200** on `GET /api/leaderboard?game=pinball&metric=score&limit=10`; until then preview may return **503** `db_not_bound` (routing present, persistence not wired).
+
+**OWNER GATE (not in agent scope):** `npx wrangler d1 create kudbee-leaderboard` → execute `leaderboard/worker/schema.sql` → set `database_id` in root `wrangler.toml` or Cloudflare Workers → devbiz → Bindings → D1.
+
 ## 2026-09-24 — PR #174 deployed Cloudflare HTTP smoke (leaderboard path)
 
 **DEPLOY (PR #174 bot, commit `7c8b31f3`):** Cloudflare Workers git integration — **Commit preview** `https://fa541bdc-devbiz.kudbee.workers.dev` · **Branch preview** `https://cursor-pinball-phys-timestep-fix-2a63-devbiz.kudbee.workers.dev` (same build). Vercel mirror: `https://devbiz-git-cursor-pinball-phys-timestep-fix-2a63-ascend9.vercel.app` (not primary). Pinball route: `/games/kudbee-pinball/`.

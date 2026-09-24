@@ -125,19 +125,21 @@ Auth is a `Authorization: Bearer <clerk-session-jwt>` header (real accounts) or
 
 ## Deploy to Cloudflare (production)
 
-The studio site already deploys on Cloudflare (`wrangler.toml` at the repo root).
-This Worker adds the `/api/*` routes backed by D1.
+The studio site deploys on Cloudflare from the **repo root** (`wrangler.toml` +
+`worker.js`). That Worker serves static assets and mounts the **same** leaderboard
+API under `/api/*` (re-exports `leaderboard/worker/worker.js`). Games keep
+`KD_LB_CONFIG.API_BASE: ''` for same-origin routing.
 
 ```bash
-cd leaderboard/worker
-npx wrangler d1 create kudbee-leaderboard          # paste database_id into wrangler.toml
-npx wrangler d1 execute kudbee-leaderboard --remote --file ./schema.sql
+# One-time D1 (owner): create DB, apply schema, paste database_id into root wrangler.toml
+npx wrangler d1 create kudbee-leaderboard
+npx wrangler d1 execute kudbee-leaderboard --remote --file ./leaderboard/worker/schema.sql
+# Deploy devbiz (site + API) from repo root:
 npx wrangler deploy
 ```
 
-To serve the **site + games + leaderboard API from one Worker**, uncomment the
-`[assets]` block in `worker/wrangler.toml` (`directory = "../"`). Otherwise deploy
-the Worker standalone and point `public/config.js` `API_BASE` at its URL.
+Standalone API-only deploy remains available from `leaderboard/worker/` (set
+`public/config.js` or per-game `API_BASE` to that Worker URL instead).
 
 ## Turn on real accounts (Clerk)
 
