@@ -2,6 +2,14 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-24 — PR #174 single Pinball lane (phys + load-perf stack + left-wall stick)
+
+**LANE:** All Pinball work consolidated on **`cursor/pinball-phys-timestep-fix-2a63`** → [PR #174](https://github.com/KudbeeZero/Devbiz/pull/174). Preserved root commit **`5608b0e`** (`hh`→`h`, TOI overlap guard); cherry-picked touch, load-perf, affordance, hardening, and eval/docs from the former load-perf stack (pinball-only files).
+
+**LEFT STICK (founder report):** Resting balls wedged on the **left wall / funnel** because `resolveSeg` contact blacklist skipped resolution while still penetrating (`pen = rr - d` large). **Fix:** only apply blacklist when penetration is shallow (`pen < 0.35`); add lower-field **wall-hug** timer (`x < 118`, low speed → gentle eject right/down after ~1.8s).
+
+**TEST_VERIFIED:** Pinball evaluator **13/13**; leaderboard **105/105**. Local passed, no CI configured. **LIVE VERIFIED:** not claimed.
+
 ## 2026-09-24 — Pinball ten-fix hardening batch (load-perf branch)
 
 **FIXES:** (1) `sweptSeg` perpendicular velocity uses `pvAlong` (removed self-referential dead `pvy` line). (2) Leaderboard boot/post gated on `http(s)` — no `file://` fetch noise; game-over shows hosting hint. (3) `lbPost` queues through async SDK boot. (4) Tab hidden: skip physics dt + reset `acc`/`lastT` on visible. (5) Physics backlog capped after 5 substeps. (6) `gameOver`/`resetGame` clear charge + pointer roles. (7) Space keyup cannot launch from gate/over overlays. (8) `setFlip`/`physStep`/`drawFlipper` guard before table built. (9) Plunger affordance also when charging / launch pointer down (fine-pointer discoverability). (10) Canvas a11y + resize redraw calls `ensureTableBuilt()`.

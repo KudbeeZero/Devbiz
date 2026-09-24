@@ -637,9 +637,12 @@
     var rr = b.r + segR;
     if (d >= rr) return false;
     var key = segKey(ax, ay, bx, by);
+    var pen = rr - d;
     // one-frame contact blacklist: skip immediate re-resolution with opposite n
+    // (deflector↔cabinet at x≈831). Never skip while still penetrating — that
+    // left resting balls wedged on the left wall / funnel with zero depenetrate.
     var lh = LAST_HIT[key];
-    if (lh && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
+    if (lh && pen < 0.35 && (b.x - lh.x) * (b.x - lh.x) + (b.y - lh.y) * (b.y - lh.y) < 0.0001) {
       var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
       if (rvx * lh.nx + rvy * lh.ny > -0.05) return false;
     }
@@ -1352,6 +1355,13 @@
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
+      // lower-field wall hug (left cabinet / funnel): slow creep along a vertical
+      // wall never tripped the upper-only lowT guard — unstick before it feels broken.
+      if (b.x < 118 && len(b.vx, b.vy) < 130) b.wallT = (b.wallT || 0) + h; else b.wallT = 0;
+      if ((b.wallT || 0) > 1.8) {
+        b.wallT = 0; b.vx = Math.max(b.vx, 220); b.vy = Math.max(b.vy, 280);
+        burst(b.x, b.y, '#7CFFb2', 12, 320); callout('FREED', 'off the wall', '#7CFFb2');
+      }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // trail
