@@ -1184,11 +1184,8 @@
          continue;
        }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
-      b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
-      // shooter-lane exit: a launched ball that clears the lane is routed over the top and
-      // DROPPED through the skill lane its plunge power selected (see enterFromLane()).
-      if (climbing && b.y < 245 && b.vy < 0) { enterFromLane(b); }
-      // speed cap
+b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
+       // speed cap
       var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
       // micro sub-steps so the ball never moves > r/2 before resolving.
       // The flippers' swept angle is interpolated across the same sub-steps so a
@@ -1197,32 +1194,49 @@
       // every segment and the FIRST hit is resolved at its exact hit time, then the
       // remainder of the sub-step is re-tried. Post-overlap (move-then-resolve) alone
       // let a fast plunge tunnel the top rail — TOI closes that.
-      var move = len(b.vx, b.vy) * h;
-      var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
-      var hh2 = h / steps;
-      for (var s = 0; s < steps; s++) {
-        var fr = (s + 1) / steps;
-        var frictPass = {};
-        flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
-        flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
-        var rem = hh2;
-        while (rem > 0) {
-          var hitSeg = null, hitT = 1, hitNx = 0, hitNy = 0, hitQx = 0, hitQy = 0;
-          for (var si = 0; si < segs.length; si++) {
-            var ss = segs[si];
-            var ht = sweptSeg(b, ss.ax, ss.ay, ss.bx, ss.by, ss.r, rem);
-            if (ht >= 0 && ht < hitT) { hitSeg = ss; hitT = ht; }
-          }
-          if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
-          b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
-          resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
-          rem *= (1 - hitT);
-          // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
-          if (hitT < 1e-5 || rem < 0.0002) rem = 0;
-        }
-        resolveAll(b, frictPass);
-        if (b.y > DRAIN_Y) break;
-      }
+var move = len(b.vx, b.vy) * h;
+       var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
+       var hh2 = h / steps;
+       for (var s = 0; s < steps; s++) {
+         var fr = (s + 1) / steps;
+         var frictPass = {};
+         var startY = b.y;
+         var startVy = b.vy;
+         flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
+         flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
+         var rem = hh2;
+         while (rem > 0) {
+           var hitSeg = null, hitT = 1, hitNx = 0, hitNy = 0, hitQx = 0, hitQy = 0;
+           for (var si = 0; si < segs.length; si++) {
+             var ss = segs[si];
+             var ht = sweptSeg(b, ss.ax, ss.ay, ss.bx, ss.by, ss.r, rem);
+             if (ht >= 0 && ht < hitT) { hitSeg = ss; hitT = ht; }
+           }
+           if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
+           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
+           resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
+           rem *= (1 - hitT);
+           // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
+           // But if the ball is moving parallel to or away from the wall (grazing contact),
+           // don't zero out remaining time — consume it and let it slide along the wall.
+           if (hitT < 1e-5) {
+             var ex = hitSeg.bx - hitSeg.ax, ey = hitSeg.by - hitSeg.ay, el2 = ex * ex + ey * ey || 1;
+             var nx = -ey, ny = ex;
+             var ml = Math.sqrt(nx * nx + ny * ny) || 1; nx /= ml; ny /= ml;
+             var mx = (hitSeg.ax + hitSeg.bx) / 2, my = (hitSeg.ay + hitSeg.by) / 2;
+             if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
+             var vn = b.vx * nx + b.vy * ny;
+             if (vn >= -0.001) { /* separating or tangential — consume remaining time to slide */ rem = 0; }
+             else { rem = 0; }
+           } else if (rem < 0.0002) { rem = 0; }
+         }
+         resolveAll(b, frictPass);
+         // shooter-lane exit check: run at END of each micro sub-step so we catch
+         // the ball crossing y=245 going UP even if it happens mid-sub-step and
+         // a collision in the same sub-step flips vy downward.
+         if (climbing && !b.injected && startY >= 245 && b.y < 245 && startVy < 0) { enterFromLane(b); climbing = false; }
+         if (b.y > DRAIN_Y) break;
+       }
       flipL.a = flipL.endA; flipR.a = flipR.endA;
       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
