@@ -2109,6 +2109,37 @@
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#7fa8d8');
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
   }
+  function plungerAffordanceActive() {
+    return state === 'play' && balls.length && balls[0].inLane && isCoarse;
+  }
+  function drawPlungerAffordance(now) {
+    if (!plungerAffordanceActive()) return;
+    var pad = Math.round(Math.min(W, H) * 0.03);
+    var mn = Math.min(W, H);
+    var t = now || frameNow || 0;
+    var x0 = W * 0.52, w = W - x0;
+    var pulse = reduceMotion ? 0.55 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 320));
+    ctx.fillStyle = 'rgba(57,230,255,' + (charging ? 0.1 : 0.05).toFixed(2) + ')';
+    ctx.fillRect(x0, H * 0.06, w, H * 0.88);
+    ctx.strokeStyle = 'rgba(57,230,255,' + pulse.toFixed(2) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x0, H * 0.08); ctx.lineTo(x0, H * 0.94); ctx.stroke();
+    var ix = x0 + w * 0.5, iy = H - pad - Math.round(mn * 0.14);
+    ctx.fillStyle = 'rgba(196,107,255,0.25)'; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(196,107,255,0.75)'; ctx.lineWidth = 2; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.stroke();
+    if (charging) {
+      ctx.strokeStyle = 'rgba(255,211,77,0.9)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(ix, iy - 10, 18, -Math.PI / 2, -Math.PI / 2 + clamp(charge, 0, 1) * TAU); ctx.stroke();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#cfe9ff';
+    ctx.font = '700 ' + Math.round(mn * 0.024) + 'px system-ui,sans-serif';
+    ctx.fillText(charging ? 'RELEASE' : 'HOLD', ix, H * 0.68);
+    ctx.fillStyle = 'rgba(138,147,168,0.95)';
+    ctx.font = '600 ' + Math.round(mn * 0.017) + 'px system-ui,sans-serif';
+    ctx.fillText(charging ? 'to launch' : 'right side · plunger', ix, H * 0.68 + Math.round(mn * 0.028));
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  }
   function drawHUD() {
     var pad = Math.round(Math.min(W, H) * 0.03);
     var mn = Math.min(W, H);
@@ -2229,9 +2260,13 @@
       }
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff'; ctx.fillRect(cx + cw * clamp(charge, 0, 1) - 1.5, cy - 3, 3, chh + 6);   // live charge marker
-      ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-      ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
+      if (!isCoarse) {
+        ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
+        ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
+      }
+      ctx.textAlign = 'left';
     }
+    drawPlungerAffordance(frameNow);
     // tilt / nudge meter (bottom-left): dots fill as you nudge; all red = TILT (flippers dead this ball)
     if (state === 'play' && (tilt > 0.05 || tilted)) {
       var tx = pad, ty = H - pad - 8, dotR = Math.max(4, Math.min(W, H) * 0.011), gap = dotR * 2.7;
@@ -2361,6 +2396,10 @@
     bumperCols: function () { return bumpers.map(function (b) { return { x: b.x, y: b.y, col: b.col || null, kind: b.kind }; }); },
     saucerState: function () { return { saucer: saucer, lockedBalls: lockedBalls, LOCK_MAX: LOCK_MAX, multiballActive: multiballActive, ballCount: balls.length }; },
     fireSaucer: function () { if (balls[0]) onSaucer(balls[0], 0); }
+    ,
+    plungerAffordanceWouldShow: function (coarse) {
+      return state === 'play' && balls.length && balls[0].inLane && !!coarse;
+    }
   };
 
   // ===== boot =====
@@ -2399,7 +2438,8 @@
       return launchPointerHit({ pointerType: coarse ? 'touch' : 'mouse' }, px, py);
     },
     bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y, W: W, H: H }; },
-    get tableBuilt() { return tableBuilt; }
+    get tableBuilt() { return tableBuilt; },
+    plungerAffordanceActive: plungerAffordanceActive
   };
 
   var scheduleIdle = window.requestIdleCallback || function (cb) { setTimeout(function () { cb({ didTimeout: true }); }, 1); };

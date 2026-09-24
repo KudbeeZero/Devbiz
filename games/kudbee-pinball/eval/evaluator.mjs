@@ -23,6 +23,10 @@ await page.screenshot({ path: OUT+'/01-gate.png' });
 await page.evaluate(()=>{ window.__f=0; const c=()=>{window.__f++;requestAnimationFrame(c);}; requestAnimationFrame(c); window.__t0=performance.now(); });
 await page.click('#startBtn').catch(()=>{}); await page.evaluate(()=>{const b=document.getElementById('startBtn'); if(b)b.blur();}); await sleep(150);
 rec('start', (await page.evaluate(()=>window.PINBALL.state))==='play', 'state=play after Launch');
+rec('plunger-affordance-gate', await page.evaluate(()=>{
+  var T=window.__kbTest;
+  return T && T.plungerAffordanceWouldShow(true) && !T.plungerAffordanceWouldShow(false);
+}), 'inLane + coarse gate true; hides when coarse false (headless uses logic hook)');
 
 const zone = await page.evaluate(() => {
   const b = window.PINBALL.bounds();
