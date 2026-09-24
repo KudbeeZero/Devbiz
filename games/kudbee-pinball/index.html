@@ -1189,9 +1189,9 @@
       // every segment and the FIRST hit is resolved at its exact hit time, then the
       // remainder of the sub-step is re-tried. Post-overlap (move-then-resolve) alone
       // let a fast plunge tunnel the top rail — TOI closes that.
-      var move = len(b.vx, b.vy) * hh;
+      var move = len(b.vx, b.vy) * h;
       var steps = Math.max(1, Math.ceil(move / (b.r * 0.5)));
-      var hh2 = hh / steps;
+      var hh2 = h / steps;
       for (var s = 0; s < steps; s++) {
         var fr = (s + 1) / steps;
         flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
@@ -1208,7 +1208,8 @@
           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
           resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling);
           rem *= (1 - hitT);
-          if (rem < 0.0002) rem = 0;
+          // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
+          if (hitT < 1e-5 || rem < 0.0002) rem = 0;
         }
         resolveAll(b);
         if (b.y > DRAIN_Y) break;
