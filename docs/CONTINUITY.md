@@ -2,6 +2,12 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-24 — Pinball ten-fix hardening batch (load-perf branch)
+
+**FIXES:** (1) `sweptSeg` perpendicular velocity uses `pvAlong` (removed self-referential dead `pvy` line). (2) Leaderboard boot/post gated on `http(s)` — no `file://` fetch noise; game-over shows hosting hint. (3) `lbPost` queues through async SDK boot. (4) Tab hidden: skip physics dt + reset `acc`/`lastT` on visible. (5) Physics backlog capped after 5 substeps. (6) `gameOver`/`resetGame` clear charge + pointer roles. (7) Space keyup cannot launch from gate/over overlays. (8) `setFlip`/`physStep`/`drawFlipper` guard before table built. (9) Plunger affordance also when charging / launch pointer down (fine-pointer discoverability). (10) Canvas a11y + resize redraw calls `ensureTableBuilt()`.
+
+**TEST_VERIFIED:** Pinball evaluator **13/13**; leaderboard **105/105**. Local passed, no CI configured.
+
 ## 2026-09-24 — Pinball evaluator `no-real-console-errors` (load-perf lane)
 
 **Finding:** The sole failing rubric check (`no-real-console-errors`) is **`Fetch API cannot load file:///api/leaderboard?…`** when the game is opened via **`file://`**, `KD_LB_CONFIG.API_BASE` is empty, and `start()` calls `lbBoot()` → `lbLoadTop()` → SDK `fetch('/api/leaderboard')`. That relative URL resolves to `file:///api/…`, which Chromium rejects with a console `error` (not a page throw).
