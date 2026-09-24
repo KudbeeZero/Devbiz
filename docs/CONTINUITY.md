@@ -2,6 +2,25 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-24 — PR #174 deployed Cloudflare HTTP smoke (leaderboard path)
+
+**DEPLOY (PR #174 bot, commit `7c8b31f3`):** Cloudflare Workers git integration — **Commit preview** `https://fa541bdc-devbiz.kudbee.workers.dev` · **Branch preview** `https://cursor-pinball-phys-timestep-fix-2a63-devbiz.kudbee.workers.dev` (same build). Vercel mirror: `https://devbiz-git-cursor-pinball-phys-timestep-fix-2a63-ascend9.vercel.app` (not primary). Pinball route: `/games/kudbee-pinball/`.
+
+**DEPLOYED GAMEPLAY (Playwright + real Chromium on commit preview):** Launch → play; left-wall slide sp≈1129; right-lane contact sp≈783; forced drain → **game-over** (score 140, `ballsLeft` 0). **No page errors; no console errors** on this pass.
+
+**DEPLOYED LEADERBOARD / NETWORK:** `GET …/leaderboard/client/kd-leaderboard.js` → **200** (304 on reload). `GET …/api/leaderboard?game=pinball&metric=score&limit=10` → **404** (empty body) on preview **and** on production host `https://devbiz.kudbee.workers.dev` (curl). Game-over UI: **`leaderboard offline`**; **`#lbPostBtn` hidden** (SDK client never binds — expected when top-10 load fails). Post-click with pre-set demo name: **no post** (button not shown). **Not** local/demo `file://` behavior — this is **http(s) hosted** with **relative `API_BASE: ''`** hitting a **static-only devbiz Worker** (root `wrangler.toml` assets only; no `/api/*` route). Separate `kudbee-leaderboard` Worker URL probe returned **404 / error 1042** — **no live production Worker** reachable from this environment for pinball receipts.
+
+**CLASSIFICATION (Four-State):**
+
+| State | PR #174 Pinball |
+| --- | --- |
+| **CODE COMPLETE** | Yes — physics frozen at `7c8b31f`; load/hardening + wall regression harness on branch. |
+| **TEST VERIFIED** | Yes — Pinball evaluator **14/14** (file://); `leaderboard/` **105/105**; inline IIFE syntax OK; localhost HTTP regression **9/9** (prior). Local passed, no CI configured. |
+| **LIVE VERIFIED** | **Partial** — **deployed static preview** gameplay + SDK load **verified** on Cloudflare HTTPS; **online leaderboard post/load not verified** (API 404 — infra gap, not Pinball regression). Do **not** claim full LIVE VERIFIED for leaderboard until `/api/leaderboard` returns 200 on the target host or `KD_LB_CONFIG.API_BASE` points at a deployed Worker. |
+| **PRODUCTION READY** | **No** — founder review/merge + live leaderboard routing/Worker (owner-gated deploy). |
+
+**DECISION:** No Pinball code change on #174 for this finding — client correctly degrades to “leaderboard offline” when API is absent. **Next larger improvement (infra lane):** mount leaderboard API on devbiz Worker (uncomment assets+routes per `leaderboard/README.md`) **or** set per-env `API_BASE` after Worker deploy; then rerun game-over → Post Score → reload top-10 on the **same** preview URL.
+
 ## 2026-09-24 — PR #174 wall-glue collision solver fix (replaces f7d927d heuristic)
 
 **DISCOVERY:** Balls “glued” to side walls because (1) **`resolveSeg` velocity-normal override** ran whenever `v·n ≥ 0`, including **tangential slides while still penetrating** — depenetration pushed along ±Y instead of the geometric outward normal, so the ball never left the wall; (2) **contact blacklist** still skipped resolution for penetrations up to **0.35** radius units; (3) **`resolveAll` × 3** re-applied tangential **friction every iteration** on the same segment, compounding to near-zero slide speed (documented failure mode at buildTable comment). The f7d927d **wall-hug timer** masked symptoms; removed.
