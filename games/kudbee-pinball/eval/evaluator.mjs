@@ -21,6 +21,32 @@ await page.screenshot({ path: OUT+'/01-gate.png' });
 await page.evaluate(()=>{ window.__f=0; const c=()=>{window.__f++;requestAnimationFrame(c);}; requestAnimationFrame(c); window.__t0=performance.now(); });
 await page.click('#startBtn').catch(()=>{}); await page.evaluate(()=>{const b=document.getElementById('startBtn'); if(b)b.blur();}); await sleep(150);
 rec('start', (await page.evaluate(()=>window.PINBALL.state))==='play', 'state=play after Launch');
+
+const zone = await page.evaluate(() => {
+  const b = window.PINBALL.bounds();
+  return {
+    coarseMid: window.PINBALL.launchPointerHit(true, b.W * 0.75, b.H * 0.5),
+    mouseMid: window.PINBALL.launchPointerHit(false, b.W * 0.75, b.H * 0.5),
+    mouseCorner: window.PINBALL.launchPointerHit(false, b.W * 0.8, b.H * 0.85),
+  };
+});
+rec('touch-zone-mid-right', zone.coarseMid && !zone.mouseMid, 'coarse mid-right accepts plunger; fine pointer mid-right does not');
+rec('mouse-zone-corner', zone.mouseCorner, 'desktop lower-right plunger zone unchanged');
+
+const touchLaunch = await page.evaluate(async () => {
+  const c = document.getElementById('game');
+  const r = c.getBoundingClientRect();
+  const cx = r.left + r.width * 0.78;
+  const cy = r.top + r.height * 0.48;
+  c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: cx, clientY: cy, pointerId: 42, pointerType: 'touch', isPrimary: true }));
+  await new Promise(res => setTimeout(res, 450));
+  c.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: cx, clientY: cy, pointerId: 42, pointerType: 'touch', isPrimary: true }));
+  await new Promise(res => setTimeout(res, 250));
+  const b0 = window.PINBALL.balls[0];
+  return { inLane: !!(b0 && b0.inLane), x: b0 ? b0.x : null, ch: window.PINBALL.charge };
+});
+rec('touch-hold-launch', !touchLaunch.inLane && touchLaunch.x < 850, 'synthetic touch hold launched (inLane=false, x=' + (touchLaunch.x == null ? 'n/a' : touchLaunch.x.toFixed(0)) + ')');
+
 await page.keyboard.down('Space'); await sleep(800); await page.keyboard.up('Space'); await sleep(300);
 
 let minX=1e9,maxScore=0,nan=false,sawPlayfield=false,flipMoved=false,launches=0;
