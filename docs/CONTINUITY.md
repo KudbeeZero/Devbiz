@@ -12,6 +12,18 @@ Append-only decisions and findings that future lanes should not re-litigate.
 
 **LIVE VERIFIED:** **No** — localhost/preview only; not production deploy or player evidence.
 
+## 2026-09-24 — PR #174 multi-wall/corner physics regression harness
+
+**DISCOVERY:** Shared `resolveSeg` fix needed proof beyond left wall — table has vertical cabinet walls, lane-inner (x≈800), angled top deflector, corner nubs, funnel diagonals, slings, and deflector TOI pocket (x≈831).
+
+**IMPLEMENTATION:** Deterministic `__kbTest.runPhysWallRegression()` — nine cases (left/right slide, deflector angle, left-top corner, high-normal impact, long parallel slide, gravity micro-substeps, lane-deflector TOI, flipper-near-wall). Each asserts no hang (`stuck` counter), `ballMaxPen` ≤ threshold, minimum speed — **no timer/eject**. Evaluator rubric **`phys-wall-regression`** (replaces standalone `wall-slide-left` check).
+
+**TEST_VERIFIED:** Pinball evaluator **14/14** (file://); leaderboard **105/105**; inline syntax OK; HTTP `http://127.0.0.1:8765/...` phys regression **9/9**. Local passed, no CI configured.
+
+**LIVE VERIFIED:** **No**.
+
+**NEXT (PR #174):** Deployed HTTP game-over → leaderboard post/load on Cloudflare preview (not localhost).
+
 ## 2026-09-24 — PR #174 single Pinball lane (phys + load-perf stack)
 
 **LANE:** All Pinball work on **`cursor/pinball-phys-timestep-fix-2a63`** → [PR #174](https://github.com/KudbeeZero/Devbiz/pull/174). Preserved **`5608b0e`**; cherry-picked touch, load-perf, affordance, hardening, eval/docs (pinball-only).

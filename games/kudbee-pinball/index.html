@@ -2445,6 +2445,85 @@
       var y0 = b.y;
       for (var i = 0; i < 150; i++) physStep(PH);
       return { y: b.y, y0: y0, sp: len(b.vx, b.vy), x: b.x };
+    },
+    ballMaxPen: function (b) {
+      var maxPen = 0;
+      for (var i = 0; i < segs.length; i++) {
+        var s = segs[i], ax = s.ax, ay = s.ay, bx = s.bx, by = s.by;
+        var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
+        var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
+        var qx = ax + ex * t, qy = ay + ey * t;
+        var d = len(b.x - qx, b.y - qy), rr = b.r + (s.r || 0);
+        if (d < rr) maxPen = Math.max(maxPen, rr - d);
+      }
+      return maxPen;
+    },
+    prepBall: function (x, y, vx, vy) {
+      if (!balls[0]) return null;
+      var b = balls[0]; b.inLane = false; b.injected = true;
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0;
+      return b;
+    },
+    runPhysWallRegression: function () {
+      if (state !== 'play' || !balls[0]) return { ok: false, reason: 'not in play', cases: {} };
+      var cases = {}, self = window.__kbTest;
+      function run(id, x, y, vx, vy, steps, pass) {
+        var b = self.prepBall(x, y, vx, vy);
+        var y0 = b.y, x0 = b.x, stuck = 0;
+        for (var i = 0; i < steps; i++) {
+          var px = b.x, py = b.y, psp = len(b.vx, b.vy);
+          physStep(PH);
+          if (len(b.x - px, b.y - py) < 0.03 && Math.abs(len(b.vx, b.vy) - psp) < 2 && psp < 12) stuck++;
+          else stuck = 0;
+          if (stuck > 50) break;
+        }
+        var sp = len(b.vx, b.vy), pen = self.ballMaxPen(b);
+        var ok = stuck <= 50 && pass(b, { sp: sp, pen: pen, x0: x0, y0: y0 });
+        cases[id] = { ok: ok, sp: Math.round(sp), pen: +pen.toFixed(3), x: Math.round(b.x), y: Math.round(b.y), stuck: stuck };
+      }
+      run('leftVerticalSlide', 78, 900, 40, 420, 150, function (b, m) {
+        return b.y > m.y0 + 100 && m.sp > 85 && m.pen < 0.2;
+      });
+      run('rightLaneInner', 785, 680, 420, 60, 80, function (b, m) {
+        return m.sp > 70 && m.pen < 0.25;
+      });
+      run('topDeflectorAngle', 820, 210, -520, 320, 90, function (b, m) {
+        return m.sp > 90 && m.pen < 0.25 && b.x < 850;
+      });
+      run('cornerLeftTop', 74, 118, 15, -90, 100, function (b, m) {
+        return m.sp > 40 && m.pen < 0.22;
+      });
+      run('highNormalLeft', 76, 520, -920, 30, 35, function (b, m) {
+        return m.sp > 200 && m.pen < 0.15;
+      });
+      run('longParallelLeft', 78, 350, 8, 580, 180, function (b, m) {
+        return m.sp > 120 && m.pen < 0.2 && b.y > m.y0 + 60;
+      });
+      run('microSubstepGravity', 78, 750, 0, 0, 120, function (b, m) {
+        return b.vy > 120 && m.sp > 70 && m.pen < 0.2;
+      });
+      run('laneDeflectorTOI', 828, 250, -620, 480, 100, function (b, m) {
+        return m.sp > 90 && m.pen < 0.3;
+      });
+      if (flipL) {
+        var b8 = self.prepBall(340, 1270, -80, -160);
+        flipL.pressed = true; flipL.buf = 0.08;
+        var a0 = flipL.a, stuck8 = 0;
+        for (var j = 0; j < 45; j++) {
+          var px8 = b8.x, py8 = b8.y;
+          physStep(PH);
+          if (len(b8.x - px8, b8.y - py8) < 0.04 && len(b8.vx, b8.vy) < 15) stuck8++;
+          else stuck8 = 0;
+          if (stuck8 > 50) break;
+        }
+        flipL.pressed = false;
+        var sp8 = len(b8.vx, b8.vy), pen8 = self.ballMaxPen(b8);
+        var ok8 = stuck8 <= 50 && (sp8 > 100 || Math.abs(flipL.a - a0) > 0.05) && pen8 < 0.28;
+        cases.flipperNearWall = { ok: ok8, sp: Math.round(sp8), pen: +pen8.toFixed(3), x: Math.round(b8.x), y: Math.round(b8.y), stuck: stuck8 };
+      }
+      var allOk = true;
+      for (var k in cases) { if (!cases[k].ok) allOk = false; }
+      return { ok: allOk, cases: cases };
     }
   };
 
