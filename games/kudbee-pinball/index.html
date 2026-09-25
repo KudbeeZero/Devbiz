@@ -331,7 +331,10 @@ var ramp = null;                           // center loop-ramp trigger
     seg(L, T, L + 40, T - 26); seg(CAB, T, CAB - 40, T - 26);   // corner nubs
     seg(CAB, T, CAB, 1340);                                // right cabinet (= lane outer wall)
     // ---- shooter lane (right); the inner wall doubles as the playfield's right wall ----
-    seg(LIN, 200, LIN, 1320);                              // lane inner / playfield-right — OPEN above y=200
+    seg(LIN, 200, LIN, 1180);                              // lane inner / playfield-right — stops at the funnel (no V-pocket)
+    // Playfield-side lip at the lane mouth: an injected ball that rolls back toward
+    // the opening is shed into the field instead of falling down the plunger.
+    seg(LIN, 200, 755, 235, { rest: 0.28 });
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
     // upper-right corner wedge: closes the dead pocket above the deflector so a ball
@@ -360,7 +363,7 @@ var ramp = null;                           // center loop-ramp trigger
     bumpers.push({ x: 450, y: 360, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
     // a couple of round posts to bank off
     bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
-    bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 630, y: 780, r: 16, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
     // ---- side bumpers: the wide outer alleys next to each wall were empty — a ball
     //      that strayed out there just slid straight down toward the outlane. A prior fix
     //      dropped 6 live bumpers ~55-80px off the outer wall to catch it — but that's
@@ -391,11 +394,11 @@ var ramp = null;                           // center loop-ramp trigger
     // col: a cooler indigo accent (vs. the center trio's signature cyan) so a wall-side hit
     // reads as visually distinct — see onBumper()'s particle burst and the render pass below.
     var WALL_BUMPER_COL = '#7b8cff';
-    bumpers.push({ x: 109, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 107, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 107, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 136, y: 480, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 134, y: 600, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 136, y: 720, r: 24, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 132, y: 820, r: 20, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 136, y: 1045, r: 24, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
     // Right wall is the shooter-lane inner at x=800, not the cabinet at 862. Mirroring
     // the left bumpers to x≈753 put them in a 21px pinch against that wall — a hug
     // at x=786 overlaps the bumper and the kick normal points INTO the wall, so the
@@ -454,7 +457,7 @@ var ramp = null;                           // center loop-ramp trigger
     // ---- secondary lock saucer (right side): "Dual Lock" — harder shot, awards bonus +
     //      advances toward multiball independently. When both locks are filled, triggers
     //      a 3-ball multiball. ----
-    saucerR = { x: 700, y: 880, r: 20, locks: 0, maxLocks: 2 };
+    saucerR = { x: 640, y: 900, r: 16, locks: 0, maxLocks: 2 };
 
     // ---- The Star (top saucer): mission start / wizard mode lock ----
     //      Sitting at the top of the playfield, this is the "star" the player must
@@ -463,7 +466,7 @@ var ramp = null;                           // center loop-ramp trigger
 
     // ---- magnet hold (electromagnet): upper-right zone that catches ball, holds it
     //      briefly, then fires it back with bonus. Great for control + scoring. ----
-    magnet = { x: 700, y: 380, r: 32, active: false, holdT: 0, holdMax: 1.2, cooldown: 0, capturedBall: null };
+    magnet = { x: 680, y: 360, r: 28, active: false, holdT: 0, holdMax: 1.0, cooldown: 0, capturedBall: null };
 
     // ---- captive ball zone: a "gravity well" in the lower-left that traps a ball.
     //      Player must nudge or hit targets to free it. Awards big bonus while captive. ----
@@ -1277,11 +1280,24 @@ var ramp = null;                           // center loop-ramp trigger
          continue;
        }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
+      // An injected ball that tunnels into the shooter is "caught on the right".
+      // Push it back onto the playfield. Failed plunges (not injected) stay in-lane.
+      if (b.injected && !b.laneTest && b.x > 798) {
+        if (b.y < 240) { b.x = 700; b.y = 250; b.vx = -220; b.vy = 140; }
+        else { b.x = 786; if (b.vx > -160) b.vx = -280; }
+      }
       // Peel off the shooter-lane inner wall. A hug at x≈786 plus a right-bumper
       // kick used to rail-gun the ball down the right side with no path back.
-      if (!climbing && b.x > 778 && b.x < 800 && b.y > 230 && b.y < 1175) {
-        b.vx -= 720 * h;
-        if (len(b.vx, b.vy) < 90) b.vx = Math.min(b.vx, -280);
+      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1180) {
+        b.vx -= 980 * h;
+        b.railT = (b.railT || 0) + h;
+        if (b.railT > 0.4) { b.vx = -360; b.vy = Math.max(b.vy, 60); b.railT = 0; }
+      } else if (b.x < 82 && b.x > 60 && b.y > 200 && b.y < 1180) {
+        b.vx += 980 * h;
+        b.railT = (b.railT || 0) + h;
+        if (b.railT > 0.4) { b.vx = 360; b.vy = Math.max(b.vy, 60); b.railT = 0; }
+      } else {
+        b.railT = 0;
       }
 b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
        // speed cap
@@ -1367,7 +1383,7 @@ var move = len(b.vx, b.vy) * h;
       // Prevents accidental catches during multiball chaos
       if (magnet && !magnet.capturedBall && magnet.cooldown <= 0 && !multiballActive) {
         var mdx = b.x - magnet.x, mdy = b.y - magnet.y;
-        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -480) { // only catch FAST upward shots
+        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -560) { // only catch FAST upward shots
           magnet.capturedBall = b; magnet.active = true; magnet.holdT = 0;
           b.vx = 0; b.vy = 0; magnet.cooldown = 3;
           sfx('lock'); callout('MAGNET LOCK', 'charging...', '#c46bff');
@@ -1455,7 +1471,7 @@ var move = len(b.vx, b.vy) * h;
       // POP-UP POST: rises to catch ball near flippers, kicks back
       if (popUpPost && !popUpPost.raised && popUpPost.cooldown <= 0) {
         var pdx = b.x - popUpPost.x, pdy = b.y - popUpPost.y;
-        if (pdx * pdx + pdy * pdy < (popUpPost.r + 30) * (popUpPost.r + 30) && b.vy > 100) {
+        if (pdx * pdx + pdy * pdy < (popUpPost.r + 6) * (popUpPost.r + 6) && b.vy > 220) {
           popUpPost.raised = true; popUpPost.raiseTimer = 0; popUpPost.capturedBall = b;
           popUpPost.cooldown = 4;
           b.vx *= 0.3; b.vy = -200; // pop up
@@ -1484,7 +1500,7 @@ var move = len(b.vx, b.vy) * h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
-      if (b.x > 800 && b.x < 862 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      if (!b.injected && b.x > 800 && b.x < 862 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -2725,13 +2741,16 @@ function frame(now) {
       return maxPen;
     },
     prepBall: function (x, y, vx, vy) {
+      if (state !== 'play') start();
+      if (ballsLeft < 1) ballsLeft = 3;
+      if (!balls.length) spawnBallInLane();
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;
-      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0;
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0; b.railT = 0;
       if (magnet) { magnet.capturedBall = null; magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; }
       if (vortex) { vortex.capturedBall = null; vortex.active = false; vortex.spinT = 0; }
       if (captiveZone) { captiveZone.captiveBall = null; captiveZone.active = false; }
-      if (popUpPost) { popUpPost.capturedBall = null; popUpPost.raised = false; }
+      if (popUpPost) { popUpPost.capturedBall = null; popUpPost.raised = false; popUpPost.cooldown = 99; }
       return b;
     },
     runPhysWallRegression: function () {
@@ -2739,6 +2758,7 @@ function frame(now) {
       var cases = {}, self = window.__kbTest;
       function run(id, x, y, vx, vy, steps, pass) {
         var b = self.prepBall(x, y, vx, vy);
+        if (id === 'topDeflectorAngle' || id === 'laneDeflectorTOI') b.laneTest = true;
         var y0 = b.y, x0 = b.x, stuck = 0;
         for (var i = 0; i < steps; i++) {
           var px = b.x, py = b.y, psp = len(b.vx, b.vy);
