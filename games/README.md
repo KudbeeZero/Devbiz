@@ -11,7 +11,7 @@ no bundler required for play; deploy via root `wrangler.toml`.
 | Kudbee Darts | [`kudbee-darts/`](./kudbee-darts/) | [yes](./kudbee-darts/README.md) |
 | Kudbee Riff | [`kudbee-riff/`](./kudbee-riff/) | [yes](./kudbee-riff/README.md) |
 | Kudbee Riff II | [`kudbee-riff-2/`](./kudbee-riff-2/) | [yes](./kudbee-riff-2/README.md) |
-| Kudbee Pinball — Starbreak | [`kudbee-pinball/`](./kudbee-pinball/) | [eval rubric](./kudbee-pinball/eval/README.md) |
+| Kudbee Pinball — Starbreak | [`kudbee-pinball/`](./kudbee-pinball/) | [yes](./kudbee-pinball/README.md) · [eval](./kudbee-pinball/eval/README.md) |
 | Kudbee Voidrunner | [`kudbee-voidrunner/`](./kudbee-voidrunner/) | [yes](./kudbee-voidrunner/README.md) |
 | Kudbee Munch — Windy City | [`kudbee-munch/`](./kudbee-munch/) | [yes](./kudbee-munch/README.md) |
 | Kudbee Orbital | [`kudbee-orbital/`](./kudbee-orbital/) | [yes](./kudbee-orbital/README.md) |
