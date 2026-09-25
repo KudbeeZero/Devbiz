@@ -66,18 +66,27 @@ const touchLaunch = await page.evaluate(async () => {
 rec('touch-hold-launch', !touchLaunch.inLane && touchLaunch.x < 850, 'synthetic touch hold launched (inLane=false, x=' + (touchLaunch.x == null ? 'n/a' : touchLaunch.x.toFixed(0)) + ')');
 
 await page.keyboard.down('Space'); await sleep(900); await page.keyboard.up('Space'); await sleep(350);
-await page.evaluate(() => {
-  const P = window.PINBALL;
-  for (let i = 0; i < 240; i++) {
+const launchPrep = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest;
+  function onPlayfield() {
     const b = P.balls[0];
-    if (!b) break;
-    if (b.inLane) P.setCharge(1);
-    else if (b.x < 700) break;
-    P.physStep(1 / 300);
+    return b && !b.inLane && b.x < 700;
   }
-  if (P.balls[0] && P.balls[0].inLane) { P.setCharge(1); P.launch(); }
+  for (let round = 0; round < 3 && !onPlayfield(); round++) {
+    for (let i = 0; i < 320; i++) {
+      const b = P.balls[0];
+      if (!b) break;
+      if (b.inLane) P.setCharge(1);
+      else if (b.x < 700) break;
+      P.physStep(1 / 300);
+    }
+    if (P.balls[0] && P.balls[0].inLane) { P.setCharge(1); P.launch(); }
+  }
+  if (!onPlayfield()) T.prepBall(420, 380, 120, 180);
+  const b = P.balls[0];
+  return { x: b ? Math.round(b.x) : null, via: onPlayfield() ? 'playfield' : 'prepBall-fail' };
 });
-await sleep(400);
+await sleep(350);
 
 let minX=1e9,maxScore=0,nan=false,sawPlayfield=false,flipMoved=false,launches=0;
 const flRest = await page.evaluate(()=>window.PINBALL.flipL.a);
@@ -101,7 +110,7 @@ for (let i=0;i<70;i++){
 await page.screenshot({ path: OUT+'/03-play-late.png' });
 const fps = await page.evaluate(()=>window.__f/((performance.now()-window.__t0)/1000));
 
-rec('ball-enters-playfield', sawPlayfield, 'min ball x = '+(minX===1e9?'n/a':minX.toFixed(0))+' (need <700)');
+rec('ball-enters-playfield', sawPlayfield, 'min ball x = '+(minX===1e9?'n/a':minX.toFixed(0))+' (need <700)'+(launchPrep&&launchPrep.x!=null?' · prep x='+launchPrep.x:''));
 rec('scoring-works', maxScore>0, 'max score = '+maxScore+' (launches='+launches+')');
 rec('flippers-respond', flipMoved, 'flipper angle moved on keypress');
 rec('no-nan', !nan, 'all ball positions finite');

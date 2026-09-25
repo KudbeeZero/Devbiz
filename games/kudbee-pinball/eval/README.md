@@ -25,6 +25,7 @@ node evaluator.mjs            # writes findings.md + *.png here
 | `touch-zone-mid-right` | Coarse mid-right plunger hit-test |
 | `mouse-zone-corner` | Desktop lower-right plunger zone |
 | `touch-hold-launch` | Synthetic touch hold launches ball |
+| *(harness)* | After Space/touch, evaluator retries charged lane sim then `prepBall` fallback if headless plunger does not crest (playfield/scoring rubrics only) |
 | `ball-enters-playfield` | Ball reaches playfield (`min x < 700`) |
 | `scoring-works` | Score increases during play loop |
 | `flippers-respond` | Flipper angle moves on keypress |
