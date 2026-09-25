@@ -1712,12 +1712,12 @@
       pendingScore = score; pendingDist = Math.round(dist);
       if (inp) { var last = ''; try { last = localStorage.getItem(INIT_KEY) || ''; } catch (e) {} inp.value = last; }
       if (entry) entry.classList.remove('hidden');
-      renderBoard(-1);
+      loadOnlineBoard();
       if (inp) setTimeout(function () { try { inp.focus(); inp.select(); } catch (e) {} }, 60);
     } else {
       pendingScore = -1;
       if (entry) entry.classList.add('hidden');
-      renderBoard(-1);
+      loadOnlineBoard();
     }
     overOv.classList.remove('hidden');
     lbLoadTop();
@@ -1733,7 +1733,6 @@
   var running = false, rafId = 0, lastT = 0, acc = 0, PH = 1 / 120;
   function start() {
     audioInit(); audioResume(); engineStart();             // unlock + spin up audio on the launch gesture
-    if (pendingScore >= 0) commitScore(initialsInput ? initialsInput.value : '');  // don't lose an unsaved high score
     if (nameEntryEl) nameEntryEl.classList.add('hidden');
     resetGame(); state = 'play'; gate.classList.add('hidden'); overOv.classList.add('hidden');
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
@@ -3121,9 +3120,61 @@
   var nameEntryEl = document.getElementById('nameEntry'), initialsInput = document.getElementById('initials'), saveBtn = document.getElementById('saveScore');
   function doSaveScore() {
     if (pendingScore < 0) return;
-    var idx = commitScore(initialsInput ? initialsInput.value : '');
-    if (nameEntryEl) nameEntryEl.classList.add('hidden');
-    renderBoard(idx);
+    var name = sanitizeInitials(initialsInput ? initialsInput.value : '');
+    // Submit via SDK (online leaderboard) — keeps the same initials-entry moment
+    var submitToCloud = function () {
+      if (!window.KDLeaderboard) { fallbackToLocal(name); return; }
+      window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+        .then(function (c) {
+          var nm = (c.user() && c.user().name) || name || 'Pilot';
+          var bestTime = Math.round(runTime || 0);
+          return c.submit(nm, { score: pendingScore, bestCombo: runStats.maxChain, dist: Math.round(pendingDist), waveSurvived: wave, bestTime: bestTime });
+        })
+        .then(function (res) {
+          var rk = res && res.ranks && res.ranks.score;
+          if (nameEntryEl) nameEntryEl.classList.add('hidden');
+          // Load online board after posting
+          loadOnlineBoard();
+          // Also save locally for offline fallback
+          fallbackToLocal(name);
+        })
+        .catch(function (err) {
+          if (err && err.status === 401) {
+            // Need to sign in first
+            var c = window.KDLeaderboard && window.KDLeaderboard._instance;
+            if (c) {
+              c.signIn().then(function () { submitToCloud(); }).catch(fallbackToLocal);
+            } else fallbackToLocal(name);
+          } else {
+            fallbackToLocal(name);
+          }
+        });
+    };
+    var fallbackToLocal = function (nm) {
+      var idx = commitScore(nm);  // saves to localStorage
+      if (nameEntryEl) nameEntryEl.classList.add('hidden');
+      renderBoard(idx);
+    };
+    submitToCloud();
+  }
+  function loadOnlineBoard() {
+    if (!window.KDLeaderboard) { renderBoard(-1); return; }
+    window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
+      .then(function (c) { return c.leaderboard('score', 10); })
+      .then(function (d) { renderBoardFromSDK(d.entries); })
+      .catch(function () { renderBoard(-1); });
+  }
+  function renderBoardFromSDK(entries) {
+    var board = document.getElementById('board'); if (!board) return;
+    if (!entries || !entries.length) { board.className = 'board empty'; board.innerHTML = ''; return; }
+    board.className = 'board';
+    var html = '<h3>Top Pilots</h3><ol>';
+    for (var i = 0; i < Math.min(10, entries.length); i++) {
+      var e = entries[i];
+      html += '<li' + (e.you ? ' class="me"' : '') + '><span class="rk">' + (i + 1) +
+        '</span><span class="nm">' + e.name + '</span><span class="sc">' + (e.value || 0).toLocaleString() + '</span></li>';
+    }
+    board.innerHTML = html + '</ol>';
   }
   if (saveBtn) saveBtn.addEventListener('click', doSaveScore);
   if (initialsInput) {
