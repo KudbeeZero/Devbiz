@@ -224,6 +224,7 @@
 
   // ---- wizard mode: SUPERNOVA — 60s ultimate frenzy ----
   var wizardActive = false, wizardTimer = 0, wizardDone = false;
+  var starbreakActive = false, starbreakTimer = 0;
   var WIZARD_DURATION = 60, wizardFlash = 0;
   var tripleLoopDone = false, hasSeenMultiball = false;                     // prerequisite trackers
   var WIZARD_MULT = 5;                                                       // all scoring ×5 in wizard mode
@@ -592,6 +593,7 @@ var ramp = null;                           // center loop-ramp trigger
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
     missionMult = 1; missionGravMod = 1;
     wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
+    starbreakActive = false; starbreakTimer = 0;
     tripleLoopDone = false; hasSeenMultiball = false; wizardKickMult = 1;
     hitStopT = 0; colorWashR = 0; colorWashG = 0; colorWashB = 0; colorWashA = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -1199,6 +1201,13 @@ var ramp = null;                           // center loop-ramp trigger
       if (wizardTimer <= 0) { wizardActive = false; wizardDone = true; wizardKickMult = 1;
         callout('SUPERNOVA END', 'wizard complete!', '#ffd34d'); sfx('multiball');
         burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ffffff', 24, 560); }
+    }
+    // STARBREAK wizard mode timer
+    if (starbreakActive) {
+      starbreakTimer -= dt;
+      if (starbreakTimer <= 0) { starbreakActive = false; starbreakTimer = 0; starSaucer.active = false; starSaucer.locks = 0;
+        callout('STARBREAK END', 'wizard complete!', '#ffd34d'); sfx('multiball');
+        burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ff6ec7', 24, 560); }
     }
     if (missionActive >= 0) {
       missionTimer -= dt;
