@@ -62,6 +62,7 @@ Use **only** these labels:
 | DBZ-061 | Devbiz | #168 | `kilo/lucky-wire-mfi` | feature | `MERGED` | — | None | **Pinball Phase 4 — Online Leaderboard Integration**: Pinball metric catalog in `leaderboard/shared/core.js` (score, bestMultiball, modesCompleted); full SDK integration in `games/kudbee-pinball/index.html` with game-over overlay UI, demo mode works immediately. Local verification passed (launch→play state, syntax clean). Pinball now matches Riff/Riff-2 as "SDK-wired" in GAMES_STUDIO_ROADMAP.md. Merged 2026-09-21 after owner approval. |
 | DBZ-063 | Devbiz | #167 | (owner) | feature | `MERGED` | — | None | **Kudbee Abyss — Interactive 3D Story (Phase 1)**: Three.js scene, branching choices, preloader, chapter map, save/resume, stats, reduced-motion support. Owner PR. Merged 2026-09-21. |
 | DBZ-066 | Devbiz | N/A | `cursor/pinball-flipper-gutter-2a63` (ff stack) | bugfix | `MERGED` | — | None | **Pinball playability restore (post #179 overlap):** Reverted shortened flippers / raised drain “cage”; full lower table (drain 1430, kick 1382–1426, flip py 1300 len 150); right gutter TOI slide + peel/rail; skill-drop `enterFromLane` + crest inject; flipper-band / gutter unstuck (`gutterT`, `flipBandT`). Evaluator **18/18** (`games/kudbee-pinball/eval/evaluator.mjs`). Fast-forwarded to `main` at `8d80634` (2026-09-25). Local passed, no CI configured. Online leaderboard still degrades on static host (`API_BASE: ''` → `/api/leaderboard` 404) — infra lane, not gameplay. |
+| DBZ-067 | Devbiz | N/A | (this commit) | bugfix | `MERGED` | — | None | **Pinball — Physics & Logic Hardening**: Fix missionC ReferenceError (add Solar Sail mission); swept collision hitT=0 stuck-ball fix; speed cap after sub-steps; ArrowUp/W nudge per spec; superLocks atomic addSuperLock(); vortex mid-capture race fix; ball-vs-ball restitution (0.6). Evaluator: 16/16 pass (local passed, no CI configured). Merged 2026-09-25. |
 | DBZ-065 | Devbiz | N/A | `kilo/fix-ball-save-bumper-stuck` | bugfix | `MERGED` | — | None | **Pinball Phase 2+ — Skill Shots + Physics Bug Fixes**: Fix skill shot lane mapping (was inverted), ball stuck in lane after skill shot, STARBREAK undefined missionA/B/C variables, colorWash RGB clamping (>255 invalid CSS), saveT not cleared on wizard mode end, STARBREAK wizardKickMult + WIZARD_DURATION constant, explicit bumper cd:0 initialization. Evaluator: 14/14 pass (local passed, no CI configured). Merged 2026-09-25 after owner request. |
 | DBZ-064 | Devbiz | #170 | `claude/darts-leaderboard-wiring` | feature | `DRAFT` | Browser preview | — | **Darts Phase B.2 — Wire Online Leaderboard SDK**: Add `KD_LB_CONFIG` + `kd-leaderboard.js` SDK to `games/kudbee-darts/index.html`; add `_lbInit`/`_lbPostMatch` in `src/game.js` to post rating, bestCheckout, total180s, wins, bestStreak after each match. GAMES.darts metrics already defined in `leaderboard/shared/core.js`. Demo mode works immediately. |
 | DBZ-059 | Devbiz | #123 | (merged) | CI/tests | `MERGED` | — | Manual gate: Safari/Firefox/iOS cross-browser pass (checklist in PR #123) | **Polish L12 — Launch QA**: Playwright smoke + Lighthouse budget in CI (advisory, confirmed green on GitHub Actions run 28813438482), htmlhint `alt-require`, `404.html`, `robots.txt` `/tests/` fencing. Merged 2026-07-06. |
@@ -207,9 +208,13 @@ checking).
 
 | Branch | Merged via | Date noted | Safe to delete? |
 |---|---|---|---|
+<<<<<<< HEAD
 | `cursor/pinball-full-fix-2a63` | direct fast-forward → main | 2026-09-25 | Yes — fully in `main` |
 | `cursor/pinball-main-polish-2a63` | direct fast-forward → main | 2026-09-25 | Yes — fully in `main` |
 | `cursor/pinball-flipper-gutter-2a63` | direct fast-forward → main | 2026-09-25 | Yes — fully in `main` |
+=======
+| `kilo/pinball-bottom-rail-stuck-fixes` | PR #179 → main | 2026-09-25 | Yes — fully in `main` |
+>>>>>>> 2c6f7a1 (docs: update BUILD_LEDGER.md for DBZ-066 pinball bottom rail fixes merge)
 | `kilo/fix-ball-save-bumper-stuck` | direct fast-forward → main | 2026-09-25 | Yes — fully in `main` |
 | `claude/leaderboard-audit-architecture-r5b2xh` | PR #133 → main | 2026-07-07 | Yes — fully in `main` |
 | `claude/abyss-prototype` | PR #167 → main | 2026-09-22 | Yes — fully in `main` |
