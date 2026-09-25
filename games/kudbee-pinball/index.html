@@ -557,7 +557,7 @@ var ramp = null;                           // center loop-ramp trigger
   var leftRamp = null, rightRamp = null;             // side loop-ramp triggers (mirror the center `ramp`)
   var kickZoneL = null, kickZoneR = null;            // outlane kickback trigger boxes
   var tilt = 0, tilted = false, tiltFlash = 0;      // nudge budget; tilted = over-nudged (flippers dead this ball)
-  var TILT_MAX = 4, STUCK_EJECT_S = 4;              // nudges-before-tilt; seconds-up-top before an auto free
+  var TILT_MAX = 4, STUCK_EJECT_S = 4, LOWER_STUCK_EJECT_S = 3;  // nudges-before-tilt; seconds-up-top before an auto free; seconds-down-low before an auto free
   var comboN = 0, comboT = 0, bestCombo = 0;        // chained-shot combo (targets/loops/skill within a window)
   var comboKinds = [], comboTripleAwarded = false;  // shot-kind history for the current chain (named combos)
   var COMBO_WINDOW = 4;                             // seconds to keep a chain alive
@@ -1464,10 +1464,13 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           continue;
         }
       }
-      // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
+      // anti-stuck ball-save (upper): a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
+      // anti-stuck ball-save (lower): a ball stuck near the flippers/drain (low velocity, y > 1200)
+      // gets a small kick to prevent it from sitting there forever.
+      if (b.y > 1200 && len(b.vx, b.vy) < 180) { b.lowT2 = (b.lowT2 || 0) + h; if (b.lowT2 > LOWER_STUCK_EJECT_S) { b.lowT2 = 0; b.vx = (Math.random() - 0.5) * 220; b.vy = -Math.max(400, Math.abs(b.vy) + 200); burst(b.x, b.y, '#ffd34d', 18, 420); callout('FREED', 'ball unstuck', '#ffd34d'); } } else { b.lowT2 = 0; }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
 // trail
