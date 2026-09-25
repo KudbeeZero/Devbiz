@@ -2,6 +2,18 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-25 — PR #179 eval-only lower-playfield checks (no index.html)
+
+**DISCOVERY:** Kilo owns `games/kudbee-pinball/index.html` + `docs/BUILD_LEDGER.md` on `kilo/pinball-bottom-rail-stuck-fixes`. This lane does **not** edit those files.
+
+**IMPLEMENTATION:** Evaluator-only rubric: `lower-playfield-geo` (drain 1450, kick 1350–1430, flip py 1250 / len 110) and `lower-funnel-band` (prepBall 250,1280 + 200 physSteps, hang counter). Uses existing `__kbTest.prepBall` / `PINBALL.physStep`.
+
+**TEST_VERIFIED:** Evaluator **14/16** on this branch. New checks **PASS** (`lower-playfield-geo`, `lower-funnel-band` stuck=0). Existing **FAIL:** `ball-enters-playfield` (min x=814, need <700) and `scoring-works` (score 0) — likely launch/geometry side effect of raised/shortened flippers. **Not** patched here; Kilo owns `index.html`. Local passed, no CI configured.
+
+**LIVE_VERIFIED:** **No** — Kilo still owns gameplay; Cloudflare preview exists on #179 but this change is harness-only.
+
+**DECISION:** Do not dual-edit `index.html` while Kilo is on #179.
+
 ## 2026-09-24 — PR #174 deployed Cloudflare HTTP smoke (leaderboard path)
 
 **DEPLOY (PR #174 bot, commit `7c8b31f3`):** Cloudflare Workers git integration — **Commit preview** `https://fa541bdc-devbiz.kudbee.workers.dev` · **Branch preview** `https://cursor-pinball-phys-timestep-fix-2a63-devbiz.kudbee.workers.dev` (same build). Vercel mirror: `https://devbiz-git-cursor-pinball-phys-timestep-fix-2a63-ascend9.vercel.app` (not primary). Pinball route: `/games/kudbee-pinball/`.
