@@ -87,10 +87,10 @@ All 9 games have completed a "game-polish" pass. The main cross-cutting gap is *
 | Game | Leaderboard Status |
 |------|-------------------|
 | `riff`, `riff-2` | SDK-wired, needs Worker deployed |
-| `darts` | Backend exists, game needs SDK call |
-| `voidrunner` | Local top-10 exists, needs SDK swap |
-| `pinball` | **SDK integrated (this session)** — metrics: score, bestMultiball, modesCompleted |
-| `contra`, `munch`, `orbital`, `puzzles` | No online leaderboard yet |
+| `darts` | SDK-wired (DBZ-064 draft), demo mode works |
+| `voidrunner` | SDK-wired (draft PR #169), demo mode works |
+| `pinball` | **SDK integrated + physics/logic hardened** — metrics: score, bestMultiball, modesCompleted; evaluator 19/19 |
+| `contra`, `munch`, `orbital`, `puzzles` | SDK-wired (DBZ-065) — demo mode works immediately |
 
 See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 
