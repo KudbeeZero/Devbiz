@@ -186,7 +186,8 @@ never execute. The gate is now **local verification only**:
 
 - **Before starting any task:** verify `main` is locally sound — run the project's
   local lint/typecheck/test commands and confirm they pass before declaring a base
-  sound. Do not build on a base you haven't verified locally.
+  sound. Default Devbiz gate from repo root: **`npm run verify`** (pinball 21/21 +
+  leaderboard unit tests). Do not build on a base you haven't verified locally.
 - **Before claiming a branch is mergeable:** merge/rebase `main` into the working
   branch first, then confirm the branch's own local checks pass.
 - **After any push to, or merge/ff into, `main`:** re-run local verification and
