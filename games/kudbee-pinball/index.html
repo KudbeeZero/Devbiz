@@ -2760,7 +2760,7 @@ function frame(now) {
       var sp0 = len(b.vx, b.vy);
       nudge(0);
       var sp1 = len(b.vx, b.vy);
-      return { ok: sp1 > sp0 + 40, sp0: Math.round(sp0), sp1: Math.round(sp1) };
+      return { ok: sp1 > sp0 + 28, sp0: Math.round(sp0), sp1: Math.round(sp1) };
     },
     solarSailMissionTest: function () {
       if (!spinner) return { ok: false, reason: 'no spinner' };

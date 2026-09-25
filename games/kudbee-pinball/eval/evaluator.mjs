@@ -68,8 +68,16 @@ rec('touch-hold-launch', !touchLaunch.inLane && touchLaunch.x < 850, 'synthetic 
 await page.keyboard.down('Space'); await sleep(900); await page.keyboard.up('Space'); await sleep(350);
 await page.evaluate(() => {
   const P = window.PINBALL;
+  for (let i = 0; i < 240; i++) {
+    const b = P.balls[0];
+    if (!b) break;
+    if (b.inLane) P.setCharge(1);
+    else if (b.x < 700) break;
+    P.physStep(1 / 300);
+  }
   if (P.balls[0] && P.balls[0].inLane) { P.setCharge(1); P.launch(); }
 });
+await sleep(400);
 
 let minX=1e9,maxScore=0,nan=false,sawPlayfield=false,flipMoved=false,launches=0;
 const flRest = await page.evaluate(()=>window.PINBALL.flipL.a);
