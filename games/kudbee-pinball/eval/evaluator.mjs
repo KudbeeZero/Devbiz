@@ -109,7 +109,7 @@ const lower = await page.evaluate(() => {
     flipY: P.flipL && P.flipL.py,
     flipLen: P.flipL && P.flipL.len,
   };
-  const geoOk = geo.drain === 1450 && geo.kickY0 === 1350 && geo.kickY1 === 1430 && geo.flipY === 1250 && geo.flipLen === 110;
+  const geoOk = geo.drain === 1430 && geo.kickY0 === 1382 && geo.kickY1 === 1426 && geo.flipY === 1300 && geo.flipLen === 150;
   const b = T.prepBall(250, 1280, 20, 40);
   if (!b) return { geo, geoOk, stuck: 99, reason: 'no ball' };
   b.midT = 0; b.lowT2 = 0;
@@ -125,7 +125,7 @@ const lower = await page.evaluate(() => {
   return { geo, geoOk, stuck, x: Math.round(b.x), y: Math.round(b.y), sp: Math.round(Math.hypot(b.vx, b.vy)) };
 });
 rec('lower-playfield-geo', !!lower.geoOk, lower.geoOk
-  ? 'drain 1450 · kick 1350–1430 · flip py 1250 len 110'
+  ? 'drain 1430 · kick 1382–1426 · flip py 1300 len 150'
   : JSON.stringify(lower.geo));
 rec('lower-funnel-band', lower.stuck <= 50, 'stuck=' + lower.stuck + ' pos=' + lower.x + ',' + lower.y + ' sp=' + lower.sp);
 
