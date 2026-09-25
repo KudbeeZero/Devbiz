@@ -594,17 +594,22 @@
   // full online when the Worker is deployed and API_BASE is configured.
   Game.prototype._lbInit = function () {
     if (!window.KDLeaderboard) return;
-    if (this._lb) return;
+    if (this._lb || this._lbIniting) return;
+    this._lbIniting = true;
     var self = this;
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-        .then(function (c) { self._lb = c; })
-        .catch(function () {});
-    } catch (e) {}
+        .then(function (c) {
+          self._lb = c;
+          self._lbIniting = false;
+          if (self._lbPostQueued) { self._lbPostQueued = false; self._lbPostMatch(); }
+        })
+        .catch(function () { self._lbIniting = false; self._lbPostQueued = false; });
+    } catch (e) { this._lbIniting = false; }
   };
   Game.prototype._lbPostMatch = function () {
     if (!window.KDLeaderboard) return;
-    if (!this._lb) { this._lbInit(); return; }
+    if (!this._lb) { this._lbPostQueued = true; this._lbInit(); return; }
     var self = this, lb = this._lb;
     var d = this.progression.data;
     var x01 = d.stats.x01, cri = d.stats.cricket;
