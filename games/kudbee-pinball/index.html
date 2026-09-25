@@ -2762,6 +2762,26 @@ function frame(now) {
       var sp1 = len(b.vx, b.vy);
       return { ok: sp1 > sp0 + 40, sp0: Math.round(sp0), sp1: Math.round(sp1) };
     },
+    solarSailMissionTest: function () {
+      if (!spinner) return { ok: false, reason: 'no spinner' };
+      missionComplete[3] = false;
+      spinner.totalSpins = 0;
+      spinner.spinVel = 0;
+      spinner.lastHit = 0;
+      var b = this.prepBall(spinner.x + 2, spinner.y + spinner.r - 3, -520, 0);
+      if (!b) return { ok: false, reason: 'no ball' };
+      for (var i = 0; i < 220; i++) {
+        spinner.lastHit = 0; // harness: bypass 150ms debounce so spins accumulate in one eval tick
+        onSpinner(b);
+        if (missionComplete[3]) {
+          return { ok: true, spins: +spinner.totalSpins.toFixed(2), steps: i + 1 };
+        }
+        b.vx = -520; b.vy = 0;
+        b.x = spinner.x + 2;
+        b.y = spinner.y + spinner.r - 3;
+      }
+      return { ok: !!missionComplete[3], spins: +spinner.totalSpins.toFixed(2) };
+    },
     wallSlideLeft: function () {
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;

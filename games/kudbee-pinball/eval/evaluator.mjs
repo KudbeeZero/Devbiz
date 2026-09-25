@@ -65,7 +65,11 @@ const touchLaunch = await page.evaluate(async () => {
 });
 rec('touch-hold-launch', !touchLaunch.inLane && touchLaunch.x < 850, 'synthetic touch hold launched (inLane=false, x=' + (touchLaunch.x == null ? 'n/a' : touchLaunch.x.toFixed(0)) + ')');
 
-await page.keyboard.down('Space'); await sleep(800); await page.keyboard.up('Space'); await sleep(300);
+await page.keyboard.down('Space'); await sleep(900); await page.keyboard.up('Space'); await sleep(350);
+await page.evaluate(() => {
+  const P = window.PINBALL;
+  if (P.balls[0] && P.balls[0].inLane) { P.setCharge(1); P.launch(); }
+});
 
 let minX=1e9,maxScore=0,nan=false,sawPlayfield=false,flipMoved=false,launches=0;
 const flRest = await page.evaluate(()=>window.PINBALL.flipL.a);
@@ -100,6 +104,11 @@ rec('phys-wall-regression', !!physReg.ok, physReg.ok ? '9 segment/contact cases'
 
 const nudgeT = await page.evaluate(() => window.__kbTest.nudgeImpulseTest());
 rec('nudge-impulse', !!(nudgeT && nudgeT.ok), nudgeT && nudgeT.ok ? 'sp ' + nudgeT.sp0 + '→' + nudgeT.sp1 : JSON.stringify(nudgeT));
+
+const solar = await page.evaluate(() => window.__kbTest.solarSailMissionTest());
+rec('solar-sail-mission', !!(solar && solar.ok), solar && solar.ok
+  ? 'missionComplete[3] at spins=' + solar.spins + ' steps=' + solar.steps
+  : JSON.stringify(solar));
 
 // #179 lower-playfield geometry + funnel/flipper band (uses existing __kbTest / PINBALL only).
 const lower = await page.evaluate(() => {
