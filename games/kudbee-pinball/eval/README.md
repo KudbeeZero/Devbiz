@@ -14,7 +14,7 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
-## Rubric (18 checks)
+## Rubric (19 checks)
 
 | ID | What it proves |
 |---|---|
@@ -35,6 +35,7 @@ node evaluator.mjs            # writes findings.md + *.png here
 | `lower-funnel-band` | `prepBall(250,1280)` + 200 `physStep` — stuck counter ≤50 |
 | `right-gutter-band` | `runLowerBandRegression()` — right gutter + hug-low |
 | `flipper-band-edges` | `runLowerBandRegression()` — flipR / between / flipL alleys |
+| `drain-lip-crawl` | `runLowerBandRegression()` — center drain lip (y≈1345) clears without hang |
 | `no-real-console-errors` | Ignores blocked fonts + `file://` `/api/leaderboard` noise when `API_BASE` is empty |
 
 Extend the rubric as features land; run before claiming pinball gameplay green.

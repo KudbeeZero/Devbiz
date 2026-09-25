@@ -1287,10 +1287,10 @@ var ramp = null;                           // center loop-ramp trigger
       }
       // Peel off the shooter-lane inner wall. A hug at x≈786 plus a right-bumper
       // kick used to rail-gun the ball down the right side with no path back.
-      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1325) {
+      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1360) {
         b.vx -= 980 * h;
         b.railT = (b.railT || 0) + h;
-        if (b.railT > 0.4) { b.vx = -360; b.vy = Math.max(b.vy, 60); b.railT = 0; }
+        if (b.railT > 0.32) { b.vx = -360; b.vy = Math.max(b.vy, 80); b.railT = 0; }
       } else if (b.x < 82 && b.x > 60 && b.y > 200 && b.y < 1325) {
         b.vx += 980 * h;
         b.railT = (b.railT || 0) + h;
@@ -1502,16 +1502,18 @@ var move = len(b.vx, b.vy) * h;
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
       if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
       // Right gutter + flipper-band: nearly stopped beside the inner wall or between bats.
-      if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && len(b.vx, b.vy) < 38) {
+      var crawlSp = len(b.vx, b.vy);
+      if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && crawlSp < 38) {
         b.gutterT = (b.gutterT || 0) + h;
-        if (b.gutterT > 0.45) {
+        if (b.gutterT > 0.32) {
           b.gutterT = 0; b.vx = b.x > 650 ? -320 : (b.x < 400 ? 280 : (470 - b.x) * 1.2); b.vy = -420;
           burst(b.x, b.y, '#ffd34d', 12, 360); callout('FREED', 'out of the gutter', '#ffd34d');
         }
-      } else if (b.injected && b.y > 1245 && b.y < 1385 && b.x > 310 && b.x < 680 && len(b.vx, b.vy) < 26) {
+      } else if (b.injected && b.y > 1245 && b.y < DRAIN_Y - 6 && b.x > 310 && b.x < 680 && crawlSp < 30) {
         b.flipBandT = (b.flipBandT || 0) + h;
-        if (b.flipBandT > 0.42) {
-          b.flipBandT = 0; b.vx = (470 - b.x) * 1.4; b.vy = -380;
+        var flipEject = b.y > 1310 ? 0.26 : 0.34;
+        if (b.flipBandT > flipEject) {
+          b.flipBandT = 0; b.vx = (470 - b.x) * 1.5; b.vy = b.y > 1310 ? -520 : -380;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
       } else { b.gutterT = 0; b.flipBandT = 0; }
@@ -2860,7 +2862,8 @@ function frame(now) {
         this.simBandDrop('rightHugLow', 786, 1100, 10, 80, 700),
         this.simBandDrop('flipRAlley', 700, 1270, 40, 60, 520),
         this.simBandDrop('betweenFlips', 470, 1290, 10, -20, 620),
-        this.simBandDrop('flipLAlley', 240, 1275, -30, 50, 520)
+        this.simBandDrop('flipLAlley', 240, 1275, -30, 50, 520),
+        this.simBandDrop('drainLipCenter', 465, 1328, 8, -12, 1000)
       ];
       var allOk = true;
       for (var i = 0; i < drops.length; i++) { if (!drops[i].ok) allOk = false; }

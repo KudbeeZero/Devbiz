@@ -135,8 +135,13 @@ rec('right-gutter-band', !!(band.drops && band.drops[0].ok && band.drops[1].ok),
   band.drops && band.drops[0].ok && band.drops[1].ok
     ? 'rightGutter + rightHugLow move or drain'
     : bandFail);
-rec('flipper-band-edges', !!(band.drops && band.drops[2].ok && band.drops[3].ok && band.drops[4].ok),
-  band.ok ? 'flipR / between / flipL alleys clear' : bandFail);
+var flipEdgesOk = !!(band.drops && band.drops[2].ok && band.drops[3].ok && band.drops[4].ok);
+rec('flipper-band-edges', flipEdgesOk,
+  flipEdgesOk ? 'flipR / between / flipL alleys clear' : bandFail);
+rec('drain-lip-crawl', !!(band.drops && band.drops[5] && band.drops[5].ok),
+  band.drops && band.drops[5]
+    ? 'drain lip center sp=' + band.drops[5].sp + ' stuck=' + band.drops[5].stuck
+    : bandFail);
 
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
