@@ -2,6 +2,10 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-25 — Games LB post-queue pattern on `main`
+
+**DECISION:** Darts (`95d174c`) and voidrunner (`4876000`, atop SDK `929f92e`) use the same **queue-until-SDK-boot** pattern as pinball `lbPostQueued` — do not call cloud submit after `pendingScore`/state is cleared while `KDLeaderboard.create()` is in flight. Ledger: **DBZ-064** (darts wiring), **DBZ-068** (voidrunner queue).
+
 ## 2026-09-25 — Pinball playability landed on `main` (`8d80634`)
 
 **CONTEXT:** Overlap with Kilo on #179 / `kilo/pinball-bottom-rail-stuck-fixes` (eval-only lower-geo checks vs gameplay edits). Owner authorized **fast-forward to `main`** without waiting on PR #180 (Cursor/GitHub PR create blocked in agent env).
