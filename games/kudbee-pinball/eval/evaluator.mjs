@@ -17,7 +17,9 @@ page.on('pageerror', e=>errors.push(String(e)));
 page.on('console', m=>{ if(m.type()==='error'){ const t=m.text(); if(!/Failed to load resource|ERR_|fonts\.g|net::|file:\/\/\/api\/leaderboard|URL scheme "file" is not supported/.test(t)) consoleErrs.push(t); } });
 
 await page.goto(URL,{waitUntil:'domcontentloaded',timeout:15000}); await sleep(400);
-rec('loads', errors.length===0, errors.length?errors[0]:'no page errors');
+  // Force document.hidden = false so physics runs in headless mode
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, writable: true }); });
+  rec('loads', errors.length===0, errors.length?errors[0]:'no page errors');
 rec('hook', await page.evaluate(()=>!!window.PINBALL), 'window.PINBALL present');
 await page.screenshot({ path: OUT+'/01-gate.png' });
 await page.evaluate(()=>{ window.__f=0; const c=()=>{window.__f++;requestAnimationFrame(c);}; requestAnimationFrame(c); window.__t0=performance.now(); });
