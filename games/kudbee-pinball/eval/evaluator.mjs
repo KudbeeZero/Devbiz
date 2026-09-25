@@ -98,6 +98,9 @@ const physReg = await page.evaluate(() => window.__kbTest.runPhysWallRegression(
 const physFail = physReg.cases ? Object.entries(physReg.cases).filter((e) => !e[1].ok).map((e) => e[0] + '(sp=' + e[1].sp + ',pen=' + e[1].pen + ')').join('; ') : (physReg.reason || 'missing');
 rec('phys-wall-regression', !!physReg.ok, physReg.ok ? '9 segment/contact cases' : physFail);
 
+const nudgeT = await page.evaluate(() => window.__kbTest.nudgeImpulseTest());
+rec('nudge-impulse', !!(nudgeT && nudgeT.ok), nudgeT && nudgeT.ok ? 'sp ' + nudgeT.sp0 + '→' + nudgeT.sp1 : JSON.stringify(nudgeT));
+
 // #179 lower-playfield geometry + funnel/flipper band (uses existing __kbTest / PINBALL only).
 const lower = await page.evaluate(() => {
   const T = window.__kbTest, P = window.PINBALL;

@@ -14,7 +14,7 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
-## Rubric (19 checks)
+## Rubric (20 checks)
 
 | ID | What it proves |
 |---|---|
@@ -31,6 +31,7 @@ node evaluator.mjs            # writes findings.md + *.png here
 | `no-nan` | Ball positions stay finite |
 | `fps` | ≥45 fps (headless rAF count) |
 | `phys-wall-regression` | 9 deterministic wall/corner cases via `__kbTest.runPhysWallRegression()` |
+| `nudge-impulse` | `__kbTest.nudgeImpulseTest()` — straight nudge adds ball speed (DBZ-067) |
 | `lower-playfield-geo` | Drain 1430 · kick 1382–1426 · flip py 1300 len 150 |
 | `lower-funnel-band` | `prepBall(250,1280)` + 200 `physStep` — stuck counter ≤50 |
 | `right-gutter-band` | `runLowerBandRegression()` — right gutter + hug-low |

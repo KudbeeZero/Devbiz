@@ -2753,6 +2753,15 @@ function frame(now) {
     plungerAffordanceWouldShow: function (coarse) {
       return state === 'play' && balls.length && balls[0].inLane && !!coarse;
     },
+    nudgeImpulseTest: function () {
+      tilt = 0; tilted = false;
+      var b = this.prepBall(400, 700, 0, 0);
+      if (!b) return { ok: false, reason: 'no ball' };
+      var sp0 = len(b.vx, b.vy);
+      nudge(0);
+      var sp1 = len(b.vx, b.vy);
+      return { ok: sp1 > sp0 + 40, sp0: Math.round(sp0), sp1: Math.round(sp1) };
+    },
     wallSlideLeft: function () {
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;
