@@ -783,17 +783,30 @@
   }
 
    // ---------- online leaderboard (kd-leaderboard.js SDK → Worker + D1) ----------
-  var lb = null, lbBusy = false;
+  var lb = null, lbBusy = false, lbBooting = false, lbPending = null;
   function lbBoot() {
     if (!window.KDLeaderboard) return;
-    if (lb) return;
+    if (lb || lbBooting) return;
+    lbBooting = true;
     window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-      .then(function (c) { lb = c; })
-      .catch(function () {});
+      .then(function (c) {
+        lb = c;
+        lbBooting = false;
+        if (lbPending) {
+          var p = lbPending;
+          lbPending = null;
+          lbPost(p.boards, p.bm, p.streak);
+        }
+      })
+      .catch(function () { lbBooting = false; lbPending = null; });
   }
   function lbPost(boards, bm, streak) {
     if (!window.KDLeaderboard) return;
-    if (!lb) { lbBoot(); return; }
+    if (!lb) {
+      lbPending = { boards: boards, bm: bm, streak: streak };
+      lbBoot();
+      return;
+    }
     if (lbBusy) return;
     lbBusy = true;
     var submit = function () {
