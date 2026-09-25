@@ -330,6 +330,11 @@ var ramp = null;                           // center loop-ramp trigger
     seg(L, T, CAB, T, { rest: 0.3 });                      // top (spans the lane)
     seg(L, T, L + 40, T - 26); seg(CAB, T, CAB - 40, T - 26);   // corner nubs
     seg(CAB, T, CAB, 1340);                                // right cabinet (= lane outer wall)
+    // extend outlane walls down to drain line (y=1450) — prevents balls slipping past kickback zones
+    seg(L, 1360, L, 1450);                                 // left cabinet wall extension (from funnel tip)
+    seg(CAB, 1340, CAB, 1450);                             // right cabinet wall extension
+    // drain mouth collision segment — catches fast balls that might tunnel the kickback zone
+    seg(360, 1320, 540, 1320, { rest: 0.3 });
     // ---- shooter lane (right); the inner wall doubles as the playfield's right wall ----
     seg(LIN, 200, LIN, 1320);                              // lane inner / playfield-right — OPEN above y=200
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
@@ -344,16 +349,22 @@ var ramp = null;                           // center loop-ramp trigger
     // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
     // of the table AND fed drains to x≈300-380, just past kickZoneL's right edge (x1=300),
     // so the left kickback silently whiffed on balls it was built to save. Narrowed to
-    // match the right's proportions (mouth ≈150px) so drains land solidly inside the
+    // match the right's proportions (mouth ≈135px) so drains land solidly inside the
     // kickback zone and both outlanes read the same width. See the side-alley rails below.
-    seg(L, 1180, 210, 1360, { rest: 0.22 });              // left funnel wall (was 295 — see above)
+    seg(L, 1180, 195, 1360, { rest: 0.22 });              // left funnel wall (mouth 135px, matches right)
     seg(LIN, 1180, 665, 1360, { rest: 0.22 });            // right funnel wall
-    // inlane/outlane guide posts
-    seg(330, 1250, 360, 1330, { rest: 0.2 });
-    seg(630, 1250, 600, 1330, { rest: 0.2 });
-    // slingshots (kickers above each flipper)
-    seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling
-    seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling
+    // connect funnel tips to slingshot bases — eliminates 90px/5px gaps where balls got stuck
+    seg(195, 1360, 300, 1185, { rest: 0.22 });            // left funnel tip → left slingshot base
+    seg(665, 1360, 660, 1185, { rest: 0.22 });            // right funnel tip → right slingshot base
+    // inlane/outlane guide posts — extended to connect to flipper zone, raised restitution
+    seg(330, 1250, 340, 1310, { rest: 0.4 });             // left guide (ends at flipper base level)
+    seg(630, 1250, 600, 1310, { rest: 0.4 });             // right guide (mirror)
+    // vertical inlane walls — guide balls from guide bottom to kickback zone
+    seg(340, 1310, 340, 1420, { rest: 0.3 });             // left inlane wall
+    seg(600, 1310, 600, 1420, { rest: 0.3 });             // right inlane wall
+    // slingshots (kickers above each flipper) — extended downward toward flippers
+    seg(300, 1185, 340, 1280, { rest: 0.6, kick: 760, sling: true });    // left sling
+    seg(660, 1185, 600, 1280, { rest: 0.6, kick: 760, sling: true });    // right sling
     // bumpers — "asteroid belt"
     bumpers.push({ x: 360, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
     bumpers.push({ x: 540, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
@@ -438,8 +449,10 @@ var ramp = null;                           // center loop-ramp trigger
     //      Wide (the outlanes have no separate rail) but only in the last stretch before
     //      the drain, and clear of the flipper/inlane band (x 300-600), so it only ever
     //      catches a ball that was truly about to be lost out that side. ----
-    kickZoneL = { x0: 60, x1: 300, y0: 1382, y1: 1426 };
-    kickZoneR = { x0: 600, x1: 840, y0: 1382, y1: 1426 };
+    // Raise y0 to 1350 (funnel tip level) so balls exiting funnels enter kickback immediately
+    // Extend y1 to 1430 to cover full drain approach
+    kickZoneL = { x0: 60, x1: 300, y0: 1350, y1: 1430 };
+    kickZoneR = { x0: 600, x1: 840, y0: 1350, y1: 1430 };
     // ---- ball-lock saucer: a dead-center open pocket (no shot lands here by accident — it's
     //      below the ramp exit, above the mid-field posts, clear of every bumper/target/lamp
     //      collider) that captures the ball outright, banks a lock, and serves a fresh ball.
@@ -487,9 +500,10 @@ var ramp = null;                           // center loop-ramp trigger
     bumpers.push({ x: 450, y: 280, r: PORTAL_R, rest: 0, kick: 0, kind: 'portal', flash: 0, cd: 0, col: '#ff6ec7' });
     portalBumper = bumpers[bumpers.length - 1];
 
-     // flippers
-     flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);   // angles in radians (down-right rest → up)
-     flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
+     // flippers — pivots raised to y=1250 so rest tips sit at y≈1261 (above kickback zone y0=1350)
+     // length shortened from 150→110; rest angles point toward INLANES (center), not outlanes
+     flipL = new Flipper(330, 1250, 110, -1, 0.10, -0.25);   // rest 0.10 rad (6° up-right), up -0.25 rad (-14°)
+     flipR = new Flipper(610, 1250, 110, 1, Math.PI - 0.10, Math.PI + 0.25); // rest π-0.10 (174° up-left), up π+0.25 (194°)
      flipUR = new Flipper(740, 980, 60, 1, Math.PI - 0.30, Math.PI + 0.30); // upper-right mini-flipper for ramp feed
      // cache static bumper glow gradients (positions/radii never change)
      for (var bi = 0; bi < bumpers.length; bi++) {
@@ -500,8 +514,8 @@ var ramp = null;                           // center loop-ramp trigger
      }
    }
 
-  // drain line (below flippers, between outlanes)
-  var DRAIN_Y = 1430;
+  // drain line (below flippers, between outlanes) — pushed to 1450 for safety margin below kickback (1430)
+  var DRAIN_Y = 1450;
 
   // ===== balls + particles =====
   var balls = [];
@@ -1468,11 +1482,16 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
+      // anti-stuck ball-save (mid): slingshot/funnel zone (y 1150–1380) — catches balls bouncing
+      // between funnel walls, slingshots, and flippers at low speed
+      var STUCK_SPEED = 350;  // raised from 180 to catch gentle bounces
+      if (b.y > 1150 && b.y < 1380 && len(b.vx, b.vy) < STUCK_SPEED) { b.midT = (b.midT || 0) + h; if (b.midT > 3) { b.midT = 0; b.vx = (Math.random() - 0.5) * 300; b.vy = -Math.max(500, Math.abs(b.vy) + 300); burst(b.x, b.y, '#ffd34d', 18, 420); callout('FREED', 'ball unstuck', '#ffd34d'); } } else { b.midT = 0; }
       // anti-stuck ball-save (lower): a ball stuck near the flippers/drain (low velocity, y > 1200)
       // gets a small kick to prevent it from sitting there forever.
-      if (b.y > 1200 && len(b.vx, b.vy) < 180) { b.lowT2 = (b.lowT2 || 0) + h; if (b.lowT2 > LOWER_STUCK_EJECT_S) { b.lowT2 = 0; b.vx = (Math.random() - 0.5) * 220; b.vy = -Math.max(400, Math.abs(b.vy) + 200); burst(b.x, b.y, '#ffd34d', 18, 420); callout('FREED', 'ball unstuck', '#ffd34d'); } } else { b.lowT2 = 0; }
+      if (b.y > 1200 && len(b.vx, b.vy) < STUCK_SPEED) { b.lowT2 = (b.lowT2 || 0) + h; if (b.lowT2 > LOWER_STUCK_EJECT_S) { b.lowT2 = 0; b.vx = (Math.random() - 0.5) * 220; b.vy = -Math.max(400, Math.abs(b.vy) + 200); burst(b.x, b.y, '#ffd34d', 18, 420); callout('FREED', 'ball unstuck', '#ffd34d'); } } else { b.lowT2 = 0; }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
-      if (b.x > 806 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
+      if (b.x > 800 && b.x < 862 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
