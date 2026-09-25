@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "verify": "npm run pinball:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
     "test:leaderboard": "npm test --prefix leaderboard"
   },

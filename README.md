@@ -40,7 +40,8 @@ python3 -m http.server 8000
 Local verification (no CI configured):
 
 ```bash
-npm run pinball:eval          # Playwright rubric — 21/21 on pinball
+npm run verify                # pinball eval (21/21) + leaderboard unit tests
+npm run pinball:eval          # Playwright rubric only
 npm run test:leaderboard      # node --test under leaderboard/
 ```
 
