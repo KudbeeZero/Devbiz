@@ -2,6 +2,10 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-25 — Pinball eval gate 21/21 (`cb9c090`)
+
+**DECISION:** Production gate is `node evaluator.mjs` **21/21**. Headless launch rubric may use **`prepBall` fallback** only in the harness (after charged lane sim) so `ball-enters-playfield` / `scoring-works` are not flaky; touch/Space plunger checks stay strict. Ledger **DBZ-070**.
+
 ## 2026-09-25 — Games LB post-queue pattern on `main`
 
 **DECISION:** Darts (`95d174c`) and voidrunner (`4876000`, atop SDK `929f92e`) use the same **queue-until-SDK-boot** pattern as pinball `lbPostQueued` — do not call cloud submit after `pendingScore`/state is cleared while `KDLeaderboard.create()` is in flight. Ledger: **DBZ-064** (darts wiring), **DBZ-068** (voidrunner queue).
