@@ -224,6 +224,7 @@
 
   // ---- wizard mode: SUPERNOVA — 60s ultimate frenzy ----
   var wizardActive = false, wizardTimer = 0, wizardDone = false;
+  var starbreakActive = false, starbreakTimer = 0;
   var WIZARD_DURATION = 60, wizardFlash = 0;
   var tripleLoopDone = false, hasSeenMultiball = false;                     // prerequisite trackers
   var WIZARD_MULT = 5;                                                       // all scoring ×5 in wizard mode
@@ -239,7 +240,7 @@
   function triggerHitStop(dur) { if (!reduceMotion) hitStopT = Math.max(hitStopT, dur); }
   function colorWash(r, g, b, a) {
     if (reduceMotion) return;
-    colorWashR = r; colorWashG = g; colorWashB = b; colorWashA = Math.max(colorWashA, a);
+    colorWashR = Math.min(255, r); colorWashG = Math.min(255, g); colorWashB = Math.min(255, b); colorWashA = Math.max(colorWashA, a);
   }
 
   // ---- skill shot (plunger lanes) ----
@@ -354,12 +355,12 @@ var ramp = null;                           // center loop-ramp trigger
     seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling
     seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling
     // bumpers — "asteroid belt"
-    bumpers.push({ x: 360, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 540, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0 });
-    bumpers.push({ x: 450, y: 360, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0 });
+    bumpers.push({ x: 360, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
+    bumpers.push({ x: 540, y: 470, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
+    bumpers.push({ x: 450, y: 360, r: 40, rest: 0.95, kick: 760, kind: 'bumper', flash: 0, cd: 0 });
     // a couple of round posts to bank off
-    bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
-    bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    bumpers.push({ x: 200, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 700, y: 760, r: 18, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
     // ---- side bumpers: the wide outer alleys next to each wall were empty — a ball
     //      that strayed out there just slid straight down toward the outlane. A prior fix
     //      dropped 6 live bumpers ~55-80px off the outer wall to catch it — but that's
@@ -390,16 +391,16 @@ var ramp = null;                           // center loop-ramp trigger
     // col: a cooler indigo accent (vs. the center trio's signature cyan) so a wall-side hit
     // reads as visually distinct — see onBumper()'s particle burst and the render pass below.
     var WALL_BUMPER_COL = '#7b8cff';
-    bumpers.push({ x: 109, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 751, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — bridges the 480→720 gap
-    bumpers.push({ x: 755, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — mirror
-    bumpers.push({ x: 107, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 753, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — bridges the 720→ramp-band gap
-    bumpers.push({ x: 757, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });  // new — mirror
-    bumpers.push({ x: 107, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 753, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 109, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 751, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — bridges the 480→720 gap
+    bumpers.push({ x: 755, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 107, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 753, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — bridges the 720→ramp-band gap
+    bumpers.push({ x: 757, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 107, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 753, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
     // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
     //      Light a side's pair for a multiplier step. ----
     target(210, 640, 'standup', '#39e6ff', 'L');
@@ -408,10 +409,10 @@ var ramp = null;                           // center loop-ramp trigger
     target(710, 860, 'standup', '#c46bff', 'R');
 
     // ---- round posts to bank off + fill the mid-field (circles never wedge) ----
-    bumpers.push({ x: 250, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0 });
-    bumpers.push({ x: 650, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0 });
-    bumpers.push({ x: 320, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
-    bumpers.push({ x: 580, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0 });
+    bumpers.push({ x: 250, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 650, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 320, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 580, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
 
     // ---- drop-target bank: clear all four for BANK BONUS + a multiplier step ----
     var dropY = 690;
@@ -483,7 +484,7 @@ var ramp = null;                           // center loop-ramp trigger
     for (var li = 0; li < lampSpec.length; li++) lamps.push({ x: lampSpec[li][0], y: lampSpec[li][1], col: lampSpec[li][2], ph: li * 0.6 });
 
     // portal bumper — placed in the upper-center; active at level 5+
-    bumpers.push({ x: 450, y: 280, r: PORTAL_R, rest: 0, kick: 0, kind: 'portal', flash: 0, col: '#ff6ec7' });
+    bumpers.push({ x: 450, y: 280, r: PORTAL_R, rest: 0, kick: 0, kind: 'portal', flash: 0, cd: 0, col: '#ff6ec7' });
     portalBumper = bumpers[bumpers.length - 1];
 
      // flippers
@@ -592,6 +593,7 @@ var ramp = null;                           // center loop-ramp trigger
     missionTriggered = [false, false, false]; missionComplete = [false, false, false];
     missionMult = 1; missionGravMod = 1;
     wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
+    starbreakActive = false; starbreakTimer = 0;
     tripleLoopDone = false; hasSeenMultiball = false; wizardKickMult = 1;
     hitStopT = 0; colorWashR = 0; colorWashG = 0; colorWashB = 0; colorWashA = 0;
     for (var i = 0; i < PMAX; i++) P[i].life = 0;
@@ -1072,13 +1074,12 @@ var ramp = null;                           // center loop-ramp trigger
     shake = Math.min(shake + 0.5, 1.5);
     // Check if all missions complete for wizard mode
     var missionsDone = 0;
-    if (missionA) missionsDone++;
-    if (missionB) missionsDone++;
-    if (missionC) missionsDone++;
+    for (var mi = 0; mi < missionComplete.length; mi++) if (missionComplete[mi]) missionsDone++;
     if (missionsDone >= 3 && !starSaucer.locks) {
       // Trigger STARBREAK wizard mode
       starSaucer.locks = 1; starSaucer.active = true;
-      starbreakActive = true; starbreakTimer = 60; // 60 seconds of wizard mode
+      starbreakActive = true; starbreakTimer = WIZARD_DURATION;
+      wizardKickMult = 2;
       callout('STARBREAK!', 'WIZARD MODE ACTIVATED', '#ffd34d');
       sfx('multiball'); colorWash(255, 211, 77, 2.0);
       // Release a 3-ball multiball for STARBREAK
@@ -1196,9 +1197,16 @@ var ramp = null;                           // center loop-ramp trigger
     if (!wizardActive && !wizardDone && wizardReady()) activateWizard();
     if (wizardActive) {
       wizardTimer -= dt;
-      if (wizardTimer <= 0) { wizardActive = false; wizardDone = true; wizardKickMult = 1;
+      if (wizardTimer <= 0) { wizardActive = false; wizardDone = true; wizardKickMult = 1; saveT = 0;
         callout('SUPERNOVA END', 'wizard complete!', '#ffd34d'); sfx('multiball');
         burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ffffff', 24, 560); }
+    }
+    // STARBREAK wizard mode timer
+    if (starbreakActive) {
+      starbreakTimer -= dt;
+      if (starbreakTimer <= 0) { starbreakActive = false; starbreakTimer = 0; starSaucer.active = false; starSaucer.locks = 0; saveT = 0;
+        callout('STARBREAK END', 'wizard complete!', '#ffd34d'); sfx('multiball');
+        burst(VW / 2, VH * 0.4, '#ffd34d', 40, 700); burst(VW / 2, VH * 0.4, '#ff6ec7', 24, 560); }
     }
     if (missionActive >= 0) {
       missionTimer -= dt;
@@ -1400,8 +1408,6 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           continue;
         }
       }
-      // magnet cooldown
-      if (magnet && magnet.cooldown > 0) magnet.cooldown -= h;
       // VORTEX: wormhole catches balls, spins them, ejects with big bonus
       if (vortex && !vortex.capturedBall && vortex.cooldown <= 0) {
         var vdx = b.x - vortex.x, vdy = b.y - vortex.y;
@@ -1458,8 +1464,6 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           continue;
         }
       }
-      if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown -= h;
-      if (vortex && vortex.cooldown > 0) vortex.cooldown -= h;
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -1516,10 +1520,11 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
 
   // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
   function enterFromLane(b) {
+    b.inLane = false;
     b.injected = true;
     if (!b.noSave) saveT = BALL_SAVE_S;                        // arm the ball-save grace window (fresh serves only)
     var f = clamp((b.launchPow - 0.45) / 0.55, 0, 1);          // 0 = just cleared .. 1 = max plunge
-    var lane = clamp(2 - Math.min(2, Math.floor(f * 3)), 0, 2); // equal thirds → matches the meter bands (strong→A)
+    var lane = f >= 0.667 ? 0 : (f >= 0.333 ? 1 : 2);          // matches charge meter bands: [0.45,0.633]→C, [0.633,0.817]→B, [0.817,1]→A
     var L = SKILL_LANES[lane];
     // nudge horizontally so a clean vertical drop can never balance on a rail tip / target gap
     b.x = L.x; b.y = 200; b.vx = lane === 0 ? 70 : lane === 2 ? -70 : 45; b.vy = 130; b.trail.length = 0;
@@ -1729,6 +1734,10 @@ function frame(now) {
       if (balls[bk].portalCd > 0) balls[bk].portalCd -= dt;
       if (balls[bk].mbImmune > 0) balls[bk].mbImmune = Math.max(0, balls[bk].mbImmune - dt);
     }
+    // World object cooldowns (tick in frame loop so they work during hit-stop)
+    if (magnet && magnet.cooldown > 0) magnet.cooldown = Math.max(0, magnet.cooldown - dt);
+    if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown = Math.max(0, popUpPost.cooldown - dt);
+    if (vortex && vortex.cooldown > 0) vortex.cooldown = Math.max(0, vortex.cooldown - dt);
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
