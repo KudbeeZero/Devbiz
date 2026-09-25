@@ -1692,21 +1692,22 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
     lastT = performance.now(); acc = 0; if (!running) { running = true; rafId = requestAnimationFrame(frame); }
     lbBoot();
   }
-   function frame(now) {
-     rafId = requestAnimationFrame(frame);
-     frameNow = now;
-     var hidden = document.hidden;
-     var dt = hidden ? 0 : Math.min(0.05, (now - lastT) / 1000);
-     lastT = now;
-    if (state === 'play' && !hidden) {
-      if (hitStopT > 0) { hitStopT -= dt; }
-      else {
-        acc += dt;
-        var guard = 0;
-        while (acc >= PH && guard < 5) { physStep(PH); acc -= PH; guard++; }
-        if (guard >= 5) acc = Math.min(acc, PH);
+function frame(now) {
+      rafId = requestAnimationFrame(frame);
+      frameNow = now;
+      var hidden = document.hidden;
+      var dt = hidden ? 0 : Math.min(0.05, (now - lastT) / 1000);
+      lastT = now;
+      // Always decrement hitStopT so it doesn't get stuck if tab is hidden during hit-pause
+      if (hitStopT > 0) hitStopT -= dt;
+      if (state === 'play' && !hidden) {
+        if (hitStopT <= 0) {
+          acc += dt;
+          var guard = 0;
+          while (acc >= PH && guard < 5) { physStep(PH); acc -= PH; guard++; }
+          if (guard >= 5) acc = Math.min(acc, PH);
+        }
       }
-    }
     // Mission tick: check triggers, count down, handle completion
     tickMissions(dt);
     // fx decay
@@ -1732,9 +1733,9 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
-    if (comboT > 0) { comboT -= dt; if (comboT <= 0) comboN = 0; }  // combo chain expires
+    if (comboT > 0) { comboT -= dt; if (comboT <= 0) { comboN = 0; comboKinds.length = 0; comboTripleAwarded = false; } }
     if (comboExplosion > 0 && !reduceMotion) comboExplosion = Math.max(0, comboExplosion - dt * 2);
-    if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); }
+    if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); flipUR.flash = Math.max(0, flipUR.flash - dt * 5); }
     if (reduceMotion) { dispScore = score; scoreFlash = 0; }        // count-up is a flourish; skip it
     else {
       dispScore += (score - dispScore) * Math.min(1, dt * 10);      // animated score count-up
@@ -2646,7 +2647,7 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
     if (el && best > 0) { el.textContent = '★ Best score ' + best.toLocaleString(); el.style.display = 'block'; }
   })();
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) { lastT = performance.now(); acc = 0; }
+    if (!document.hidden) { lastT = performance.now(); acc = 0; hitStopT = 0; }
   });
 
   // Test/verification hook (harmless in production — read-only introspection plus
