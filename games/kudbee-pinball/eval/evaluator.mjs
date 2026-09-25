@@ -97,6 +97,38 @@ rec('fps', fps>=45, 'measured ~'+fps.toFixed(0)+' fps');
 const physReg = await page.evaluate(() => window.__kbTest.runPhysWallRegression());
 const physFail = physReg.cases ? Object.entries(physReg.cases).filter((e) => !e[1].ok).map((e) => e[0] + '(sp=' + e[1].sp + ',pen=' + e[1].pen + ')').join('; ') : (physReg.reason || 'missing');
 rec('phys-wall-regression', !!physReg.ok, physReg.ok ? '9 segment/contact cases' : physFail);
+
+// #179 lower-playfield geometry + funnel/flipper band (uses existing __kbTest / PINBALL only).
+const lower = await page.evaluate(() => {
+  const T = window.__kbTest, P = window.PINBALL;
+  const g = T.geometry();
+  const geo = {
+    drain: g.DRAIN_Y,
+    kickY0: g.kickZoneL && g.kickZoneL.y0,
+    kickY1: g.kickZoneL && g.kickZoneL.y1,
+    flipY: P.flipL && P.flipL.py,
+    flipLen: P.flipL && P.flipL.len,
+  };
+  const geoOk = geo.drain === 1450 && geo.kickY0 === 1350 && geo.kickY1 === 1430 && geo.flipY === 1250 && geo.flipLen === 110;
+  const b = T.prepBall(250, 1280, 20, 40);
+  if (!b) return { geo, geoOk, stuck: 99, reason: 'no ball' };
+  b.midT = 0; b.lowT2 = 0;
+  const PH = 1 / 300;
+  let stuck = 0;
+  for (let i = 0; i < 200; i++) {
+    const px = b.x, py = b.y, psp = Math.hypot(b.vx, b.vy);
+    P.physStep(PH);
+    if (Math.hypot(b.x - px, b.y - py) < 0.03 && Math.abs(Math.hypot(b.vx, b.vy) - psp) < 2 && psp < 12) stuck++;
+    else stuck = 0;
+    if (stuck > 50) break;
+  }
+  return { geo, geoOk, stuck, x: Math.round(b.x), y: Math.round(b.y), sp: Math.round(Math.hypot(b.vx, b.vy)) };
+});
+rec('lower-playfield-geo', !!lower.geoOk, lower.geoOk
+  ? 'drain 1450 · kick 1350–1430 · flip py 1250 len 110'
+  : JSON.stringify(lower.geo));
+rec('lower-funnel-band', lower.stuck <= 50, 'stuck=' + lower.stuck + ' pos=' + lower.x + ',' + lower.y + ' sp=' + lower.sp);
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
