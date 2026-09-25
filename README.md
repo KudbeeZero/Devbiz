@@ -37,6 +37,13 @@ python3 -m http.server 8000
 # Game:  http://localhost:8000/games/kudbee-contra/index.html
 ```
 
+Local verification (no CI configured):
+
+```bash
+npm run pinball:eval          # Playwright rubric — 21/21 on pinball
+npm run test:leaderboard      # node --test under leaderboard/
+```
+
 ## Highlights
 
 - **Modern single-file site** — gradient-mesh design, glassmorphism nav, dark/light theme,
