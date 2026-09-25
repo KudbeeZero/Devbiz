@@ -392,15 +392,20 @@ var ramp = null;                           // center loop-ramp trigger
     // reads as visually distinct — see onBumper()'s particle burst and the render pass below.
     var WALL_BUMPER_COL = '#7b8cff';
     bumpers.push({ x: 109, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 751, y: 480, r: 28, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — bridges the 480→720 gap
-    bumpers.push({ x: 755, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 105, y: 600, r: 24, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
     bumpers.push({ x: 107, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 753, y: 720, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — bridges the 720→ramp-band gap
-    bumpers.push({ x: 757, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });  // new — mirror
+    bumpers.push({ x: 103, y: 800, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
     bumpers.push({ x: 107, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
-    bumpers.push({ x: 753, y: 1050, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    // Right wall is the shooter-lane inner at x=800, not the cabinet at 862. Mirroring
+    // the left bumpers to x≈753 put them in a 21px pinch against that wall — a hug
+    // at x=786 overlaps the bumper and the kick normal points INTO the wall, so the
+    // ball rail-guns the lane and never comes back. Sit them in the open alley
+    // (x≈728) so a wall-hug can pass or get kicked toward center.
+    bumpers.push({ x: 728, y: 475, r: 26, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 730, y: 595, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 724, y: 705, r: 22, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 726, y: 830, r: 20, rest: 0.95, kick: 650, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
+    bumpers.push({ x: 728, y: 1045, r: 24, rest: 0.95, kick: 700, kind: 'bumper', flash: 0, cd: 0, col: WALL_BUMPER_COL });
     // ---- standup targets out in the OPEN field (well clear of walls → no wedge).
     //      Light a side's pair for a multiplier step. ----
     target(210, 640, 'standup', '#39e6ff', 'L');
@@ -458,7 +463,7 @@ var ramp = null;                           // center loop-ramp trigger
 
     // ---- magnet hold (electromagnet): upper-right zone that catches ball, holds it
     //      briefly, then fires it back with bonus. Great for control + scoring. ----
-    magnet = { x: 720, y: 400, r: 50, active: false, holdT: 0, holdMax: 1.5, cooldown: 0, capturedBall: null };
+    magnet = { x: 700, y: 380, r: 32, active: false, holdT: 0, holdMax: 1.2, cooldown: 0, capturedBall: null };
 
     // ---- captive ball zone: a "gravity well" in the lower-left that traps a ball.
     //      Player must nudge or hit targets to free it. Awards big bonus while captive. ----
@@ -1272,6 +1277,12 @@ var ramp = null;                           // center loop-ramp trigger
          continue;
        }
       var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
+      // Peel off the shooter-lane inner wall. A hug at x≈786 plus a right-bumper
+      // kick used to rail-gun the ball down the right side with no path back.
+      if (!climbing && b.x > 778 && b.x < 800 && b.y > 230 && b.y < 1175) {
+        b.vx -= 720 * h;
+        if (len(b.vx, b.vy) < 90) b.vx = Math.min(b.vx, -280);
+      }
 b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
        // speed cap
       var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
@@ -1312,6 +1323,14 @@ var move = len(b.vx, b.vy) * h;
              var ml = Math.sqrt(nx * nx + ny * ny) || 1; nx /= ml; ny /= ml;
              var mx = (hitSeg.ax + hitSeg.bx) / 2, my = (hitSeg.ay + hitSeg.by) / 2;
              if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
+             var vn = b.vx * nx + b.vy * ny;
+             // Already touching: sliding or leaving the wall must still consume rem
+             // along the tangent. Zeroing rem here glued a hug on the right lane
+             // wall (x=786) — gravity stacked to SPEED_CAP while y never moved.
+             if (vn >= -0.001 && rem > 0) {
+               var tx = b.vx - vn * nx, ty = b.vy - vn * ny;
+               b.x += tx * rem; b.y += ty * rem;
+             }
              rem = 0;
            } else if (rem < 0.0002) { rem = 0; }
          }
@@ -1348,7 +1367,7 @@ var move = len(b.vx, b.vy) * h;
       // Prevents accidental catches during multiball chaos
       if (magnet && !magnet.capturedBall && magnet.cooldown <= 0 && !multiballActive) {
         var mdx = b.x - magnet.x, mdy = b.y - magnet.y;
-        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -300) { // only catch FAST upward shots
+        if (mdx * mdx + mdy * mdy < magnet.r * magnet.r && b.vy < -480) { // only catch FAST upward shots
           magnet.capturedBall = b; magnet.active = true; magnet.holdT = 0;
           b.vx = 0; b.vy = 0; magnet.cooldown = 3;
           sfx('lock'); callout('MAGNET LOCK', 'charging...', '#c46bff');
@@ -2709,6 +2728,10 @@ function frame(now) {
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;
       b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0;
+      if (magnet) { magnet.capturedBall = null; magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; }
+      if (vortex) { vortex.capturedBall = null; vortex.active = false; vortex.spinT = 0; }
+      if (captiveZone) { captiveZone.captiveBall = null; captiveZone.active = false; }
+      if (popUpPost) { popUpPost.capturedBall = null; popUpPost.raised = false; }
       return b;
     },
     runPhysWallRegression: function () {
