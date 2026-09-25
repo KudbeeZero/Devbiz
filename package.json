@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
+    "test:leaderboard": "npm test --prefix leaderboard"
+  },
   "dependencies": {
     "playwright": "^1.63.0",
     "puppeteer": "^25.11.0"
