@@ -18,8 +18,8 @@ touch/pointer handlers; puzzles relies on generic `click`, lower risk given its 
 mechanic but worth a manual mobile check). **This is not a "finish unfinished games" roadmap
 — it's a "what's the next tier of ambition" roadmap.**
 
-The one real functional gap, cutting across every game: **online leaderboard integration is
-inconsistent.**
+**Client integration is done on `main` (2026-09-25).** The remaining cross-game gap is
+**production Worker deploy + `API_BASE`** so posts and top-10 load hit a live API (owner-gated).
 
 | Game | Leaderboard status |
 |---|---|
@@ -43,19 +43,12 @@ before it happens, not something to do silently as part of a "polish" pass. Zero
 risk (the SDK is already wired and tested); the risk is entirely "this makes prod state
 change," which is exactly the kind of thing to flag rather than just do.
 
-### Phase B — Wire the two "almost there" games
-1. **`voidrunner`**: swap its existing local top-10/initials UX to post through
-   `client/kd-leaderboard.js` (`GAME: 'voidrunner'`) instead of `localStorage`, keeping the
-   same on-screen initials-entry moment. Lowest-effort win — the UX doesn't need to be
-   designed, just re-plumbed. (draft PR #169)
-2. **`darts`**: add the SDK call directly into `games/kudbee-darts/index.html` (matching the
-   `GAMES.darts` metric shape that already exists server-side: rating, bestCheckout,
-   total180s, wins, bestStreak) so a match auto-posts instead of requiring a manual visit to
-   the separate leaderboard portal page. Refresh the README's "Leaderboard" section at the
-   same time so it stops reading as if the local AI-ladder *is* the online leaderboard. (draft PR #170)
+### Phase B — Wire the two "almost there" games — **DONE on `main`**
+1. **`voidrunner`** — SDK + cloud post queue (**DBZ-068**); local initials fallback retained.
+2. **`darts`** — SDK + `_lbPostMatch` + post queue (**DBZ-064**); README leaderboard section updated.
 
-### Phase C — Wire the four with no online leaderboard yet
-**DONE (draft PR: N/A on this branch) — see DBZ-065**: `contra`, `munch`, `orbital`, `puzzles`
+### Phase C — Wire the four with no online leaderboard yet — **DONE on `main`**
+**DBZ-065** (+ post-queue hardening **DBZ-071** for munch/puzzles/orbital): `contra`, `munch`, `orbital`, `puzzles`
 each has a `GAMES.<name>` entry in `leaderboard/shared/core.js` (contra:
 score/bestCombo/waves/kills; munch: score/level/chipsEaten; orbital: score/wave/kills;
 puzzles: boardsSolved/bestMoves/flawlessStreak), schema columns + indexes in
