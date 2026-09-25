@@ -9,16 +9,26 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const R=[]; const rec=(id,p,n)=>{R.push({id,pass:p,note:n});console.log((p?'PASS':'FAIL'),id,'—',n);};
 
 const browser = await chromium.launch({ headless:true, args:['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'] });
-const page = await browser.newPage({ viewport:{ width:540, height:900 }, deviceScaleFactor:2 });
+  const page = await browser.newPage({ viewport:{ width:540, height:900 }, deviceScaleFactor:2 });
+  // Override document.hidden before page loads
+  await page.addInitScript(() => {
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
+    // Override visibilitychange event
+    const originalAddEventListener = document.addEventListener;
+    document.addEventListener = function(type, listener, options) {
+      if (type === 'visibilitychange') return;
+      return originalAddEventListener.call(this, type, listener, options);
+    };
+  });
 const errors=[], consoleErrs=[];
 page.on('pageerror', e=>errors.push(String(e)));
 // Ignore known-non-gameplay console noise: blocked fonts, network stubs, and file://
 // leaderboard fetches (empty API_BASE → relative /api/* resolves to file:///api/…).
 page.on('console', m=>{ if(m.type()==='error'){ const t=m.text(); if(!/Failed to load resource|ERR_|fonts\.g|net::|file:\/\/\/api\/leaderboard|URL scheme "file" is not supported/.test(t)) consoleErrs.push(t); } });
 
-await page.goto(URL,{waitUntil:'domcontentloaded',timeout:15000}); await sleep(400);
-  // Force document.hidden = false so physics runs in headless mode
-  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, writable: true }); });
+await page.goto(URL,{waitUntil:'domcontentloaded',timeout:15000});
+  await sleep(400);
   rec('loads', errors.length===0, errors.length?errors[0]:'no page errors');
 rec('hook', await page.evaluate(()=>!!window.PINBALL), 'window.PINBALL present');
 await page.screenshot({ path: OUT+'/01-gate.png' });
