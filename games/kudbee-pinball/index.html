@@ -1287,11 +1287,11 @@ var ramp = null;                           // center loop-ramp trigger
       }
       // Peel off the shooter-lane inner wall. A hug at x≈786 plus a right-bumper
       // kick used to rail-gun the ball down the right side with no path back.
-      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1180) {
+      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1325) {
         b.vx -= 980 * h;
         b.railT = (b.railT || 0) + h;
         if (b.railT > 0.4) { b.vx = -360; b.vy = Math.max(b.vy, 60); b.railT = 0; }
-      } else if (b.x < 82 && b.x > 60 && b.y > 200 && b.y < 1180) {
+      } else if (b.x < 82 && b.x > 60 && b.y > 200 && b.y < 1325) {
         b.vx += 980 * h;
         b.railT = (b.railT || 0) + h;
         if (b.railT > 0.4) { b.vx = 360; b.vy = Math.max(b.vy, 60); b.railT = 0; }
@@ -1501,14 +1501,20 @@ var move = len(b.vx, b.vy) * h;
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
       if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
-      // Right gutter: nearly stopped in the funnel/outlane band beside the inner wall.
-      if (b.injected && b.x > 720 && b.y > 1280 && len(b.vx, b.vy) < 35) {
+      // Right gutter + flipper-band: nearly stopped beside the inner wall or between bats.
+      if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && len(b.vx, b.vy) < 38) {
         b.gutterT = (b.gutterT || 0) + h;
-        if (b.gutterT > 0.55) {
-          b.gutterT = 0; b.vx = -320; b.vy = -420;
+        if (b.gutterT > 0.45) {
+          b.gutterT = 0; b.vx = b.x > 650 ? -320 : (b.x < 400 ? 280 : (470 - b.x) * 1.2); b.vy = -420;
           burst(b.x, b.y, '#ffd34d', 12, 360); callout('FREED', 'out of the gutter', '#ffd34d');
         }
-      } else { b.gutterT = 0; }
+      } else if (b.injected && b.y > 1245 && b.y < 1385 && b.x > 310 && b.x < 680 && len(b.vx, b.vy) < 26) {
+        b.flipBandT = (b.flipBandT || 0) + h;
+        if (b.flipBandT > 0.42) {
+          b.flipBandT = 0; b.vx = (470 - b.x) * 1.4; b.vy = -380;
+          burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
+        }
+      } else { b.gutterT = 0; b.flipBandT = 0; }
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -2754,7 +2760,7 @@ function frame(now) {
       if (!balls.length) spawnBallInLane();
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;
-      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0; b.railT = 0;
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0; b.railT = 0; b.gutterT = 0; b.flipBandT = 0;
       if (magnet) { magnet.capturedBall = null; magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; }
       if (vortex) { vortex.capturedBall = null; vortex.active = false; vortex.spinT = 0; }
       if (captiveZone) { captiveZone.captiveBall = null; captiveZone.active = false; }
@@ -2822,6 +2828,43 @@ function frame(now) {
       var allOk = true;
       for (var k in cases) { if (!cases[k].ok) allOk = false; }
       return { ok: allOk, cases: cases };
+    },
+    simBandDrop: function (id, x, y, vx, vy, steps) {
+      var b = this.prepBall(x, y, vx, vy);
+      if (!b) return { id: id, ok: false, reason: 'no ball' };
+      b.saucerCd = 3; b.portalCd = 3;
+      var y0 = y, stuck = 0, maxStuck = 0;
+      for (var i = 0; i < steps; i++) {
+        var px = b.x, py = b.y, psp = len(b.vx, b.vy);
+        physStep(PH);
+        if (!balls.length) {
+          return { id: id, ok: true, drained: true, stuck: maxStuck, y0: y0 };
+        }
+        if (balls[0] !== b) {
+          return { id: id, ok: true, replaced: true, stuck: maxStuck, y0: y0 };
+        }
+        var sp = len(b.vx, b.vy);
+        if (len(b.x - px, b.y - py) < 0.05 && Math.abs(sp - psp) < 2 && sp < 50) stuck++;
+        else stuck = 0;
+        maxStuck = Math.max(maxStuck, stuck);
+        if (maxStuck > 50) break;
+      }
+      var spF = len(b.vx, b.vy);
+      var moved = Math.abs(b.y - y0) > 18 || spF > 75 || b.y > DRAIN_Y - 5;
+      var ok = maxStuck <= 50 && moved && !b.inLane;
+      return { id: id, ok: ok, stuck: maxStuck, x: Math.round(b.x), y: Math.round(b.y), sp: Math.round(spF), inLane: !!b.inLane, moved: moved };
+    },
+    runLowerBandRegression: function () {
+      var drops = [
+        this.simBandDrop('rightGutter', 785, 1220, 0, 30, 700),
+        this.simBandDrop('rightHugLow', 786, 1100, 10, 80, 700),
+        this.simBandDrop('flipRAlley', 700, 1270, 40, 60, 520),
+        this.simBandDrop('betweenFlips', 470, 1290, 10, -20, 620),
+        this.simBandDrop('flipLAlley', 240, 1275, -30, 50, 520)
+      ];
+      var allOk = true;
+      for (var i = 0; i < drops.length; i++) { if (!drops[i].ok) allOk = false; }
+      return { ok: allOk, drops: drops };
     }
   };
 

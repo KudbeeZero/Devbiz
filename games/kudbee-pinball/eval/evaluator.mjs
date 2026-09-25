@@ -129,6 +129,15 @@ rec('lower-playfield-geo', !!lower.geoOk, lower.geoOk
   : JSON.stringify(lower.geo));
 rec('lower-funnel-band', lower.stuck <= 50, 'stuck=' + lower.stuck + ' pos=' + lower.x + ',' + lower.y + ' sp=' + lower.sp);
 
+const band = await page.evaluate(() => window.__kbTest.runLowerBandRegression());
+const bandFail = band.drops ? band.drops.filter((d) => !d.ok).map((d) => d.id + '@' + d.x + ',' + d.y + ' sp=' + d.sp + ' stuck=' + d.stuck).join('; ') : (band.reason || 'missing');
+rec('right-gutter-band', !!(band.drops && band.drops[0].ok && band.drops[1].ok),
+  band.drops && band.drops[0].ok && band.drops[1].ok
+    ? 'rightGutter + rightHugLow move or drain'
+    : bandFail);
+rec('flipper-band-edges', !!(band.drops && band.drops[2].ok && band.drops[3].ok && band.drops[4].ok),
+  band.ok ? 'flipR / between / flipL alleys clear' : bandFail);
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
