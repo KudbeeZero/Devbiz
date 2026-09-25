@@ -1409,8 +1409,6 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           continue;
         }
       }
-      // magnet cooldown
-      if (magnet && magnet.cooldown > 0) magnet.cooldown -= h;
       // VORTEX: wormhole catches balls, spins them, ejects with big bonus
       if (vortex && !vortex.capturedBall && vortex.cooldown <= 0) {
         var vdx = b.x - vortex.x, vdy = b.y - vortex.y;
@@ -1467,8 +1465,6 @@ flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           continue;
         }
       }
-      if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown -= h;
-      if (vortex && vortex.cooldown > 0) vortex.cooldown -= h;
       // anti-stuck ball-save: a ball that never reaches the lower field for a while (a top-corner
       // bounce loop) is gently ejected downward so it can NEVER hang up there forever.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
@@ -1738,6 +1734,10 @@ function frame(now) {
       if (balls[bk].portalCd > 0) balls[bk].portalCd -= dt;
       if (balls[bk].mbImmune > 0) balls[bk].mbImmune = Math.max(0, balls[bk].mbImmune - dt);
     }
+    // World object cooldowns (tick in frame loop so they work during hit-stop)
+    if (magnet && magnet.cooldown > 0) magnet.cooldown = Math.max(0, magnet.cooldown - dt);
+    if (popUpPost && popUpPost.cooldown > 0) popUpPost.cooldown = Math.max(0, popUpPost.cooldown - dt);
+    if (vortex && vortex.cooldown > 0) vortex.cooldown = Math.max(0, vortex.cooldown - dt);
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
