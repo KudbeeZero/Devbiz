@@ -8,24 +8,22 @@ development** — built as a zero-build static site and deployed on Cloudflare P
 ```
 index.html              Single-file marketing site (CSS-only routing, no build step)
 wrangler.toml           Cloudflare Pages config (serves the repo root as static assets)
-games/                  Kudbee Games Studio
-  kudbee-contra/        Flagship title — a playable 2.5D run-and-gun (HTML5 Canvas)
-  kudbee-darts/         Predictive flick-throw darts game (501 + Cricket, AI leagues)
+games/                  Kudbee Games Studio — nine canvas titles (see games/README.md)
+leaderboard/            Online scores SDK + Worker + D1 (demo mode on static host)
 tools/                  Kudbee developer utilities (standalone HTML, no build step)
   token-analyzer/       Token Price Analyzer — track AI model costs across sessions
   coverage-dashboard/   Coverage Breakdown — read-only view of the scoped coverage
                         gate (leaderboard/shared/ only; NOT whole-repo coverage)
 ```
 
-## Test coverage gate
+## Leaderboard tests & coverage
 
-A **scoped, quantitative coverage gate** runs in CI over `leaderboard/shared/` —
-the deterministic leaderboard logic where a percentage is meaningful. It is
-deliberately **not** a whole-repo coverage gate (games and the marketing site
-aren't meaningfully coverable). Thresholds live in `leaderboard/.c8rc.json`; the
-read-only `tools/coverage-dashboard/` visualizes the exact gated data. See
-[`leaderboard/README.md`](leaderboard/README.md#coverage-gate-scoped-to-shared)
-for details.
+**Local gate (no CI configured):** `npm run test:leaderboard` runs `node --test` under
+`leaderboard/`. Pinball playability: `npm run pinball:eval` (**21/21** rubric).
+
+Optional **scoped coverage** for `leaderboard/shared/` only (not whole-repo): thresholds in
+`leaderboard/.c8rc.json`; read-only [`tools/coverage-dashboard/`](tools/coverage-dashboard/)
+and [`leaderboard/README.md`](leaderboard/README.md#coverage-gate-scoped-to-shared).
 
 ## Run locally
 
@@ -57,25 +55,8 @@ npm run test:leaderboard      # node --test under leaderboard/
 All art and audio are **original** (procedurally generated placeholders with a documented
 swap-in pipeline for production / AI-generated assets). No copyrighted material.
 
-## Baton
+## Project docs
 
-### ✅ Completed units
-
-| Unit | PR | Status |
-|---|---|---|
-| Kudbee Contra — vertical slice | #1 | Merged |
-| Mobile touch controls + auto-fire | #2 | Merged |
-| Kudbee Darts — full game | #3 | Merged |
-| Token Price Analyzer tool | #4 | **Open → audit+polish complete, ready to merge** |
-
-### 🔲 Backlog (not blocking PR #4)
-
-- **Nav mobile overflow** — 6 nav items may wrap on mid-size screens; consider a scrollable pill row or hiding "Tools" behind a "More" dropdown at ≤768 px
-- **Pricing table staleness** — no automated update when model prices change; a comment in the JS marks the cache date (`2026-06-04`)
-- **Session editing** — currently sessions are append-only; an edit-in-place flow would be useful
-- **Daily cost sparkline** — a timeline chart showing cost per day would complement the existing model breakdown bar chart
-- **Bookmarklet / CLI snippet** — a one-liner to pre-fill the log form from terminal output (e.g. Cursor usage stats)
-
-### ⛔ Working agreement
-
-One PR open at a time. Do not start the next implementation unit until PR #4 is audited and merged.
+Active lanes, merge status, and owner gates: [`docs/BUILD_LEDGER.md`](docs/BUILD_LEDGER.md).
+Roadmap and backlog: [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md), [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Agent workflow: [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md).
