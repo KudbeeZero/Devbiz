@@ -1602,8 +1602,9 @@
     try { localStorage.setItem(INIT_KEY, entry.name); } catch (e) {}
     list.push(entry); list.sort(function (a, b) { return b.score - a.score; }); list = list.slice(0, 10);
     saveScores(list);
-    lbPostScore(entry.name);           // also try to post the run to the cloud leaderboard
+    var cloudSnap = lbCloudSnap(entry.name, entry.score, entry.dist);
     pendingScore = -1;
+    lbPostCloud(cloudSnap);
     return list.indexOf(entry);
   }
   function renderBoard(highlight) {
@@ -1620,17 +1621,34 @@
   }
 
   // ===== Online leaderboard (demo-mode SDK; degrades to local-only) =====
-  var lb = null, lbBusy = false;
+  var lb = null, lbBusy = false, lbBooting = false, lbPosted = false, lbPendingCloud = null;
+  function lbCloudSnap(name, scoreVal, distVal) {
+    return {
+      name: sanitizeInitials(name),
+      score: scoreVal,
+      dist: distVal,
+      bestCombo: runStats.maxChain,
+      waveSurvived: wave,
+      bestTime: Math.round(runTime || 0)
+    };
+  }
   function lbBoot() {
     if (!window.KDLeaderboard) {
       lbEmpty('lbResultsList', 'leaderboard offline');
       return;
     }
+    if (lb || lbBooting) return;
+    lbBooting = true;
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-        .then(function (c) { lb = c; lbLoadTop(); })
-        .catch(function () {});
-    } catch (e) {}
+        .then(function (c) {
+          lb = c;
+          lbBooting = false;
+          lbLoadTop();
+          if (lbPendingCloud) { var snap = lbPendingCloud; lbPendingCloud = null; lbPostCloud(snap); }
+        })
+        .catch(function () { lbBooting = false; lbPendingCloud = null; });
+    } catch (e) { lbBooting = false; }
   }
   function lbLoadTop() {
     if (!lb) return;
@@ -1679,14 +1697,20 @@
     } else submit();
   }
 
-  // lbPostScore: used by local leaderboard commitScore to also try cloud post
-  function lbPostScore(name) {
-    if (!lb || lbPosted || pendingScore < 0) return;
+  function lbPostCloud(snap) {
+    if (!window.KDLeaderboard || lbPosted || !snap) return;
+    if (!lb) { lbPendingCloud = snap; lbBoot(); return; }
     lbPosted = true;
-    var nm = (lb.user && lb.user() && lb.user().name) || (name && name.trim()) || 'Pilot';
-    lb.submit(nm, { score: pendingScore, bestCombo: runStats.maxChain, dist: Math.round(pendingDist), waveSurvived: wave, bestTime: Math.round(runTime || 0) })
-      .then(function (res) { lbLoadTop(); })
-      .catch(function () { /* cloud offline — local board already saved */ });
+    var nm = (lb.user && lb.user() && lb.user().name) || snap.name || 'Pilot';
+    lb.submit(nm, {
+      score: snap.score,
+      bestCombo: snap.bestCombo,
+      dist: Math.round(snap.dist),
+      waveSurvived: snap.waveSurvived,
+      bestTime: snap.bestTime
+    })
+      .then(function () { lbLoadTop(); })
+      .catch(function () { lbPosted = false; /* cloud offline — local board already saved */ });
   }
 
   function gameOver() {
