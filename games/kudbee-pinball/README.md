@@ -33,7 +33,7 @@ Live cloud needs Worker + `API_BASE` — see `leaderboard/README.md`.
 
 ## Verification (developers)
 
-Automated playability rubric (**21 checks**, Playwright + Chromium):
+Automated playability rubric (**23 checks**, Playwright + Chromium):
 
 ```bash
 npm run pinball:eval    # from repo root

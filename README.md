@@ -19,7 +19,7 @@ tools/                  Kudbee developer utilities (standalone HTML, no build st
 ## Leaderboard tests & coverage
 
 **Local gate (no CI configured):** `npm run test:leaderboard` runs `node --test` under
-`leaderboard/`. Pinball playability: `npm run pinball:eval` (**21/21** rubric).
+`leaderboard/`. Pinball playability: `npm run pinball:eval` (**24/24** rubric).
 
 Optional **scoped coverage** for `leaderboard/shared/` only (not whole-repo): thresholds in
 `leaderboard/.c8rc.json`; read-only [`tools/coverage-dashboard/`](tools/coverage-dashboard/)
@@ -38,7 +38,7 @@ python3 -m http.server 8000
 Local verification (no CI configured):
 
 ```bash
-npm run verify                # pinball eval (21/21) + leaderboard unit tests
+npm run verify                # pinball eval (24/24) + leaderboard unit tests
 npm run pinball:eval          # Playwright rubric only
 npm run test:leaderboard      # node --test under leaderboard/
 ```

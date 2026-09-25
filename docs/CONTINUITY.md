@@ -2,9 +2,15 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-25 — Pinball launch re-serve + crest (`cursor/pinball-launch-reserve-2a63`)
+
+**DISCOVERY:** Eval **21/21** hid a real player break: tap / short-hold plunges never crested (`charge` 0–0.40 stayed in the shooter at x≈815–822) and the old re-serve speed gate (`sp<200`) left the ball bouncing with `inLane=false` — dead table. Weak crests that did inject dropped on lane C (x=650) and railed the right wall. Upper-right mini-flip at (740,980) cupped against LIN (stuck ~752,956).
+
+**FIX:** Easier climb (`LANE_G` 680, base `vy` −780, crest `y<310`); failed-plunge timer re-parks any down-going corridor ball; C inject inset + leftward `vx`; rail peel from x=720; mini-flip inset; `urPocketT` eject. Gate is now **24/24** (`launch-crest-mid-charge`, `failed-plunge-reserve`, `ur-mini-flip-pocket`). Ledger **DBZ-079**.
+
 ## 2026-09-25 — Pinball eval gate 21/21 (`cb9c090`)
 
-**DECISION:** Production gate is `node evaluator.mjs` **21/21**. Headless launch rubric may use **`prepBall` fallback** only in the harness (after charged lane sim) so `ball-enters-playfield` / `scoring-works` are not flaky; touch/Space plunger checks stay strict. Ledger **DBZ-070**.
+**DECISION:** Production gate was `node evaluator.mjs` **21/21** (now **24/24**, see above). Headless launch rubric may use **`prepBall` fallback** only in the harness (after charged lane sim) so `ball-enters-playfield` / `scoring-works` are not flaky; touch/Space plunger checks stay strict. Ledger **DBZ-070**.
 
 ## 2026-09-25 — Games LB post-queue pattern on `main`
 

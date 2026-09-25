@@ -171,6 +171,40 @@ rec('drain-lip-crawl', !!(band.drops && band.drops[5] && band.drops[5].ok),
   band.drops && band.drops[5]
     ? 'drain lip center sp=' + band.drops[5].sp + ' stuck=' + band.drops[5].stuck
     : bandFail);
+rec('ur-mini-flip-pocket', !!(band.drops && band.drops[6] && band.drops[6].ok),
+  band.drops && band.drops[6]
+    ? 'urMiniFlip end=' + band.drops[6].x + ',' + band.drops[6].y + ' stuck=' + band.drops[6].stuck
+    : bandFail);
+
+const launchLive = await page.evaluate(() => {
+  const P = window.PINBALL, PH = 1 / 300;
+  function runCharge(ch, steps) {
+    P.start();
+    P.setCharge(ch);
+    P.launch();
+    let minX = 1e9, inj = false;
+    for (let i = 0; i < steps; i++) {
+      P.physStep(PH);
+      const b = P.balls[0];
+      if (!b) return { drained: true, minX: Math.round(minX), inj };
+      if (b.injected) inj = true;
+      minX = Math.min(minX, b.x);
+    }
+    const b = P.balls[0];
+    return b
+      ? { x: Math.round(b.x), y: Math.round(b.y), minX: Math.round(minX), inj, lane: !!b.inLane }
+      : { drained: true, minX: Math.round(minX), inj };
+  }
+  return { mid: runCharge(0.35, 700), tap: runCharge(0, 1100) };
+});
+rec('launch-crest-mid-charge', !!(launchLive.mid && launchLive.mid.inj && launchLive.mid.minX < 700),
+  launchLive.mid && launchLive.mid.inj && launchLive.mid.minX < 700
+    ? 'charge 0.35 → playfield minX=' + launchLive.mid.minX
+    : JSON.stringify(launchLive.mid));
+rec('failed-plunge-reserve', !!(launchLive.tap && launchLive.tap.lane && !launchLive.tap.inj),
+  launchLive.tap && launchLive.tap.lane
+    ? 'tap plunge re-parked in lane x=' + launchLive.tap.x
+    : JSON.stringify(launchLive.tap));
 
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 

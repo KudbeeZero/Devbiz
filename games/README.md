@@ -32,11 +32,11 @@ python3 -m http.server 8000
 From repo root (no CI configured):
 
 ```bash
-npm run verify                # pinball Playwright rubric (21/21) + leaderboard unit tests
+npm run verify                # pinball Playwright rubric (24/24) + leaderboard unit tests
 npm run pinball:eval          # pinball only
 ```
 
-Pinball gameplay changes should keep **21/21** on `games/kudbee-pinball/eval/evaluator.mjs`.
+Pinball gameplay changes should keep **24/24** on `games/kudbee-pinball/eval/evaluator.mjs`.
 
 ## Online leaderboards
 

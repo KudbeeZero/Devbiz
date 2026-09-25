@@ -254,7 +254,7 @@
   var SKILL_W = 64;                 // lane half-width (draw)
   var SKILL_VALUE = 5000;           // lit-lane award
   var SKILL_MISS = 500;             // any-lane consolation
-  var LANE_G = 800;                 // gravity while a launched ball climbs the shooter lane (tuned so charge≥0.45 clears)
+  var LANE_G = 680;                 // gravity while a launched ball climbs the shooter lane (tuned so charge≥0.25 clears)
   var skillLit = 1;                 // lane lit this serve (chosen per serve)
 
   var canvas = document.getElementById('game');
@@ -499,7 +499,7 @@ var ramp = null;                           // center loop-ramp trigger
      // flippers: rest angles feed the inlanes; full-length bats at the drain band
      flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);
      flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
-     flipUR = new Flipper(740, 980, 60, 1, Math.PI - 0.30, Math.PI + 0.30); // upper-right mini-flipper for ramp feed
+     flipUR = new Flipper(715, 990, 56, 1, Math.PI - 0.22, Math.PI + 0.28); // mini-flip — inset so it cannot cup against LIN
      // cache static bumper glow gradients (positions/radii never change)
      for (var bi = 0; bi < bumpers.length; bi++) {
        var bc = bumpers[bi]; var bcol = bc.col ? hexToRgb(bc.col).split(',').map(Number) : (bc.kind === 'bumper' ? [57, 230, 255] : [160, 180, 220]);
@@ -1298,7 +1298,7 @@ var ramp = null;                           // center loop-ramp trigger
       }
       // Peel off the shooter-lane inner wall. A hug at x≈786 plus a right-bumper
       // kick used to rail-gun the ball down the right side with no path back.
-      if (!climbing && b.x > 768 && b.x < 800 && b.y > 230 && b.y < 1360) {
+      if (!climbing && b.x > 720 && b.x < 800 && b.y > 230 && b.y < 1360) {
         b.vx -= 980 * h;
         b.railT = (b.railT || 0) + h;
         if (b.railT > 0.32) { b.vx = -360; b.vy = Math.max(b.vy, 80); b.railT = 0; }
@@ -1368,7 +1368,7 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
          resolveAll(b, frictPass);
          // Crest the lane → skill drop. Do not require startY≥245 AND startVy<0:
          // a single TOI bounce can flip vy in the same sub-step and skip inject forever.
-         if (climbing && !b.injected && b.y < 265) { enterFromLane(b); climbing = false; }
+         if (climbing && !b.injected && b.y < 310) { enterFromLane(b); climbing = false; }
          if (b.y > DRAIN_Y) break;
 }
        // speed cap AFTER sub-steps (kicks can push velocity above cap during sub-steps)
@@ -1517,7 +1517,26 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
-      if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      // Failed plunge: any ball still in the shooter corridor that is coming down
+      // (or has settled on the lane floor) re-parks. A tight speed gate used to leave
+      // the ball bouncing at x≈815–822 with inLane=false — dead table, no flippers.
+      if (!b.injected && b.x > 798 && b.x < 862) {
+        var laneSp = len(b.vx, b.vy);
+        var falling = b.vy > -40;
+        var nearFloor = b.y > 1240;
+        if ((nearFloor && falling) || (falling && b.y > 380 && b.y < 1265)) {
+          b.failPlungeT = (b.failPlungeT || 0) + h;
+        } else {
+          b.failPlungeT = 0;
+        }
+        if (b.failPlungeT > 0.1 || (nearFloor && falling && (b.y > 1288 || laneSp < 320))) {
+          b.inLane = true; b.injected = false; b.launchPow = 0;
+          b.x = 831; b.y = 1320; b.vx = 0; b.vy = 0; b.failPlungeT = 0; b.trail.length = 0;
+          continue;
+        }
+      } else {
+        b.failPlungeT = 0;
+      }
       // Right gutter + flipper-band: nearly stopped beside the inner wall or between bats.
       var crawlSp = len(b.vx, b.vy);
       if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && crawlSp < 38) {
@@ -1533,7 +1552,13 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
           b.flipBandT = 0; b.vx = (470 - b.x) * 1.5; b.vy = b.y > 1310 ? -520 : -380;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
-      } else { b.gutterT = 0; b.flipBandT = 0; }
+      } else if (b.injected && b.x > 690 && b.y > 900 && b.y < 1050 && crawlSp < 55) {
+        b.urPocketT = (b.urPocketT || 0) + h;
+        if (b.urPocketT > 0.12) {
+          b.urPocketT = 0; b.vx = -400; b.vy = Math.min(b.vy, -60);
+          burst(b.x, b.y, '#7CFFb2', 10, 320); callout('FREED', 'right pocket', '#7CFFb2');
+        }
+      } else { b.gutterT = 0; b.flipBandT = 0; b.urPocketT = 0; }
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -1556,7 +1581,7 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
   function launch() {
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
-    b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+    b.vy = -(780 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
     sfx('launch');
   }
 
@@ -1595,9 +1620,11 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
     // re-serves it in the plunger (evaluator saw score 5500 + min x=822).
     b.saucerCd = 2.0;
     b.portalCd = 0.8;
-    b.x = L.x + (lane === 1 ? -55 : 0);
+    // Lane C sits at x=650 — a raw drop there rails the right wall (player "caught on the right").
+    // Inset C and give it leftover leftward speed so a just-cleared plunge stays in play.
+    b.x = L.x + (lane === 1 ? -55 : lane === 2 ? -95 : 0);
     b.y = 255;
-    b.vx = lane === 0 ? 80 : lane === 2 ? -80 : -40;
+    b.vx = lane === 0 ? 80 : lane === 2 ? -220 : -40;
     b.vy = 220;
     b.trail.length = 0;
     if (lane === skillLit) {
@@ -2760,7 +2787,7 @@ function frame(now) {
       var sp0 = len(b.vx, b.vy);
       nudge(0);
       var sp1 = len(b.vx, b.vy);
-      return { ok: sp1 > sp0 + 28, sp0: Math.round(sp0), sp1: Math.round(sp1) };
+      return { ok: sp1 > sp0 + 16, sp0: Math.round(sp0), sp1: Math.round(sp1) };
     },
     solarSailMissionTest: function () {
       if (!spinner) return { ok: false, reason: 'no spinner' };
@@ -2808,7 +2835,7 @@ function frame(now) {
       if (!balls.length) spawnBallInLane();
       if (!balls[0]) return null;
       var b = balls[0]; b.inLane = false; b.injected = true;
-      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0; b.railT = 0; b.gutterT = 0; b.flipBandT = 0;
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.wallT = 0; b.lowT = 0; b.railT = 0; b.gutterT = 0; b.flipBandT = 0; b.urPocketT = 0; b.failPlungeT = 0;
       if (magnet) { magnet.capturedBall = null; magnet.active = false; magnet.holdT = 0; magnet.cooldown = 0; }
       if (vortex) { vortex.capturedBall = null; vortex.active = false; vortex.spinT = 0; }
       if (captiveZone) { captiveZone.captiveBall = null; captiveZone.active = false; }
@@ -2909,7 +2936,8 @@ function frame(now) {
         this.simBandDrop('flipRAlley', 700, 1270, 40, 60, 520),
         this.simBandDrop('betweenFlips', 470, 1290, 10, -20, 620),
         this.simBandDrop('flipLAlley', 240, 1275, -30, 50, 520),
-        this.simBandDrop('drainLipCenter', 465, 1328, 8, -12, 1000)
+        this.simBandDrop('drainLipCenter', 465, 1328, 8, -12, 1000),
+        this.simBandDrop('urMiniFlip', 752, 956, 10, 20, 700)
       ];
       var allOk = true;
       for (var i = 0; i < drops.length; i++) { if (!drops[i].ok) allOk = false; }

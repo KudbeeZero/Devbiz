@@ -14,7 +14,7 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
-## Rubric (21 checks)
+## Rubric (24 checks)
 
 | ID | What it proves |
 |---|---|
@@ -39,6 +39,9 @@ node evaluator.mjs            # writes findings.md + *.png here
 | `right-gutter-band` | `runLowerBandRegression()` — right gutter + hug-low |
 | `flipper-band-edges` | `runLowerBandRegression()` — flipR / between / flipL alleys |
 | `drain-lip-crawl` | `runLowerBandRegression()` — center drain lip (y≈1345) clears without hang |
+| `ur-mini-flip-pocket` | Upper-right mini-flip / LIN cup (752,956) moves or drains |
+| `launch-crest-mid-charge` | `setCharge(0.35)` + `launch()` injects to playfield (no `prepBall`) |
+| `failed-plunge-reserve` | Tap plunge (`charge=0`) re-parks in the shooter lane |
 | `no-real-console-errors` | Ignores blocked fonts + `file://` `/api/leaderboard` noise when `API_BASE` is empty |
 
 Extend the rubric as features land; run before claiming pinball gameplay green.
