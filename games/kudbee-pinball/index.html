@@ -710,7 +710,7 @@ var ramp = null;                           // center loop-ramp trigger
     var vn = b.vx * nx + b.vy * ny;
     if (vn < 0) {
       b.vx -= (1 + c.rest) * vn * nx; b.vy -= (1 + c.rest) * vn * ny;
-      if (c.kick) { var ek = c.kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; onBumper(c); }
+      if (c.kick && !(c.cd > 0)) { var ek = c.kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; onBumper(c); c.cd = 0.1; } // cooldown to prevent multi-hit in one frame
     }
     return true;
   }
@@ -1254,7 +1254,6 @@ var ramp = null;                           // center loop-ramp trigger
     if (!flipL || !flipR) return;
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipUR.pressed = false; flipL.buf = 0; flipR.buf = 0; flipUR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h); flipUR.update(h);
-    if (saveT > 0) saveT -= h;                                      // ball-save window ticks down
     if (charging && balls.length && balls[0].inLane) charge = Math.min(1, charge + h * 1.6);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
@@ -1719,7 +1718,7 @@ function frame(now) {
     if (wizardFlash > 0) wizardFlash = Math.max(0, wizardFlash - dt * 2);
     tableHue += (targetHue - tableHue) * Math.min(1, dt * 3);
     if (colorWashA > 0) colorWashA = Math.max(0, colorWashA - dt * 2.5);
-    for (var i = 0; i < bumpers.length; i++) if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3);
+    for (var i = 0; i < bumpers.length; i++) { if (bumpers[i].flash > 0) bumpers[i].flash = Math.max(0, bumpers[i].flash - dt * 3); if (bumpers[i].cd > 0) bumpers[i].cd = Math.max(0, bumpers[i].cd - dt); }
     for (var tk = 0; tk < targets.length; tk++) { var tt = targets[tk]; if (tt.cd > 0) tt.cd -= dt; if (tt.flash > 0) tt.flash = Math.max(0, tt.flash - dt * 3); }
     for (var rk = 0; rk < rollovers.length; rk++) if (rollovers[rk].flash > 0) rollovers[rk].flash = Math.max(0, rollovers[rk].flash - dt * 3);
     for (var bk = 0; bk < balls.length; bk++) {
@@ -1733,6 +1732,7 @@ function frame(now) {
     if (multFlash > 0) multFlash = Math.max(0, multFlash - dt * 2);
     if (tilt > 0 && !tilted) tilt = Math.max(0, tilt - dt * 0.5);   // nudge budget recovers over time
     if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt * 2);
+    if (saveT > 0) saveT = Math.max(0, saveT - dt);                 // ball-save window always ticks (even during hit-stop)
     if (comboT > 0) { comboT -= dt; if (comboT <= 0) { comboN = 0; comboKinds.length = 0; comboTripleAwarded = false; } }
     if (comboExplosion > 0 && !reduceMotion) comboExplosion = Math.max(0, comboExplosion - dt * 2);
     if (flipL) { flipL.flash = Math.max(0, flipL.flash - dt * 5); flipR.flash = Math.max(0, flipR.flash - dt * 5); flipUR.flash = Math.max(0, flipUR.flash - dt * 5); }
