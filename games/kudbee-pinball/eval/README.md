@@ -16,5 +16,7 @@ node evaluator.mjs            # writes findings.md + *.png here
 
 ## Rubric (Phase 1)
 loads · hook present · starts · ball enters the playfield · scoring works ·
-flippers respond · no NaN · ≥45 fps · no real console errors (blocked web-font
-requests are ignored). Extend the rubric as features land.
+flippers respond · no NaN · ≥45 fps · **phys-wall-regression** (multi-wall/corner
+deterministic `physStep` harness via `__kbTest.runPhysWallRegression`) · no real
+console errors (blocked web-font requests and `file://` relative `/api/leaderboard`
+fetch noise are ignored when `API_BASE` is empty). Extend the rubric as features land.

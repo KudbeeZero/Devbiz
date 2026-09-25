@@ -9,18 +9,36 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const R=[]; const rec=(id,p,n)=>{R.push({id,pass:p,note:n});console.log((p?'PASS':'FAIL'),id,'—',n);};
 
 const browser = await chromium.launch({ headless:true, args:['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'] });
-const page = await browser.newPage({ viewport:{ width:540, height:900 }, deviceScaleFactor:2 });
+  const page = await browser.newPage({ viewport:{ width:540, height:900 }, deviceScaleFactor:2 });
+  // Override document.hidden before page loads
+  await page.addInitScript(() => {
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
+    // Override visibilitychange event
+    const originalAddEventListener = document.addEventListener;
+    document.addEventListener = function(type, listener, options) {
+      if (type === 'visibilitychange') return;
+      return originalAddEventListener.call(this, type, listener, options);
+    };
+  });
 const errors=[], consoleErrs=[];
 page.on('pageerror', e=>errors.push(String(e)));
-page.on('console', m=>{ if(m.type()==='error'){ const t=m.text(); if(!/Failed to load resource|ERR_|fonts\.g|net::/.test(t)) consoleErrs.push(t); } });
+// Ignore known-non-gameplay console noise: blocked fonts, network stubs, and file://
+// leaderboard fetches (empty API_BASE → relative /api/* resolves to file:///api/…).
+page.on('console', m=>{ if(m.type()==='error'){ const t=m.text(); if(!/Failed to load resource|ERR_|fonts\.g|net::|file:\/\/\/api\/leaderboard|URL scheme "file" is not supported/.test(t)) consoleErrs.push(t); } });
 
-await page.goto(URL,{waitUntil:'domcontentloaded',timeout:15000}); await sleep(400);
-rec('loads', errors.length===0, errors.length?errors[0]:'no page errors');
+await page.goto(URL,{waitUntil:'domcontentloaded',timeout:15000});
+  await sleep(400);
+  rec('loads', errors.length===0, errors.length?errors[0]:'no page errors');
 rec('hook', await page.evaluate(()=>!!window.PINBALL), 'window.PINBALL present');
 await page.screenshot({ path: OUT+'/01-gate.png' });
 await page.evaluate(()=>{ window.__f=0; const c=()=>{window.__f++;requestAnimationFrame(c);}; requestAnimationFrame(c); window.__t0=performance.now(); });
 await page.click('#startBtn').catch(()=>{}); await page.evaluate(()=>{const b=document.getElementById('startBtn'); if(b)b.blur();}); await sleep(150);
 rec('start', (await page.evaluate(()=>window.PINBALL.state))==='play', 'state=play after Launch');
+rec('plunger-affordance-gate', await page.evaluate(()=>{
+  var T=window.__kbTest;
+  return T && T.plungerAffordanceWouldShow(true) && !T.plungerAffordanceWouldShow(false);
+}), 'inLane + coarse gate true; hides when coarse false (headless uses logic hook)');
 
 const zone = await page.evaluate(() => {
   const b = window.PINBALL.bounds();
@@ -76,6 +94,9 @@ rec('scoring-works', maxScore>0, 'max score = '+maxScore+' (launches='+launches+
 rec('flippers-respond', flipMoved, 'flipper angle moved on keypress');
 rec('no-nan', !nan, 'all ball positions finite');
 rec('fps', fps>=45, 'measured ~'+fps.toFixed(0)+' fps');
+const physReg = await page.evaluate(() => window.__kbTest.runPhysWallRegression());
+const physFail = physReg.cases ? Object.entries(physReg.cases).filter((e) => !e[1].ok).map((e) => e[0] + '(sp=' + e[1].sp + ',pen=' + e[1].pen + ')').join('; ') : (physReg.reason || 'missing');
+rec('phys-wall-regression', !!physReg.ok, physReg.ok ? '9 segment/contact cases' : physFail);
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
