@@ -2,6 +2,18 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-25 — Pinball playability landed on `main` (`8d80634`)
+
+**CONTEXT:** Overlap with Kilo on #179 / `kilo/pinball-bottom-rail-stuck-fixes` (eval-only lower-geo checks vs gameplay edits). Owner authorized **fast-forward to `main`** without waiting on PR #180 (Cursor/GitHub PR create blocked in agent env).
+
+**IMPLEMENTATION (gameplay on `games/kudbee-pinball/index.html`):** Restored full lower table after #179 cage experiment; right-wall / lane-inner TOI tangent slide (no speed-cap freeze at x≈786); right gutter funnel from y=1225; injected balls x>798 pushed back; skill-drop saucer cooldown + lane-B crest inject (y<265); flipper-band + gutter unstuck timers; bumpers/magnet adjusted on right stack.
+
+**TEST_VERIFIED:** Pinball evaluator **18/18** on `file://` (`cd games/kudbee-pinball/eval && node evaluator.mjs`). Rubric includes `lower-playfield-geo`, `lower-funnel-band`, `right-gutter-band`, `flipper-band-edges`, `phys-wall-regression` (9 cases). Local passed, no CI configured.
+
+**LIVE_VERIFIED:** **Partial** — static Cloudflare/Vercel hosts serve gameplay; **`GET /api/leaderboard?game=pinball…` → 404** on devbiz Worker (assets-only). Game correctly shows “leaderboard offline”. Full LIVE for post/load requires infra lane (`leaderboard/README.md`) or `KD_LB_CONFIG.API_BASE` — owner-gated.
+
+**DECISION:** Do not re-litigate #179 shortened-flipper geometry on `main` — canonical lower geo is drain **1430**, kick **1382–1426**, flip **py 1300 / len 150**. Ledger: **DBZ-066**.
+
 ## 2026-09-25 — PR #179 eval-only lower-playfield checks (no index.html)
 
 **DISCOVERY:** Kilo owns `games/kudbee-pinball/index.html` + `docs/BUILD_LEDGER.md` on `kilo/pinball-bottom-rail-stuck-fixes`. This lane does **not** edit those files.
