@@ -209,17 +209,19 @@
   function levelGrav() { return 1 + Math.max(0, (level || 1) - 1) * 0.12; }
   function levelKick() { return 1 + Math.max(0, (level || 1) - 1) * 0.08; }
 
-  // ---- mission system: 3 timed objectives, one active at a time ----
+  // ---- mission system: 4 timed objectives, one active at a time ----
   var MISSION_DEFS = [
     { id: 'asteroid', name: 'ASTEROID FIELD', icon: '\u2B21', desc: '2\u00D7 score \u00B7 bumpers enlarged', DUR: 25, reward: '+2 mult', col: '#39e6ff',
       check: function() { return rampShots >= 6; } },
     { id: 'warp', name: 'WARP SPEED', icon: '\u27A4', desc: '\u00BD gravity \u00B7 ramps 3\u00D7 \u00B7 ball save', DUR: 20, reward: 'Extra ball', col: '#c46bff',
       check: function() { return comboN >= 5; } },
     { id: 'targetLock', name: 'TARGET LOCK', icon: '\u25CE', desc: 'drops reset \u00B7 chain bonus \u00B7 1.5\u00D7', DUR: 30, reward: '+3 mult', col: '#ffd34d',
-      check: function() { for (var i = 0; i < rollovers.length; i++) if (!rollovers[i].lit) return false; return true; } }
+      check: function() { for (var i = 0; i < rollovers.length; i++) if (!rollovers[i].lit) return false; return true; } },
+    { id: 'solarSail', name: 'SOLAR SAIL', icon: '\u2609', desc: 'spinner 2\u00D7 \u00B7 ramp save \u00B7 3\u00D7 bumpers', DUR: 25, reward: '+2 mult', col: '#ffd34d',
+      check: function() { return spinner.totalSpins >= 50; } }
   ];
   var missionActive = -1, missionTimer = 0, missionFlash = 0;
-  var missionTriggered = [false, false, false], missionComplete = [false, false, false];
+  var missionTriggered = [false, false, false, false], missionComplete = [false, false, false, false];
   var missionMult = 1, missionGravMod = 1;                                 // set during missions (asteroid → score 2×, warp → gravity ½)
 
   // ---- wizard mode: SUPERNOVA — 60s ultimate frenzy ----
@@ -230,7 +232,7 @@
   var WIZARD_MULT = 5;                                                       // all scoring ×5 in wizard mode
   function wizardReady() {
     return !wizardDone && level >= 5 && hasSeenMultiball && tripleLoopDone &&
-           missionComplete[0] && missionComplete[1] && missionComplete[2];
+           missionComplete[0] && missionComplete[1] && missionComplete[2] && missionComplete[3];
   }
   var wizardKickMult = 1;                                                   // 2× during wizard mode
 
@@ -555,6 +557,14 @@ var ramp = null;                           // center loop-ramp trigger
   var lockedBalls = 0, LOCK_MAX = 2, multiballActive = false;
   // Super lock system: combine locks from all features for SUPER MULTIBALL
   var superLocks = 0, SUPER_LOCK_MAX = 5, superMultiballReady = false; // main(2) + right(2) + vortex(1)
+  function addSuperLock() {
+    if (superMultiballReady) return; // already triggered this cycle
+    superLocks++;
+    if (superLocks >= SUPER_LOCK_MAX) {
+      superLocks = SUPER_LOCK_MAX;
+      triggerSuperMultiball();
+    }
+  }
   // Extra balls: a classic pinball award (adds to ballsLeft instead of ending the game) hooked
   // into milestones the table already tracks — no parallel scoring system, just a bonus payout
   // on top of events that already exist. Capped so it stays a rare "you earned this" moment.
@@ -597,7 +607,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (popUpPost) { popUpPost.raised = false; popUpPost.raiseTimer = 0; popUpPost.cooldown = 0; popUpPost.capturedBall = null; }
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     missionActive = -1; missionTimer = 0; missionFlash = 0;
-    missionTriggered = [false, false, false]; missionComplete = [false, false, false];
+    missionTriggered = [false, false, false, false]; missionComplete = [false, false, false, false];
     missionMult = 1; missionGravMod = 1;
     wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
     starbreakActive = false; starbreakTimer = 0;
@@ -764,6 +774,7 @@ var ramp = null;                           // center loop-ramp trigger
   }
 
   // ball-vs-ball (for future multiball; cheap, runs now harmlessly)
+  var BALL_BALL_REST = 0.6;  // restitution for ball-ball collisions (multiball feel)
   function ballVsBall() {
     for (var i = 0; i < balls.length; i++) for (var j = i + 1; j < balls.length; j++) {
       var a = balls[i], b = balls[j];
@@ -774,7 +785,7 @@ var ramp = null;                           // center loop-ramp trigger
         var nx = dx / d, ny = dy / d, push = (rr - d) / 2;
         a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push;
         var rvn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
-        if (rvn < 0) { var imp = rvn; a.vx += nx * imp; a.vy += ny * imp; b.vx -= nx * imp; b.vy -= ny * imp; }
+        if (rvn < 0) { var imp = rvn * (1 + BALL_BALL_REST); a.vx += nx * imp; a.vy += ny * imp; b.vx -= nx * imp; b.vy -= ny * imp; }
       }
     }
   }
@@ -996,15 +1007,14 @@ var ramp = null;                           // center loop-ramp trigger
     burst(saucer.x, saucer.y, '#39ffe0', 10, 160); burst(saucer.x, saucer.y, '#ffffff', 6, 90);  // tight, "sucked-in" flourish (low speed, small count) vs. every outward-exploding burst elsewhere
     shake = Math.min(shake + 0.25, 1.3);
     if (lockedBalls < LOCK_MAX - 1) {
-      lockedBalls++; superLocks++;
+      lockedBalls++; addSuperLock();
       callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
       balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
       // lock quota filled — check for SUPER MULTIBALL
-      superLocks++;
-      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      addSuperLock();
       // normal multiball
       var releaseCount = lockedBalls + 1;                   // the locks banked earlier + this catch
       if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
@@ -1042,13 +1052,12 @@ var ramp = null;                           // center loop-ramp trigger
     burst(saucerR.x, saucerR.y, '#ff6ec7', 10, 160); burst(saucerR.x, saucerR.y, '#ffffff', 6, 90);
     shake = Math.min(shake + 0.3, 1.4);
     if (saucerR.locks < saucerR.maxLocks - 1) {
-      saucerR.locks++; superLocks++;
+      saucerR.locks++; addSuperLock();
       callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
       balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
     } else {
       // both right locks filled — check for SUPER MULTIBALL
-      saucerR.locks = 0; superLocks++;
-      if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); return; }
+      saucerR.locks = 0; addSuperLock();
       // normal multiball
       var releaseCount = saucerR.maxLocks;
       if (lockedBalls > 0) { releaseCount += lockedBalls; lockedBalls = 0; }
@@ -1133,9 +1142,9 @@ var ramp = null;                           // center loop-ramp trigger
     spinner.hitFlash = 0.3; // visual feedback
     // Track total spins (absolute rotations)
     spinner.totalSpins += Math.abs(spinDelta) / (2 * Math.PI);
-    if (spinner.totalSpins >= 50 && !missionC) {
-      missionC = true; // Solar Sail mission = missionC
-      callout('SOLAR SAIL', 'Mission lit!', '#39e6ff');
+    if (spinner.totalSpins >= 50 && !missionComplete[3]) {
+      missionComplete[3] = true; // Solar Sail mission
+      callout('SOLAR SAIL', 'Mission lit!', '#ffd34d');
     }
   }
   // Outlane kickback — a ball about to drain out an outlane instead gets punched
@@ -1174,6 +1183,8 @@ var ramp = null;                           // center loop-ramp trigger
   // SUPER MULTIBALL: 5+ balls, all locks filled — ultimate frenzy
   function triggerSuperMultiball() {
     superMultiballReady = true; superLocks = 0; // reset for next cycle
+    // Clear vortex capture to prevent mid-capture race (vortex would eject its ball next frame)
+    if (vortex) { vortex.capturedBall = null; vortex.active = false; }
     var releaseCount = 5; // always 5 balls for super multiball
     if (releaseCount > maxMultiballBalls) maxMultiballBalls = releaseCount;
     lockedBalls = 0; saucerR.locks = 0; multiballActive = true; hasSeenMultiball = true;
@@ -1325,38 +1336,45 @@ var move = len(b.vx, b.vy) * h;
              var ht = sweptSeg(b, ss.ax, ss.ay, ss.bx, ss.by, ss.r, rem);
              if (ht >= 0 && ht < hitT) { hitSeg = ss; hitT = ht; }
            }
-           if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
-           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
-           resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
-           rem *= (1 - hitT);
-           // hitT=0 means already overlapping (sweptSeg returns 0); rem would never shrink → spin forever
-           // But if the ball is moving parallel to or away from the wall (grazing contact),
-           // don't zero out remaining time — consume it and let it slide along the wall.
-           if (hitT < 1e-5) {
-             var ex = hitSeg.bx - hitSeg.ax, ey = hitSeg.by - hitSeg.ay, el2 = ex * ex + ey * ey || 1;
-             var nx = -ey, ny = ex;
-             var ml = Math.sqrt(nx * nx + ny * ny) || 1; nx /= ml; ny /= ml;
-             var mx = (hitSeg.ax + hitSeg.bx) / 2, my = (hitSeg.ay + hitSeg.by) / 2;
-             if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
-             var vn = b.vx * nx + b.vy * ny;
-             // Already touching: sliding or leaving the wall must still consume rem
-             // along the tangent. Zeroing rem here glued a hug on the right lane
-             // wall (x=786) — gravity stacked to SPEED_CAP while y never moved.
-             if (vn >= -0.001 && rem > 0) {
-               var tx = b.vx - vn * nx, ty = b.vy - vn * ny;
-               b.x += tx * rem; b.y += ty * rem;
-             }
-             rem = 0;
-           } else if (rem < 0.0002) { rem = 0; }
+if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
+            b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
+            resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
+            rem *= (1 - hitT);
+            // hitT=0 means already overlapping at start of substep; rem would never shrink → spin forever
+            // But if the ball is moving parallel to or away from the wall (grazing contact),
+            // don't zero out remaining time — consume it and let it slide along the wall.
+            if (hitT < 1e-5) {
+              var ex = hitSeg.bx - hitSeg.ax, ey = hitSeg.by - hitSeg.ay, el2 = ex * ex + ey * ey || 1;
+              var nx = -ey, ny = ex;
+              var ml = Math.sqrt(nx * nx + ny * ny) || 1; nx /= ml; ny /= ml;
+              var mx = (hitSeg.ax + hitSeg.bx) / 2, my = (hitSeg.ay + hitSeg.by) / 2;
+              if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
+              var vn = b.vx * nx + b.vy * ny;
+              // Check if ball is still penetrating after resolution
+              var dx = b.x - mx, dy = b.y - my;
+              var proj = dx * nx + dy * ny;
+              var dist = Math.abs(proj);
+              var rr = b.r + hitSeg.r;
+              if (vn >= -0.001 || dist >= rr - 0.01) {
+                // separating/tangential OR just touching (not penetrating) — consume remaining time to slide
+                rem = 0;
+              } else {
+                // penetrating and moving INTO wall — push out slightly, then continue with remaining time
+                b.x += nx * 0.01; b.y += ny * 0.01;
+                // don't zero rem — let remaining time be used after collision
+              }
+            } else if (rem < 0.0002) { rem = 0; }
          }
          resolveAll(b, frictPass);
          // Crest the lane → skill drop. Do not require startY≥245 AND startVy<0:
          // a single TOI bounce can flip vy in the same sub-step and skip inject forever.
          if (climbing && !b.injected && b.y < 265) { enterFromLane(b); climbing = false; }
          if (b.y > DRAIN_Y) break;
-       }
-      flipL.a = flipL.endA; flipR.a = flipR.endA; flipUR.a = flipUR.endA;
-      b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
+}
+       // speed cap AFTER sub-steps (kicks can push velocity above cap during sub-steps)
+       var sp2 = len(b.vx, b.vy); if (sp2 > SPEED_CAP) { b.vx *= SPEED_CAP / sp2; b.vy *= SPEED_CAP / sp2; }
+       flipL.a = flipL.endA; flipR.a = flipR.endA; flipUR.a = flipUR.endA;
+       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
@@ -1460,8 +1478,7 @@ var move = len(b.vx, b.vy) * h;
           burst(vortex.x, vortex.y, '#ff6ec7', 24, 600); burst(vortex.x, vortex.y, '#ffffff', 12, 400);
           callout('VORTEX EJECT', '+3000', '#ff6ec7');
           // vortex counts as 1 super lock
-          superLocks++;
-          if (superLocks >= SUPER_LOCK_MAX) { triggerSuperMultiball(); }
+          addSuperLock();
           vortex.capturedBall = null; vortex.active = false;
         } else {
           continue; // skip physics while in vortex
@@ -2638,7 +2655,7 @@ function frame(now) {
     if (state !== 'play') return;
     if (k === 'arrowleft' || k === 'z' || k === 'a') { setFlip(-1, true); e.preventDefault(); }
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') { setFlip(1, true); e.preventDefault(); }
-    else if (k === 'arrowup' || k === 'w') { setFlip(0, true); e.preventDefault(); }
+    else if (k === 'arrowup' || k === 'w') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge straight
     else if (k === ' ') {                                   // plunge while in the lane; otherwise nudge
       if (balls.length && balls[0].inLane) charging = true; else if (!e.repeat) nudge(0);
       e.preventDefault();
@@ -2652,7 +2669,7 @@ function frame(now) {
     var k = e.key.toLowerCase();
     if (k === 'arrowleft' || k === 'z' || k === 'a') setFlip(-1, false);
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
-    else if (k === 'arrowup' || k === 'w') setFlip(0, false);
+    else if (k === 'arrowup' || k === 'w') { }   // nudge straight (no keyup action needed)
     else if (k === ' ') { if (state === 'play') { charging = false; launch(); } else charging = false; }
   });
   // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
