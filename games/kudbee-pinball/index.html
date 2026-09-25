@@ -331,10 +331,7 @@ var ramp = null;                           // center loop-ramp trigger
     seg(L, T, L + 40, T - 26); seg(CAB, T, CAB - 40, T - 26);   // corner nubs
     seg(CAB, T, CAB, 1340);                                // right cabinet (= lane outer wall)
     // ---- shooter lane (right); the inner wall doubles as the playfield's right wall ----
-    seg(LIN, 200, LIN, 1180);                              // lane inner / playfield-right — stops at the funnel (no V-pocket)
-    // Playfield-side lip at the lane mouth: an injected ball that rolls back toward
-    // the opening is shed into the field instead of falling down the plunger.
-    seg(LIN, 200, 755, 235, { rest: 0.28 });
+    seg(LIN, 200, LIN, 1320);                              // lane inner / playfield-right (full height)
     seg(LIN, 1340, CAB, 1340);                             // lane floor (plunger rests here)
     seg(CAB, 200, 700, 140, { rest: 0.4 });               // top deflector → routes a launched ball down-left into play
     // upper-right corner wedge: closes the dead pocket above the deflector so a ball
@@ -350,7 +347,9 @@ var ramp = null;                           // center loop-ramp trigger
     // match the right's proportions (mouth ≈135px) so drains land solidly inside the
     // kickback zone and both outlanes read the same width. See the side-alley rails below.
     seg(L, 1180, 210, 1360, { rest: 0.22 });              // left funnel (mouth ~150px → kickZoneL)
-    seg(LIN, 1180, 665, 1360, { rest: 0.22 });            // right funnel wall
+    // Funnel starts below the slingshot band so it meets the inner wall at a shallow
+    // angle (no V-pocket at y=1180 that trapped balls on the right gutter).
+    seg(LIN, 1225, 655, 1360, { rest: 0.22 });            // right funnel wall
     // inlane/outlane guides — feed the flipper band, not a cage down to the drain
     seg(330, 1250, 360, 1330, { rest: 0.2 });
     seg(630, 1250, 600, 1330, { rest: 0.2 });
@@ -1353,7 +1352,7 @@ var move = len(b.vx, b.vy) * h;
          resolveAll(b, frictPass);
          // Crest the lane → skill drop. Do not require startY≥245 AND startVy<0:
          // a single TOI bounce can flip vy in the same sub-step and skip inject forever.
-         if (climbing && !b.injected && b.y < 245) { enterFromLane(b); climbing = false; }
+         if (climbing && !b.injected && b.y < 265) { enterFromLane(b); climbing = false; }
          if (b.y > DRAIN_Y) break;
        }
       flipL.a = flipL.endA; flipR.a = flipR.endA; flipUR.a = flipUR.endA;
@@ -1500,7 +1499,16 @@ var move = len(b.vx, b.vy) * h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
-      if (!b.injected && b.x > 800 && b.x < 862 && b.y > 1255 && len(b.vx, b.vy) < 240) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
+      if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      // Right gutter: nearly stopped in the funnel/outlane band beside the inner wall.
+      if (b.injected && b.x > 720 && b.y > 1280 && len(b.vx, b.vy) < 35) {
+        b.gutterT = (b.gutterT || 0) + h;
+        if (b.gutterT > 0.55) {
+          b.gutterT = 0; b.vx = -320; b.vy = -420;
+          burst(b.x, b.y, '#ffd34d', 12, 360); callout('FREED', 'out of the gutter', '#ffd34d');
+        }
+      } else { b.gutterT = 0; }
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
