@@ -86,11 +86,12 @@ All 9 games have completed a "game-polish" pass. The main cross-cutting gap is *
 
 | Game | Leaderboard Status |
 |------|-------------------|
-| `riff`, `riff-2` | SDK-wired, needs Worker deployed |
-| `darts` | SDK-wired (DBZ-064 draft), demo mode works |
-| `voidrunner` | SDK-wired (draft PR #169), demo mode works |
-| `pinball` | **SDK integrated + physics/logic hardened** — metrics: score, bestMultiball, modesCompleted; evaluator **21/21** |
-| `contra`, `munch`, `orbital`, `puzzles` | SDK-wired (DBZ-065) — demo mode works immediately |
+| All 9 | SDK-wired on `main`; **live post** needs Worker deploy + `API_BASE` (owner-gated) |
+| `pinball` | Evaluator gate **21/21** (`npm run pinball:eval`); metrics score / bestMultiball / modesCompleted |
+| `darts`, `voidrunner` | Auto-post with queue-until-boot (DBZ-064, DBZ-068) |
+| `munch`, `puzzles`, `orbital` | Auto-post with `lbPending` flush (DBZ-071) |
+| `riff`, `riff-2` | Manual post + top-10; `lbPostQueued` (DBZ-072) |
+| `contra` | Auto-post; recursive `_lbPost` after SDK create |
 
 See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 
