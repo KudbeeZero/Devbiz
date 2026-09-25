@@ -105,5 +105,6 @@ See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 
 - No CI configured (removed to avoid billing stalls)
 - Local verification only: run project's lint/typecheck/test commands before declaring green
+- Pinball gate from repo root: `npm run pinball:eval` (21/21). Leaderboard unit tests: `npm run test:leaderboard`
 - Manual gates documented in ledger (browser, wallet, payment, API key, deploy verification)
 - Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball) for headless verification
