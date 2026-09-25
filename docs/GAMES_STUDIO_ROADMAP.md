@@ -23,11 +23,11 @@ inconsistent.**
 
 | Game | Leaderboard status |
 |---|---|
-| `riff`, `riff-2` | Fully SDK-wired (`KD_LB_CONFIG` + `client/kd-leaderboard.js`), posts + loads top-10. **Not live** — `API_BASE` is empty, so scores post nowhere yet. Needs the Worker deployed (see `leaderboard/README.md` → *Deploy to Cloudflare*). |
-| `pinball` | **SDK-wired** (merged PR #168): `KD_LB_CONFIG = { GAME: 'pinball' }` + SDK script in `games/kudbee-pinball/index.html`; metrics `score`, `bestMultiball`, `modesCompleted` defined in `leaderboard/shared/core.js`. Game-over overlay shows top-10 + "Post your score" button. Demo mode works immediately. |
-| `voidrunner` | **SDK-wired** (draft PR #169): `KD_LB_CONFIG = { GAME: 'voidrunner' }` + SDK script in `games/kudbee-voidrunner/index.html`; metrics `score`, `waveSurvived`, `bestTime` defined in `leaderboard/shared/core.js`. Swaps existing local top-10/initials UX for SDK post/load. Demo mode works immediately. |
-| `darts` | **SDK-wired** (draft PR #170): `KD_LB_CONFIG = { GAME: 'darts' }` + SDK script in `games/kudbee-darts/index.html`; `_lbPostMatch` posts `rating`, `bestCheckout`, `total180s`, `wins`, `bestStreak` after each match (metrics already defined in `leaderboard/shared/core.js`). Demo mode works immediately. |
-| `contra`, `munch`, `orbital`, `puzzles` | No online leaderboard yet. `contra`'s own `docs/GAME_DESIGN.md` roadmap already names "save/leaderboard" as a named Phase 3 item, so wiring it there has an existing design hook. |
+| All 9 games | **SDK-wired** on `main` (`KD_LB_CONFIG` + `leaderboard/client/kd-leaderboard.js`). Demo mode works immediately. **Not live on static host** — empty `API_BASE` → relative `/api/*` 404 until the Worker is deployed (owner-gated; see `leaderboard/README.md`). |
+| `riff`, `riff-2` | Manual “Post my score” + top-10 load; **post queues** if clicked before SDK boot (`lbPostQueued`). |
+| `pinball` | Game-over overlay + post/load; metrics `score`, `bestMultiball`, `modesCompleted`. |
+| `voidrunner`, `darts` | Auto-post after run/match with **queue-until-boot** (DBZ-064, DBZ-068). |
+| `contra`, `munch`, `orbital`, `puzzles` | Auto-post on game over; munch/puzzles/orbital use `lbPending` flush (DBZ-071); contra re-enters `_lbPost()` after create. |
 
 ## Proposed phases
 

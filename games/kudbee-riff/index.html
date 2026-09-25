@@ -1324,17 +1324,24 @@
   }
 
   // ---- Online leaderboard (demo-mode SDK; degrades to local-only) ----
-  var lb = null, lastAcc = 0, lbBusy = false;
+  var lb = null, lastAcc = 0, lbBusy = false, lbBooting = false, lbPostQueued = false;
   function lbBoot() {
     if (!window.KDLeaderboard) {                   // SDK script missing/blocked
       lbEmpty('lbRailList', 'leaderboard offline'); lbEmpty('lbResultsList', 'leaderboard offline');
       return;
     }
+    if (lb || lbBooting) return;
+    lbBooting = true;
     try {
       window.KDLeaderboard.create(window.KD_LB_CONFIG || {})
-        .then(function (c) { lb = c; lbLoadTop(); })
-        .catch(function () {});
-    } catch (e) {}
+        .then(function (c) {
+          lb = c;
+          lbBooting = false;
+          lbLoadTop();
+          if (lbPostQueued) { lbPostQueued = false; lbPost(); }
+        })
+        .catch(function () { lbBooting = false; lbPostQueued = false; });
+    } catch (e) { lbBooting = false; lbPostQueued = false; }
   }
   function lbLoadTop() {
     if (!lb) return;
@@ -1360,7 +1367,8 @@
   function lbEmpty(id, msg) { var el = document.getElementById(id); if (el) el.innerHTML = '<li class="lb-empty">' + msg + '</li>'; }
   function lbPost() {
     var status = function (m) { setText('lbStatus', m); };
-    if (!lb) { status('offline — your best is saved locally'); return; }
+    if (!window.KDLeaderboard) { status('offline — your best is saved locally'); return; }
+    if (!lb) { lbPostQueued = true; lbBoot(); status('connecting…'); return; }
     if (lbBusy) return;
     var submit = function () {
       lbBusy = true; status('posting…');
