@@ -1017,7 +1017,7 @@ var ramp = null;                           // center loop-ramp trigger
       callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
     } else {
       // lock quota filled — check for SUPER MULTIBALL
       addSuperLock();
@@ -1060,7 +1060,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (saucerR.locks < saucerR.maxLocks - 1) {
       saucerR.locks++; addSuperLock();
       callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
     } else {
       // both right locks filled — check for SUPER MULTIBALL
       saucerR.locks = 0; addSuperLock();
@@ -1122,7 +1122,7 @@ var ramp = null;                           // center loop-ramp trigger
       starSaucer.locks++;
       callout('THE STAR', 'Mission progress: ' + (missionsDone + 1) + '/3', '#ffd34d');
       // Serve a fresh ball
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
     }
   }
   // SPINNER ("solar sail") — ball passing through spins it, awards points per rotation
