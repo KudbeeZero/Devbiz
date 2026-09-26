@@ -198,7 +198,7 @@
   var PHYS_HZ = 300, PH = 1 / PHYS_HZ;
   var BALL_R = 14;
   var SPEED_CAP = 3200;         // px/s
-  var WALL_REST = 0.35, WALL_FRIC = 0.012;  // reduced friction for fluidity (was 0.018)
+  var WALL_REST = 0.35, WALL_FRIC = 0.014;  // balanced friction for fluidity with grip (was 0.018, too high)
 
   // ---- dynamic difficulty: levels change the table ----
   var portalBumper = null;
@@ -351,10 +351,10 @@ var ramp = null;                           // center loop-ramp trigger
     seg(L, 1180, 210, 1360, { rest: 0.22 });              // left funnel (mouth ~150px → kickZoneL)
     // Funnel starts below the slingshot band so it meets the inner wall at a shallow
     // angle (no V-pocket at y=1180 that trapped balls on the right gutter).
-    seg(LIN, 1225, 655, 1360, { rest: 0.22 });            // right funnel wall
+    seg(LIN, 1225, 680, 1360, { rest: 0.22 });            // right funnel wall (adjusted closer to center)
     // inlane/outlane guides — feed the flipper band, not a cage down to the drain
-    seg(330, 1250, 360, 1330, { rest: 0.2 });
-    seg(630, 1250, 600, 1330, { rest: 0.2 });
+    seg(325, 1250, 355, 1330, { rest: 0.2 });
+    seg(635, 1250, 605, 1330, { rest: 0.2 });
     // slingshots (kickers above each flipper)
     seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling
     seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling
@@ -497,8 +497,8 @@ var ramp = null;                           // center loop-ramp trigger
     portalBumper = bumpers[bumpers.length - 1];
 
      // flippers: rest angles feed the inlanes; full-length bats at the drain band
-     flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);
-     flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
+     flipL = new Flipper(320, 1295, 160, -1, 0.42, -0.20);
+     flipR = new Flipper(620, 1295, 160, 1, Math.PI - 0.42, Math.PI + 0.20);
      flipUR = new Flipper(740, 980, 60, 1, Math.PI - 0.30, Math.PI + 0.30); // upper-right mini-flipper for ramp feed
      // cache static bumper glow gradients (positions/radii never change)
      for (var bi = 0; bi < bumpers.length; bi++) {
