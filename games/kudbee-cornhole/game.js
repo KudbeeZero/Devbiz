@@ -265,13 +265,26 @@
     }
   };
   Game.prototype._score = function (pts) {
-    this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
     this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak); this._scoredThisThrow = true;
-    if (pts >= 3) { this.audio.holeDrop(); this._triggerHitStop(0.1); this._emitConfetti(this.bag.x, this.bag.y, this.streak >= 3 ? 48 : 30); }
+    // Apply multiplier for hole drops based on streak: 1x @ streak 1, 1.5x @ 3, 2x @ 5+
+    let mult = 1;
+    if (pts >= 3) {
+      mult = this.streak >= 5 ? 2.0 : this.streak >= 3 ? 1.5 : 1.0;
+      pts = Math.round(pts * mult);
+    }
+    this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
+    if (pts >= 3) {
+      this.audio.holeDrop(); this._triggerHitStop(0.1);
+      // bigger confetti + extra flash for multiplier kicks
+      const confettiCount = this.streak >= 5 ? 64 : this.streak >= 3 ? 48 : 30;
+      this._emitConfetti(this.bag.x, this.bag.y, confettiCount);
+      if (mult > 1) { this.flash = Math.max(this.flash, 1.5); this.shake = Math.max(this.shake, 0.6); }
+    }
     this.audio.scoreJingle(pts);
     this.bag.gone = true;
     this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 12 : 6);
-    const popText = pts >= 3 && this.streak >= 3 ? '+' + pts + ' ×' + this.streak + '!' : '+' + pts;
+    const multStr = mult > 1 ? ' ×' + mult.toFixed(1) + 'x!' : '';
+    const popText = pts >= 3 && this.streak >= 3 ? '+' + pts + multStr : '+' + pts;
     this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: popText, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };

@@ -332,8 +332,20 @@
     this.phase = 'resolve'; this.phaseT = 0;
     if (out) {
       this.wickets++; this.banner = 'OUT!'; this._bannerAt = this.time;
-      this.shake = 0.5; this._triggerHitStop(0.08);
-      this.audio.whistle(); this.batterIdx++;
+      this.shake = 0.6; this._triggerHitStop(0.12);
+      this.flash = Math.max(this.flash, 1.0); // brief red-ish flash on dismissal
+      this.audio.whistle(); this.audio.whistle();
+      // wicket particles - burst from pitch center
+      if (!this.reduceMotion) {
+        for (let i = 0; i < 24; i++) {
+          const ang = Math.random() * Math.PI * 2, sp = KC.Util.rand(80, 280);
+          this.particles.items.push({
+            x: VIEW_W / 2, y: VIEW_H * 0.75, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+            life: KC.Util.rand(0.8, 1.3), max: 1.3, col: '#ff3c5d', size: KC.Util.rand(2, 4), rot: Math.random() * Math.PI * 2, spin: KC.Util.rand(-12, 12)
+          });
+        }
+      }
+      this.batterIdx++;
     } else {
       this.runs += runs;
       this.banner = runs === 6 ? 'SIX!' : runs === 4 ? 'FOUR!' : runs > 0 ? runs + ' run' + (runs > 1 ? 's' : '') : 'Dot ball';
