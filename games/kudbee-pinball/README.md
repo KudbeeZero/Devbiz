@@ -25,6 +25,11 @@ Use **http(s)** for online leaderboard SDK calls; `file://` shows an offline hin
 
 Honors `prefers-reduced-motion` where animations allow.
 
+**Table feel:** like a real table, a dead ball can drain **between the flippers** (the
+resting tips leave a ball-width gap) — hold a flipper up to **cradle** the ball and line up
+a shot. The ball rolls freely along walls and flippers; an auto-free only kicks in after a
+full second of a genuinely wedged ball, never while you're holding a flipper.
+
 ## Leaderboard
 
 **kd-leaderboard** SDK (`GAME: 'pinball'`). Metrics: `score`, `bestMultiball`, `modesCompleted`.
@@ -39,4 +44,7 @@ Automated playability rubric (**21 checks**, Playwright + Chromium):
 npm run pinball:eval    # from repo root
 ```
 
-Details: [`eval/README.md`](./eval/README.md). Headless hooks: `window.PINBALL`, `window.__kbTest`.
+Details: [`eval/README.md`](./eval/README.md). Headless hooks: `window.PINBALL`, `window.__kbTest`
+(incl. `__kbTest.simulate()` for stuck-ball scans). Physics invariants — swept-TOI, Coulomb
+friction, capsule normals, ≥30px clearances — are in [`AGENTS.md`](../../AGENTS.md#pinball-physics-rules-gameskudbee-pinballindexhtml);
+read them before touching collision code or lower-table geometry.

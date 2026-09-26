@@ -1177,11 +1177,40 @@ html:not(.js) .story .pin-outer { height: auto; }
 
 /* ---------------- Pricing ---------------- */
 .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: stretch; }
-.pkg { position: relative; display: flex; flex-direction: column; padding: 30px 26px; border-radius: 20px; border: 1px solid var(--border-soft); background: var(--panel); transition: transform var(--mo-dur-3) var(--ease), border-color var(--mo-dur-3), box-shadow var(--mo-dur-3); }
+.pkg {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 26px;
+    border-radius: 20px;
+    border: 1px solid rgba(var(--acc-rgb, 111,91,255), 0.15);
+    background: var(--panel);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: all var(--mo-dur-3) var(--ease);
+}
 /* --acc-rgb is set per-card inline (same convention as .gcard, DBZ-054) so
    each tier gets its own hover glow instead of one identical treatment. */
-.pkg:hover, .pkg:focus-within { transform: translateY(-8px); border-color: rgba(var(--acc-rgb, 111,91,255), 0.5); box-shadow: 0 26px 60px -20px rgba(0,0,0,0.55), 0 0 44px rgba(var(--acc-rgb, 111,91,255), 0.2); }
-.pkg.hot { border-color: rgba(111,91,255,0.55); background: linear-gradient(170deg, rgba(111,91,255,0.10), var(--panel) 55%); box-shadow: 0 0 44px rgba(111,91,255,0.16); }
+.pkg:hover, .pkg:focus-within {
+    transform: translateY(-8px);
+    border-color: rgba(var(--acc-rgb, 111,91,255), 0.5);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 60px rgba(var(--acc-rgb, 111,91,255), 0.24), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.pkg.hot {
+    border-color: rgba(var(--acc-rgb, 111,91,255), 0.35);
+    background: linear-gradient(170deg, rgba(var(--acc-rgb, 111,91,255), 0.12), var(--panel) 55%);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35), 0 0 30px rgba(var(--acc-rgb, 111,91,255), 0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.pkg.hot:hover, .pkg.hot:focus-within {
+    border-color: rgba(var(--acc-rgb, 111,91,255), 0.6);
+    box-shadow: 0 36px 90px rgba(0,0,0,0.45), 0 0 70px rgba(var(--acc-rgb, 111,91,255), 0.32), inset 0 1px 0 rgba(255,255,255,0.1);
+    transform: translateY(-10px);
+}
+@media (prefers-reduced-motion: reduce) {
+    .pkg, .pkg:hover, .pkg.hot, .pkg.hot:hover {
+        transform: none;
+        transition: none;
+    }
+}
 .pkg .hot-tag { position: absolute; top: -12px; left: 24px; font: 700 10px/1 var(--fd); letter-spacing: 0.2em; text-transform: uppercase; color: #04040a; background: var(--grad); border-radius: 999px; padding: 7px 13px; }
 .pkg h3 { font-size: 17px; letter-spacing: 0.01em; }
 .pkg .amount { margin-top: 14px; font: 600 clamp(34px, 3.4vw, 46px)/1 var(--fd); letter-spacing: -0.03em; }
@@ -1633,8 +1662,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
         </div>
 
         <div class="game-grid">
-            <a class="gcard" data-rv style="--acc-rgb:255,160,60" href="games/kudbee-cornhole/index.html"><span class="g-art" style="background:linear-gradient(135deg,#2a1a0a,#05050f)"><span class="g-badge" style="--c:var(--amber)">Physics</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Cornhole</h3><span class="g-cat">Neon bag toss · real physics · hole=3 board=1</span></span></a>
-            <a class="gcard" data-rv style="--acc-rgb:57,230,255" href="games/kudbee-cricket/index.html"><span class="g-art" style="background:linear-gradient(135deg,#0a2818,#05050f)"><span class="g-badge" style="--c:var(--green)">Franchise</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Cricket</h3><span class="g-cat">Neon T20 · real players · time your shots</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.21s;--acc-rgb:255,160,60" href="games/kudbee-cornhole/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="cornhole" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Physics</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Cornhole</h3><span class="g-cat">Neon bag toss · real physics · hole=3 board=1</span></span></a>
+            <a class="gcard" data-rv style="--rvd:0.28s;--acc-rgb:57,230,255" href="games/kudbee-cricket/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="cricket" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">Franchise</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Cricket</h3><span class="g-cat">Neon T20 · real players · time your shots</span></span></a>
             <a class="gcard" data-rv style="--acc-rgb:57,230,255" href="games/kudbee-darts/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="darts" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">League</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Darts</h3><span class="g-cat">501 &amp; Cricket · smart AI rivals · XP ladder &amp; skins</span></span></a>
             <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:255,211,77" href="games/kudbee-riff/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Rhythm</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff</h3><span class="g-cat">Fret Rush — charted to the real beats of the track</span></span></a>
             <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-riff-2/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="riff2" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">New track</span></span><span class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Riff II</h3><span class="g-cat">Neon Fret Rush — new studio track, fresh leaderboard</span></span></a>
@@ -2957,6 +2986,145 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
             ctx.shadowColor = palette.green; ctx.shadowBlur = 14; ctx.fillStyle = 'rgba(120,255,200,0.55)'; ctx.beginPath(); ctx.arc(0, Math.min(w, h) * 0.05, Math.min(w, h) * 0.06, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
             ctx.fillStyle = '#dff6ff'; ctx.strokeStyle = palette.cyan; ctx.lineWidth = 2; var s = Math.min(w, h) * 0.07;
             ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.7, s * 0.6); ctx.lineTo(0, s * 0.3); ctx.lineTo(-s * 0.7, s * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+        },
+        cornhole: function (ctx, w, h, t) {
+            t = t || 0;
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0d0908'); g.addColorStop(1, '#05050f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            // board (wooden surface tilted, side view)
+            ctx.save();
+            ctx.fillStyle = 'rgba(180, 120, 60, 0.9)'; // wood brown
+            ctx.beginPath();
+            ctx.moveTo(w * 0.3, h * 0.6); ctx.lineTo(w * 0.8, h * 0.5); ctx.lineTo(w * 0.82, h * 0.45); ctx.lineTo(w * 0.28, h * 0.65); ctx.closePath();
+            ctx.fill();
+            // board wood grain (darker stripes)
+            ctx.strokeStyle = 'rgba(100, 60, 30, 0.6)';
+            ctx.lineWidth = 2;
+            for (var bd = 0; bd < 5; bd++) {
+                var by = h * 0.5 + bd * h * 0.016;
+                ctx.beginPath();
+                ctx.moveTo(w * 0.3 + bd * w * 0.01, by);
+                ctx.lineTo(w * 0.8 + bd * w * 0.01, by - h * 0.1);
+                ctx.stroke();
+            }
+            ctx.restore();
+            // hole (bright neon ring)
+            var hx = w * 0.64, hy = h * 0.48;
+            ctx.save();
+            ctx.shadowColor = palette.amber;
+            ctx.shadowBlur = 16;
+            ctx.strokeStyle = palette.amber;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(hx, hy, Math.min(w, h) * 0.08, 0, 7);
+            ctx.stroke();
+            // hole interior
+            ctx.fillStyle = 'rgba(255, 160, 60, 0.2)';
+            ctx.fill();
+            ctx.restore();
+            // bag in flight (falling onto board)
+            var bx = w * 0.5 + Math.sin(t * 0.0028) * w * 0.08;
+            var by = h * 0.3 + Math.sin(t * 0.0042) * h * 0.15;
+            ctx.save();
+            ctx.shadowColor = palette.cyan;
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = palette.cyan;
+            ctx.fillRect(bx - w * 0.06, by - h * 0.08, w * 0.12, h * 0.12);
+            // bag stitching
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(bx - w * 0.02, by - h * 0.08);
+            ctx.lineTo(bx + w * 0.02, by + h * 0.04);
+            ctx.stroke();
+            ctx.restore();
+            // ground hint
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.2, h * 0.7);
+            ctx.lineTo(w * 0.9, h * 0.7);
+            ctx.stroke();
+        },
+        cricket: function (ctx, w, h, t) {
+            t = t || 0;
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#051a08'); g.addColorStop(1, '#05050f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            // grass pitch with perspective
+            ctx.fillStyle = 'rgba(50, 120, 80, 0.6)';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.2, h * 0.4);
+            ctx.lineTo(w * 0.8, h * 0.4);
+            ctx.lineTo(w * 0.85, h * 0.8);
+            ctx.lineTo(w * 0.15, h * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            // pitch lines (crease)
+            ctx.strokeStyle = palette.green;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.3, h * 0.4);
+            ctx.lineTo(w * 0.3, h * 0.8);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(w * 0.7, h * 0.4);
+            ctx.lineTo(w * 0.7, h * 0.8);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            // wickets (stumps) at far end
+            var wk_x = w * 0.5;
+            var wk_y = h * 0.42;
+            ctx.save();
+            ctx.strokeStyle = palette.cyan;
+            ctx.lineWidth = 2;
+            for (var st = 0; st < 3; st++) {
+                ctx.beginPath();
+                ctx.moveTo(wk_x - w * 0.04 + st * w * 0.04, wk_y);
+                ctx.lineTo(wk_x - w * 0.04 + st * w * 0.04, wk_y - h * 0.08);
+                ctx.stroke();
+            }
+            // bails
+            ctx.beginPath();
+            ctx.moveTo(wk_x - w * 0.065, wk_y - h * 0.075);
+            ctx.lineTo(wk_x + w * 0.025, wk_y - h * 0.075);
+            ctx.stroke();
+            ctx.restore();
+            // batsman silhouette
+            var bt_x = w * 0.35;
+            var bt_y = h * 0.65;
+            ctx.save();
+            ctx.fillStyle = palette.amber;
+            ctx.shadowColor = palette.amber;
+            ctx.shadowBlur = 12;
+            // bat swing
+            var bat_angle = t * 0.006;
+            ctx.translate(bt_x, bt_y);
+            ctx.rotate(bat_angle);
+            ctx.fillRect(-w * 0.02, -h * 0.12, w * 0.04, h * 0.16);
+            ctx.restore();
+            // batter body
+            ctx.save();
+            ctx.fillStyle = palette.amber;
+            ctx.beginPath();
+            ctx.arc(bt_x, bt_y - h * 0.05, Math.min(w, h) * 0.035, 0, 7);
+            ctx.fill();
+            ctx.restore();
+            // ball in flight
+            var bl_x = w * 0.6 + Math.sin(t * 0.0025) * w * 0.1;
+            var bl_y = h * 0.35 + Math.cos(t * 0.0035) * h * 0.1;
+            ctx.save();
+            ctx.shadowColor = palette.violet;
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = palette.violet;
+            ctx.beginPath();
+            ctx.arc(bl_x, bl_y, Math.min(w, h) * 0.035, 0, 7);
+            ctx.fill();
+            // ball seam detail
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(bl_x, bl_y, Math.min(w, h) * 0.02, 0, 7);
+            ctx.stroke();
+            ctx.restore();
         }
     };
     // Game-scene canvases get a subtle idle-loop animation (DBZ-054): reticle
@@ -2965,7 +3133,7 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--border-soft
     // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
     // comments in each), so paintAll's single frame and the reduced-motion
     // path below are pixel-identical to the art that shipped before this lane.
-    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1 };
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');

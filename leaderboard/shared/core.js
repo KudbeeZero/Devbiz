@@ -102,6 +102,24 @@ export const GAMES = {
       flawlessStreak:{ label: 'Flawless Streak', dir: 'max', min: 0, max: 1e4, rank: true },
     },
   },
+  cornhole: {
+    label: 'Kudbee Cornhole',
+    primary: 'score',
+    metrics: {
+      score:       { label: 'Score',        dir: 'max', min: 0, max: 100, rank: true },
+      bags:        { label: 'Bags Thrown',  dir: 'max', min: 0, max: 1e3, rank: true },
+      holePcts:    { label: 'Hole %',       dir: 'max', min: 0, max: 100, rank: true },
+    },
+  },
+  cricket: {
+    label: 'Kudbee Cricket',
+    primary: 'score',
+    metrics: {
+      score:       { label: 'Score',     dir: 'max', min: 0, max: 1e4, rank: true },
+      highestRun:  { label: 'Highest Run', dir: 'max', min: 0, max: 100, rank: true },
+      wicketsLost: { label: 'Wickets Lost', dir: 'min', min: 0, max: 11, rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }

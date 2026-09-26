@@ -14,6 +14,20 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
+**Cloud containers:** The evaluator auto-detects Chromium at `/opt/pw-browsers`
+if available, so it runs without `playwright install` mismatch errors.
+
+## Stuck-ball scan (not in the rubric yet)
+
+`window.__kbTest.simulate(x, y, vx, vy, secs)` drops a ball, runs `physStep` headlessly
+with flippers at rest, and returns `{ drained, maxStill, freed, where, touch }`:
+`maxStill` = longest time (s) within 8px of one spot, `freed` = anti-stuck rescues fired,
+`where` = first rescue positions, `touch` = colliders in contact when it ended. Grid it
+over the table (x 80–790 step 30, y 150–1400 step 40, a few velocities, 6s) and flag
+`maxStill > 1.2 || freed > 0`. Baseline after DBZ-079: **58 flags**, all balls balanced
+exactly on a round post top or started inside the sealed pocket above the deflector
+(was 2566). Run it before and after any physics or lower-table change.
+
 ## Rubric (21 checks)
 
 | ID | What it proves |

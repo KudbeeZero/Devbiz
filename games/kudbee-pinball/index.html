@@ -187,6 +187,7 @@
       case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
       case 'lock':   tone(700, 0.07, 'sine', 0.16, 300); tone(300, 0.12, 'sine', 0.14, 120, 0.05); break;         // ball vanishes into the saucer
       case 'multiball': tone(200, 0.5, 'sawtooth', 0.22, 1400); tone(400, 0.4, 'square', 0.18, 1200, 0.06); tone(600, 0.3, 'square', 0.16, 1600, 0.12); break;
+      case 'newbest': tone(523, 0.1, 'square', 0.18); tone(659, 0.1, 'square', 0.18, 0, 0.09); tone(784, 0.1, 'square', 0.18, 0, 0.18); tone(1047, 0.35, 'square', 0.2, 0, 0.27); break;  // ascending fanfare arpeggio
     }
   }
 
@@ -198,7 +199,7 @@
   var PHYS_HZ = 300, PH = 1 / PHYS_HZ;
   var BALL_R = 14;
   var SPEED_CAP = 3200;         // px/s
-  var WALL_REST = 0.35, WALL_FRIC = 0.018;
+  var WALL_REST = 0.35, WALL_FRIC = 0.1;    // WALL_FRIC: Coulomb μ (tangential impulse ≤ μ·normal impulse)
 
   // ---- dynamic difficulty: levels change the table ----
   var portalBumper = null;
@@ -206,8 +207,11 @@
   var levelTransT = 0, prevLevel = 1;
   var tableHue = 0, targetHue = 0;
   var tableFlash = 0;
+  // Terraforming: table evolves at higher levels
+  var cosmicOrbiter = { x: 470, y: 280, r: 45, orbitR: 60, angle: 0, spin: 1.8 };  // hidden until level 4
   function levelGrav() { return 1 + Math.max(0, (level || 1) - 1) * 0.12; }
   function levelKick() { return 1 + Math.max(0, (level || 1) - 1) * 0.08; }
+  function terraformLevel() { return Math.max(0, (level || 1) - 2); }  // 0=base, 1=L3, 2=L4, 3+=L5+
 
   // ---- mission system: 4 timed objectives, one active at a time ----
   var MISSION_DEFS = [
@@ -340,7 +344,7 @@ var ramp = null;                           // center loop-ramp trigger
     // can't wedge between the cabinet wall and the deflector (infinite bounce loop).
     // Fixed: wedge now connects cabinet wall to deflector without intersecting it.
     // At y=160, deflector x ≈ 754; cabinet wall at x=862. Horizontal segment across pocket.
-    seg(862, 160, 754, 160, { rest: 0.35, fric: 0.03 });
+    seg(862, 160, 754, 160, { rest: 0.35, fric: 0.15 });
     // ---- lower funnel toward the flippers ----
     // Left funnel's mouth used to be nearly 2x as wide as the right's (235px vs 135px,
     // wall-to-endpoint) — a leftover asymmetry that made the left outlane swallow far more
@@ -352,9 +356,10 @@ var ramp = null;                           // center loop-ramp trigger
     // Funnel starts below the slingshot band so it meets the inner wall at a shallow
     // angle (no V-pocket at y=1180 that trapped balls on the right gutter).
     seg(LIN, 1225, 655, 1360, { rest: 0.22 });            // right funnel wall
-    // inlane/outlane guides — feed the flipper band, not a cage down to the drain
-    seg(330, 1250, 360, 1330, { rest: 0.2 });
-    seg(630, 1250, 600, 1330, { rest: 0.2 });
+    // inlane/outlane guides end ON the flipper pivot (no crossing): inside face feeds the
+    // flipper, outside face rolls off the pivot into the outlane. Crossing the pivot made a V-pocket.
+    seg(270, 1215, 298, 1288, { rest: 0.2 });
+    seg(670, 1215, 642, 1288, { rest: 0.2 });
     // slingshots (kickers above each flipper)
     seg(300, 1185, 372, 1258, { rest: 0.6, kick: 760, sling: true });    // left sling
     seg(660, 1185, 588, 1258, { rest: 0.6, kick: 760, sling: true });    // right sling
@@ -418,17 +423,17 @@ var ramp = null;                           // center loop-ramp trigger
     target(710, 860, 'standup', '#c46bff', 'R');
 
     // ---- round posts to bank off + fill the mid-field (circles never wedge) ----
-    bumpers.push({ x: 250, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });
-    bumpers.push({ x: 650, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 280, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });
+    bumpers.push({ x: 620, y: 1000, r: 16, rest: 0.62, kick: 0, kind: 'post', flash: 0, cd: 0 });   // ≥30px clear of the mini-flipper tip (683,998) — was a 4px wedge
     bumpers.push({ x: 320, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
     bumpers.push({ x: 580, y: 600, r: 14, rest: 0.6, kick: 0, kind: 'post', flash: 0, cd: 0 });
 
     // ---- drop-target bank: clear all four for BANK BONUS + a multiplier step ----
     var dropY = 690;
-    target(372, dropY, 'drop', '#ff8a3c', 'D');            // bank offset from center so a lane-B drop can't sit on the gap
-    target(428, dropY, 'drop', '#ffd34d', 'D');
-    target(484, dropY, 'drop', '#7CFFb2', 'D');
-    target(540, dropY, 'drop', '#39e6ff', 'D');
+    target(357, dropY, 'drop', '#ff8a3c', 'D');            // bank offset from center so a lane-B drop can't sit on the gap
+    target(423, dropY, 'drop', '#ffd34d', 'D');
+    target(489, dropY, 'drop', '#7CFFb2', 'D');
+    target(555, dropY, 'drop', '#39e6ff', 'D');
 
     // ---- top lane rollovers: light K-U-D for a multiplier step ----
     rollover(250, 330, 'K', '#39e6ff');
@@ -496,9 +501,10 @@ var ramp = null;                           // center loop-ramp trigger
     bumpers.push({ x: 450, y: 280, r: PORTAL_R, rest: 0, kick: 0, kind: 'portal', flash: 0, cd: 0, col: '#ff6ec7' });
     portalBumper = bumpers[bumpers.length - 1];
 
-     // flippers: rest angles feed the inlanes; full-length bats at the drain band
-     flipL = new Flipper(330, 1300, 150, -1, 0.40, -0.18);
-     flipR = new Flipper(610, 1300, 150, 1, Math.PI - 0.40, Math.PI + 0.18);
+     // flippers: rest tips ~60px apart (34px clear) so a dead ball drains up the middle
+     // instead of resting on overlapping tips waiting for an auto-rescue kick.
+     flipL = new Flipper(305, 1300, 150, -1, 0.45, -0.18);
+     flipR = new Flipper(635, 1300, 150, 1, Math.PI - 0.45, Math.PI + 0.18);
      flipUR = new Flipper(740, 980, 60, 1, Math.PI - 0.30, Math.PI + 0.30); // upper-right mini-flipper for ramp feed
      // cache static bumper glow gradients (positions/radii never change)
      for (var bi = 0; bi < bumpers.length; bi++) {
@@ -634,16 +640,17 @@ var ramp = null;                           // center loop-ramp trigger
     var pvAlong = (vx * ex + vy * ey) / el2;
     var rvx = vx - pvAlong * ex, rvy = vy - pvAlong * ey;
     var a = rvx * rvx + rvy * rvy;
+    if (a < 1e-9) return -1;                  // no motion toward/away from the surface
     var c = dx * dx + dy * dy - rr * rr;
-    if (a < 1e-9) { if (c <= 0) return 0; return -1; }
     var bb = dx * rvx + dy * rvy;
+    // Already touching: only a ball moving INTO the surface is a hit. Returning the exit
+    // root here (old t2 path) made every ball rolling along a wall report hitT≈0 each
+    // sub-step, so it never advanced — frozen on the wall while gravity maxed its speed.
+    if (c <= 0) return bb < 0 ? 0 : -1;
     var disc = bb * bb - a * c;
     if (disc < 0) return -1;
-    var sq = Math.sqrt(disc);
-    var t1 = (-bb - sq) / a, t2 = (-bb + sq) / a;
-    if (t1 >= 0 && t1 <= 1) return t1;
-    if (t2 >= 0 && t2 <= 1) return t2;
-    return -1;
+    var t1 = (-bb - Math.sqrt(disc)) / a;
+    return (t1 >= 0 && t1 <= 1) ? t1 : -1;
   }
   // Segment contact normal policy (geometric-first, velocity-only as last resort):
   //   1. Primary normal n = normalize(-(by-ay), bx-ax) — the segment's own outward
@@ -681,21 +688,10 @@ var ramp = null;                           // center loop-ramp trigger
     }
     var nx, ny;
     if (d > 0.0001) {
-      // geometric normal: perpendicular to the segment, pointing toward the ball
-      nx = -ey; ny = ex;
-      var ml = Math.sqrt(nx * nx + ny * ny) || 1;
-      nx /= ml; ny /= ml;
-      // flip so n points from surface toward ball (playfield side)
-      var mx = (ax + bx) / 2, my = (ay + by) / 2;
-      if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
-      // Grazing/separating deflector hits only when nearly flush. While penetrating,
-      // v·n≥0 is common for wall slides (tangential motion) — swapping to -v̂ then
-      // depenetrates along the slide direction (often ±Y) instead of into the field,
-      // which zeros tangential speed under repeated friction and feels like glue.
-      var sp = len(b.vx, b.vy);
-      if (pen <= 0.012 && sp > 0.0001 && (b.vx * nx + b.vy * ny) >= 0) {
-        nx = -b.vx / sp; ny = -b.vy / sp;
-      }
+      // Capsule normal: closest point → ball. Along the body this is the segment's
+      // perpendicular on the ball's side; at the end caps it is round, so a ball past a
+      // flipper tip rolls off instead of resting on an invisible extension of the bat.
+      nx = dx / d; ny = dy / d;
     } else {
       // ball center exactly on the segment line — derive from velocity
       var sp = len(b.vx, b.vy);
@@ -708,13 +704,17 @@ var ramp = null;                           // center loop-ramp trigger
     var rvx = b.vx - (ptVelX || 0), rvy = b.vy - (ptVelY || 0);
     var vn = rvx * nx + rvy * ny;
     if (vn < 0) {
-      b.vx -= (1 + rest) * vn * nx; b.vy -= (1 + rest) * vn * ny;
-      // tangential friction once per segment per micro-substep (resolveAll runs 3
-      // iterations; without this, parallel walls shed >85% of speed in one step).
+      var jn = -(1 + rest) * vn;
+      b.vx += jn * nx; b.vy += jn * ny;
+      // Coulomb friction, once per segment per micro-substep: tangential impulse is capped
+      // at fric·jn. A flat %-of-tangential-speed cut here (the old model) ran 300×/s and
+      // bled a rolling ball down to a ~50px/s crawl on any wall or resting flipper.
       if (!frictPass || !frictPass[key]) {
         if (frictPass) frictPass[key] = true;
-        var tvx = b.vx - (b.vx * nx + b.vy * ny) * nx, tvy = b.vy - (b.vx * nx + b.vy * ny) * ny;
-        b.vx -= fric * tvx; b.vy -= fric * tvy;
+        var tx = b.vx - (ptVelX || 0), ty = b.vy - (ptVelY || 0), tn = tx * nx + ty * ny;
+        tx -= tn * nx; ty -= tn * ny;
+        var vt = len(tx, ty);
+        if (vt > 1e-6) { var jt = Math.min(vt, fric * jn) / vt; b.vx -= tx * jt; b.vy -= ty * jt; }
       }
       if (kick) { var ek = kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
@@ -759,7 +759,7 @@ var ramp = null;                           // center loop-ramp trigger
     var qx = f.px + ex * t, qy = f.py + ey * t;
     var pv = flipperPointVel(f, qx, qy);
     var relSp = len(b.vx - pv.x, b.vy - pv.y);        // approach speed before resolution
-    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.02, 0, false, pv.x, pv.y, null);
+    var hit = resolveSeg(b, f.px, f.py, tip.x, tip.y, f.r, 0.32, 0.12, 0, false, pv.x, pv.y, null);
     if (hit && relSp > 260) { f.flash = 1; sfx('thock'); }
     return hit;
   }
@@ -769,6 +769,8 @@ var ramp = null;                           // center loop-ramp trigger
       for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling, 0, 0, frictPass); }
       for (var j = 0; j < bumpers.length; j++) resolveCircle(b, bumpers[j]);
       for (var ti = 0; ti < targets.length; ti++) resolveTarget(b, targets[ti]);
+      // Cosmic orbiter collision (terraformed at level 4+)
+      if (terraformLevel() >= 2) resolveCircle(b, { x: cosmicOrbiter.x, y: cosmicOrbiter.y, r: cosmicOrbiter.r, rest: 0.85, kick: 1200, kind: 'orbiter' });
       resolveFlipper(b, flipL); resolveFlipper(b, flipR); resolveFlipper(b, flipUR);
     }
   }
@@ -976,8 +978,10 @@ var ramp = null;                           // center loop-ramp trigger
     var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
-    burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
-    triggerHitStop(0.05); colorWash(57, 230, 255, 0.7);   // hit-stop + cyan wash on loop
+    var particleCount = rampShots >= 6 ? 32 : 22;        // bigger burst for ramp master
+    burst(ramp.x, ramp.y0, '#39e6ff', particleCount, 460); shake = Math.min(shake + 0.35, 1.4);
+    var stopDur = rampShots >= 6 ? 0.08 : 0.05;          // longer freeze on ramp chains
+    triggerHitStop(stopDur); colorWash(57, 230, 255, rampShots >= 6 ? 0.95 : 0.7);
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
     else if (!chained) callout('LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), '#39e6ff');
@@ -990,9 +994,11 @@ var ramp = null;                           // center loop-ramp trigger
     var col = r.side < 0 ? '#c46bff' : '#ffd34d';
     var chained = comboHit(r.x, r.y0, r.side < 0 ? 'rampL' : 'rampR');
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
-    burst(r.x, r.y0, col, 22, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
+    var particleCount = rampShots >= 6 ? 32 : 22;
+    burst(r.x, r.y0, col, particleCount, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
     shake = Math.min(shake + 0.35, 1.4);
-    triggerHitStop(0.05);
+    var stopDur = rampShots >= 6 ? 0.08 : 0.05;
+    triggerHitStop(stopDur); colorWash(col === '#c46bff' ? 196 : 255, col === '#c46bff' ? 107 : 211, col === '#c46bff' ? 255 : 77, rampShots >= 6 ? 0.85 : 0.5);
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
     else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), col);
@@ -1328,43 +1334,22 @@ var move = len(b.vx, b.vy) * h;
          flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
           flipUR.a = flipUR.prevA + (flipUR.endA - flipUR.prevA) * fr;
+         // Up to 4 time-of-impact hits per sub-step (corner/wedge contacts); whatever time is
+         // left after that is spent moving freely and resolveAll() depenetrates.
          var rem = hh2;
-         while (rem > 0) {
-           var hitSeg = null, hitT = 1, hitNx = 0, hitNy = 0, hitQx = 0, hitQy = 0;
+         for (var hit = 0; hit < 4 && rem > 1e-7; hit++) {
+           var hitSeg = null, hitT = 1;
            for (var si = 0; si < segs.length; si++) {
              var ss = segs[si];
              var ht = sweptSeg(b, ss.ax, ss.ay, ss.bx, ss.by, ss.r, rem);
              if (ht >= 0 && ht < hitT) { hitSeg = ss; hitT = ht; }
            }
-if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
-            b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
-            resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
-            rem *= (1 - hitT);
-            // hitT=0 means already overlapping at start of substep; rem would never shrink → spin forever
-            // But if the ball is moving parallel to or away from the wall (grazing contact),
-            // don't zero out remaining time — consume it and let it slide along the wall.
-            if (hitT < 1e-5) {
-              var ex = hitSeg.bx - hitSeg.ax, ey = hitSeg.by - hitSeg.ay, el2 = ex * ex + ey * ey || 1;
-              var nx = -ey, ny = ex;
-              var ml = Math.sqrt(nx * nx + ny * ny) || 1; nx /= ml; ny /= ml;
-              var mx = (hitSeg.ax + hitSeg.bx) / 2, my = (hitSeg.ay + hitSeg.by) / 2;
-              if (nx * (b.x - mx) + ny * (b.y - my) < 0) { nx = -nx; ny = -ny; }
-              var vn = b.vx * nx + b.vy * ny;
-              // Check if ball is still penetrating after resolution
-              var dx = b.x - mx, dy = b.y - my;
-              var proj = dx * nx + dy * ny;
-              var dist = Math.abs(proj);
-              var rr = b.r + hitSeg.r;
-              if (vn >= -0.001 || dist >= rr - 0.01) {
-                // separating/tangential OR just touching (not penetrating) — consume remaining time to slide
-                rem = 0;
-              } else {
-                // penetrating and moving INTO wall — push out slightly, then continue with remaining time
-                b.x += nx * 0.01; b.y += ny * 0.01;
-                // don't zero rem — let remaining time be used after collision
-              }
-            } else if (rem < 0.0002) { rem = 0; }
+           if (!hitSeg) break;
+           b.x += b.vx * hitT * rem; b.y += b.vy * hitT * rem;
+           resolveSeg(b, hitSeg.ax, hitSeg.ay, hitSeg.bx, hitSeg.by, hitSeg.r, hitSeg.rest, hitSeg.fric, hitSeg.kick, hitSeg.sling, 0, 0, frictPass);
+           rem *= (1 - hitT);
          }
+         if (rem > 1e-7) { b.x += b.vx * rem; b.y += b.vy * rem; }
          resolveAll(b, frictPass);
          // Crest the lane → skill drop. Do not require startY≥245 AND startVy<0:
          // a single TOI bounce can flip vy in the same sub-step and skip inject forever.
@@ -1374,7 +1359,7 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
        // speed cap AFTER sub-steps (kicks can push velocity above cap during sub-steps)
        var sp2 = len(b.vx, b.vy); if (sp2 > SPEED_CAP) { b.vx *= SPEED_CAP / sp2; b.vy *= SPEED_CAP / sp2; }
        flipL.a = flipL.endA; flipR.a = flipR.endA; flipUR.a = flipUR.endA;
-       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
+       b.vx *= 0.99985; b.vy *= 0.99985;        // light air drag (~4%/s)
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
@@ -1517,23 +1502,30 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
-      if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
-      // Right gutter + flipper-band: nearly stopped beside the inner wall or between bats.
+      // Hopper recapture: only grab balls that came DOWN into the lane from above (vy>0 recently),
+      // not ones sliding horizontally back. cooldown prevents immediate re-capture after launch.
+      if (!b.injected && b.x > 820 && b.x < 842 && b.y > 1300 && b.y < 1330 && len(b.vx, b.vy) < 80 && (!b.launchCd || b.launchCd < 0.3)) {
+        b.launchCd = 0; b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue;
+      }
+      // Last-resort unstick for the gutter + flipper band. Physics should never park a ball
+      // here, so these wait a full second — and the flipper-band one never fires while a
+      // flipper is held, or cradling the ball would get it kicked away.
       var crawlSp = len(b.vx, b.vy);
       if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && crawlSp < 38) {
         b.gutterT = (b.gutterT || 0) + h;
-        if (b.gutterT > 0.32) {
+        if (b.gutterT > 1.0) {
           b.gutterT = 0; b.vx = b.x > 650 ? -320 : (b.x < 400 ? 280 : (470 - b.x) * 1.2); b.vy = -420;
           burst(b.x, b.y, '#ffd34d', 12, 360); callout('FREED', 'out of the gutter', '#ffd34d');
         }
-      } else if (b.injected && b.y > 1245 && b.y < DRAIN_Y - 6 && b.x > 310 && b.x < 680 && crawlSp < 30) {
+      } else if (b.injected && b.y > 1245 && b.y < DRAIN_Y - 6 && b.x > 280 && b.x < 680 && crawlSp < 30 && !flipL.pressed && !flipR.pressed) {
         b.flipBandT = (b.flipBandT || 0) + h;
-        var flipEject = b.y > 1310 ? 0.26 : 0.34;
-        if (b.flipBandT > flipEject) {
+        if (b.flipBandT > 1.0) {
           b.flipBandT = 0; b.vx = (470 - b.x) * 1.5; b.vy = b.y > 1310 ? -520 : -380;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
       } else { b.gutterT = 0; b.flipBandT = 0; }
+      // Decay launch cooldown to prevent re-capture
+      if (b.launchCd) b.launchCd = Math.max(0, b.launchCd - h);
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -1550,13 +1542,15 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
        if (Math.abs(spinner.spinVel) < 0.05) spinner.spinVel = 0;
        spinner.hitFlash = Math.max(0, spinner.hitFlash - h * 5);
      }
+     // COSMIC ORBITER: rotate continuously at higher levels
+     if (terraformLevel() >= 2) cosmicOrbiter.angle += cosmicOrbiter.spin * h;
      ballVsBall();
    }
 
   function launch() {
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
-    b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+    b.vy = -(620 + charge * 1700); b.vx = -6; b.launchCd = 1.0; charge = 0;     // up the lane; enterFromLane() routes it over the top
     sfx('launch');
   }
 
@@ -1661,6 +1655,11 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
     document.getElementById('oScore').textContent = score.toLocaleString();
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
+    if (isBest) {
+      // new-record payoff: gold table wash + a shower of bursts across the playfield + fanfare
+      sfx('newbest'); colorWash(255, 211, 77, 1.6);
+      for (var nb = 0; nb < 8; nb++) burst(120 + Math.random() * 660, 200 + Math.random() * 900, '#ffd34d', 14, 260);
+    }
     overOv.classList.remove('hidden');
     lbShowOverScreen();
   }
@@ -1880,9 +1879,9 @@ function frame(now) {
       if (s.sling) { ctx.shadowColor = '#c46bff'; ctx.shadowBlur = 12; }
       ctx.beginPath(); ctx.moveTo(s.ax, s.ay); ctx.lineTo(s.bx, s.by); ctx.stroke(); ctx.shadowBlur = 0;
     }
-    // drain mouth
+    // drain mouth (gap between the resting flipper tips)
     ctx.strokeStyle = 'rgba(255,93,60,0.35)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(360, 1320); ctx.lineTo(540, 1320); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(440, 1392); ctx.lineTo(500, 1392); ctx.stroke();
 
    // bumpers / posts
      for (var j = 0; j < bumpers.length; j++) {
@@ -1903,6 +1902,7 @@ function frame(now) {
      }
 
     drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawGuidePosts(); drawSaucer(); drawSaucerR(); drawStarSaucer(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost(); drawSpinner();
+    if (terraformLevel() >= 2) drawCosmicOrbiter();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR); drawFlipper(flipUR);
     drawBallSave();
@@ -2132,8 +2132,8 @@ function frame(now) {
     var t = frameNow;
     var posts = [
       { x: 210, y: 1340, col: '255,93,60', label: 'OUT' },    // left outlane
-      { x: 360, y: 1300, col: '124,255,178', label: 'IN' },    // left inlane
-      { x: 540, y: 1300, col: '124,255,178', label: 'IN' },    // right inlane
+      { x: 317, y: 1240, col: '124,255,178', label: 'IN' },    // left inlane (guide ↔ sling)
+      { x: 633, y: 1240, col: '124,255,178', label: 'IN' },    // right inlane
       { x: 690, y: 1340, col: '255,93,60', label: 'OUT' }      // right outlane
     ];
     ctx.globalCompositeOperation = 'lighter';
@@ -2268,6 +2268,28 @@ function frame(now) {
       ctx.fillText('SPINS: ' + totalSpins + '/50', spinner.x, spinner.y - spinner.r - 16);
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
+  }
+  // Cosmic Orbiter — terraformed element at level 4+, rotates and bounces balls outward
+  function drawCosmicOrbiter() {
+    if (terraformLevel() < 2) return;
+    var c = cosmicOrbiter;
+    ctx.globalCompositeOperation = 'lighter';
+    // Orbiting particles
+    for (var i = 0; i < 6; i++) {
+      var ang = c.angle + i * Math.PI * 2 / 6;
+      var px = c.x + Math.cos(ang) * c.orbitR, py = c.y + Math.sin(ang) * c.orbitR;
+      var alpha = 0.6 - Math.abs(Math.sin(c.angle * 2 + i)) * 0.3;
+      ctx.fillStyle = 'rgba(255,211,77,' + alpha.toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, TAU); ctx.fill();
+    }
+    // Core glow
+    var gg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 1.8);
+    gg.addColorStop(0, 'rgba(255,211,77,0.35)'); gg.addColorStop(1, 'rgba(255,211,77,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.8, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // Core circle
+    ctx.fillStyle = 'rgba(255,211,77,0.25)'; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,211,77,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
   }
   // magnet hold (electromagnet) — cyan/purple pulsing field
   function drawMagnet() {
@@ -2444,6 +2466,9 @@ function frame(now) {
     ctx.fillStyle = '#cdfbe2'; ctx.beginPath(); ctx.arc(f.px, f.py, f.r * 0.7, 0, TAU); ctx.fill();
   }
   function drawBall(b) {
+    // soft contact shadow for depth — offset toward the table's implied light source
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(b.x + b.r * 0.18, b.y + b.r * 0.35, b.r * 0.9, b.r * 0.4, 0, 0, TAU); ctx.fill();
     if (!reduceMotion && b.trail.length) {
       for (var i = 0; i < b.trail.length; i++) { var t = b.trail[i], a = (i / b.trail.length) * 0.4; ctx.fillStyle = 'rgba(207,233,255,' + a.toFixed(2) + ')'; ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (0.4 + i / b.trail.length * 0.5), 0, TAU); ctx.fill(); }
     }
@@ -2455,13 +2480,18 @@ function frame(now) {
     var bg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.4, 1, b.x, b.y, b.r);
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#7fa8d8');
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+    // crisp specular highlight — sells the "polished steel" material read
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.32, b.y - b.r * 0.4, b.r * 0.22, b.r * 0.14, -0.5, 0, TAU); ctx.fill();
   }
   function plungerAffordanceActive() {
     if (state !== 'play' || !balls.length || !balls[0].inLane) return false;
     return isCoarse || charging || anyLaunchPointer();
   }
   function drawPlungerAffordance(now) {
-    if (!plungerAffordanceActive()) return;
+    // Show while charging OR during affordance (don't hide mid-launch)
+    var showGauge = charging || plungerAffordanceActive();
+    if (!showGauge) return;
     var pad = Math.round(Math.min(W, H) * 0.03);
     var mn = Math.min(W, H);
     var t = now || frameNow || 0;
@@ -2546,6 +2576,15 @@ function frame(now) {
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
       ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
       ctx.fillText('MULTIPLIER', mx, my + Math.round(mn * 0.052));
+      // Terraforming indicator (what table feature is active at this level)
+      var tfLevel = terraformLevel();
+      if (tfLevel > 0) {
+        var tfY = my + Math.round(mn * 0.09);
+        var tfCol = tfLevel >= 2 ? '#ffd34d' : '#39e6ff';
+        var tfText = tfLevel >= 2 ? '⭐ COSMIC ORBITER' : '◈ Table evolving...';
+        ctx.fillStyle = tfCol; ctx.font = '600 ' + Math.round(mn * 0.014) + 'px Inter, sans-serif';
+        ctx.fillText(tfText, mx, tfY);
+      }
       // mission bar — active mission with countdown timer
       if (missionActive >= 0 && missionTimer > 0) {
         var mDef = MISSION_DEFS[missionActive];
@@ -2734,6 +2773,28 @@ function frame(now) {
   // Test/verification hook (harmless in production — read-only introspection plus
   // a couple of deterministic triggers so automated checks don't rely on flaky physics RNG).
   window.__kbTest = {
+    // Headless stuck-ball probe: longest time (s) the ball stayed within 8px of one spot,
+    // plus how many anti-stuck rescues ("FREED") fired. Flippers stay at rest.
+    simulate: function (x, y, vx, vy, secs) {
+      var b = window.__kbTest.prepBall(x, y, vx, vy);
+      if (!b) return null;
+      var ax = b.x, ay = b.y, still = 0, maxStill = 0, freed = 0, where = [], n = Math.round(secs * PHYS_HZ);
+      for (var i = 0; i < n; i++) {
+        co.life = 0;
+        physStep(PH);
+        if (co.life > 0 && co.text === 'FREED') { freed++; if (where.length < 3) where.push(co.sub + '@' + Math.round(b.x) + ',' + Math.round(b.y)); }
+        if (balls[0] !== b) return { drained: true, t: i * PH, maxStill: maxStill, freed: freed, where: where };
+        if (len(b.x - ax, b.y - ay) > 8) { ax = b.x; ay = b.y; still = 0; }
+        else { still += PH; if (still > maxStill) maxStill = still; }
+      }
+      var touch = [];
+      segs.forEach(function (s) {
+        var ex = s.bx - s.ax, ey = s.by - s.ay, t = clamp(((b.x - s.ax) * ex + (b.y - s.ay) * ey) / (ex * ex + ey * ey || 1), 0, 1);
+        if (len(b.x - s.ax - ex * t, b.y - s.ay - ey * t) < b.r + s.r + 2) touch.push('seg ' + [s.ax, s.ay, s.bx, s.by].join(','));
+      });
+      bumpers.concat(targets).forEach(function (c) { if (!c.down && len(b.x - c.x, b.y - c.y) < b.r + c.r + 2) touch.push((c.kind || 'target') + ' ' + c.x + ',' + c.y + ' r' + c.r); });
+      return { drained: false, x: Math.round(b.x), y: Math.round(b.y), vx: Math.round(b.vx), vy: Math.round(b.vy), maxStill: maxStill, freed: freed, where: where, touch: touch };
+    },
     state: function () { return state; },
     score: function () { return score; },
     kickCharges: function () { return { L: kickL, R: kickR }; },
