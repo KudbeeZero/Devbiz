@@ -109,7 +109,6 @@ See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 - Green gate from repo root: `npm run verify` (pinball 21/21 + leaderboard unit tests). Pinball-only: `npm run pinball:eval`
 - Manual gates documented in ledger (browser, wallet, payment, API key, deploy verification)
 - Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball) for headless verification
-- Cloud containers: if Playwright can't find its Chromium build, launch with `executablePath: '/opt/pw-browsers/chromium'` (never `playwright install`) — see `games/kudbee-pinball/eval/README.md`
 
 ## Pinball physics rules (`games/kudbee-pinball/index.html`)
 

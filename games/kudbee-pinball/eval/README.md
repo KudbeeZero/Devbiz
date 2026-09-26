@@ -14,16 +14,8 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
-**Cloud containers (Claude Code on the web):** Chromium is preinstalled at
-`/opt/pw-browsers` but may not match the Playwright version in `package-lock.json`
-("Executable doesn't exist … chromium_headless_shell-1243"). Don't run
-`playwright install`; run a throwaway copy that points at the installed browser:
-
-```bash
-sed "s#chromium.launch({ headless:true,#chromium.launch({ headless:true, executablePath:'/opt/pw-browsers/chromium',#" \
-  games/kudbee-pinball/eval/evaluator.mjs > games/kudbee-pinball/eval/_eval_local.mjs
-node games/kudbee-pinball/eval/_eval_local.mjs; rm games/kudbee-pinball/eval/_eval_local.mjs
-```
+**Cloud containers:** The evaluator auto-detects Chromium at `/opt/pw-browsers`
+if available, so it runs without `playwright install` mismatch errors.
 
 ## Stuck-ball scan (not in the rubric yet)
 
