@@ -1455,35 +1455,83 @@ html:not(.js) .story .pin-outer { height: auto; }
 
 .cline a { color: var(--txt); text-decoration: none; transition: color var(--mo-dur-1) var(--ease); }
 .cline a:hover { color: var(--cyan); }
+.faq { margin-top: 26px; display: grid; gap: 12px; }
 
-/* FAQ section — professional card styling */
-.faq { margin-top: 26px; display: grid; gap: 10px; }
-
+/* FAQ details container — base state with professional shadow depth */
 .faq details {
-    border: 1px solid rgba(57,230,255,0.15);
-    border-radius: 14px;
-    background: rgba(255,255,255,0.01);
+    border-radius: 18px;
+    border: 1px solid rgba(57,230,255, 0.15);
+    background: var(--bg-2);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.03);
     overflow: hidden;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-    transition: all var(--mo-dur-2) var(--ease);
+    transition: all var(--mo-dur-3) var(--ease);
 }
 
+/* Hover state — consistent with other cards: lift + enhanced shadow + border glow */
 .faq details:hover {
-    border-color: rgba(57,230,255,0.25);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+    border-color: rgba(57,230,255, 0.5);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.4),
+                0 0 60px rgba(57,230,255, 0.24),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+    transform: translateY(-4px);
 }
 
+/* Focus state — accessible keyboard navigation */
+.faq details:focus-within summary {
+    outline: 2px solid rgba(57,230,255, 0.5);
+    outline-offset: 2px;
+}
+
+/* Summary (header) styling */
 .faq summary {
-    padding: 16px 18px; cursor: pointer; font: 600 14.5px/1.4 var(--fd);
-    list-style: none; display: flex; justify-content: space-between; align-items: center;
-    transition: all var(--mo-dur-1) var(--ease);
+    padding: 18px 20px;
+    cursor: pointer;
+    font: 600 14.5px/1.4 var(--fd);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--txt);
+    transition: color var(--mo-dur-2) var(--ease);
 }
 
+/* Remove default marker */
 .faq summary::-webkit-details-marker { display: none; }
-.faq summary::after { content: "+"; color: rgba(57,230,255,0.6); font-size: 18px; transition: transform var(--mo-dur-2) var(--ease), color var(--mo-dur-2) var(--ease); }
-.faq details[open] summary::after { transform: rotate(45deg); color: var(--cyan); }
-.faq summary:hover::after { color: var(--cyan); }
-.faq .fa { padding: 0 18px 16px; color: var(--txt-2); font-size: 14px; }
+
+/* Indicator animation — smooth rotation */
+.faq summary::after {
+    content: "+";
+    color: var(--cyan);
+    font-size: 20px;
+    font-weight: 300;
+    transition: transform var(--mo-dur-2) var(--ease);
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* Open state — indicator becomes ✕ (45deg rotation of +) */
+.faq details[open] summary::after {
+    transform: rotate(45deg);
+}
+
+/* Content area styling */
+.faq .fa {
+    padding: 0 20px 18px;
+    color: rgba(255,255,255,0.75);
+    font: 400 14px/1.6 var(--fd);
+    animation: revealDown var(--mo-dur-2) var(--ease);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .faq details,
+    .faq summary::after,
+    .faq .fa {
+        transition: none;
+        animation: none;
+    }
+}
 
 /* ---------------- Floating "Start a project" pill (DBZ-056) ----------------
    Fixed bottom-right, content-sized (never a full-width bar) so it can't
