@@ -28,12 +28,21 @@
 
   // Particle system for impacts and scoring
   class Particle {
-    constructor(x, y, vx, vy, life, col) {
-      this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.col = col;
+    constructor(x, y, vx, vy, life, col, spin) {
+      this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life; this.col = col;
+      this.rot = spin != null ? Math.random() * Math.PI * 2 : null; this.spin = spin;
     }
-    update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; }
-    draw(ctx) { const a = Math.max(0, this.life / 0.6); ctx.globalAlpha = a; ctx.fillStyle = this.col;
-      ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, 7); ctx.fill(); }
+    update(dt) {
+      this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt;
+      if (this.spin != null) { this.rot += this.spin * dt; this.vy += 220 * dt; this.vx *= 0.99; }
+    }
+    draw(ctx) {
+      const a = Math.max(0, this.life / this.maxLife); ctx.globalAlpha = a; ctx.fillStyle = this.col;
+      if (this.spin != null) {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+        ctx.fillRect(-4, -2, 8, 4); ctx.restore();
+      } else { ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, 7); ctx.fill(); }
+    }
   }
 
   // World geometry (logical units). Side view: thrower left, board right+up.
@@ -135,14 +144,18 @@
     this.score = 0; this.round = 0; this.maxRounds = 8; this.bagsLeft = 8;
     this.phase = 'aim';          // aim | fly | settle
     this.banner = ''; this.flash = 0; this.shake = 0; this.lastPts = 0; this._scorePops = [];
+    this.streak = 0; this.bestStreak = 0; this.hitStopT = 0; this._scoredThisThrow = false;
   };
   Game.prototype.start = function () { this._last = performance.now() / 1000; requestAnimationFrame(this._frame.bind(this)); };
 
   Game.prototype._frame = function () {
     const now = performance.now() / 1000; let dt = Math.min(0.05, now - this._last); this._last = now; this.time += dt;
+    // hit-stop: brief near-freeze sells the impact of a hole drop without a real pause.
+    if (this.hitStopT > 0 && !this.reduceMotion) { this.hitStopT -= dt; dt *= 0.06; }
     this.update(dt); this.render(); this.input.endFrame();
     requestAnimationFrame(this._frame.bind(this));
   };
+  Game.prototype._triggerHitStop = function (dur) { if (!this.reduceMotion) this.hitStopT = Math.max(this.hitStopT, dur); };
 
   Game.prototype.update = function (dt) {
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 1.5);
@@ -241,12 +254,25 @@
       this.particles.push(new Particle(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp, 0.6, col));
     }
   };
+  // confetti: tumbling rectangles with gravity + drift — reserved for the hole drop (3pt),
+  // distinct from the small round impact sparks above.
+  Game.prototype._emitConfetti = function (x, y, count) {
+    if (this.reduceMotion) return;
+    const cols = [C.gold, C.cyan, C.green, C.text];
+    for (let i = 0; i < count; i++) {
+      const ang = KC.Util.rand(-Math.PI, 0), sp = KC.Util.rand(100, 340);
+      this.particles.push(new Particle(x, y, Math.cos(ang) * sp * 0.6, Math.sin(ang) * sp, KC.Util.rand(0.9, 1.4), KC.Util.pick(cols), KC.Util.rand(-8, 8)));
+    }
+  };
   Game.prototype._score = function (pts) {
     this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
-    if (pts >= 3) this.audio.holeDrop(); this.audio.scoreJingle(pts);
+    this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak); this._scoredThisThrow = true;
+    if (pts >= 3) { this.audio.holeDrop(); this._triggerHitStop(0.1); this._emitConfetti(this.bag.x, this.bag.y, this.streak >= 3 ? 48 : 30); }
+    this.audio.scoreJingle(pts);
     this.bag.gone = true;
     this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 12 : 6);
-    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: '+' + pts, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
+    const popText = pts >= 3 && this.streak >= 3 ? '+' + pts + ' ×' + this.streak + '!' : '+' + pts;
+    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: popText, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };
 
@@ -256,6 +282,7 @@
     if (onBoard && b.x > BOARD_X - BAG && b.x < BOARD_X + BOARD_W + BAG) {
       this._score(1);    // stuck on the board = 1 pt
     }
+    if (!this._scoredThisThrow) this.streak = 0;   // missed everything: chain breaks
     // next throw
     this.bagsLeft--; this.round++;
     if (this.bagsLeft <= 0 || this.score >= 21) { this.state = 'over'; this.audio.scoreJingle(1); return; }
@@ -264,7 +291,7 @@
 
   Game.prototype._resetBag = function () {
     this.bag = { x: 150, y: GROUND_Y - BAG, vx: 0, vy: 0, spin: 0, rot: 0, air: true, squash: 0, skid: 0, rest: false, gone: false };
-    this.phase = 'aim'; this.power = 0;
+    this.phase = 'aim'; this.power = 0; this._scoredThisThrow = false;
   };
 
   // ===================================================================
@@ -357,6 +384,15 @@
     ctx.fillText('Score ' + this.score, 16, 36);
     ctx.font = '14px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
     ctx.fillText('Bags left: ' + this.bagsLeft, 16, 56);
+    // streak counter — only worth showing once a chain is actually building
+    if (this.streak >= 2) {
+      const pulse = 1 + Math.sin(this.time * 10) * 0.06;
+      ctx.save(); ctx.translate(200, 30); ctx.scale(pulse, pulse);
+      ctx.font = 'bold 18px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+      ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
+      ctx.fillText('🔥 ' + this.streak + ' streak', 0, 6); ctx.shadowBlur = 0;
+      ctx.restore();
+    }
     // throw line marker
     ctx.fillStyle = 'rgba(255,160,60,0.4)';
     ctx.fillRect(120, GROUND_Y - 80, 4, 80);
@@ -392,8 +428,12 @@
     ctx.fillText('GAME OVER', VIEW_W / 2, VIEW_H / 2 - 40); ctx.shadowBlur = 0;
     ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.fillStyle = C.green;
     ctx.fillText('Score: ' + this.score, VIEW_W / 2, VIEW_H / 2 + 10);
+    if (this.bestStreak >= 2) {
+      ctx.font = 'bold 16px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+      ctx.fillText('🔥 Best streak: ' + this.bestStreak, VIEW_W / 2, VIEW_H / 2 + 38);
+    }
     ctx.fillStyle = C.dim; ctx.font = '16px "Space Grotesk",sans-serif';
-    ctx.fillText('click to play again', VIEW_W / 2, VIEW_H / 2 + 60);
+    ctx.fillText('click to play again', VIEW_W / 2, VIEW_H / 2 + 66);
     ctx.textAlign = 'left';
   };
 
