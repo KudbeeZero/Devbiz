@@ -198,7 +198,7 @@
   var PHYS_HZ = 300, PH = 1 / PHYS_HZ;
   var BALL_R = 14;
   var SPEED_CAP = 3200;         // px/s
-  var WALL_REST = 0.35, WALL_FRIC = 0.018;
+  var WALL_REST = 0.35, WALL_FRIC = 0.012;  // reduced friction for fluidity (was 0.018)
 
   // ---- dynamic difficulty: levels change the table ----
   var portalBumper = null;
@@ -1374,7 +1374,7 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
        // speed cap AFTER sub-steps (kicks can push velocity above cap during sub-steps)
        var sp2 = len(b.vx, b.vy); if (sp2 > SPEED_CAP) { b.vx *= SPEED_CAP / sp2; b.vy *= SPEED_CAP / sp2; }
        flipL.a = flipL.endA; flipR.a = flipR.endA; flipUR.a = flipUR.endA;
-       b.vx *= 0.99975; b.vy *= 0.99975;        // slight damping
+       b.vx *= 0.99985; b.vy *= 0.99985;        // reduced damping for smoother rolling (friction handles contact losses)
       // lane rollovers (light K·U·D) + center loop-ramp (a hard upward shot loops over the top)
       for (var ro = 0; ro < rollovers.length; ro++) { var rv = rollovers[ro]; if (!rv.lit) { var rdx = b.x - rv.x, rdy = b.y - rv.y; if (rdx * rdx + rdy * rdy < rv.r * rv.r) onRollover(rv); } }
       if (ramp && b.rampCd <= 0 && b.vy < -520 && b.x > ramp.x - ramp.hw && b.x < ramp.x + ramp.hw && b.y > ramp.y0 && b.y < ramp.y1) { b.rampCd = 0.7; onRamp(b); }
