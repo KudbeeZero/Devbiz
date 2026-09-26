@@ -1514,6 +1514,38 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
       // is ejected downward. Do not timer-eject in the flipper band — that is play.
       if (b.y > 700) b.lowT = 0; else b.lowT += h;
       if (b.lowT > STUCK_EJECT_S) { b.lowT = 0; b.vx = (Math.random() - 0.5) * 160; b.vy = Math.max(b.vy, 540); burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'ball unstuck', '#7CFFb2'); }
+
+      // bounds check: if ball escapes out of bounds (left, right, top), forcefully recover it
+      var oobThreshold = 30;  // allow 30px leeway for normal physics bouncing
+      var ballSpeed = len(b.vx, b.vy);
+
+      // Out of bounds on left edge (x < 30) or right edge (x > 870)
+      if ((b.x < oobThreshold || b.x > VW + oobThreshold) && ballSpeed < 50) {
+        b.x = Math.max(100, Math.min(VW - 100, b.x));  // clamp to playfield
+        b.vx = (b.x < VW / 2 ? 1 : -1) * (Math.random() * 120 + 180);  // kick away from wall
+        b.vy = Math.max(b.vy, -300);  // ensure upward component to escape upper areas
+        burst(b.x, b.y, '#ff5d3c', 12, 360); callout('FREED', 'out of bounds', '#ff5d3c');
+      }
+
+      // Out of bounds on top edge (y < 80) with slow speed
+      if (b.y < 80 && ballSpeed < 60) {
+        b.y = Math.max(100, b.y);
+        b.vy = Math.max(b.vy, 200);  // strong downward push
+        b.vx = (Math.random() - 0.5) * 300;  // horizontal randomness to escape corners
+        burst(b.x, b.y, '#ff5d3c', 12, 360); callout('FREED', 'ceiling bounce', '#ff5d3c');
+      }
+
+      // Upper-left corner trap: very slow ball in dangerous zone (y < 300, x < 200)
+      if (b.y < 300 && b.x < 200 && ballSpeed < 40) {
+        b.cornerT = (b.cornerT || 0) + h;
+        if (b.cornerT > 2) {  // quicker detection than lowT (2s instead of 4s)
+          b.cornerT = 0;
+          b.x = Math.max(150, b.x) + (Math.random() - 0.5) * 100;
+          b.vx = (Math.random() - 0.5) * 240;
+          b.vy = Math.max(b.vy, 480);
+          burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'corner escape', '#7CFFb2');
+        }
+      } else { b.cornerT = 0; }
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
@@ -1567,8 +1599,12 @@ if (!hitSeg) { b.x += b.vx * rem; b.y += b.vy * rem; rem = 0; break; }
     var hit = false;
     for (var i = 0; i < balls.length; i++) {
       var b = balls[i]; if (b.inLane) continue;
-      b.vx += dir * 170 + (Math.random() - 0.5) * 120;        // sideways shove + jitter
-      b.vy += -90 + Math.random() * 220;                      // mostly downward so a top-stuck ball drops
+      var ballSpeed = len(b.vx, b.vy);
+      var isStuck = ballSpeed < 80;  // ball is moving slowly
+      var stuckMultiplier = isStuck ? 1.6 : 1.0;  // extra power for stuck balls
+
+      b.vx += dir * 170 * stuckMultiplier + (Math.random() - 0.5) * 150;        // sideways shove + jitter; stronger for stuck
+      b.vy += (-90 - (isStuck ? 200 : 0)) + Math.random() * 240;  // more downward force for stuck balls
       hit = true;
     }
     if (!hit) return;
