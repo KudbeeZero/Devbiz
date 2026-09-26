@@ -32,6 +32,16 @@
   const VIEW_W = 960, VIEW_H = 640;
   const C = { cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2', gold: '#ffd34d', ember: '#ff5d3c', text: '#cfe9ff', dim: '#7d8aa8' };
 
+  // Particle system for batting and field effects
+  class Particle {
+    constructor(x, y, vx, vy, life, col, size) {
+      this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.col = col; this.size = size || 2;
+    }
+    update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; this.vy += 300 * dt; }
+    draw(ctx) { const a = Math.max(0, this.life / 0.4); ctx.globalAlpha = a; ctx.fillStyle = this.col;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, 7); ctx.fill(); }
+  }
+
   // ===================================================================
   // AUDIO — procedural neon synth (bat crack, crowd, thuds, UI ticks).
   // ===================================================================
@@ -422,7 +432,13 @@
       ctx.globalAlpha = 1; ctx.restore();
     }
     this._drawHUD(ctx);
-    if (this.banner) { ctx.fillStyle = C.text; ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.textAlign = 'center'; ctx.shadowColor = C.cyan; ctx.shadowBlur = 16; ctx.fillText(this.banner, VIEW_W / 2, 40); ctx.shadowBlur = 0; ctx.textAlign = 'left'; }
+    if (this.banner) {
+      const scale = 1 + Math.sin(this.time * 8) * 0.05;
+      ctx.fillStyle = C.text; ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.textAlign = 'center';
+      ctx.save(); ctx.translate(VIEW_W / 2, 40); ctx.scale(scale, scale);
+      ctx.shadowColor = C.cyan; ctx.shadowBlur = 16; ctx.fillText(this.banner, 0, 0); ctx.shadowBlur = 0;
+      ctx.restore(); ctx.textAlign = 'left';
+    }
   };
 
   Game.prototype._drawHUD = function (ctx) {
