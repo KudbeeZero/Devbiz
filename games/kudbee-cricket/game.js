@@ -150,15 +150,37 @@
   Particles.prototype.update = function (dt) {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const p = this.items[i]; p.life -= dt; if (p.life <= 0) { this.items.splice(i, 1); continue; }
-      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; p.vx *= 0.98;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.spin != null) { p.rot += p.spin * dt; p.vy += 180 * dt; p.vx *= 0.99; } // confetti: lighter fall, more flutter
+      else { p.vy += 400 * dt; p.vx *= 0.98; }
     }
   };
   Particles.prototype.draw = function (ctx) {
     for (const p of this.items) {
       ctx.globalAlpha = KC.Util.clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.col;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
+      if (p.rot != null) {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillRect(-p.size, -p.size * 0.5, p.size * 2, p.size);
+        ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
+  };
+  // confetti: rectangular, tumbling, falls with gravity + drifts — celebration-grade,
+  // distinct from the small round batting sparks above.
+  Particles.prototype.confetti = function (x, y, n) {
+    n = n || 40;
+    const cols = [C.gold, C.cyan, C.green, C.violet, '#fff'];
+    for (let i = 0; i < n; i++) {
+      const a = KC.Util.rand(-Math.PI, 0), s = KC.Util.rand(120, 420);
+      this.items.push({
+        x: x, y: y, vx: Math.cos(a) * s * 0.6, vy: Math.sin(a) * s,
+        life: KC.Util.rand(1.1, 1.8), max: 1.8, col: KC.Util.pick(cols),
+        size: KC.Util.rand(3, 6), rot: Math.random() * TAU, spin: KC.Util.rand(-8, 8),
+      });
+    }
   };
 
   // ===================================================================
@@ -171,7 +193,7 @@
     this.reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.state = 'menu'; this.selTeam = 0;
     this.resetMatch();
-    this.menuSel = 0; this.flash = 0; this.shake = 0; this.banner = '';
+    this.menuSel = 0; this.flash = 0; this.shake = 0; this.banner = ''; this.hitStopT = 0; this.bannerScale = 1;
   }
   Game.prototype.resetMatch = function () {
     this.overs = 0; this.ball = 0; this.runs = 0; this.wickets = 0; this.target = 0; this.batting = true;
@@ -179,7 +201,7 @@
     this.phase = 'idle'; // idle | runup | flight | resolve
     this.phaseT = 0; this.ballX = 0; this.ballY = 0; this.bounceX = 0;
     this.aimX = VIEW_W / 2; this.aimY = VIEW_H * 0.42; this.sweetRing = 0; this.sweetScore = 1;
-    this.lastShot = null; this.overBalls = 0;
+    this.lastShot = null; this.overBalls = 0; this._trail = []; this._bounced = false;
   };
   Game.prototype.start = function () { this._last = performance.now() / 1000; requestAnimationFrame(this._frame.bind(this)); };
   Game.prototype.confirm = function () {
@@ -189,15 +211,19 @@
     this.resetMatch(); this.batting = true; this.innings = 1; this.phase = 'idle'; this.state = 'play';
     this.team = TEAMS[this.selTeam]; this.myXI = this.team.pick.map(i => ROSTER[i]);
     this.opp = TEAMS[(this.selTeam + 1) % TEAMS.length]; this.oppXI = this.opp.pick.map(i => ROSTER[i]);
-    this.banner = this.team.name + ' to bat first'; this.flash = 1.5; this.audio.whistle();
+    this.banner = this.team.name + ' to bat first'; this._bannerAt = this.time; this.flash = 1.5; this.audio.whistle();
   };
 
   // ---- main loop ----
   Game.prototype._frame = function () {
     const now = performance.now() / 1000; let dt = Math.min(0.05, now - this._last); this._last = now; this.time += dt;
+    // hit-stop: a brief near-freeze on big moments (sixes) sells impact without a real pause —
+    // particles/camera still drift a hair so the frame doesn't read as a stutter.
+    if (this.hitStopT > 0 && !this.reduceMotion) { this.hitStopT -= dt; dt *= 0.06; }
     this.update(dt); this.render(); this.input.endFrame();
     requestAnimationFrame(this._frame.bind(this));
   };
+  Game.prototype._triggerHitStop = function (dur) { if (!this.reduceMotion) this.hitStopT = Math.max(this.hitStopT, dur); };
 
   Game.prototype.update = function (dt) {
     this.particles.update(dt);
@@ -305,12 +331,22 @@
   Game.prototype._resolve = function (out, runs) {
     this.phase = 'resolve'; this.phaseT = 0;
     if (out) {
-      this.wickets++; this.banner = 'OUT!';
+      this.wickets++; this.banner = 'OUT!'; this._bannerAt = this.time;
+      this.shake = 0.5; this._triggerHitStop(0.08);
       this.audio.whistle(); this.batterIdx++;
     } else {
       this.runs += runs;
       this.banner = runs === 6 ? 'SIX!' : runs === 4 ? 'FOUR!' : runs > 0 ? runs + ' run' + (runs > 1 ? 's' : '') : 'Dot ball';
-      if (runs === 6 || runs === 4) this.audio.crowd();
+      this._bannerAt = this.time;
+      if (runs === 6) {
+        this.audio.crowd(); this.audio.crowd();
+        this._triggerHitStop(0.14); this.shake = Math.max(this.shake, 0.45); this.flash = Math.max(this.flash, 1.2);
+        this.particles.confetti(this.aimX, this.aimY, 44);
+      } else if (runs === 4) {
+        this.audio.crowd();
+        this._triggerHitStop(0.09); this.shake = Math.max(this.shake, 0.3); this.flash = Math.max(this.flash, 0.8);
+        this.particles.confetti(this.aimX, this.aimY, 20);
+      }
     }
     this.thisOver.push(out ? 'W' : (runs === 0 ? '.' : String(runs)));
     this._bounced = false;
@@ -325,7 +361,7 @@
 
   Game.prototype._endInnings = function () {
     this.state = 'result';
-    this.banner = this.team.name + ' scored ' + this.runs + '/' + this.wickets;
+    this.banner = this.team.name + ' scored ' + this.runs + '/' + this.wickets; this._bannerAt = this.time;
     this.audio.crowd();
   };
 
@@ -432,13 +468,25 @@
       ctx.globalAlpha = 1; ctx.restore();
     }
     this._drawHUD(ctx);
-    if (this.banner) {
-      const scale = 1 + Math.sin(this.time * 8) * 0.05;
-      ctx.fillStyle = C.text; ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.textAlign = 'center';
-      ctx.save(); ctx.translate(VIEW_W / 2, 40); ctx.scale(scale, scale);
-      ctx.shadowColor = C.cyan; ctx.shadowBlur = 16; ctx.fillText(this.banner, 0, 0); ctx.shadowBlur = 0;
-      ctx.restore(); ctx.textAlign = 'left';
-    }
+    this._drawBanner(ctx);
+  };
+
+  // Big moments (SIX!/OUT!) punch in oversized then settle to a gentle pulse; ordinary
+  // ball-by-ball banners just get the small idle pulse. bannerT tracks time-since-set
+  // (reset in _resolve/_endInnings/startMatch) so the punch only plays once per banner.
+  Game.prototype._drawBanner = function (ctx) {
+    if (!this.banner) return;
+    const big = /^(SIX|FOUR|OUT)/.test(this.banner);
+    const age = this.time - (this._bannerAt || 0);
+    const punch = big ? Math.max(0, 1 - age * 3) : 0;               // decays to 0 within ~0.33s
+    const idle = 1 + Math.sin(this.time * 8) * (big ? 0.08 : 0.05);
+    const scale = idle + punch * punch * 1.6;                        // eased overshoot on the punch-in
+    const col = this.banner.startsWith('SIX') ? C.gold : this.banner.startsWith('OUT') ? '#ff3c5d' : this.banner.startsWith('FOUR') ? C.green : C.cyan;
+    ctx.fillStyle = C.text; ctx.font = 'bold ' + (big ? 34 : 28) + 'px "Space Grotesk",sans-serif'; ctx.textAlign = 'center';
+    ctx.save(); ctx.translate(VIEW_W / 2, 44); ctx.scale(scale, scale);
+    ctx.shadowColor = col; ctx.shadowBlur = big ? 24 : 16; ctx.fillStyle = big ? col : C.text;
+    ctx.fillText(this.banner, 0, 0); ctx.shadowBlur = 0;
+    ctx.restore(); ctx.textAlign = 'left';
   };
 
   Game.prototype._drawHUD = function (ctx) {
