@@ -2473,7 +2473,9 @@ function frame(now) {
     return isCoarse || charging || anyLaunchPointer();
   }
   function drawPlungerAffordance(now) {
-    if (!plungerAffordanceActive()) return;
+    // Show while charging OR during affordance (don't hide mid-launch)
+    var showGauge = charging || plungerAffordanceActive();
+    if (!showGauge) return;
     var pad = Math.round(Math.min(W, H) * 0.03);
     var mn = Math.min(W, H);
     var t = now || frameNow || 0;
@@ -2558,6 +2560,15 @@ function frame(now) {
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
       ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
       ctx.fillText('MULTIPLIER', mx, my + Math.round(mn * 0.052));
+      // Terraforming indicator (what table feature is active at this level)
+      var tfLevel = terraformLevel();
+      if (tfLevel > 0) {
+        var tfY = my + Math.round(mn * 0.09);
+        var tfCol = tfLevel >= 2 ? '#ffd34d' : '#39e6ff';
+        var tfText = tfLevel >= 2 ? '⭐ COSMIC ORBITER' : '◈ Table evolving...';
+        ctx.fillStyle = tfCol; ctx.font = '600 ' + Math.round(mn * 0.014) + 'px Inter, sans-serif';
+        ctx.fillText(tfText, mx, tfY);
+      }
       // mission bar — active mission with countdown timer
       if (missionActive >= 0 && missionTimer > 0) {
         var mDef = MISSION_DEFS[missionActive];
