@@ -206,8 +206,11 @@
   var levelTransT = 0, prevLevel = 1;
   var tableHue = 0, targetHue = 0;
   var tableFlash = 0;
+  // Terraforming: table evolves at higher levels
+  var cosmicOrbiter = { x: 470, y: 280, r: 45, orbitR: 60, angle: 0, spin: 1.8 };  // hidden until level 4
   function levelGrav() { return 1 + Math.max(0, (level || 1) - 1) * 0.12; }
   function levelKick() { return 1 + Math.max(0, (level || 1) - 1) * 0.08; }
+  function terraformLevel() { return Math.max(0, (level || 1) - 2); }  // 0=base, 1=L3, 2=L4, 3+=L5+
 
   // ---- mission system: 4 timed objectives, one active at a time ----
   var MISSION_DEFS = [
@@ -765,6 +768,8 @@ var ramp = null;                           // center loop-ramp trigger
       for (var i = 0; i < segs.length; i++) { var s = segs[i]; resolveSeg(b, s.ax, s.ay, s.bx, s.by, s.r, s.rest, s.fric, s.kick, s.sling, 0, 0, frictPass); }
       for (var j = 0; j < bumpers.length; j++) resolveCircle(b, bumpers[j]);
       for (var ti = 0; ti < targets.length; ti++) resolveTarget(b, targets[ti]);
+      // Cosmic orbiter collision (terraformed at level 4+)
+      if (terraformLevel() >= 2) resolveCircle(b, { x: cosmicOrbiter.x, y: cosmicOrbiter.y, r: cosmicOrbiter.r, rest: 0.85, kick: 1200, kind: 'orbiter' });
       resolveFlipper(b, flipL); resolveFlipper(b, flipR); resolveFlipper(b, flipUR);
     }
   }
@@ -1532,6 +1537,8 @@ var move = len(b.vx, b.vy) * h;
        if (Math.abs(spinner.spinVel) < 0.05) spinner.spinVel = 0;
        spinner.hitFlash = Math.max(0, spinner.hitFlash - h * 5);
      }
+     // COSMIC ORBITER: rotate continuously at higher levels
+     if (terraformLevel() >= 2) cosmicOrbiter.angle += cosmicOrbiter.spin * h;
      ballVsBall();
    }
 
@@ -1885,6 +1892,7 @@ function frame(now) {
      }
 
     drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawGuidePosts(); drawSaucer(); drawSaucerR(); drawStarSaucer(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost(); drawSpinner();
+    if (terraformLevel() >= 2) drawCosmicOrbiter();
     drawSkill();
     drawFlipper(flipL); drawFlipper(flipR); drawFlipper(flipUR);
     drawBallSave();
@@ -2250,6 +2258,28 @@ function frame(now) {
       ctx.fillText('SPINS: ' + totalSpins + '/50', spinner.x, spinner.y - spinner.r - 16);
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
+  }
+  // Cosmic Orbiter — terraformed element at level 4+, rotates and bounces balls outward
+  function drawCosmicOrbiter() {
+    if (terraformLevel() < 2) return;
+    var c = cosmicOrbiter;
+    ctx.globalCompositeOperation = 'lighter';
+    // Orbiting particles
+    for (var i = 0; i < 6; i++) {
+      var ang = c.angle + i * Math.PI * 2 / 6;
+      var px = c.x + Math.cos(ang) * c.orbitR, py = c.y + Math.sin(ang) * c.orbitR;
+      var alpha = 0.6 - Math.abs(Math.sin(c.angle * 2 + i)) * 0.3;
+      ctx.fillStyle = 'rgba(255,211,77,' + alpha.toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, TAU); ctx.fill();
+    }
+    // Core glow
+    var gg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 1.8);
+    gg.addColorStop(0, 'rgba(255,211,77,0.35)'); gg.addColorStop(1, 'rgba(255,211,77,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.8, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // Core circle
+    ctx.fillStyle = 'rgba(255,211,77,0.25)'; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,211,77,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.stroke();
   }
   // magnet hold (electromagnet) — cyan/purple pulsing field
   function drawMagnet() {
