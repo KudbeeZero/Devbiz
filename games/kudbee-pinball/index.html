@@ -1492,7 +1492,11 @@ var move = len(b.vx, b.vy) * h;
       // a plunge that didn't clear falls back down the lane → re-serve for another go
       // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
       // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
-      if (!b.injected && b.x > 808 && b.x < 862 && b.y > 1265 && len(b.vx, b.vy) < 200) { b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue; }
+      // Hopper recapture: only grab balls that came DOWN into the lane from above (vy>0 recently),
+      // not ones sliding horizontally back. cooldown prevents immediate re-capture after launch.
+      if (!b.injected && b.x > 820 && b.x < 842 && b.y > 1300 && b.y < 1330 && len(b.vx, b.vy) < 80 && (!b.launchCd || b.launchCd < 0.3)) {
+        b.launchCd = 0; b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue;
+      }
       // Last-resort unstick for the gutter + flipper band. Physics should never park a ball
       // here, so these wait a full second — and the flipper-band one never fires while a
       // flipper is held, or cradling the ball would get it kicked away.
@@ -1510,6 +1514,8 @@ var move = len(b.vx, b.vy) * h;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
       } else { b.gutterT = 0; b.flipBandT = 0; }
+      // Decay launch cooldown to prevent re-capture
+      if (b.launchCd) b.launchCd = Math.max(0, b.launchCd - h);
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -1532,7 +1538,7 @@ var move = len(b.vx, b.vy) * h;
   function launch() {
     if (!balls.length || !balls[0].inLane) return;
     var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
-    b.vy = -(620 + charge * 1700); b.vx = -6; charge = 0;     // up the lane; enterFromLane() routes it over the top
+    b.vy = -(620 + charge * 1700); b.vx = -6; b.launchCd = 1.0; charge = 0;     // up the lane; enterFromLane() routes it over the top
     sfx('launch');
   }
 
