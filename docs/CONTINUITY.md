@@ -2,6 +2,30 @@
 
 Append-only decisions and findings that future lanes should not re-litigate.
 
+## 2026-09-26 — Pinball stuck-ball root causes fixed in collision physics (PR #180, DBZ-079)
+
+**CONTEXT:** Owner play-test: ball sticks (left wall, lower right, between flippers) and doesn't roll fluidly. Earlier lanes treated each stuck spot with geometry nudges + timed "FREED" rescues; the rescues were masking physics bugs.
+
+**DISCOVERY (full-table stuck scan, `__kbTest.simulate`):** ~780 drop points × 4 velocities × 6s → **2566 stalls before, 58 after** (the 58 are a ball balanced exactly on a round post top, or a start inside the sealed pocket above the deflector — not reachable in real play). Root causes, all in `games/kudbee-pinball/index.html`:
+1. `sweptSeg` returned the *exit* root (≈0) for a ball already touching a wall and moving along/away from it → substep loop discarded remaining time → ball frozen on the wall while gravity pushed speed to `SPEED_CAP`.
+2. Friction was a flat %-of-tangential-speed cut on every contact substep (300×/s) → rolling balls bled to a ~50px/s crawl on walls and resting flippers.
+3. `resolveSeg` swapped the normal to −v̂ on flush contacts (reversed a rolling ball every few steps) and used the flat perpendicular at segment end caps (ball hovered past flipper tips on an invisible extension).
+4. Resting flipper tips overlapped (capsule r13, tips ~4px apart) → center drain sealed; ball sat on the tips until `flipBandT` kicked it.
+5. V-pockets: inlane guides crossing flipper pivots; drop targets 22px apart (ball 28px); right lower post 4px from mini-flipper tip.
+
+**DECISION (physics invariants — do not regress):**
+- Swept TOI: a touching ball is a hit **only if approaching** (`bb < 0`); never return the exit root. TOI loop capped at 4 hits/substep, leftover time spent moving freely.
+- Friction is **Coulomb**: tangential impulse ≤ `fric · jn` (walls `WALL_FRIC = 0.1`, flippers 0.12, corner wedge 0.15). Never a per-step %-of-speed cut.
+- Contact normal is always the **capsule normal** (closest point → ball). No velocity-derived normals except when the ball center is exactly on the segment.
+- Any gap the ball must pass or clear: **≥ 30px surface-to-surface** (ball Ø 28). Check guides/posts/targets against flipper pivots and tips.
+- Rescues (`gutterT`, `flipBandT`) are last-resort nets: **≥ 1.0s**, and `flipBandT` never fires while a flipper is held (cradling).
+
+**DECISION:** Canonical lower geo from DBZ-066 still holds (drain 1430, kick 1382–1426, **flip py 1300 / len 150**). Only flipper **pivot x** (330/610 → 305/635) and rest droop (0.40 → 0.45) changed, to open a ~34px-clear center drain like a real table.
+
+**TEST_VERIFIED:** Evaluator **21/21** (local, Chromium via `executablePath`), `npm run test:leaderboard` 105/105, lower-table screenshot. Local passed, no CI configured.
+
+**OPEN:** Manual browser play-test on the PR preview (rolling feel, center drains, cradling). `npm run pinball:eval` can't launch in the cloud container as-is (Playwright wants chromium-1243, `/opt/pw-browsers` ships 1194) — see `games/kudbee-pinball/eval/README.md`.
+
 ## 2026-09-25 — Pinball eval gate 21/21 (`cb9c090`)
 
 **DECISION:** Production gate is `node evaluator.mjs` **21/21**. Headless launch rubric may use **`prepBall` fallback** only in the harness (after charged lane sim) so `ball-enters-playfield` / `scoring-works` are not flaky; touch/Space plunger checks stay strict. Ledger **DBZ-070**.

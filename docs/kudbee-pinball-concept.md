@@ -143,6 +143,21 @@ damping is enough; tune by feel, not by simulating 3D incline.
 > bumper* and nothing else, until the catch/cradle/bounce feels right. Feature
 > work only starts after the physics core feels good.
 
+### 4.6 As built — lessons from the stuck-ball hunt (DBZ-079, 2026-09-26)
+The spec above held up; the bugs were in the details of 4.1/4.2 and 4.4:
+- **Swept contact:** a ball already *touching* a wall is only a hit if it is moving
+  into it. Treating "touching + sliding along" as a time-0 hit froze balls on walls.
+- **Friction must be Coulomb** (tangential impulse ≤ μ × normal impulse). A
+  %-of-speed cut per physics step behaves like thick syrup at 300 Hz.
+- **Capsule end caps are round:** the normal is always closest-point → ball, or a
+  ball rolls onto an invisible extension past the flipper tip.
+- **Clearances:** every gap the ball must pass is ≥30px (ball Ø28), and the flipper
+  tips at rest leave a real **center drain** (~34px clear) — as §4.5 intends.
+- **Cradle (4.4)** needs the anti-stuck rescues to stay off while a flipper is held.
+
+Implementation rules for agents: `AGENTS.md` → *Pinball physics rules*; decision
+log: `docs/CONTINUITY.md` 2026-09-26.
+
 ---
 
 ## 5. Game-feel checklist (the actual product)

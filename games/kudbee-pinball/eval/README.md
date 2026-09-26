@@ -14,6 +14,28 @@ npx playwright install chromium
 node evaluator.mjs            # writes findings.md + *.png here
 ```
 
+**Cloud containers (Claude Code on the web):** Chromium is preinstalled at
+`/opt/pw-browsers` but may not match the Playwright version in `package-lock.json`
+("Executable doesn't exist … chromium_headless_shell-1243"). Don't run
+`playwright install`; run a throwaway copy that points at the installed browser:
+
+```bash
+sed "s#chromium.launch({ headless:true,#chromium.launch({ headless:true, executablePath:'/opt/pw-browsers/chromium',#" \
+  games/kudbee-pinball/eval/evaluator.mjs > games/kudbee-pinball/eval/_eval_local.mjs
+node games/kudbee-pinball/eval/_eval_local.mjs; rm games/kudbee-pinball/eval/_eval_local.mjs
+```
+
+## Stuck-ball scan (not in the rubric yet)
+
+`window.__kbTest.simulate(x, y, vx, vy, secs)` drops a ball, runs `physStep` headlessly
+with flippers at rest, and returns `{ drained, maxStill, freed, where, touch }`:
+`maxStill` = longest time (s) within 8px of one spot, `freed` = anti-stuck rescues fired,
+`where` = first rescue positions, `touch` = colliders in contact when it ended. Grid it
+over the table (x 80–790 step 30, y 150–1400 step 40, a few velocities, 6s) and flag
+`maxStill > 1.2 || freed > 0`. Baseline after DBZ-079: **58 flags**, all balls balanced
+exactly on a round post top or started inside the sealed pocket above the deflector
+(was 2566). Run it before and after any physics or lower-table change.
+
 ## Rubric (21 checks)
 
 | ID | What it proves |
