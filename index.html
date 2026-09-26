@@ -271,6 +271,25 @@
        reference the old names (v1 tokens) silently breaks. */
     --ease: var(--mo-ease-out);
     --ease-io: var(--mo-ease-in-out);
+
+    /* ---- Border-radius scale (DBZ-Unit7) ----
+       Unified radius tiers across all card types + UI elements.
+       Usage: apply to .card, .panel, .gcard, .receipt, .pkg, etc. */
+    --radius-sm: 14px;   /* Small: FAQ items, minor controls, badges */
+    --radius-md: 20px;   /* Medium: tools cards, capability items, form fields */
+    --radius-lg: 24px;   /* Large: primary cards (games, services, work, pricing) */
+
+    /* ---- Shadow architecture (DBZ-Unit7) ----
+       Reusable shadow utilities with inset highlights for depth.
+       Applied as `box-shadow: var(--shadow-sm)` or layered in `:hover`.
+       --shadow-sm: subtle elevation (cards at rest)
+       --shadow-md: medium elevation (cards on hover, panels)
+       --shadow-lg: deep elevation (hero media, prominent cards)
+       Inset white highlight on dark bg creates depth perception.
+       Accent color dynamic: use rgba(var(--acc-rgb, 57,230,255), ...) in pseudo-elements. */
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.03);
+    --shadow-md: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
+    --shadow-lg: 0 32px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -480,6 +499,64 @@ html:not(.js) .preloader { display: none; }
 .btn:hover { background-position: 100% 0; box-shadow: 0 6px 36px rgba(111,91,255,0.5); }
 .btn-o { color: var(--txt); background: var(--panel); border: 1px solid var(--border); }
 .btn-o:hover { border-color: rgba(57,230,255,0.5); color: var(--cyan); }
+
+/* ================================================================
+   CSS PATTERNS & CONVENTIONS (DBZ-Unit7)
+   ================================================================
+
+   ALL CARD-LIKE ELEMENTS follow these rules for consistency:
+
+   1. BORDER-RADIUS SCALE
+      • --radius-sm (14px): small cards, minor UI, badges
+      • --radius-md (20px): medium cards, tool items, form fields, capability items
+      • --radius-lg (24px): primary cards (games, services, work, pricing, games hero)
+      Example: border-radius: var(--radius-lg);
+
+   2. SHADOW ARCHITECTURE
+      • Base shadows use CSS custom properties (no hardcoded values)
+      • --shadow-sm: at-rest cards (subtle, ~12px blur)
+      • --shadow-md: hover/panels (medium depth, ~30px blur)
+      • --shadow-lg: hero/prominent (deep, ~80px blur)
+      • Each shadow includes inset white highlight (1px, low opacity) for depth
+      Example: box-shadow: var(--shadow-md);
+      Hover: box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(var(--acc-rgb), 0.16);
+
+   3. ACCENT COLOR SYSTEM
+      • Default accent: --cyan (57,230,255)
+      • Per-card override: inline style="--acc-rgb:R,G,B" (no comma spaces)
+      • Usage in shadows: rgba(var(--acc-rgb, 57,230,255), 0.2) for fallback
+      • Apply to borders, glows, and CRT effects on hover
+      Example: border-color: rgba(var(--acc-rgb, 57,230,255), 0.4);
+
+   4. MOTION TIMING
+      • All transitions use --mo-dur-* variables (never hardcoded milliseconds)
+      • Primary interaction: --mo-dur-1 (0.25s), --mo-dur-2 (0.3s), --mo-dur-3 (0.4s)
+      • Use --ease (cubic-bezier easing) by default, --ease-io for symmetrical
+      • Respect prefers-reduced-motion: wrap animations in @media blocks
+      Example: transition: transform var(--mo-dur-3) var(--ease);
+
+   5. TRANSFORM & HARDWARE ACCELERATION
+      • Use transform + opacity only (never left/top/margin for animation)
+      • Add will-change: transform; on interactive cards to hint compositor
+      • On hover: transform: translateY(-4px) or scale(1.02) for depth
+      Example: will-change: transform; transition: transform var(--mo-dur-3) var(--ease);
+
+   6. INSET HIGHLIGHTS & GLOSS
+      • Dark backgrounds (--bg-2, --panel) + inset white border creates depth
+      • Inset highlights: inset 0 1px 0 rgba(255,255,255,0.03..0.08)
+      • CRT scanlines on game cards: repeating-linear-gradient(0deg, rgba(0,0,0,0.13)..0.22)
+      • Applied to ::after pseudo-elements so they layer on top
+      Example: inset 0 1px 0 rgba(255,255,255,0.05);
+
+   7. RESPONSIVE SCALING
+      • Font sizes, gaps, padding use clamp(min, preferred, max)
+      • Border-radius: can vary per breakpoint if needed, but prefer fixed for now
+      • Example: padding: clamp(24px, 3.5vw, 40px);
+
+   Implementation note: This is the production CSS foundation. Every new card
+   type or section applies these rules without exception. Audit new PRs against
+   this checklist before approving.
+   ================================================================ */
 
 /* Reveal system (DBZ-051): extracted to assets/kudbee-motion.css so it's a
    shared primitive. If that stylesheet 404s, [data-rv] elements simply never
