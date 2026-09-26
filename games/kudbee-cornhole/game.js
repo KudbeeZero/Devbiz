@@ -26,6 +26,16 @@
   const VIEW_W = 960, VIEW_H = 680;
   const C = { cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2', gold: '#ffd34d', ember: '#ff7a2d', text: '#dfeaff', dim: '#8a93a8' };
 
+  // Particle system for impacts and scoring
+  class Particle {
+    constructor(x, y, vx, vy, life, col) {
+      this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.col = col;
+    }
+    update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; }
+    draw(ctx) { const a = Math.max(0, this.life / 0.6); ctx.globalAlpha = a; ctx.fillStyle = this.col;
+      ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, 7); ctx.fill(); }
+  }
+
   // World geometry (logical units). Side view: thrower left, board right+up.
   const GROUND_Y = 560;
   const BOARD_X = 760;            // board near-edge x
@@ -116,6 +126,7 @@
     this.time = 0; this.audio = new Audio(); this.input = new Input(this.canvas);
     this.reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.state = 'menu';         // menu | play | over
+    this.particles = [];
     this.reset();
   }
   Game.prototype.reset = function () {
@@ -136,6 +147,11 @@
   Game.prototype.update = function (dt) {
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 1.5);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2);
+    // particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+    }
     // score pops
     for (let i = this._scorePops.length - 1; i >= 0; i--) {
       const p = this._scorePops[i]; p.life -= dt; p.y += p.vy * dt; p.vy *= 0.92;
@@ -185,6 +201,7 @@
         if (bagBottom > topY - 6 && bagBottom < topY + BOARD_T + 30) {
           if (overHole && b.vy < 950) { this._score(3); return; }
           // land on the board surface
+          this._emitParticles(b.x, topY + 5, C.amber, 4);
           b.y = topY - BAG; b.vy = -b.vy * 0.18; b.vx *= 0.5; b.squash = 1; b.spin *= 0.4;
           this.audio.woodThud(KC.Util.clamp(Math.abs(b.vy) / 500, 0, 1));
           if (Math.abs(b.vy) < 45) { b.vy = 0; this._enterSettle(); }
@@ -217,10 +234,18 @@
     else b.rest = 'ground';
   };
 
+  Game.prototype._emitParticles = function (x, y, col, count) {
+    if (this.reduceMotion) return;
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 100;
+      this.particles.push(new Particle(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp, 0.6, col));
+    }
+  };
   Game.prototype._score = function (pts) {
     this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
     if (pts >= 3) this.audio.holeDrop(); this.audio.scoreJingle(pts);
     this.bag.gone = true;
+    this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 12 : 6);
     this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: '+' + pts, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };
@@ -251,10 +276,16 @@
     ctx.save(); ctx.translate(sx, sy);
     this._drawScene(ctx);
     if (this.state === 'menu') this._drawMenu(ctx);
-    else { this._drawHUD(ctx); this._drawBag(ctx); this._drawScorePops(ctx); }
+    else { this._drawHUD(ctx); this._drawBag(ctx); this._drawParticles(ctx); this._drawScorePops(ctx); }
     if (this.state === 'over') this._drawOver(ctx);
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,211,77,' + (this.flash * 0.25).toFixed(2) + ')'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); }
     ctx.restore();
+  };
+
+  Game.prototype._drawParticles = function (ctx) {
+    ctx.shadowBlur = 0;
+    for (const p of this.particles) p.draw(ctx);
+    ctx.globalAlpha = 1;
   };
 
   Game.prototype._drawScene = function (ctx) {
@@ -279,9 +310,11 @@
     ctx.fillStyle = '#2a1a0c';
     ctx.fillRect(BOARD_X + 8, topY + BOARD_T, 8, BOARD_H * 0.5);
     ctx.fillRect(BOARD_X + BOARD_W - 16, topY + BOARD_T, 8, BOARD_H * 0.5);
-    // hole (drawn as dark ellipse)
+    // hole (drawn as dark ellipse with glow)
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 12;
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
     // power target marker under hole
     ctx.fillStyle = C.dim; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('3 pts', HOLE_X, topY - 10); ctx.textAlign = 'left';
   };
