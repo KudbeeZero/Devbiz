@@ -668,6 +668,13 @@ var ramp = null;                           // center loop-ramp trigger
   //      deflector↔cabinet bounce loop at x≈831 without softening either wall.
   var LAST_HIT = {}, LAST_HIT_EPS = 1e-4;
   function segKey(ax, ay, bx, by) { return ax + ',' + ay + ',' + bx + ',' + by; }
+  // A ball resting on the very top of a round post or segment end cap is an unstable
+  // equilibrium — any real ball rolls off. The solver can balance it forever (normal
+  // straight up, zero tangential speed), so tip it off the side it leans toward.
+  function apexRoll(b, ny, dx) {
+    if (ny > -0.985 || Math.abs(b.vx) > 12) return;
+    b.vx += (dx > 0.3 ? 1 : dx < -0.3 ? -1 : (Math.random() < 0.5 ? -1 : 1)) * 40;
+  }
   function resolveSeg(b, ax, ay, bx, by, segR, rest, fric, kick, sling, ptVelX, ptVelY, frictPass) {
     var ex = bx - ax, ey = by - ay, el2 = ex * ex + ey * ey || 1;
     var t = clamp(((b.x - ax) * ex + (b.y - ay) * ey) / el2, 0, 1);
@@ -718,6 +725,7 @@ var ramp = null;                           // center loop-ramp trigger
       }
       if (kick) { var ek = kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; if (sling) onSling(qx, qy); }
     }
+    if ((t === 0 || t === 1) && !ptVelX && !ptVelY) apexRoll(b, ny, dx);
     return true;
   }
   function resolveCircle(b, c) {
@@ -731,6 +739,7 @@ var ramp = null;                           // center loop-ramp trigger
       b.vx -= (1 + c.rest) * vn * nx; b.vy -= (1 + c.rest) * vn * ny;
       if (c.kick && !(c.cd > 0)) { var ek = c.kick * levelKick() * wizardKickMult; b.vx += nx * ek; b.vy += ny * ek; onBumper(c); c.cd = 0.1; } // cooldown to prevent multi-hit in one frame
     }
+    apexRoll(b, ny, dx);
     return true;
   }
   function resolveTarget(b, t) {
@@ -744,6 +753,7 @@ var ramp = null;                           // center loop-ramp trigger
       b.vx -= (1 + t.rest) * vn * nx; b.vy -= (1 + t.rest) * vn * ny;
       if ((t.cd || 0) <= 0) { t.cd = 0.3; onTarget(t); }   // score once per contact (debounced across sub-steps)
     }
+    apexRoll(b, ny, dx);
     return true;
   }
   function flipperPointVel(f, qx, qy) {
@@ -1007,6 +1017,28 @@ var ramp = null;                           // center loop-ramp trigger
   // bounced) and serves a fresh one from the shooter lane so play continues without costing
   // a ball. The catch that fills the lock quota instead triggers MULTIBALL: every locked ball
   // gets ejected back onto the table at once, alongside whatever ball is already in play.
+  // The shooter lane holds ONE ball. During multiball the lane ball is rarely balls[0],
+  // so plunger code must find it rather than assume index 0.
+  function laneBall() { for (var i = 0; i < balls.length; i++) if (balls[i].inLane) return balls[i]; return null; }
+  function laneBusy() {
+    for (var i = 0; i < balls.length; i++) { var b = balls[i]; if (b.inLane || (!b.injected && b.x > 798)) return true; }
+    return false;
+  }
+  // After a lock: with nothing else in play, serve a fresh ball to the plunger. With balls
+  // still live (multiball) or the lane occupied, kick the ball back out of the saucer —
+  // parking extra balls in the lane is what stacked them up there with no way to plunge.
+  function serveAfterLock(s) {
+    var live = false;
+    for (var i = 0; i < balls.length; i++) if (!balls[i].inLane) live = true;
+    if (!live && !laneBusy()) {
+      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
+      return;
+    }
+    var down = s.y < 400;                                   // the Star sits under the top arch: kick it down, not up
+    balls.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 320, vy: down ? 240 : -560 - Math.random() * 120,
+      r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0.4, saucerCd: 1.5, lowT: 0, trail: [], noSave: true, mbImmune: 0.5 });
+    burst(s.x, s.y, '#ffffff', 10, 360);
+  }
   function onSaucer(b, bi) {
     balls.splice(bi, 1);                                    // the ball vanishes into the saucer
     addScore(1000); bonusU += 10; sfx('lock');
@@ -1017,7 +1049,7 @@ var ramp = null;                           // center loop-ramp trigger
       callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
+      serveAfterLock(saucer);
     } else {
       // lock quota filled — check for SUPER MULTIBALL
       addSuperLock();
@@ -1060,7 +1092,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (saucerR.locks < saucerR.maxLocks - 1) {
       saucerR.locks++; addSuperLock();
       callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
+      serveAfterLock(saucerR);
     } else {
       // both right locks filled — check for SUPER MULTIBALL
       saucerR.locks = 0; addSuperLock();
@@ -1122,7 +1154,7 @@ var ramp = null;                           // center loop-ramp trigger
       starSaucer.locks++;
       callout('THE STAR', 'Mission progress: ' + (missionsDone + 1) + '/3', '#ffd34d');
       // Serve a fresh ball
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0.3, lowT: 0, trail: [], noSave: true });
+      serveAfterLock(starSaucer);
     }
   }
   // SPINNER ("solar sail") — ball passing through spins it, awards points per rotation
@@ -1286,7 +1318,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (!flipL || !flipR) return;
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipUR.pressed = false; flipL.buf = 0; flipR.buf = 0; flipUR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h); flipUR.update(h);
-    if (charging && balls.length && balls[0].inLane) charge = Math.min(1, charge + h * 1.6);
+    if (charging && laneBall()) charge = Math.min(1, charge + h * 1.6);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
        if (b.inLane) {                          // parked in plunger lane until launched
@@ -1589,8 +1621,8 @@ var move = len(b.vx, b.vy) * h;
    }
 
   function launch() {
-    if (!balls.length || !balls[0].inLane) return;
-    var b = balls[0]; b.inLane = false; b.injected = false; b.launchPow = charge;
+    var b = laneBall(); if (!b) return;
+    b.inLane = false; b.injected = false; b.launchPow = charge;
     b.vy = -(620 + charge * 1700); b.vx = -6; b.launchCd = 1.0; charge = 0;     // up the lane; enterFromLane() routes it over the top
     sfx('launch');
   }
@@ -1824,8 +1856,10 @@ function frame(now) {
         if (hitStopT <= 0) {
           acc += dt;
           var guard = 0;
-          while (acc >= PH && guard < 5) { physStep(PH); acc -= PH; guard++; }
-          if (guard >= 5) acc = Math.min(acc, PH);
+          // Catch up to real time. dt is capped at 50ms, i.e. 15 steps at 300Hz. The old cap of 5
+          // only kept pace at a steady 60fps — iOS Low Power Mode (30fps rAF) ran the game at half speed.
+          while (acc >= PH && guard < 15) { physStep(PH); acc -= PH; guard++; }
+          if (guard >= 15) acc = Math.min(acc, PH);
         }
       }
     // Mission tick: check triggers, count down, handle completion
@@ -2530,7 +2564,7 @@ function frame(now) {
     ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.32, b.y - b.r * 0.4, b.r * 0.22, b.r * 0.14, -0.5, 0, TAU); ctx.fill();
   }
   function plungerAffordanceActive() {
-    if (state !== 'play' || !balls.length || !balls[0].inLane) return false;
+    if (state !== 'play' || !laneBall()) return false;
     return isCoarse || charging || anyLaunchPointer();
   }
   function drawPlungerAffordance(now) {
@@ -2589,16 +2623,16 @@ function frame(now) {
     ctx.fillText('BALL ' + ballNum + ' / ' + (3 + extraBallsAwarded), W - pad, ry);
     // Level display (space-themed) with progress bar
     var levelCol = level >= 5 ? '#ff5d3c' : (level >= 3 ? '#ffd34d' : '#39e6ff');
-    ctx.fillStyle = levelCol; ctx.font = '700 ' + Math.round(mn * 0.026) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText('LEVEL ' + level, W - pad, ry - Math.round(mn * 0.045));
+    ctx.fillStyle = levelCol; ctx.font = '700 ' + Math.round(mn * 0.022) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('LEVEL ' + level, W - pad, ry + Math.round(mn * 0.027));
     // Level progress bar: how close to the next 50k threshold
     var lvlBase = (level - 1) * 50000, lvlNext = level * 50000;
     var lvlProg = clamp((score - lvlBase) / 50000, 0, 1);
     var lbw = Math.round(mn * 0.12), lbh = 3;
-    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(W - pad - lbw, ry - Math.round(mn * 0.025), lbw, lbh);
-    ctx.fillStyle = levelCol; ctx.fillRect(W - pad - lbw, ry - Math.round(mn * 0.025), lbw * lvlProg, lbh);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(W - pad - lbw, ry + Math.round(mn * 0.056), lbw, lbh);
+    ctx.fillStyle = levelCol; ctx.fillRect(W - pad - lbw, ry + Math.round(mn * 0.056), lbw * lvlProg, lbh);
     ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.026));
+    ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.066));
     // playfield multiplier (top-center)
     if (state === 'play') {
       var mx = W / 2, my = pad, ms = 1 + multFlash * 0.45;
@@ -2621,19 +2655,11 @@ function frame(now) {
       ctx.fillText(mult + '×', mx, my); ctx.shadowBlur = 0;
       ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(mn * 0.016) + 'px Inter, sans-serif';
       ctx.fillText('MULTIPLIER', mx, my + Math.round(mn * 0.052));
-      // Terraforming indicator (what table feature is active at this level)
-      var tfLevel = terraformLevel();
-      if (tfLevel > 0) {
-        var tfY = my + Math.round(mn * 0.09);
-        var tfCol = tfLevel >= 2 ? '#ffd34d' : '#39e6ff';
-        var tfText = tfLevel >= 2 ? '⭐ COSMIC ORBITER' : '◈ Table evolving...';
-        ctx.fillStyle = tfCol; ctx.font = '600 ' + Math.round(mn * 0.014) + 'px Inter, sans-serif';
-        ctx.fillText(tfText, mx, tfY);
-      }
+      var hy = my + Math.round(mn * 0.074);               // next free row under MULTIPLIER — each readout takes its own
       // mission bar — active mission with countdown timer
       if (missionActive >= 0 && missionTimer > 0) {
         var mDef = MISSION_DEFS[missionActive];
-        var myy = my + Math.round(mn * 0.074), mbw = mn * 0.22;
+        var myy = hy, mbw = mn * 0.22; hy += 26;
         var mFlashA = missionFlash > 0 ? 0.5 + 0.5 * Math.sin(frameNow / 120) * missionFlash : 0;
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - mbw / 2, myy, mbw, 22, 6); ctx.fill();
         ctx.fillStyle = mDef.col; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px "Space Grotesk", sans-serif';
@@ -2645,8 +2671,9 @@ function frame(now) {
       }
       // live combo chain: label + draining timer bar under the multiplier
       if (comboN >= 2 && comboT > 0) {
-        var cyy = my + Math.round(mn * 0.075), cbw = mn * 0.16;
-        var chudCol = comboTierColor(comboN);
+        var cyy = hy, cbw = mn * 0.16; hy += Math.round(mn * 0.028) + 10;
+        var chudCol = comboTierColor(comboN), cpw = mn * 0.24;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - cpw / 2, cyy - 3, cpw, Math.round(mn * 0.028) + 9, 6); ctx.fill();
         ctx.fillStyle = chudCol; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px Inter, sans-serif';
         var icon = comboChainIcon();
         ctx.fillText(icon + ' ' + comboTierLabel(comboN), mx, cyy);
@@ -2665,7 +2692,7 @@ function frame(now) {
       }
       // Super lock progress — shows progress toward SUPER MULTIBALL
       if (superLocks > 0 && superLocks < SUPER_LOCK_MAX) {
-        var sly = my + Math.round(mn * 0.11), slbw = mn * 0.18;
+        var sly = hy, slbw = mn * 0.18; hy += 24;
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - slbw / 2, sly, slbw, 18, 6); ctx.fill();
         ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(mn * 0.018) + 'px "Space Grotesk", sans-serif';
         ctx.fillText('★ SUPER LOCK ' + superLocks + '/' + SUPER_LOCK_MAX + ' ★', mx, sly + 1);
@@ -2674,11 +2701,21 @@ function frame(now) {
         ctx.fillStyle = 'rgba(255,211,77,0.2)'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, slbw - 4, 3);
         ctx.fillStyle = '#ffd34d'; ctx.fillRect(mx - slbw / 2 + 2, sly + 16, (slbw - 4) * prog, 3);
       }
+      // Terraforming indicator (what table feature is active at this level)
+      var tfLevel = terraformLevel();
+      if (tfLevel > 0) {
+        var tfCol = tfLevel >= 2 ? '#ffd34d' : '#39e6ff';
+        var tfText = tfLevel >= 2 ? '⭐ COSMIC ORBITER' : '◈ Table evolving...';
+        ctx.font = '600 ' + Math.round(mn * 0.014) + 'px Inter, sans-serif';
+        var tfw = ctx.measureText(tfText).width + 16;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - tfw / 2, hy - 2, tfw, Math.round(mn * 0.014) + 6, 6); ctx.fill();
+        ctx.fillStyle = tfCol; ctx.fillText(tfText, mx, hy);
+      }
       ctx.textAlign = 'left';
       }
     }
     // charge meter — banded by the lane each power range drops into (lit band highlighted)
-    if (state === 'play' && balls.length && balls[0].inLane) {
+    if (state === 'play' && laneBall()) {
       var cw = Math.min(W, H) * 0.32, cx = W - pad - cw, cy = H - pad - 12, chh = 11;
       ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(cx, cy, cw, chh);
       var bands = [[0.45, 0.633, 2], [0.633, 0.817, 1], [0.817, 1.0, 0]];   // [from,to,laneIndex]
@@ -2741,7 +2778,7 @@ function frame(now) {
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') { setFlip(1, true); e.preventDefault(); }
     else if (k === 'arrowup' || k === 'w') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge straight
     else if (k === ' ') {                                   // plunge while in the lane; otherwise nudge
-      if (balls.length && balls[0].inLane) charging = true; else if (!e.repeat) nudge(0);
+      if (laneBall()) charging = true; else if (!e.repeat) nudge(0);
       e.preventDefault();
     }
     else if (k === 'arrowdown' || k === 'n') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge (straight)
@@ -2759,7 +2796,7 @@ function frame(now) {
   // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
   // gets the whole shooter-lane column so hold-to-charge is easy to discover on phones.
   function launchPointerHit(e, px, py) {
-    if (!balls.length || !balls[0].inLane) return false;
+    if (!laneBall()) return false;
     var coarse = isCoarse || (e && (e.pointerType === 'touch' || e.pointerType === 'pen'));
     if (coarse) return px >= W * 0.52;
     return px > W * 0.55 && py > H * 0.7;
@@ -2853,11 +2890,17 @@ function frame(now) {
     comboKinds: function () { return comboKinds.slice(); },
     extraBalls: function () { return { awarded: extraBallsAwarded, ballsLeft: ballsLeft, ballNum: ballNum }; },
     bumperCols: function () { return bumpers.map(function (b) { return { x: b.x, y: b.y, col: b.col || null, kind: b.kind }; }); },
+    hudState: function (o) {
+      if ('mission' in o) { missionActive = o.mission; missionTimer = MISSION_DEFS[o.mission].DUR; }
+      if ('combo' in o) { comboN = o.combo; comboT = COMBO_WINDOW; }
+      if ('superLocks' in o) superLocks = o.superLocks;
+      if ('level' in o) level = o.level;
+    },
     saucerState: function () { return { saucer: saucer, lockedBalls: lockedBalls, LOCK_MAX: LOCK_MAX, multiballActive: multiballActive, ballCount: balls.length }; },
     fireSaucer: function () { if (balls[0]) onSaucer(balls[0], 0); }
     ,
     plungerAffordanceWouldShow: function (coarse) {
-      return state === 'play' && balls.length && balls[0].inLane && !!coarse;
+      return state === 'play' && !!laneBall() && !!coarse;
     },
     nudgeImpulseTest: function () {
       tilt = 0; tilted = false;
