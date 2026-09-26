@@ -1327,11 +1327,33 @@ html:not(.js) .story .pin-outer { height: auto; }
 .doctrine-intro { font-size: clamp(17px, 1.8vw, 21px); color: var(--txt-2); max-width: 62ch; }
 .doctrine-intro strong { color: var(--txt); }
 .doc-grid { columns: 2; column-gap: clamp(24px, 4vw, 56px); margin-top: clamp(36px, 5vw, 60px); }
-.doc-art { break-inside: avoid; padding: 26px 0; border-top: 1px solid var(--border-soft); }
+.doc-art {
+    break-inside: avoid;
+    padding: clamp(20px, 3vw, 28px);
+    border-radius: 16px;
+    border: 1px solid rgba(57, 230, 255, 0.15);
+    background: var(--bg-2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition: all var(--mo-dur-3) var(--ease);
+    will-change: transform;
+}
+.doc-art:hover {
+    border-color: rgba(57, 230, 255, 0.5);
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4), 0 0 60px rgba(57, 230, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transform: translateY(-8px);
+}
 .doc-art .d-num { font: 600 11px/1 var(--fd); letter-spacing: 0.3em; text-transform: uppercase; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.doc-art h3 { margin: 12px 0 8px; font-size: clamp(19px, 2vw, 24px); }
-.doc-art p { color: var(--txt-2); font-size: 14.8px; }
+.doc-art h3 { margin: 12px 0 8px; font-size: clamp(19px, 2vw, 24px); transition: color var(--mo-dur-3) var(--ease); }
+.doc-art p { color: var(--txt-2); font-size: 14.8px; transition: color var(--mo-dur-3) var(--ease); }
 .doc-art p strong { color: var(--txt); font-weight: 600; }
+.doc-art:hover h3,
+.doc-art:hover p {
+    color: var(--txt-1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .doc-art { transition: none; }
+    .doc-art .d-num, .doc-art h3, .doc-art p { transition: none; }
+}
 .doc-meta { margin-top: 8px; font: 500 12px/1.6 var(--fb); color: var(--dim); }
 
 /* ---------------- Contact ---------------- */
