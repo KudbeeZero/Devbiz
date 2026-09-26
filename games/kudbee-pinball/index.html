@@ -187,6 +187,7 @@
       case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
       case 'lock':   tone(700, 0.07, 'sine', 0.16, 300); tone(300, 0.12, 'sine', 0.14, 120, 0.05); break;         // ball vanishes into the saucer
       case 'multiball': tone(200, 0.5, 'sawtooth', 0.22, 1400); tone(400, 0.4, 'square', 0.18, 1200, 0.06); tone(600, 0.3, 'square', 0.16, 1600, 0.12); break;
+      case 'newbest': tone(523, 0.1, 'square', 0.18); tone(659, 0.1, 'square', 0.18, 0, 0.09); tone(784, 0.1, 'square', 0.18, 0, 0.18); tone(1047, 0.35, 'square', 0.2, 0, 0.27); break;  // ascending fanfare arpeggio
     }
   }
 
@@ -977,8 +978,10 @@ var ramp = null;                           // center loop-ramp trigger
     var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
-    burst(ramp.x, ramp.y0, '#39e6ff', 22, 460); shake = Math.min(shake + 0.35, 1.4);
-    triggerHitStop(0.05); colorWash(57, 230, 255, 0.7);   // hit-stop + cyan wash on loop
+    var particleCount = rampShots >= 6 ? 32 : 22;        // bigger burst for ramp master
+    burst(ramp.x, ramp.y0, '#39e6ff', particleCount, 460); shake = Math.min(shake + 0.35, 1.4);
+    var stopDur = rampShots >= 6 ? 0.08 : 0.05;          // longer freeze on ramp chains
+    triggerHitStop(stopDur); colorWash(57, 230, 255, rampShots >= 6 ? 0.95 : 0.7);
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
     else if (!chained) callout('LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), '#39e6ff');
@@ -991,9 +994,11 @@ var ramp = null;                           // center loop-ramp trigger
     var col = r.side < 0 ? '#c46bff' : '#ffd34d';
     var chained = comboHit(r.x, r.y0, r.side < 0 ? 'rampL' : 'rampR');
     addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
-    burst(r.x, r.y0, col, 22, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
+    var particleCount = rampShots >= 6 ? 32 : 22;
+    burst(r.x, r.y0, col, particleCount, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
     shake = Math.min(shake + 0.35, 1.4);
-    triggerHitStop(0.05);
+    var stopDur = rampShots >= 6 ? 0.08 : 0.05;
+    triggerHitStop(stopDur); colorWash(col === '#c46bff' ? 196 : 255, col === '#c46bff' ? 107 : 211, col === '#c46bff' ? 255 : 77, rampShots >= 6 ? 0.85 : 0.5);
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
     else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), col);
@@ -1650,6 +1655,11 @@ var move = len(b.vx, b.vy) * h;
     document.getElementById('oScore').textContent = score.toLocaleString();
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
+    if (isBest) {
+      // new-record payoff: gold table wash + a shower of bursts across the playfield + fanfare
+      sfx('newbest'); colorWash(255, 211, 77, 1.6);
+      for (var nb = 0; nb < 8; nb++) burst(120 + Math.random() * 660, 200 + Math.random() * 900, '#ffd34d', 14, 260);
+    }
     overOv.classList.remove('hidden');
     lbShowOverScreen();
   }
@@ -2456,6 +2466,9 @@ function frame(now) {
     ctx.fillStyle = '#cdfbe2'; ctx.beginPath(); ctx.arc(f.px, f.py, f.r * 0.7, 0, TAU); ctx.fill();
   }
   function drawBall(b) {
+    // soft contact shadow for depth — offset toward the table's implied light source
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(b.x + b.r * 0.18, b.y + b.r * 0.35, b.r * 0.9, b.r * 0.4, 0, 0, TAU); ctx.fill();
     if (!reduceMotion && b.trail.length) {
       for (var i = 0; i < b.trail.length; i++) { var t = b.trail[i], a = (i / b.trail.length) * 0.4; ctx.fillStyle = 'rgba(207,233,255,' + a.toFixed(2) + ')'; ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (0.4 + i / b.trail.length * 0.5), 0, TAU); ctx.fill(); }
     }
@@ -2467,6 +2480,9 @@ function frame(now) {
     var bg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.4, 1, b.x, b.y, b.r);
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#7fa8d8');
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+    // crisp specular highlight — sells the "polished steel" material read
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.32, b.y - b.r * 0.4, b.r * 0.22, b.r * 0.14, -0.5, 0, TAU); ctx.fill();
   }
   function plungerAffordanceActive() {
     if (state !== 'play' || !balls.length || !balls[0].inLane) return false;

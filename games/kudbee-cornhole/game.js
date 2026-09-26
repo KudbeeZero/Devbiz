@@ -26,6 +26,25 @@
   const VIEW_W = 960, VIEW_H = 680;
   const C = { cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2', gold: '#ffd34d', ember: '#ff7a2d', text: '#dfeaff', dim: '#8a93a8' };
 
+  // Particle system for impacts and scoring
+  class Particle {
+    constructor(x, y, vx, vy, life, col, spin) {
+      this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life; this.col = col;
+      this.rot = spin != null ? Math.random() * Math.PI * 2 : null; this.spin = spin;
+    }
+    update(dt) {
+      this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt;
+      if (this.spin != null) { this.rot += this.spin * dt; this.vy += 220 * dt; this.vx *= 0.99; }
+    }
+    draw(ctx) {
+      const a = Math.max(0, this.life / this.maxLife); ctx.globalAlpha = a; ctx.fillStyle = this.col;
+      if (this.spin != null) {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+        ctx.fillRect(-4, -2, 8, 4); ctx.restore();
+      } else { ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, 7); ctx.fill(); }
+    }
+  }
+
   // World geometry (logical units). Side view: thrower left, board right+up.
   const GROUND_Y = 560;
   const BOARD_X = 760;            // board near-edge x
@@ -116,6 +135,7 @@
     this.time = 0; this.audio = new Audio(); this.input = new Input(this.canvas);
     this.reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.state = 'menu';         // menu | play | over
+    this.particles = [];
     this.reset();
   }
   Game.prototype.reset = function () {
@@ -124,18 +144,27 @@
     this.score = 0; this.round = 0; this.maxRounds = 8; this.bagsLeft = 8;
     this.phase = 'aim';          // aim | fly | settle
     this.banner = ''; this.flash = 0; this.shake = 0; this.lastPts = 0; this._scorePops = [];
+    this.streak = 0; this.bestStreak = 0; this.hitStopT = 0; this._scoredThisThrow = false;
   };
   Game.prototype.start = function () { this._last = performance.now() / 1000; requestAnimationFrame(this._frame.bind(this)); };
 
   Game.prototype._frame = function () {
     const now = performance.now() / 1000; let dt = Math.min(0.05, now - this._last); this._last = now; this.time += dt;
+    // hit-stop: brief near-freeze sells the impact of a hole drop without a real pause.
+    if (this.hitStopT > 0 && !this.reduceMotion) { this.hitStopT -= dt; dt *= 0.06; }
     this.update(dt); this.render(); this.input.endFrame();
     requestAnimationFrame(this._frame.bind(this));
   };
+  Game.prototype._triggerHitStop = function (dur) { if (!this.reduceMotion) this.hitStopT = Math.max(this.hitStopT, dur); };
 
   Game.prototype.update = function (dt) {
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 1.5);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2);
+    // particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+    }
     // score pops
     for (let i = this._scorePops.length - 1; i >= 0; i--) {
       const p = this._scorePops[i]; p.life -= dt; p.y += p.vy * dt; p.vy *= 0.92;
@@ -185,6 +214,7 @@
         if (bagBottom > topY - 6 && bagBottom < topY + BOARD_T + 30) {
           if (overHole && b.vy < 950) { this._score(3); return; }
           // land on the board surface
+          this._emitParticles(b.x, topY + 5, C.amber, 4);
           b.y = topY - BAG; b.vy = -b.vy * 0.18; b.vx *= 0.5; b.squash = 1; b.spin *= 0.4;
           this.audio.woodThud(KC.Util.clamp(Math.abs(b.vy) / 500, 0, 1));
           if (Math.abs(b.vy) < 45) { b.vy = 0; this._enterSettle(); }
@@ -217,11 +247,45 @@
     else b.rest = 'ground';
   };
 
+  Game.prototype._emitParticles = function (x, y, col, count) {
+    if (this.reduceMotion) return;
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 100;
+      this.particles.push(new Particle(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp, 0.6, col));
+    }
+  };
+  // confetti: tumbling rectangles with gravity + drift — reserved for the hole drop (3pt),
+  // distinct from the small round impact sparks above.
+  Game.prototype._emitConfetti = function (x, y, count) {
+    if (this.reduceMotion) return;
+    const cols = [C.gold, C.cyan, C.green, C.text];
+    for (let i = 0; i < count; i++) {
+      const ang = KC.Util.rand(-Math.PI, 0), sp = KC.Util.rand(100, 340);
+      this.particles.push(new Particle(x, y, Math.cos(ang) * sp * 0.6, Math.sin(ang) * sp, KC.Util.rand(0.9, 1.4), KC.Util.pick(cols), KC.Util.rand(-8, 8)));
+    }
+  };
   Game.prototype._score = function (pts) {
+    this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak); this._scoredThisThrow = true;
+    // Apply multiplier for hole drops based on streak: 1x @ streak 1, 1.5x @ 3, 2x @ 5+
+    let mult = 1;
+    if (pts >= 3) {
+      mult = this.streak >= 5 ? 2.0 : this.streak >= 3 ? 1.5 : 1.0;
+      pts = Math.round(pts * mult);
+    }
     this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
-    if (pts >= 3) this.audio.holeDrop(); this.audio.scoreJingle(pts);
+    if (pts >= 3) {
+      this.audio.holeDrop(); this._triggerHitStop(0.1);
+      // bigger confetti + extra flash for multiplier kicks
+      const confettiCount = this.streak >= 5 ? 64 : this.streak >= 3 ? 48 : 30;
+      this._emitConfetti(this.bag.x, this.bag.y, confettiCount);
+      if (mult > 1) { this.flash = Math.max(this.flash, 1.5); this.shake = Math.max(this.shake, 0.6); }
+    }
+    this.audio.scoreJingle(pts);
     this.bag.gone = true;
-    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: '+' + pts, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
+    this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 12 : 6);
+    const multStr = mult > 1 ? ' ×' + mult.toFixed(1) + 'x!' : '';
+    const popText = pts >= 3 && this.streak >= 3 ? '+' + pts + multStr : '+' + pts;
+    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: popText, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };
 
@@ -231,6 +295,7 @@
     if (onBoard && b.x > BOARD_X - BAG && b.x < BOARD_X + BOARD_W + BAG) {
       this._score(1);    // stuck on the board = 1 pt
     }
+    if (!this._scoredThisThrow) this.streak = 0;   // missed everything: chain breaks
     // next throw
     this.bagsLeft--; this.round++;
     if (this.bagsLeft <= 0 || this.score >= 21) { this.state = 'over'; this.audio.scoreJingle(1); return; }
@@ -239,7 +304,7 @@
 
   Game.prototype._resetBag = function () {
     this.bag = { x: 150, y: GROUND_Y - BAG, vx: 0, vy: 0, spin: 0, rot: 0, air: true, squash: 0, skid: 0, rest: false, gone: false };
-    this.phase = 'aim'; this.power = 0;
+    this.phase = 'aim'; this.power = 0; this._scoredThisThrow = false;
   };
 
   // ===================================================================
@@ -251,10 +316,16 @@
     ctx.save(); ctx.translate(sx, sy);
     this._drawScene(ctx);
     if (this.state === 'menu') this._drawMenu(ctx);
-    else { this._drawHUD(ctx); this._drawBag(ctx); this._drawScorePops(ctx); }
+    else { this._drawHUD(ctx); this._drawBag(ctx); this._drawParticles(ctx); this._drawScorePops(ctx); }
     if (this.state === 'over') this._drawOver(ctx);
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,211,77,' + (this.flash * 0.25).toFixed(2) + ')'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); }
     ctx.restore();
+  };
+
+  Game.prototype._drawParticles = function (ctx) {
+    ctx.shadowBlur = 0;
+    for (const p of this.particles) p.draw(ctx);
+    ctx.globalAlpha = 1;
   };
 
   Game.prototype._drawScene = function (ctx) {
@@ -279,9 +350,11 @@
     ctx.fillStyle = '#2a1a0c';
     ctx.fillRect(BOARD_X + 8, topY + BOARD_T, 8, BOARD_H * 0.5);
     ctx.fillRect(BOARD_X + BOARD_W - 16, topY + BOARD_T, 8, BOARD_H * 0.5);
-    // hole (drawn as dark ellipse)
+    // hole (drawn as dark ellipse with glow)
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 12;
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
     // power target marker under hole
     ctx.fillStyle = C.dim; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('3 pts', HOLE_X, topY - 10); ctx.textAlign = 'left';
   };
@@ -324,6 +397,15 @@
     ctx.fillText('Score ' + this.score, 16, 36);
     ctx.font = '14px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
     ctx.fillText('Bags left: ' + this.bagsLeft, 16, 56);
+    // streak counter — only worth showing once a chain is actually building
+    if (this.streak >= 2) {
+      const pulse = 1 + Math.sin(this.time * 10) * 0.06;
+      ctx.save(); ctx.translate(200, 30); ctx.scale(pulse, pulse);
+      ctx.font = 'bold 18px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+      ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
+      ctx.fillText('🔥 ' + this.streak + ' streak', 0, 6); ctx.shadowBlur = 0;
+      ctx.restore();
+    }
     // throw line marker
     ctx.fillStyle = 'rgba(255,160,60,0.4)';
     ctx.fillRect(120, GROUND_Y - 80, 4, 80);
@@ -359,8 +441,12 @@
     ctx.fillText('GAME OVER', VIEW_W / 2, VIEW_H / 2 - 40); ctx.shadowBlur = 0;
     ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.fillStyle = C.green;
     ctx.fillText('Score: ' + this.score, VIEW_W / 2, VIEW_H / 2 + 10);
+    if (this.bestStreak >= 2) {
+      ctx.font = 'bold 16px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+      ctx.fillText('🔥 Best streak: ' + this.bestStreak, VIEW_W / 2, VIEW_H / 2 + 38);
+    }
     ctx.fillStyle = C.dim; ctx.font = '16px "Space Grotesk",sans-serif';
-    ctx.fillText('click to play again', VIEW_W / 2, VIEW_H / 2 + 60);
+    ctx.fillText('click to play again', VIEW_W / 2, VIEW_H / 2 + 66);
     ctx.textAlign = 'left';
   };
 
