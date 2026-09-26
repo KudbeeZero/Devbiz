@@ -109,3 +109,14 @@ See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 - Green gate from repo root: `npm run verify` (pinball 21/21 + leaderboard unit tests). Pinball-only: `npm run pinball:eval`
 - Manual gates documented in ledger (browser, wallet, payment, API key, deploy verification)
 - Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball) for headless verification
+
+## Pinball physics rules (`games/kudbee-pinball/index.html`)
+
+Stuck-ball reports are almost always a **physics bug, not a missing rescue**. Before adding geometry nudges or another "FREED" timer, reproduce with `window.__kbTest.simulate(x, y, vx, vy, secs)` (returns `maxStill`, `freed`, `where`, `touch`) and scan the table. Invariants (full rationale: `docs/CONTINUITY.md` 2026-09-26, DBZ-079):
+
+- **Swept TOI** (`sweptSeg`): a ball already touching a surface is a hit only if moving *into* it. Never return the exit root.
+- **Friction is Coulomb** (tangential impulse ≤ `fric · normal impulse`); never a per-step %-of-speed cut.
+- **Contact normal** = capsule normal (closest point → ball); round at end caps. No −velocity normals.
+- **Clearances** the ball must pass: ≥30px surface-to-surface (ball Ø28). Guides end *on* flipper pivots, never cross them.
+- **Rescues** (`gutterT`, `flipBandT`) are last resort: ≥1s, and never while a flipper is held (cradling).
+- Lower geo is gated: drain 1430, kick 1382–1426, flip **py 1300 / len 150**. Pivot x / rest angle may move to keep the center drain open (~34px clear).

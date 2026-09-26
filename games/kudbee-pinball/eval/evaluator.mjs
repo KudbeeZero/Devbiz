@@ -1,14 +1,17 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync } from 'node:fs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const URL = process.env.PINBALL_URL || ('file://' + resolve(HERE, '..', 'index.html'));
 const OUT = HERE;
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const R=[]; const rec=(id,p,n)=>{R.push({id,pass:p,note:n});console.log((p?'PASS':'FAIL'),id,'—',n);};
 
-const browser = await chromium.launch({ headless:true, args:['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'] });
+// Cloud containers: use pre-installed Chromium if available (avoids playwright install)
+const launchOpts = { headless:true, args:['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'] };
+if (existsSync('/opt/pw-browsers/chromium')) launchOpts.executablePath = '/opt/pw-browsers/chromium';
+const browser = await chromium.launch(launchOpts);
   const page = await browser.newPage({ viewport:{ width:540, height:900 }, deviceScaleFactor:2 });
   // Override document.hidden before page loads
   await page.addInitScript(() => {
