@@ -429,15 +429,53 @@ html:not(.js) .preloader { display: none; }
 /* ---------------- Shared section chrome ---------------- */
 .wrap { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); position: relative; z-index: 2; }
 .sec { position: relative; padding: clamp(90px, 14vh, 170px) 0; }
-.sec-head { max-width: 780px; margin-bottom: clamp(40px, 6vw, 72px); }
-.kicker {
-    display: inline-flex; align-items: center; gap: 10px; margin-bottom: 18px;
-    font: 600 11px/1 var(--fd); letter-spacing: 0.34em; text-transform: uppercase; color: var(--cyan);
+.sec-head {
+    max-width: 780px;
+    margin-bottom: clamp(48px, 7vw, 88px);
+    position: relative;
 }
-.kicker::before { content: ""; width: 26px; height: 1px; background: var(--grad); }
-.title { font-size: clamp(34px, 5.2vw, 62px); letter-spacing: -0.035em; }
-.title .g, .title.g { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.sub { margin-top: 18px; max-width: 620px; color: var(--txt-2); font-size: clamp(15.5px, 1.35vw, 17.5px); }
+.kicker {
+    display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    font: 700 11.5px/1 var(--fd); letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--cyan);
+    transition: all var(--mo-dur-3) var(--ease);
+}
+.kicker::before {
+    content: ""; width: 32px; height: 1.5px;
+    background: var(--grad);
+    transition: width var(--mo-dur-3) var(--ease);
+    transform-origin: left;
+}
+.sec-head:hover .kicker::before {
+    width: 44px;
+}
+.title {
+    font-size: clamp(38px, 5.5vw, 68px);
+    letter-spacing: -0.038em;
+    font-weight: 700;
+    line-height: 1.1;
+    transition: transform var(--mo-dur-3);
+}
+.sec-head:hover .title {
+    transform: translateX(2px);
+}
+.title .g, .title.g {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+}
+.sub {
+    margin-top: 20px; max-width: 640px;
+    color: var(--txt-2);
+    font-size: clamp(15.5px, 1.35vw, 17.5px);
+    line-height: 1.6;
+    transition: color var(--mo-dur-3);
+}
+.sec-head:hover .sub {
+    color: var(--txt-1);
+}
 .gword {
     position: absolute; z-index: 0; left: 50%; transform: translateX(-50%); top: clamp(8px, 3vw, 40px);
     font: 700 clamp(90px, 17vw, 230px)/0.9 var(--fd); letter-spacing: -0.04em; white-space: nowrap;
@@ -471,15 +509,43 @@ html:not(.js) .preloader { display: none; }
 /* Buttons */
 .btn, .btn-o {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 16px 30px; border-radius: 999px; font: 600 15px/1 var(--fd); letter-spacing: 0.01em;
+    padding: 18px 36px; border-radius: 12px; font: 700 15px/1 var(--fd); letter-spacing: 0.03em;
     text-decoration: none; cursor: pointer; border: none;
-    transition: transform var(--mo-dur-35) var(--ease), box-shadow var(--mo-dur-35), background-position var(--mo-dur-3) var(--ease), border-color var(--mo-dur-2), color var(--mo-dur-2);
+    transition: transform var(--mo-dur-2) var(--ease), box-shadow var(--mo-dur-2), background-position var(--mo-dur-3), border-color var(--mo-dur-2), color var(--mo-dur-2), background-color var(--mo-dur-2);
     will-change: transform;
 }
-.btn { color: #04040a; background: var(--grad); background-size: 160% 100%; box-shadow: 0 0 28px rgba(111,91,255,0.3); }
-.btn:hover { background-position: 100% 0; box-shadow: 0 6px 36px rgba(111,91,255,0.5); }
-.btn-o { color: var(--txt); background: var(--panel); border: 1px solid var(--border); }
-.btn-o:hover { border-color: rgba(57,230,255,0.5); color: var(--cyan); }
+.btn {
+    color: #04040a;
+    background: var(--grad);
+    background-size: 160% 100%;
+    box-shadow: 0 8px 24px rgba(111,91,255,0.35), inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn:hover {
+    background-position: 100% 0;
+    box-shadow: 0 12px 40px rgba(111,91,255,0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+}
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(111,91,255,0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn-o {
+    color: var(--txt);
+    background: rgba(var(--panel-rgb, 20,16,48), 0.4);
+    border: 1.5px solid rgba(57,230,255,0.2);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.03);
+    transition: all var(--mo-dur-2) var(--ease);
+}
+.btn-o:hover {
+    border-color: rgba(57,230,255,0.6);
+    color: var(--cyan);
+    background: rgba(57,230,255,0.08);
+    box-shadow: 0 8px 24px rgba(57,230,255,0.2), inset 0 1px 1px rgba(255,255,255,0.08);
+    transform: translateY(-2px);
+}
+.btn-o:active {
+    transform: translateY(0);
+}
 
 /* Reveal system (DBZ-051): extracted to assets/kudbee-motion.css so it's a
    shared primitive. If that stylesheet 404s, [data-rv] elements simply never
@@ -679,56 +745,222 @@ html:not(.js) .story .pin-outer { height: auto; }
 }
 
 /* ---------------- Games ---------------- */
-.games-band { position: relative; background: linear-gradient(180deg, transparent, rgba(10,6,26,0.7) 18%, rgba(10,6,26,0.7) 82%, transparent); }
-.game-hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(26px, 4vw, 64px); align-items: center; margin-bottom: clamp(40px, 6vw, 80px); }
-.game-hero .g-media { position: relative; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 16/10; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(111,91,255,0.14); }
-.game-hero .g-media img { width: 100%; height: 100%; object-fit: cover; }
-.game-hero .g-media .scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 3px); pointer-events: none; }
-.game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.games-band {
+    position: relative;
+    background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(10, 6, 26, 0.5) 15%,
+        rgba(10, 6, 26, 0.8) 50%,
+        rgba(10, 6, 26, 0.5) 85%,
+        transparent 100%);
+}
+.games-band::before {
+    content: ""; position: absolute; inset: 0; z-index: 1;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(57,230,255,0.06), transparent 80%);
+    pointer-events: none;
+}
+.game-hero {
+    display: grid; grid-template-columns: 1.05fr 0.95fr;
+    gap: clamp(26px, 4vw, 64px); align-items: center;
+    margin-bottom: clamp(48px, 7vw, 96px);
+    position: relative; z-index: 2;
+}
+.game-hero .g-media {
+    position: relative; border-radius: 28px; overflow: hidden;
+    border: 1px solid rgba(57,230,255,0.2);
+    aspect-ratio: 16/10;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5),
+                0 0 80px rgba(111,91,255,0.18),
+                inset 0 1px 1px rgba(255,255,255,0.05);
+    transition: box-shadow var(--mo-dur-3) var(--ease), transform var(--mo-dur-3);
+}
+.game-hero .g-media:hover {
+    box-shadow: 0 50px 120px rgba(0,0,0,0.55),
+                0 0 100px rgba(111,91,255,0.25),
+                inset 0 1px 1px rgba(255,255,255,0.08);
+    transform: translateY(-4px);
+}
+.game-hero .g-media img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform var(--mo-dur-8) var(--ease);
+}
+.game-hero .g-media:hover img {
+    transform: scale(1.04);
+}
+.game-hero .g-media::before {
+    content: ""; position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(135deg,
+        rgba(57,230,255,0.1) 0%,
+        rgba(57,230,255,0.05) 50%,
+        rgba(57,230,255,0) 100%);
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--mo-dur-3);
+}
+.game-hero .g-media:hover::before {
+    opacity: 1;
+}
+.game-hero .g-media .scan {
+    position: absolute; inset: 0; z-index: 3;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+    transition: opacity var(--mo-dur-3);
+    opacity: 0.3;
+}
+.game-hero .g-media:hover .scan {
+    opacity: 0.5;
+}
+.game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
 .gcard {
-    position: relative; display: block; border-radius: 20px; overflow: hidden; text-decoration: none;
-    border: 1px solid var(--border-soft); background: var(--bg-2);
-    transition: transform var(--mo-dur-45) var(--ease), border-color var(--mo-dur-45), box-shadow var(--mo-dur-45);
+    position: relative; display: block; border-radius: 24px; overflow: hidden; text-decoration: none;
+    border: 1px solid rgba(var(--acc-rgb, 57,230,255), 0.15); background: var(--bg-2);
+    transition: transform var(--mo-dur-45) var(--ease), border-color var(--mo-dur-3), box-shadow var(--mo-dur-45), background-color var(--mo-dur-3);
     will-change: transform;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 /* --acc-rgb is set per-card inline (style="--acc-rgb:57,230,255") so the hover
    glow and CRT bloom below pick up that title's own palette instead of one
    generic cyan accent (DBZ-054); falls back to cyan if a card omits it. */
-.gcard:hover, .gcard:focus-visible { transform: translateY(-7px); border-color: rgba(var(--acc-rgb, 57,230,255), 0.4); box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(var(--acc-rgb, 57,230,255), 0.16); }
-.gcard .g-art { display: block; position: relative; aspect-ratio: 16/9; overflow: hidden; }
-.gcard .g-art canvas, .gcard .g-art img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--mo-dur-8) var(--ease); }
-.gcard:hover .g-art canvas, .gcard:hover .g-art img, .gcard:focus-visible .g-art canvas, .gcard:focus-visible .g-art img { transform: scale(1.06); }
-/* CRT hover treatment — scanline + a soft per-title bloom, CSS-only. Sits
-   above the canvas/img (pseudo-elements paint last) and is fully inert
-   (opacity 0, pointer-events none) until hover/focus. */
-.gcard .g-art::after {
+.gcard:hover, .gcard:focus-visible {
+    transform: translateY(-12px);
+    border-color: rgba(var(--acc-rgb, 57,230,255), 0.5);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 60px rgba(var(--acc-rgb, 57,230,255), 0.24), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.gcard .g-art {
+    display: block; position: relative; aspect-ratio: 16/9; overflow: hidden;
+    background: linear-gradient(135deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05));
+}
+.gcard .g-art canvas, .gcard .g-art img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform var(--mo-dur-8) var(--ease);
+}
+.gcard:hover .g-art canvas, .gcard:hover .g-art img, .gcard:focus-visible .g-art canvas, .gcard:focus-visible .g-art img {
+    transform: scale(1.08);
+}
+/* Professional gradient overlay on hover — color-coded per card accent. */
+.gcard .g-art::before {
     content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px),
-                radial-gradient(120% 90% at 50% 8%, rgba(var(--acc-rgb, 57,230,255), 0.38), transparent 60%);
+    background: linear-gradient(135deg,
+        rgba(var(--acc-rgb, 57,230,255), 0.15) 0%,
+        rgba(var(--acc-rgb, 57,230,255), 0.05) 100%);
     transition: opacity var(--mo-dur-3) var(--mo-ease-out);
 }
-.gcard:hover .g-art::after, .gcard:focus-visible .g-art::after { opacity: 1; }
+.gcard:hover .g-art::before, .gcard:focus-visible .g-art::before {
+    opacity: 1;
+}
+/* CRT hover treatment — scanline + a soft per-title bloom, CSS-only. */
+.gcard .g-art::after {
+    content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0 1px, transparent 1px 3px),
+                radial-gradient(120% 90% at 50% 8%, rgba(var(--acc-rgb, 57,230,255), 0.32), transparent 60%);
+    transition: opacity var(--mo-dur-3) var(--mo-ease-out);
+}
+.gcard:hover .g-art::after, .gcard:focus-visible .g-art::after {
+    opacity: 1;
+}
 @media (prefers-reduced-motion: reduce) {
-    .gcard .g-art::after { transition: none; }
+    .gcard .g-art::before, .gcard .g-art::after { transition: none; }
 }
 .gcard .g-play {
-    position: absolute; right: 14px; top: -23px; width: 46px; height: 46px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 15px; color: #04040a;
-    background: var(--grad); box-shadow: 0 8px 24px rgba(111,91,255,0.45);
-    transition: transform var(--mo-dur-3) var(--ease);
+    position: absolute; right: 16px; top: -24px; width: 56px; height: 56px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; color: #04040a;
+    background: linear-gradient(135deg, var(--grad), rgba(111,91,255,0.8));
+    box-shadow: 0 12px 32px rgba(111,91,255,0.4), inset 0 1px 1px rgba(255,255,255,0.3);
+    transition: transform var(--mo-dur-3) var(--ease), box-shadow var(--mo-dur-3);
 }
-.gcard:hover .g-play { transform: scale(1.12) rotate(8deg); }
-.gcard .g-meta { display: block; position: relative; padding: 22px 20px 20px; }
-.gcard h3 { font-size: 18px; }
-.gcard .g-cat { display: block; margin-top: 4px; font: 500 12px/1.5 var(--fb); color: var(--dim); }
-.gcard .g-badge { position: absolute; left: 14px; top: 12px; font: 700 10px/1 var(--fd); letter-spacing: 0.18em; text-transform: uppercase; color: var(--c, var(--cyan)); border: 1px solid currentColor; border-radius: 999px; padding: 6px 11px; background: rgba(5,5,10,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.gcard:hover .g-play {
+    transform: scale(1.18) rotate(12deg);
+    box-shadow: 0 16px 48px rgba(111,91,255,0.6), inset 0 1px 1px rgba(255,255,255,0.4);
+}
+.gcard .g-meta {
+    display: block; position: relative; padding: 24px 22px 22px;
+}
+.gcard h3 {
+    font-size: 18px;
+    font-weight: 600;
+    transition: color var(--mo-dur-3);
+}
+.gcard:hover h3 {
+    color: rgba(var(--acc-rgb, 57,230,255), 0.95);
+}
+.gcard .g-cat {
+    display: block; margin-top: 6px; font: 500 12.5px/1.4 var(--fb); color: var(--txt-2);
+    transition: color var(--mo-dur-3);
+}
+.gcard:hover .g-cat {
+    color: var(--txt-1);
+}
+.gcard .g-badge {
+    position: absolute; left: 16px; top: 14px; font: 700 10px/1 var(--fd);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--c, var(--cyan)); border: 1.5px solid currentColor;
+    border-radius: 999px; padding: 7px 13px;
+    background: rgba(5,5,10,0.65);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: all var(--mo-dur-3) var(--ease);
+    will-change: transform, box-shadow;
+}
+.gcard:hover .g-badge, .gcard:focus-visible .g-badge {
+    transform: scale(1.08);
+    box-shadow: 0 0 16px rgba(var(--acc-rgb, 57,230,255), 0.4);
+    border-color: rgba(var(--acc-rgb, 57,230,255), 0.8);
+}
+@media (max-width: 1024px) {
+    .game-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+}
+@media (max-width: 640px) {
+    .game-grid { grid-template-columns: 1fr; gap: 16px; }
+    .gcard { border-radius: 18px; }
+    .gcard .g-play { width: 48px; height: 48px; font-size: 14px; }
+    .gcard .g-meta { padding: 18px 16px 16px; }
+    .gcard h3 { font-size: 16px; }
+    .gcard .g-cat { font-size: 11px; margin-top: 4px; }
+    .gcard .g-badge { font-size: 9px; padding: 5px 10px; }
+}
 .league {
-    margin-top: clamp(34px, 5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px;
-    padding: clamp(24px, 3.5vw, 40px); border-radius: 22px; border: 1px solid var(--border);
-    background: linear-gradient(120deg, rgba(255,211,77,0.07), var(--panel) 55%);
+    margin-top: clamp(56px, 8vw, 88px);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 28px;
+    padding: clamp(32px, 4vw, 48px);
+    border-radius: 28px;
+    border: 1px solid rgba(255,211,77,0.25);
+    background: linear-gradient(135deg,
+        rgba(255,211,77,0.08) 0%,
+        rgba(255,211,77,0.04) 50%,
+        var(--panel) 100%);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3),
+                0 0 40px rgba(255,211,77,0.12),
+                inset 0 1px 1px rgba(255,255,255,0.03);
+    transition: all var(--mo-dur-3) var(--ease);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
-.league h3 { font-size: clamp(20px, 2.4vw, 28px); }
-.league p { color: var(--txt-2); margin-top: 6px; max-width: 52ch; }
+.league:hover {
+    border-color: rgba(255,211,77,0.35);
+    box-shadow: 0 24px 72px rgba(0,0,0,0.35),
+                0 0 50px rgba(255,211,77,0.18),
+                inset 0 1px 1px rgba(255,255,255,0.06);
+    transform: translateY(-2px);
+}
+.league h3 {
+    font-size: clamp(22px, 2.6vw, 32px);
+    font-weight: 700;
+    transition: color var(--mo-dur-3);
+}
+.league:hover h3 {
+    color: rgba(255,211,77,0.95);
+}
+.league p {
+    color: var(--txt-2);
+    margin-top: 8px;
+    max-width: 56ch;
+    font-size: clamp(14px, 1.1vw, 16px);
+    line-height: 1.5;
+    transition: color var(--mo-dur-3);
+}
+.league:hover p {
+    color: var(--txt-1);
+}
 </style>
 </head>
 <body>
