@@ -1543,7 +1543,16 @@ var move = len(b.vx, b.vy) * h;
       // here, so these wait a full second — and the flipper-band one never fires while a
       // flipper is held, or cradling the ball would get it kicked away.
       var crawlSp = len(b.vx, b.vy);
-      if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && crawlSp < 38) {
+      // Right wall stuck detection: special handling for balls trapped on the right wall (x > 770)
+      // near the funnel. This is a common wedge point where the right wall meets the funnel and
+      // the ball can't escape leftward on its own due to low velocity.
+      if (b.injected && b.x > 770 && b.y > 1215 && b.y < 1365 && crawlSp < 45) {
+        b.rightWallT = (b.rightWallT || 0) + h;
+        if (b.rightWallT > 1.0) {
+          b.rightWallT = 0; b.vx = -480; b.vy = -350; // Aggressive escape: strong leftward + upward
+          burst(b.x, b.y, '#ff8a3c', 14, 380); callout('FREED', 'wall wedge', '#ff8a3c');
+        }
+      } else if (b.injected && b.x > 700 && b.y > 1220 && b.y < 1365 && crawlSp < 38) {
         b.gutterT = (b.gutterT || 0) + h;
         if (b.gutterT > 1.0) {
           b.gutterT = 0; b.vx = b.x > 650 ? -320 : (b.x < 400 ? 280 : (470 - b.x) * 1.2); b.vy = -420;
@@ -1555,7 +1564,7 @@ var move = len(b.vx, b.vy) * h;
           b.flipBandT = 0; b.vx = (470 - b.x) * 1.5; b.vy = b.y > 1310 ? -520 : -380;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
-      } else { b.gutterT = 0; b.flipBandT = 0; }
+      } else { b.gutterT = 0; b.flipBandT = 0; b.rightWallT = 0; }
       // Decay launch cooldown to prevent re-capture
       if (b.launchCd) b.launchCd = Math.max(0, b.launchCd - h);
 // trail
