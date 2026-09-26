@@ -1037,16 +1037,16 @@ var ramp = null;                           // center loop-ramp trigger
       // normal single-ball serve resumes exactly the way it already does once the last one
       // actually drains.
       // Spread balls out in a wide fan pattern so they don't cluster on right side
-      var spreadAngles = [-1.0, -0.6, -0.2, 0.2, 0.6, 1.0];
+      var spreadAngles = [-1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2];  // 7-ball spread
       for (var i = 0; i < releaseCount; i++) {
         var angleIdx = i % spreadAngles.length;
-        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.2;
         // Stagger spawn Y positions to prevent stacking
-        var spawnY = saucer.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
+        var spawnY = saucer.y - 60 - (Math.floor(i / spreadAngles.length) * 40);  // more vertical stagger
         // Add multiball immunity so new balls don't immediately collide with each other
         balls.push({
-          x: saucer.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
+          x: saucer.x + Math.sin(a) * 80, y: spawnY, vx: Math.sin(a) * 400, vy: -620 - Math.random() * 100,  // stronger spread, more upward
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 1.0
         });
       }
     }
@@ -1074,14 +1074,14 @@ var ramp = null;                           // center loop-ramp trigger
       burst(saucerR.x, saucerR.y, '#ffd34d', 26, 620); burst(saucerR.x, saucerR.y, '#ff6ec7', 20, 560);
       shake = Math.min(shake + 0.8, 1.9);
       triggerHitStop(0.12); colorWash(255, 211, 77, 1.2);
-      var spreadAngles = [-0.8, -0.4, 0, 0.4, 0.8];
+      var spreadAngles = [-1.2, -0.6, 0, 0.6, 1.2];  // wider spread to separate balls
       for (var i = 0; i < releaseCount; i++) {
         var angleIdx = i % spreadAngles.length;
-        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.25;
-        var spawnY = saucerR.y - 60 - (Math.floor(i / spreadAngles.length) * 30);
+        var a = spreadAngles[angleIdx] + (Math.random() - 0.5) * 0.3;
+        var spawnY = saucerR.y - 60 - (Math.floor(i / spreadAngles.length) * 40);  // more vertical stagger
         balls.push({
-          x: saucerR.x + Math.sin(a) * 60, y: spawnY, vx: Math.sin(a) * 350, vy: -580 - Math.random() * 150,
-          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 0.8
+          x: saucerR.x + Math.sin(a) * 80, y: spawnY, vx: Math.sin(a) * 420, vy: -620 - Math.random() * 100,  // stronger spread, more upward
+          r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.6, lRampCd: 0.6, rRampCd: 0.6, portalCd: 0, saucerCd: 2.0, lowT: 0, trail: [], noSave: true, mbImmune: 1.0
         });
       }
     }
