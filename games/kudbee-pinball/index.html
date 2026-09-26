@@ -187,6 +187,7 @@
       case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
       case 'lock':   tone(700, 0.07, 'sine', 0.16, 300); tone(300, 0.12, 'sine', 0.14, 120, 0.05); break;         // ball vanishes into the saucer
       case 'multiball': tone(200, 0.5, 'sawtooth', 0.22, 1400); tone(400, 0.4, 'square', 0.18, 1200, 0.06); tone(600, 0.3, 'square', 0.16, 1600, 0.12); break;
+      case 'newbest': tone(523, 0.1, 'square', 0.18); tone(659, 0.1, 'square', 0.18, 0, 0.09); tone(784, 0.1, 'square', 0.18, 0, 0.18); tone(1047, 0.35, 'square', 0.2, 0, 0.27); break;  // ascending fanfare arpeggio
     }
   }
 
@@ -1650,6 +1651,11 @@ var move = len(b.vx, b.vy) * h;
     document.getElementById('oScore').textContent = score.toLocaleString();
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
+    if (isBest) {
+      // new-record payoff: gold table wash + a shower of bursts across the playfield + fanfare
+      sfx('newbest'); colorWash(255, 211, 77, 1.6);
+      for (var nb = 0; nb < 8; nb++) burst(120 + Math.random() * 660, 200 + Math.random() * 900, '#ffd34d', 14, 260);
+    }
     overOv.classList.remove('hidden');
     lbShowOverScreen();
   }
