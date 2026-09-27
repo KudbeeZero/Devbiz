@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Kudbee Plinko — a neon peg-board drop game with a real provably-fair (HMAC-SHA256 commit-reveal) engine you can verify yourself, demo chips, and an optional read-only Phantom wallet connect. No real funds ever move. A playable browser game by Kudbee Games Studio.">
+<meta name="theme-color" content="#05050f">
+<title>Kudbee Plinko — Neon Drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: #05050f;
+    color: #cfe9ff;
+    font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,90,190,0.10), transparent 60%),
+      radial-gradient(circle at 50% 100%, rgba(57,230,255,0.08), transparent 55%),
+      #05050f;
+  }
+  #frame {
+    position: relative;
+    width: min(100vw, calc(100vh * 0.72));
+    height: min(100vh, calc(100vw / 0.72));
+    box-shadow: 0 0 60px rgba(255,90,190,0.16), inset 0 0 0 1px rgba(255,90,190,0.14);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #05050f;
+    display: flex; flex-direction: column;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #topbar {
+    position: relative; z-index: 3;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 8px 10px;
+    background: linear-gradient(180deg, rgba(5,5,15,0.92), rgba(5,5,15,0.6));
+    border-bottom: 1px solid rgba(255,90,190,0.16);
+    font-size: 12px;
+  }
+  #brand { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.04em; }
+  #brand .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff5ac6; box-shadow: 0 0 10px #ff5ac6; }
+  #fairbadge {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(57,230,255,0.35);
+    background: rgba(57,230,255,0.08); color: #9fe9ff; font-size: 11px; white-space: nowrap;
+  }
+  #fairbadge:hover { background: rgba(57,230,255,0.16); }
+  #fairbadge .hash { font-family: monospace; opacity: 0.8; }
+  #walletwrap { display: flex; align-items: center; gap: 8px; }
+  #walletbtn {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,90,190,0.4);
+    background: rgba(255,90,190,0.10); color: #ffd7f0; font: inherit; font-size: 11px;
+    cursor: pointer; white-space: nowrap;
+  }
+  #walletbtn:hover { background: rgba(255,90,190,0.2); }
+  #walletinfo { font-size: 10.5px; opacity: 0.75; text-align: right; line-height: 1.3; display: none; }
+
+  #boardwrap { position: relative; flex: 1; min-height: 0; }
+
+  #bottombar {
+    position: relative; z-index: 3;
+    padding: 10px 10px 12px;
+    background: linear-gradient(0deg, rgba(5,5,15,0.94), rgba(5,5,15,0.55));
+    border-top: 1px solid rgba(255,90,190,0.16);
+  }
+  #chiprow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  #chipbal { font-weight: 700; }
+  #chipbal .coin { filter: drop-shadow(0 0 6px rgba(255,211,77,0.7)); }
+  #netstat { font-size: 11px; opacity: 0.7; }
+  #betrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .betbtn {
+    flex: 1; min-width: 40px; padding: 8px 4px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04);
+    color: #cfe9ff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .betbtn.on { border-color: #ff5ac6; background: rgba(255,90,190,0.22); color: #ffd7f0; box-shadow: 0 0 14px rgba(255,90,190,0.35); }
+  .betbtn:disabled { opacity: 0.4; cursor: default; }
+  #dropbtn {
+    padding: 10px 22px; border-radius: 12px; border: none; cursor: pointer;
+    font: inherit; font-weight: 700; font-size: 14px; letter-spacing: 0.03em;
+    color: #05050f; background: linear-gradient(180deg, #39e6ff, #7cffb2);
+    box-shadow: 0 0 22px rgba(57,230,255,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  #dropbtn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+  #dropbtn:active:not(:disabled) { transform: translateY(1px); }
+
+  .overlay {
+    position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,3,10,0.86); backdrop-filter: blur(3px);
+  }
+  .hidden { display: none !important; }
+  .panel {
+    width: min(92%, 420px); max-height: 86%; overflow-y: auto;
+    background: #0a0a18; border: 1px solid rgba(255,90,190,0.3); border-radius: 16px;
+    padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .panel h2 { font-size: 16px; margin-bottom: 10px; color: #ffd7f0; }
+  .panel h3 { font-size: 12px; margin: 14px 0 6px; opacity: 0.8; letter-spacing: 0.04em; text-transform: uppercase; }
+  .panel p { font-size: 12.5px; line-height: 1.55; opacity: 0.85; margin-bottom: 8px; }
+  .panel label { display: block; font-size: 11px; opacity: 0.7; margin-bottom: 3px; }
+  .panel input {
+    width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.16);
+    background: #050510; color: #cfe9ff; font: inherit; font-size: 12px; margin-bottom: 8px;
+  }
+  .panel .row2 { display: flex; gap: 6px; }
+  .panel .row2 > * { flex: 1; }
+  .panel button.act {
+    padding: 8px 12px; border-radius: 9px; border: 1px solid rgba(57,230,255,0.4);
+    background: rgba(57,230,255,0.12); color: #9fe9ff; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .panel button.act:hover { background: rgba(57,230,255,0.22); }
+  .panel .mono { font-family: monospace; font-size: 10.5px; word-break: break-all; }
+  .panel table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px; }
+  .panel th, .panel td { text-align: left; padding: 3px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .panel th { opacity: 0.6; font-weight: 600; }
+  #closepanel {
+    position: absolute; top: 10px; right: 12px; background: none; border: none;
+    color: #cfe9ff; font-size: 18px; cursor: pointer; opacity: 0.7;
+  }
+  #helpbtn {
+    position: absolute; top: 8px; left: 8px; z-index: 4; width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.4); color: #cfe9ff;
+    font-size: 12px; cursor: pointer; line-height: 20px; text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <div id="topbar">
+      <div id="brand"><span class="dot"></span>KUDBEE PLINKO</div>
+      <div id="fairbadge" title="Provably fair — tap to verify"><span>🔒 Fair</span><span class="hash" id="hashPreview">…</span></div>
+      <div id="walletwrap">
+        <div id="walletinfo"></div>
+        <button id="walletbtn">Connect Wallet</button>
+      </div>
+    </div>
+    <div id="boardwrap">
+      <button id="helpbtn" title="How to play">?</button>
+      <canvas id="board"></canvas>
+    </div>
+    <div id="bottombar">
+      <div id="chiprow">
+        <div id="chipbal"><span class="coin">🪙</span> <span id="chipVal">1000</span> DEMO CHIPS</div>
+        <div id="netstat">Net: +0 · Best: 0×</div>
+      </div>
+      <div id="betrow">
+        <button class="betbtn" data-bet="10">10</button>
+        <button class="betbtn on" data-bet="25">25</button>
+        <button class="betbtn" data-bet="50">50</button>
+        <button class="betbtn" data-bet="100">100</button>
+        <button class="betbtn" data-bet="250">250</button>
+        <button id="dropbtn">DROP</button>
+      </div>
+    </div>
+
+    <div id="fairpanel" class="overlay hidden">
+      <div class="panel">
+        <button id="closepanel">✕</button>
+        <h2>Provably Fair</h2>
+        <p>Every drop is decided by <strong>HMAC-SHA256(server seed, client seed : round : row)</strong> —
+        a real cryptographic coin flip per peg row, not <code>Math.random()</code>. The server seed's
+        <strong>hash</strong> is shown to you <em>before</em> you play a round under it, so it can't be
+        changed after the fact. Reveal the seed any time to check every past round yourself.</p>
+        <h3>Current commitment</h3>
+        <div class="mono" id="curHash">…</div>
+        <label style="margin-top:8px">Your client seed (change it any time — it's mixed into every roll)</label>
+        <input id="clientSeedInput" spellcheck="false">
+        <div class="row2">
+          <button class="act" id="saveSeedBtn">Save seed</button>
+          <button class="act" id="revealBtn">Reveal &amp; rotate</button>
+        </div>
+        <p id="revealMsg" style="display:none"></p>
+
+        <h3>Verify any round yourself</h3>
+        <p style="margin-bottom:4px">Paste a revealed server seed + the client seed/round shown in the
+        history below, and this recomputes the result locally — no network call, no trust required.</p>
+        <label>Server seed (revealed)</label>
+        <input id="vSeed" spellcheck="false">
+        <div class="row2">
+          <div><label>Client seed</label><input id="vClient" spellcheck="false"></div>
+          <div><label>Round #</label><input id="vNonce" type="number" min="0"></div>
+        </div>
+        <button class="act" id="verifyBtn">Compute result</button>
+        <p id="verifyOut" style="display:none" class="mono"></p>
+
+        <h3>Round history (this session)</h3>
+        <table>
+          <thead><tr><th>#</th><th>Bet</th><th>Slot</th><th>×</th><th>Payout</th><th>Seed</th></tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="helppanel" class="overlay hidden">
+      <div class="panel">
+        <button id="closehelp">✕</button>
+        <h2>How to play</h2>
+        <p>Pick a bet size, hit <strong>DROP</strong>, and watch the chip fall through the peg field.
+        It's a real Galton board: each peg is a 50/50 bounce, so drops land in the middle far more
+        often than they land at the edges — that's exactly why the <strong>edge slots pay the biggest
+        multipliers</strong> and the middle slots pay less than your bet back most of the time.</p>
+        <p>This build plays with <strong>demo chips only</strong> — nothing here moves real money.
+        The gold "Connect Wallet" button is a read-only preview: it shows your real Phantom address
+        (and real SOL balance, just for show) but never signs a transaction or touches your funds.</p>
+        <p>Tap the <strong>🔒 Fair</strong> badge any time to see exactly how the odds are generated,
+        and to verify past rounds yourself.</p>
+        <button class="act" id="closehelp2">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'plinko' };</script>
+<script src="../../leaderboard/client/kd-leaderboard.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ===================== provably-fair engine (real HMAC-SHA256) ===================== */
+  var ROWS = 12; // -> 13 slots (0..12)
+  var MULT = [40, 9, 3, 1.5, 1, 0.8, 0.5, 0.8, 1, 1.5, 3, 9, 40];
+
+  function toHex(buf) {
+    var b = new Uint8Array(buf), s = '';
+    for (var i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+    return s;
+  }
+  function randomHex(nBytes) {
+    var a = new Uint8Array(nBytes);
+    crypto.getRandomValues(a);
+    return toHex(a.buffer);
+  }
+  async function sha256Hex(str) {
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return toHex(buf);
+  }
+  async function hmacBytes(keyHex, msg) {
+    var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(keyHex), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    var sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+    return new Uint8Array(sig);
+  }
+  // Deterministic: same (serverSeed, clientSeed, nonce, rows) always produces the same
+  // bits/slot. Independently reproducible by anyone with the Verify panel above.
+  async function computePath(serverSeed, clientSeed, nonce, rows) {
+    var bits = [];
+    for (var r = 0; r < rows; r++) {
+      var sig = await hmacBytes(serverSeed, clientSeed + ':' + nonce + ':' + r);
+      var n = ((sig[0] << 24) | (sig[1] << 16) | (sig[2] << 8) | sig[3]) >>> 0;
+      bits.push(n < 0x80000000 ? 0 : 1);
+    }
+    var slot = 0;
+    for (var i = 0; i < bits.length; i++) slot += bits[i];
+    return { bits: bits, slot: slot };
+  }
+
+  /* ===================== persistent state ===================== */
+  function loadJSON(key, fallback) {
+    try { var v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function saveJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* storage full/unavailable */ } }
+
+  var chips = loadJSON('kd.plinko.chips', 1000);
+  var stats = loadJSON('kd.plinko.stats', { drops: 0, net: 0, bestMult: 0, bestWin: 0 });
+  var pf = loadJSON('kd.plinko.pf', null);
+
+  var pendingInit = (async function initSeed() {
+    if (!pf) {
+      var seed = randomHex(32);
+      pf = { serverSeed: seed, serverSeedHash: await sha256Hex(seed), clientSeed: randomHex(8), nonce: 0, history: [] };
+      saveJSON('kd.plinko.pf', pf);
+    }
+  })();
+
+  var betAmount = 25;
+  var dropping = false;
+
+  /* ===================== DOM refs ===================== */
+  var $ = function (id) { return document.getElementById(id); };
+  var chipValEl = $('chipVal'), netstatEl = $('netstat'), dropBtn = $('dropbtn');
+  var hashPreview = $('hashPreview'), curHash = $('curHash'), clientSeedInput = $('clientSeedInput');
+  var histBody = $('histBody');
+
+  function fmt(n) { return (Math.round(n * 100) / 100).toString(); }
+  function renderChips() {
+    chipValEl.textContent = Math.max(0, Math.floor(chips));
+    netstatEl.textContent = 'Net: ' + (stats.net >= 0 ? '+' : '') + Math.round(stats.net) + ' · Best: ' + fmt(stats.bestMult) + '×';
+    dropBtn.disabled = dropping || chips < betAmount;
+    document.querySelectorAll('.betbtn').forEach(function (b) {
+      b.disabled = dropping || chips < parseInt(b.dataset.bet, 10);
+    });
+  }
+  function renderFair() {
+    var h = pf.serverSeedHash || '…';
+    hashPreview.textContent = h.slice(0, 10) + '…';
+    curHash.textContent = h;
+    clientSeedInput.value = pf.clientSeed;
+  }
+  function renderHistory() {
+    var rows = pf.history.slice(-25).reverse().map(function (h) {
+      return '<tr><td>' + h.nonce + '</td><td>' + h.bet + '</td><td>' + h.slot + '</td><td>' + h.mult + '×</td><td>' +
+        (h.payout >= 0 ? '+' : '') + fmt(h.payout) + '</td><td class="mono">' + (h.revealedSeed ? 'revealed' : 'sealed') + '</td></tr>';
+    });
+    histBody.innerHTML = rows.join('');
+  }
+
+  document.querySelectorAll('.betbtn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (dropping) return;
+      document.querySelectorAll('.betbtn').forEach(function (o) { o.classList.remove('on'); });
+      b.classList.add('on');
+      betAmount = parseInt(b.dataset.bet, 10);
+      renderChips();
+    });
+  });
+
+  /* ===================== board rendering + drop animation ===================== */
+  var canvas = $('board'), ctx = canvas.getContext('2d');
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ball = null; // { r, coordFrom, coordTo, t0, dur } while animating
+
+  function resize() {
+    var r = canvas.parentElement.getBoundingClientRect();
+    canvas.width = Math.max(2, r.width * dpr);
+    canvas.height = Math.max(2, r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    layout(r.width, r.height);
+  }
+  var L = null;
+  function layout(w, h) {
+    var pegTop = h * 0.06, pegBottom = h * 0.74, slotY = h * 0.80, slotH = h * 0.14;
+    L = { w: w, h: h, pegTop: pegTop, pegBottom: pegBottom, slotY: slotY, slotH: slotH, slotW: w / (ROWS + 1) };
+  }
+  function coordToX(coord) { return coord * L.slotW + L.slotW / 2; }
+
+  function drawPegs(t) {
+    for (var r = 0; r < ROWS; r++) {
+      var count = r + 3;
+      var y = L.pegTop + (r / (ROWS - 1)) * (L.pegBottom - L.pegTop);
+      var rowW = L.w * (0.22 + 0.7 * (r / (ROWS - 1)));
+      var left = (L.w - rowW) / 2;
+      for (var i = 0; i < count; i++) {
+        var x = count === 1 ? L.w / 2 : left + (rowW * i) / (count - 1);
+        var pulse = 0.55 + 0.25 * Math.sin(t * 0.002 + r * 0.7 + i * 1.3);
+        ctx.save();
+        ctx.shadowColor = 'rgba(57,230,255,0.9)'; ctx.shadowBlur = 8;
+        ctx.fillStyle = 'rgba(180,240,255,' + pulse + ')';
+        ctx.beginPath(); ctx.arc(x, y, Math.max(1.6, L.slotW * 0.06), 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+  function drawSlots(highlightSlot, flashT) {
+    for (var i = 0; i <= ROWS; i++) {
+      var x0 = i * L.slotW, m = MULT[i];
+      var hue = m >= 9 ? '255,90,90' : (m >= 3 ? '255,180,60' : (m >= 1 ? '255,211,77' : '110,220,255'));
+      var isHi = i === highlightSlot;
+      ctx.save();
+      if (isHi && flashT > 0) { ctx.shadowColor = 'rgba(' + hue + ',1)'; ctx.shadowBlur = 20 * flashT; }
+      ctx.fillStyle = 'rgba(' + hue + ',' + (isHi ? 0.35 + 0.4 * flashT : 0.14) + ')';
+      ctx.fillRect(x0 + 1, L.slotY, L.slotW - 2, L.slotH);
+      ctx.strokeStyle = 'rgba(' + hue + ',0.7)'; ctx.lineWidth = 1;
+      ctx.strokeRect(x0 + 1, L.slotY, L.slotW - 2, L.slotH);
+      ctx.fillStyle = '#eaf6ff'; ctx.font = '600 ' + Math.max(9, L.slotW * 0.28) + 'px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(m + '×', x0 + L.slotW / 2, L.slotY + L.slotH / 2);
+      ctx.restore();
+    }
+  }
+  function drawBall(coord, rowFrac) {
+    var x = coordToX(coord);
+    var y = L.pegTop + rowFrac * (L.pegBottom - L.pegTop);
+    var bounce = reduceMotion ? 0 : Math.abs(Math.sin(rowFrac * ROWS * Math.PI)) * L.slotW * 0.08;
+    ctx.save();
+    ctx.shadowColor = '#ff5ac6'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#fff3fb';
+    ctx.beginPath(); ctx.arc(x, y - bounce, Math.max(3, L.slotW * 0.14), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  var lastLandedSlot = -1, landFlashT = 0;
+  function frame(t) {
+    requestAnimationFrame(frame);
+    ctx.clearRect(0, 0, L.w, L.h);
+    var g = ctx.createLinearGradient(0, 0, 0, L.h);
+    g.addColorStop(0, 'rgba(255,90,190,0.05)'); g.addColorStop(1, 'rgba(57,230,255,0.04)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, L.w, L.h);
+    drawPegs(t);
+    if (landFlashT > 0) landFlashT -= 0.02;
+    drawSlots(lastLandedSlot, Math.max(0, landFlashT));
+    if (ball) {
+      var frac = Math.min(1, (t - ball.t0) / ball.dur);
+      var coord = ball.coordFrom + (ball.coordTo - ball.coordFrom) * frac;
+      var rowFrac = (ball.r + frac) / ROWS;
+      drawBall(coord, rowFrac);
+      if (frac >= 1) {
+        ball.r += 1;
+        if (ball.r >= ROWS) {
+          ball = null;
+          onLanded();
+        } else {
+          ball.coordFrom = ball.coordTo;
+          ball.coordTo = ball.nextCoords[ball.r];
+          ball.t0 = t;
+        }
+      }
+    }
+  }
+
+  var landCallback = null;
+  function onLanded() { if (landCallback) { var cb = landCallback; landCallback = null; cb(); } }
+
+  function animateDrop(bits, slot, onDone) {
+    var coords = [ROWS / 2];
+    var s = 0;
+    for (var r = 0; r < ROWS; r++) { s += bits[r]; coords.push(s + (ROWS - r - 1) / 2); }
+    landCallback = onDone;
+    lastLandedSlot = -1;
+    if (reduceMotion) {
+      lastLandedSlot = slot; landFlashT = 1;
+      onDone();
+      return;
+    }
+    ball = { r: 0, coordFrom: coords[0], coordTo: coords[1], nextCoords: coords.slice(2), t0: performance.now(), dur: 230 };
+    lastLandedSlot = slot;
+  }
+
+  /* ===================== drop flow ===================== */
+  async function doDrop() {
+    if (dropping) return;
+    await pendingInit;
+    if (chips < betAmount) return;
+    dropping = true;
+    renderChips();
+    chips -= betAmount;
+    var nonce = pf.nonce;
+    var seed = pf.serverSeed, clientSeed = pf.clientSeed, hashAtBet = pf.serverSeedHash;
+    var res = await computePath(seed, clientSeed, nonce, ROWS);
+    var mult = MULT[res.slot];
+    var payout = betAmount * mult;
+    animateDrop(res.bits, res.slot, function () {
+      chips += payout;
+      stats.drops++;
+      stats.net += payout - betAmount;
+      if (mult > stats.bestMult) stats.bestMult = mult;
+      if (payout - betAmount > stats.bestWin) stats.bestWin = payout - betAmount;
+      pf.history.push({ nonce: nonce, clientSeed: clientSeed, hash: hashAtBet, bits: res.bits, slot: res.slot, mult: mult, bet: betAmount, payout: payout - betAmount, revealedSeed: null });
+      pf.nonce++;
+      saveJSON('kd.plinko.chips', chips);
+      saveJSON('kd.plinko.stats', stats);
+      saveJSON('kd.plinko.pf', pf);
+      dropping = false;
+      renderChips(); renderHistory();
+      lbPost();
+    });
+  }
+  dropBtn.addEventListener('click', doDrop);
+
+  /* ===================== fairness panel ===================== */
+  var fairpanel = $('fairpanel');
+  $('fairbadge').addEventListener('click', function () { fairpanel.classList.remove('hidden'); renderFair(); renderHistory(); });
+  $('closepanel').addEventListener('click', function () { fairpanel.classList.add('hidden'); });
+  $('saveSeedBtn').addEventListener('click', function () {
+    var v = clientSeedInput.value.trim();
+    if (v) { pf.clientSeed = v; saveJSON('kd.plinko.pf', pf); }
+  });
+  $('revealBtn').addEventListener('click', async function () {
+    var revealed = pf.serverSeed;
+    pf.history.forEach(function (h) { if (h.hash === pf.serverSeedHash && !h.revealedSeed) h.revealedSeed = revealed; });
+    var newSeed = randomHex(32);
+    pf.serverSeed = newSeed;
+    pf.serverSeedHash = await sha256Hex(newSeed);
+    pf.nonce = 0;
+    saveJSON('kd.plinko.pf', pf);
+    var msg = $('revealMsg');
+    msg.style.display = 'block';
+    msg.innerHTML = 'Revealed seed for the rounds you just played: <span class="mono">' + revealed + '</span> — paste it into the verifier below with a client seed/round from the history table to confirm any of them.';
+    renderFair(); renderHistory();
+  });
+  $('verifyBtn').addEventListener('click', async function () {
+    var seed = $('vSeed').value.trim(), cSeed = $('vClient').value.trim(), n = parseInt($('vNonce').value, 10) || 0;
+    if (!seed || !cSeed) return;
+    var r = await computePath(seed, cSeed, n, ROWS);
+    var out = $('verifyOut');
+    out.style.display = 'block';
+    out.textContent = 'bits: [' + r.bits.join(',') + ']  ->  slot ' + r.slot + '  (' + MULT[r.slot] + '×)';
+  });
+
+  /* ===================== help panel ===================== */
+  var helppanel = $('helppanel');
+  $('helpbtn').addEventListener('click', function () { helppanel.classList.remove('hidden'); });
+  $('closehelp').addEventListener('click', function () { helppanel.classList.add('hidden'); });
+  $('closehelp2').addEventListener('click', function () { helppanel.classList.add('hidden'); });
+
+  /* ===================== wallet connect (read-only, demo chips unaffected) ===================== */
+  var walletBtn = $('walletbtn'), walletInfo = $('walletinfo');
+  async function connectWallet() {
+    var provider = window.solana;
+    if (!provider || !provider.isPhantom) {
+      window.open('https://phantom.app/', '_blank', 'noopener');
+      return;
+    }
+    try {
+      var resp = await provider.connect();
+      var pk = resp.publicKey.toString();
+      walletBtn.textContent = pk.slice(0, 4) + '…' + pk.slice(-4);
+      walletInfo.style.display = 'block';
+      walletInfo.textContent = 'Connected · read-only · demo chips only';
+      fetchSolBalance(pk);
+    } catch (e) { /* user rejected the connection */ }
+  }
+  async function fetchSolBalance(pubkey) {
+    try {
+      var res = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [pubkey] })
+      });
+      var j = await res.json();
+      if (j && j.result && typeof j.result.value === 'number') {
+        walletInfo.textContent = (j.result.value / 1e9).toFixed(3) + ' SOL (not used here) · demo chips only';
+      }
+    } catch (e) { /* offline or RPC unreachable — wallet UI still works without it */ }
+  }
+  walletBtn.addEventListener('click', connectWallet);
+
+  /* ===================== online leaderboard ===================== */
+  var lb = null, lbBooting = false, lbBusy = false;
+  function lbBoot() {
+    if (!window.KDLeaderboard || lb || lbBooting) return;
+    lbBooting = true;
+    window.KDLeaderboard.create(window.KD_LB_CONFIG || {}).then(function (c) { lb = c; lbBooting = false; }).catch(function () { lbBooting = false; });
+  }
+  function lbPost() {
+    if (!window.KDLeaderboard || !lb || lbBusy) return;
+    lbBusy = true;
+    var submit = function () {
+      var nm = (lb.user() && lb.user().name) || 'Dropper';
+      lb.submit(nm, { bestMultiplier: stats.bestMult, biggestWin: stats.bestWin, totalDrops: stats.drops })
+        .then(function () { lbBusy = false; }).catch(function () { lbBusy = false; });
+    };
+    if (!lb.isSignedIn()) lb.signIn().then(function () { if (lb.isSignedIn()) submit(); else lbBusy = false; }).catch(function () { lbBusy = false; });
+    else submit();
+  }
+  lbBoot();
+
+  /* ===================== boot ===================== */
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+  pendingInit.then(function () { renderChips(); renderFair(); renderHistory(); });
+
+  /* ===================== test hook (harmless in production) ===================== */
+  window.__plinkoTest = {
+    ready: function () { return pendingInit; },
+    state: function () { return { chips: chips, betAmount: betAmount, stats: stats, hash: pf.serverSeedHash, nonce: pf.nonce, clientSeed: pf.clientSeed, historyLen: pf.history.length }; },
+    setBet: function (n) { betAmount = n; renderChips(); },
+    dropInstant: async function () {
+      var wasReduce = reduceMotion; reduceMotion = true;
+      await doDrop();
+      await new Promise(function (res) { var iv = setInterval(function () { if (!dropping) { clearInterval(iv); res(); } }, 10); });
+      reduceMotion = wasReduce;
+      return { chips: chips, stats: stats };
+    },
+    reveal: function () { return $('revealBtn').click(); },
+    computePath: computePath,
+    history: function () { return pf.history; },
+  };
+})();
+</script>
+</body>
+</html>

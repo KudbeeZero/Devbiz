@@ -120,6 +120,15 @@ export const GAMES = {
       wicketsLost: { label: 'Wickets Lost', dir: 'min', min: 0, max: 11, rank: true },
     },
   },
+  plinko: {
+    label: 'Kudbee Plinko',
+    primary: 'bestMultiplier',
+    metrics: {
+      bestMultiplier: { label: 'Best Multiplier', dir: 'max', min: 0, max: 100,  rank: true },
+      biggestWin:     { label: 'Biggest Win',     dir: 'max', min: 0, max: 1e6,  rank: true },
+      totalDrops:     { label: 'Total Drops',     dir: 'max', min: 0, max: 1e6,  rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }

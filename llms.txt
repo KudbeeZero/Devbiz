@@ -13,7 +13,7 @@ section below is a named anchor on that one document, not a separate URL.
 - `#services` — Web Design & Development, AI Agent Training, Support Agent Suite, Game
   Development.
 - `#work` — Selected client work (case studies) and the Support Agent Suite mini-grid.
-- `#games` — Kudbee Games Studio: nine original, free, in-browser titles.
+- `#games` — Kudbee Games Studio: ten original, free, in-browser titles.
 - `#agents` — The live Kudbee agent (ask it questions right on the page) and AI training.
 - `#lab` — Studio Media Lab: audio-reactive music videos and other in-browser experiments.
 - `#pricing` — Flat, one-time website pricing tiers; AI training scoped per engagement.
@@ -29,7 +29,7 @@ section below is a named anchor on that one document, not a separate URL.
 - Game Development: Original browser games with cinematic 2.5D worlds, fluid combat, and a
   60 FPS feel.
 
-## Games (Kudbee Games Studio — nine titles, all free, in-browser, no install)
+## Games (Kudbee Games Studio — ten titles, all free, in-browser, no install)
 - [Kudbee Contra](https://devbiz.kudbee.workers.dev/games/kudbee-contra/index.html) — flagship
   2.5D side-scrolling run-and-gun. Blast through the Neon Jungle Outpost, dodge drones and
   turrets, and topple the Hive Sentinel.
@@ -42,6 +42,9 @@ section below is a named anchor on that one document, not a separate URL.
   Fret Rush on a second original studio track, with its own leaderboard.
 - [Kudbee Pinball — Starbreak](https://devbiz.kudbee.workers.dev/games/kudbee-pinball/index.html)
   — a neon space pinball table with skill shots and multi-ramp play.
+- [Kudbee Plinko — Neon Drop](https://devbiz.kudbee.workers.dev/games/kudbee-plinko/index.html) —
+  a neon Galton-board drop game with a real, player-verifiable provably-fair
+  (HMAC-SHA256 commit-reveal) engine and demo chips only.
 - [Kudbee Voidrunner](https://devbiz.kudbee.workers.dev/games/kudbee-voidrunner/index.html) —
   Asteroid Dive: steer, dodge, and blast through a neon outer-space flyer.
 - [Kudbee Munch — Windy City](https://devbiz.kudbee.workers.dev/games/kudbee-munch/index.html)
