@@ -973,6 +973,25 @@
             ctx.beginPath(); ctx.moveTo(lw * 0.5, h * 0.82); ctx.lineTo(w - lw * 0.5, h * 0.82); ctx.stroke();
             ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(lw * 2, h * 0.82, Math.min(w, h) * 0.07, 0, 7); ctx.stroke(); ctx.restore();
         },
+        jackpot: function (ctx, w, h, t) {
+            t = t || 0;
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1a1006'); g.addColorStop(1, '#05060f');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            var cols = [palette.red, palette.violet, palette.green, palette.cyan, palette.amber], reels = 5, rw = w / (reels + 1);
+            for (var i = 0; i < reels; i++) {
+                var x = rw * (i + 1);
+                ctx.save(); ctx.strokeStyle = 'rgba(255,180,40,0.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - rw * 0.42, h * 0.14); ctx.lineTo(x - rw * 0.42, h * 0.66); ctx.moveTo(x + rw * 0.42, h * 0.14); ctx.lineTo(x + rw * 0.42, h * 0.66); ctx.stroke(); ctx.restore();
+                var spin = (t * 0.01 + i * 0.6) % 1, y = h * 0.4 + Math.sin(spin * 6.283) * h * 0.05;
+                ctx.save(); ctx.shadowColor = cols[i]; ctx.shadowBlur = 12; ctx.fillStyle = cols[i];
+                ctx.beginPath(); ctx.arc(x, y, Math.min(w, h) * 0.055, 0, 7); ctx.fill(); ctx.restore();
+            }
+            ctx.save(); ctx.strokeStyle = palette.amber; ctx.shadowColor = palette.amber; ctx.shadowBlur = 14; ctx.lineWidth = 2;
+            ctx.strokeRect(w * 0.06, h * 0.14, w * 0.88, h * 0.52);
+            ctx.restore();
+            ctx.save(); ctx.fillStyle = 'rgba(255,90,90,0.85)'; ctx.shadowColor = palette.red; ctx.shadowBlur = 10;
+            ctx.font = '700 ' + (Math.min(w, h) * 0.09) + 'px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('JACKPOT', w / 2, h * 0.82); ctx.restore();
+        },
         pinball: function (ctx, w, h, t) {
             t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0a1e'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1148,7 +1167,7 @@
     // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
     // comments in each), so paintAll's single frame and the reduced-motion
     // path below are pixel-identical to the art that shipped before this lane.
-    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1 };
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1, jackpot: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');

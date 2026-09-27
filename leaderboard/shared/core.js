@@ -120,6 +120,15 @@ export const GAMES = {
       wicketsLost: { label: 'Wickets Lost', dir: 'min', min: 0, max: 11, rank: true },
     },
   },
+  jackpot: {
+    label: 'Kudbee Jackpot',
+    primary: 'biggestWin',
+    metrics: {
+      biggestWin:     { label: 'Biggest Win',     dir: 'max', min: 0, max: 1e7, rank: true },
+      biggestJackpot: { label: 'Biggest Jackpot', dir: 'max', min: 0, max: 1e7, rank: true },
+      totalSpins:     { label: 'Total Spins',     dir: 'max', min: 0, max: 1e7, rank: true },
+    },
+  },
 };
 
 export function gameDef(game) { return GAMES[game] || null; }
