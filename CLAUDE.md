@@ -8,7 +8,8 @@ Project instructions for agents working in this repository.
 game development), built as a zero-build static site and deployed on Cloudflare Pages.
 
 ```
-index.html              Single-file marketing site (CSS-only routing, no build step)
+index.html              Marketing site markup, filed §01–§17 (no build step)
+assets/site/            Site stylesheet + scripts, filed by section (see AGENTS.md → Site filing system)
 wrangler.toml           Cloudflare Pages config (serves the repo root as static assets)
 games/                  Kudbee Games Studio (HTML5 Canvas titles)
 tools/                  Kudbee developer utilities (standalone HTML, no build step)
@@ -34,9 +35,9 @@ holds the relevant memory; end it by writing back what changed.
 | **Prefrontal cortex** — planning | Roadmap, backlog, process reference | **`docs/BUILD_PLAN.md`**, **`docs/BACKLOG.md`**, **`docs/PR_FLOW.md`** | Read before scoping; write when the plan changes. |
 | **Cerebellum** — procedural reflexes (learned) | Habits distilled from repetition & fixed mistakes | **Reflexes log** (below) | Write when something is learned the *second* time. |
 | **Amygdala** — guardrails / risk | Owner-only gates, `OWNER-OK` token, private surfaces | §11 below, **`docs/PRIVATE_TESTING_GATE.md`** | Never auto-cross. Read before any risky/irreversible action. |
-| **Motor cortex** — execution surfaces | Where changes actually land | `index.html`, `games/` (+ `games/shared/engine/`), `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Read the file before editing (Doctrine §D). |
+| **Motor cortex** — execution surfaces | Where changes actually land | `index.html` + `assets/site/` (filed by section), `games/` (+ `games/shared/engine/`), `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Read the file before editing (Doctrine §D). |
 | **Sensory cortex** — external signals | How the brain perceives the outside | Cloudflare/Vercel deploys, **`ops/github-sentinel/`** | Treat deploy comments as signal, act only when actionable (§6). |
-| **Corpus callosum** — the index/router | Which memory holds what | *this table* + `docs/` | Consult when unsure where a memory belongs. |
+| **Corpus callosum** — the index/router | Which memory holds what | *this table* + `docs/` + **`AGENTS.md` → Site filing system** (directory of every `§`/`C`/`J`/`A`/`T` section of the site) | Consult when unsure where a memory — or a piece of the site — belongs. Update the directory in the same commit as any new section; `npm run site:filing` fails if it drifts. |
 
 ### Memory discipline (the save-triggers)
 

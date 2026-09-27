@@ -36,7 +36,7 @@ This project uses a **commit-streaming workflow** (owner decision 2026-07-02):
 | Prefrontal cortex (planning) | `docs/BUILD_PLAN.md`, `docs/BACKLOG.md`, `docs/PR_FLOW.md` | Before scoping | When plan changes |
 | Cerebellum (procedural reflexes) | Reflexes log in `CLAUDE.md` | Task start | When something learned twice |
 | Amygdala (guardrails) | `docs/PRIVATE_TESTING_GATE.md`, §11 in `CLAUDE.md` | Before risky actions | Never auto-cross |
-| Motor cortex (execution) | `index.html`, `games/`, `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Before editing | When making changes |
+| Motor cortex (execution) | `index.html` + `assets/site/` (filed — see *Site filing system*), `games/`, `tools/`, `recording-it/`, `leaderboard/`, `clients/`, `lab/` | Before editing | When making changes |
 | Sensory cortex (external signals) | Cloudflare/Vercel deploys, `ops/github-sentinel/` | Continuous | Treat deploy comments as signal only |
 
 ## Build Ledger
@@ -66,12 +66,155 @@ Update on a docs/process lane — never bundled into feature PRs.
 ## Project Structure
 
 ```
-index.html              Single-file marketing site (CSS-only routing, no build step)
+index.html              Marketing site markup (filed §01–§17; no build step)
+assets/site/            Its stylesheet + scripts: site.css, site.js, agent.js, store.js (filed)
 wrangler.toml           Cloudflare Pages config (serves repo root as static assets)
 games/                  Kudbee Games Studio (HTML5 Canvas titles)
 tools/                  Kudbee developer utilities (standalone HTML, no build step)
 leaderboard/            Online leaderboard service (Worker + D1 + client SDK)
 docs/                   Project documentation (ledger, plans, concepts, specs)
+```
+
+## Site filing system (`index.html` + `assets/site/`)
+
+The marketing site is filed like a cabinet: every major section sits between a
+**BEGIN** and an **END** marker carrying the same id and title, so any section can
+be found with one grep and edited without scrolling through 4,000 lines.
+
+- **Markup** — `index.html`, ids `§01`–`§17`: `<!-- ════════ BEGIN §05 Services — sticky stack ════════ -->` … `END §05 …`
+- **Styles** — `assets/site/site.css`, ids `C01`–`C22` (cascade order = file order)
+- **Behaviour** — `assets/site/site.js` `J01`–`J18` (one IIFE, shared closure), `agent.js` `A01`–`A04`, `store.js` `T01`–`T02`
+- **Find a section:** `grep -n "BEGIN" index.html assets/site/*` · **Check the filing:** `npm run site:filing`
+- **Rules:** new work goes inside an existing section or gets a new BEGIN/END pair with the next id;
+  titles on BEGIN and END must match; update the directory below in the same commit
+  (`node ops/check-filing.mjs --print` regenerates it). The check fails if they drift.
+- Keep inline only what must be inline: the `html.js` flag script and the JSON-LD.
+
+### Directory
+
+| Id | File | Section |
+|---|---|---|
+| `§01` | `index.html` | Page chrome — skip link, grain, aurora, preloader, progress |
+| `§02` | `index.html` | Nav + mobile drawer |
+| `§03` | `index.html` | Hero |
+| `§04` | `index.html` | Stats |
+| `§05` | `index.html` | Services — sticky stack |
+| `§06` | `index.html` | Story — pinned process |
+| `§07` | `index.html` | Work — case studies |
+| `§08` | `index.html` | Games band |
+| `§09` | `index.html` | AI agents + tiny-app store |
+| `§10` | `index.html` | Lab |
+| `§11` | `index.html` | Pricing |
+| `§12` | `index.html` | Doctrine |
+| `§13` | `index.html` | Contact + FAQ |
+| `§14` | `index.html` | Mega CTA |
+| `§15` | `index.html` | Floating "Start a project" pill |
+| `§16` | `index.html` | Footer |
+| `§17` | `index.html` | Scripts — site.js, agent.js, store.js (assets/site/) |
+| `C01` | `assets/site/site.css` | Foundation — fonts, design tokens, base elements |
+| `C02` | `assets/site/site.css` | Ambient room — film grain + aurora |
+| `C03` | `assets/site/site.css` | Preloader + ghost wordmark |
+| `C04` | `assets/site/site.css` | Custom cursor |
+| `C05` | `assets/site/site.css` | Progress bar + nav + mobile drawer |
+| `C06` | `assets/site/site.css` | Section chrome, lighting, buttons |
+| `C07` | `assets/site/site.css` | Hero + marquee ribbon |
+| `C08` | `assets/site/site.css` | Stats |
+| `C09` | `assets/site/site.css` | Services — sticky stack |
+| `C10` | `assets/site/site.css` | Story — pinned steps |
+| `C11` | `assets/site/site.css` | Work — case cards, device frames, quotes |
+| `C12` | `assets/site/site.css` | Games band |
+| `C13` | `assets/site/site.css` | Agents — chat card + capability cards |
+| `C14` | `assets/site/site.css` | Tiny-app store + terminal |
+| `C15` | `assets/site/site.css` | Lab / media |
+| `C16` | `assets/site/site.css` | Pricing |
+| `C17` | `assets/site/site.css` | Doctrine |
+| `C18` | `assets/site/site.css` | Contact form + FAQ |
+| `C19` | `assets/site/site.css` | Floating "Start a project" pill |
+| `C20` | `assets/site/site.css` | Big CTA + footer |
+| `C21` | `assets/site/site.css` | Responsive breakpoints |
+| `C22` | `assets/site/site.css` | Global reduced-motion gate |
+| `J01` | `assets/site/site.js` | Setup + motion-token readers |
+| `J02` | `assets/site/site.js` | Preloader |
+| `J03` | `assets/site/site.js` | Custom cursor |
+| `J04` | `assets/site/site.js` | Shared rAF scroll bus |
+| `J05` | `assets/site/site.js` | Nav — progress, hide-on-scroll, active section, drawer |
+| `J06` | `assets/site/site.js` | Reveal / counter / magnetic / marquee |
+| `J07` | `assets/site/site.js` | Card spotlight follow |
+| `J08` | `assets/site/site.js` | Ghost-word parallax |
+| `J09` | `assets/site/site.js` | Hero exit choreography |
+| `J10` | `assets/site/site.js` | Aurora per-section hue bias |
+| `J11` | `assets/site/site.js` | Sticky service stack |
+| `J12` | `assets/site/site.js` | Pinned story canvas |
+| `J13` | `assets/site/site.js` | Hero constellation canvas |
+| `J14` | `assets/site/site.js` | Neon scene painter (game thumbnails) |
+| `J15` | `assets/site/site.js` | Arcade thumbnail motion ticker |
+| `J16` | `assets/site/site.js` | Legacy hash router |
+| `J17` | `assets/site/site.js` | Floating "Start a project" pill |
+| `J18` | `assets/site/site.js` | Contact form validation |
+| `A01` | `assets/site/agent.js` | Owner config — capture endpoints |
+| `A02` | `assets/site/agent.js` | Kudbee Agent — setup + site index |
+| `A03` | `assets/site/agent.js` | Agent KB scoring |
+| `A04` | `assets/site/agent.js` | Lead capture + chat UI |
+| `T01` | `assets/site/store.js` | Tiny-app store — install terminal |
+| `T02` | `assets/site/store.js` | Typed terminal commands |
+
+### Site CSS conventions
+
+Moved here from the stylesheet (it was shipped to every visitor as a comment).
+
+```
+ALL CARD-LIKE ELEMENTS follow these rules for consistency:
+
+1. BORDER-RADIUS SCALE
+   • --radius-sm (14px): small cards, minor UI, badges
+   • --radius-md (20px): medium cards, tool items, form fields, capability items
+   • --radius-lg (24px): primary cards (games, services, work, pricing, games hero)
+   Example: border-radius: var(--radius-lg);
+
+2. SHADOW ARCHITECTURE
+   • Base shadows use CSS custom properties (no hardcoded values)
+   • --shadow-sm: at-rest cards (subtle, ~12px blur)
+   • --shadow-md: hover/panels (medium depth, ~30px blur)
+   • --shadow-lg: hero/prominent (deep, ~80px blur)
+   • Each shadow includes inset white highlight (1px, low opacity) for depth
+   Example: box-shadow: var(--shadow-md);
+   Hover: box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(var(--acc-rgb), 0.16);
+
+3. ACCENT COLOR SYSTEM
+   • Default accent: --cyan (57,230,255)
+   • Per-card override: inline style="--acc-rgb:R,G,B" (no comma spaces)
+   • Usage in shadows: rgba(var(--acc-rgb, 57,230,255), 0.2) for fallback
+   • Apply to borders, glows, and CRT effects on hover
+   Example: border-color: rgba(var(--acc-rgb, 57,230,255), 0.4);
+
+4. MOTION TIMING
+   • All transitions use --mo-dur-* variables (never hardcoded milliseconds)
+   • Primary interaction: --mo-dur-1 (0.25s), --mo-dur-2 (0.3s), --mo-dur-3 (0.4s)
+   • Use --ease (cubic-bezier easing) by default, --ease-io for symmetrical
+   • Respect prefers-reduced-motion: wrap animations in @media blocks
+   Example: transition: transform var(--mo-dur-3) var(--ease);
+
+5. TRANSFORM & HARDWARE ACCELERATION
+   • Use transform + opacity only (never left/top/margin for animation)
+   • Add will-change: transform; on interactive cards to hint compositor
+   • On hover: transform: translateY(-4px) or scale(1.02) for depth
+   Example: will-change: transform; transition: transform var(--mo-dur-3) var(--ease);
+
+6. INSET HIGHLIGHTS & GLOSS
+   • Dark backgrounds (--bg-2, --panel) + inset white border creates depth
+   • Inset highlights: inset 0 1px 0 rgba(255,255,255,0.03..0.08)
+   • CRT scanlines on game cards: repeating-linear-gradient(0deg, rgba(0,0,0,0.13)..0.22)
+   • Applied to ::after pseudo-elements so they layer on top
+   Example: inset 0 1px 0 rgba(255,255,255,0.05);
+
+7. RESPONSIVE SCALING
+   • Font sizes, gaps, padding use clamp(min, preferred, max)
+   • Border-radius: can vary per breakpoint if needed, but prefer fixed for now
+   • Example: padding: clamp(24px, 3.5vw, 40px);
+
+Implementation note: This is the production CSS foundation. Every new card
+type or section applies these rules without exception. Audit new PRs against
+this checklist before approving.
 ```
 
 ## Local Preview

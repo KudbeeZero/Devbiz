@@ -1,8 +1,9 @@
 {
   "scripts": {
-    "verify": "npm run pinball:eval && npm run test:leaderboard",
+    "verify": "npm run site:filing && npm run pinball:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
-    "test:leaderboard": "npm test --prefix leaderboard"
+    "test:leaderboard": "npm test --prefix leaderboard",
+    "site:filing": "node ops/check-filing.mjs"
   },
   "dependencies": {
     "playwright": "^1.63.0"

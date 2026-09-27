@@ -6,7 +6,8 @@ development** — built as a zero-build static site and deployed on Cloudflare P
 ## Structure
 
 ```
-index.html              Single-file marketing site (CSS-only routing, no build step)
+index.html              Marketing site markup, filed §01–§17 (no build step)
+assets/site/            Site stylesheet + scripts, filed by section (see AGENTS.md → Site filing system)
 wrangler.toml           Cloudflare Pages config (serves the repo root as static assets)
 games/                  Kudbee Games Studio — nine canvas titles (see games/README.md)
 leaderboard/            Online scores SDK + Worker + D1 (demo mode on static host)
@@ -45,7 +46,7 @@ npm run test:leaderboard      # node --test under leaderboard/
 
 ## Highlights
 
-- **Modern single-file site** — gradient-mesh design, glassmorphism nav, dark/light theme,
+- **Zero-build filed site** — gradient-mesh design, glassmorphism nav, dark/light theme,
   scroll reveals, and live canvas-rendered art. No bundler, no dependencies.
 - **Games showcase** (`index.html → Games`) — hero, live playable embed, screenshot gallery,
   dev logs, roadmap, and coming-soon.
