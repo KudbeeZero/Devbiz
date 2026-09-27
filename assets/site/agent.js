@@ -29,7 +29,7 @@ var KUDBEE_CONFIG = {
     var state = document.getElementById('agent-state');
     if (!log || !form) return;
 
-    var CAL = 'mailto:kudbeezero@gmail.com?subject=Discovery%20call%20request'; // TODO(owner): swap to the real Cal.com link once the handle exists.
+    var CAL = 'https://cal.com/kudbee';
     var BASE = (window.KUDBEE_AGENT_URL || '').replace(/\/$/, '');
     var busy = false;
 
