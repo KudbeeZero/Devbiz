@@ -208,6 +208,31 @@ const hyper = await page.evaluate(() => {
 rec('hyperdrive-launch', hyper.co === 'HYPERDRIVE SKILL' && hyper.gain === 10000 && hyper.parked,
   'perfect → ' + hyper.co + ' +' + hyper.gain + ' · weak plunge re-parked=' + hyper.parked);
 
+// Multiball jackpots: three ramps light on multiball start, each pays an escalating jackpot
+// once, and collecting all three lights SUPER JACKPOT (any ramp) which pays big and relights.
+const jp = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest, H = 1 / 300;
+  T.forceStart();
+  const pre = P.jackpotState();
+  const s = T.saucerState().saucer;
+  for (let k = 0; k < 2; k++) { const bb = T.prepBall(s.x, s.y, 0, 0); bb.saucerCd = 0; P.physStep(H); }
+  P.physStep(H);   // jackpot.update() runs at the top of physStep; one more tick to see the flag the saucer hit just set
+  const armed = P.jackpotState();
+  const s0 = P.score; T.fireLeftRamp(); const g1 = P.score - s0;
+  const s1 = P.score; T.fireRightRamp(); const g2 = P.score - s1;
+  const s2 = P.score; P.onRamp(); const g3 = P.score - s2;
+  const lit = P.jackpotState();
+  const s3 = P.score; T.fireLeftRamp(); const superGain = P.score - s3;
+  const relit = P.jackpotState();
+  return { pre, armed, g1, g2, g3, lit, superGain, relit };
+});
+const jpOk = !jp.pre.active && jp.armed.active && jp.armed.lit.length === 3
+  && jp.g1 > 0 && jp.g2 > jp.g1 && jp.g3 > jp.g2 && jp.lit.superLit && jp.lit.lit.length === 0
+  && jp.superGain > jp.g3 * 2 && jp.relit.active && !jp.relit.superLit && jp.relit.lit.length === 3;
+rec('multiball-jackpot', jpOk,
+  jpOk ? 'armed 3/3 → escalating ' + jp.g1 + '/' + jp.g2 + '/' + jp.g3 + ' → SUPER +' + jp.superGain + ' → relit'
+       : JSON.stringify(jp));
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
