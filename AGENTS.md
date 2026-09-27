@@ -89,6 +89,11 @@ be found with one grep and edited without scrolling through 4,000 lines.
   titles on BEGIN and END must match; update the directory below in the same commit
   (`node ops/check-filing.mjs --print` regenerates it). The check fails if they drift.
 - Keep inline only what must be inline: the `html.js` flag script and the JSON-LD.
+- **Shared page stylesheets** (one source of truth for pages that were copy-pasted):
+  `blog/post.css` — every blog post (not `blog/index.html`); `clients/modernmed/service.css` — the
+  four ModernMed service pages (page-only rules stay in a small inline `<style>` after the link).
+  New pages of either kind link the shared file instead of pasting CSS. The `tools/` pages
+  were checked and left separate: their styles have genuinely diverged (~40–50% overlap).
 
 ### Directory
 
