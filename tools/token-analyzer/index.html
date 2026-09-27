@@ -336,6 +336,7 @@
         .price-note-mobile { display: block; }
         .history-actions .btn-secondary:first-child { display: none; }
     }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
 </style>
 </head>
 <body>
@@ -467,7 +468,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="logDesc">Description <span style="opacity:.5;font-size:10px;">(optional)</span></label>
-                    <input type="text" class="form-input" id="logDesc" placeholder="Code review, feature build, Q&A…" maxlength="120">
+                    <input type="text" class="form-input" id="logDesc" placeholder="Code review, feature build, Q&amp;A…" maxlength="120">
                 </div>
                 <div style="display:flex;align-items:center;gap:14px;">
                     <button type="submit" class="btn-primary" id="logSubmitBtn" style="flex:1;justify-content:center;">+ Add Session</button>
@@ -546,9 +547,6 @@
     <span id="toastIcon">✓</span><span id="toastMsg"></span>
 </div>
 
-<style>
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
-</style>
 
 <script>
 'use strict';
