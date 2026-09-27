@@ -75,7 +75,7 @@
         <h1>Kudbee <span class="grad">Pinball</span></h1>
         <p><b>Starbreak.</b> Flip, ricochet, and ride the neon. Plunge the <b>lit lane</b> for a Skill Shot, clear the <b>drop-target bank</b>, light <b>K·U·D</b>, and rip any of the three <b>loop ramps</b> — center, left, or right — chain shots for <b>COMBOS</b>, climb the <b>multiplier</b>, and bank an end-of-ball <b>bonus</b>. Fresh serves get a short <b>ball save</b>, and each outlane packs one loaded <b>kickback</b> so a bad bounce doesn't always mean a lost ball.</p>
         <div class="badge">3 loop ramps · outlane kickback · combos · ball save</div>
-        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, <b>hold the right side</b> to charge the plunger, release to launch · tap low to flip · tap up top to nudge</p>
+        <p style="font-size:12px;margin-top:12px"><b>Z / .</b> or <b>← / →</b> flippers · <b>Space</b> launch (hold to charge, release on the ◆ for HYPERDRIVE) · <b>Space / ↓ / X·C</b> nudge to free a stuck ball — but over-nudge and you <b>TILT</b> · <b>M</b> sound · on touch, <b>hold the right side</b> to charge the plunger, release to launch · tap low to flip · tap up top to nudge</p>
         <button class="btn" id="startBtn">▶ Launch</button>
         <p class="ov-foot" id="gBest" style="display:none;color:#ffd34d;font-weight:600"></p>
         <div class="ov-foot">Desktop &amp; mobile · original Kudbee table · all art &amp; sound procedural</div>
@@ -109,6 +109,7 @@
      https://kudbee-leaderboard.<acct>.workers.dev) or route the /api/* paths
      through your edge. The SDK posts and loads top-10 quietly.
      See leaderboard/README.md. -->
+<script src="launcher.js"></script>
 <script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'pinball' };</script>
 
 <script>
@@ -176,6 +177,7 @@
       case 'drop':   tone(500, 0.08, 'square', 0.16, 250); tone(760, 0.1, 'square', 0.13, 990, 0.05); break;
       case 'roll':   tone(980, 0.09, 'sine', 0.15, 1240); break;
       case 'launch': tone(120, 0.32, 'sawtooth', 0.16, 640); break;
+      case 'perfect': tone(330, 0.5, 'sawtooth', 0.18, 2600); tone(660, 0.35, 'square', 0.12, 3200, 0.05); break;   // hyperdrive whoosh
       case 'ramp':   tone(240, 0.24, 'sawtooth', 0.16, 1100); break;
       case 'kick':   tone(90, 0.16, 'square', 0.2, 640); tone(180, 0.22, 'sawtooth', 0.18, 900, 0.04); break;
       case 'drain':  tone(320, 0.5, 'sawtooth', 0.18, 55); break;
@@ -249,17 +251,6 @@
     colorWashR = Math.min(255, r); colorWashG = Math.min(255, g); colorWashB = Math.min(255, b); colorWashA = Math.max(colorWashA, a);
   }
 
-  // ---- skill shot (plunger lanes) ----
-  // Three top rollover lanes. Plunge power selects which one the ball drops
-  // through (strong = far-left A, soft-but-cleared = right C); landing the LIT
-  // lane scores the skill shot. A lighter gravity in the shooter lane makes the
-  // power→lane mapping clean and learnable.
-  var SKILL_LANES = [{ x: 250, label: 'A' }, { x: 450, label: 'B' }, { x: 650, label: 'C' }];
-  var SKILL_W = 64;                 // lane half-width (draw)
-  var SKILL_VALUE = 5000;           // lit-lane award
-  var SKILL_MISS = 500;             // any-lane consolation
-  var LANE_G = 800;                 // gravity while a launched ball climbs the shooter lane (tuned so charge≥0.45 clears)
-  var skillLit = 1;                 // lane lit this serve (chosen per serve)
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d', { alpha: false });
@@ -520,10 +511,17 @@ var ramp = null;                           // center loop-ramp trigger
 
   // ===== balls + particles =====
   var balls = [];
+  var launcher = KBLauncher.create({
+    balls: balls, BALL_R: BALL_R, G: G, isCoarse: isCoarse, reduceMotion: reduceMotion,
+    state: function () { return state; }, now: function () { return frameNow; },
+    mult: function () { return mult; }, launchPointerDown: function () { return anyLaunchPointer(); },
+    sfx: sfx, burst: burst, callout: callout, addScore: addScore, comboHit: comboHit,
+    bonus: function (u) { bonusU += u; }, shake: function (a) { shake = Math.min(shake + a, 1.6); },
+    armSave: function () { saveT = BALL_SAVE_S; }
+  });
   // keep=true → ball-save re-serve: the run continues (multiplier / tilt / bonus survive),
   // but the saved ball earns no fresh save window of its own.
   function spawnBallInLane(keep) {
-    skillLit = Math.floor(Math.random() * 3);                 // light a fresh lane each serve
     if (!keep) {
       mult = 1;                                               // playfield multiplier resets with each new ball
       tilt = 0; tilted = false;                               // fresh tilt budget each ball
@@ -532,7 +530,7 @@ var ramp = null;                           // center loop-ramp trigger
     comboN = 0; comboT = 0; saveT = 0;                        // combo chain + save window reset per serve
     comboKinds.length = 0; comboTripleAwarded = false;
     if (!keep) { kickL = true; kickR = true; }                 // outlane kickbacks reload each fresh ball (a saved re-serve keeps whatever's left)
-    balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: !!keep });
+    launcher.serve(keep);
   }
 
   // floating score callout (skill shot / big events)
@@ -552,7 +550,7 @@ var ramp = null;                           // center loop-ramp trigger
 
   // ===== game state =====
   var state = 'gate';                  // gate | play | over
-  var score = 0, ballsLeft = 3, charge = 0, charging = false, shake = 0, best = 0;
+  var score = 0, ballsLeft = 3, shake = 0, best = 0;
   var level = 1, comboExplosion = 0;                  // level (every 50k score), combo visual burst
   var ballNum = 1;                                  // which ball of the game is in play (for the "BALL N / total" HUD readout)
   // Ball-lock + multiball: the saucer captures a ball (lockedBalls++) and serves a fresh one
@@ -588,21 +586,17 @@ var ramp = null;                           // center loop-ramp trigger
   var bonusU = 0;                                   // end-of-ball bonus units collected this ball
   var dispScore = 0, scoreFlash = 0;                // animated score count-up + glow
   // skill-shot streak: back-to-back lit-lane hits across serves (fresh or ball-saved) within one
-  // game. Small capped scaling bonus on top of the base skill shot — rewards a player who's
-  // actually reading the plunge-power meter consistently, without needing a whole new mode.
-  var skillStreak = 0, bestSkillStreak = 0, SKILL_STREAK_CAP = 3;
   try { best = parseInt(localStorage.getItem('kudbee.pinball.best') || '0', 10) || 0; } catch (e) {}
 
   // ---- leaderboard (demo-mode SDK; degrades to local-only) ----
   var lb = null, lbBusy = false, lbPostQueued = false, maxMultiballBalls = 0;
 
   function resetGame() {
-    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; charge = 0; charging = false; ptrRole = {}; shake = 0;
+    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; launcher.reset(); ptrRole = {}; shake = 0;
     level = 1; comboExplosion = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
     comboKinds.length = 0; comboTripleAwarded = false;
-    skillStreak = 0; bestSkillStreak = 0;
     kickL = true; kickR = true; extraBallsAwarded = 0;
     lockedBalls = 0; multiballActive = false; maxMultiballBalls = 0;
     superLocks = 0; superMultiballReady = false;
@@ -1017,28 +1011,6 @@ var ramp = null;                           // center loop-ramp trigger
   // bounced) and serves a fresh one from the shooter lane so play continues without costing
   // a ball. The catch that fills the lock quota instead triggers MULTIBALL: every locked ball
   // gets ejected back onto the table at once, alongside whatever ball is already in play.
-  // The shooter lane holds ONE ball. During multiball the lane ball is rarely balls[0],
-  // so plunger code must find it rather than assume index 0.
-  function laneBall() { for (var i = 0; i < balls.length; i++) if (balls[i].inLane) return balls[i]; return null; }
-  function laneBusy() {
-    for (var i = 0; i < balls.length; i++) { var b = balls[i]; if (b.inLane || (!b.injected && b.x > 798)) return true; }
-    return false;
-  }
-  // After a lock: with nothing else in play, serve a fresh ball to the plunger. With balls
-  // still live (multiball) or the lane occupied, kick the ball back out of the saucer —
-  // parking extra balls in the lane is what stacked them up there with no way to plunge.
-  function serveAfterLock(s) {
-    var live = false;
-    for (var i = 0; i < balls.length; i++) if (!balls[i].inLane) live = true;
-    if (!live && !laneBusy()) {
-      balls.push({ x: 831, y: 1320, vx: 0, vy: 0, r: BALL_R, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true });
-      return;
-    }
-    var down = s.y < 400;                                   // the Star sits under the top arch: kick it down, not up
-    balls.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 320, vy: down ? 240 : -560 - Math.random() * 120,
-      r: BALL_R, inLane: false, injected: true, launchPow: 1, rampCd: 0.4, lRampCd: 0.4, rRampCd: 0.4, portalCd: 0.4, saucerCd: 1.5, lowT: 0, trail: [], noSave: true, mbImmune: 0.5 });
-    burst(s.x, s.y, '#ffffff', 10, 360);
-  }
   function onSaucer(b, bi) {
     balls.splice(bi, 1);                                    // the ball vanishes into the saucer
     addScore(1000); bonusU += 10; sfx('lock');
@@ -1049,7 +1021,7 @@ var ramp = null;                           // center loop-ramp trigger
       callout('BALL LOCKED', lockedBalls + ' / ' + LOCK_MAX + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#39ffe0');
       // serve a fresh ball into the shooter lane WITHOUT touching combo/mult/save/kickback
       // state — the run in progress (and whichever ball is already live) carries on untouched.
-      serveAfterLock(saucer);
+      launcher.serveAfterLock(saucer);
     } else {
       // lock quota filled — check for SUPER MULTIBALL
       addSuperLock();
@@ -1092,7 +1064,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (saucerR.locks < saucerR.maxLocks - 1) {
       saucerR.locks++; addSuperLock();
       callout('DUAL LOCK', saucerR.locks + ' / ' + saucerR.maxLocks + '  (Super: ' + superLocks + '/' + SUPER_LOCK_MAX + ')', '#ff6ec7');
-      serveAfterLock(saucerR);
+      launcher.serveAfterLock(saucerR);
     } else {
       // both right locks filled — check for SUPER MULTIBALL
       saucerR.locks = 0; addSuperLock();
@@ -1154,7 +1126,7 @@ var ramp = null;                           // center loop-ramp trigger
       starSaucer.locks++;
       callout('THE STAR', 'Mission progress: ' + (missionsDone + 1) + '/3', '#ffd34d');
       // Serve a fresh ball
-      serveAfterLock(starSaucer);
+      launcher.serveAfterLock(starSaucer);
     }
   }
   // SPINNER ("solar sail") — ball passing through spins it, awards points per rotation
@@ -1318,16 +1290,11 @@ var ramp = null;                           // center loop-ramp trigger
     if (!flipL || !flipR) return;
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipUR.pressed = false; flipL.buf = 0; flipR.buf = 0; flipUR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h); flipUR.update(h);
-    if (charging && laneBall()) charge = Math.min(1, charge + h * 1.6);
+    launcher.update(h);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
-       if (b.inLane) {                          // parked in plunger lane until launched
-         // gentle settle to the floor
-         b.vy += G * h; b.y += b.vy * h; if (b.y > 1320) { b.y = 1320; b.vy = 0; }
-         b.x = 831;
-         continue;
-       }
-      var climbing = (!b.injected && b.x > 800);        // still rising up the shooter lane
+      if (launcher.holdInLane(b, h)) continue;         // parked in the plunger lane until launched
+      var climbing = launcher.climbing(b);              // still rising up the shooter lane
       // An injected ball that tunnels into the shooter is "caught on the right".
       // Push it back onto the playfield. Failed plunges (not injected) stay in-lane.
       if (b.injected && !b.laneTest && b.x > 798) {
@@ -1347,7 +1314,7 @@ var ramp = null;                           // center loop-ramp trigger
       } else {
         b.railT = 0;
       }
-b.vy += (climbing ? LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
+b.vy += (climbing ? launcher.LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
        // speed cap
       var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
       // micro sub-steps so the ball never moves > r/2 before resolving.
@@ -1385,7 +1352,7 @@ var move = len(b.vx, b.vy) * h;
          resolveAll(b, frictPass);
          // Crest the lane → skill drop. Do not require startY≥245 AND startVy<0:
          // a single TOI bounce can flip vy in the same sub-step and skip inject forever.
-         if (climbing && !b.injected && b.y < 265) { enterFromLane(b); climbing = false; }
+         if (climbing && launcher.crest(b)) climbing = false;
          if (b.y > DRAIN_Y) break;
 }
        // speed cap AFTER sub-steps (kicks can push velocity above cap during sub-steps)
@@ -1562,14 +1529,7 @@ var move = len(b.vx, b.vy) * h;
           burst(b.x, b.y, '#7CFFb2', 14, 360); callout('FREED', 'corner escape', '#7CFFb2');
         }
       } else { b.cornerT = 0; }
-      // a plunge that didn't clear falls back down the lane → re-serve for another go
-      // Restrict to shooter lane corridor (x ∈ [800, 862]) to avoid false triggers from playfield
-      // Re-serve only a failed plunge (not injected playfield traffic) in the lane corridor.
-      // Hopper recapture: only grab balls that came DOWN into the lane from above (vy>0 recently),
-      // not ones sliding horizontally back. cooldown prevents immediate re-capture after launch.
-      if (!b.injected && b.x > 820 && b.x < 842 && b.y > 1300 && b.y < 1330 && len(b.vx, b.vy) < 80 && (!b.launchCd || b.launchCd < 0.3)) {
-        b.launchCd = 0; b.inLane = true; b.injected = false; b.launchPow = 0; b.x = 831; b.vx = 0; b.vy = 0; b.trail.length = 0; continue;
-      }
+      if (launcher.recapture(b, h)) continue;             // a plunge that didn't clear falls back → park it again
       // Last-resort unstick for the gutter + flipper band. Physics should never park a ball
       // here, so these wait a full second — and the flipper-band one never fires while a
       // flipper is held, or cradling the ball would get it kicked away.
@@ -1597,8 +1557,6 @@ var move = len(b.vx, b.vy) * h;
           burst(b.x, b.y, '#7CFFb2', 10, 340); callout('FREED', 'flipper unstuck', '#7CFFb2');
         }
       } else { b.gutterT = 0; b.flipBandT = 0; b.rightWallT = 0; }
-      // Decay launch cooldown to prevent re-capture
-      if (b.launchCd) b.launchCd = Math.max(0, b.launchCd - h);
 // trail
        // trail buffer: at PHYS_HZ=300 a 10-sample buffer is only ~33ms of history — invisible
        // once the ball is actually moving fast (skill shots, ramps, kickbacks), which is exactly
@@ -1619,13 +1577,6 @@ var move = len(b.vx, b.vy) * h;
      if (terraformLevel() >= 2) cosmicOrbiter.angle += cosmicOrbiter.spin * h;
      ballVsBall();
    }
-
-  function launch() {
-    var b = laneBall(); if (!b) return;
-    b.inLane = false; b.injected = false; b.launchPow = charge;
-    b.vy = -(620 + charge * 1700); b.vx = -6; b.launchCd = 1.0; charge = 0;     // up the lane; enterFromLane() routes it over the top
-    sfx('launch');
-  }
 
   // Nudge ("tilt") — shove the table to free a stuck ball. dir: -1 left, +1 right, 0 straight shake.
   // Over-nudge and you TILT: flippers die for the rest of the ball (classic pinball penalty).
@@ -1650,45 +1601,6 @@ var move = len(b.vx, b.vy) * h;
       // tilt gets its own harsh, table-wide look — a dead-ember shockwave at every live ball,
       // distinct from every other event's particles (no other event bursts red/ember + this wide).
       for (var bi = 0; bi < balls.length; bi++) { var tb = balls[bi]; if (!tb.inLane) burst(tb.x, tb.y, '#ff5d3c', 26, 620); }
-    }
-  }
-
-  // A cleared plunge crests the lane and is dropped through the skill lane its power picked.
-  function enterFromLane(b) {
-    b.inLane = false;
-    b.injected = true;
-    if (!b.noSave) saveT = BALL_SAVE_S;                        // arm the ball-save grace window (fresh serves only)
-    var f = clamp((b.launchPow - 0.45) / 0.55, 0, 1);          // 0 = just cleared .. 1 = max plunge
-    var lane = f >= 0.667 ? 0 : (f >= 0.333 ? 1 : 2);          // matches charge meter bands: [0.45,0.633]→C, [0.633,0.817]→B, [0.817,1]→A
-    var L = SKILL_LANES[lane];
-    // Drop through the skill lane, not onto The Star (450,220). Lane B shares that
-    // x — without a saucer cooldown the same-frame star check swallows the ball and
-    // re-serves it in the plunger (evaluator saw score 5500 + min x=822).
-    b.saucerCd = 2.0;
-    b.portalCd = 0.8;
-    b.x = L.x + (lane === 1 ? -55 : 0);
-    b.y = 255;
-    b.vx = lane === 0 ? 80 : lane === 2 ? -80 : -40;
-    b.vy = 220;
-    b.trail.length = 0;
-    if (lane === skillLit) {
-      comboHit(L.x, 210, 'skill');
-      skillStreak++; if (skillStreak > bestSkillStreak) bestSkillStreak = skillStreak;
-      // capped streak bonus: +50% of a base skill shot per streak step beyond the first, capped
-      var streakStep = Math.min(skillStreak - 1, SKILL_STREAK_CAP);
-      var streakBonus = streakStep * Math.round(SKILL_VALUE * 0.5);
-      addScore(SKILL_VALUE + streakBonus); bonusU += 15; sfx('skill');
-      if (skillStreak >= 2) {
-        callout('SKILL STREAK ×' + skillStreak, '+' + ((SKILL_VALUE + streakBonus) * mult).toLocaleString(), '#ffd34d');
-      } else {
-        callout('SKILL SHOT!', '+' + (SKILL_VALUE * mult).toLocaleString(), '#ffd34d');
-      }
-      shake = Math.min(shake + 0.55 + streakStep * 0.08, 1.6);
-      burst(L.x, 210, '#ffd34d', 28 + streakStep * 4, 520); burst(L.x, 210, '#ffffff', 14, 300);
-    } else {
-      skillStreak = 0;
-      addScore(SKILL_MISS); callout('LANE ' + L.label, '+' + SKILL_MISS, '#39e6ff');
-      burst(L.x, 210, '#39e6ff', 10, 340);
     }
   }
 
@@ -1725,12 +1637,12 @@ var move = len(b.vx, b.vy) * h;
 
   function gameOver() {
     state = 'over';
-    charging = false; charge = 0; ptrRole = {};
+    launcher.release(true); ptrRole = {};
     var isBest = score > 0 && score > best;
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
     dispScore = score;
     document.getElementById('oScore').textContent = score.toLocaleString();
-    var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (bestSkillStreak >= 2 ? ' · skill streak ×' + bestSkillStreak : '');
+    var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (launcher.bestStreak >= 2 ? ' · skill streak ×' + launcher.bestStreak : '') + (launcher.perfects ? ' · hyperdrive ×' + launcher.perfects : '');
     document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
     if (isBest) {
       // new-record payoff: gold table wash + a shower of bursts across the playfield + fanfare
@@ -1982,7 +1894,7 @@ function frame(now) {
 
     drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawGuidePosts(); drawSaucer(); drawSaucerR(); drawStarSaucer(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost(); drawSpinner();
     if (terraformLevel() >= 2) drawCosmicOrbiter();
-    drawSkill();
+    launcher.drawWorld(ctx);
     drawFlipper(flipL); drawFlipper(flipR); drawFlipper(flipUR);
     drawBallSave();
 
@@ -2005,31 +1917,6 @@ function frame(now) {
     ctx.restore();
 
     drawHUD();
-  }
-  function drawSkill(now) {
-    if (state !== 'play') return;
-    var t = frameNow;
-    for (var i = 0; i < SKILL_LANES.length; i++) {
-      var L = SKILL_LANES[i], lit = (i === skillLit);
-      var pulse = lit && !reduceMotion ? 0.5 + 0.5 * Math.abs(Math.sin(t / 260)) : (lit ? 0.6 : 0);
-      var c = lit ? '255,211,77' : '57,230,255';
-      ctx.globalCompositeOperation = 'lighter';
-      var g = ctx.createLinearGradient(0, 150, 0, 300);
-      g.addColorStop(0, 'rgba(' + c + ',' + (lit ? (0.05 + pulse * 0.10) : 0.04).toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(' + c + ',0)');
-      ctx.fillStyle = g; ctx.fillRect(L.x - SKILL_W, 150, SKILL_W * 2, 150);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(' + c + ',' + (lit ? 0.85 : 0.28) + ')'; ctx.lineWidth = lit ? 3 : 1.5;
-      ctx.beginPath();
-      ctx.moveTo(L.x - SKILL_W, 300); ctx.lineTo(L.x - SKILL_W, 158);
-      ctx.moveTo(L.x + SKILL_W, 300); ctx.lineTo(L.x + SKILL_W, 158); ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = lit ? '#ffe79a' : 'rgba(120,170,230,0.6)';
-      ctx.font = '700 ' + (lit ? 30 : 20) + 'px "Space Grotesk", sans-serif';
-      ctx.fillText(lit ? SKILL_VALUE.toLocaleString() : L.label, L.x, 192);
-      if (lit) { ctx.fillStyle = 'rgba(255,211,77,0.85)'; ctx.font = '700 13px Inter, sans-serif'; ctx.fillText('SKILL', L.x, 168); }
-    }
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
   // pulsing "BALL SAVE" light over the drain while the grace window is live
   // plus "tractor beam" visual: a beam from the flippers up to the ball when save is active
@@ -2563,40 +2450,6 @@ function frame(now) {
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.32, b.y - b.r * 0.4, b.r * 0.22, b.r * 0.14, -0.5, 0, TAU); ctx.fill();
   }
-  function plungerAffordanceActive() {
-    if (state !== 'play' || !laneBall()) return false;
-    return isCoarse || charging || anyLaunchPointer();
-  }
-  function drawPlungerAffordance(now) {
-    // Show while charging OR during affordance (don't hide mid-launch)
-    var showGauge = charging || plungerAffordanceActive();
-    if (!showGauge) return;
-    var pad = Math.round(Math.min(W, H) * 0.03);
-    var mn = Math.min(W, H);
-    var t = now || frameNow || 0;
-    var x0 = W * 0.52, w = W - x0;
-    var pulse = reduceMotion ? 0.55 : 0.4 + 0.3 * (0.5 + 0.5 * Math.sin(t / 320));
-    ctx.fillStyle = 'rgba(57,230,255,' + (charging ? 0.1 : 0.05).toFixed(2) + ')';
-    ctx.fillRect(x0, H * 0.06, w, H * 0.88);
-    ctx.strokeStyle = 'rgba(57,230,255,' + pulse.toFixed(2) + ')';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x0, H * 0.08); ctx.lineTo(x0, H * 0.94); ctx.stroke();
-    var ix = x0 + w * 0.5, iy = H - pad - Math.round(mn * 0.14);
-    ctx.fillStyle = 'rgba(196,107,255,0.25)'; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.fill();
-    ctx.strokeStyle = 'rgba(196,107,255,0.75)'; ctx.lineWidth = 2; roundRect(ctx, ix - 14, iy - 28, 28, 36, 8); ctx.stroke();
-    if (charging) {
-      ctx.strokeStyle = 'rgba(255,211,77,0.9)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(ix, iy - 10, 18, -Math.PI / 2, -Math.PI / 2 + clamp(charge, 0, 1) * TAU); ctx.stroke();
-    }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#cfe9ff';
-    ctx.font = '700 ' + Math.round(mn * 0.024) + 'px system-ui,sans-serif';
-    ctx.fillText(charging ? 'RELEASE' : 'HOLD', ix, H * 0.68);
-    ctx.fillStyle = 'rgba(138,147,168,0.95)';
-    ctx.font = '600 ' + Math.round(mn * 0.017) + 'px system-ui,sans-serif';
-    ctx.fillText(charging ? 'to launch' : 'right side · plunger', ix, H * 0.68 + Math.round(mn * 0.028));
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  }
   function drawHUD() {
     var pad = Math.round(Math.min(W, H) * 0.03);
     var mn = Math.min(W, H);
@@ -2714,28 +2567,7 @@ function frame(now) {
       ctx.textAlign = 'left';
       }
     }
-    // charge meter — banded by the lane each power range drops into (lit band highlighted)
-    if (state === 'play' && laneBall()) {
-      var cw = Math.min(W, H) * 0.32, cx = W - pad - cw, cy = H - pad - 12, chh = 11;
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(cx, cy, cw, chh);
-      var bands = [[0.45, 0.633, 2], [0.633, 0.817, 1], [0.817, 1.0, 0]];   // [from,to,laneIndex]
-      for (var bi2 = 0; bi2 < bands.length; bi2++) {
-        var bd = bands[bi2], x0 = cx + cw * bd[0], x1 = cx + cw * bd[1], isLit = (bd[2] === skillLit);
-        ctx.fillStyle = isLit ? 'rgba(255,211,77,0.9)' : 'rgba(57,230,255,0.20)';
-        ctx.fillRect(x0, cy, Math.max(1, x1 - x0 - 1), chh);
-        ctx.fillStyle = isLit ? '#04040a' : 'rgba(207,233,255,0.65)';
-        ctx.font = '700 ' + Math.round(chh * 0.9) + 'px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(SKILL_LANES[bd[2]].label, (x0 + x1) / 2, cy + chh / 2 + 0.5);
-      }
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = '#fff'; ctx.fillRect(cx + cw * clamp(charge, 0, 1) - 1.5, cy - 3, 3, chh + 6);   // live charge marker
-      if (!isCoarse) {
-        ctx.fillStyle = '#8a93a8'; ctx.textAlign = 'right'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.018) + 'px Inter, sans-serif';
-        ctx.fillText('HOLD SPACE · LAND THE LIT LANE', W - pad, cy - 22);
-      }
-      ctx.textAlign = 'left';
-    }
-    drawPlungerAffordance(frameNow);
+    launcher.drawHUD(ctx, W, H);
     // tilt / nudge meter (bottom-left): dots fill as you nudge; all red = TILT (flippers dead this ball)
     if (state === 'play' && (tilt > 0.05 || tilted)) {
       var tx = pad, ty = H - pad - 8, dotR = Math.max(4, Math.min(W, H) * 0.011), gap = dotR * 2.7;
@@ -2778,7 +2610,7 @@ function frame(now) {
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') { setFlip(1, true); e.preventDefault(); }
     else if (k === 'arrowup' || k === 'w') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge straight
     else if (k === ' ') {                                   // plunge while in the lane; otherwise nudge
-      if (laneBall()) charging = true; else if (!e.repeat) nudge(0);
+      if (!launcher.press() && !e.repeat) nudge(0);
       e.preventDefault();
     }
     else if (k === 'arrowdown' || k === 'n') { if (!e.repeat) nudge(0); e.preventDefault(); }   // nudge (straight)
@@ -2791,19 +2623,13 @@ function frame(now) {
     if (k === 'arrowleft' || k === 'z' || k === 'a') setFlip(-1, false);
     else if (k === 'arrowright' || k === '.' || k === 'l' || k === '/') setFlip(1, false);
     else if (k === 'arrowup' || k === 'w') { }   // nudge straight (no keyup action needed)
-    else if (k === ' ') { if (state === 'play') { charging = false; launch(); } else charging = false; }
+    else if (k === ' ') launcher.release(state !== 'play');
   });
   // Pointer launch hit-test: desktop keeps the original tight lower-right target; touch/coarse
   // gets the whole shooter-lane column so hold-to-charge is easy to discover on phones.
   function launchPointerHit(e, px, py) {
-    if (!laneBall()) return false;
     var coarse = isCoarse || (e && (e.pointerType === 'touch' || e.pointerType === 'pen'));
-    if (coarse) return px >= W * 0.52;
-    return px > W * 0.55 && py > H * 0.7;
-  }
-  function clearLaunchCharge(abort) {
-    charging = false;
-    if (abort) charge = 0;
+    return launcher.pointerHit(coarse, px, py, W, H);
   }
   function anyLaunchPointer() {
     for (var id in ptrRole) { if (ptrRole[id] === 'launch') return true; }
@@ -2817,21 +2643,17 @@ function frame(now) {
     audioInit();
     if (state !== 'play') return;
     var r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    if (launchPointerHit(e, px, py)) { charging = true; ptrRole[e.pointerId] = 'launch'; return; }
+    if (launchPointerHit(e, px, py) && launcher.press()) { ptrRole[e.pointerId] = 'launch'; return; }
     if (py < H * 0.42) { nudge(px < W * 0.5 ? -1 : 1); return; }   // tap the upper playfield to shake a stuck ball loose
     if (px < W / 2) { setFlip(-1, true); ptrRole[e.pointerId] = 'L'; }
     else { setFlip(1, true); ptrRole[e.pointerId] = 'R'; }
   }, { passive: true });
   function pointerEnd(e, abortLaunch) {
     var role = ptrRole[e.pointerId]; delete ptrRole[e.pointerId];
-    if (role === 'launch') {
-      if (charging) {
-        if (abortLaunch) clearLaunchCharge(true);
-        else { charging = false; launch(); }
-      }
-    } else if (role === 'L') setFlip(-1, false);
+    if (role === 'launch') launcher.release(abortLaunch);
+    else if (role === 'L') setFlip(-1, false);
     else if (role === 'R') setFlip(1, false);
-    if (!anyLaunchPointer() && charging && abortLaunch) clearLaunchCharge(true);
+    if (!anyLaunchPointer() && launcher.charging && abortLaunch) launcher.release(true);
   }
   canvas.addEventListener('pointerup', function (e) { pointerEnd(e, false); }, { passive: true });
   canvas.addEventListener('pointercancel', function (e) { pointerEnd(e, true); }, { passive: true });
@@ -2900,7 +2722,7 @@ function frame(now) {
     fireSaucer: function () { if (balls[0]) onSaucer(balls[0], 0); }
     ,
     plungerAffordanceWouldShow: function (coarse) {
-      return state === 'play' && !!laneBall() && !!coarse;
+      return state === 'play' && !!launcher.laneBall() && !!coarse;
     },
     nudgeImpulseTest: function () {
       tilt = 0; tilted = false;
@@ -3085,24 +2907,24 @@ function frame(now) {
   window.PINBALL = {
     get state() { return state; }, get score() { return score; }, get balls() { return balls; },
     get flipL() { return flipL; }, get flipR() { return flipR; },
-    get skillLit() { return skillLit; }, get lastCallout() { return co.text; },
+    get skillLit() { return launcher.lit; }, get lastCallout() { return co.text; },
     get mult() { return mult; }, get targets() { return targets; }, get rollovers() { return rollovers; }, get ramp() { return ramp; },
     get tilt() { return tilt; }, get tilted() { return tilted; },
     get saveT() { return saveT; }, get combo() { return comboN; }, get bonusU() { return bonusU; },
     get muted() { return muted; }, get ballsLeft() { return ballsLeft; },
-    get skillStreak() { return skillStreak; }, get bestSkillStreak() { return bestSkillStreak; },
+    get skillStreak() { return launcher.streak; }, get bestSkillStreak() { return launcher.bestStreak; }, get perfects() { return launcher.perfects; },
     setMuted: setMuted,
     nudge: function (d) { nudge(d || 0); },
     onRamp: function () { if (balls[0]) onRamp(balls[0]); },
-    start: start, physStep: physStep, launch: launch,
-    press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { charge = c; },
-    get charging() { return charging; }, get charge() { return charge; },
+    start: start, physStep: physStep, launch: function () { launcher.launch(); },
+    press: function (s, on) { setFlip(s, on); }, setCharge: function (c) { launcher.charge = c; },
+    get charging() { return launcher.charging; }, get charge() { return launcher.charge; },
     launchPointerHit: function (coarse, px, py) {
       return launchPointerHit({ pointerType: coarse ? 'touch' : 'mouse' }, px, py);
     },
     bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y, W: W, H: H }; },
     get tableBuilt() { return tableBuilt; },
-    plungerAffordanceActive: plungerAffordanceActive
+    plungerAffordanceActive: function () { return launcher.affordanceActive(); }, perfectRange: function () { return launcher.perfectRange(); }
   };
 
   var scheduleIdle = window.requestIdleCallback || function (cb) { setTimeout(function () { cb({ didTimeout: true }); }, 1); };

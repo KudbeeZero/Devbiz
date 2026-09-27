@@ -191,6 +191,23 @@ const laneMB = await page.evaluate(() => {
 });
 rec('multiball-lane', laneMB.parked === 0 && laneMB.launched, 'lock during play parked=' + laneMB.parked + ' · non-first lane ball launched=' + laneMB.launched);
 
+// HYPERDRIVE launcher plug-in: a release inside the ◆ notch doubles the skill award, and a
+// plunge too weak to clear the lane is parked again (it used to rest at x≈815, unlaunchable).
+const hyper = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest, H = 1 / 300;
+  T.forceStart();
+  const pr = P.perfectRange(), s0 = P.score; P.setCharge((pr[0] + pr[1]) / 2); P.launch();
+  const b = P.balls[0]; let co = '', gain = 0;
+  for (let i = 0; i < 600 && !b.injected; i++) P.physStep(H);
+  co = P.lastCallout; gain = P.score - s0;
+  T.forceStart(); P.setCharge(0.3); P.launch();
+  const w = P.balls[0]; let parked = false;
+  for (let i = 0; i < 1800 && !parked; i++) { P.physStep(H); parked = w.inLane; }
+  return { co, gain, parked };
+});
+rec('hyperdrive-launch', hyper.co === 'HYPERDRIVE SKILL' && hyper.gain === 10000 && hyper.parked,
+  'perfect → ' + hyper.co + ' +' + hyper.gain + ' · weak plunge re-parked=' + hyper.parked);
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;

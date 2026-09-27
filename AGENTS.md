@@ -87,7 +87,7 @@ All 9 games have completed a "game-polish" pass. The main cross-cutting gap is *
 | Game | Leaderboard Status |
 |------|-------------------|
 | All 9 | SDK-wired on `main`; **live post** needs Worker deploy + `API_BASE` (owner-gated) |
-| `pinball` | Evaluator gate **22/22** (`npm run pinball:eval`); metrics score / bestMultiball / modesCompleted |
+| `pinball` | Evaluator gate **23/23** (`npm run pinball:eval`); metrics score / bestMultiball / modesCompleted |
 | `darts`, `voidrunner` | Auto-post with queue-until-boot (DBZ-064, DBZ-068) |
 | `munch`, `puzzles`, `orbital` | Auto-post with `lbPending` flush (DBZ-071) |
 | `riff`, `riff-2` | Manual post + top-10; `lbPostQueued` (DBZ-072) |
@@ -106,7 +106,7 @@ See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 
 - No CI configured (removed to avoid billing stalls)
 - Local verification only: run project's lint/typecheck/test commands before declaring green
-- Green gate from repo root: `npm run verify` (pinball 22/22 + leaderboard unit tests). Pinball-only: `npm run pinball:eval`
+- Green gate from repo root: `npm run verify` (pinball 23/23 + leaderboard unit tests). Pinball-only: `npm run pinball:eval`
 - Manual gates documented in ledger (browser, wallet, payment, API key, deploy verification)
 - Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball) for headless verification
 
@@ -119,6 +119,7 @@ Stuck-ball reports are almost always a **physics bug, not a missing rescue**. Be
 - **Contact normal** = capsule normal (closest point → ball); round at end caps. No −velocity normals.
 - **Clearances** the ball must pass: ≥30px surface-to-surface (ball Ø28). Guides end *on* flipper pivots, never cross them.
 - **Rescues** (`gutterT`, `flipBandT`) are last resort: ≥1s, and never while a flipper is held (cradling).
+- **Launching is a plug-in:** `games/kudbee-pinball/launcher.js` (`KBLauncher.create(host)`) owns serve, lane hold, charge, plunger, climb, crest + skill shot, weak-plunge recapture, the in-lane power column and the touch overlay. The game passes hooks (score, sfx, burst…); don't re-add launch logic to `index.html`.
 - **Shooter lane holds one ball.** Plunger code finds it with `laneBall()` — never `balls[0]` (during multiball the lane ball is rarely first). Locks serve a lane ball only when nothing else is live and the lane is empty (`serveAfterLock`); otherwise the saucer kicks the ball back out.
 - **Frame loop must catch up to real time** (step cap 15 = the 50ms dt cap). A cap of 5 only keeps pace at a steady 60fps; iOS Low Power Mode (30fps rAF) ran the game at half speed.
 - **Round apexes are unstable** (`apexRoll`): a ball dead-centre on a post/cap/target top is tipped off, never balanced.

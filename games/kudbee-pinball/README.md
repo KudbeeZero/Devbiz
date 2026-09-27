@@ -19,7 +19,7 @@ Use **http(s)** for online leaderboard SDK calls; `file://` shows an offline hin
 | Action | Keyboard | Touch |
 |--------|----------|-------|
 | Flippers | `Z` / `.` or `←` / `→` | Tap lower left / right |
-| Launch | Hold `Space` to charge, release | Hold right side (plunger lane), release |
+| Launch | Hold `Space` to charge, release — land on the ◆ notch for a **HYPERDRIVE** launch (2× skill shot) | Hold right side (plunger lane), release |
 | Nudge | `Space` / `↓` / `X` / `C` (tilt if abused) | Tap upper playfield |
 | Sound | `M` | Mute in HUD |
 
