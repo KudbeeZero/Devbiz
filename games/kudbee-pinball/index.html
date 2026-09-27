@@ -110,6 +110,7 @@
      through your edge. The SDK posts and loads top-10 quietly.
      See leaderboard/README.md. -->
 <script src="launcher.js"></script>
+<script src="jackpot.js"></script>
 <script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'pinball' };</script>
 
 <script>
@@ -189,6 +190,9 @@
       case 'tilt':   tone(110, 0.6, 'sawtooth', 0.22, 45); break;
       case 'lock':   tone(700, 0.07, 'sine', 0.16, 300); tone(300, 0.12, 'sine', 0.14, 120, 0.05); break;         // ball vanishes into the saucer
       case 'multiball': tone(200, 0.5, 'sawtooth', 0.22, 1400); tone(400, 0.4, 'square', 0.18, 1200, 0.06); tone(600, 0.3, 'square', 0.16, 1600, 0.12); break;
+      case 'jackpot': tone(784, 0.1, 'square', 0.18, 1046); tone(1046, 0.12, 'square', 0.16, 1318, 0.06); break;
+      case 'superlit': tone(392, 0.14, 'sawtooth', 0.18, 784); tone(587, 0.16, 'sawtooth', 0.16, 987, 0.08); break;
+      case 'superjackpot': tone(261, 0.6, 'sawtooth', 0.24, 2093); tone(392, 0.5, 'square', 0.2, 1568, 0.08); tone(523, 0.45, 'square', 0.18, 2093, 0.16); tone(659, 0.4, 'square', 0.18, 2637, 0.24); break;
       case 'newbest': tone(523, 0.1, 'square', 0.18); tone(659, 0.1, 'square', 0.18, 0, 0.09); tone(784, 0.1, 'square', 0.18, 0, 0.18); tone(1047, 0.35, 'square', 0.2, 0, 0.27); break;  // ascending fanfare arpeggio
     }
   }
@@ -519,6 +523,16 @@ var ramp = null;                           // center loop-ramp trigger
     bonus: function (u) { bonusU += u; }, shake: function (a) { shake = Math.min(shake + a, 1.6); },
     armSave: function () { saveT = BALL_SAVE_S; }
   });
+  var jackpot = KBJackpot.create({
+    state: function () { return state; }, now: function () { return frameNow; }, reduceMotion: reduceMotion,
+    multiballActive: function () { return multiballActive; }, mult: function () { return mult; },
+    addScore: addScore, bonus: function (u) { bonusU += u; }, sfx: sfx, burst: burst, callout: callout,
+    shake: function (a) { shake = Math.min(shake + a, 1.9); }, colorWash: colorWash,
+    geometry: function (shot) {
+      var g = shot === 'left' ? leftRamp : shot === 'right' ? rightRamp : ramp;
+      return g ? { x: g.x, y: g.y0 } : null;
+    }
+  });
   // keep=true → ball-save re-serve: the run continues (multiplier / tilt / bonus survive),
   // but the saved ball earns no fresh save window of its own.
   function spawnBallInLane(keep) {
@@ -592,7 +606,7 @@ var ramp = null;                           // center loop-ramp trigger
   var lb = null, lbBusy = false, lbPostQueued = false, maxMultiballBalls = 0;
 
   function resetGame() {
-    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; launcher.reset(); ptrRole = {}; shake = 0;
+    score = 0; ballsLeft = 3; ballNum = 1; balls.length = 0; launcher.reset(); jackpot.reset(); ptrRole = {}; shake = 0;
     level = 1; comboExplosion = 0;
     mult = 1; multFlash = 0; rampShots = 0; tilt = 0; tilted = false; tiltFlash = 0;
     comboN = 0; comboT = 0; bestCombo = 0; saveT = 0; bonusU = 0; dispScore = 0; scoreFlash = 0;
@@ -981,7 +995,7 @@ var ramp = null;                           // center loop-ramp trigger
   function onRamp(b) {
     var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var chained = comboHit(ramp.x, ramp.y0, 'rampC');   // true = a combo callout already claimed the marquee this instant
-    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
+    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp'); jackpot.hitCenter();
     var particleCount = rampShots >= 6 ? 32 : 22;        // bigger burst for ramp master
     burst(ramp.x, ramp.y0, '#39e6ff', particleCount, 460); shake = Math.min(shake + 0.35, 1.4);
     var stopDur = rampShots >= 6 ? 0.08 : 0.05;          // longer freeze on ramp chains
@@ -997,7 +1011,7 @@ var ramp = null;                           // center loop-ramp trigger
     var rampMult = missionActive === 1 ? 3 : 1;           // Warp Speed: ramps score 3×
     var col = r.side < 0 ? '#c46bff' : '#ffd34d';
     var chained = comboHit(r.x, r.y0, r.side < 0 ? 'rampL' : 'rampR');
-    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp');
+    addScore(1000 * rampMult); rampShots++; bonusU += 12 * rampMult; sfx('ramp'); jackpot.hitSide(r.side);
     var particleCount = rampShots >= 6 ? 32 : 22;
     burst(r.x, r.y0, col, particleCount, 460); burst(r.x, r.y0, '#ffffff', 10, 560);   // loop completion: color + a fast white streak layer
     shake = Math.min(shake + 0.35, 1.4);
@@ -1291,6 +1305,7 @@ var ramp = null;                           // center loop-ramp trigger
     if (tilted) { flipL.pressed = false; flipR.pressed = false; flipUR.pressed = false; flipL.buf = 0; flipR.buf = 0; flipUR.buf = 0; }   // over-nudged → flippers dead until this ball drains
     flipL.update(h); flipR.update(h); flipUR.update(h);
     launcher.update(h);
+    jackpot.update(h);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
       if (launcher.holdInLane(b, h)) continue;         // parked in the plunger lane until launched
@@ -1895,6 +1910,7 @@ function frame(now) {
     drawRamp(); drawTargets(); drawRollovers(); drawKickback(); drawGuidePosts(); drawSaucer(); drawSaucerR(); drawStarSaucer(); drawMagnet(); drawCaptiveZone(); drawVortex(); drawPopUpPost(); drawSpinner();
     if (terraformLevel() >= 2) drawCosmicOrbiter();
     launcher.drawWorld(ctx);
+    jackpot.drawWorld(ctx);
     drawFlipper(flipL); drawFlipper(flipR); drawFlipper(flipUR);
     drawBallSave();
 
@@ -2924,7 +2940,8 @@ function frame(now) {
     },
     bounds: function () { return { VW: VW, VH: VH, DRAIN_Y: DRAIN_Y, W: W, H: H }; },
     get tableBuilt() { return tableBuilt; },
-    plungerAffordanceActive: function () { return launcher.affordanceActive(); }, perfectRange: function () { return launcher.perfectRange(); }
+    plungerAffordanceActive: function () { return launcher.affordanceActive(); }, perfectRange: function () { return launcher.perfectRange(); },
+    jackpotState: function () { return jackpot.state(); }
   };
 
   var scheduleIdle = window.requestIdleCallback || function (cb) { setTimeout(function () { cb({ didTimeout: true }); }, 1); };
