@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kudbee Angry Birds</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0e27;
+      font-family: monospace;
+      overflow: hidden;
+      color: #39e6ff;
+    }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+      border: 2px solid #39e6ff;
+      box-shadow: 0 0 40px rgba(57, 230, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+  <script src="src/util.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/physics.js"></script>
+  <script src="src/particle.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
