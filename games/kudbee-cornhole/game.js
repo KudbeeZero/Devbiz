@@ -87,15 +87,16 @@
     const g = this.ctx.createGain(); g.gain.value = vol || 0.3;
     src.connect(f); f.connect(g); g.connect(this.master); src.start(t);
   };
-  Audio.prototype.whoosh = function () { this._noise(0.18, 0.12, 500, 2000); };
+  Audio.prototype.whoosh = function () { this._noise(0.22, 0.15, 600, 2200); };
   Audio.prototype.woodThud = function (power) {
-    this._tone(120 + power * 60, 0.12, 'triangle', 0.25 + power * 0.2, 70);
-    this._noise(0.08, 0.2, 400, 1200);
+    this._tone(140 + power * 80, 0.14, 'triangle', 0.3 + power * 0.25, 60);
+    this._noise(0.1, 0.25, 500, 1400);
   };
-  Audio.prototype.skid = function () { this._noise(0.22, 0.1, 1500, 4000); };
+  Audio.prototype.skid = function () { this._noise(0.25, 0.12, 1800, 4500); };
   Audio.prototype.holeDrop = function () {
-    this._tone(300, 0.18, 'sine', 0.3, 90);   // hollow descending clunk
-    this._noise(0.1, 0.15, 600, 2000);
+    this._tone(280, 0.22, 'sine', 0.35, 75);   // satisfying hollow drop
+    this._noise(0.12, 0.18, 700, 2200);
+    this._tone(140, 0.15, 'sine', 0.25, null);
   };
   Audio.prototype.scoreJingle = function (pts) {
     const base = pts >= 3 ? 660 : 520;
@@ -272,20 +273,22 @@
       mult = this.streak >= 5 ? 2.0 : this.streak >= 3 ? 1.5 : 1.0;
       pts = Math.round(pts * mult);
     }
-    this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.4 : 0.15;
+    this.score += pts; this.lastPts = pts; this.flash = 1; this.shake = pts >= 3 ? 0.5 : 0.2;
     if (pts >= 3) {
-      this.audio.holeDrop(); this._triggerHitStop(0.1);
+      this.audio.holeDrop(); this._triggerHitStop(0.12);
       // bigger confetti + extra flash for multiplier kicks
-      const confettiCount = this.streak >= 5 ? 64 : this.streak >= 3 ? 48 : 30;
+      const confettiCount = this.streak >= 5 ? 80 : this.streak >= 3 ? 56 : 36;
       this._emitConfetti(this.bag.x, this.bag.y, confettiCount);
-      if (mult > 1) { this.flash = Math.max(this.flash, 1.5); this.shake = Math.max(this.shake, 0.6); }
+      if (mult > 1) { this.flash = Math.max(this.flash, 1.8); this.shake = Math.max(this.shake, 0.75); }
+    } else {
+      this.audio.skid();
     }
     this.audio.scoreJingle(pts);
     this.bag.gone = true;
-    this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 12 : 6);
+    this._emitParticles(this.bag.x, this.bag.y, pts >= 3 ? C.gold : C.green, pts >= 3 ? 16 : 8);
     const multStr = mult > 1 ? ' ×' + mult.toFixed(1) + 'x!' : '';
     const popText = pts >= 3 && this.streak >= 3 ? '+' + pts + multStr : '+' + pts;
-    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: popText, life: 1.4, col: pts >= 3 ? C.gold : C.green, vy: -40 });
+    this._scorePops.push({ x: this.bag.x, y: this.bag.y - 20, text: popText, life: 1.6, col: pts >= 3 ? C.gold : C.green, vy: -50 });
     if (pts >= 3) { this.phase = 'settle'; this.bag.vx = 0; this.bag.vy = 0; }
   };
 
@@ -335,118 +338,218 @@
     ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     // ground
     ctx.fillStyle = '#0c1020'; ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
-    ctx.strokeStyle = 'rgba(255,160,60,0.25)'; ctx.lineWidth = 2;
+    // shadow under board
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(BOARD_X - 2, GROUND_Y, BOARD_W + 4, 12);
+    // ground line
+    ctx.strokeStyle = 'rgba(255,160,60,0.3)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, GROUND_Y); ctx.lineTo(VIEW_W, GROUND_Y); ctx.stroke();
-    // board (side view): angled platform
+    // board (side view): angled platform with depth
     const topY = GROUND_Y - BOARD_H;
+    // shadow/depth
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(BOARD_X + 2, topY + 2, BOARD_W - 2, BOARD_T);
+    // main board surface
     ctx.fillStyle = '#3a2410';
     ctx.fillRect(BOARD_X, topY, BOARD_W, BOARD_T);
+    // highlight (wood grain illusion)
     ctx.fillStyle = '#5a3820';
-    ctx.fillRect(BOARD_X, topY, BOARD_W, 4);
-    // neon trim
-    ctx.strokeStyle = C.ember; ctx.lineWidth = 2; ctx.shadowColor = C.ember; ctx.shadowBlur = 10;
-    ctx.strokeRect(BOARD_X, topY, BOARD_W, BOARD_T); ctx.shadowBlur = 0;
-    // legs
-    ctx.fillStyle = '#2a1a0c';
-    ctx.fillRect(BOARD_X + 8, topY + BOARD_T, 8, BOARD_H * 0.5);
-    ctx.fillRect(BOARD_X + BOARD_W - 16, topY + BOARD_T, 8, BOARD_H * 0.5);
-    // hole (drawn as dark ellipse with glow)
-    ctx.shadowColor = C.gold; ctx.shadowBlur = 12;
-    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.stroke();
+    ctx.fillRect(BOARD_X, topY, BOARD_W, 3);
+    ctx.fillStyle = 'rgba(255,200,100,0.08)';
+    ctx.fillRect(BOARD_X, topY + 3, BOARD_W * 0.7, 2);
+    // neon trim with glow
+    ctx.shadowColor = C.ember; ctx.shadowBlur = 18;
+    ctx.strokeStyle = C.ember; ctx.lineWidth = 2.5;
+    ctx.strokeRect(BOARD_X, topY, BOARD_W, BOARD_T);
     ctx.shadowBlur = 0;
-    // power target marker under hole
-    ctx.fillStyle = C.dim; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('3 pts', HOLE_X, topY - 10); ctx.textAlign = 'left';
+    // inner border for depth
+    ctx.strokeStyle = 'rgba(255,160,60,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(BOARD_X + 2, topY + 2, BOARD_W - 4, BOARD_T - 4);
+    // legs with shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4;
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(BOARD_X + 8, topY + BOARD_T, 10, BOARD_H * 0.5);
+    ctx.fillRect(BOARD_X + BOARD_W - 18, topY + BOARD_T, 10, BOARD_H * 0.5);
+    ctx.shadowBlur = 0;
+    // hole (drawn as dark ellipse with strong glow)
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R, 8, 0, 0, TAU); ctx.stroke();
+    // inner glow ring
+    ctx.strokeStyle = 'rgba(255,211,77,0.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(HOLE_X, topY + 4, HOLE_R - 3, 5, 0, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
   };
 
   Game.prototype._drawBag = function (ctx) {
     const b = this.bag;
     ctx.save();
     ctx.translate(b.x, b.y);
+    // shadow under bag
+    ctx.save();
+    ctx.globalAlpha = 0.2; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(0, BAG * 0.8, BAG * 0.9, BAG * 0.3, 0, 0, TAU); ctx.fill();
+    ctx.restore();
     ctx.rotate(b.rot);
     // squash: compress vertically on impact, bulge horizontally
     const sq = b.squash || 0;
-    const sxw = 1 + sq * 0.45, syh = 1 - sq * 0.5;
+    const sxw = 1 + sq * 0.5, syh = 1 - sq * 0.55;
     ctx.scale(sxw, syh);
-    // bag body (square, fabric look)
-    ctx.fillStyle = '#c46b2a';
+    // bag body (square, fabric look) with depth
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#d47a3a';
     ctx.fillRect(-BAG, -BAG, BAG * 2, BAG * 2);
-    ctx.fillStyle = '#a85520';
-    ctx.fillRect(-BAG, -BAG, BAG * 2, BAG * 0.5);
-    // neon stitch
-    ctx.strokeStyle = C.gold; ctx.lineWidth = 1.5; ctx.shadowColor = C.gold; ctx.shadowBlur = 6;
-    ctx.strokeRect(-BAG + 3, -BAG + 3, BAG * 2 - 6, BAG * 2 - 6);
     ctx.shadowBlur = 0;
-    // fold line (scrunched detail)
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(-BAG * 0.5, -BAG * 0.4); ctx.lineTo(BAG * 0.6, BAG * 0.5); ctx.stroke();
+    // top highlight (fabric shine)
+    ctx.fillStyle = '#e89a5a';
+    ctx.fillRect(-BAG, -BAG, BAG * 2, BAG * 0.6);
+    // darker fabric on sides
+    ctx.fillStyle = '#a85520';
+    ctx.fillRect(-BAG, BAG * 0.4, BAG * 2, BAG * 1.6);
+    // neon stitch with glow
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
+    ctx.strokeRect(-BAG + 2, -BAG + 2, BAG * 2 - 4, BAG * 2 - 4);
+    ctx.shadowBlur = 0;
+    // fabric texture lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-BAG, 0); ctx.lineTo(BAG, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -BAG); ctx.lineTo(0, BAG); ctx.stroke();
+    // subtle fold details
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(-BAG * 0.6, -BAG * 0.3); ctx.quadraticCurveTo(-BAG * 0.2, 0, BAG * 0.5, BAG * 0.4); ctx.stroke();
     ctx.restore();
     // aim guide while aiming
     if (this.aiming) {
-      ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.setLineDash([6, 6]);
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + Math.cos(this.aimAng) * this.power * 180, b.y + Math.sin(this.aimAng) * this.power * 180); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
-      // power arc
-      ctx.fillStyle = this.power > 0.7 ? C.ember : C.cyan; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(Math.round(this.power * 100) + '%', b.x, b.y - BAG - 10); ctx.textAlign = 'left';
+      ctx.strokeStyle = C.gold; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.8; ctx.setLineDash([8, 5]);
+      ctx.shadowColor = C.gold; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + Math.cos(this.aimAng) * this.power * 200, b.y + Math.sin(this.aimAng) * this.power * 200); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.setLineDash([]); ctx.globalAlpha = 1;
+      // power indicator with color coding
+      ctx.save(); ctx.translate(b.x, b.y - BAG - 20);
+      const powerPct = Math.round(this.power * 100);
+      ctx.fillStyle = this.power > 0.8 ? C.ember : this.power > 0.5 ? C.gold : C.cyan;
+      ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12;
+      ctx.font = 'bold 16px "Space Grotesk",monospace'; ctx.textAlign = 'center';
+      ctx.fillText(powerPct + '%', 0, 0);
+      ctx.restore();
     }
   };
 
   Game.prototype._drawHUD = function (ctx) {
-    ctx.fillStyle = C.text; ctx.font = 'bold 26px "Space Grotesk",monospace'; ctx.textAlign = 'left';
-    ctx.fillText('Score ' + this.score, 16, 36);
-    ctx.font = '14px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
-    ctx.fillText('Bags left: ' + this.bagsLeft, 16, 56);
+    ctx.textAlign = 'left';
+    // Score with glow
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 12;
+    ctx.fillStyle = C.text; ctx.font = 'bold 32px "Space Grotesk",monospace';
+    ctx.fillText(String(this.score).padStart(2, '0'), 16, 42);
+    ctx.shadowBlur = 0;
+    ctx.font = '12px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
+    ctx.fillText('SCORE', 16, 60);
+    // Bags remaining indicator
+    ctx.fillStyle = this.bagsLeft <= 2 ? C.ember : C.dim;
+    ctx.font = '12px "Space Grotesk",sans-serif';
+    ctx.fillText('BAGS: ' + this.bagsLeft, 16, 84);
+    // Visual bag counter dots
+    const dotSpacing = 18;
+    for (let i = 0; i < this.bagsLeft && i < 4; i++) {
+      const dotX = 16 + (i * dotSpacing);
+      ctx.fillStyle = C.gold;
+      ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.arc(dotX, 100, 3, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     // streak counter — only worth showing once a chain is actually building
     if (this.streak >= 2) {
-      const pulse = 1 + Math.sin(this.time * 10) * 0.06;
-      ctx.save(); ctx.translate(200, 30); ctx.scale(pulse, pulse);
-      ctx.font = 'bold 18px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
-      ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
-      ctx.fillText('🔥 ' + this.streak + ' streak', 0, 6); ctx.shadowBlur = 0;
+      const pulse = 1 + Math.sin(this.time * 12) * 0.08;
+      ctx.save(); ctx.translate(140, 42); ctx.scale(pulse, pulse);
+      ctx.font = 'bold 22px "Space Grotesk",monospace'; ctx.fillStyle = C.gold;
+      ctx.shadowColor = C.gold; ctx.shadowBlur = 14;
+      ctx.textAlign = 'center';
+      ctx.fillText('🔥 ' + this.streak, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.font = '10px sans-serif'; ctx.fillStyle = C.dim;
+      ctx.fillText('COMBO', 0, 14);
       ctx.restore();
     }
-    // throw line marker
-    ctx.fillStyle = 'rgba(255,160,60,0.4)';
-    ctx.fillRect(120, GROUND_Y - 80, 4, 80);
+    ctx.textAlign = 'left';
+    // throw line marker with gradient feel
+    ctx.strokeStyle = 'rgba(255,160,60,0.3)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(120, GROUND_Y - 90); ctx.lineTo(120, GROUND_Y - 20); ctx.stroke();
+    // Best streak display in corner
+    if (this.bestStreak >= 3) {
+      ctx.font = '11px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim; ctx.textAlign = 'right';
+      ctx.fillText('Best: ' + this.bestStreak + '🔥', VIEW_W - 20, 30);
+    }
   };
 
   Game.prototype._drawScorePops = function (ctx) {
     ctx.textAlign = 'center';
     for (const p of this._scorePops) {
-      const a = KC.Util.clamp(p.life / 1.4, 0, 1);
-      ctx.globalAlpha = a; ctx.font = 'bold 30px "Space Grotesk",sans-serif';
-      ctx.fillStyle = p.col; ctx.shadowColor = p.col; ctx.shadowBlur = 16;
-      ctx.fillText(p.text, p.x, p.y);
+      const a = KC.Util.clamp(p.life / 1.6, 0, 1);
+      const bounce = Math.max(0, 1 - (1 - a) * (1 - a)) * 2; // ease out bounce
+      ctx.save(); ctx.translate(p.x, p.y - bounce * 8);
+      ctx.globalAlpha = a; ctx.font = 'bold 36px "Space Grotesk",monospace';
+      ctx.fillStyle = p.col; ctx.shadowColor = p.col; ctx.shadowBlur = 20;
+      ctx.fillText(p.text, 0, 0);
+      ctx.restore();
     }
     ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.textAlign = 'left';
   };
 
   Game.prototype._drawMenu = function (ctx) {
-    ctx.fillStyle = C.text; ctx.font = 'bold 40px "Space Grotesk",sans-serif'; ctx.textAlign = 'center'; ctx.shadowColor = C.ember; ctx.shadowBlur = 20;
-    ctx.fillText('CORNHOLE', VIEW_W / 2, 200); ctx.shadowBlur = 0;
-    ctx.font = 'bold 18px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim; ctx.fillText('Neon Bag Toss', VIEW_W / 2, 230);
-    ctx.font = '16px "Space Grotesk",sans-serif'; ctx.fillStyle = C.text;
-    ctx.fillText('Drag back from the bag & release to throw', VIEW_W / 2, 320);
-    ctx.fillText('Hole = 3 pts  ·  Board = 1 pt  ·  First to 21 wins', VIEW_W / 2, 348);
-    ctx.fillStyle = C.gold; ctx.font = 'bold 22px "Space Grotesk",sans-serif';
-    const pulse = 0.6 + 0.4 * Math.sin(this.time * 4);
-    ctx.globalAlpha = pulse; ctx.fillText('click to play', VIEW_W / 2, 440); ctx.globalAlpha = 1;
+    // Background gradient suggestion
+    ctx.fillStyle = 'rgba(5,5,15,0.3)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.text; ctx.font = 'bold 48px "Space Grotesk",sans-serif';
+    ctx.shadowColor = C.ember; ctx.shadowBlur = 24;
+    ctx.fillText('CORNHOLE', VIEW_W / 2, 180);
+    ctx.shadowBlur = 0;
+
+    ctx.font = 'bold 20px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+    ctx.fillText('Neon Bag Toss', VIEW_W / 2, 220);
+
+    ctx.font = '15px "Space Grotesk",sans-serif'; ctx.fillStyle = C.text;
+    ctx.fillText('Drag back from the bag & release to throw', VIEW_W / 2, 310);
+    ctx.fillText('Hole = 3 pts  ·  Board = 1 pt', VIEW_W / 2, 335);
+    ctx.fillText('First to 21 wins  ·  Build combos for multipliers', VIEW_W / 2, 360);
+
+    ctx.fillStyle = C.gold; ctx.font = 'bold 24px "Space Grotesk",sans-serif';
+    const pulse = 0.7 + 0.3 * Math.sin(this.time * 5);
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 16;
+    ctx.fillText('CLICK TO PLAY', VIEW_W / 2, 450);
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     ctx.textAlign = 'left';
   };
 
   Game.prototype._drawOver = function (ctx) {
-    ctx.fillStyle = 'rgba(5,5,15,0.85)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    ctx.fillStyle = C.text; ctx.font = 'bold 38px "Space Grotesk",sans-serif'; ctx.textAlign = 'center'; ctx.shadowColor = C.gold; ctx.shadowBlur = 20;
-    ctx.fillText('GAME OVER', VIEW_W / 2, VIEW_H / 2 - 40); ctx.shadowBlur = 0;
-    ctx.font = 'bold 28px "Space Grotesk",sans-serif'; ctx.fillStyle = C.green;
-    ctx.fillText('Score: ' + this.score, VIEW_W / 2, VIEW_H / 2 + 10);
+    ctx.fillStyle = 'rgba(5,5,15,0.92)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    // glow behind text
+    ctx.fillStyle = 'rgba(255,211,77,0.08)'; ctx.beginPath();
+    ctx.arc(VIEW_W / 2, VIEW_H / 2 - 20, 120, 0, TAU); ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.text; ctx.font = 'bold 44px "Space Grotesk",sans-serif';
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 24;
+    ctx.fillText('GAME OVER', VIEW_W / 2, VIEW_H / 2 - 50);
+    ctx.shadowBlur = 0;
+
+    ctx.font = 'bold 32px "Space Grotesk",monospace'; ctx.fillStyle = C.gold;
+    ctx.fillText(String(this.score).padStart(2, '0'), VIEW_W / 2, VIEW_H / 2 + 10);
+    ctx.font = '14px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
+    ctx.fillText('FINAL SCORE', VIEW_W / 2, VIEW_H / 2 + 32);
+
     if (this.bestStreak >= 2) {
-      ctx.font = 'bold 16px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
-      ctx.fillText('🔥 Best streak: ' + this.bestStreak, VIEW_W / 2, VIEW_H / 2 + 38);
+      ctx.font = 'bold 18px "Space Grotesk",sans-serif'; ctx.fillStyle = C.gold;
+      ctx.shadowColor = C.gold; ctx.shadowBlur = 12;
+      ctx.fillText('🔥 Best streak: ' + this.bestStreak, VIEW_W / 2, VIEW_H / 2 + 60);
+      ctx.shadowBlur = 0;
     }
-    ctx.fillStyle = C.dim; ctx.font = '16px "Space Grotesk",sans-serif';
-    ctx.fillText('click to play again', VIEW_W / 2, VIEW_H / 2 + 66);
+
+    ctx.fillStyle = C.gold; ctx.font = 'bold 18px "Space Grotesk",sans-serif';
+    const pulse2 = 0.6 + 0.4 * Math.sin(this.time * 4);
+    ctx.globalAlpha = pulse2;
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 14;
+    ctx.fillText('CLICK TO PLAY AGAIN', VIEW_W / 2, VIEW_H / 2 + 100);
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     ctx.textAlign = 'left';
   };
 
