@@ -323,8 +323,11 @@
     }
     this.lastShot = { ang: aimAng, pow: timing, runs: runs, out: out };
     this.audio.batCrack(timing);
-    this.particles.burst(this.aimX, this.aimY, timing > 0.8 ? C.green : C.cyan, timing > 0.8 ? 16 : 8);
-    this.shake = timing * 0.15;
+    // enhanced feedback: bigger bursts for premium feel
+    const burstCount = out ? 32 : (runs === 6 ? 24 : runs === 4 ? 20 : timing > 0.8 ? 16 : 8);
+    const burstCol = out ? '#ff5d3c' : (runs === 6 ? C.gold : runs === 4 ? C.green : timing > 0.8 ? C.green : C.cyan);
+    this.particles.burst(this.aimX, this.aimY, burstCol, burstCount);
+    this.shake = (out ? 0.6 : runs === 6 ? 0.5 : runs === 4 ? 0.35 : timing * 0.2);
     this._resolve(out, runs);
   };
 
@@ -502,17 +505,36 @@
   };
 
   Game.prototype._drawHUD = function (ctx) {
-    ctx.fillStyle = C.text; ctx.font = 'bold 30px "Space Grotesk",monospace'; ctx.textAlign = 'left';
-    ctx.fillText(this.runs + '/' + this.wickets, 16, 40);
-    ctx.font = '14px "Space Grotesk",sans-serif';
-    ctx.fillText('Ov ' + this.overs + '.' + this.overBalls + (this.overs >= 5 ? ' (innings done)' : '/5'), 16, 60);
-    // batter
+    ctx.textAlign = 'left';
+    // Score display with glow
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 14;
+    ctx.fillStyle = C.text; ctx.font = 'bold 36px "Space Grotesk",monospace';
+    ctx.fillText(String(this.runs).padStart(2, '0'), 16, 44);
+    ctx.shadowBlur = 0;
+    ctx.font = '11px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
+    ctx.fillText('RUNS', 16, 58);
+    // Wickets indicator
+    ctx.shadowColor = '#ff5d3c'; ctx.shadowBlur = 10;
+    ctx.fillStyle = this.wickets >= 8 ? '#ff5d3c' : C.gold;
+    ctx.font = 'bold 32px "Space Grotesk",monospace';
+    ctx.fillText(this.wickets + '/10', 90, 44);
+    ctx.shadowBlur = 0;
+    ctx.font = '11px "Space Grotesk",sans-serif'; ctx.fillStyle = C.dim;
+    ctx.fillText('WICKETS', 90, 58);
+    // Over counter
+    ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk",sans-serif';
+    ctx.fillText('OVERS: ' + this.overs + '.' + this.overBalls + '/5', 190, 40);
+    // batter info with color coding
     const bat = this.myXI[this.batterIdx % this.myXI.length];
-    ctx.fillStyle = this.team.col; ctx.font = 'bold 16px "Space Grotesk",sans-serif';
-    ctx.fillText('Batting: ' + bat.n + ' (' + bat.bat + ')', 16, VIEW_H - 40);
-    // this over
-    ctx.fillStyle = C.dim; ctx.font = '13px monospace';
-    ctx.fillText('This over: ' + this.thisOver.join(' '), 16, VIEW_H - 18);
+    ctx.fillStyle = this.team.col; ctx.font = 'bold 13px "Space Grotesk",sans-serif'; ctx.shadowColor = this.team.col; ctx.shadowBlur = 8;
+    ctx.fillText('▸ ' + bat.n, 16, VIEW_H - 38);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = C.dim; ctx.font = '11px "Space Grotesk",sans-serif';
+    ctx.fillText('Bat: ' + bat.bat, 16, VIEW_H - 24);
+    // this over dots/wickets
+    ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk",sans-serif';
+    const overStr = this.thisOver.slice(-6).join(' ');
+    ctx.fillText('Over: ' + (overStr || '—'), 16, VIEW_H - 10);
   };
 
   Game.prototype._drawMenu = function (ctx) {
