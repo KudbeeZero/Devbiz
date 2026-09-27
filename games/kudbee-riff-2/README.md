@@ -15,4 +15,8 @@ Same as Riff: **`D F J K`** lanes, **`Space`** / heat bar for Overdrive, **`P`**
 Touch: tap lanes and the heat bar.
 
 See [`../kudbee-riff/README.md`](../kudbee-riff/README.md) for leaderboard and career details.
-SDK game id: **`riff-2`**.
+SDK game id: **`riff2`**.
+
+## Related
+
+**Kudbee Riff III** ([`../kudbee-riff-3/`](../kudbee-riff-3/)) — same engine, charted to "Cold Hard Gold."

@@ -45,6 +45,15 @@ export const GAMES = {
       accuracy:  { label: 'Accuracy',   dir: 'max', min: 0, max: 100, rank: true },
     },
   },
+  riff3: {
+    label: 'Kudbee Riff III',
+    primary: 'score',
+    metrics: {
+      score:     { label: 'Score',      dir: 'max', min: 0, max: 1e9, rank: true },
+      bestCombo: { label: 'Max streak', dir: 'max', min: 0, max: 1e6, rank: true },
+      accuracy:  { label: 'Accuracy',   dir: 'max', min: 0, max: 100, rank: true },
+    },
+  },
   voidrunner: {
     label: 'Kudbee Voidrunner',
     primary: 'score',

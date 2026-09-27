@@ -973,6 +973,31 @@
             ctx.beginPath(); ctx.moveTo(lw * 0.5, h * 0.82); ctx.lineTo(w - lw * 0.5, h * 0.82); ctx.stroke();
             ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(lw * 2, h * 0.82, Math.min(w, h) * 0.07, 0, 7); ctx.stroke(); ctx.restore();
         },
+        riff3: function (ctx, w, h, t) {
+            t = t || 0;
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1a1206'); g.addColorStop(1, '#05060f');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            var cols = [palette.amber, palette.cyan, palette.violet, palette.green], n = 4, lw = w / (n + 1);
+            var range = h * 1.15, fall = (t * 0.048) % range;
+            for (var i = 0; i < n; i++) {
+                var x = lw * (i + 1);
+                ctx.strokeStyle = 'rgba(210,170,90,0.24)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+                for (var j = 0; j < 2; j++) {
+                    var ny = (h * (0.14 + i * 0.1 + j * 0.36) + fall) % range;
+                    if (ny > h) continue;
+                    ctx.save(); ctx.shadowColor = cols[i]; ctx.shadowBlur = 14; ctx.fillStyle = cols[i];
+                    ctx.beginPath(); ctx.arc(x, ny, Math.min(w, h) * 0.05, 0, 7); ctx.fill(); ctx.restore();
+                }
+            }
+            // a chord-slam moment frozen at the strum line: two adjacent lanes light at once
+            ctx.save(); ctx.strokeStyle = palette.amber; ctx.shadowColor = palette.amber; ctx.shadowBlur = 16; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(lw * 0.5, h * 0.82); ctx.lineTo(w - lw * 0.5, h * 0.82); ctx.stroke();
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath(); ctx.arc(lw * 2, h * 0.82, Math.min(w, h) * 0.065, 0, 7); ctx.stroke();
+            ctx.strokeStyle = palette.cyan; ctx.shadowColor = palette.cyan;
+            ctx.beginPath(); ctx.arc(lw * 3, h * 0.82, Math.min(w, h) * 0.065, 0, 7); ctx.stroke();
+            ctx.restore();
+        },
         pinball: function (ctx, w, h, t) {
             t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0a1e'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1148,7 +1173,7 @@
     // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
     // comments in each), so paintAll's single frame and the reduced-motion
     // path below are pixel-identical to the art that shipped before this lane.
-    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1 };
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, riff3: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');

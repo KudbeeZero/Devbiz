@@ -32,3 +32,4 @@ Live cloud needs Worker + `API_BASE` — see `leaderboard/README.md`.
 ## Related
 
 **Kudbee Riff II** ([`../kudbee-riff-2/`](../kudbee-riff-2/)) — same engine, different original track/chart.
+**Kudbee Riff III** ([`../kudbee-riff-3/`](../kudbee-riff-3/)) — same engine, charted to "Cold Hard Gold."

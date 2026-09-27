@@ -40,6 +40,8 @@ section below is a named anchor on that one document, not a separate URL.
   rhythm game charted to the real beats of an original Kudbee track.
 - [Kudbee Riff II](https://devbiz.kudbee.workers.dev/games/kudbee-riff-2/index.html) — Neon
   Fret Rush on a second original studio track, with its own leaderboard.
+- [Kudbee Riff III](https://devbiz.kudbee.workers.dev/games/kudbee-riff-3/index.html) — Neon
+  Fret Rush charted to "Cold Hard Gold," with two-lane chord slams and its own leaderboard.
 - [Kudbee Pinball — Starbreak](https://devbiz.kudbee.workers.dev/games/kudbee-pinball/index.html)
   — a neon space pinball table with skill shots and multi-ramp play.
 - [Kudbee Voidrunner](https://devbiz.kudbee.workers.dev/games/kudbee-voidrunner/index.html) —
