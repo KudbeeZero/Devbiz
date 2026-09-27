@@ -175,6 +175,39 @@ rec('drain-lip-crawl', !!(band.drops && band.drops[5] && band.drops[5].ok),
     ? 'drain lip center sp=' + band.drops[5].sp + ' stuck=' + band.drops[5].stuck
     : bandFail);
 
+// Multiball shooter lane: a lock while another ball is live must not park a second ball in
+// the lane, and a lane ball that isn't balls[0] must still launch (the "balls stack up in
+// the lane and I can't shoot" report).
+const laneMB = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest, H = 1 / 300;
+  const live = T.prepBall(300, 700, 0, 0); live.saucerCd = 5;
+  const s = T.saucerState().saucer;
+  const extra = { x: s.x, y: s.y, vx: 0, vy: 0, r: live.r, inLane: false, injected: true, launchPow: 1, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, saucerCd: 0, lowT: 0, trail: [], noSave: true };
+  P.balls.push(extra); P.physStep(H);
+  const parked = P.balls.filter(b => b.inLane).length;
+  const lane = { x: 831, y: 1320, vx: 0, vy: 0, r: live.r, inLane: true, injected: false, launchPow: 0, rampCd: 0, lRampCd: 0, rRampCd: 0, portalCd: 0, lowT: 0, trail: [], noSave: true };
+  P.balls.push(lane); P.setCharge(0.7); P.launch();
+  return { parked, launched: !lane.inLane && lane.vy < 0 };
+});
+rec('multiball-lane', laneMB.parked === 0 && laneMB.launched, 'lock during play parked=' + laneMB.parked + ' · non-first lane ball launched=' + laneMB.launched);
+
+// HYPERDRIVE launcher plug-in: a release inside the ◆ notch doubles the skill award, and a
+// plunge too weak to clear the lane is parked again (it used to rest at x≈815, unlaunchable).
+const hyper = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest, H = 1 / 300;
+  T.forceStart();
+  const pr = P.perfectRange(), s0 = P.score; P.setCharge((pr[0] + pr[1]) / 2); P.launch();
+  const b = P.balls[0]; let co = '', gain = 0;
+  for (let i = 0; i < 600 && !b.injected; i++) P.physStep(H);
+  co = P.lastCallout; gain = P.score - s0;
+  T.forceStart(); P.setCharge(0.3); P.launch();
+  const w = P.balls[0]; let parked = false;
+  for (let i = 0; i < 1800 && !parked; i++) { P.physStep(H); parked = w.inLane; }
+  return { co, gain, parked };
+});
+rec('hyperdrive-launch', hyper.co === 'HYPERDRIVE SKILL' && hyper.gain === 10000 && hyper.parked,
+  'perfect → ' + hyper.co + ' +' + hyper.gain + ' · weak plunge re-parked=' + hyper.parked);
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
