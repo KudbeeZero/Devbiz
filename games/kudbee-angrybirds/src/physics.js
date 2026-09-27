@@ -132,6 +132,13 @@ KAB.Physics = class {
       const dmg = Math.max(5, Math.abs(velAlongNormal) * 2);
       a.damage(dmg);
       b.damage(dmg);
+
+      // Trigger screen shake and audio feedback
+      if (window.game) {
+        window.game.screenShake = Math.min(3, Math.abs(velAlongNormal) * 0.5);
+        window.game.audio.hit();
+        window.game.particles.burst((a.pos.x + b.pos.x) / 2, (a.pos.y + b.pos.y) / 2, 15, 2, a.color || '#39e6ff');
+      }
     }
   }
 };

@@ -33,6 +33,12 @@ KAB.Audio = class {
     this.synth(80, 0.15, 'sine', 0.1);
   }
 
+  enemyDestroy() {
+    this.synth(320, 0.15, 'sine', 0.2);
+    this.synth(480, 0.12, 'sine', 0.15);
+    this.synth(240, 0.1, 'sine', 0.1);
+  }
+
   levelComplete() {
     const notes = [261.63, 329.63, 392.00, 523.25];
     notes.forEach((f, i) => {
