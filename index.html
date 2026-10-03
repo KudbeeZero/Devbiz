@@ -36,6 +36,7 @@
          its exact timing even if these two assets fail to load. -->
     <link rel="stylesheet" href="assets/kudbee-motion.css">
     <script src="assets/kudbee-motion.js" defer></script>
+    <script src="assets/site/hero-cube.js" defer></script>
     <script>document.documentElement.classList.add('js');</script>
     <script type="application/ld+json">
     {
@@ -244,6 +245,9 @@
 <!-- ════════ BEGIN §03 Hero ════════ -->
 <section class="hero" id="home" aria-label="Intro">
     <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="hero-cube-wrapper" aria-hidden="true">
+        <canvas id="heroCube"></canvas>
+    </div>
     <div class="hero-fade" aria-hidden="true"></div>
     <div class="wrap" id="heroWrap">
         <div class="hero-badge" data-rv><span class="pulse"></span> Now booking web design &amp; AI training projects</div>
