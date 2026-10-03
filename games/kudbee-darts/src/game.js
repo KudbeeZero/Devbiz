@@ -367,6 +367,8 @@
     else this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time });
     cur.dartsThrown++;
 
+    const out = this.mode.applyDart(cur, res, opp);
+
     // Dart-grouping (muscle memory): a scoring human dart updates the turn's
     // cluster center so subsequent darts groove toward it. Stronger the more you
     // stack — landing T20 then T20 pulls the third in tight for a realistic 180.
@@ -376,8 +378,6 @@
       else { this._groupCenter.x = this._groupCenter.x * 0.6 + lx * 0.4; this._groupCenter.y = this._groupCenter.y * 0.6 + ly * 0.4; }
       this._groupStrength = Math.min(0.55, this._groupStrength + 0.18);
     }
-
-    const out = this.mode.applyDart(cur, res, opp);
     this.dartsThisTurn++;
 
     // Floating score pop + scoring explosion (density scales with the score).
