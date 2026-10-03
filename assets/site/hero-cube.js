@@ -15,6 +15,9 @@
       this.mouseX = 0.5;
       this.mouseY = 0.5;
       this.scrollProgress = 0;
+      this.scrollVelocity = 0;  // scroll speed (positive = down, negative = up)
+      this.lastScrollY = 0;
+      this.scrollMomentum = 0;  // decaying momentum for smooth spinning
 
       // 3D cube vertices (normalized -1 to 1)
       this.vertices = [
@@ -90,10 +93,13 @@
       const mouseInfluence = (this.mouseX - 0.5) * 0.002;
       const scrollInfluence = this.scrollProgress * 0.003;
 
-      // Rotation angles (auto-rotating + mouse influence)
-      const angleX = time * 0.3 + (this.mouseY - 0.5) * 0.5;
-      const angleY = time * 0.5 + mouseInfluence * 2;
-      const angleZ = time * 0.2 + scrollInfluence;
+      // Scroll momentum drives the spin (decays over time)
+      this.scrollMomentum *= 0.92;  // friction
+
+      // Rotation angles (auto-rotating + mouse + scroll momentum)
+      const angleX = time * 0.3 + (this.mouseY - 0.5) * 0.5 + this.scrollMomentum * 0.15;
+      const angleY = time * 0.5 + mouseInfluence * 2 + this.scrollVelocity * 0.008;
+      const angleZ = time * 0.2 + scrollInfluence + this.scrollMomentum * 0.08;
 
       // Transform vertices
       const rotated = this.rotate(this.vertices, angleX, angleY, angleZ);
@@ -182,12 +188,18 @@
       cube.mouseY = e.clientY / window.innerHeight;
     });
 
-    // Track scroll
+    // Track scroll and velocity for spinning
     window.addEventListener('scroll', () => {
       const scrolled = window.scrollY;
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       cube.scrollProgress = scrolled / maxScroll;
-    });
+
+      // Calculate scroll velocity (pixels per frame)
+      const deltaScroll = scrolled - cube.lastScrollY;
+      cube.scrollVelocity = deltaScroll;
+      cube.scrollMomentum = Math.max(cube.scrollMomentum, deltaScroll * 0.5);
+      cube.lastScrollY = scrolled;
+    }, { passive: true });
 
     // Responsive canvas resizing
     let resizeTimer;
