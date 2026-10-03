@@ -144,15 +144,15 @@
     rdx /= rlen; rdy /= rlen;
 
     if (powf < 1) {
-      // Soft flick: the dart drops low and pulls in toward the centre.
+      // Soft flick: the dart pulls in toward the centre with minimal depth change.
       const soft = (1 - powf);
-      ly += soft * Rpx * 0.26;                       // gravity sag
-      lx -= rdx * soft * Rpx * 0.05; ly -= rdy * soft * Rpx * 0.05;
+      ly += soft * Rpx * 0.03;                       // minimal gravity sag
+      lx -= rdx * soft * Rpx * 0.08; ly -= rdy * soft * Rpx * 0.02;  // pull inward
     } else {
       // Hard flick: overshoot outward along the throw line (can sail off).
       const hard = Math.min(1.1, powf - 1);
       lx += rdx * hard * Rpx * 0.22;
-      ly += rdy * hard * Rpx * 0.22;
+      ly += rdy * hard * Rpx * 0.01;                // near-zero Y overshoot
     }
 
     // Curl: sideways component of the release direction pulls the landing and
