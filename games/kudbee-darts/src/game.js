@@ -13,7 +13,7 @@
 
   const VIEW_W = 960;
   const VIEW_H = 720;
-  const DART_SCALE = 1.4;
+  const DART_SCALE = 1.75;  // increased 25%
   const C = {
     cyan: '#39e6ff', violet: '#c46bff', green: '#7CFFb2',
     gold: '#ffd34d', ember: '#ff5d3c', text: '#cfe9ff', dim: '#7d8aa8',
@@ -100,7 +100,8 @@
   Game.prototype.start = function () {
     this.audio.startMusic();
     this.loop.start();
-    this._lbInit();
+    // Defer leaderboard init to avoid blocking game startup
+    setTimeout(() => this._lbInit(), 100);
   };
 
   // Triggered by Dart.release(): the board lunges in a touch, then snaps back.
