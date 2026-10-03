@@ -36,6 +36,7 @@
          its exact timing even if these two assets fail to load. -->
     <link rel="stylesheet" href="assets/kudbee-motion.css">
     <script src="assets/kudbee-motion.js" defer></script>
+    <script src="assets/site/hero-cube.js" defer></script>
     <script>document.documentElement.classList.add('js');</script>
     <script type="application/ld+json">
     {
@@ -244,6 +245,9 @@
 <!-- ════════ BEGIN §03 Hero ════════ -->
 <section class="hero" id="home" aria-label="Intro">
     <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="hero-cube-wrapper" aria-hidden="true">
+        <canvas id="heroCube"></canvas>
+    </div>
     <div class="hero-fade" aria-hidden="true"></div>
     <div class="wrap" id="heroWrap">
         <div class="hero-badge" data-rv><span class="pulse"></span> Now booking web design &amp; AI training projects</div>
@@ -517,7 +521,7 @@
             <a class="gcard" data-rv style="--acc-rgb:196,107,255" href="games/kudbee-pinball/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="pinball" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--magenta)">Pinball</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Pinball — Starbreak</h3><span class="g-cat">Neon space table · skill shots · keep the ball alive</span></div></a>
             <a class="gcard" data-rv style="--acc-rgb:255,182,46" href="games/kudbee-jackpot/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="jackpot" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">Provably Fair</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Jackpot — Neon Fortune</h3><span class="g-cat">5-reel slots · Bonus Wheel · 4 live jackpots</span></div></a>
             <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:57,230,255" href="games/kudbee-voidrunner/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="voidrunner" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">Flyer</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Voidrunner</h3><span class="g-cat">Asteroid Dive — steer, dodge, blast into the void</span></div></a>
-            <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-contra/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="jungle" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--green)">Flagship</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Contra</h3><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></div></a>
+            <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:124,255,178" href="games/kudbee-contra/index.html"><span class="g-art"><img src="games/kudbee-contra/assets/backgrounds/neon-jungle-preview.jpg" alt="Kudbee Contra — Neon Jungle Outpost" loading="lazy"><span class="g-badge" style="--c:var(--green)">Flagship</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Contra</h3><span class="g-cat">2.5D run-and-gun · the Hive Sentinel awaits</span></div></a>
             <a class="gcard" data-rv style="--acc-rgb:255,211,77" href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Munch — Windy City</h3><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></div></a>
             <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:111,91,255" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Orbital</h3><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></div></a>
             <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:57,230,255" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Puzzles — Circuit</h3><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></div></a>
