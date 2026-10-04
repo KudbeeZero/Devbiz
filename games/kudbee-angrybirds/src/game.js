@@ -405,6 +405,7 @@ KAB.Game = class {
     // bodies
     const bodies = showWorld ? w.phys.bodies : [];
     for (const b of bodies) if (b.kind === 'ground' && b.shape === 'poly') R.drawRock(ctx, b, th.world);
+    R.krypto = th.world === 4;
     for (const b of bodies) if (b.kind === 'block') R.drawBlock(ctx, b, th.accent);
     for (const b of bodies) if (b.kind === 'enemy') R.drawEnemy(ctx, b, this.time);
     for (const b of bodies) if (b.kind === 'bomb') R.drawEgg(ctx, b);

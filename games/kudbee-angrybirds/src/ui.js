@@ -11,7 +11,7 @@ KAB.UI = {
   OUT: '#3a2216',
   buttons: [],
   PER_PAGE: 8,
-  WORLDS: ['MEADOW', 'FROSTPEAK', 'NIGHTMARE'],
+  WORLDS: ['MEADOW', 'FROSTPEAK', 'NIGHTMARE + KRYPTO'],
 
   COL: {
     green:  ['#a9ec62', '#53bd3c', '#2f8a2a'],
@@ -225,6 +225,13 @@ KAB.UI = {
       U.text(ctx, (g.coarse ? 'TAP' : 'TAP / SPACE') + ' = ' + spec.name.toUpperCase(), 480, 568, 20, '#ffffff', 'center');
     }
 
+    if (w.level.theme.world === 4 && w.shots === 0 && g.hintT > 3.2) {                           // KUDBEE x KRYPTO intro splash
+      const k = KAB.Util.easeOut(Math.min(1, (6 - g.hintT) * 2.4)), fade = Math.min(1, (g.hintT - 3.2) * 2.2);
+      ctx.save(); ctx.globalAlpha = fade; ctx.translate(480, 250); ctx.scale(0.7 + 0.3 * k, 0.7 + 0.3 * k);
+      U.bubble(ctx, 'KUDBEE', 0, -20, 110, '#ffffff', '#cfe9ff', -0.04);
+      U.bubble(ctx, w.level.theme.tag || 'KRYPTO', 0, 66, 50, '#fff27a', '#ff9a1f', -0.03);
+      ctx.restore();
+    }
     if (w.state === 'ready' && g.hintT > 0 && w.shots === 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, g.hintT);
