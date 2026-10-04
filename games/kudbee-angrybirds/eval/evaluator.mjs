@@ -6,11 +6,27 @@
 // reduced-motion.
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, resolve, extname } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const URL = process.env.BIRDS_URL || ('file://' + resolve(HERE, '..', 'index.html'));
+// Serve the repo over HTTP like production does (a file:// page taints the canvas
+// once the painted backdrop image loads, which would break the pixel checks).
+const ROOT = resolve(HERE, '..', '..', '..');
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json', '.svg': 'image/svg+xml' };
+let server = null;
+let URL = process.env.BIRDS_URL;
+if (!URL) {
+  server = createServer((req, res) => {
+    const path = resolve(ROOT, '.' + decodeURIComponent(req.url.split('?')[0]));
+    if (!path.startsWith(ROOT) || !existsSync(path) || statSync(path).isDirectory()) { res.writeHead(404); res.end('not found'); return; }
+    res.writeHead(200, { 'Content-Type': MIME[extname(path)] || 'application/octet-stream' });
+    res.end(readFileSync(path));
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  URL = 'http://127.0.0.1:' + server.address().port + '/games/kudbee-angrybirds/index.html';
+}
 const OUT = resolve(HERE, 'out');
 mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -199,6 +215,7 @@ const waitFor = async (page, fn, ms = 20000) => { try { await page.waitForFuncti
 
 rec('no-console-errors', errors.length === 0, errors.length ? errors[0] : 'no page or console errors during the whole run');
 await browser.close();
+if (server) server.close();
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

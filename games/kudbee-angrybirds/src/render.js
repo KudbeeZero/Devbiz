@@ -27,7 +27,123 @@ KAB.Render = {
   alpha(hex, a) { const c = this.rgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; },
 
   // ---- backdrop ---------------------------------------------------------
+  img: { lake: null },
+
+  // Kicks off the painted backdrop load; until it arrives (or if it fails) the
+  // procedural neon skyline below is used, so the game never shows an empty stage.
+  loadImages() {
+    const im = new Image();
+    im.onload = () => { this._bg = {}; this._fringe = null; };
+    im.src = 'assets/bg-lake.jpg';
+    this.img.lake = im;
+  },
+
+  _hasLake() { const im = this.img.lake; return !!(im && im.complete && im.naturalWidth > 0); },
+
+  // Painted scene: meadow line aligned to the physics ground, per-level mood grade,
+  // soft depth-of-field so the playfield pops, cartoon dirt + grass in front.
+  _makePaintedBg(theme, dpr, seed) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = this.H * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const rnd = KAB.Util.rng(seed);
+    const GY = KAB.GROUND_Y;
+    const im = this.img.lake;
+    const m = theme.mood || { tint: '#ffffff', a: 0 };
+
+    // The source's front meadow line sits ~88% down; land it on the physics ground.
+    const sc = GY / (im.naturalHeight * 0.883);
+    const dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+    x.save();
+    x.beginPath(); x.rect(0, 0, this.W, GY + 2); x.clip();
+    if ('filter' in x) x.filter = 'blur(1.6px) saturate(' + (m.sat || 1) + ') brightness(' + (m.bright || 1) + ')';
+    // Nudge left so the scene's own scaffold (it reads as a second slingshot) is cropped off.
+    x.drawImage(im, -(dw - this.W) / 2 - 38, 0, dw, dh);
+    x.filter = 'none';
+    x.restore();
+
+    // Mood grade: multiply tint, then a warm horizon glow for sunset-type levels.
+    if (m.a > 0) {
+      x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = m.a; x.fillStyle = m.tint; x.fillRect(0, 0, this.W, GY); x.restore();
+    }
+    if (m.glow) {
+      const gl = x.createRadialGradient(m.gx || 700, GY - 120, 10, m.gx || 700, GY - 120, 520);
+      gl.addColorStop(0, this.alpha(m.glow, 0.55)); gl.addColorStop(1, this.alpha(m.glow, 0));
+      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = gl; x.fillRect(0, 0, this.W, GY); x.restore();
+    }
+    // HUD readability scrim + gentle vignette.
+    const sg = x.createLinearGradient(0, 0, 0, 130);
+    sg.addColorStop(0, 'rgba(4,10,30,0.50)'); sg.addColorStop(1, 'rgba(4,10,30,0)');
+    x.fillStyle = sg; x.fillRect(0, 0, this.W, 130);
+    const vg = x.createRadialGradient(480, 280, 260, 480, 280, 640);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.30)');
+    x.fillStyle = vg; x.fillRect(0, 0, this.W, GY);
+
+    const stars = [];
+    if (m.night) {
+      for (let i = 0; i < 60; i++) stars.push({ x: rnd() * this.W, y: rnd() * 220, r: 0.6 + rnd() * 1.3, p: rnd() * 6.28 });
+      for (const st of stars) { x.fillStyle = 'rgba(235,240,255,' + (0.35 + st.r * 0.25) + ')'; x.fillRect(st.x, st.y, st.r, st.r); }
+    }
+    this._cartoonGround(x, theme, rnd);
+    return { cv, stars: stars.filter((st, i) => i % 3 === 0) };
+  },
+
+  // Dirt + stone + grass cap below the playfield (y >= ground line).
+  _cartoonGround(x, theme, rnd) {
+    const GY = KAB.GROUND_Y, W = this.W, H = this.H;
+    const dg = x.createLinearGradient(0, GY, 0, H);
+    dg.addColorStop(0, '#7a5434'); dg.addColorStop(1, '#2e1d10');
+    x.fillStyle = dg; x.fillRect(0, GY, W, H - GY);
+    // rounded stone blobs
+    for (let row = 0; row < 3; row++) {
+      let px = -20 + (row % 2) * 24;
+      while (px < W + 30) {
+        const w = 38 + rnd() * 46, h = 16 + rnd() * 10, y = GY + 14 + row * 17;
+        const shade = 0.82 + rnd() * 0.3;
+        x.fillStyle = 'rgb(' + Math.round(150 * shade) + ',' + Math.round(106 * shade) + ',' + Math.round(66 * shade) + ')';
+        x.strokeStyle = 'rgba(30,16,6,0.75)'; x.lineWidth = 1.6;
+        x.beginPath();
+        if (x.roundRect) x.roundRect(px, y, w, h, 7); else x.rect(px, y, w, h);
+        x.fill(); x.stroke();
+        x.fillStyle = 'rgba(255,235,200,0.18)'; x.fillRect(px + 5, y + 2.5, w * 0.45, 2.5);
+        px += w + 5 + rnd() * 5;
+      }
+    }
+    // grass cap with a lit top edge
+    const gg = x.createLinearGradient(0, GY - 2, 0, GY + 16);
+    gg.addColorStop(0, '#9be84a'); gg.addColorStop(0.45, '#4fb83a'); gg.addColorStop(1, '#2a7a2c');
+    x.fillStyle = gg;
+    x.beginPath(); x.moveTo(0, GY + 16);
+    for (let px = 0; px <= W; px += 12) x.lineTo(px, GY - 1 + Math.sin(px * 0.11) * 1.8 + (rnd() - 0.5) * 2);
+    x.lineTo(W, GY + 16); x.closePath(); x.fill();
+    x.strokeStyle = 'rgba(20,70,20,0.55)'; x.lineWidth = 1.5; x.stroke();
+    x.fillStyle = 'rgba(210,255,150,0.35)'; x.fillRect(0, GY - 1.5, W, 2);
+  },
+
+  // Front grass blades drawn OVER the bodies' feet so everything stands in the meadow.
+  _makeFringe(dpr) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = 40 * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const rnd = KAB.Util.rng(4242), GY = KAB.GROUND_Y, base = 40 - 2;
+    for (let px = -4; px < this.W + 4; px += 3 + rnd() * 4) {
+      const h = 5 + rnd() * 9, lean = (rnd() - 0.5) * 6, g = 120 + Math.floor(rnd() * 90);
+      x.fillStyle = 'rgb(' + Math.round(g * 0.45) + ',' + g + ',' + Math.round(g * 0.3) + ')';
+      x.beginPath(); x.moveTo(px - 2, base); x.lineTo(px + lean, base - h); x.lineTo(px + 2, base); x.closePath(); x.fill();
+    }
+    return cv;
+  },
+
+  drawFringe(ctx, dpr) {
+    if (!this._hasLake()) return;
+    if (!this._fringe || this._fringeDpr !== dpr) { this._fringe = this._makeFringe(dpr); this._fringeDpr = dpr; }
+    ctx.drawImage(this._fringe, 0, KAB.GROUND_Y - 38, this.W, 40);
+  },
+
   _makeBg(theme, dpr, seed) {
+    if (this._hasLake()) return this._makePaintedBg(theme, dpr, seed);
     const cv = document.createElement('canvas');
     cv.width = this.W * dpr; cv.height = this.H * dpr;
     const x = cv.getContext('2d');
@@ -118,8 +234,14 @@ KAB.Render = {
     const dmg = Math.max(0, Math.min(1, 1 - b.hp / b.maxHp));
     const hx = -w / 2, hy = -h / 2;
 
+    // dark under-edge so blocks read against a busy painted backdrop
+    ctx.fillStyle = 'rgba(8,14,30,0.45)';
+    ctx.fillRect(hx - 1.5, hy - 1.5, w + 3, h + 3);
+
     if (b.mat === 'glass') {
-      ctx.fillStyle = 'rgba(57,230,255,0.20)';
+      ctx.fillStyle = 'rgba(30,70,110,0.28)';
+      ctx.fillRect(hx, hy, w, h);
+      ctx.fillStyle = 'rgba(120,235,255,0.30)';
       ctx.fillRect(hx, hy, w, h);
       ctx.save();
       ctx.beginPath(); ctx.rect(hx, hy, w, h); ctx.clip();
@@ -327,7 +449,9 @@ KAB.Render = {
   slingBack(ctx, accent, bx, by, stretch) {
     const S = KAB.SLING;
     ctx.save();
-    ctx.fillStyle = '#0f1b36'; ctx.strokeStyle = this.alpha(accent, 0.7); ctx.lineWidth = 1.5;
+    const mg = ctx.createLinearGradient(0, KAB.GROUND_Y - 62, 0, KAB.GROUND_Y);
+    mg.addColorStop(0, '#8a6a45'); mg.addColorStop(1, '#5a3f26');
+    ctx.fillStyle = this._hasLake() ? mg : '#0f1b36'; ctx.strokeStyle = this._hasLake() ? 'rgba(30,16,6,0.8)' : this.alpha(accent, 0.7); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(S.x - 30, KAB.GROUND_Y); ctx.lineTo(S.x - 20, KAB.GROUND_Y - 62); ctx.lineTo(S.x + 20, KAB.GROUND_Y - 62); ctx.lineTo(S.x + 30, KAB.GROUND_Y); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#7a4d1e'; ctx.lineWidth = 9;

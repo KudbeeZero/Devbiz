@@ -91,6 +91,8 @@ KAB.UI = {
     ctx.save();
     ctx.font = (weight || 600) + ' ' + size + 'px ' + (mono ? this.MONO : this.FONT);
     ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size * 0.2); ctx.strokeStyle = 'rgba(6,10,28,0.78)';
+    ctx.strokeText(s, x, y);                       // dark halo keeps text legible on a bright scene
     ctx.fillText(s, x, y);
     ctx.restore();
   },

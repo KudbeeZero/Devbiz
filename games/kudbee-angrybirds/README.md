@@ -1,7 +1,7 @@
 # Kudbee Birds
 
-> **Kudbee Games Studio** — neon slingshot demolition. Zero install, zero build: canvas + Web Audio,
-> all art and sound procedural.
+> **Kudbee Games Studio** — slingshot demolition across painted meadows. Zero install, zero build:
+> canvas + Web Audio; birds, drones, blocks and effects are drawn in code, sound is synthesized.
 
 Fling three kinds of bird at the Hive's drone fortresses across **8 levels** (the last is a boss),
 using real rigid-body physics: stacks topple, glass shatters, stone cracks, TNT chains.
@@ -41,6 +41,9 @@ using real rigid-body physics: stacks topple, glass shatters, stone cracks, TNT 
 - Progress (stars, best score) and the sound setting are stored in `localStorage`
   (`kudbee.birds.v2`); everything degrades gracefully if storage is blocked.
 - Fail a level and **Try Again** restarts that level (not the whole game).
+- Each level has its own lighting mood (morning, dusk, sunset, ember, crimson night) graded over one painted
+  backdrop (`assets/bg-lake.jpg`, 260 KB). If the image is missing or still loading, a procedural neon skyline
+  is drawn instead, so the stage is never empty.
 - Honors `prefers-reduced-motion` (no shake, no slow-mo, static stars) and pauses when the tab is hidden.
 
 ## How it's built
@@ -52,8 +55,9 @@ src/physics.js   rigid-body engine: box/circle SAT + clipped manifolds, warm-sta
 src/levels.js    level data (builder DSL)
 src/world.js     game rules, DOM-free: launch, abilities, destruction, TNT, turn state machine
 src/particle.js  cosmetic effects        src/audio.js   synthesized SFX + music bed
-src/render.js    world drawing           src/ui.js      HUD + menu/select/pause/win/fail screens
+src/render.js    backdrop + world drawing  src/ui.js    HUD + menu/select/pause/win/fail screens
 src/game.js      loop, input, wiring
+assets/bg-lake.jpg   painted backdrop (level moods are baked in at load; meadow line = physics ground)
 ```
 
 `world.js` has no DOM dependency, so the same code runs in the browser and in the headless tests.
@@ -71,7 +75,7 @@ npm run verify         # whole repo gate (includes birds:eval)
 - `eval/engine.mjs` — stacking, no-tunnelling, determinism, abilities, state machine, every level
   stands still on its own, and **replays a recorded winning line for every level**
   (`eval/solutions.json`) so a physics or layout tweak can't silently make a level unwinnable.
-- `eval/evaluator.mjs` — real Chromium, real pointer/keyboard input: menu, select + locks, launch,
+- `eval/evaluator.mjs` — real Chromium (page served over a local HTTP server, like production), real pointer/keyboard input: menu, select + locks, launch,
   ability tap, keyboard aim, pause, a full recorded win, persistence across reload, fail flow,
   phone-sized viewport, reduced motion. Screenshots land in `eval/out/` (gitignored).
 - `eval/solve.mjs` — beam-search bot that finds winning lines. Re-run after changing levels or

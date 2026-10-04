@@ -1,7 +1,7 @@
 /* =====================================================================
  * Kudbee Birds — levels.js
  * Level data. `build(b)` places bodies with the KAB.Builder helpers
- * (ground is y=540). Every level is verified headlessly by
+ * (ground is y=540). `theme.mood` grades the painted backdrop per level. Every level is verified headlessly by
  * eval/solve.mjs: it must (1) stand still on its own and (2) be solvable
  * by a search bot. `stars` = [2-star score, 3-star score].
  * ===================================================================== */
@@ -10,7 +10,7 @@ KAB.LEVELS = [
   {
     name: 'First Contact', hint: 'Drag the bird back, then let go.',
     birds: ['cyan', 'cyan', 'gold'], stars: [28000, 35000],
-    theme: { sky: ['#0b1330', '#1d2a5c'], accent: '#39e6ff', skyline: '#14224a' },
+    theme: { sky: ['#0b1330', '#1d2a5c'], accent: '#39e6ff', skyline: '#14224a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(610, [['wood', 40, 40], ['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
       b.col(740, [['glass', 40, 40], ['wood', 40, 40], ['glass', 40, 40], ['wood', 40, 40], ['grunt']]);
@@ -20,7 +20,7 @@ KAB.LEVELS = [
   {
     name: 'Glass House', hint: 'Tap in flight: Dash boosts forward.',
     birds: ['cyan', 'gold', 'cyan'], stars: [21000, 26000],
-    theme: { sky: ['#0d1b2a', '#123a4d'], accent: '#7CFFb2', skyline: '#10303f' },
+    theme: { sky: ['#0d1b2a', '#123a4d'], accent: '#7CFFb2', skyline: '#10303f', mood: { tint: '#7fe8d0', a: 0.22, sat: 1.05 } },
     build(b) {
       b.col(500, [['stone', 26, 92]]);
       b.col(600, [['glass', 16, 70], ['glass', 16, 70]]);
@@ -34,7 +34,7 @@ KAB.LEVELS = [
   {
     name: 'Split Decision', hint: 'Green splits in three with a tap.',
     birds: ['green', 'cyan', 'green', 'gold'], stars: [37000, 47000],
-    theme: { sky: ['#1a1038', '#3a1a5c'], accent: '#c46bff', skyline: '#2a1650' },
+    theme: { sky: ['#1a1038', '#3a1a5c'], accent: '#c46bff', skyline: '#2a1650', mood: { tint: '#b08aff', a: 0.30, glow: '#ff9ad0', gx: 760 } },
     build(b) {
       b.col(520, [['stone', 30, 100]]);
       b.enemy('grunt', 566, 525);
@@ -47,7 +47,7 @@ KAB.LEVELS = [
   {
     name: 'Stone Keep', hint: 'Gold slams straight down. Crack the roof.',
     birds: ['gold', 'cyan', 'green', 'gold'], stars: [34000, 43000],
-    theme: { sky: ['#1c1220', '#4a1f3a'], accent: '#ff7ab8', skyline: '#341530' },
+    theme: { sky: ['#1c1220', '#4a1f3a'], accent: '#ff7ab8', skyline: '#341530', mood: { tint: '#ff9ac0', a: 0.28, glow: '#ffb070', gx: 720 } },
     build(b) {
       b.col(580, [['stone', 26, 70], ['stone', 26, 70]]);
       b.col(740, [['stone', 26, 70], ['stone', 26, 70]]);
@@ -62,7 +62,7 @@ KAB.LEVELS = [
   {
     name: 'Powder Keg', hint: 'Pop the TNT. Chain reactions score big.',
     birds: ['cyan', 'green', 'gold', 'cyan'], stars: [28000, 36000],
-    theme: { sky: ['#220f0f', '#55201a'], accent: '#ff5d3c', skyline: '#3a1612' },
+    theme: { sky: ['#220f0f', '#55201a'], accent: '#ff5d3c', skyline: '#3a1612', mood: { tint: '#ff8a50', a: 0.34, glow: '#ff5d3c', gx: 700, bright: 0.95 } },
     build(b) {
       b.col(500, [['wood', 28, 70], ['grunt']]);
       b.col(640, [['wood', 20, 60], ['wood', 20, 60]]);
@@ -77,7 +77,7 @@ KAB.LEVELS = [
   {
     name: 'Bridge Gap', hint: 'Mix birds. Break a pillar, drop the bridge.',
     birds: ['cyan', 'green', 'cyan', 'gold', 'cyan'], stars: [39000, 49000],
-    theme: { sky: ['#0a1f1a', '#14463a'], accent: '#7CFFb2', skyline: '#0f3128' },
+    theme: { sky: ['#0a1f1a', '#14463a'], accent: '#7CFFb2', skyline: '#0f3128', mood: { tint: '#9dffc2', a: 0.24, sat: 1.1 } },
     build(b) {
       b.col(560, [['stone', 40, 90], ['stone', 40, 90]]);
       b.col(800, [['stone', 40, 90], ['stone', 40, 90]]);
@@ -93,7 +93,7 @@ KAB.LEVELS = [
   {
     name: 'Twin Towers', hint: 'Topple one, crush the other.',
     birds: ['green', 'gold', 'cyan', 'cyan', 'green'], stars: [46000, 58000],
-    theme: { sky: ['#101030', '#2a2a6c'], accent: '#6f5bff', skyline: '#1c1c52' },
+    theme: { sky: ['#101030', '#2a2a6c'], accent: '#6f5bff', skyline: '#1c1c52', mood: { tint: '#6a6aff', a: 0.42, glow: '#8a7bff', gx: 600, bright: 0.85 } },
     build(b) {
       b.col(500, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
       b.col(610, [['stone', 60, 44], ['stone', 60, 44], ['wood', 50, 44], ['glass', 50, 44], ['wood', 50, 44], ['grunt']]);
@@ -106,7 +106,7 @@ KAB.LEVELS = [
   {
     name: 'Hive Sentinel', hint: 'The boss is armored. Use the TNT.',
     birds: ['gold', 'green', 'cyan', 'gold', 'green', 'cyan'], stars: [55000, 69000],
-    theme: { sky: ['#1d0a24', '#5a1040'], accent: '#ff3d7f', skyline: '#3a0c32' },
+    theme: { sky: ['#1d0a24', '#5a1040'], accent: '#ff3d7f', skyline: '#3a0c32', mood: { tint: '#7a1030', a: 0.55, glow: '#ff3d7f', gx: 700, bright: 0.7, night: true } },
     build(b) {
       b.col(700, [['stone', 240, 36], ['wood', 190, 28]]);
       b.col(650, [['stone', 24, 100]], 476);

@@ -17,6 +17,7 @@ KAB.Game = class {
     this.coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
     KAB.Store.load();
+    KAB.Render.loadImages();
     this.audio = new KAB.Audio();
     this.particles = new KAB.Particles();
     this.world = new KAB.World(this._handlers());
@@ -402,6 +403,7 @@ KAB.Game = class {
       R.drawBird(ctx, b.x, b.y, b.r, b.data.type, fly ? dir : b.angle, dir, this.time, { blink: b.asleep });
     }
 
+    if (showWorld) R.drawFringe(ctx, this.dpr);
     this.particles.draw(ctx);
     ctx.restore();
 
