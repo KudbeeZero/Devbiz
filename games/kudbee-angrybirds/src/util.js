@@ -49,5 +49,5 @@ KAB.Store = {
     this.save();
     return isBest;
   },
-  unlocked(i) { return i === 0 || this.best(i - 1).stars > 0; },
+  unlocked(i) { return i === 0 || this.best(i - 1).stars > 0 || (typeof location !== 'undefined' && /[?&]unlock\b/.test(location.search || '')); },   // ?unlock opens every level (preview/QA)
 };
