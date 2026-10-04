@@ -59,10 +59,29 @@ KAR.Render = {
   },
 
   // ---- scenery ----------------------------------------------------------------
+  // Photo backdrops (assets/bg-*.jpg); null until loaded so the painted scene is the fallback.
+  _photo(name) {
+    const c = this._ph || (this._ph = {});
+    if (!c[name]) { const im = new Image(); const o = c[name] = { im, ok: false }; im.onload = () => { o.ok = true; }; im.src = 'assets/' + name + '.jpg'; }
+    return c[name].ok ? c[name].im : null;
+  },
+  drawMenuPhoto(ctx) {
+    const im = this._photo('bg-menu'); if (!im) return false;
+    const W = this.W, H = this.H, s = Math.max(W / im.width, H / im.height);
+    ctx.drawImage(im, (W - im.width * s) / 2, (H - im.height * s) / 2, im.width * s, im.height * s);
+    return true;
+  },
   drawWorld(ctx, t, wind) {
     const W = this.W, H = this.H, hy = Math.max(60, Math.min(H - 120, this.horizonY()));
     const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#4aa8ff'); sky.addColorStop(1, '#d6f1ff');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
+    if (ph) {
+      const s = Math.max(W / ph.width, hy / ph.height);
+      ctx.drawImage(ph, (W - ph.width * s) / 2, hy - ph.height * s, ph.width * s, ph.height * s);
+      this._field(ctx, hy, true);
+      return;
+    }
     // sun glow + clouds
     const sg = ctx.createRadialGradient(780, hy - 150, 10, 780, hy - 150, 220); sg.addColorStop(0, 'rgba(255,248,200,0.9)'); sg.addColorStop(1, 'rgba(255,248,200,0)');
     ctx.fillStyle = sg; ctx.fillRect(560, 0, 400, hy + 40);
@@ -73,8 +92,11 @@ KAR.Render = {
     hill(46, 26, '#9bc7d8', 0.006, 1); hill(30, 20, '#78b093', 0.009, 2.4); hill(14, 10, '#4f9a55', 0.014, 4);
     const rnd = KAR.Util.rng(77);
     for (let x = -10; x < W + 20; x += 11 + rnd() * 13) { const th = 10 + rnd() * 20; ctx.fillStyle = rnd() > 0.5 ? '#2f7a3c' : '#3a8a45'; ctx.beginPath(); ctx.arc(x, hy - 6 - th * 0.35, th * 0.55, 0, 7); ctx.fill(); }
-    // mown field: bands receding to the horizon, with a faint lane
-    const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, '#79cc55'); gg.addColorStop(1, '#3f9a36');
+    this._field(ctx, hy);
+  },
+  _field(ctx, hy, photo) {
+    const W = this.W, H = this.H;
+    const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, photo ? '#7aa83e' : '#79cc55'); gg.addColorStop(1, photo ? '#4a8a2e' : '#3f9a36');
     ctx.fillStyle = gg; ctx.fillRect(0, hy, W, H - hy);
     const D = this.dist;
     for (let i = 0; i < 40; i++) {
