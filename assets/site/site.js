@@ -1023,61 +1023,23 @@
         },
         cornhole: function (ctx, w, h, t) {
             t = t || 0;
-            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0d0908'); g.addColorStop(1, '#05050f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-            // board (wooden surface tilted, side view)
-            ctx.save();
-            ctx.fillStyle = 'rgba(180, 120, 60, 0.9)'; // wood brown
-            ctx.beginPath();
-            ctx.moveTo(w * 0.3, h * 0.6); ctx.lineTo(w * 0.8, h * 0.5); ctx.lineTo(w * 0.82, h * 0.45); ctx.lineTo(w * 0.28, h * 0.65); ctx.closePath();
-            ctx.fill();
-            // board wood grain (darker stripes)
-            ctx.strokeStyle = 'rgba(100, 60, 30, 0.6)';
-            ctx.lineWidth = 2;
-            for (var bd = 0; bd < 5; bd++) {
-                var by = h * 0.5 + bd * h * 0.016;
-                ctx.beginPath();
-                ctx.moveTo(w * 0.3 + bd * w * 0.01, by);
-                ctx.lineTo(w * 0.8 + bd * w * 0.01, by - h * 0.1);
-                ctx.stroke();
-            }
-            ctx.restore();
-            // hole (bright neon ring)
-            var hx = w * 0.64, hy = h * 0.48;
-            ctx.save();
-            ctx.shadowColor = palette.amber;
-            ctx.shadowBlur = 16;
-            ctx.strokeStyle = palette.amber;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(hx, hy, Math.min(w, h) * 0.08, 0, 7);
-            ctx.stroke();
-            // hole interior
-            ctx.fillStyle = 'rgba(255, 160, 60, 0.2)';
-            ctx.fill();
-            ctx.restore();
-            // bag in flight (falling onto board)
-            var bx = w * 0.5 + Math.sin(t * 0.0028) * w * 0.08;
-            var by = h * 0.3 + Math.sin(t * 0.0042) * h * 0.15;
-            ctx.save();
-            ctx.shadowColor = palette.cyan;
-            ctx.shadowBlur = 14;
-            ctx.fillStyle = palette.cyan;
-            ctx.fillRect(bx - w * 0.06, by - h * 0.08, w * 0.12, h * 0.12);
-            // bag stitching
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bx - w * 0.02, by - h * 0.08);
-            ctx.lineTo(bx + w * 0.02, by + h * 0.04);
-            ctx.stroke();
-            ctx.restore();
-            // ground hint
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(w * 0.2, h * 0.7);
-            ctx.lineTo(w * 0.9, h * 0.7);
-            ctx.stroke();
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#59b8ff'); sky.addColorStop(1, '#bfe6ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            var lawn = ctx.createLinearGradient(0, h * 0.42, 0, h); lawn.addColorStop(0, '#6fcf4a'); lawn.addColorStop(1, '#2f9a35'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.42, w, h * 0.58);
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.5 + m * 0.09), w, h * 0.04);
+            // board, far end, in perspective
+            var cx = w * 0.5, top = h * 0.26, bw = w * 0.2, bb = h * 0.62, bbw = w * 0.34;
+            ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx + 8, bb + 6, bbw * 0.55, h * 0.03, 0, 0, 7); ctx.fill();
+            ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a52'; ctx.lineWidth = Math.max(3, w * 0.012); ctx.fillStyle = '#e8c27a';
+            ctx.beginPath(); ctx.moveTo(cx - bw / 2, top); ctx.lineTo(cx + bw / 2, top); ctx.lineTo(cx + bbw / 2, bb); ctx.lineTo(cx - bbw / 2, bb); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = 'rgba(140,90,40,0.35)'; ctx.lineWidth = 1.5;
+            for (var gI = 1; gI < 6; gI++) { var f = gI / 6; ctx.beginPath(); ctx.moveTo(cx - bw / 2 + bw * f, top + 3); ctx.lineTo(cx - bbw / 2 + bbw * f, bb - 3); ctx.stroke(); }
+            // hole
+            ctx.fillStyle = '#1a1010'; ctx.beginPath(); ctx.ellipse(cx, top + h * 0.075, w * 0.045, h * 0.024, 0, 0, 7); ctx.fill();
+            // bag arcing in
+            var k = (t * 0.0007) % 1, bx = cx + Math.sin(k * 6) * w * 0.02, by = h * 0.96 - k * h * 0.7 - Math.sin(k * Math.PI) * h * 0.16, bs = w * (0.07 - k * 0.04);
+            ctx.save(); ctx.translate(bx, by); ctx.rotate(k * 7); ctx.fillStyle = '#3d86ff'; ctx.strokeStyle = '#122a66'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.rect(-bs / 2, -bs / 2, bs, bs); ctx.fill(); ctx.stroke(); ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.strokeRect(-bs / 2 + 4, -bs / 2 + 4, bs - 8, bs - 8); ctx.restore();
         },
         cricket: function (ctx, w, h, t) {
             t = t || 0;

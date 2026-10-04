@@ -3,43 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#05050f">
-<title>Kudbee Cornhole — Neon Bag Toss</title>
+<meta name="theme-color" content="#59b8ff">
+<meta name="description" content="Kudbee Cornhole — a backyard bag toss with real sloped-board physics, slide and flop throws, a CPU opponent and cancellation scoring to 21. Plays in your browser.">
+<title>Kudbee Cornhole</title>
+<link rel="preload" href="assets/fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:#05050f;color:#cfe9ff;font-family:"Space Grotesk","Inter",system-ui,sans-serif;overflow:hidden}
-#stage{position:relative;width:100vw;height:100vh;display:grid;place-items:center}
-#frame{position:relative;width:min(100vw,calc(100vh*1.4));height:min(100vh,calc(100vw/1.4));box-shadow:0 0 60px rgba(255,140,40,0.18),inset 0 0 0 1px rgba(255,160,60,0.12);border-radius:8px;overflow:hidden;background:#0a0d14}
-canvas{display:block;width:100%;height:100%;touch-action:none}
-.hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:10;font-size:11px;color:#6a7a8a;pointer-events:none}
-@media(pointer:coarse){.hint{display:none}}
-.back-link{position:absolute;top:10px;left:12px;z-index:30;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#9fb6c8;text-decoration:none;padding:6px 10px;border:1px solid rgba(159,182,200,0.25);border-radius:6px;background:rgba(5,5,15,0.5);backdrop-filter:blur(6px)}
-.snd-btn{position:absolute;top:10px;right:12px;z-index:30;background:rgba(5,5,15,0.6);border:1px solid rgba(255,160,60,0.3);color:#ffa040;border-radius:6px;width:34px;height:34px;font-size:16px;cursor:pointer}
+  @font-face { font-family:"Lilita One"; src:url(assets/fonts/lilita-one.woff2) format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:#0b1b2e; color:#cfe9ff; overflow:hidden; overscroll-behavior:none;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 700px at 50% 40%, #16385a, #0b1b2e); }
+  canvas { display:block; width:min(100vw, 150vh); width:min(100vw, 150dvh); aspect-ratio:960 / 640; height:auto;
+    touch-action:none; user-select:none; -webkit-user-select:none; outline:none; box-shadow:0 0 60px rgba(255,160,60,0.16); }
+  @media (min-width:700px) and (min-height:520px) { canvas { border-radius:10px; } }
+  .back-link { position:fixed; right:12px; bottom:10px; z-index:30; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; color:#cfe0f0; text-decoration:none; padding:6px 10px;
+    border:1px solid rgba(207,224,240,0.3); border-radius:6px; background:rgba(8,20,36,0.6); backdrop-filter:blur(6px); }
+  .back-link:hover, .back-link:focus-visible { color:#fff; border-color:#ffa040; outline:none; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .rotate-tip { display:none; position:fixed; top:14px; left:0; right:0; z-index:20; text-align:center; font-size:13px; color:#9fb6c8; pointer-events:none; }
+  @media (orientation:portrait) and (max-width:700px) { .rotate-tip { display:block; } }
+  noscript { position:fixed; inset:0; display:grid; place-items:center; text-align:center; padding:24px; }
 </style>
 </head>
 <body>
 <div id="stage">
-  <div id="frame">
-    <a class="back-link" href="../../index.html#games">&larr; Studio</a>
-    <button class="snd-btn" id="sndBtn" aria-label="Toggle sound" aria-pressed="false">&#128266;</button>
-    <canvas id="game" width="960" height="680"></canvas>
-    <div class="hint">drag back from the bag &amp; release to throw &middot; aim for the hole (3 pts) or the board (1 pt) &middot; M mute</div>
-  </div>
+  <canvas id="gameCanvas" tabindex="0" role="application"
+    aria-label="Kudbee Cornhole. Press and drag over the board to aim, release to throw the bag. Toggle slide or flop."></canvas>
 </div>
-<script src="../shared/engine/core-util.js"></script>
-<script src="game.js"></script>
-<script>window.KD_LB_CONFIG = { API_BASE: '', CLERK_PUBLISHABLE_KEY: '', GAME: 'cornhole' };</script>
-<script src="../../leaderboard/client/kd-leaderboard.js"></script>
-<script>
-(function(){
-  var canvas=document.getElementById('game');
-  var game=new KC.Game({canvas:canvas});
-  game.start();
-  var sndBtn=document.getElementById('sndBtn');
-  function toggle(){game.audio.toggle();sndBtn.setAttribute('aria-pressed',String(game.audio.enabled));}
-  window.addEventListener('keydown',function(e){ if(e.code==='KeyM')toggle(); });
-  sndBtn.onclick=toggle;
-})();
-</script>
+<p class="rotate-tip" aria-hidden="true">&#8635; Rotate your phone for a bigger playfield</p>
+<a class="back-link" href="../../index.html#games">&larr; Studio</a>
+<p class="sr">Controls: press and drag over the board to place the aiming ring, then release to throw. The ring sways, so time your release. Or use the arrow keys to aim and Space to throw. S switches between slide and flop throws. P pauses, M toggles sound, R restarts. A bag in the hole scores 3, a bag on the board scores 1, and the lower score cancels the higher. First to 21 wins.</p>
+<noscript>Kudbee Cornhole needs JavaScript to run.</noscript>
+<script src="src/util.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/physics.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
 </body>
 </html>

@@ -1,9 +1,11 @@
 {
   "scripts": {
-    "verify": "npm run site:filing && npm run pinball:eval && npm run test:leaderboard",
+    "verify": "npm run site:filing && npm run pinball:eval && npm run cornhole:engine && npm run cornhole:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
     "test:leaderboard": "npm test --prefix leaderboard",
-    "site:filing": "node ops/check-filing.mjs"
+    "site:filing": "node ops/check-filing.mjs",
+    "cornhole:engine": "node games/kudbee-cornhole/eval/engine.mjs",
+    "cornhole:eval": "node games/kudbee-cornhole/eval/evaluator.mjs"
   },
   "dependencies": {
     "playwright": "^1.63.0"
