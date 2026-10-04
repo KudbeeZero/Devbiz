@@ -129,6 +129,19 @@ KAR.Render = {
   },
 
   // ---- the target ----------------------------------------------------------------
+  // drifting leaves: the stronger the wind, the faster and flatter they fly
+  drawWind(ctx, t, wind) {
+    const W = this.W, H = this.H, a = Math.min(1, Math.abs(wind) / 4), dir = Math.sign(wind) || 1;
+    ctx.save();
+    for (let i = 0; i < 16; i++) {
+      const sp = 40 + a * 260 + (i % 4) * 14, ph = (i * 137.5) % W;
+      let x = ((ph + dir * t * sp) % (W + 80) + (W + 80)) % (W + 80) - 40;
+      const y = H * (0.3 + 0.55 * ((i * 53) % 100) / 100) + Math.sin(t * 1.7 + i) * (10 + 14 * (1 - a));
+      ctx.globalAlpha = 0.5 + 0.35 * a; ctx.fillStyle = i % 3 ? '#8fd24a' : '#e6c54a';
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 3 + i) * 0.9 + dir * a * 0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5 + (i % 3), 2.2, 0, 0, 7); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+  },
   drawTarget(ctx, t, wind) {
     const C = KAR.CFG, D = this.dist, F = this.faceD, R = F / 2, Y = C.FACE_Y;
     const ctr = this.proj(0, Y, D); if (!ctr) return;
@@ -196,7 +209,7 @@ KAR.Render = {
   stuck(ctx, a, team) {
     if (!a.hit) return;
     const D = this.dist, h = a.hit, L = Math.hypot(h.vx, h.vy, h.vz) || 1;
-    this.arrow(ctx, { x: h.x, y: h.y, z: D }, { x: h.vx / L, y: h.vy / L * 3.5, z: h.vz / L }, 0.5, team, 30 * Math.min(1, 0.4 + this.zoom));
+    this.arrow(ctx, { x: h.x, y: h.y, z: D }, { x: h.vx / L, y: h.vy / L * 3.5, z: h.vz / L }, 0.9, team, 52 * Math.min(1, 0.4 + this.zoom));
   },
 
   // ---- first-person bow + sight ----------------------------------------------------------
@@ -230,3 +243,4 @@ KAR.Render = {
     ctx.restore();
   },
 };
+if (typeof Image !== 'undefined') ['bg-menu', 'bg-range-1', 'bg-range-2'].forEach(n => KAR.Render._photo(n));
