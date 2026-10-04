@@ -24,10 +24,10 @@ KAB.BIRDS = {
 };
 
 KAB.ENEMIES = {
-  grunt: { r: 15, hp: 60,  density: 0.8, score: 5000,  color: '#82d44a' },
-  armor: { r: 17, hp: 220, density: 1.1, score: 8000,  color: '#8fd957' },
-  boss:  { r: 30, hp: 1100, density: 1.5, score: 25000, color: '#6fc23f', resist: 0.4 },
-  king:  { r: 28, hp: 850,  density: 1.4, score: 25000, color: '#6fc23f', resist: 0.5 },
+  grunt: { r: 15, hp: 25,  density: 0.8, score: 5000,  color: '#82d44a' },
+  armor: { r: 17, hp: 90, density: 1.1, score: 8000,  color: '#8fd957' },
+  boss:  { r: 30, hp: 480, density: 1.5, score: 25000, color: '#6fc23f', resist: 0.4 },
+  king:  { r: 28, hp: 400,  density: 1.4, score: 25000, color: '#6fc23f', resist: 0.5 },
 };
 
 KAB.Builder = class {
