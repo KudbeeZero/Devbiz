@@ -17,6 +17,7 @@ no bundler required for play; deploy via root `wrangler.toml`.
 | Kudbee Orbital | [`kudbee-orbital/`](./kudbee-orbital/) | [yes](./kudbee-orbital/README.md) |
 | Kudbee Puzzles — Circuit | [`kudbee-puzzles/`](./kudbee-puzzles/) | [yes](./kudbee-puzzles/README.md) |
 | Kudbee Jackpot — Neon Fortune | [`kudbee-jackpot/`](./kudbee-jackpot/) | [yes](./kudbee-jackpot/README.md) |
+| Kudbee Birds | [`kudbee-angrybirds/`](./kudbee-angrybirds/) | [yes](./kudbee-angrybirds/README.md) · evals in `eval/` (not leaderboard-wired) |
 
 Other playable experiments (cornhole, cricket, abyss, etc.) may appear on the marketing site;
 this table is the core **Games Studio** set from `docs/GAMES_STUDIO_ROADMAP.md`.
@@ -33,8 +34,9 @@ python3 -m http.server 8000
 From repo root (no CI configured):
 
 ```bash
-npm run verify                # pinball Playwright rubric (24/24) + leaderboard unit tests
+npm run verify                # site filing + pinball (24/24) + birds engine/browser rubric + leaderboard unit tests
 npm run pinball:eval          # pinball only
+npm run birds:eval            # Kudbee Birds only (Node engine/levels + Playwright rubric)
 ```
 
 Pinball gameplay changes should keep **24/24** on `games/kudbee-pinball/eval/evaluator.mjs`.
@@ -44,6 +46,7 @@ Pinball gameplay changes should keep **24/24** on `games/kudbee-pinball/eval/eva
 All nine titles above are **SDK-wired** (`leaderboard/client/kd-leaderboard.js` + `KD_LB_CONFIG`).
 Demo mode works on static hosts; live post/load needs the Worker deployed and `API_BASE` set
 (owner-gated — see `leaderboard/README.md`).
+Kudbee Birds is the exception for now: it keeps progress locally only (see its README).
 
 ## Conventions for new games
 

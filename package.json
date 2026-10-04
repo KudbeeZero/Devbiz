@@ -1,7 +1,9 @@
 {
   "scripts": {
-    "verify": "npm run site:filing && npm run pinball:eval && npm run test:leaderboard",
+    "verify": "npm run site:filing && npm run pinball:eval && npm run birds:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
+    "birds:engine": "node games/kudbee-angrybirds/eval/engine.mjs",
+    "birds:eval": "npm run birds:engine && node games/kudbee-angrybirds/eval/evaluator.mjs",
     "test:leaderboard": "npm test --prefix leaderboard",
     "site:filing": "node ops/check-filing.mjs"
   },

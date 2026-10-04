@@ -1,41 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kudbee Angry Birds</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0e27;
-      font-family: monospace;
-      overflow: hidden;
-      color: #39e6ff;
-    }
-    #container {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    canvas {
-      display: block;
-      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
-      border: 2px solid #39e6ff;
-      box-shadow: 0 0 40px rgba(57, 230, 255, 0.2);
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#05050a">
+<meta name="description" content="Kudbee Birds — a bright cartoon slingshot demolition game by Kudbee Games Studio. Four birds with tap abilities including an egg bomb, TNT chain reactions and 16 levels across two worlds, each ending in a boss. Plays in your browser; characters and effects are drawn in code and all sound is synthesized.">
+<title>Kudbee Birds</title>
+<link rel="preload" href="assets/fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family:"Lilita One"; src:url(assets/fonts/lilita-one.woff2) format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+  :root { --bg:#05050a; --cyan:#39e6ff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:var(--bg); color:#cfe9ff; overflow:hidden; overscroll-behavior:none;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 700px at 50% 40%, #0d1330, var(--bg)); }
+  canvas { display:block; width:min(100vw, 160vh); width:min(100vw, 160dvh); aspect-ratio:960 / 600; height:auto;
+    touch-action:none; user-select:none; -webkit-user-select:none; outline:none;
+    box-shadow:0 0 60px rgba(57,230,255,0.14); }
+  @media (min-width:700px) and (min-height:520px) { canvas { border-radius:10px; } }
+  .back-link { position:fixed; right:12px; bottom:10px; z-index:30; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; color:#9fb6c8; text-decoration:none; padding:6px 10px;
+    border:1px solid rgba(159,182,200,0.25); border-radius:6px; background:rgba(5,5,10,0.6); backdrop-filter:blur(6px); }
+  .back-link:hover, .back-link:focus-visible { color:#fff; border-color:var(--cyan); outline:none; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .rotate-tip { display:none; position:fixed; top:14px; left:0; right:0; z-index:20; text-align:center; font-size:13px; letter-spacing:0.04em; color:#9fb6c8; pointer-events:none; }
+  @media (orientation:portrait) and (max-width:700px) { .rotate-tip { display:block; } }
+  noscript { position:fixed; inset:0; display:grid; place-items:center; text-align:center; padding:24px; }
+</style>
 </head>
 <body>
-  <div id="container">
-    <canvas id="gameCanvas"></canvas>
-  </div>
-  <script src="src/util.js"></script>
-  <script src="src/audio.js"></script>
-  <script src="src/physics.js"></script>
-  <script src="src/particle.js"></script>
-  <script src="src/game.js"></script>
+<div id="stage">
+  <canvas id="gameCanvas" tabindex="0" role="application"
+    aria-label="Kudbee Birds. Drag the bird back from the slingshot and release to launch. Tap during flight to use the bird's ability."></canvas>
+</div>
+<p class="rotate-tip" aria-hidden="true">&#8635; Rotate your phone for a bigger playfield</p>
+<a class="back-link" href="../../index.html#games">&larr; Studio</a>
+<p class="sr">Controls: drag the bird back and release to fire, or use the arrow keys to aim and Space to fire. Press Space or tap while a bird is flying to use its ability. P pauses, R restarts the level, M toggles sound.</p>
+<noscript>Kudbee Birds needs JavaScript to run.</noscript>
+<script src="src/util.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/physics.js"></script>
+<script src="src/levels.js"></script>
+<script src="src/world.js"></script>
+<script src="src/particle.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
 </body>
 </html>
