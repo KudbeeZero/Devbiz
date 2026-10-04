@@ -27,7 +27,8 @@ KAB.Render = {
   alpha(hex, a) { const c = this.rgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; },
 
   // ---- backdrop ---------------------------------------------------------
-  img: { lake: null },
+  krypto: false,
+  img: { lake: null, nm: [] },
 
   // Kicks off the painted backdrop load; until it arrives (or if it fails) the
   // procedural neon skyline below is used, so the game never shows an empty stage.
@@ -36,6 +37,7 @@ KAB.Render = {
     im.onload = () => { this._bg = {}; this._fringe = null; };
     im.src = 'assets/bg-lake.jpg';
     this.img.lake = im;
+    for (let i = 1; i <= 4; i++) { const n = new Image(); n.onload = () => { this._bg = {}; }; n.src = 'assets/bg-nightmare-' + i + '.jpg'; this.img.nm[i - 1] = n; }
   },
 
   _hasLake() { const im = this.img.lake; return !!(im && im.complete && im.naturalWidth > 0); },
@@ -137,6 +139,7 @@ KAB.Render = {
   },
 
   drawFringe(ctx, dpr, world) {
+    if (world === 3 || world === 4) return;
     if (world === 2) {
       if (!this._fringeS || this._fringeSDpr !== dpr) { this._fringeS = this._makeSnowFringe(dpr); this._fringeSDpr = dpr; }
       ctx.drawImage(this._fringeS, 0, KAB.GROUND_Y - 38, this.W, 40);
@@ -281,7 +284,7 @@ KAB.Render = {
     const top = Math.min.apply(null, b.verts.map(p => p.y)), bot = Math.max.apply(null, b.verts.map(p => p.y));
     path();
     const g = ctx.createLinearGradient(0, top, 0, bot);
-    g.addColorStop(0, '#a89c92'); g.addColorStop(1, '#6a5f58');
+    if (snowy === 4) { g.addColorStop(0, '#3a3a8a'); g.addColorStop(1, '#14123e'); } else if (snowy === 3) { g.addColorStop(0, '#4a3858'); g.addColorStop(1, '#1d1228'); } else { g.addColorStop(0, '#a89c92'); g.addColorStop(1, '#6a5f58'); }
     ctx.fillStyle = g; ctx.fill();
     ctx.save(); path(); ctx.clip();
     const rnd = KAB.Util.rng(b.id * 13);
@@ -289,7 +292,7 @@ KAB.Render = {
     for (let i = 0; i < 7; i++) { let px = (rnd() - 0.5) * b.w * 0.8, py = top + rnd() * (bot - top); ctx.beginPath(); ctx.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * 40; py += rnd() * 22; ctx.lineTo(px, py); } ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     for (let i = 0; i < 10; i++) ctx.fillRect((rnd() - 0.5) * b.w * 0.8, top + rnd() * (bot - top), 6 + rnd() * 10, 3 + rnd() * 3);
-    if (snowy) {
+    if (snowy === 2 || snowy === true) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.moveTo(-b.w, top - 4);
       for (let px = -b.w; px <= b.w; px += 10) ctx.lineTo(px, top + 22 + Math.sin(px * 0.2) * 5 + (Math.abs(px) * 0.28));
@@ -300,7 +303,87 @@ KAB.Render = {
     ctx.restore();
   },
 
+  // World 3: painted nightmare scenes, covered to the stage, dark cracked-stone floor below the physics ground.
+  _makeNightmareBg(theme, dpr, seed) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = this.H * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const GY = KAB.GROUND_Y, W = this.W, H = this.H, im = this.img.nm[theme.bg || 0];
+    const m = theme.mood || { tint: '#ffffff', a: 0 }, rnd = KAB.Util.rng(seed);
+    if (im && im.complete && im.naturalWidth > 0) {
+      const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+      if ('filter' in x) x.filter = 'brightness(' + (m.bright || 1.12) + ') saturate(1.1)';
+      x.drawImage(im, (W - dw) / 2, H - dh, dw, dh);
+      x.filter = 'none';
+    } else { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d0614'); g.addColorStop(0.6, '#4a1230'); g.addColorStop(1, '#10060c'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+    if (m.a > 0) { x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = m.a; x.fillStyle = m.tint; x.fillRect(0, 0, W, H); x.restore(); }
+    // HUD scrim + vignette
+    const sg = x.createLinearGradient(0, 0, 0, 130); sg.addColorStop(0, 'rgba(0,0,0,0.5)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = sg; x.fillRect(0, 0, W, 130);
+    const vg = x.createRadialGradient(480, 300, 280, 480, 300, 680); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)'); x.fillStyle = vg; x.fillRect(0, 0, W, H);
+    // the floor: dark basalt slabs under the playfield, with an ember-lit edge
+    const fg = x.createLinearGradient(0, GY, 0, H); fg.addColorStop(0, '#2a1a2e'); fg.addColorStop(1, '#0b0610');
+    x.fillStyle = fg; x.fillRect(0, GY, W, H - GY);
+    for (let row = 0; row < 3; row++) {
+      let px = -20 + (row % 2) * 30;
+      while (px < W + 30) {
+        const w = 40 + rnd() * 50, h = 16 + rnd() * 9, y = GY + 12 + row * 17, sh = 0.7 + rnd() * 0.5;
+        x.fillStyle = 'rgb(' + Math.round(62 * sh) + ',' + Math.round(44 * sh) + ',' + Math.round(70 * sh) + ')'; x.strokeStyle = 'rgba(8,2,12,0.85)'; x.lineWidth = 1.6;
+        x.beginPath(); if (x.roundRect) x.roundRect(px, y, w, h, 6); else x.rect(px, y, w, h); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(255,90,110,0.10)'; x.fillRect(px + 4, y + 2, w * 0.4, 2);
+        px += w + 5 + rnd() * 5;
+      }
+    }
+    const eg = x.createLinearGradient(0, GY - 4, 0, GY + 14); eg.addColorStop(0, '#5a3a66'); eg.addColorStop(1, '#241430');
+    x.fillStyle = eg; x.beginPath(); x.moveTo(0, GY + 14);
+    for (let px = 0; px <= W; px += 10) x.lineTo(px, GY - 1 + Math.sin(px * 0.13) * 2 + (rnd() - 0.5) * 3);
+    x.lineTo(W, GY + 14); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(255,70,100,0.55)'; x.fillRect(0, GY - 1.5, W, 2);
+    const stars = [];
+    for (let i = 0; i < 26; i++) stars.push({ x: rnd() * W, y: 80 + rnd() * (GY - 260), r: 0.8 + rnd() * 1.4, p: rnd() * 6.28 });   // drifting embers
+    return { cv, stars };
+  },
+
+  // World 4: the Krypto run — neon night, candlestick skyline, giant ghost coins, grid floor.
+  _makeKryptoBg(theme, dpr, seed) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = this.H * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const GY = KAB.GROUND_Y, W = this.W, H = this.H, rnd = KAB.Util.rng(seed), v = theme.bg || 0;
+    const g = x.createLinearGradient(0, 0, 0, GY); g.addColorStop(0, '#070a24'); g.addColorStop(0.6, v === 1 ? '#2a0f5a' : '#14125a'); g.addColorStop(1, v === 2 ? '#5a1450' : '#1e3a8a');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    for (let i = 0; i < 90; i++) { x.fillStyle = 'rgba(200,220,255,' + (0.2 + rnd() * 0.5) + ')'; x.fillRect(rnd() * W, rnd() * (GY - 120), 1 + rnd() * 1.4, 1 + rnd() * 1.4); }
+    // giant ghost coin (BTC gold or SOL violet)
+    const cx = v % 2 ? 250 : 720, cy = 190, R = 130;
+    const cg = x.createRadialGradient(cx, cy, 10, cx, cy, R * 1.7); cg.addColorStop(0, v % 2 ? 'rgba(130,100,255,0.45)' : 'rgba(255,190,60,0.45)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = cg; x.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    x.lineWidth = 5; x.strokeStyle = v % 2 ? 'rgba(150,120,255,0.55)' : 'rgba(255,200,80,0.55)'; x.beginPath(); x.arc(cx, cy, R, 0, 6.283); x.stroke(); x.lineWidth = 2; x.beginPath(); x.arc(cx, cy, R * 0.8, 0, 6.283); x.stroke();
+    if (v % 2) { for (let k = 0; k < 3; k++) { const yy = cy + (k - 1) * 46; x.fillStyle = k === 1 ? 'rgba(130,100,255,0.5)' : 'rgba(90,240,200,0.5)'; x.beginPath(); x.moveTo(cx - 70, yy + 14); x.lineTo(cx + 62, yy + 14); x.lineTo(cx + 78, yy - 14); x.lineTo(cx - 54, yy - 14); x.closePath(); x.fill(); } }
+    else { x.fillStyle = 'rgba(255,205,90,0.5)'; x.font = '400 190px "Lilita One","Arial Black",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('B', cx, cy + 6); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; }
+    // candlestick skyline
+    let lvl = GY - 120;
+    for (let px = -10; px < W + 20; px += 26) {
+      lvl = Math.max(GY - 330, Math.min(GY - 60, lvl + (rnd() - (v === 2 ? 0.62 : 0.42)) * 70));
+      const bh = 20 + rnd() * 50, up = rnd() > (v === 2 ? 0.65 : 0.38), col = up ? '60,230,150' : '255,70,100';
+      x.strokeStyle = 'rgba(' + col + ',0.5)'; x.lineWidth = 2; x.beginPath(); x.moveTo(px + 8, lvl - bh * 0.8); x.lineTo(px + 8, lvl + bh * 1.5); x.stroke();
+      x.fillStyle = 'rgba(' + col + ',0.38)'; x.fillRect(px, lvl - bh * 0.3, 16, bh);
+    }
+    // HUD scrim, vignette
+    const sg = x.createLinearGradient(0, 0, 0, 130); sg.addColorStop(0, 'rgba(0,0,10,0.55)'); sg.addColorStop(1, 'rgba(0,0,10,0)'); x.fillStyle = sg; x.fillRect(0, 0, W, 130);
+    // neon grid floor
+    const fg = x.createLinearGradient(0, GY, 0, H); fg.addColorStop(0, '#16123e'); fg.addColorStop(1, '#07061a'); x.fillStyle = fg; x.fillRect(0, GY, W, H - GY);
+    x.strokeStyle = 'rgba(90,240,255,0.35)'; x.lineWidth = 1;
+    for (let k = 0; k < 5; k++) { const yy = GY + 6 + k * k * 4 + k * 6; x.beginPath(); x.moveTo(0, yy); x.lineTo(W, yy); x.stroke(); }
+    for (let k = -14; k <= 14; k++) { x.beginPath(); x.moveTo(480 + k * 20, GY + 2); x.lineTo(480 + k * 90, H); x.stroke(); }
+    x.fillStyle = 'rgba(90,240,255,0.85)'; x.fillRect(0, GY - 1.5, W, 3);
+    x.shadowColor = '#5af0ff'; x.shadowBlur = 14; x.fillRect(0, GY - 1, W, 2); x.shadowBlur = 0;
+    return { cv, stars: [] };
+  },
+
   _makeBg(theme, dpr, seed) {
+    if (theme.world === 4) return this._makeKryptoBg(theme, dpr, seed);
+    if (theme.world === 3) return this._makeNightmareBg(theme, dpr, seed);
     if (theme.world === 2) return this._makeSnowBg(theme, dpr, seed);
     if (this._hasLake()) return this._makePaintedBg(theme, dpr, seed);
     const cv = document.createElement('canvas');
@@ -374,6 +457,12 @@ KAB.Render = {
     let bg = this._bg[key];
     if (!bg || bg.dpr !== dpr) { bg = this._bg[key] = this._makeBg(theme, dpr, 1000 + key * 77); bg.dpr = dpr; }
     ctx.drawImage(bg.cv, 0, 0, this.W, this.H);
+    if (theme.world === 3 && !reduceMotion) {                       // rising embers
+      for (let i = 0; i < 30; i++) {
+        const sp = 14 + (i % 5) * 7, fx = (i * 97.3) % this.W + Math.sin(t * 0.7 + i) * 22, fy = KAB.GROUND_Y - ((i * 61 + t * sp) % (KAB.GROUND_Y + 10));
+        ctx.fillStyle = 'rgba(255,' + (90 + (i % 4) * 30) + ',90,' + (0.35 + (i % 3) * 0.15) + ')'; ctx.beginPath(); ctx.arc(fx, fy, 1 + (i % 3) * 0.7, 0, 6.283); ctx.fill();
+      }
+    }
     if (theme.world === 2 && !reduceMotion) {                       // drifting snowfall
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       for (let i = 0; i < 46; i++) {
@@ -411,10 +500,14 @@ KAB.Render = {
     const circle = b.shape === 'circle', poly = b.shape === 'poly';
     const w = circle ? b.r * 2 : b.w, h = circle ? b.r * 2 : b.h;
     const hx = -w / 2, hy = -h / 2;
-    const stops = {
+    let stops = {
       wood: ['#f7d283', '#d99c3c', '#b67826'], stone: ['#d6dde3', '#a5aeb8', '#7c8691'],
       glass: ['#f4fdff', '#c2ecff', '#8dcfee'], tnt: ['#f5735a', '#d9432b', '#a52a19'],
     }[b.mat];
+    const K = this.krypto;
+    if (K && !circle) { if (b.mat === 'stone') stops = ['#5a6c9c', '#34457a', '#1b2850']; else if (b.mat === 'wood') stops = ['#c9a2ff', '#8156e8', '#4f2cb4']; }
+    if (K && circle && b.mat === 'stone') stops = ['#fff0a0', '#f7b32b', '#b9770e'];
+    if (K && circle && b.mat === 'wood') stops = ['#6df0c8', '#7a5af0', '#3a2a9a'];
     ctx.save();
     ctx.translate(b.x, b.y); ctx.rotate(b.angle);
     ctx.lineJoin = 'round';
@@ -481,9 +574,26 @@ KAB.Render = {
         ctx.fillStyle = '#fff3d6'; ctx.strokeStyle = '#4a1208'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
         ctx.font = '400 ' + Math.max(9, Math.floor(h * 0.34)) + 'px "Lilita One","Arial Black",system-ui,sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.strokeText('TNT', 0, 1); ctx.fillText('TNT', 0, 1);
+        const lbl = this.krypto ? 'RUG' : 'TNT'; ctx.strokeText(lbl, 0, 1); ctx.fillText(lbl, 0, 1);
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       }
+    }
+    if (K) {
+      ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (circle && b.mat === 'stone') {                                                                  // BTC-style coin
+        ctx.strokeStyle = 'rgba(120,70,0,0.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, b.r * 0.78, 0, 6.283); ctx.stroke();
+        ctx.fillStyle = '#fff6c8'; ctx.strokeStyle = '#8a4e00'; ctx.lineWidth = 2.4;
+        ctx.font = '400 ' + Math.floor(b.r * 1.25) + 'px "Lilita One","Arial Black",sans-serif'; ctx.strokeText('B', 0, 1); ctx.fillText('B', 0, 1);
+        ctx.fillStyle = '#8a4e00'; ctx.fillRect(-b.r * 0.2, -b.r * 0.82, 2.4, b.r * 0.3); ctx.fillRect(b.r * 0.1, -b.r * 0.82, 2.4, b.r * 0.3); ctx.fillRect(-b.r * 0.2, b.r * 0.52, 2.4, b.r * 0.3); ctx.fillRect(b.r * 0.1, b.r * 0.52, 2.4, b.r * 0.3);
+      } else if (circle && b.mat === 'wood') {                                                           // SOL-style coin: three slanted bars
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, b.r * 0.8, 0, 6.283); ctx.stroke();
+        const cols = ['#5cf2c8', '#a18bff', '#7a5af0'];
+        for (let k = 0; k < 3; k++) { const yy = (k - 1) * b.r * 0.42; ctx.fillStyle = cols[k]; ctx.beginPath(); ctx.moveTo(-b.r * 0.5 + (k % 2 ? 4 : 0), yy + b.r * 0.12); ctx.lineTo(b.r * 0.5 + (k % 2 ? 4 : 0) - 6, yy + b.r * 0.12); ctx.lineTo(b.r * 0.5 + (k % 2 ? 4 : 0), yy - b.r * 0.12); ctx.lineTo(-b.r * 0.5 + (k % 2 ? 4 : 0) + 6, yy - b.r * 0.12); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#1a1250'; ctx.lineWidth = 1.4; ctx.stroke(); }
+      } else if (!circle && !poly && b.mat !== 'tnt' && b.mat !== 'glass' && Math.min(w, h) >= 26) {      // ledger block: hash + neon edge
+        ctx.strokeStyle = b.mat === 'stone' ? 'rgba(90,240,255,0.8)' : 'rgba(90,255,200,0.7)'; ctx.lineWidth = 1.6; ctx.strokeRect(hx + 4, hy + 4, w - 8, h - 8);
+        if (Math.min(w, h) >= 34) { ctx.fillStyle = 'rgba(200,250,255,0.75)'; ctx.font = '400 ' + Math.floor(Math.min(w, h) * 0.42) + 'px "Lilita One","Arial Black",sans-serif'; ctx.fillText('#', 0, 1); }
+      }
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
     ctx.restore();
 

@@ -295,5 +295,236 @@
   ],
   "score": 80000,
   "stars": 1
+ },
+ "16": {
+  "name": "Gloomfall",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": 35
+   },
+   {
+    "angle": 73,
+    "pull": 100,
+    "ability": 70
+   },
+   {
+    "angle": 8,
+    "pull": 110,
+    "ability": 20
+   }
+  ],
+  "score": 58000,
+  "stars": 3
+ },
+ "17": {
+  "name": "Blood Moon Keep",
+  "shots": [
+   {
+    "angle": 33,
+    "pull": 85,
+    "ability": 35
+   },
+   {
+    "angle": 58,
+    "pull": 110,
+    "ability": 70
+   },
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": 35
+   }
+  ],
+  "score": 85300,
+  "stars": 3
+ },
+ "18": {
+  "name": "Eclipse Citadel",
+  "shots": [
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": null
+   },
+   {
+    "angle": 43,
+    "pull": 70,
+    "ability": 35
+   },
+   {
+    "angle": 18,
+    "pull": 85,
+    "ability": 35
+   },
+   {
+    "angle": 78,
+    "pull": 85,
+    "ability": 20
+   },
+   {
+    "angle": 43,
+    "pull": 110,
+    "ability": 35
+   },
+   {
+    "angle": 68,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 58300,
+  "stars": 3
+ },
+ "19": {
+  "name": "Heart of the Nightmare",
+  "shots": [
+   {
+    "angle": 28,
+    "pull": 100,
+    "ability": null
+   },
+   {
+    "angle": 43,
+    "pull": 110,
+    "ability": 35
+   },
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": 50
+   },
+   {
+    "angle": 43,
+    "pull": 100,
+    "ability": 35
+   },
+   {
+    "angle": 18,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 8,
+    "pull": 110,
+    "ability": null
+   }
+  ],
+  "score": 99500,
+  "stars": 3
+ },
+ "20": {
+  "name": "Genesis Block",
+  "shots": [
+   {
+    "angle": 63,
+    "pull": 100,
+    "ability": null
+   },
+   {
+    "angle": 33,
+    "pull": 85,
+    "ability": null
+   }
+  ],
+  "score": 59500,
+  "stars": 3
+ },
+ "21": {
+  "name": "Solana Speed",
+  "shots": [
+   {
+    "angle": 33,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 43,
+    "pull": 85,
+    "ability": 8
+   },
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": null
+   }
+  ],
+  "score": 69400,
+  "stars": 3
+ },
+ "22": {
+  "name": "Rug Pull",
+  "shots": [
+   {
+    "angle": 53,
+    "pull": 110,
+    "ability": 70
+   },
+   {
+    "angle": 23,
+    "pull": 110,
+    "ability": 50
+   },
+   {
+    "angle": 58,
+    "pull": 85,
+    "ability": 20
+   },
+   {
+    "angle": 78,
+    "pull": 110,
+    "ability": 20
+   },
+   {
+    "angle": 78,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 43,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 61800,
+  "stars": 3
+ },
+ "23": {
+  "name": "To The Moon",
+  "shots": [
+   {
+    "angle": 48,
+    "pull": 110,
+    "ability": 50
+   },
+   {
+    "angle": 73,
+    "pull": 100,
+    "ability": 70
+   },
+   {
+    "angle": 28,
+    "pull": 70,
+    "ability": 50
+   },
+   {
+    "angle": 53,
+    "pull": 110,
+    "ability": 70
+   },
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": 35
+   },
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": null
+   }
+  ],
+  "score": 87300,
+  "stars": 3
  }
 }

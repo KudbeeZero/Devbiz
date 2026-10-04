@@ -241,4 +241,119 @@ KAB.LEVELS = [
       b.col(918, [['wood', 36, 50], ['armor']]);
     },
   },
+  // ---- World 3: Nightmare ----------------------------------------------------
+  {
+    name: 'Gloomfall', hint: 'The ruins lean. Push them over.',
+    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [41000, 52000],
+    theme: { world: 3, bg: 0, sky: ['#0d0614', '#3a1030'], accent: '#c46bff', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.hill(600, 190, 90);
+      b.enemyOn('grunt', 600, 450);
+      b.col(740, [['stone', 40, 60], ['wood', 40, 44], ['grunt']]);
+      b.col(830, [['stone', 40, 60], ['stone', 40, 60], ['wood', 40, 44], ['armor']]);
+      b.col(915, [['ball', 'stone', 22], ['wood', 36, 40], ['armor']]);
+      b.enemy('grunt', 460, 525);
+    },
+  },
+  {
+    name: 'Blood Moon Keep', hint: 'The keep sits high. Lob it, or bomb the gate.',
+    birds: ['egg', 'gold', 'green', 'cyan', 'egg', 'gold'], stars: [60000, 76000],
+    theme: { world: 3, bg: 1, sky: ['#0d0614', '#3a1030'], accent: '#ff4d6d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.hill(770, 360, 110);
+      b.enemyOn('boss', 750, 430);
+      b.col(818, [['stone', 40, 40], ['wood', 40, 36], ['armor']], 430);
+      b.col(520, [['wood', 40, 50], ['grunt']]);
+      b.col(565, [['stone', 36, 60], ['grunt']]);
+      b.enemy('grunt', 480, 525);
+    },
+  },
+  {
+    name: 'Eclipse Citadel', hint: 'Spires fall hard. Find the weak pillar.',
+    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [41000, 53000],
+    theme: { world: 3, bg: 2, sky: ['#0d0614', '#3a1030'], accent: '#ff3d3d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(640, [['stone', 44, 70], ['wood', 44, 60], ['glass', 44, 46], ['wood', 44, 46]]);
+      b.col(800, [['stone', 44, 70], ['wood', 44, 60], ['glass', 44, 46], ['wood', 44, 46]]);
+      b.beam('stone', 720, 318, 230, 24);
+      b.enemyOn('boss', 720, 294);
+      b.col(720, [['tnt', 32], ['grunt']]);
+      b.enemy('armor', 570, 520);
+      b.col(900, [['wood', 36, 50], ['armor']]);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+    },
+  },
+  {
+    name: 'Heart of the Nightmare', hint: 'The Nightmare King waits at the heart. End it.',
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg', 'green'], stars: [70000, 92000],
+    theme: { world: 3, bg: 3, sky: ['#0d0614', '#3a1030'], accent: '#ff2d55', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
+      b.col(660, [['glass', 24, 90]], 478);
+      b.col(780, [['glass', 24, 90]], 478);
+      b.enemyOn('king', 702, 478);
+      b.col(748, [['tnt', 30]], 478);
+      b.beam('stone', 720, 388, 170, 16);
+      b.enemyOn('boss', 720, 372);
+      b.col(560, [['tnt', 34], ['armor']]);
+      b.tnt(868, 523, 34);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+      b.col(918, [['wood', 36, 50], ['armor']]);
+    },
+  },
+  // ---- World 4: Krypto -------------------------------------------------------
+  {
+    name: 'Genesis Block', hint: 'Block one. Break the chain before it grows.',
+    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [45000, 57000],
+    theme: { world: 4, bg: 0, tag: 'BITCOIN', accent: '#f7b32b', sky: ['#070a24', '#14125a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(560, [['stone', 50, 50], ['stone', 50, 50], ['ball', 'stone', 20], ['grunt']]);
+      b.col(690, [['stone', 50, 50], ['wood', 50, 40], ['grunt']]);
+      b.col(820, [['stone', 50, 50], ['stone', 50, 50], ['wood', 50, 40], ['armor']]);
+      b.col(910, [['ball', 'stone', 22], ['grunt']]);
+    },
+  },
+  {
+    name: 'Solana Speed', hint: 'Fast chain, thin towers. Hit the base.',
+    birds: ['cyan', 'green', 'gold', 'egg', 'cyan', 'egg'], stars: [55000, 67000],
+    theme: { world: 4, bg: 1, tag: 'SOLANA', accent: '#a18bff', sky: ['#070a24', '#2a0f5a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(540, [['wood', 30, 70], ['wood', 30, 70], ['wood', 40, 36], ['grunt']]);
+      b.col(640, [['stone', 30, 70], ['glass', 30, 60], ['wood', 40, 36], ['grunt']]);
+      b.col(740, [['wood', 30, 70], ['wood', 30, 70], ['glass', 40, 36], ['armor']]);
+      b.col(850, [['stone', 30, 70], ['wood', 30, 70], ['wood', 40, 36], ['grunt']]);
+      b.col(925, [['ball', 'wood', 20], ['armor']]);
+    },
+  },
+  {
+    name: 'Rug Pull', hint: 'The RUG blocks are explosive. Pull them all.',
+    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [48000, 60000],
+    theme: { world: 4, bg: 2, tag: 'BEAR MARKET', accent: '#ff4d6d', sky: ['#070a24', '#5a1450'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(560, [['tnt', 34], ['stone', 50, 50], ['grunt']]);
+      b.col(660, [['stone', 50, 50], ['stone', 50, 50], ['tnt', 34], ['armor']]);
+      b.col(770, [['stone', 70, 40], ['boss']]);
+      b.tnt(712, 523, 30);
+      b.col(860, [['tnt', 34], ['stone', 50, 50], ['grunt']]);
+      b.col(925, [['ball', 'stone', 20], ['armor']]);
+    },
+  },
+  {
+    name: 'To The Moon', hint: 'The Whale King holds every coin. Bring bombs.',
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [70000, 85000],
+    theme: { world: 4, bg: 3, tag: 'KUDBEE x KRYPTO', accent: '#5af0ff', sky: ['#070a24', '#2a0f5a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
+      b.col(660, [['glass', 24, 90]], 478);
+      b.col(780, [['glass', 24, 90]], 478);
+      b.enemyOn('king', 702, 478);
+      b.col(748, [['tnt', 30]], 478);
+      b.beam('stone', 720, 388, 170, 16);
+      b.enemyOn('boss', 720, 372);
+      b.col(560, [['tnt', 34], ['ball', 'stone', 20], ['grunt']]);
+      b.tnt(868, 523, 34);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+      b.col(918, [['ball', 'wood', 20], ['armor']]);
+    },
+  },
 ];
