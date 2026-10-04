@@ -250,7 +250,9 @@ KCH.Render = {
 
   drawBag(ctx, b, opts) {
     opts = opts || {};
-    const col = this.TEAM[b.team], H = KCH.CFG.BAG_T / 2, R = 3.0;
+    const sq = Math.max(-0.4, Math.min(1.1, b.sq || 0));
+    const flutter = b.state === 'air' ? 0.12 * Math.sin((b.x + b.y + b.z) * 0.45) : 0;
+    const col = this.TEAM[b.team], H = KCH.CFG.BAG_T / 2 * (1 - 0.42 * sq + flutter * 0.5), R = 3.0 * (1 + 0.16 * sq);
     const bs = this._basis(b);
     let cx = b.x, cy = b.y, cz = b.z, sc = 1, alpha = 1;
     if (b.state === 'hole') {
@@ -277,33 +279,45 @@ KCH.Render = {
       const hp = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283, q = KCH.surface.point(Math.cos(a) * KCH.CFG.HOLE_R, KCH.CFG.HOLE_S + Math.sin(a) * KCH.CFG.HOLE_R); hp.push(this.proj(q.x, q.y, q.z)); }
       this.poly(ctx, hp, null); ctx.clip();
     }
-    // side walls facing the camera
+    // pillow geometry: every edge bows outward (the corn fill), more when squashed or fluttering
     const cam = this.cam;
-    const sides = [[0, 1], [1, 2], [2, 3], [3, 0]];
-    const mid = { x: cx, y: cy, z: cz };
+    const cT = { x: (pt[0].x + pt[2].x) / 2, y: (pt[0].y + pt[2].y) / 2 }, cB = { x: (pb[0].x + pb[2].x) / 2, y: (pb[0].y + pb[2].y) / 2 };
+    const puff = 0.055 + 0.09 * Math.max(0, sq) + Math.abs(flutter) * 0.35;
+    const edgePts = (pts, c, k) => pts.map((p, i) => { const q = pts[(i + 1) % 4], mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2, L = Math.hypot(q.x - p.x, q.y - p.y), dx = mx - c.x, dy = my - c.y, dl = Math.hypot(dx, dy) || 1; return { cx: mx + dx / dl * L * k * 2, cy: my + dy / dl * L * k * 2 }; });
+    const ctlT = edgePts(pt, cT, puff), ctlB = edgePts(pb, cB, puff * 0.7);
+    const pillow = (pts, ctl) => { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 0; i < 4; i++) { const q = pts[(i + 1) % 4]; ctx.quadraticCurveTo(ctl[i].cx, ctl[i].cy, q.x, q.y); } ctx.closePath(); };
+    const sides = [[0, 1], [1, 2], [2, 3], [3, 0]], mid = { x: cx, y: cy, z: cz };
     sides.forEach((s, i) => {
       const nrm = [[0, -1], [1, 0], [0, 1], [-1, 0]][i];
       const wx = bs.A[0] * nrm[0] + bs.B[0] * nrm[1], wy = bs.A[1] * nrm[0] + bs.B[1] * nrm[1], wz = bs.A[2] * nrm[0] + bs.B[2] * nrm[1];
       if (wx * (cam.x - mid.x) + wy * (cam.y - mid.y) + wz * (cam.z - mid.z) <= 0) return;
-      this.poly(ctx, [pt[s[0]], pt[s[1]], pb[s[1]], pb[s[0]]], col.dark, this.OUT, 1.6);
+      const a0 = pt[s[0]], a1 = pt[s[1]], b1 = pb[s[1]], b0 = pb[s[0]];
+      ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.quadraticCurveTo(ctlT[i].cx, ctlT[i].cy, a1.x, a1.y); ctx.lineTo(b1.x, b1.y); ctx.quadraticCurveTo(ctlB[i].cx, ctlB[i].cy, b0.x, b0.y); ctx.closePath();
+      const sg = ctx.createLinearGradient(0, Math.min(a0.y, a1.y), 0, Math.max(b0.y, b1.y) + 1); sg.addColorStop(0, col.base); sg.addColorStop(1, col.dark);
+      ctx.fillStyle = sg; ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = 1.8; ctx.strokeStyle = this.OUT; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a0.x + (b0.x - a0.x) * 0.25, a0.y + (b0.y - a0.y) * 0.25); ctx.quadraticCurveTo(ctlT[i].cx, ctlT[i].cy + 2, a1.x + (b1.x - a1.x) * 0.25, a1.y + (b1.y - a1.y) * 0.25); ctx.stroke();   // seam rolling over the side
     });
-    // top face (or underside if tumbled over)
+    // top face (or underside if tumbled over): a pillow with pinched corners
     const up = bs.N[0] * (cam.x - cx) + bs.N[1] * (cam.y - cy) + bs.N[2] * (cam.z - cz) > 0;
-    const face = up ? pt : pb;
-    const c0 = face[0], c2 = face[2];
-    const g = ctx.createLinearGradient(c0.x, c0.y, c2.x, c2.y);
-    g.addColorStop(0, col.light); g.addColorStop(0.5, col.base); g.addColorStop(1, col.dark);
-    this.poly(ctx, face, g, this.OUT, 2);
-    // stitched border + centre seam
-    const mix = (a, b2, t2) => ({ x: a.x + (b2.x - a.x) * t2, y: a.y + (b2.y - a.y) * t2 });
-    const ctr = { x: (face[0].x + face[2].x) / 2, y: (face[0].y + face[2].y) / 2 };
-    const ins = face.map(p => mix(p, ctr, 0.2));
-    ctx.setLineDash([2.2, 2.2]); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ins.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath();
-    const m01 = mix(face[0], face[1], 0.5), m23 = mix(face[3], face[2], 0.5);
-    ctx.moveTo(m01.x, m01.y); ctx.lineTo(m23.x, m23.y); ctx.stroke();
+    const face = up ? pt : pb, ctl = up ? ctlT : ctlB, ctr = up ? cT : cB;
+    const rad = Math.hypot(face[0].x - ctr.x, face[0].y - ctr.y);
+    // corner ears (the little dog-eared corners of a sewn bag)
+    face.forEach(p => { const dx = p.x - ctr.x, dy = p.y - ctr.y, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl; ctx.beginPath(); ctx.moveTo(p.x - uy * rad * 0.09, p.y + ux * rad * 0.09); ctx.lineTo(p.x + ux * rad * 0.15, p.y + uy * rad * 0.15); ctx.lineTo(p.x + uy * rad * 0.09, p.y - ux * rad * 0.09); ctx.closePath(); ctx.fillStyle = col.dark; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = this.OUT; ctx.lineJoin = 'round'; ctx.stroke(); });
+    pillow(face, ctl);
+    const g = ctx.createRadialGradient(ctr.x - rad * 0.28, ctr.y - rad * 0.32, rad * 0.05, ctr.x, ctr.y, rad * 1.05);
+    g.addColorStop(0, col.light); g.addColorStop(0.45, col.base); g.addColorStop(1, col.dark);
+    ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = this.OUT; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.save(); pillow(face, ctl); ctx.clip();
+    // pinch creases from each corner toward the filling, shaded on one side and lit on the other
+    face.forEach((p, i) => { const L = 0.38; const ex = p.x + (ctr.x - p.x) * L, ey = p.y + (ctr.y - p.y) * L; ctx.strokeStyle = 'rgba(0,0,0,0.26)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo((p.x + ex) / 2 + 1.5, (p.y + ey) / 2 - 1.5, ex, ey); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x + 1.5, p.y + 1.5); ctx.quadraticCurveTo((p.x + ex) / 2 + 3, (p.y + ey) / 2 - 0, ex + 1.5, ey + 1.5); ctx.stroke(); });
+    // lumpy corn fill: soft highlight blobs
+    ctx.fillStyle = 'rgba(255,255,255,0.20)'; ctx.beginPath(); ctx.ellipse(ctr.x - rad * 0.18, ctr.y - rad * 0.22, rad * 0.34, rad * 0.19, -0.5, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.beginPath(); ctx.ellipse(ctr.x + rad * 0.2, ctr.y + rad * 0.24, rad * 0.3, rad * 0.14, -0.5, 0, 6.283); ctx.fill();
+    ctx.restore();
+    // double stitched border, inset along the same pillow curve
+    const mix = (a, b3, t2) => ({ x: a.x + (b3.x - a.x) * t2, y: a.y + (b3.y - a.y) * t2 });
+    const ins = face.map(p => mix(p, ctr, 0.2)), insCtl = ctl.map(c => ({ cx: c.cx + (ctr.x - c.cx) * 0.2, cy: c.cy + (ctr.y - c.cy) * 0.2 }));
+    ctx.setLineDash([2.4, 2.2]); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.1; pillow(ins, insCtl); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
   },
 

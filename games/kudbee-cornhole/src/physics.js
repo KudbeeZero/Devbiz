@@ -90,6 +90,7 @@ KCH.Sim = class {
       u: 0, s: 0, vu: 0, vs: 0,
       yaw: 0, yawV: (du >= 0 ? 1 : -1) * st.spin, tilt: 0, tiltV: st.flip ? (Math.PI * 2 * st.flip) / flight : 0,
       airmail: false, touched: false, pushedIn: false, flight,
+      sq: 0, sqV: 0,                                  // cosmetic squash-and-wobble of the filled bag (never feeds back into the physics)
     };
     this.bags.push(b);
     this.emit('throw', b, speed);
@@ -100,6 +101,7 @@ KCH.Sim = class {
     this.t += dt;
     const C = KCH.CFG;
     for (const b of this.bags) {
+      b.sqV += (-380 * b.sq - 15 * b.sqV) * dt; b.sq += b.sqV * dt;     // jelly spring: a filled bag squashes, then settles
       if (b.state === 'air') this._air(b, dt);
       else if (b.state === 'board') this._board(b, dt);
       else if (b.state === 'off') this._fall(b, dt);
@@ -123,6 +125,7 @@ KCH.Sim = class {
     }
     if (b.y <= C.BAG_T / 2) {                                   // missed the board: onto the lawn
       b.y = C.BAG_T / 2; b.state = 'ground'; b.vx *= 0.15; b.vz *= 0.15; b.vy = 0; b.tilt = 0;
+      b.sq = Math.min(1, Math.hypot(b.vx, b.vy, b.vz) / 260); b.sqV = 0;
       this.emit('ground', b, Math.hypot(b.vx, b.vz));
     }
   }
@@ -150,6 +153,7 @@ KCH.Sim = class {
     b.state = 'board'; b.touched = true;
     b.tilt = 0; b.yawV *= 0.4;
     this._place(b);
+    b.sq = Math.min(1.1, 0.25 + impact / 170); b.sqV = 0;
     this.emit('land', b, impact);
   }
 
@@ -221,7 +225,7 @@ KCH.Sim = class {
         if (rv < 0) {
           const e = 0.12, j2 = -(1 + e) * rv / 2;
           A.vu -= j2 * nx; A.vs -= j2 * ns; B.vu += j2 * nx; B.vs += j2 * ns;
-          this.emit('push', B, Math.abs(rv));
+          B.sq = Math.max(B.sq, Math.min(0.6, Math.abs(rv) / 200)); this.emit('push', B, Math.abs(rv));
           if (!A.touched) A.touched = true;
         }
       }
