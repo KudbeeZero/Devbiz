@@ -992,6 +992,47 @@
             ctx.font = '700 ' + (Math.min(w, h) * 0.09) + 'px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
             ctx.fillText('JACKPOT', w / 2, h * 0.82); ctx.restore();
         },
+        angrybirds: function (ctx, w, h, t) {
+            t = t || 0;
+            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b1330'); g.addColorStop(1, '#1d2a5c'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            var u = Math.min(w, h), gy = h * 0.82;
+            ctx.save(); ctx.globalAlpha = 0.5; ctx.shadowColor = palette.cyan; ctx.shadowBlur = 24; ctx.fillStyle = palette.cyan;
+            ctx.beginPath(); ctx.arc(w * 0.8, h * 0.27, u * 0.11, 0, 7); ctx.fill(); ctx.restore();
+            ctx.fillStyle = '#14224a';
+            for (var i = 0; i < 9; i++) { var bw = w / 9, bh = h * (0.16 + ((i * 37) % 5) * 0.045); ctx.fillRect(i * bw, gy - bh, bw - 3, bh); }
+            ctx.fillStyle = '#0c1630'; ctx.fillRect(0, gy, w, h - gy);
+            ctx.save(); ctx.strokeStyle = palette.cyan; ctx.shadowColor = palette.cyan; ctx.shadowBlur = 10; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke(); ctx.restore();
+            // slingshot
+            var sx = w * 0.17, sy = gy - u * 0.2;
+            ctx.save(); ctx.strokeStyle = '#a06a2a'; ctx.lineWidth = Math.max(3, u * 0.03); ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(sx - u * 0.04, gy); ctx.lineTo(sx - u * 0.04, sy + u * 0.03); ctx.lineTo(sx - u * 0.07, sy - u * 0.02);
+            ctx.moveTo(sx + u * 0.04, gy); ctx.lineTo(sx + u * 0.04, sy + u * 0.03); ctx.lineTo(sx + u * 0.07, sy - u * 0.02); ctx.stroke(); ctx.restore();
+            // tower: alternating wood / glass blocks with a drone on top
+            var tx = w * 0.74, bs = u * 0.13, cols = [palette.amber, palette.cyan, palette.amber];
+            for (var k = 0; k < 3; k++) {
+                ctx.save(); ctx.fillStyle = k === 1 ? 'rgba(57,230,255,0.22)' : 'rgba(201,154,46,0.85)'; ctx.strokeStyle = cols[k]; ctx.lineWidth = 1.5;
+                ctx.fillRect(tx - bs / 2, gy - bs * (k + 1), bs, bs); ctx.strokeRect(tx - bs / 2 + 0.75, gy - bs * (k + 1) + 0.75, bs - 1.5, bs - 1.5); ctx.restore();
+            }
+            var dy = gy - bs * 3 - bs * 0.45, dr = bs * 0.42;
+            ctx.save(); ctx.shadowColor = '#ff5d9e'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff5d9e';
+            ctx.beginPath(); ctx.arc(tx, dy, dr, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+            ctx.fillStyle = '#150b1e'; ctx.fillRect(tx - dr * 0.7, dy - dr * 0.25, dr * 1.4, dr * 0.5);
+            ctx.fillStyle = '#ffe9a8'; ctx.fillRect(tx - dr * 0.45, dy - dr * 0.08, dr * 0.3, dr * 0.16); ctx.fillRect(tx + dr * 0.15, dy - dr * 0.08, dr * 0.3, dr * 0.16); ctx.restore();
+            // lob arc (dotted) + the bird riding it. t=0 -> phase 0.4, the static frame.
+            var x0 = sx, y0 = sy, x2 = tx - dr, y2 = dy, x1 = (x0 + x2) / 2, y1 = Math.min(y0, y2) - h * 0.5;
+            function at(p) { var q = 1 - p; return [q * q * x0 + 2 * q * p * x1 + p * p * x2, q * q * y0 + 2 * q * p * y1 + p * p * y2]; }
+            ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            for (var d = 0.06; d < 0.96; d += 0.07) { var pt = at(d); ctx.beginPath(); ctx.arc(pt[0], pt[1], 1.8, 0, 7); ctx.fill(); }
+            ctx.restore();
+            var ph = (0.4 + t * 0.00028) % 1, bp = at(ph), br = u * 0.055;
+            ctx.save(); ctx.shadowColor = palette.cyan; ctx.shadowBlur = 14; ctx.fillStyle = palette.cyan;
+            ctx.beginPath(); ctx.arc(bp[0], bp[1], br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(bp[0] + br * 0.35, bp[1] - br * 0.25, br * 0.28, 0, 7); ctx.fill();
+            ctx.fillStyle = '#10142a'; ctx.beginPath(); ctx.arc(bp[0] + br * 0.42, bp[1] - br * 0.25, br * 0.12, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.moveTo(bp[0] + br * 0.85, bp[1] - br * 0.05); ctx.lineTo(bp[0] + br * 1.6, bp[1] + br * 0.2); ctx.lineTo(bp[0] + br * 0.85, bp[1] + br * 0.4); ctx.fill();
+            ctx.restore();
+        },
         pinball: function (ctx, w, h, t) {
             t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0a0a1e'); g.addColorStop(1, '#05060f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1167,7 +1208,7 @@
     // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
     // comments in each), so paintAll's single frame and the reduced-motion
     // path below are pixel-identical to the art that shipped before this lane.
-    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1, jackpot: 1 };
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1, jackpot: 1, angrybirds: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');

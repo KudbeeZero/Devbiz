@@ -1,0 +1,158 @@
+{
+ "0": {
+  "name": "First Contact",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": 8
+   }
+  ],
+  "score": 39600,
+  "stars": 2
+ },
+ "1": {
+  "name": "Glass House",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 110,
+    "ability": null
+   },
+   {
+    "angle": 28,
+    "pull": 110,
+    "ability": 35
+   }
+  ],
+  "score": 29700,
+  "stars": 1
+ },
+ "2": {
+  "name": "Split Decision",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 8,
+    "pull": 110,
+    "ability": 8
+   }
+  ],
+  "score": 53100,
+  "stars": 3
+ },
+ "3": {
+  "name": "Stone Keep",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": null
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 35
+   }
+  ],
+  "score": 49200,
+  "stars": 2
+ },
+ "4": {
+  "name": "Powder Keg",
+  "shots": [
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 20
+   },
+   {
+    "angle": 78,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 35
+   }
+  ],
+  "score": 40500,
+  "stars": 1
+ },
+ "5": {
+  "name": "Bridge Gap",
+  "shots": [
+   {
+    "angle": 78,
+    "pull": 85,
+    "ability": 20
+   },
+   {
+    "angle": 33,
+    "pull": 100,
+    "ability": 50
+   },
+   {
+    "angle": 58,
+    "pull": 85,
+    "ability": 35
+   }
+  ],
+  "score": 56200,
+  "stars": 1
+ },
+ "6": {
+  "name": "Twin Towers",
+  "shots": [
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 48,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 65700,
+  "stars": 1
+ },
+ "7": {
+  "name": "Hive Sentinel",
+  "shots": [
+   {
+    "angle": 58,
+    "pull": 110,
+    "ability": 70
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 35
+   },
+   {
+    "angle": 73,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 43,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 78600,
+  "stars": 1
+ }
+}
