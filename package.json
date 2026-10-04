@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "verify": "npm run site:filing && npm run pinball:eval && npm run birds:eval && npm run cornhole:engine && npm run cornhole:eval && npm run cricket:engine && npm run cricket:eval && npm run test:leaderboard",
+    "verify": "npm run site:filing && npm run pinball:eval && npm run birds:eval && npm run cornhole:engine && npm run cornhole:eval && npm run cricket:engine && npm run cricket:eval && npm run archery:engine && npm run archery:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
     "birds:engine": "node games/kudbee-angrybirds/eval/engine.mjs",
     "birds:eval": "npm run birds:engine && node games/kudbee-angrybirds/eval/evaluator.mjs",
@@ -9,7 +9,9 @@
     "cricket:engine": "node games/kudbee-cricket/eval/engine.mjs",
     "cricket:eval": "node games/kudbee-cricket/eval/evaluator.mjs",
     "cornhole:engine": "node games/kudbee-cornhole/eval/engine.mjs",
-    "cornhole:eval": "node games/kudbee-cornhole/eval/evaluator.mjs"
+    "cornhole:eval": "node games/kudbee-cornhole/eval/evaluator.mjs",
+    "archery:engine": "node games/kudbee-archery/eval/engine.mjs",
+    "archery:eval": "node games/kudbee-archery/eval/evaluator.mjs"
   },
   "dependencies": {
     "playwright": "^1.63.0"
