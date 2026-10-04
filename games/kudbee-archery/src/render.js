@@ -101,9 +101,25 @@ KAR.Render = {
     const D = this.dist;
     for (let i = 0; i < 40; i++) {
       const za = -4 + i * (D + 80) / 40 * (1 + i * 0.05), zb = za + (D + 80) / 40 * (1 + i * 0.05);
-      this.poly(ctx, [this.proj(-300, 0, za), this.proj(300, 0, za), this.proj(300, 0, zb), this.proj(-300, 0, zb)], i % 2 ? 'rgba(255,255,255,0.075)' : 'rgba(0,50,0,0.05)');
+      this.poly(ctx, [this.proj(-300, 0, za), this.proj(300, 0, za), this.proj(300, 0, zb), this.proj(-300, 0, zb)], i % 2 ? (photo ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.075)') : (photo ? 'rgba(0,50,0,0.10)' : 'rgba(0,50,0,0.05)'));
     }
+    if (photo) this._fences(ctx);
     this._lane(ctx);
+  },
+  // Split-rail fences + a lane sign converging on the target, like a real range.
+  _fences(ctx) {
+    const D = this.dist + 6, X = 9, km = (this.proj(X, 0, D * 0.5) || { k: 40 }).k, OUT = this.OUT || '#3a2216';
+    for (const sx of [-1, 1]) {
+      const n = Math.round(D / 4);
+      for (const h of [0.45, 0.95]) {
+        const a = this.proj(sx * X, h, 0.5), b = this.proj(sx * X, h, D);
+        if (a && b) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.strokeStyle = '#5a3d22'; ctx.lineWidth = Math.max(1.2, 0.045 * km); ctx.lineCap = 'round'; ctx.stroke(); }
+      }
+      for (let i = 0; i <= n; i++) {
+        const z = 6 + i * (D - 6) / n, p = this.proj(sx * X, 0, z), q = this.proj(sx * X, 1.15, z);
+        if (p && q) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.strokeStyle = '#4a3019'; ctx.lineWidth = Math.max(1.2, 0.07 * (this.proj(sx * X, 0, z) || { k: 20 }).k * 0.5); ctx.stroke(); }
+      }
+    }
   },
   _lane(ctx) {
     const D = this.dist;
