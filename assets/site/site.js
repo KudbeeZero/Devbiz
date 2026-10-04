@@ -1072,23 +1072,37 @@
         },
         cornhole: function (ctx, w, h, t) {
             t = t || 0;
-            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#59b8ff'); sky.addColorStop(1, '#bfe6ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-            var lawn = ctx.createLinearGradient(0, h * 0.42, 0, h); lawn.addColorStop(0, '#6fcf4a'); lawn.addColorStop(1, '#2f9a35'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.42, w, h * 0.58);
-            ctx.fillStyle = 'rgba(255,255,255,0.18)';
-            for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.5 + m * 0.09), w, h * 0.04);
-            // board, far end, in perspective
-            var cx = w * 0.5, top = h * 0.26, bw = w * 0.2, bb = h * 0.62, bbw = w * 0.34;
-            ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx + 8, bb + 6, bbw * 0.55, h * 0.03, 0, 0, 7); ctx.fill();
-            ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a52'; ctx.lineWidth = Math.max(3, w * 0.012); ctx.fillStyle = '#e8c27a';
+            var u = Math.min(w, h), OUT = '#1b2a52';
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#4fb3ff'); sky.addColorStop(1, '#cfeeff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#ffffff';
+            [[0.2, 0.16, 0.06], [0.7, 0.12, 0.05], [0.9, 0.26, 0.04]].forEach(function (c) { var cx = w * c[0], cy = h * c[1], r = u * c[2]; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.arc(cx + r, cy + r * 0.2, r * 0.8, 0, 7); ctx.arc(cx - r, cy + r * 0.25, r * 0.7, 0, 7); ctx.fill(); });
+            ctx.fillStyle = '#8fd0b0'; ctx.beginPath(); ctx.moveTo(0, h * 0.42); ctx.quadraticCurveTo(w * 0.3, h * 0.2, w * 0.6, h * 0.36); ctx.quadraticCurveTo(w * 0.85, h * 0.26, w, h * 0.4); ctx.lineTo(w, h * 0.42); ctx.fill();
+            var lawn = ctx.createLinearGradient(0, h * 0.4, 0, h); lawn.addColorStop(0, '#74d44c'); lawn.addColorStop(1, '#379f38'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.4, w, h * 0.6);
+            ctx.fillStyle = 'rgba(255,255,255,0.14)'; for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.48 + m * 0.09), w, h * 0.04);
+            // far board with a shadow
+            var cx = w * 0.5, top = h * 0.3, bw = w * 0.22, bb = h * 0.66, bbw = w * 0.38;
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx + 8, bb + 6, bbw * 0.55, h * 0.03, 0, 0, 7); ctx.fill();
+            ctx.lineJoin = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(3, w * 0.014); ctx.fillStyle = '#f0c978';
             ctx.beginPath(); ctx.moveTo(cx - bw / 2, top); ctx.lineTo(cx + bw / 2, top); ctx.lineTo(cx + bbw / 2, bb); ctx.lineTo(cx - bbw / 2, bb); ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.strokeStyle = 'rgba(140,90,40,0.35)'; ctx.lineWidth = 1.5;
             for (var gI = 1; gI < 6; gI++) { var f = gI / 6; ctx.beginPath(); ctx.moveTo(cx - bw / 2 + bw * f, top + 3); ctx.lineTo(cx - bbw / 2 + bbw * f, bb - 3); ctx.stroke(); }
-            // hole
-            ctx.fillStyle = '#1a1010'; ctx.beginPath(); ctx.ellipse(cx, top + h * 0.075, w * 0.045, h * 0.024, 0, 0, 7); ctx.fill();
+            ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(3, w * 0.012); ctx.fillStyle = '#2a1a14';
+            ctx.beginPath(); ctx.ellipse(cx, top + h * 0.09, w * 0.05, h * 0.028, 0, 0, 7); ctx.fill(); ctx.stroke();
+            // legs
+            ctx.strokeStyle = OUT; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - bbw * 0.4, bb); ctx.lineTo(cx - bbw * 0.45, bb + h * 0.07); ctx.moveTo(cx + bbw * 0.4, bb); ctx.lineTo(cx + bbw * 0.45, bb + h * 0.07); ctx.stroke();
+            // pillow bag helper
+            function bag(x, y, s, rot, col, dark) {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.lineJoin = 'round';
+                ctx.fillStyle = col; ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(2.5, s * 0.07);
+                ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.46); ctx.quadraticCurveTo(0, -s * 0.58, s * 0.5, -s * 0.46); ctx.quadraticCurveTo(s * 0.58, 0, s * 0.5, s * 0.46); ctx.quadraticCurveTo(0, s * 0.58, -s * 0.5, s * 0.46); ctx.quadraticCurveTo(-s * 0.58, 0, -s * 0.5, -s * 0.46); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1.5, s * 0.035); ctx.setLineDash([s * 0.09, s * 0.07]); ctx.beginPath(); ctx.rect(-s * 0.38, -s * 0.34, s * 0.76, s * 0.68); ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(-s * 0.12, -s * 0.26, s * 0.24, s * 0.09, -0.1, 0, 7); ctx.fill();
+                ctx.restore();
+            }
+            bag(cx + bw * 0.34, top + h * 0.2, w * 0.07, 0.25, '#ff5a4a', '#ffd0c8');
             // bag arcing in
-            var k = (t * 0.0007) % 1, bx = cx + Math.sin(k * 6) * w * 0.02, by = h * 0.96 - k * h * 0.7 - Math.sin(k * Math.PI) * h * 0.16, bs = w * (0.07 - k * 0.04);
-            ctx.save(); ctx.translate(bx, by); ctx.rotate(k * 7); ctx.fillStyle = '#3d86ff'; ctx.strokeStyle = '#122a66'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.rect(-bs / 2, -bs / 2, bs, bs); ctx.fill(); ctx.stroke(); ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.strokeRect(-bs / 2 + 4, -bs / 2 + 4, bs - 8, bs - 8); ctx.restore();
+            var k = (t * 0.0007) % 1, bx = cx - w * 0.14 + k * w * 0.14, by = h * 0.94 - k * h * 0.62 - Math.sin(k * Math.PI) * h * 0.26, bs = w * (0.1 - k * 0.045);
+            bag(bx, by, bs, k * 6, '#3d86ff', '#cfe0ff');
         },
         archery: function (ctx, w, h, t) {
             t = t || 0;
