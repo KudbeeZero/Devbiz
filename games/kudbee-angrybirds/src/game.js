@@ -1,511 +1,444 @@
+/* =====================================================================
+ * Kudbee Birds — game.js
+ * The controller: fixed-timestep loop (frame-rate independent), pointer /
+ * touch / keyboard input, screen flow (menu → select → play → won/lost),
+ * and the juice (shake, slow-mo, particles, sound) wired to world events.
+ * Logical canvas is 960x600; CSS scales it, pointer coords are mapped back.
+ * ===================================================================== */
+
 KAB.Game = class {
-  constructor() {
-    this.canvas = document.getElementById('gameCanvas');
-    this.ctx = this.canvas.getContext('2d');
-    this.canvas.width = 960;
-    this.canvas.height = 600;
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = KAB.Render.W * this.dpr;
+    canvas.height = KAB.Render.H * this.dpr;
+    this.reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
-    this.physics = new KAB.Physics();
-    this.particles = new KAB.Particles();
+    KAB.Store.load();
+    KAB.Render.loadImages();
+    if (document.fonts && document.fonts.load) document.fonts.load('28px "Lilita One"').catch(() => {});
     this.audio = new KAB.Audio();
+    this.particles = new KAB.Particles();
+    this.world = new KAB.World(this._handlers());
 
-    this.state = 'menu';
-    this.level = 1;
-    this.score = 0;
-    this.totalScore = 0;
-    this.birdQueue = [];
-    this.currentBird = null;
-    this.launched = false;
-    this.screenShake = 0;
-    this.combo = 0;
-    this.comboTimer = 0;
+    this.screen = 'menu';          // menu | select | play | paused | won | lost
+    this.selPage = 0;
+    this.time = 0;
+    this.acc = 0;
+    this.timeScale = 1;
+    this.slowT = 0;
+    this.shake = 0;
+    this.shownScore = 0;
+    this.hintT = 0;
+    this.overlayT = 0;
+    this.pendingEnd = null;
+    this.starSfx = 0;
+    this.newBest = false;
+    this.focusIdx = 0;
+    this.focusPending = true;
+    this.aim = null;               // pull position while dragging
+    this.keyAim = { on: false, angle: 38, pull: 82 };
+    this.fxBudget = 0;
+    this.last = 0;
 
-    // Slingshot
-    this.slingshotX = 120;
-    this.slingshotY = 500;
-    this.slingshotDist = 80;
-    this.mouseDown = false;
-    this.mouseX = this.slingshotX;
-    this.mouseY = this.slingshotY;
+    this.world.load(0);
+    this._bindInput();
+    this._frame = this._frame.bind(this);
+    requestAnimationFrame(this._frame);
+  }
 
-    // Bird types: cyan (fast), gold (heavy), green (bouncy)
-    this.birdTypes = ['cyan', 'gold', 'green'];
-    this.birdSpecs = {
-      cyan: { w: 14, h: 14, mass: 1, restitution: 0.5, color: '#39e6ff', speed: 1.2 },
-      gold: { w: 18, h: 18, mass: 1.8, restitution: 0.3, color: '#ffd34d', speed: 0.8 },
-      green: { w: 16, h: 16, mass: 1.2, restitution: 0.8, color: '#7CFFb2', speed: 1.0 }
+  // ---- flow ---------------------------------------------------------------
+  startLevel(i) {
+    i = Math.max(0, Math.min(KAB.LEVELS.length - 1, i));
+    this.world.load(i);
+    this.particles.clear();
+    this.screen = 'play';
+    this.shownScore = 0;
+    this.hintT = 6;
+    this.aim = null;
+    this.keyAim.on = false;
+    this.pendingEnd = null;
+    this.newBest = false;
+    this.slowT = 0;
+    this.acc = 0;
+    this.focusIdx = -1;
+    this.focusPending = true;
+  }
+
+  setScreen(s) {
+    this.screen = s;
+    this.overlayT = 0;
+    this.focusPending = true;
+    this.starSfx = 0;
+  }
+
+  continueIndex() {
+    for (let i = 0; i < KAB.LEVELS.length; i++) if (KAB.Store.best(i).stars === 0) return i;
+    return 0;
+  }
+
+  activate(id) {
+    this.audio.ensure();
+    this.audio.click();
+    if (id === 'play') this.startLevel(this.continueIndex());
+    else if (id === 'levels') { this.selPage = Math.floor(Math.min(this.continueIndex(), KAB.LEVELS.length - 1) / KAB.UI.PER_PAGE); if (this.screen === 'won') this.selPage = Math.floor(this.world.index / KAB.UI.PER_PAGE); this.setScreen('select'); }
+    else if (id === 'pgprev') { this.selPage = Math.max(0, this.selPage - 1); this.focusPending = true; }
+    else if (id === 'pgnext') { this.selPage = Math.min(Math.ceil(KAB.LEVELS.length / KAB.UI.PER_PAGE) - 1, this.selPage + 1); this.focusPending = true; }
+    else if (id === 'back') this.setScreen('menu');
+    else if (id.indexOf('lvl') === 0) this.startLevel(parseInt(id.slice(3), 10));
+    else if (id === 'resume') this.screen = 'play';
+    else if (id === 'pause') this.setScreen('paused');
+    else if (id === 'restart' || id === 'retry') this.startLevel(this.world.index);
+    else if (id === 'next') this.startLevel(this.world.index + 1);
+    else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
+  }
+
+  togglePause() {
+    if (this.screen === 'play') { this.aim = null; this.setScreen('paused'); }
+    else if (this.screen === 'paused') this.screen = 'play';
+  }
+
+  // ---- world events -> feedback ---------------------------------------------
+  _handlers() {
+    const g = this;
+    return {
+      launch(b, speed) {
+        g.audio.launch(speed);
+        g.particles.ring(KAB.SLING.x, KAB.SLING.y, KAB.BIRDS[b.data.type].color, 50, 0.3, 3);
+        g.particles.puff(KAB.SLING.x, KAB.SLING.y + 10, 4, 12);
+        g._addShake(2);
+        g.hintT = 0;
+      },
+      ability(kind, x, y, b) {
+        g.audio.ability(kind);
+        const c = KAB.BIRDS[b.data.type].color;
+        g.particles.ring(x, y, '#ffffff', kind === 'slam' ? 70 : 52, 0.35, 4);
+        if (kind === 'egg') g.particles.puff(x, y + 14, 3, 12);
+        g.particles.feathers(x, y, c, kind === 'split' ? 8 : 6);
+        g._addShake(kind === 'slam' ? 3 : 1.5);
+      },
+      impact(a, b, closing, x, y) {
+        if (g.fxBudget <= 0) return;
+        g.fxBudget--;
+        const other = a.kind === 'bird' ? b : a;
+        const mat = other.kind === 'ground' ? 'stone' : other.kind === 'enemy' ? 'wood' : other.mat;
+        const s = Math.min(1, closing / 700);
+        g.audio.hit(mat, s);
+        const col = other.kind === 'block' ? KAB.Mat[other.mat].color : '#ffffff';
+        if (a.kind === 'bird' || b.kind === 'bird') g.particles.feathers(x, y, KAB.BIRDS[(a.kind === 'bird' ? a : b).data.type].color, 1 + Math.round(s * 3));
+        if (other.kind === 'block') g.particles.chips(x, y, { wood: '#d99c3c', stone: '#a5aeb8', glass: '#bfeaff', tnt: '#d9432b' }[other.mat], 1 + Math.round(s * 3), 6);
+        else g.particles.spark(x, y, col, 2 + Math.round(s * 4), 120 + s * 160, 0.35);
+        g._addShake(s * 3.2);
+        if (a.kind === 'bird' && closing > 200 && Math.hypot(a.vx, a.vy) > 250) g.particles.ring(x, y, '#ffffff', 22 + s * 24, 0.25, 2);
+      },
+      destroy(b) {
+        g.audio.shatter(b.mat);
+        const col = { wood: '#d99c3c', stone: '#a5aeb8', glass: '#bfeaff', tnt: '#d9432b' }[b.mat];
+        g.particles.chips(b.x, b.y, col, Math.min(14, 5 + Math.round(b.rad / 5)), b.rad);
+        if (b.mat === 'glass') g.particles.chips(b.x, b.y, '#ffffff', 5, 10);
+        g.particles.puff(b.x, b.y, b.mat === 'stone' ? 4 : 2, 12);
+        g._addShake(2.5);
+      },
+      kill(e, chain) {
+        g.audio.kill();
+        const x = Math.min(920, Math.max(40, e.x)), y = Math.min(520, e.y);
+        g.particles.puff(x, y, 7, 18);
+        g.particles.stars(x, y - 6, 6);
+        g.particles.feathers(x, y, '#82d44a', 5);
+        g._addShake(4);
+      },
+      explode(x, y, R) {
+        g.audio.boom();
+        g.particles.ring(x, y, '#ffb02e', R, 0.5, 6);
+        g.particles.ring(x, y, '#ff5d3c', R * 0.7, 0.4, 4);
+        g.particles.spark(x, y, '#ffb02e', 44, 460, 0.8);
+        g.particles.puff(x, y, 9, 22);
+        g.particles.smoke(x, y, 6, '#6b5a5a');
+        g._addShake(14);
+      },
+      score(points, x, y, kind) {
+        const px = Math.min(920, Math.max(40, x)), py = Math.min(515, y);
+        if (kind === 'enemy') g.particles.popup(px, py - 18, '+' + KAB.UI.fmt(points), '#ff9ac9', 24);
+        else if (kind === 'chain') g.particles.popup(px, py - 10, 'CHAIN +' + KAB.UI.fmt(points), '#ffd34d', 18);
+        else g.particles.popup(px, py - 8, '+' + KAB.UI.fmt(points), '#ffffff', 14);
+      },
+      lastKill() {
+        if (!g.reduceMotion) g.slowT = 0.9;
+      },
+      birdGone(b) {
+        g.particles.spark(b.x, b.y, KAB.BIRDS[b.data.type].color, 8, 120, 0.4);
+      },
+      win(stars, score, bonus) {
+        g.newBest = KAB.Store.record(g.world.index, stars, score);
+        g.pendingEnd = { screen: 'won', t: 0.7 };
+        g.audio.win();
+      },
+      lose() {
+        g.pendingEnd = { screen: 'lost', t: 0.8 };
+        g.audio.lose();
+      },
     };
-
-    this.setupLevel(1);
-    this.setupInput();
-    this.animate();
   }
 
-  setupLevel(levelNum) {
-    this.physics.bodies = [];
-    if (levelNum === 1) this.score = 0;
-    this.combo = 0;
-    this.comboTimer = 0;
-    this.launched = false;
-    this.setupBirdQueue(levelNum);
-    this.currentBird = this.spawnBird();
+  _addShake(v) { if (!this.reduceMotion) this.shake = Math.min(14, this.shake + v); }
 
-    if (levelNum === 1) this.createLevel1();
-    else if (levelNum === 2) this.createLevel2();
-    else if (levelNum === 3) this.createLevel3();
-    else if (levelNum === 4) this.createLevel4();
-    else if (levelNum === 5) this.createLevel5();
-    else if (levelNum === 6) this.createLevel6();
-
-    this.state = 'playing';
+  // ---- input -----------------------------------------------------------------
+  _pt(e) {
+    const r = this.canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * KAB.Render.W / r.width, y: (e.clientY - r.top) * KAB.Render.H / r.height };
   }
 
-  setupBirdQueue(levelNum) {
-    const queues = {
-      1: ['cyan', 'cyan', 'gold'],
-      2: ['cyan', 'green', 'gold'],
-      3: ['green', 'cyan', 'cyan', 'gold'],
-      4: ['gold', 'cyan', 'green', 'cyan'],
-      5: ['cyan', 'cyan', 'green', 'gold', 'cyan'],
-      6: ['green', 'gold', 'cyan', 'green', 'cyan']
-    };
-    this.birdQueue = queues[levelNum] || ['cyan', 'cyan', 'gold'];
+  _clampAim(px, py) {
+    const S = KAB.SLING;
+    let dx = px - S.x, dy = py - S.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > KAB.MAX_PULL) { dx = dx / d * KAB.MAX_PULL; dy = dy / d * KAB.MAX_PULL; }
+    const r = this.world.current ? KAB.BIRDS[this.world.current].r : 12;
+    return { x: S.x + dx, y: Math.min(S.y + dy, KAB.GROUND_Y - r - 3) };
   }
 
-  spawnBird() {
-    if (this.birdQueue.length === 0) return null;
-    const type = this.birdQueue.shift();
-    const spec = this.birdSpecs[type];
-    const bird = new KAB.Body(this.slingshotX, this.slingshotY, spec.w, spec.h, 'dynamic');
-    bird.restitution = spec.restitution;
-    bird.color = spec.color;
-    bird.type_name = 'bird';
-    bird.birdType = type;
-    bird.speedMult = spec.speed;
-    this.physics.add(bird);
-    return bird;
-  }
-
-  createLevel1() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3 - i; j++) {
-        const x = 600 + j * 50 + i * 25;
-        const y = 500 - i * 50;
-        const block = new KAB.Body(x, y, 40, 40, 'dynamic');
-        block.color = '#c46bff';
-        block.restitution = 0.4;
-        this.physics.add(block);
-      }
-    }
-    const enemy = new KAB.Body(700, 450, 20, 20, 'dynamic');
-    enemy.color = '#ff5d9e';
-    enemy.type_name = 'enemy';
-    this.physics.add(enemy);
-  }
-
-  createLevel2() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    for (let i = 0; i < 4; i++) {
-      const b1 = new KAB.Body(550 + i * 50, 520 - i * 40, 40, 40, 'dynamic');
-      b1.color = '#ffd34d';
-      this.physics.add(b1);
-      const b2 = new KAB.Body(700 + i * 50, 520 - i * 40, 40, 40, 'dynamic');
-      b2.color = '#39e6ff';
-      this.physics.add(b2);
-    }
-    const enemy = new KAB.Body(680, 420, 20, 20, 'dynamic');
-    enemy.color = '#ff5d9e';
-    enemy.type_name = 'enemy';
-    this.physics.add(enemy);
-  }
-
-  createLevel3() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
-        if ((i + j) % 2 === 0) {
-          const x = 520 + j * 35;
-          const y = 500 - i * 40;
-          const block = new KAB.Body(x, y, 35, 35, 'dynamic');
-          block.color = ['#39e6ff', '#ffd34d', '#c46bff', '#7CFFb2'][Math.floor(Math.random() * 4)];
-          this.physics.add(block);
-        }
-      }
-    }
-    const e1 = new KAB.Body(620, 400, 18, 18, 'dynamic');
-    e1.color = '#ff5d9e';
-    e1.type_name = 'enemy';
-    this.physics.add(e1);
-    const e2 = new KAB.Body(720, 420, 18, 18, 'dynamic');
-    e2.color = '#ff5d9e';
-    e2.type_name = 'enemy';
-    this.physics.add(e2);
-  }
-
-  createLevel4() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    // Castle structure
-    const castle = [
-      {x: 600, y: 520, w: 50, h: 50}, {x: 700, y: 520, w: 50, h: 50},
-      {x: 650, y: 450, w: 50, h: 50}, {x: 600, y: 380, w: 40, h: 40},
-      {x: 700, y: 380, w: 40, h: 40}, {x: 650, y: 300, w: 40, h: 40}
-    ];
-    castle.forEach(b => {
-      const block = new KAB.Body(b.x, b.y, b.w, b.h, 'dynamic');
-      block.color = ['#39e6ff', '#ffd34d'][Math.floor(Math.random() * 2)];
-      this.physics.add(block);
+  _bindInput() {
+    const c = this.canvas;
+    c.addEventListener('pointerdown', e => this._onDown(e));
+    c.addEventListener('pointermove', e => this._onMove(e));
+    c.addEventListener('pointerup', e => this._onUp(e));
+    c.addEventListener('pointercancel', () => { this.aim = null; });
+    c.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('keydown', e => this._onKey(e));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); }
+      else this.audio.resume();
     });
-    for (let i = 0; i < 2; i++) {
-      const enemy = new KAB.Body(580 + i * 140, 480, 18, 18, 'dynamic');
-      enemy.color = '#ff5d9e';
-      enemy.type_name = 'enemy';
-      this.physics.add(enemy);
-    }
+    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
   }
 
-  createLevel5() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    // Bridge structure
-    for (let x = 550; x < 800; x += 45) {
-      const block = new KAB.Body(x, 500, 40, 20, 'dynamic');
-      block.color = '#c46bff';
-      this.physics.add(block);
-    }
-    // Tower on bridge
-    for (let i = 0; i < 3; i++) {
-      const block = new KAB.Body(675, 450 - i * 45, 40, 40, 'dynamic');
-      block.color = '#ffd34d';
-      this.physics.add(block);
-    }
-    for (let i = 0; i < 2; i++) {
-      const enemy = new KAB.Body(650 + i * 50, 410, 18, 18, 'dynamic');
-      enemy.color = '#ff5d9e';
-      enemy.type_name = 'enemy';
-      this.physics.add(enemy);
-    }
+  _firstGesture() {
+    if (this.audio.ensure()) this.audio.startMusic();
   }
 
-  createLevel6() {
-    this.physics.add(new KAB.Body(480, 580, 960, 40, 'static')).color = '#2a4a5a';
-    // Boss level: massive structure
-    const structures = [
-      {x: 550, y: 500, w: 60, h: 60}, {x: 700, y: 500, w: 60, h: 60},
-      {x: 625, y: 410, w: 50, h: 50}, {x: 625, y: 320, w: 50, h: 50},
-      {x: 550, y: 240, w: 40, h: 40}, {x: 700, y: 240, w: 40, h: 40}
-    ];
-    structures.forEach(s => {
-      const block = new KAB.Body(s.x, s.y, s.w, s.h, 'dynamic');
-      block.color = ['#39e6ff', '#ffd34d', '#7CFFb2'][Math.floor(Math.random() * 3)];
-      this.physics.add(block);
-    });
-    for (let i = 0; i < 3; i++) {
-      const enemy = new KAB.Body(550 + i * 75, 460, 20, 20, 'dynamic');
-      enemy.color = '#ff5d9e';
-      enemy.type_name = 'enemy';
-      this.physics.add(enemy);
-    }
-  }
-
-  setupInput() {
-    document.addEventListener('mousedown', e => this.onMouseDown(e));
-    document.addEventListener('mousemove', e => this.onMouseMove(e));
-    document.addEventListener('mouseup', e => this.onMouseUp(e));
-
-    document.addEventListener('touchstart', e => this.onTouchStart(e));
-    document.addEventListener('touchmove', e => this.onTouchMove(e));
-    document.addEventListener('touchend', e => this.onTouchEnd(e));
-  }
-
-  onMouseDown(e) {
-    if (this.state !== 'playing' || this.launched) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left);
-    const y = (e.clientY - rect.top);
-    const dx = x - this.slingshotX;
-    const dy = y - this.slingshotY;
-    if (dx * dx + dy * dy < 30 * 30) {
-      this.mouseDown = true;
-      this.mouseX = x;
-      this.mouseY = y;
-    }
-  }
-
-  onMouseMove(e) {
-    if (!this.mouseDown) return;
-    const rect = this.canvas.getBoundingClientRect();
-    this.mouseX = e.clientX - rect.left;
-    this.mouseY = e.clientY - rect.top;
-  }
-
-  onMouseUp(e) {
-    if (!this.mouseDown) return;
-    this.mouseDown = false;
-    this.launchBird();
-  }
-
-  onTouchStart(e) { this.onMouseDown({clientX: e.touches[0].clientX, clientY: e.touches[0].clientY}); }
-  onTouchMove(e) { this.onMouseMove({clientX: e.touches[0].clientX, clientY: e.touches[0].clientY}); }
-  onTouchEnd(e) { this.onMouseUp({}); }
-
-  launchBird() {
-    if (!this.currentBird || this.launched) return;
-    const dx = this.slingshotX - this.mouseX;
-    const dy = this.slingshotY - this.mouseY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const power = Math.min(dist / 30, 3);
-    const speedMult = this.currentBird.speedMult || 1;
-
-    this.currentBird.vel.x = (dx / Math.max(dist, 1)) * power * 15 * speedMult;
-    this.currentBird.vel.y = (dy / Math.max(dist, 1)) * power * 15 * speedMult;
-    this.launched = true;
-    this.audio.launch();
-
-    setTimeout(() => {
-      if (this.launched && this.currentBird && Math.abs(this.currentBird.vel.x) < 0.5 && Math.abs(this.currentBird.vel.y) < 0.5) {
-        this.nextBirdOrLevelComplete();
+  _onDown(e) {
+    this._firstGesture();
+    const p = this._pt(e);
+    const i = KAB.UI.hit(p.x, p.y);
+    if (i >= 0) { e.preventDefault(); this.activate(KAB.UI.buttons[i].id); return; }
+    if (this.screen !== 'play') return;
+    const w = this.world;
+    if (w.state === 'ready' && w.current) {
+      const S = KAB.SLING;
+      if (Math.hypot(p.x - S.x, p.y - S.y) < 95) {
+        this.aim = this._clampAim(p.x, p.y);
+        this.keyAim.on = false;
+        try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       }
-    }, 3000);
+    } else if (w.state === 'flying') w.useAbility();
   }
 
-  nextBirdOrLevelComplete() {
-    if (this.birdQueue.length > 0) {
-      this.launched = false;
-      this.currentBird = this.spawnBird();
-    } else {
-      const enemies = this.physics.bodies.filter(b => b.type_name === 'enemy');
-      if (enemies.length === 0) {
-        this.state = 'levelComplete';
-        this.score += 1000 + this.birdQueue.length * 300;
-        this.totalScore += this.score;
-        this.audio.levelComplete();
-      } else {
-        this.state = 'gameOver';
-        this.totalScore += this.score;
-        this.audio.gameOver();
+  _onMove(e) {
+    const p = this._pt(e);
+    if (this.aim) {
+      const prev = this.aim;
+      this.aim = this._clampAim(p.x, p.y);
+      const t = Math.min(1, Math.hypot(this.aim.x - KAB.SLING.x, this.aim.y - KAB.SLING.y) / KAB.MAX_PULL);
+      if (Math.hypot(this.aim.x - prev.x, this.aim.y - prev.y) > 3) this.audio.stretch(t);
+      return;
+    }
+    const i = KAB.UI.hit(p.x, p.y);
+    if (i >= 0) this.focusIdx = i;
+    else if (this.screen === 'play') this.focusIdx = -1;
+    this.canvas.style.cursor = i >= 0 ? 'pointer' : (this.screen === 'play' && this.world.state === 'ready' && Math.hypot(p.x - KAB.SLING.x, p.y - KAB.SLING.y) < 95 ? 'grab' : 'default');
+  }
+
+  _onUp(e) {
+    if (!this.aim) return;
+    const a = this.aim;
+    this.aim = null;
+    if (!this.world.fire(a.x, a.y)) this.audio.click();
+  }
+
+  _onKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    const overlay = this.screen !== 'play';
+    this._firstGesture();
+    if (k === 'm' || k === 'M') { this.audio.setMuted(!this.audio.muted); return; }
+    if (k === 'p' || k === 'P' || k === 'Escape') {
+      e.preventDefault();
+      if (this.screen === 'play' || this.screen === 'paused') this.togglePause();
+      else if (this.screen === 'select') this.setScreen('menu');
+      return;
+    }
+    if ((k === 'r' || k === 'R') && (this.screen === 'play' || this.screen === 'paused' || this.screen === 'won' || this.screen === 'lost')) { this.startLevel(this.world.index); return; }
+    if ((k === 'n' || k === 'N') && this.screen === 'won' && this.world.index < KAB.LEVELS.length - 1) { this.startLevel(this.world.index + 1); return; }
+
+    if (overlay) {
+      const n = KAB.UI.buttons.length;
+      if (!n) return;
+      const sel = this.screen === 'select';
+      if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'Tab') {
+        e.preventDefault();
+        const step = sel && k === 'ArrowDown' ? 4 : 1;
+        this.focusIdx = Math.min(n - 1, (this.focusIdx < 0 ? -1 : this.focusIdx) + step);
+      } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
+        e.preventDefault();
+        const step = sel && k === 'ArrowUp' ? 4 : 1;
+        this.focusIdx = Math.max(0, this.focusIdx - step);
+      } else if (k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        const b = KAB.UI.buttons[this.focusIdx];
+        if (b && !b.disabled) this.activate(b.id);
+      }
+      return;
+    }
+
+    const w = this.world;
+    if (k === ' ' || k === 'Enter') {
+      e.preventDefault();
+      if (w.state === 'flying') w.useAbility();
+      else if (w.state === 'ready' && w.current) {
+        const p = this._keyPull();
+        w.fire(p.x, p.y);
+        this.keyAim.on = false;
+      }
+    } else if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight') {
+      e.preventDefault();
+      if (w.state !== 'ready') return;
+      const a = this.keyAim;
+      a.on = true;
+      if (k === 'ArrowUp') a.angle = Math.min(85, a.angle + 2);
+      if (k === 'ArrowDown') a.angle = Math.max(3, a.angle - 2);
+      if (k === 'ArrowRight') a.pull = Math.min(KAB.MAX_PULL, a.pull + 3);
+      if (k === 'ArrowLeft') a.pull = Math.max(30, a.pull - 3);
+    }
+  }
+
+  _keyPull() {
+    const a = this.keyAim, rad = a.angle * Math.PI / 180;
+    return this._clampAim(KAB.SLING.x - Math.cos(rad) * a.pull, KAB.SLING.y + Math.sin(rad) * a.pull);
+  }
+
+  // ---- loop ------------------------------------------------------------------
+  _frame(ts) {
+    requestAnimationFrame(this._frame);
+    const dt = Math.min(0.1, (ts - this.last) / 1000) || 0;
+    this.last = ts;
+    this._update(dt);
+    this._render();
+  }
+
+  _update(dt) {
+    this.time += dt;
+    if (this.slowT > 0) { this.slowT -= dt; this.timeScale = this.slowT > 0 ? 0.3 : 1; } else this.timeScale = 1;
+    const sdt = dt * this.timeScale;
+    this.fxBudget = 6;
+
+    if (this.screen === 'play') {
+      this.acc += sdt;
+      let n = 0;
+      while (this.acc >= KAB.TICK && n < 5) { this.world.step(); this.acc -= KAB.TICK; n++; }
+      if (this.acc > KAB.TICK) this.acc = 0;
+      this.hintT = Math.max(0, this.hintT - dt);
+
+      for (const b of this.world.birds) {
+        if (b.alive && !b.asleep && Math.abs(b.vx) + Math.abs(b.vy) > 260 && Math.random() < 0.8) this.particles.trail(b.x, b.y, '#ffffff');
+      }
+      if (this.pendingEnd) {
+        this.pendingEnd.t -= dt;
+        if (this.pendingEnd.t <= 0) { const s = this.pendingEnd.screen; this.pendingEnd = null; this.setScreen(s); }
       }
     }
+    if (this.screen === 'won' || this.screen === 'lost') {
+      this.overlayT += dt;
+      if (this.screen === 'won') {
+        const times = [0.5, 0.92, 1.34];
+        while (this.starSfx < this.world.stars && this.overlayT > times[this.starSfx]) this.audio.star(this.starSfx++);
+      }
+    } else this.overlayT += dt;
+
+    this.particles.update(sdt);
+    this.shake *= Math.exp(-dt * 9);
+    this.shownScore += (this.world.score - this.shownScore) * Math.min(1, dt * 9);
+    if (Math.abs(this.world.score - this.shownScore) < 1) this.shownScore = this.world.score;
   }
 
-  update() {
-    if (this.state !== 'playing') return;
+  _render() {
+    const ctx = this.ctx, w = this.world, R = KAB.Render, S = KAB.SLING;
+    const th = w.level.theme;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, R.W, R.H);
+    ctx.save();
+    if (this.shake > 0.15) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
 
-    this.physics.step();
-    this.particles.update();
+    R.drawBackground(ctx, th, w.index, this.time, this.dpr, this.reduceMotion);
 
-    if (this.screenShake > 0) this.screenShake *= 0.9;
-    if (this.comboTimer > 0) this.comboTimer--;
-
-    const enemies = this.physics.bodies.filter(b => b.type_name === 'enemy');
-    if (enemies.length === 0 && !this.launched) {
-      this.state = 'levelComplete';
-      this.score += 1000 + this.birdQueue.length * 300;
-      this.totalScore += this.score;
-      this.audio.levelComplete();
-    }
-
-    if (this.currentBird && this.currentBird.pos.x > 960) {
-      this.nextBirdOrLevelComplete();
-    }
-  }
-
-  draw() {
-    this.ctx.fillStyle = '#0a0e27';
-    this.ctx.fillRect(0, 0, 960, 600);
-
-    const shake = this.screenShake > 0 ? KAB.Util.randRange(-this.screenShake, this.screenShake) : 0;
-
-    this.ctx.save();
-    this.ctx.translate(shake, shake * 0.5);
-
-    // Draw level
-    this.physics.bodies.forEach(body => {
-      this.ctx.save();
-      this.ctx.translate(body.pos.x, body.pos.y);
-      this.ctx.rotate(body.rot);
-
-      this.ctx.fillStyle = body.color || '#39e6ff';
-      this.ctx.shadowColor = body.color ? body.color : '#00ffff';
-      this.ctx.shadowBlur = 12;
-      this.ctx.shadowOffsetX = 0;
-      this.ctx.shadowOffsetY = 2;
-      this.ctx.fillRect(-body.w / 2, -body.h / 2, body.w, body.h);
-
-      // Outline glow
-      this.ctx.strokeStyle = body.color;
-      this.ctx.lineWidth = 1;
-      this.ctx.globalAlpha = 0.6;
-      this.ctx.shadowBlur = 0;
-      this.ctx.strokeRect(-body.w / 2, -body.h / 2, body.w, body.h);
-      this.ctx.globalAlpha = 1;
-      this.ctx.restore();
+    const showWorld = this.screen !== 'menu' && this.screen !== 'select';
+    // waiting birds on the ground
+    if (showWorld) w.queue.slice(0, 5).forEach((ty, i) => {
+      const r = KAB.BIRDS[ty].r;
+      R.drawBird(ctx, 78 + i * 38, KAB.GROUND_Y - r - 1, r, ty, 0, 0, this.time, { noGlow: true, blink: (this.time * 0.6 + i * 0.9) % 4 > 3.9 });
     });
 
-    // Draw slingshot with enhanced visuals
-    this.ctx.strokeStyle = '#39e6ff';
-    this.ctx.lineWidth = 4;
-    this.ctx.shadowColor = '#39e6ff';
-    this.ctx.shadowBlur = 12;
-    this.ctx.beginPath();
-    this.ctx.arc(this.slingshotX, this.slingshotY, 15, 0, Math.PI * 2);
-    this.ctx.stroke();
-
-    this.ctx.fillStyle = '#0a0e27';
-    this.ctx.beginPath();
-    this.ctx.arc(this.slingshotX, this.slingshotY, 8, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    if (this.mouseDown && this.currentBird) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.slingshotX, this.slingshotY);
-      this.ctx.lineTo(this.mouseX, this.mouseY);
-      this.ctx.stroke();
-      this.ctx.shadowBlur = 0;
+    // aim state
+    let pull = null;
+    if (w.state === 'ready' && w.current) {
+      if (this.aim) pull = this.aim;
+      else if (this.keyAim.on) pull = this._keyPull();
     }
-    this.ctx.shadowBlur = 0;
+    const bx = pull ? pull.x : S.x, by = pull ? pull.y : S.y;
+    const stretch = pull ? Math.min(1, Math.hypot(bx - S.x, by - S.y) / KAB.MAX_PULL) : 0;
 
-    this.particles.draw(this.ctx);
-    this.ctx.restore();
-
-    // HUD with enhanced styling
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.font = 'bold 14px monospace';
-    this.ctx.shadowColor = '#39e6ff';
-    this.ctx.shadowBlur = 8;
-    this.ctx.fillText(`LV${this.level}`, 20, 25);
-    this.ctx.font = 'bold 18px monospace';
-    this.ctx.fillText(this.score.toString().padStart(6, '0'), 20, 50);
-
-    // Bird queue display
-    this.ctx.font = '12px monospace';
-    this.ctx.fillText('NEXT:', 870, 30);
-    this.birdQueue.slice(0, 3).forEach((type, i) => {
-      const spec = this.birdSpecs[type];
-      this.ctx.fillStyle = spec.color;
-      this.ctx.shadowColor = spec.color;
-      this.ctx.beginPath();
-      this.ctx.arc(885 + i * 20, 40, 6, 0, Math.PI * 2);
-      this.ctx.fill();
-    });
-
-    this.ctx.shadowBlur = 0;
-
-    if (this.state === 'levelComplete') {
-      this.drawLevelComplete();
-    } else if (this.state === 'gameOver') {
-      this.drawGameOver();
-    } else if (this.state === 'menu') {
-      this.drawMenu();
+    if (showWorld) R.slingBack(ctx, th.accent, bx, by, stretch);
+    if (showWorld && w.state === 'ready' && w.current) {
+      const spec = KAB.BIRDS[w.current];
+      const look = pull ? Math.atan2(S.y - by, S.x - bx) : -0.2;
+      R.drawBird(ctx, bx, by, spec.r, w.current, pull ? look * 0.25 : 0, look, this.time, { blink: !pull && (this.time * 0.8) % 4 > 3.9 });
     }
-  }
+    if (showWorld) R.slingFront(ctx, th.accent, bx, by, stretch);
+    if (showWorld && pull) R.trajectory(ctx, w.preview(bx, by, 80), th.accent, this.time);
 
-  drawMenu() {
-    this.ctx.fillStyle = 'rgba(10, 14, 39, 0.8)';
-    this.ctx.fillRect(0, 0, 960, 600);
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.font = 'bold 48px monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.shadowColor = '#39e6ff';
-    this.ctx.shadowBlur = 20;
-    this.ctx.fillText('KUDBEE BIRDS', 480, 150);
-    this.ctx.font = '20px monospace';
-    this.ctx.fillText('Click and drag bird to aim, release to fire', 480, 220);
-    this.ctx.fillText('Destroy all enemies to advance', 480, 260);
-    this.ctx.fillText('CLICK TO START', 480, 350);
-    this.ctx.shadowBlur = 0;
-    this.ctx.textAlign = 'left';
-  }
+    // enemy eyes follow the nearest live bird (or the slingshot)
+    R.lookAt = { x: S.x, y: S.y };
+    for (const b of w.birds) if (b.alive) { R.lookAt = { x: b.x, y: b.y }; break; }
+    if (pull) R.lookAt = { x: pull.x, y: pull.y };
 
-  drawLevelComplete() {
-    this.ctx.fillStyle = 'rgba(10, 14, 39, 0.95)';
-    this.ctx.fillRect(0, 0, 960, 600);
-
-    const bonus = 1000 + this.birdQueue.length * 300;
-    const levelColor = this.level >= 6 ? '#ffd34d' : '#7CFFb2';
-
-    this.ctx.fillStyle = levelColor;
-    this.ctx.font = 'bold 40px monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.shadowColor = levelColor;
-    this.ctx.shadowBlur = 20;
-    this.ctx.fillText('LEVEL COMPLETE!', 480, 140);
-
-    this.ctx.font = '20px monospace';
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.fillText(`LEVEL ${this.level}`, 480, 200);
-    this.ctx.fillStyle = '#ffd34d';
-    this.ctx.fillText(`+${bonus} POINTS`, 480, 240);
-    this.ctx.fillStyle = '#c46bff';
-    this.ctx.fillText(`TOTAL: ${this.totalScore}`, 480, 280);
-
-    if (this.level >= 6) {
-      this.ctx.fillStyle = '#ff5d9e';
-      this.ctx.font = 'bold 32px monospace';
-      this.ctx.fillText('🎮 ALL LEVELS CLEARED! 🎮', 480, 350);
+    // bodies
+    const bodies = showWorld ? w.phys.bodies : [];
+    for (const b of bodies) if (b.kind === 'ground' && b.shape === 'poly') R.drawRock(ctx, b, th.world === 2);
+    for (const b of bodies) if (b.kind === 'block') R.drawBlock(ctx, b, th.accent);
+    for (const b of bodies) if (b.kind === 'enemy') R.drawEnemy(ctx, b, this.time);
+    for (const b of bodies) if (b.kind === 'bomb') R.drawEgg(ctx, b);
+    for (const b of bodies) {
+      if (b.kind !== 'bird') continue;
+      const moving = Math.abs(b.vx) + Math.abs(b.vy) > 30;
+      const dir = Math.atan2(b.vy, b.vx);
+      const fly = moving && !b.data.touched;
+      R.drawBird(ctx, b.x, b.y, b.r, b.data.type, fly ? dir : b.angle, dir, this.time, { blink: b.asleep });
     }
 
-    this.ctx.font = '16px monospace';
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.fillText(this.level >= 6 ? 'CLICK TO RESTART' : 'CLICK FOR NEXT LEVEL', 480, 480);
-    this.ctx.shadowBlur = 0;
-    this.ctx.textAlign = 'left';
-  }
+    if (showWorld) R.drawFringe(ctx, this.dpr, th.world);
+    this.particles.draw(ctx);
+    ctx.restore();
 
-  drawGameOver() {
-    this.ctx.fillStyle = 'rgba(10, 14, 39, 0.95)';
-    this.ctx.fillRect(0, 0, 960, 600);
-    this.ctx.fillStyle = '#ff5d9e';
-    this.ctx.font = 'bold 40px monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.shadowColor = '#ff5d9e';
-    this.ctx.shadowBlur = 20;
-    this.ctx.fillText('GAME OVER', 480, 140);
+    KAB.UI.begin();
+    if (this.screen === 'play' || this.screen === 'paused' || this.screen === 'won' || this.screen === 'lost') KAB.UI.hud(ctx, this);
+    if (this.screen === 'menu') KAB.UI.menu(ctx, this);
+    else if (this.screen === 'select') KAB.UI.select(ctx, this);
+    else if (this.screen === 'paused') { KAB.UI.buttons.length = 0; KAB.UI.pause(ctx, this); }
+    else if (this.screen === 'won') { KAB.UI.buttons.length = 0; KAB.UI.won(ctx, this); }
+    else if (this.screen === 'lost') { KAB.UI.buttons.length = 0; KAB.UI.lost(ctx, this); }
 
-    this.ctx.font = '20px monospace';
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.fillText(`REACHED LEVEL: ${this.level}`, 480, 200);
-    this.ctx.fillStyle = '#ffd34d';
-    this.ctx.fillText(`LEVEL SCORE: ${this.score}`, 480, 240);
-    this.ctx.fillStyle = '#c46bff';
-    this.ctx.fillText(`TOTAL SCORE: ${this.totalScore}`, 480, 280);
-
-    this.ctx.font = '16px monospace';
-    this.ctx.fillStyle = '#39e6ff';
-    this.ctx.fillText('CLICK TO RESTART', 480, 480);
-    this.ctx.shadowBlur = 0;
-    this.ctx.textAlign = 'left';
-  }
-
-  handleClick() {
-    if (this.state === 'menu') {
-      this.state = 'playing';
-    } else if (this.state === 'levelComplete') {
-      if (this.level >= 6) {
-        this.level = 1;
-        this.totalScore = 0;
-        this.setupLevel(1);
-      } else {
-        this.level++;
-        this.setupLevel(this.level);
-      }
-    } else if (this.state === 'gameOver') {
-      this.level = 1;
-      this.totalScore = 0;
-      this.setupLevel(1);
+    if (this.focusPending) {
+      let i = KAB.UI.buttons.findIndex(b => b.primary && !b.hud);
+      if (i < 0 && this.screen === 'select') i = KAB.UI.buttons.findIndex(b => b.id === 'lvl' + this.continueIndex());
+      if (i < 0 && this.screen === 'select') i = KAB.UI.buttons.findIndex(b => /^lvl/.test(b.id) && !b.disabled);
+      if (i < 0 && this.screen !== 'play') i = KAB.UI.buttons.findIndex(b => !b.disabled && !b.hud);
+      this.focusIdx = i;
+      this.focusPending = false;
     }
-  }
-
-  animate() {
-    this.update();
-    this.draw();
-    requestAnimationFrame(() => this.animate());
   }
 };
 
-document.addEventListener('click', () => {
-  if (window.game) window.game.handleClick();
-});
-
 document.addEventListener('DOMContentLoaded', () => {
-  window.game = new KAB.Game();
+  window.KABGame = new KAB.Game(document.getElementById('gameCanvas'));
 });
