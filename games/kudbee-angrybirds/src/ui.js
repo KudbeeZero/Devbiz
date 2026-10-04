@@ -11,7 +11,7 @@ KAB.UI = {
   OUT: '#3a2216',
   buttons: [],
   PER_PAGE: 8,
-  WORLDS: ['MEADOW', 'FROSTPEAK', 'SUNSET RIDGE'],
+  WORLDS: ['MEADOW', 'FROSTPEAK', 'NIGHTMARE'],
 
   COL: {
     green:  ['#a9ec62', '#53bd3c', '#2f8a2a'],

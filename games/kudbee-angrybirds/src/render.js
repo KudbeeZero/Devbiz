@@ -27,7 +27,7 @@ KAB.Render = {
   alpha(hex, a) { const c = this.rgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; },
 
   // ---- backdrop ---------------------------------------------------------
-  img: { lake: null },
+  img: { lake: null, nm: [] },
 
   // Kicks off the painted backdrop load; until it arrives (or if it fails) the
   // procedural neon skyline below is used, so the game never shows an empty stage.
@@ -36,6 +36,7 @@ KAB.Render = {
     im.onload = () => { this._bg = {}; this._fringe = null; };
     im.src = 'assets/bg-lake.jpg';
     this.img.lake = im;
+    for (let i = 1; i <= 4; i++) { const n = new Image(); n.onload = () => { this._bg = {}; }; n.src = 'assets/bg-nightmare-' + i + '.jpg'; this.img.nm[i - 1] = n; }
   },
 
   _hasLake() { const im = this.img.lake; return !!(im && im.complete && im.naturalWidth > 0); },
@@ -137,6 +138,7 @@ KAB.Render = {
   },
 
   drawFringe(ctx, dpr, world) {
+    if (world === 3) return;
     if (world === 2) {
       if (!this._fringeS || this._fringeSDpr !== dpr) { this._fringeS = this._makeSnowFringe(dpr); this._fringeSDpr = dpr; }
       ctx.drawImage(this._fringeS, 0, KAB.GROUND_Y - 38, this.W, 40);
@@ -281,7 +283,7 @@ KAB.Render = {
     const top = Math.min.apply(null, b.verts.map(p => p.y)), bot = Math.max.apply(null, b.verts.map(p => p.y));
     path();
     const g = ctx.createLinearGradient(0, top, 0, bot);
-    g.addColorStop(0, '#a89c92'); g.addColorStop(1, '#6a5f58');
+    if (snowy === 3) { g.addColorStop(0, '#4a3858'); g.addColorStop(1, '#1d1228'); } else { g.addColorStop(0, '#a89c92'); g.addColorStop(1, '#6a5f58'); }
     ctx.fillStyle = g; ctx.fill();
     ctx.save(); path(); ctx.clip();
     const rnd = KAB.Util.rng(b.id * 13);
@@ -289,7 +291,7 @@ KAB.Render = {
     for (let i = 0; i < 7; i++) { let px = (rnd() - 0.5) * b.w * 0.8, py = top + rnd() * (bot - top); ctx.beginPath(); ctx.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * 40; py += rnd() * 22; ctx.lineTo(px, py); } ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     for (let i = 0; i < 10; i++) ctx.fillRect((rnd() - 0.5) * b.w * 0.8, top + rnd() * (bot - top), 6 + rnd() * 10, 3 + rnd() * 3);
-    if (snowy) {
+    if (snowy === 2 || snowy === true) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.moveTo(-b.w, top - 4);
       for (let px = -b.w; px <= b.w; px += 10) ctx.lineTo(px, top + 22 + Math.sin(px * 0.2) * 5 + (Math.abs(px) * 0.28));
@@ -300,7 +302,49 @@ KAB.Render = {
     ctx.restore();
   },
 
+  // World 3: painted nightmare scenes, covered to the stage, dark cracked-stone floor below the physics ground.
+  _makeNightmareBg(theme, dpr, seed) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = this.H * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const GY = KAB.GROUND_Y, W = this.W, H = this.H, im = this.img.nm[theme.bg || 0];
+    const m = theme.mood || { tint: '#ffffff', a: 0 }, rnd = KAB.Util.rng(seed);
+    if (im && im.complete && im.naturalWidth > 0) {
+      const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+      if ('filter' in x) x.filter = 'brightness(' + (m.bright || 1.12) + ') saturate(1.1)';
+      x.drawImage(im, (W - dw) / 2, H - dh, dw, dh);
+      x.filter = 'none';
+    } else { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d0614'); g.addColorStop(0.6, '#4a1230'); g.addColorStop(1, '#10060c'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+    if (m.a > 0) { x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = m.a; x.fillStyle = m.tint; x.fillRect(0, 0, W, H); x.restore(); }
+    // HUD scrim + vignette
+    const sg = x.createLinearGradient(0, 0, 0, 130); sg.addColorStop(0, 'rgba(0,0,0,0.5)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = sg; x.fillRect(0, 0, W, 130);
+    const vg = x.createRadialGradient(480, 300, 280, 480, 300, 680); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)'); x.fillStyle = vg; x.fillRect(0, 0, W, H);
+    // the floor: dark basalt slabs under the playfield, with an ember-lit edge
+    const fg = x.createLinearGradient(0, GY, 0, H); fg.addColorStop(0, '#2a1a2e'); fg.addColorStop(1, '#0b0610');
+    x.fillStyle = fg; x.fillRect(0, GY, W, H - GY);
+    for (let row = 0; row < 3; row++) {
+      let px = -20 + (row % 2) * 30;
+      while (px < W + 30) {
+        const w = 40 + rnd() * 50, h = 16 + rnd() * 9, y = GY + 12 + row * 17, sh = 0.7 + rnd() * 0.5;
+        x.fillStyle = 'rgb(' + Math.round(62 * sh) + ',' + Math.round(44 * sh) + ',' + Math.round(70 * sh) + ')'; x.strokeStyle = 'rgba(8,2,12,0.85)'; x.lineWidth = 1.6;
+        x.beginPath(); if (x.roundRect) x.roundRect(px, y, w, h, 6); else x.rect(px, y, w, h); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(255,90,110,0.10)'; x.fillRect(px + 4, y + 2, w * 0.4, 2);
+        px += w + 5 + rnd() * 5;
+      }
+    }
+    const eg = x.createLinearGradient(0, GY - 4, 0, GY + 14); eg.addColorStop(0, '#5a3a66'); eg.addColorStop(1, '#241430');
+    x.fillStyle = eg; x.beginPath(); x.moveTo(0, GY + 14);
+    for (let px = 0; px <= W; px += 10) x.lineTo(px, GY - 1 + Math.sin(px * 0.13) * 2 + (rnd() - 0.5) * 3);
+    x.lineTo(W, GY + 14); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(255,70,100,0.55)'; x.fillRect(0, GY - 1.5, W, 2);
+    const stars = [];
+    for (let i = 0; i < 26; i++) stars.push({ x: rnd() * W, y: 80 + rnd() * (GY - 260), r: 0.8 + rnd() * 1.4, p: rnd() * 6.28 });   // drifting embers
+    return { cv, stars };
+  },
+
   _makeBg(theme, dpr, seed) {
+    if (theme.world === 3) return this._makeNightmareBg(theme, dpr, seed);
     if (theme.world === 2) return this._makeSnowBg(theme, dpr, seed);
     if (this._hasLake()) return this._makePaintedBg(theme, dpr, seed);
     const cv = document.createElement('canvas');
@@ -374,6 +418,12 @@ KAB.Render = {
     let bg = this._bg[key];
     if (!bg || bg.dpr !== dpr) { bg = this._bg[key] = this._makeBg(theme, dpr, 1000 + key * 77); bg.dpr = dpr; }
     ctx.drawImage(bg.cv, 0, 0, this.W, this.H);
+    if (theme.world === 3 && !reduceMotion) {                       // rising embers
+      for (let i = 0; i < 30; i++) {
+        const sp = 14 + (i % 5) * 7, fx = (i * 97.3) % this.W + Math.sin(t * 0.7 + i) * 22, fy = KAB.GROUND_Y - ((i * 61 + t * sp) % (KAB.GROUND_Y + 10));
+        ctx.fillStyle = 'rgba(255,' + (90 + (i % 4) * 30) + ',90,' + (0.35 + (i % 3) * 0.15) + ')'; ctx.beginPath(); ctx.arc(fx, fy, 1 + (i % 3) * 0.7, 0, 6.283); ctx.fill();
+      }
+    }
     if (theme.world === 2 && !reduceMotion) {                       // drifting snowfall
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       for (let i = 0; i < 46; i++) {

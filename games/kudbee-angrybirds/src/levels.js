@@ -241,4 +241,64 @@ KAB.LEVELS = [
       b.col(918, [['wood', 36, 50], ['armor']]);
     },
   },
+  // ---- World 3: Nightmare ----------------------------------------------------
+  {
+    name: 'Gloomfall', hint: 'The ruins lean. Push them over.',
+    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [41000, 52000],
+    theme: { world: 3, bg: 0, sky: ['#0d0614', '#3a1030'], accent: '#c46bff', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.hill(600, 190, 90);
+      b.enemyOn('grunt', 600, 450);
+      b.col(740, [['stone', 40, 60], ['wood', 40, 44], ['grunt']]);
+      b.col(830, [['stone', 40, 60], ['stone', 40, 60], ['wood', 40, 44], ['armor']]);
+      b.col(915, [['ball', 'stone', 22], ['wood', 36, 40], ['armor']]);
+      b.enemy('grunt', 460, 525);
+    },
+  },
+  {
+    name: 'Blood Moon Keep', hint: 'The keep sits high. Lob it, or bomb the gate.',
+    birds: ['egg', 'gold', 'green', 'cyan', 'egg', 'gold'], stars: [60000, 76000],
+    theme: { world: 3, bg: 1, sky: ['#0d0614', '#3a1030'], accent: '#ff4d6d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.hill(770, 360, 110);
+      b.enemyOn('boss', 750, 430);
+      b.col(818, [['stone', 40, 40], ['wood', 40, 36], ['armor']], 430);
+      b.col(520, [['wood', 40, 50], ['grunt']]);
+      b.col(565, [['stone', 36, 60], ['grunt']]);
+      b.enemy('grunt', 480, 525);
+    },
+  },
+  {
+    name: 'Eclipse Citadel', hint: 'Spires fall hard. Find the weak pillar.',
+    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [41000, 53000],
+    theme: { world: 3, bg: 2, sky: ['#0d0614', '#3a1030'], accent: '#ff3d3d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(640, [['stone', 44, 70], ['wood', 44, 60], ['glass', 44, 46], ['wood', 44, 46]]);
+      b.col(800, [['stone', 44, 70], ['wood', 44, 60], ['glass', 44, 46], ['wood', 44, 46]]);
+      b.beam('stone', 720, 318, 230, 24);
+      b.enemyOn('boss', 720, 294);
+      b.col(720, [['tnt', 32], ['grunt']]);
+      b.enemy('armor', 570, 520);
+      b.col(900, [['wood', 36, 50], ['armor']]);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+    },
+  },
+  {
+    name: 'Heart of the Nightmare', hint: 'The Nightmare King waits at the heart. End it.',
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg', 'green'], stars: [70000, 92000],
+    theme: { world: 3, bg: 3, sky: ['#0d0614', '#3a1030'], accent: '#ff2d55', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
+      b.col(660, [['glass', 24, 90]], 478);
+      b.col(780, [['glass', 24, 90]], 478);
+      b.enemyOn('king', 702, 478);
+      b.col(748, [['tnt', 30]], 478);
+      b.beam('stone', 720, 388, 170, 16);
+      b.enemyOn('boss', 720, 372);
+      b.col(560, [['tnt', 34], ['armor']]);
+      b.tnt(868, 523, 34);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+      b.col(918, [['wood', 36, 50], ['armor']]);
+    },
+  },
 ];

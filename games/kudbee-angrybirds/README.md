@@ -3,7 +3,7 @@
 > **Kudbee Games Studio** — bright cartoon slingshot demolition. Zero install, zero build: canvas + Web Audio.
 > Birds, grubs, blocks and effects are drawn in code; all sound is synthesized.
 
-Fling four kinds of bird at the Hive grubs' fortresses across **16 levels in two worlds** (each ends in
+Fling four kinds of bird at the Hive grubs' fortresses across **20 levels in three worlds** (each ends in
 a boss), using real rigid-body physics: stacks topple, ice shatters, stone cracks, boulders roll, TNT chains.
 The look is a bright cartoon style (chunky outlines, glossy UI); the characters are all original.
 
@@ -47,6 +47,7 @@ The look is a bright cartoon style (chunky outlines, glossy UI); the characters 
 - World 1 (Meadow) uses a painted backdrop (`assets/bg-lake.jpg`, 260 KB) graded per level (morning, dusk,
   sunset, ember, crimson night). If it is missing or still loading a procedural skyline is drawn instead, so the
   stage is never empty. World 2 (Frostpeak) is a procedural snowy-mountain scene with falling snow.
+  World 3 (Nightmare, 4 levels) paints four dark-fantasy scenes (`assets/bg-nightmare-1..4.jpg`, ~100 KB each) with a basalt floor and rising embers.
 - Display font: Lilita One (`assets/fonts/`, SIL OFL 1.1).
 - Honors `prefers-reduced-motion` (no shake, no slow-mo, static stars) and pauses when the tab is hidden.
 
