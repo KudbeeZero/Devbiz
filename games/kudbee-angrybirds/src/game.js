@@ -18,11 +18,13 @@ KAB.Game = class {
 
     KAB.Store.load();
     KAB.Render.loadImages();
+    if (document.fonts && document.fonts.load) document.fonts.load('28px "Lilita One"').catch(() => {});
     this.audio = new KAB.Audio();
     this.particles = new KAB.Particles();
     this.world = new KAB.World(this._handlers());
 
     this.screen = 'menu';          // menu | select | play | paused | won | lost
+    this.selPage = 0;
     this.time = 0;
     this.acc = 0;
     this.timeScale = 1;
@@ -81,7 +83,9 @@ KAB.Game = class {
     this.audio.ensure();
     this.audio.click();
     if (id === 'play') this.startLevel(this.continueIndex());
-    else if (id === 'levels') this.setScreen('select');
+    else if (id === 'levels') { this.selPage = Math.floor(Math.min(this.continueIndex(), KAB.LEVELS.length - 1) / KAB.UI.PER_PAGE); if (this.screen === 'won') this.selPage = Math.floor(this.world.index / KAB.UI.PER_PAGE); this.setScreen('select'); }
+    else if (id === 'pgprev') { this.selPage = Math.max(0, this.selPage - 1); this.focusPending = true; }
+    else if (id === 'pgnext') { this.selPage = Math.min(Math.ceil(KAB.LEVELS.length / KAB.UI.PER_PAGE) - 1, this.selPage + 1); this.focusPending = true; }
     else if (id === 'back') this.setScreen('menu');
     else if (id.indexOf('lvl') === 0) this.startLevel(parseInt(id.slice(3), 10));
     else if (id === 'resume') this.screen = 'play';
@@ -103,15 +107,16 @@ KAB.Game = class {
       launch(b, speed) {
         g.audio.launch(speed);
         g.particles.ring(KAB.SLING.x, KAB.SLING.y, KAB.BIRDS[b.data.type].color, 50, 0.3, 3);
-        g.particles.spark(b.x, b.y, KAB.BIRDS[b.data.type].color, 10, 220, 0.4);
+        g.particles.puff(KAB.SLING.x, KAB.SLING.y + 10, 4, 12);
         g._addShake(2);
         g.hintT = 0;
       },
       ability(kind, x, y, b) {
         g.audio.ability(kind);
         const c = KAB.BIRDS[b.data.type].color;
-        g.particles.ring(x, y, c, kind === 'slam' ? 70 : 52, 0.35, 4);
-        g.particles.spark(x, y, c, kind === 'split' ? 22 : 16, 260, 0.5);
+        g.particles.ring(x, y, '#ffffff', kind === 'slam' ? 70 : 52, 0.35, 4);
+        if (kind === 'egg') g.particles.puff(x, y + 14, 3, 12);
+        g.particles.feathers(x, y, c, kind === 'split' ? 8 : 6);
         g._addShake(kind === 'slam' ? 3 : 1.5);
       },
       impact(a, b, closing, x, y) {
@@ -122,26 +127,26 @@ KAB.Game = class {
         const s = Math.min(1, closing / 700);
         g.audio.hit(mat, s);
         const col = other.kind === 'block' ? KAB.Mat[other.mat].color : '#ffffff';
-        g.particles.spark(x, y, col, 2 + Math.round(s * 6), 120 + s * 200, 0.4);
+        if (a.kind === 'bird' || b.kind === 'bird') g.particles.feathers(x, y, KAB.BIRDS[(a.kind === 'bird' ? a : b).data.type].color, 1 + Math.round(s * 3));
+        if (other.kind === 'block') g.particles.chips(x, y, { wood: '#d99c3c', stone: '#a5aeb8', glass: '#bfeaff', tnt: '#d9432b' }[other.mat], 1 + Math.round(s * 3), 6);
+        else g.particles.spark(x, y, col, 2 + Math.round(s * 4), 120 + s * 160, 0.35);
         g._addShake(s * 3.2);
         if (a.kind === 'bird' && closing > 200 && Math.hypot(a.vx, a.vy) > 250) g.particles.ring(x, y, '#ffffff', 22 + s * 24, 0.25, 2);
       },
       destroy(b) {
         g.audio.shatter(b.mat);
-        const col = KAB.Mat[b.mat].color;
-        g.particles.shards(b.x, b.y, col, Math.min(16, 6 + Math.round(b.w * b.h / 260)), Math.max(b.w, b.h) * 0.5);
-        if (b.mat === 'glass') g.particles.shards(b.x, b.y, '#ffffff', 5, 12);
-        if (b.mat !== 'glass') g.particles.smoke(b.x, b.y, 3, '#8aa0c8');
+        const col = { wood: '#d99c3c', stone: '#a5aeb8', glass: '#bfeaff', tnt: '#d9432b' }[b.mat];
+        g.particles.chips(b.x, b.y, col, Math.min(14, 5 + Math.round(b.rad / 5)), b.rad);
+        if (b.mat === 'glass') g.particles.chips(b.x, b.y, '#ffffff', 5, 10);
+        g.particles.puff(b.x, b.y, b.mat === 'stone' ? 4 : 2, 12);
         g._addShake(2.5);
       },
       kill(e, chain) {
         g.audio.kill();
-        const col = KAB.ENEMIES[e.data.type].color;
         const x = Math.min(920, Math.max(40, e.x)), y = Math.min(520, e.y);
-        g.particles.ring(x, y, col, 70, 0.5, 4);
-        g.particles.spark(x, y, col, 26, 280, 0.7);
-        g.particles.spark(x, y, '#ffe9a8', 12, 180, 0.6);
-        g.particles.smoke(x, y, 5, '#cbbad8');
+        g.particles.puff(x, y, 7, 18);
+        g.particles.stars(x, y - 6, 6);
+        g.particles.feathers(x, y, '#82d44a', 5);
         g._addShake(4);
       },
       explode(x, y, R) {
@@ -149,7 +154,8 @@ KAB.Game = class {
         g.particles.ring(x, y, '#ffb02e', R, 0.5, 6);
         g.particles.ring(x, y, '#ff5d3c', R * 0.7, 0.4, 4);
         g.particles.spark(x, y, '#ffb02e', 44, 460, 0.8);
-        g.particles.smoke(x, y, 10, '#6b5a5a');
+        g.particles.puff(x, y, 9, 22);
+        g.particles.smoke(x, y, 6, '#6b5a5a');
         g._addShake(14);
       },
       score(points, x, y, kind) {
@@ -272,11 +278,11 @@ KAB.Game = class {
       const sel = this.screen === 'select';
       if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'Tab') {
         e.preventDefault();
-        const step = sel && k === 'ArrowDown' ? KAB.LEVELS.length / 2 : 1;
+        const step = sel && k === 'ArrowDown' ? 4 : 1;
         this.focusIdx = Math.min(n - 1, (this.focusIdx < 0 ? -1 : this.focusIdx) + step);
       } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
         e.preventDefault();
-        const step = sel && k === 'ArrowUp' ? KAB.LEVELS.length / 2 : 1;
+        const step = sel && k === 'ArrowUp' ? 4 : 1;
         this.focusIdx = Math.max(0, this.focusIdx - step);
       } else if (k === 'Enter' || k === ' ') {
         e.preventDefault();
@@ -391,10 +397,16 @@ KAB.Game = class {
     if (showWorld) R.slingFront(ctx, th.accent, bx, by, stretch);
     if (showWorld && pull) R.trajectory(ctx, w.preview(bx, by, 80), th.accent, this.time);
 
+    // enemy eyes follow the nearest live bird (or the slingshot)
+    R.lookAt = { x: S.x, y: S.y };
+    for (const b of w.birds) if (b.alive) { R.lookAt = { x: b.x, y: b.y }; break; }
+    if (pull) R.lookAt = { x: pull.x, y: pull.y };
+
     // bodies
     const bodies = showWorld ? w.phys.bodies : [];
     for (const b of bodies) if (b.kind === 'block') R.drawBlock(ctx, b, th.accent);
     for (const b of bodies) if (b.kind === 'enemy') R.drawEnemy(ctx, b, this.time);
+    for (const b of bodies) if (b.kind === 'bomb') R.drawEgg(ctx, b);
     for (const b of bodies) {
       if (b.kind !== 'bird') continue;
       const moving = Math.abs(b.vx) + Math.abs(b.vy) > 30;
@@ -418,6 +430,7 @@ KAB.Game = class {
     if (this.focusPending) {
       let i = KAB.UI.buttons.findIndex(b => b.primary && !b.hud);
       if (i < 0 && this.screen === 'select') i = KAB.UI.buttons.findIndex(b => b.id === 'lvl' + this.continueIndex());
+      if (i < 0 && this.screen === 'select') i = KAB.UI.buttons.findIndex(b => /^lvl/.test(b.id) && !b.disabled);
       if (i < 0 && this.screen !== 'play') i = KAB.UI.buttons.findIndex(b => !b.disabled && !b.hud);
       this.focusIdx = i;
       this.focusPending = false;

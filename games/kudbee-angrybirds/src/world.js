@@ -17,15 +17,16 @@ KAB.TICK = 1 / 60;
 KAB.BIRD_BONUS = 10000;
 
 KAB.BIRDS = {
-  cyan:  { name: 'Dash',  r: 12, density: 1.5, rest: 0.20, color: '#39e6ff', ability: 'dash',  tip: 'Tap to boost forward' },
-  gold:  { name: 'Slam',  r: 15, density: 3.4, rest: 0.08, color: '#ffd34d', ability: 'slam',  tip: 'Tap to dive down hard' },
-  green: { name: 'Split', r: 13, density: 1.3, rest: 0.50, color: '#7CFFb2', ability: 'split', tip: 'Tap to split in three' },
+  cyan:  { name: 'Dash',  r: 12, density: 1.5, rest: 0.20, color: '#38b6ff', ability: 'dash',  tip: 'Tap to boost forward' },
+  gold:  { name: 'Slam',  r: 15, density: 3.4, rest: 0.08, color: '#ffc933', ability: 'slam',  tip: 'Tap to dive down hard' },
+  green: { name: 'Split', r: 13, density: 1.3, rest: 0.50, color: '#6fd94d', ability: 'split', tip: 'Tap to split in three' },
+  egg:   { name: 'Egg Bomb', r: 14, density: 1.5, rest: 0.20, color: '#ffe9b8', ability: 'egg', tip: 'Tap to lay an egg bomb' },
 };
 
 KAB.ENEMIES = {
-  grunt: { r: 15, hp: 60,  density: 0.8, score: 5000,  color: '#ff5d9e' },
-  armor: { r: 17, hp: 220, density: 1.1, score: 8000,  color: '#ff7ab8' },
-  boss:  { r: 30, hp: 1100, density: 1.5, score: 25000, color: '#ff3d7f', resist: 0.4 },
+  grunt: { r: 15, hp: 60,  density: 0.8, score: 5000,  color: '#82d44a' },
+  armor: { r: 17, hp: 220, density: 1.1, score: 8000,  color: '#8fd957' },
+  boss:  { r: 30, hp: 1100, density: 1.5, score: 25000, color: '#6fc23f', resist: 0.4 },
 };
 
 KAB.Builder = class {
@@ -33,6 +34,18 @@ KAB.Builder = class {
 
   box(mat, x, y, w, h, angle) {
     return this.world.phys.add(new KAB.Body({ shape: 'box', kind: 'block', mat, x, y, w, h, angle: angle || 0 }));
+  }
+
+  // Roof-style isosceles triangle with its base resting at baseY.
+  tri(mat, x, baseY, w, h) {
+    const b = new KAB.Body({ shape: 'poly', kind: 'block', mat, x, y: baseY, verts: [{ x: -w / 2, y: 0 }, { x: w / 2, y: 0 }, { x: 0, y: -h }] });
+    b.x += b.cx; b.y += b.cy;                       // authoring origin -> centroid
+    return this.world.phys.add(b);
+  }
+
+  // Round block: stone boulder or wooden wheel.
+  ball(mat, x, y, r) {
+    return this.world.phys.add(new KAB.Body({ shape: 'circle', kind: 'block', mat, x, y, r, friction: 0.55 }));
   }
 
   tnt(x, y, s) {
@@ -56,6 +69,8 @@ KAB.Builder = class {
     for (const it of items) {
       if (KAB.ENEMIES[it[0]]) { this.enemyOn(it[0], x, y); y -= KAB.ENEMIES[it[0]].r * 2 + 1; }
       else if (it[0] === 'tnt') { const s = it[1] || 32; this.tnt(x, y - s / 2, s); y -= s; }
+      else if (it[0] === 'tri') { this.tri(it[1], x, y, it[2], it[3]); y -= it[3]; }
+      else if (it[0] === 'ball') { this.ball(it[1], x, y - it[2], it[2]); y -= it[2] * 2; }
       else { this.box(it[0], x, y - it[2] / 2, it[1], it[2]); y -= it[2]; }
     }
     return y;
@@ -182,6 +197,17 @@ KAB.World = class {
     } else if (spec.ability === 'slam') {
       b.vx *= 0.22;
       b.vy = Math.max(b.vy, 0) + 980;
+    } else if (spec.ability === 'egg') {
+      // Lay a bomb straight down; the hen kicks upward and ahead from the recoil.
+      const egg = new KAB.Body({
+        shape: 'circle', kind: 'bomb', mat: 'wood', x: b.x, y: b.y + b.r + 9, r: 8, density: 2.4,
+        restitution: 0.15, friction: 0.5, linDamp: 0.02, angDamp: 0.5, invuln: true,
+        data: { egg: true, born: this.tick },
+      });
+      egg.vx = b.vx * 0.2; egg.vy = 220;
+      this.phys.add(egg);
+      this.birds.push(egg);
+      b.vy = Math.min(b.vy, 0) - 320; b.vx *= 1.15;
     } else if (spec.ability === 'split') {
       const sp = Math.hypot(b.vx, b.vy) || 1;
       const ang = Math.atan2(b.vy, b.vx);
@@ -202,9 +228,16 @@ KAB.World = class {
 
   _impact(a, b, closing, x, y) {
     if (this.silent) return;
+    if (a.data.egg || b.data.egg) { this._detonateEgg(a.data.egg ? a : b); return; }
     if (a.kind === 'bird') a.data.touched = true;
     if (b.kind === 'bird') b.data.touched = true;
     this.emit('impact', a, b, closing, x, y);
+  }
+
+  _detonateEgg(egg) {
+    if (!egg.alive) return;
+    egg.alive = false;
+    this.pendingBlasts.push({ x: egg.x, y: egg.y, t: 1, R: 105, dv: 520, dmg: 330 });
   }
 
   _score(points, x, y, kind) {
@@ -230,8 +263,8 @@ KAB.World = class {
     }
   }
 
-  _explode(x, y) {
-    const R = 135;
+  _explode(x, y, R, dvMax, dmgMax) {
+    R = R || 135; dvMax = dvMax || 600; dmgMax = dmgMax || 230;
     this.emit('explode', x, y, R);
     for (const o of this.phys.bodies) {
       if (o.isStatic || !o.alive) continue;
@@ -240,11 +273,11 @@ KAB.World = class {
       if (d > R) continue;
       const f = 1 - d / R;
       const nx = d > 1 ? dx / d : 0, ny = d > 1 ? dy / d - 0.25 : -1;
-      const dv = 600 * f / (0.5 + 0.5 * o.mass);
+      const dv = dvMax * f / (0.5 + 0.5 * o.mass);
       this.phys.wake(o);
       o.vx += nx * dv; o.vy += ny * dv;
       o.av += (nx > 0 ? 1 : -1) * f * 4;
-      if (!o.invuln) o.hp -= 230 * f * f;
+      if (!o.invuln) o.hp -= dmgMax * f * f;
     }
   }
 
@@ -254,7 +287,8 @@ KAB.World = class {
 
     // Destruction + out-of-bounds.
     for (const b of this.phys.bodies) {
-      if (b.isStatic || !b.alive || b.kind === 'bird') continue;
+      if (b.data.egg && b.alive && this.tick - b.data.born > 140) this._detonateEgg(b);      // fuse
+      if (b.isStatic || !b.alive || b.kind === 'bird' || b.kind === 'bomb') continue;
       if (b.hp <= 0) this._destroy(b);
       else if (b.y > 900 || b.x > 1400 || b.x < -300) {
         b.alive = false;
@@ -267,7 +301,7 @@ KAB.World = class {
     }
     for (let i = this.pendingBlasts.length - 1; i >= 0; i--) {
       const p = this.pendingBlasts[i];
-      if (--p.t <= 0) { this.pendingBlasts.splice(i, 1); this._explode(p.x, p.y); }
+      if (--p.t <= 0) { this.pendingBlasts.splice(i, 1); this._explode(p.x, p.y, p.R, p.dv, p.dmg); }
     }
     this.phys.cleanup();
 
@@ -291,7 +325,7 @@ KAB.World = class {
 
   _worldQuiet() {
     for (const b of this.phys.bodies) {
-      if (b.isStatic || !b.alive || b.kind === 'bird') continue;
+      if (b.isStatic || !b.alive || b.kind === 'bird' || b.kind === 'bomb') continue;
       if (!b.asleep && Math.abs(b.vx) + Math.abs(b.vy) > 30) return false;
     }
     return true;

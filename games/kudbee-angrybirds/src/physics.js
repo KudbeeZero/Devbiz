@@ -36,14 +36,34 @@ KAB.Body = class {
     this.resist = o.resist != null ? o.resist : 1;   // damage multiplier (<1 = tougher)
     this.linDamp = o.linDamp != null ? o.linDamp : 0.05;
     this.angDamp = o.angDamp != null ? o.angDamp : 0.5;
-    const area = this.shape === 'circle' ? Math.PI * this.r * this.r : this.w * this.h;
+    // Polygons (e.g. roof triangles) arrive as local vertices; re-centre on the centroid.
+    let area, inertiaPerMass;
+    if (this.shape === 'poly') {
+      const v = o.verts;
+      let a2 = 0, cx = 0, cy = 0;
+      for (let i = 0; i < v.length; i++) {
+        const p = v[i], q = v[(i + 1) % v.length], cr = p.x * q.y - q.x * p.y;
+        a2 += cr; cx += (p.x + q.x) * cr; cy += (p.y + q.y) * cr;
+      }
+      area = Math.abs(a2) / 2; cx /= 3 * a2; cy /= 3 * a2;
+      this.verts = v.map(p => ({ x: p.x - cx, y: p.y - cy }));
+      let num = 0, den = 0;
+      for (let i = 0; i < this.verts.length; i++) {
+        const p = this.verts[i], q = this.verts[(i + 1) % this.verts.length], cr = Math.abs(p.x * q.y - q.x * p.y);
+        num += cr * (p.x * p.x + p.y * p.y + p.x * q.x + p.y * q.y + q.x * q.x + q.y * q.y); den += cr;
+      }
+      inertiaPerMass = num / (6 * den);
+      this.cx = cx; this.cy = cy;                 // centroid offset from the authoring origin
+      this.rad = Math.max.apply(null, this.verts.map(p => Math.hypot(p.x, p.y)));
+      this.w = 2 * Math.max.apply(null, this.verts.map(p => Math.abs(p.x))); this.h = 2 * Math.max.apply(null, this.verts.map(p => Math.abs(p.y)));
+    } else {
+      area = this.shape === 'circle' ? Math.PI * this.r * this.r : this.w * this.h;
+      inertiaPerMass = this.shape === 'circle' ? 0.5 * this.r * this.r : (this.w * this.w + this.h * this.h) / 12;
+      this.rad = this.shape === 'circle' ? this.r : Math.hypot(this.w, this.h) / 2;
+    }
     this.mass = this.isStatic ? 0 : this.density * area / 1000;
     this.invMass = this.isStatic ? 0 : 1 / this.mass;
-    const inertia = this.shape === 'circle'
-      ? 0.5 * this.mass * this.r * this.r
-      : this.mass * (this.w * this.w + this.h * this.h) / 12;
-    this.invI = this.isStatic ? 0 : 1 / inertia;
-    this.rad = this.shape === 'circle' ? this.r : Math.hypot(this.w, this.h) / 2;
+    this.invI = this.isStatic ? 0 : 1 / (this.mass * inertiaPerMass);
     this.asleep = false;
     this.sleepT = 0;
     this.alive = true;
@@ -101,7 +121,12 @@ KAB.Physics = class {
       if (b.isStatic) continue;
       if (!b.asleep) b.vy += g * h;
       if (b.shape === 'circle') { b._hx = b.r; b._hy = b.r; }
-      else {
+      else if (b.shape === 'poly') {
+        const c = Math.cos(b.angle), sn = Math.sin(b.angle);
+        let mx = 0, my = 0;
+        for (const p of b.verts) { mx = Math.max(mx, Math.abs(p.x * c - p.y * sn)); my = Math.max(my, Math.abs(p.x * sn + p.y * c)); }
+        b._hx = mx; b._hy = my;
+      } else {
         const c = Math.abs(Math.cos(b.angle)), s = Math.abs(Math.sin(b.angle));
         b._hx = c * b.w / 2 + s * b.h / 2;
         b._hy = s * b.w / 2 + c * b.h / 2;
@@ -125,6 +150,7 @@ KAB.Physics = class {
         const B = bodies[j];
         if (A.isStatic && B.isStatic) continue;
         if ((A.kind === 'bird' && B.data.birdPass) || (B.kind === 'bird' && A.data.birdPass)) continue;   // edge wall: birds fly through
+        if ((A.data.egg && B.kind === 'bird') || (B.data.egg && A.kind === 'bird')) continue;           // egg bombs ignore the bird that laid them
         const sA = A.isStatic || A.asleep, sB = B.isStatic || B.asleep;
         if (sA && sB) continue;
         if (Math.abs(A.x - B.x) > A._hx + B._hx || Math.abs(A.y - B.y) > A._hy + B._hy) continue;
@@ -263,6 +289,16 @@ KAB.Physics = class {
  * clipping approach, giving two contact points so stacks rest flat.
  * --------------------------------------------------------------------- */
 KAB.collide = function (A, B) {
+  if (A.shape === 'poly' || B.shape === 'poly') {
+    if (A.shape === 'circle') return KAB._circlePoly(A, B);
+    if (B.shape === 'circle') {
+      const m = KAB._circlePoly(B, A);
+      if (!m) return null;
+      m.nx = -m.nx; m.ny = -m.ny;
+      return m;
+    }
+    return KAB._polyPoly(A, B);
+  }
   if (A.shape === 'circle' && B.shape === 'circle') return KAB._circleCircle(A, B);
   if (A.shape === 'circle') return KAB._circleBox(A, B);     // circle -> box == A -> B
   if (B.shape === 'circle') {
@@ -410,4 +446,89 @@ KAB._clip = function (v, nx, ny, offset) {
     out.push({ x: v[0].x + t * (v[1].x - v[0].x), y: v[0].y + t * (v[1].y - v[0].y) });
   }
   return out;
+};
+
+/* ---- convex polygons -----------------------------------------------------
+ * World-space vertices + outward edge normals for a poly OR a box, then the
+ * same reference-face / incident-edge clipping used for boxes, generalised.
+ * --------------------------------------------------------------------- */
+KAB._polyData = function (b) {
+  const c = Math.cos(b.angle), sn = Math.sin(b.angle);
+  const local = b.shape === 'poly' ? b.verts : [
+    { x: -b.w / 2, y: -b.h / 2 }, { x: b.w / 2, y: -b.h / 2 }, { x: b.w / 2, y: b.h / 2 }, { x: -b.w / 2, y: b.h / 2 }];
+  const v = [], n = [];
+  for (const p of local) v.push({ x: b.x + p.x * c - p.y * sn, y: b.y + p.x * sn + p.y * c });
+  for (let i = 0; i < v.length; i++) {
+    const a = v[i], q = v[(i + 1) % v.length];
+    let ex = q.x - a.x, ey = q.y - a.y;
+    const l = Math.sqrt(ex * ex + ey * ey) || 1;
+    let nx = ey / l, ny = -ex / l;
+    if (nx * (a.x - b.x) + ny * (a.y - b.y) < 0) { nx = -nx; ny = -ny; }   // always outward
+    n.push({ x: nx, y: ny });
+  }
+  return { v, n };
+};
+
+KAB._maxSep = function (P, Q) {
+  let best = -Infinity, idx = 0;
+  for (let i = 0; i < P.v.length; i++) {
+    let mn = Infinity;
+    for (let j = 0; j < Q.v.length; j++) {
+      const d = P.n[i].x * (Q.v[j].x - P.v[i].x) + P.n[i].y * (Q.v[j].y - P.v[i].y);
+      if (d < mn) mn = d;
+    }
+    if (mn > best) { best = mn; idx = i; }
+  }
+  return [best, idx];
+};
+
+KAB._polyPoly = function (A, B) {
+  const pa = KAB._polyData(A), pb = KAB._polyData(B);
+  const ra = KAB._maxSep(pa, pb); if (ra[0] > 0) return null;
+  const rb = KAB._maxSep(pb, pa); if (rb[0] > 0) return null;
+  const flip = rb[0] > ra[0] + 0.1;
+  const ref = flip ? pb : pa, inc = flip ? pa : pb, ri = flip ? rb[1] : ra[1];
+  const n = ref.n[ri];
+  let ii = 0, mn = Infinity;
+  for (let j = 0; j < inc.n.length; j++) { const d = n.x * inc.n[j].x + n.y * inc.n[j].y; if (d < mn) { mn = d; ii = j; } }
+  const seg = [inc.v[ii], inc.v[(ii + 1) % inc.v.length]];
+  const r1 = ref.v[ri], r2 = ref.v[(ri + 1) % ref.v.length];
+  let tx = r2.x - r1.x, ty = r2.y - r1.y; const tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
+  const c1 = KAB._clip(seg, -tx, -ty, -(tx * r1.x + ty * r1.y));
+  if (c1.length < 2) return null;
+  const c2 = KAB._clip(c1, tx, ty, tx * r2.x + ty * r2.y);
+  if (c2.length < 2) return null;
+  const pts = [];
+  for (const p of c2) {
+    const sep = n.x * (p.x - r1.x) + n.y * (p.y - r1.y);
+    if (sep <= 0) pts.push({ x: p.x - sep * n.x, y: p.y - sep * n.y, sep, Pn: 0, Pt: 0 });
+  }
+  if (!pts.length) return null;
+  return flip ? { nx: -n.x, ny: -n.y, pts } : { nx: n.x, ny: n.y, pts };
+};
+
+// Circle C against polygon/box P. Returned normal points from the circle to P.
+KAB._circlePoly = function (C, P) {
+  const pd = KAB._polyData(P);
+  let best = -Infinity, fi = 0;
+  for (let i = 0; i < pd.v.length; i++) {
+    const s = pd.n[i].x * (C.x - pd.v[i].x) + pd.n[i].y * (C.y - pd.v[i].y);
+    if (s > best) { best = s; fi = i; }
+  }
+  if (best > C.r) return null;
+  const v1 = pd.v[fi], v2 = pd.v[(fi + 1) % pd.v.length], n = pd.n[fi];
+  let nx, ny, px, py, sep;
+  if (best < 0) {                                             // centre inside: push out through the nearest face
+    nx = n.x; ny = n.y; px = C.x - n.x * best; py = C.y - n.y * best; sep = best - C.r;
+  } else {
+    const ex = v2.x - v1.x, ey = v2.y - v1.y, l2 = ex * ex + ey * ey || 1;
+    const u = ((C.x - v1.x) * ex + (C.y - v1.y) * ey) / l2;
+    if (u <= 0 || u >= 1) {
+      const v = u <= 0 ? v1 : v2;
+      const dx = C.x - v.x, dy = C.y - v.y, d = Math.sqrt(dx * dx + dy * dy);
+      if (d >= C.r) return null;
+      nx = d > 1e-6 ? dx / d : n.x; ny = d > 1e-6 ? dy / d : n.y; px = v.x; py = v.y; sep = d - C.r;
+    } else { nx = n.x; ny = n.y; px = C.x - n.x * best; py = C.y - n.y * best; sep = best - C.r; }
+  }
+  return { nx: -nx, ny: -ny, pts: [{ x: px, y: py, sep, Pn: 0, Pt: 0 }] };
 };
