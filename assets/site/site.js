@@ -1081,84 +1081,27 @@
         },
         cricket: function (ctx, w, h, t) {
             t = t || 0;
-            var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#051a08'); g.addColorStop(1, '#05050f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-            // grass pitch with perspective
-            ctx.fillStyle = 'rgba(50, 120, 80, 0.6)';
-            ctx.beginPath();
-            ctx.moveTo(w * 0.2, h * 0.4);
-            ctx.lineTo(w * 0.8, h * 0.4);
-            ctx.lineTo(w * 0.85, h * 0.8);
-            ctx.lineTo(w * 0.15, h * 0.8);
-            ctx.closePath();
-            ctx.fill();
-            // pitch lines (crease)
-            ctx.strokeStyle = palette.green;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.7;
-            ctx.beginPath();
-            ctx.moveTo(w * 0.3, h * 0.4);
-            ctx.lineTo(w * 0.3, h * 0.8);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(w * 0.7, h * 0.4);
-            ctx.lineTo(w * 0.7, h * 0.8);
-            ctx.stroke();
-            ctx.globalAlpha = 1;
-            // wickets (stumps) at far end
-            var wk_x = w * 0.5;
-            var wk_y = h * 0.42;
-            ctx.save();
-            ctx.strokeStyle = palette.cyan;
-            ctx.lineWidth = 2;
-            for (var st = 0; st < 3; st++) {
-                ctx.beginPath();
-                ctx.moveTo(wk_x - w * 0.04 + st * w * 0.04, wk_y);
-                ctx.lineTo(wk_x - w * 0.04 + st * w * 0.04, wk_y - h * 0.08);
-                ctx.stroke();
-            }
-            // bails
-            ctx.beginPath();
-            ctx.moveTo(wk_x - w * 0.065, wk_y - h * 0.075);
-            ctx.lineTo(wk_x + w * 0.025, wk_y - h * 0.075);
-            ctx.stroke();
-            ctx.restore();
-            // batsman silhouette
-            var bt_x = w * 0.35;
-            var bt_y = h * 0.65;
-            ctx.save();
-            ctx.fillStyle = palette.amber;
-            ctx.shadowColor = palette.amber;
-            ctx.shadowBlur = 12;
-            // bat swing
-            var bat_angle = t * 0.006;
-            ctx.translate(bt_x, bt_y);
-            ctx.rotate(bat_angle);
-            ctx.fillRect(-w * 0.02, -h * 0.12, w * 0.04, h * 0.16);
-            ctx.restore();
-            // batter body
-            ctx.save();
-            ctx.fillStyle = palette.amber;
-            ctx.beginPath();
-            ctx.arc(bt_x, bt_y - h * 0.05, Math.min(w, h) * 0.035, 0, 7);
-            ctx.fill();
-            ctx.restore();
-            // ball in flight
-            var bl_x = w * 0.6 + Math.sin(t * 0.0025) * w * 0.1;
-            var bl_y = h * 0.35 + Math.cos(t * 0.0035) * h * 0.1;
-            ctx.save();
-            ctx.shadowColor = palette.violet;
-            ctx.shadowBlur = 14;
-            ctx.fillStyle = palette.violet;
-            ctx.beginPath();
-            ctx.arc(bl_x, bl_y, Math.min(w, h) * 0.035, 0, 7);
-            ctx.fill();
-            // ball seam detail
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(bl_x, bl_y, Math.min(w, h) * 0.02, 0, 7);
-            ctx.stroke();
-            ctx.restore();
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.45); sky.addColorStop(0, '#4fb0ff'); sky.addColorStop(1, '#d4f0ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            // crowd wall
+            var cols = ['#ffd34d', '#ff8a7a', '#7ac7ff', '#ffffff', '#a9ec62', '#c46bff'];
+            ctx.fillStyle = '#6b7487'; ctx.fillRect(0, h * 0.12, w, h * 0.3);
+            for (var cy = 0; cy < 6; cy++) for (var cx = 0; cx < 26; cx++) { ctx.fillStyle = cols[(cx * 7 + cy * 3) % 6]; ctx.beginPath(); ctx.arc(w * (cx + 0.5 + (cy % 2) * 0.5) / 26, h * (0.16 + cy * 0.045), Math.max(2, w * 0.011), 0, 7); ctx.fill(); }
+            var lawn = ctx.createLinearGradient(0, h * 0.42, 0, h); lawn.addColorStop(0, '#6ac84c'); lawn.addColorStop(1, '#3f9a36'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.42, w, h * 0.58);
+            ctx.fillStyle = 'rgba(255,255,255,0.08)'; for (var m = 0; m < 5; m++) ctx.fillRect(0, h * (0.5 + m * 0.1), w, h * 0.05);
+            // pitch
+            ctx.fillStyle = '#dcc48c'; ctx.beginPath(); ctx.moveTo(w * 0.46, h * 0.44); ctx.lineTo(w * 0.54, h * 0.44); ctx.lineTo(w * 0.7, h * 1.0); ctx.lineTo(w * 0.3, h * 1.0); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w * 0.36, h * 0.86); ctx.lineTo(w * 0.64, h * 0.86); ctx.stroke();
+            // bowler end stumps + batter
+            ctx.fillStyle = '#f7ecc8'; for (var s = -1; s <= 1; s++) ctx.fillRect(w * 0.5 + s * w * 0.008 - 1, h * 0.4, 2, h * 0.05);
+            ctx.fillStyle = '#e8483a'; ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(w * 0.5, h * 0.4, w * 0.012, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(w * 0.5 - w * 0.01, h * 0.415, w * 0.02, h * 0.06);
+            var bx = w * 0.45, by = h * 0.78;
+            ctx.fillStyle = '#2f86d8'; ctx.beginPath(); ctx.arc(bx, by - h * 0.17, w * 0.032, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.rect(bx - w * 0.04, by - h * 0.14, w * 0.08, h * 0.15); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.fillRect(bx - w * 0.035, by + h * 0.01, w * 0.025, h * 0.14); ctx.fillRect(bx + w * 0.01, by + h * 0.01, w * 0.025, h * 0.14);
+            var sw = (Math.sin(t * 0.0025) * 0.5 + 0.5); ctx.save(); ctx.translate(bx + w * 0.05, by - h * 0.06); ctx.rotate(-0.4 - sw * 1.6); ctx.fillStyle = '#e8c27a'; ctx.fillRect(-w * 0.012, 0, w * 0.024, h * 0.2); ctx.restore();
+            // ball
+            var k = (t * 0.0008) % 1, ballx = w * (0.5 - 0.02 * k), bally = h * (0.42 + k * 0.4) - Math.sin(k * 3.14) * h * 0.08, br = w * (0.008 + k * 0.014);
+            ctx.fillStyle = '#d63a2a'; ctx.beginPath(); ctx.arc(ballx, bally, br, 0, 7); ctx.fill(); ctx.stroke();
         }
     };
     // Game-scene canvases get a subtle idle-loop animation (DBZ-054): reticle

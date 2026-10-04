@@ -16,9 +16,10 @@ no bundler required for play; deploy via root `wrangler.toml`.
 | Kudbee Munch — Windy City | [`kudbee-munch/`](./kudbee-munch/) | [yes](./kudbee-munch/README.md) |
 | Kudbee Orbital | [`kudbee-orbital/`](./kudbee-orbital/) | [yes](./kudbee-orbital/README.md) |
 | Kudbee Puzzles — Circuit | [`kudbee-puzzles/`](./kudbee-puzzles/) | [yes](./kudbee-puzzles/README.md) |
+| Kudbee Cricket | [`kudbee-cricket/`](./kudbee-cricket/) | [yes](./kudbee-cricket/README.md) |
 | Kudbee Jackpot — Neon Fortune | [`kudbee-jackpot/`](./kudbee-jackpot/) | [yes](./kudbee-jackpot/README.md) |
 
-Other playable experiments (cornhole, cricket, abyss, etc.) may appear on the marketing site;
+Other playable experiments (cornhole, abyss, etc.) may appear on the marketing site;
 this table is the core **Games Studio** set from `docs/GAMES_STUDIO_ROADMAP.md`.
 
 ## Local preview
