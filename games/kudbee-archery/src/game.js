@@ -272,9 +272,12 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD);
-    R.drawWorld(ctx, this.time, m.wind);
-    R.drawTarget(ctx, this.time, m.wind);
-    this._drawArrows(ctx);
+    if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
+    else {
+      R.drawWorld(ctx, this.time, m.wind);
+      R.drawTarget(ctx, this.time, m.wind);
+      this._drawArrows(ctx);
+    }
     if (this.screen !== 'menu') this._drawAim(ctx);
     ctx.restore();
     U.begin();
