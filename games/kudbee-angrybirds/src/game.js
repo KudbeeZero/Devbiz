@@ -341,7 +341,7 @@ KAB.Game = class {
       this.hintT = Math.max(0, this.hintT - dt);
 
       for (const b of this.world.birds) {
-        if (b.alive && !b.asleep && Math.abs(b.vx) + Math.abs(b.vy) > 260 && Math.random() < 0.8) this.particles.trail(b.x, b.y, KAB.BIRDS[b.data.type].color);
+        if (b.alive && !b.asleep && Math.abs(b.vx) + Math.abs(b.vy) > 260 && Math.random() < 0.8) this.particles.trail(b.x, b.y, '#ffffff');
       }
       if (this.pendingEnd) {
         this.pendingEnd.t -= dt;
@@ -404,6 +404,7 @@ KAB.Game = class {
 
     // bodies
     const bodies = showWorld ? w.phys.bodies : [];
+    for (const b of bodies) if (b.kind === 'ground' && b.shape === 'poly') R.drawRock(ctx, b, th.world === 2);
     for (const b of bodies) if (b.kind === 'block') R.drawBlock(ctx, b, th.accent);
     for (const b of bodies) if (b.kind === 'enemy') R.drawEnemy(ctx, b, this.time);
     for (const b of bodies) if (b.kind === 'bomb') R.drawEgg(ctx, b);
@@ -415,7 +416,7 @@ KAB.Game = class {
       R.drawBird(ctx, b.x, b.y, b.r, b.data.type, fly ? dir : b.angle, dir, this.time, { blink: b.asleep });
     }
 
-    if (showWorld) R.drawFringe(ctx, this.dpr);
+    if (showWorld) R.drawFringe(ctx, this.dpr, th.world);
     this.particles.draw(ctx);
     ctx.restore();
 

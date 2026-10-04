@@ -168,7 +168,7 @@ KAB.Physics = class {
           }
         }
 
-        const key = A.id < B.id ? A.id * 65536 + B.id : B.id * 65536 + A.id;
+        const key = A.id < B.id ? A.id * 67108864 + B.id : B.id * 67108864 + A.id;   // 2^26 apart: ids can never collide
         const old = prev.get(key);
         const arb = {
           A, B, nx: man.nx, ny: man.ny, pts: man.pts,

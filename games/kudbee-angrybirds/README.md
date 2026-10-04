@@ -1,10 +1,11 @@
 # Kudbee Birds
 
-> **Kudbee Games Studio** — slingshot demolition across painted meadows. Zero install, zero build:
-> canvas + Web Audio; birds, drones, blocks and effects are drawn in code, sound is synthesized.
+> **Kudbee Games Studio** — bright cartoon slingshot demolition. Zero install, zero build: canvas + Web Audio.
+> Birds, grubs, blocks and effects are drawn in code; all sound is synthesized.
 
-Fling three kinds of bird at the Hive's drone fortresses across **8 levels** (the last is a boss),
-using real rigid-body physics: stacks topple, glass shatters, stone cracks, TNT chains.
+Fling four kinds of bird at the Hive grubs' fortresses across **16 levels in two worlds** (each ends in
+a boss), using real rigid-body physics: stacks topple, ice shatters, stone cracks, boulders roll, TNT chains.
+The look is a bright cartoon style (chunky outlines, glossy UI); the characters are all original.
 
 ## Play
 
@@ -31,19 +32,22 @@ using real rigid-body physics: stacks topple, glass shatters, stone cracks, TNT 
 | Cyan **Dash** | Boost forward |
 | Gold **Slam** | Dive straight down, hard — cracks roofs |
 | Green **Split** | Split into three |
+| Cream **Egg Bomb** | Lays an egg bomb straight down (it explodes on impact or after a short fuse) and recoils forward |
 
 ## Rules
 
-- Destroy every drone to clear a level. Blocks are glass (weak), wood, stone (tough) and **TNT**
-  (explodes, damaging and launching everything nearby, including other TNT).
+- Destroy every grub to clear a level. Blocks are ice (weak), wood, stone (tough) and **TNT**
+  (explodes, damaging and launching everything nearby, including other TNT), in boxes, planks, triangle roofs,
+  rolling boulders and wheels, plus immovable rock hills to lob over. Helmeted grubs take more hits; bosses more still.
 - Score: blocks + drones + chain bonuses + **10,000 per unused bird**. Stars are by score; a win is
   always at least 1★ and unlocks the next level.
 - Progress (stars, best score) and the sound setting are stored in `localStorage`
   (`kudbee.birds.v2`); everything degrades gracefully if storage is blocked.
 - Fail a level and **Try Again** restarts that level (not the whole game).
-- Each level has its own lighting mood (morning, dusk, sunset, ember, crimson night) graded over one painted
-  backdrop (`assets/bg-lake.jpg`, 260 KB). If the image is missing or still loading, a procedural neon skyline
-  is drawn instead, so the stage is never empty.
+- World 1 (Meadow) uses a painted backdrop (`assets/bg-lake.jpg`, 260 KB) graded per level (morning, dusk,
+  sunset, ember, crimson night). If it is missing or still loading a procedural skyline is drawn instead, so the
+  stage is never empty. World 2 (Frostpeak) is a procedural snowy-mountain scene with falling snow.
+- Display font: Lilita One (`assets/fonts/`, SIL OFL 1.1).
 - Honors `prefers-reduced-motion` (no shake, no slow-mo, static stars) and pauses when the tab is hidden.
 
 ## How it's built
@@ -57,7 +61,8 @@ src/world.js     game rules, DOM-free: launch, abilities, destruction, TNT, turn
 src/particle.js  cosmetic effects        src/audio.js   synthesized SFX + music bed
 src/render.js    backdrop + world drawing  src/ui.js    HUD + menu/select/pause/win/fail screens
 src/game.js      loop, input, wiring
-assets/bg-lake.jpg   painted backdrop (level moods are baked in at load; meadow line = physics ground)
+assets/bg-lake.jpg   painted backdrop for world 1 (meadow line = physics ground)
+assets/fonts/        Lilita One (OFL)
 ```
 
 `world.js` has no DOM dependency, so the same code runs in the browser and in the headless tests.

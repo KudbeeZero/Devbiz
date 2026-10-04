@@ -75,6 +75,7 @@ function solveLevel(level, beam = FAST ? 3 : 4) {
       if (node.world.state === 'won' || node.world.state === 'lost') { scored.push({ node, val: evaluate(node.world) + 1 }); continue; }
       for (const c of cands) {
         const w = deepClone(node.world);
+        w._bind();
         if (!runShot(w, c)) continue;
         scored.push({ node: { shots: node.shots.concat([c]), world: w }, val: evaluate(w) });
       }

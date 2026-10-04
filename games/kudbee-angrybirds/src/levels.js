@@ -121,4 +121,124 @@ KAB.LEVELS = [
       b.col(910, [['wood', 36, 50], ['armor']]);
     },
   },
+  // ---- World 2: Frostpeak --------------------------------------------------
+  {
+    name: 'Snow Day', hint: 'Egg Bomb: tap to lay a bomb on the roof.',
+    birds: ['egg', 'cyan', 'egg'], stars: [21000, 27000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ffffff', a: 0 } },
+    build(b) {
+      b.col(520, [['stone', 26, 90]]);
+      b.enemy('grunt', 566, 525);
+      b.col(640, [['glass', 24, 70], ['glass', 24, 70]]);
+      b.col(760, [['glass', 24, 70], ['glass', 24, 70]]);
+      b.beam('wood', 700, 400, 170, 14);
+      b.tri('wood', 700, 386, 160, 52);
+      b.enemy('grunt', 700, 524);
+      b.col(870, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
+    },
+  },
+  {
+    name: 'Boulder Run', hint: 'Knock the platform out. Boulders do the rest.',
+    birds: ['cyan', 'gold', 'egg', 'cyan'], stars: [29000, 36000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ffd7a8', a: 0.18, glow: '#ffb070', gx: 760 } },
+    build(b) {
+      b.col(560, [['wood', 24, 110]]);
+      b.col(780, [['wood', 24, 110]]);
+      b.beam('wood', 670, 430, 260, 20);
+      b.ball('stone', 620, 390, 20);
+      b.ball('stone', 720, 390, 20);
+      b.enemy('grunt', 640, 525);
+      b.enemy('armor', 706, 523);
+      b.col(880, [['wood', 40, 60], ['grunt']]);
+    },
+  },
+  {
+    name: 'Cart Crashers', hint: 'Wheels roll. Everything on the cart goes with it.',
+    birds: ['cyan', 'green', 'egg', 'gold'], stars: [37000, 46000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#b8d4ff', a: 0.22 } },
+    build(b) {
+      b.ball('wood', 640, 524, 16);
+      b.ball('wood', 740, 524, 16);
+      b.beam('wood', 690, 508, 160, 14);
+      b.col(655, [['wood', 40, 40], ['grunt']], 494);
+      b.col(730, [['tnt', 34], ['armor']], 494);
+      b.col(860, [['stone', 40, 70], ['grunt']]);
+      b.col(520, [['wood', 30, 70]]);
+    },
+  },
+  {
+    name: 'Ice Palace', hint: 'Crack the pillars. Roofs fall hard.',
+    birds: ['egg', 'green', 'gold', 'egg', 'cyan'], stars: [44000, 55000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#9fd8ff', a: 0.26, glow: '#d8f0ff', gx: 640 } },
+    build(b) {
+      b.col(560, [['glass', 30, 60], ['glass', 30, 60]]);
+      b.col(680, [['glass', 30, 60], ['glass', 30, 60]]);
+      b.col(800, [['glass', 30, 60], ['glass', 30, 60]]);
+      b.beam('glass', 614, 420, 124, 14);
+      b.beam('glass', 746, 420, 124, 14);
+      b.tri('stone', 614, 406, 110, 46);
+      b.tri('stone', 746, 406, 110, 46);
+      b.enemy('grunt', 620, 525);
+      b.enemy('armor', 740, 523);
+      b.col(895, [['wood', 36, 40], ['grunt']]);
+      b.col(490, [['stone', 24, 70], ['grunt']]);
+    },
+  },
+  {
+    name: 'TNT Valley', hint: 'Light the fuse. Let the crates do the work.',
+    birds: ['cyan', 'egg', 'green', 'egg'], stars: [43000, 54000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ff9a7a', a: 0.3, glow: '#ff7a3c', gx: 700, bright: 0.95 } },
+    build(b) {
+      b.col(520, [['wood', 30, 50], ['grunt']]);
+      b.tnt(600, 523, 34); b.tnt(636, 523, 34); b.tnt(672, 523, 34);
+      b.beam('wood', 636, 506, 130, 14);
+      b.enemyOn('grunt', 618, 492);
+      b.enemyOn('armor', 662, 492);
+      b.col(790, [['tnt', 34], ['wood', 70, 14], ['grunt']]);
+      b.col(890, [['stone', 40, 60], ['armor']]);
+    },
+  },
+  {
+    name: 'Behind the Hill', hint: 'Lob it over, or lay an egg behind the rock.',
+    birds: ['egg', 'green', 'gold', 'cyan', 'egg'], stars: [42000, 52000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#c9b8ff', a: 0.3, glow: '#ffa0d0', gx: 700 } },
+    build(b) {
+      b.hill(600, 230, 120);
+      b.enemyOn('grunt', 600, 420);
+      b.enemy('grunt', 752, 525);
+      b.col(820, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
+      b.col(900, [['stone', 40, 60], ['armor']]);
+    },
+  },
+  {
+    name: 'Twin Peaks', hint: 'Topple the big one onto the small ones.',
+    birds: ['green', 'egg', 'gold', 'cyan', 'egg'], stars: [42000, 53000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#6a8aff', a: 0.4, glow: '#8aa0ff', gx: 600, bright: 0.85 } },
+    build(b) {
+      b.col(560, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
+      b.col(700, [['stone', 70, 40], ['wood', 60, 40], ['glass', 50, 40], ['wood', 50, 40], ['tri', 'stone', 56, 40]]);
+      b.col(830, [['stone', 40, 40], ['glass', 40, 40], ['wood', 40, 40], ['armor']]);
+      b.tnt(765, 523, 34);
+      b.enemy('grunt', 765, 490);
+      b.col(915, [['wood', 30, 40], ['grunt']]);
+    },
+  },
+  {
+    name: 'Frost King', hint: 'The king sits on a throne of ice. Bring bombs.',
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [56000, 70000],
+    theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#4a1a7a', a: 0.52, glow: '#c97bff', gx: 700, bright: 0.72, night: true } },
+    build(b) {
+      b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
+      b.col(660, [['glass', 24, 90]], 478);
+      b.col(780, [['glass', 24, 90]], 478);
+      b.enemyOn('king', 702, 478);
+      b.col(748, [['tnt', 30]], 478);
+      b.beam('wood', 720, 388, 170, 16);
+      b.tri('stone', 720, 372, 150, 44);
+      b.col(560, [['tnt', 34], ['grunt']]);
+      b.tnt(868, 523, 34);
+      b.col(500, [['wood', 36, 50], ['grunt']]);
+      b.col(918, [['wood', 36, 50], ['armor']]);
+    },
+  },
 ];

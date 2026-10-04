@@ -98,7 +98,8 @@ for (let i = 0; i < KAB.LEVELS.length; i++) {
   const n0 = bodies.length;
   for (let t = 0; t < 600; t++) w.step();
   const drift = Math.max(...bodies.map((b, k) => Math.hypot(b.x - p0[k][0], b.y - p0[k][1])));
-  rec(`level${i + 1}-stands`, drift < 0.5 && w.phys.bodies.filter(b => !b.isStatic).length === n0 && w.score === 0, `${L.name}: ${n0} bodies, drift ${drift.toFixed(3)}px, nothing breaks by itself`);
+  const settle = Math.max(...bodies.map(b => Math.hypot(b.x - b.spawnX, b.y - b.spawnY)));
+  rec(`level${i + 1}-stands`, drift < 0.5 && settle < 4 && w.phys.bodies.filter(b => !b.isStatic).length === n0 && w.score === 0, `${L.name}: ${n0} bodies, settles ${settle.toFixed(1)}px from the authored layout, drift ${drift.toFixed(3)}px after, nothing breaks by itself`);
   rec(`level${i + 1}-has-drones`, w.totalEnemies >= 3 && L.birds.length >= 3 && L.stars[0] < L.stars[1], `${w.totalEnemies} drones, ${L.birds.length} birds, stars ${L.stars.join('/')}`);
   if (sols && sols[i]) {
     const v = new KAB.World({}); v.load(i);
@@ -106,6 +107,13 @@ for (let i = 0; i < KAB.LEVELS.length; i++) {
     rec(`level${i + 1}-solvable`, v.state === 'won', `${L.name}: recorded ${sols[i].shots.length}-bird line -> ${v.state}, ${v.stars}★, score ${v.score}`);
     rec(`level${i + 1}-3-stars-attainable`, v.stars === 3, `${L.name}: recorded line earns ${v.stars}★ (thresholds ${L.stars.join('/')})`);
   } else if (sols) rec(`level${i + 1}-solvable`, false, `${L.name}: no recorded solution`);
+}
+// 8b. body ids restart on every level load (contact-cache keys must never collide)
+{
+  for (let n = 0; n < 40; n++) { const t = new KAB.World({}); t.load(n % KAB.LEVELS.length); }
+  const w = new KAB.World({}); w.load(15);
+  const maxId = Math.max(...w.phys.bodies.map(b => b.id));
+  rec('body-ids-reset', maxId < 200, `after 40 level loads the largest body id is ${maxId} (ids reset per load)`);
 }
 // 9. persistence helpers
 {

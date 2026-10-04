@@ -190,6 +190,37 @@ const waitFor = async (page, fn, ms = 20000) => { try { await page.waitForFuncti
   await ctx.close();
 }
 
+// world 2: paging, snowy backdrop, and the Egg Bomb through real input
+{
+  const { ctx, page } = await open({ width: 960, height: 600 });
+  await page.evaluate(() => { for (let i = 0; i < 8; i++) KAB.Store.data.levels[i] = { stars: 1, score: 10000 }; KAB.Store.save(); });
+  await page.reload(); await page.waitForFunction(() => window.KABGame); await sleep(250);
+  await clickBtn(page, 'levels'); await sleep(200);
+  // after clearing world 1, Level Select opens on world 2
+  const p2 = await page.evaluate(() => ({ ids: KAB.UI.buttons.filter(b => /^lvl/.test(b.id)).map(b => b.id), first: !KAB.UI.buttons.find(b => b.id === 'lvl8').disabled, second: !KAB.UI.buttons.find(b => b.id === 'lvl9').disabled }));
+  await page.screenshot({ path: OUT + '/12-select-world2.png' });
+  await clickBtn(page, 'pgprev'); await sleep(250);
+  const p1 = await page.evaluate(() => KAB.UI.buttons.filter(b => /^lvl/.test(b.id)).map(b => b.id));
+  rec('world2-paging', p1.length === 8 && p1[0] === 'lvl0' && p2.ids[0] === 'lvl8' && p2.ids.length === 8 && p2.first && !p2.second, 'after clearing world 1 the select screen opens on world 2 (levels 9-16); level 9 open, 10 locked; the back arrow shows 1-8');
+  await clickBtn(page, 'pgnext'); await sleep(250);
+  await clickBtn(page, 'lvl8'); await sleep(600);
+  await page.screenshot({ path: OUT + '/13-world2-level.png' });
+  let s2 = await snap(page);
+  rec('world2-starts', s2.screen === 'play' && s2.level === 8 && s2.ws === 'ready' && s2.enemies === 3, `Snow Day loads: ${s2.enemies} grubs, first bird is the Egg Bomb`);
+  // fire the egg bird flat, tap mid-flight, watch for the bomb
+  await drag(page, 28, 70, 35);
+  let sawEgg = false, boomed = false;
+  for (let i = 0; i < 40 && !boomed; i++) {
+    await sleep(60);
+    const st = await page.evaluate(() => ({ egg: KABGame.world.phys.bodies.some(b => b.data && b.data.egg && b.alive), used: KABGame.world.abilityUsed }));
+    if (st.egg) sawEgg = true;
+    if (sawEgg && !st.egg) boomed = true;
+  }
+  await page.screenshot({ path: OUT + '/14-egg-bomb.png' });
+  rec('egg-bomb', sawEgg && boomed, `tap in flight lays an egg (seen=${sawEgg}) and it detonates (gone=${boomed})`);
+  await ctx.close();
+}
+
 // phone-sized viewport: canvas scales and pointer coords still map correctly
 {
   const { ctx, page } = await open({ width: 390, height: 700 }, { hasTouch: true, isMobile: true });

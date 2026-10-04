@@ -27,6 +27,7 @@ KAB.ENEMIES = {
   grunt: { r: 15, hp: 60,  density: 0.8, score: 5000,  color: '#82d44a' },
   armor: { r: 17, hp: 220, density: 1.1, score: 8000,  color: '#8fd957' },
   boss:  { r: 30, hp: 1100, density: 1.5, score: 25000, color: '#6fc23f', resist: 0.4 },
+  king:  { r: 28, hp: 850,  density: 1.4, score: 25000, color: '#6fc23f', resist: 0.5 },
 };
 
 KAB.Builder = class {
@@ -46,6 +47,14 @@ KAB.Builder = class {
   // Round block: stone boulder or wooden wheel.
   ball(mat, x, y, r) {
     return this.world.phys.add(new KAB.Body({ shape: 'circle', kind: 'block', mat, x, y, r, friction: 0.55 }));
+  }
+
+  // Immovable rocky mound (apex up) for lobbing over.
+  hill(x, w, h) {
+    const b = new KAB.Body({ shape: 'poly', kind: 'ground', mat: 'ground', x, y: KAB.GROUND_Y, isStatic: true, friction: 0.7,
+      verts: [{ x: -w / 2, y: 0 }, { x: -w * 0.18, y: -h }, { x: w * 0.18, y: -h }, { x: w / 2, y: 0 }] });
+    b.x += b.cx; b.y += b.cy;
+    return this.world.phys.add(b);
   }
 
   tnt(x, y, s) {
@@ -96,12 +105,17 @@ KAB.World = class {
 
   emit(name, ...args) { if (!this.silent && this.h[name]) this.h[name](...args); }
 
+  // (Re)attach the physics callback to THIS world. Needed after a world is cloned:
+  // a cloned closure would otherwise still point at the original.
+  _bind() { this.phys.onImpact = (a, b, closing, x, y) => this._impact(a, b, closing, x, y); }
+
   load(index) {
     const L = KAB.LEVELS[index];
     this.index = index;
     this.level = L;
+    KAB.Body._n = 1;                                  // ids restart per level: keeps contact keys small + replays exact
     this.phys = new KAB.Physics();
-    this.phys.onImpact = (a, b, closing, x, y) => this._impact(a, b, closing, x, y);
+    this._bind();
     this.phys.add(new KAB.Body({ shape: 'box', kind: 'ground', mat: 'ground', x: 480, y: KAB.GROUND_Y + 100, w: 4000, h: 200, isStatic: true }));
     this.phys.add(new KAB.Body({ shape: 'box', kind: 'ground', mat: 'ground', x: -60, y: 0, w: 120, h: 3000, isStatic: true }));
     this.phys.add(new KAB.Body({ shape: 'box', kind: 'ground', mat: 'ground', x: 1022, y: 0, w: 120, h: 3000, isStatic: true, data: { birdPass: true } }));   // right edge: keeps drones + debris in play
@@ -120,6 +134,7 @@ KAB.World = class {
     this.totalEnemies = 0;
     this.shots = 0;
 
+    for (const b of this.phys.bodies) { b.spawnX = b.x; b.spawnY = b.y; }   // authored position, for settle checks
     // Let the structure settle before the player sees it (no damage, no sound).
     this.silent = true;
     this.phys.damageOn = false;
@@ -130,6 +145,14 @@ KAB.World = class {
     this.totalEnemies = this.enemiesAlive();
     this._nextBird();
     return this;
+  }
+
+  // Mid-level bodies (the bird, split children, eggs) take ids above every existing one,
+  // so contact-cache keys stay unique even if the world was cloned or replayed.
+  _syncIds() {
+    let m = 0;
+    for (const b of this.phys.bodies) if (b.id > m) m = b.id;
+    KAB.Body._n = m + 1;
   }
 
   enemiesAlive() {
@@ -157,6 +180,7 @@ KAB.World = class {
     const pull = Math.sqrt(dx * dx + dy * dy);
     if (pull < KAB.MIN_PULL) return false;
     const speed = Math.min(pull, KAB.MAX_PULL) * KAB.LAUNCH_K;
+    this._syncIds();
     const type = this.current;
     const spec = KAB.BIRDS[type];
     const b = new KAB.Body({
@@ -189,6 +213,7 @@ KAB.World = class {
     const b = this.birds[0];
     const spec = KAB.BIRDS[b.data.type];
     this.abilityUsed = true;
+    this._syncIds();
     this.phys.wake(b);
     if (spec.ability === 'dash') {
       const sp = Math.hypot(b.vx, b.vy) || 1;

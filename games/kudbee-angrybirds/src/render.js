@@ -136,13 +136,172 @@ KAB.Render = {
     return cv;
   },
 
-  drawFringe(ctx, dpr) {
+  drawFringe(ctx, dpr, world) {
+    if (world === 2) {
+      if (!this._fringeS || this._fringeSDpr !== dpr) { this._fringeS = this._makeSnowFringe(dpr); this._fringeSDpr = dpr; }
+      ctx.drawImage(this._fringeS, 0, KAB.GROUND_Y - 38, this.W, 40);
+      return;
+    }
     if (!this._hasLake()) return;
     if (!this._fringe || this._fringeDpr !== dpr) { this._fringe = this._makeFringe(dpr); this._fringeDpr = dpr; }
     ctx.drawImage(this._fringe, 0, KAB.GROUND_Y - 38, this.W, 40);
   },
 
+
+  // ---- World 2: procedural snowy peaks -----------------------------------------
+  _cloud(x, cx, cy, sc) {
+    const puffs = [[0, 0, 26], [-30, 8, 20], [30, 8, 22], [-14, -14, 20], [16, -12, 22], [52, 14, 14], [-52, 14, 14]];
+    x.fillStyle = 'rgba(190,215,245,0.9)';
+    for (const p of puffs) { x.beginPath(); x.arc(cx + p[0] * sc, cy + p[1] * sc + 4 * sc, p[2] * sc, 0, 6.283); x.fill(); }
+    x.fillStyle = '#ffffff';
+    for (const p of puffs) { x.beginPath(); x.arc(cx + p[0] * sc, cy + p[1] * sc, p[2] * sc, 0, 6.283); x.fill(); }
+  },
+
+  _mountains(x, rnd, base, minH, maxH, body, snow, step) {
+    let px = -40; const pts = [];
+    while (px < this.W + 60) { const h = minH + rnd() * (maxH - minH); pts.push([px, h]); px += step * (0.7 + rnd() * 0.6); }
+    x.fillStyle = body;
+    x.beginPath(); x.moveTo(-60, base);
+    for (let i = 0; i < pts.length; i++) {
+      const peak = pts[i], next = pts[i + 1];
+      x.lineTo(peak[0], base - peak[1]);
+      if (next) x.lineTo((peak[0] + next[0]) / 2, base - Math.min(peak[1], next[1]) * 0.45);
+    }
+    x.lineTo(this.W + 80, base); x.closePath(); x.fill();
+    x.fillStyle = snow;                                           // snow caps: top ~40% of each peak
+    for (const pk of pts) {
+      const h = pk[1], cap = h * 0.42, w = cap * 0.62;
+      x.beginPath(); x.moveTo(pk[0], base - h);
+      x.lineTo(pk[0] + w, base - h + cap); x.lineTo(pk[0] + w * 0.5, base - h + cap * 0.78); x.lineTo(pk[0] + w * 0.15, base - h + cap * 1.02);
+      x.lineTo(pk[0] - w * 0.3, base - h + cap * 0.8); x.lineTo(pk[0] - w, base - h + cap); x.closePath(); x.fill();
+    }
+  },
+
+  _pine(x, px, base, h) {
+    const w = h * 0.42;
+    x.fillStyle = '#5a3a22'; x.fillRect(px - h * 0.04, base - h * 0.12, h * 0.08, h * 0.12);
+    for (let i = 0; i < 3; i++) {
+      const ty = base - h * (0.12 + i * 0.3), ww = w * (1 - i * 0.22), hh = h * 0.42;
+      x.fillStyle = '#2f7a4f';
+      x.beginPath(); x.moveTo(px, ty - hh); x.lineTo(px + ww, ty); x.lineTo(px - ww, ty); x.closePath(); x.fill();
+      x.fillStyle = '#ffffff';
+      x.beginPath(); x.moveTo(px, ty - hh); x.lineTo(px + ww * 0.55, ty - hh * 0.45); x.lineTo(px + ww * 0.2, ty - hh * 0.3); x.lineTo(px - ww * 0.15, ty - hh * 0.5); x.lineTo(px - ww * 0.55, ty - hh * 0.4); x.closePath(); x.fill();
+    }
+  },
+
+  _makeSnowBg(theme, dpr, seed) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = this.H * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const rnd = KAB.Util.rng(seed);
+    const GY = KAB.GROUND_Y, m = theme.mood || { tint: '#ffffff', a: 0 };
+
+    const g = x.createLinearGradient(0, 0, 0, GY);
+    g.addColorStop(0, '#5fb8ff'); g.addColorStop(0.65, '#bfe6ff'); g.addColorStop(1, '#eaf8ff');
+    x.fillStyle = g; x.fillRect(0, 0, this.W, this.H);
+    const sx = 770, sy = 120;
+    const gl = x.createRadialGradient(sx, sy, 8, sx, sy, 190); gl.addColorStop(0, 'rgba(255,255,235,0.95)'); gl.addColorStop(1, 'rgba(255,255,235,0)');
+    x.fillStyle = gl; x.fillRect(sx - 200, sy - 200, 400, 400);
+    x.fillStyle = '#fffbe3'; x.beginPath(); x.arc(sx, sy, 34, 0, 6.283); x.fill();
+    for (const c of [[130, 110, 1.1], [420, 70, 0.8], [600, 150, 1.0], [880, 60, 0.7], [300, 200, 0.7]]) this._cloud(x, c[0], c[1], c[2]);
+
+    this._mountains(x, rnd, GY - 40, 170, 300, '#9db4e0', '#ffffff', 190);
+    this._mountains(x, rnd, GY - 10, 120, 210, '#7794cf', '#f4fbff', 150);
+    // snowy rolling hills
+    x.fillStyle = '#e8f4ff';
+    x.beginPath(); x.moveTo(0, GY);
+    for (let px = 0; px <= this.W; px += 10) x.lineTo(px, GY - 34 - Math.sin(px * 0.011 + 1) * 18 - Math.sin(px * 0.031) * 7);
+    x.lineTo(this.W, GY); x.closePath(); x.fill();
+    for (let i = 0; i < 22; i++) this._pine(x, rnd() * this.W, GY - 6 + rnd() * 4, 50 + rnd() * 60);
+    x.fillStyle = '#f7fcff';
+    x.beginPath(); x.moveTo(0, GY);
+    for (let px = 0; px <= this.W; px += 10) x.lineTo(px, GY - 12 - Math.sin(px * 0.017 + 3) * 8);
+    x.lineTo(this.W, GY); x.closePath(); x.fill();
+
+    if (m.a > 0) { x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = m.a; x.fillStyle = m.tint; x.fillRect(0, 0, this.W, GY); x.restore(); }
+    if (m.glow) {
+      const gx = m.gx || 700, gl2 = x.createRadialGradient(gx, GY - 120, 10, gx, GY - 120, 520);
+      gl2.addColorStop(0, this.alpha(m.glow, 0.5)); gl2.addColorStop(1, this.alpha(m.glow, 0));
+      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = gl2; x.fillRect(0, 0, this.W, GY); x.restore();
+    }
+    const sg = x.createLinearGradient(0, 0, 0, 120); sg.addColorStop(0, 'rgba(10,30,70,0.38)'); sg.addColorStop(1, 'rgba(10,30,70,0)');
+    x.fillStyle = sg; x.fillRect(0, 0, this.W, 120);
+    const stars = [];
+    if (m.night) {
+      for (let i = 0; i < 60; i++) stars.push({ x: rnd() * this.W, y: rnd() * 200, r: 0.7 + rnd() * 1.3, p: rnd() * 6.28 });
+      for (const st of stars) { x.fillStyle = 'rgba(240,245,255,' + (0.4 + st.r * 0.25) + ')'; x.fillRect(st.x, st.y, st.r, st.r); }
+    }
+    this._snowGround(x, rnd);
+    return { cv, stars: stars.filter((st, i) => i % 3 === 0) };
+  },
+
+  _snowGround(x, rnd) {
+    const GY = KAB.GROUND_Y, W = this.W, H = this.H;
+    const dg = x.createLinearGradient(0, GY, 0, H); dg.addColorStop(0, '#a9c8e8'); dg.addColorStop(1, '#4d6d98');
+    x.fillStyle = dg; x.fillRect(0, GY, W, H - GY);
+    for (let row = 0; row < 3; row++) {
+      let px = -20 + (row % 2) * 24;
+      while (px < W + 30) {
+        const w = 38 + rnd() * 46, h = 16 + rnd() * 10, y = GY + 14 + row * 17, sh = 0.9 + rnd() * 0.2;
+        x.fillStyle = 'rgb(' + Math.round(150 * sh) + ',' + Math.round(186 * sh) + ',' + Math.round(224 * sh) + ')';
+        x.strokeStyle = 'rgba(30,50,90,0.75)'; x.lineWidth = 1.6;
+        x.beginPath(); if (x.roundRect) x.roundRect(px, y, w, h, 7); else x.rect(px, y, w, h); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(255,255,255,0.4)'; x.fillRect(px + 5, y + 2.5, w * 0.45, 2.5);
+        px += w + 5 + rnd() * 5;
+      }
+    }
+    x.fillStyle = '#ffffff';
+    x.beginPath(); x.moveTo(0, GY + 17);
+    for (let px = 0; px <= W; px += 9) x.lineTo(px, GY - 2 + Math.sin(px * 0.13) * 2.2 + (rnd() - 0.5) * 2.5 + (Math.sin(px * 0.045) > 0.6 ? 3 : 0));
+    x.lineTo(W, GY + 17); x.closePath(); x.fill();
+    x.strokeStyle = 'rgba(90,130,185,0.6)'; x.lineWidth = 1.6; x.stroke();
+    x.fillStyle = 'rgba(190,225,255,0.55)'; x.fillRect(0, GY + 9, W, 4);
+  },
+
+  _makeSnowFringe(dpr) {
+    const cv = document.createElement('canvas');
+    cv.width = this.W * dpr; cv.height = 40 * dpr;
+    const x = cv.getContext('2d');
+    x.scale(dpr, dpr);
+    const rnd = KAB.Util.rng(777), base = 40 - 1;
+    for (let px = -4; px < this.W + 4; px += 5 + rnd() * 9) {
+      const r = 3 + rnd() * 5;
+      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(px, base - r * 0.4, r, Math.PI, 0); x.fill();
+      x.strokeStyle = 'rgba(120,160,210,0.55)'; x.lineWidth = 1; x.stroke();
+    }
+    return cv;
+  },
+
+  // Static rocky mound (levels with a hill), snow-capped in the winter world.
+  drawRock(ctx, b, snowy) {
+    ctx.save();
+    ctx.translate(b.x, b.y); ctx.rotate(b.angle); ctx.lineJoin = 'round';
+    const path = () => { ctx.beginPath(); b.verts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); };
+    const top = Math.min.apply(null, b.verts.map(p => p.y)), bot = Math.max.apply(null, b.verts.map(p => p.y));
+    path();
+    const g = ctx.createLinearGradient(0, top, 0, bot);
+    g.addColorStop(0, '#a89c92'); g.addColorStop(1, '#6a5f58');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.save(); path(); ctx.clip();
+    const rnd = KAB.Util.rng(b.id * 13);
+    ctx.strokeStyle = 'rgba(40,28,20,0.45)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) { let px = (rnd() - 0.5) * b.w * 0.8, py = top + rnd() * (bot - top); ctx.beginPath(); ctx.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * 40; py += rnd() * 22; ctx.lineTo(px, py); } ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    for (let i = 0; i < 10; i++) ctx.fillRect((rnd() - 0.5) * b.w * 0.8, top + rnd() * (bot - top), 6 + rnd() * 10, 3 + rnd() * 3);
+    if (snowy) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.moveTo(-b.w, top - 4);
+      for (let px = -b.w; px <= b.w; px += 10) ctx.lineTo(px, top + 22 + Math.sin(px * 0.2) * 5 + (Math.abs(px) * 0.28));
+      ctx.lineTo(b.w, top - 4); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    path(); ctx.strokeStyle = this.OUT; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+  },
+
   _makeBg(theme, dpr, seed) {
+    if (theme.world === 2) return this._makeSnowBg(theme, dpr, seed);
     if (this._hasLake()) return this._makePaintedBg(theme, dpr, seed);
     const cv = document.createElement('canvas');
     cv.width = this.W * dpr; cv.height = this.H * dpr;
@@ -215,6 +374,13 @@ KAB.Render = {
     let bg = this._bg[key];
     if (!bg || bg.dpr !== dpr) { bg = this._bg[key] = this._makeBg(theme, dpr, 1000 + key * 77); bg.dpr = dpr; }
     ctx.drawImage(bg.cv, 0, 0, this.W, this.H);
+    if (theme.world === 2 && !reduceMotion) {                       // drifting snowfall
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 46; i++) {
+        const sp = 18 + (i % 5) * 9, fx = (i * 137.5) % this.W + Math.sin(t * 0.6 + i) * 16, fy = (i * 71 + t * sp) % (KAB.GROUND_Y + 10);
+        ctx.beginPath(); ctx.arc(fx, fy, 1.2 + (i % 3) * 0.7, 0, 6.283); ctx.fill();
+      }
+    }
     if (!reduceMotion) {
       for (const s of bg.stars) {
         ctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(t * 1.4 + s.p));
@@ -451,7 +617,7 @@ KAB.Render = {
   drawEnemy(ctx, b, t) {
     const type = b.data.type, r = b.r, OUT = this.OUT;
     const frac = Math.max(0, b.hp / b.maxHp);
-    const base = type === 'boss' ? { l: '#b4f07c', b: '#6fc23f', d: '#3d8a2a' } : { l: '#c2f58a', b: '#82d44a', d: '#4a9a2e' };
+    const base = (type === 'boss' || type === 'king') ? { l: '#b4f07c', b: '#6fc23f', d: '#3d8a2a' } : { l: '#c2f58a', b: '#82d44a', d: '#4a9a2e' };
     const lw = Math.max(2.4, r * 0.15);
     ctx.save();
     ctx.translate(b.x, b.y);
@@ -499,7 +665,7 @@ KAB.Render = {
     ctx.fillStyle = '#fff';
     for (const sx of [-0.22, 0.22]) { ctx.beginPath(); ctx.moveTo(sx * r - r * 0.07, r * 0.36); ctx.lineTo(sx * r + r * 0.07, r * 0.36); ctx.lineTo(sx * r, r * 0.52); ctx.closePath(); ctx.fill(); }
 
-    if (type === 'armor' || type === 'boss') {                                                              // steel helmet
+    if (type === 'armor' || type === 'boss' || type === 'king') {                                                 // steel helmet
       const hg = ctx.createLinearGradient(0, -r, 0, -r * 0.2);
       hg.addColorStop(0, '#f1f5ff'); hg.addColorStop(1, '#8d9ac0');
       ctx.fillStyle = hg; ctx.strokeStyle = OUT; ctx.lineWidth = lw;
@@ -511,7 +677,7 @@ KAB.Render = {
       ctx.fillStyle = '#4fbf3a'; ctx.strokeStyle = OUT; ctx.lineWidth = lw * 0.7;
       ctx.beginPath(); ctx.moveTo(0, -r * 0.95); ctx.quadraticCurveTo(r * 0.5, -r * 1.55, r * 0.55, -r * 1.05); ctx.quadraticCurveTo(r * 0.25, -r * 0.95, 0, -r * 0.95); ctx.fill(); ctx.stroke();
     }
-    if (type === 'boss') {                                                                                  // gold crown
+    if (type === 'boss' || type === 'king') {                                                                      // gold crown
       ctx.fillStyle = '#ffd34d'; ctx.strokeStyle = OUT; ctx.lineWidth = lw * 0.8;
       ctx.beginPath(); ctx.moveTo(-r * 0.62, -r * 1.0);
       for (let i = 0; i < 4; i++) { ctx.lineTo(-r * 0.62 + i * r * 0.4 + r * 0.2, -r * 1.62); ctx.lineTo(-r * 0.62 + (i + 1) * r * 0.4, -r * 1.0); }
@@ -521,7 +687,7 @@ KAB.Render = {
     if (b.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (b.flash * 0.45) + ')'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill(); }
     ctx.restore();
 
-    if (type === 'boss' && b.hp < b.maxHp) {                                                                // boss health bar
+    if ((type === 'boss' || type === 'king') && b.hp < b.maxHp) {                                                  // boss health bar
       const bw = 78, bx = b.x - bw / 2, by = b.y - r - 30;
       ctx.fillStyle = this.OUT; this._rr(ctx, bx - 3, by - 3, bw + 6, 12, 6); ctx.fill();
       ctx.fillStyle = frac > 0.4 ? '#7ae04a' : '#ff5d3c'; this._rr(ctx, bx, by, Math.max(4, bw * frac), 6, 3); ctx.fill();
