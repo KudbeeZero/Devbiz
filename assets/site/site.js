@@ -1128,6 +1128,22 @@
             ctx.lineTo(w * 0.9, h * 0.7);
             ctx.stroke();
         },
+        archery: function (ctx, w, h, t) {
+            t = t || 0;
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#4aa8ff'); sky.addColorStop(1, '#d6f1ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#9bc7d8'; ctx.beginPath(); ctx.moveTo(0, h * 0.5); for (var x = 0; x <= w; x += 12) ctx.lineTo(x, h * 0.42 - Math.sin(x * 0.02) * h * 0.05); ctx.lineTo(w, h * 0.5); ctx.fill();
+            ctx.fillStyle = '#3a8a45'; for (var q = 0; q < 14; q++) { ctx.beginPath(); ctx.arc(w * (q + 0.5) / 14, h * 0.47, h * 0.045 + (q % 3) * 2, 0, 7); ctx.fill(); }
+            var lawn = ctx.createLinearGradient(0, h * 0.48, 0, h); lawn.addColorStop(0, '#79cc55'); lawn.addColorStop(1, '#3f9a36'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.48, w, h * 0.52);
+            ctx.fillStyle = 'rgba(255,255,255,0.08)'; for (var m = 0; m < 5; m++) ctx.fillRect(0, h * (0.55 + m * 0.09), w, h * 0.04);
+            var cx = w * 0.62, cy = h * 0.5, R = Math.min(w, h) * 0.3;
+            ctx.strokeStyle = '#b9884e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - R * 0.8, cy + R * 0.8); ctx.lineTo(cx - R * 1.1, h * 0.98); ctx.moveTo(cx + R * 0.8, cy + R * 0.8); ctx.lineTo(cx + R * 1.1, h * 0.98); ctx.stroke();
+            ctx.fillStyle = '#f0cf6a'; ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 3; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx - R * 0.95, cy - R * 0.95, R * 1.9, R * 1.9, 10); else ctx.rect(cx - R * 0.95, cy - R * 0.95, R * 1.9, R * 1.9); ctx.fill(); ctx.stroke();
+            var cols = ['#f4f1e6', '#26262e', '#3c8fe0', '#e4453a', '#ffd34d'];
+            for (var i = 4; i >= 0; i--) { ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.arc(cx, cy, R * (i + 1) / 5, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(20,20,30,0.5)'; ctx.lineWidth = 1; ctx.stroke(); }
+            var k = (t * 0.0006) % 1.4, f = Math.min(1, k), ax = w * 0.1 + (cx - w * 0.1 + R * 0.05) * f, ay = h * 0.9 - (h * 0.4 + Math.sin(f * Math.PI) * h * 0.3) * f;
+            ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ax - 28, ay + 8 * (1 - f)); ctx.lineTo(ax, ay); ctx.stroke();
+            ctx.strokeStyle = '#f2e6c8'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = '#e8483a'; ctx.beginPath(); ctx.moveTo(ax - 28, ay + 8 * (1 - f)); ctx.lineTo(ax - 36, ay - 4); ctx.lineTo(ax - 22, ay + 3); ctx.fill();
+        },
         cricket: function (ctx, w, h, t) {
             t = t || 0;
             var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#051a08'); g.addColorStop(1, '#05050f'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1216,7 +1232,7 @@
     // reproduces its pre-animation static frame exactly (see the "t=0 -> ..."
     // comments in each), so paintAll's single frame and the reduced-motion
     // path below are pixel-identical to the art that shipped before this lane.
-    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1, jackpot: 1, angrybirds: 1 };
+    var ANIMATED_SCENES = { jungle: 1, darts: 1, riff: 1, riff2: 1, pinball: 1, voidrunner: 1, munch: 1, orbital: 1, circuit: 1, cornhole: 1, cricket: 1, jackpot: 1, angrybirds: 1, archery: 1 };
     function paintAll() {
         document.querySelectorAll('.shot-canvas').forEach(function (cv) {
             var scene = cv.getAttribute('data-scene');

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4aa8ff">
+<meta name="description" content="Kudbee Archery — read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres, plus a head-to-head duel with a CPU. Plays in your browser.">
+<title>Kudbee Archery</title>
+<link rel="canonical" href="https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kudbee">
+<meta property="og:title" content="Kudbee Archery — Read the Wind">
+<meta property="og:description" content="Read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres plus a head-to-head duel with a CPU. Plays in your browser.">
+<meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html">
+<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kudbee Archery — Read the Wind — gameplay preview">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Kudbee Archery — Read the Wind">
+<meta name="twitter:description" content="Read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres plus a head-to-head duel with a CPU. Plays in your browser.">
+<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg">
+<link rel="preload" href="assets/fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family:"Lilita One"; src:url(assets/fonts/lilita-one.woff2) format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:#0b1b2e; color:#cfe9ff; overflow:hidden; overscroll-behavior:none;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 700px at 50% 40%, #16385a, #0b1b2e); }
+  canvas { display:block; width:min(100vw, 150vh); width:min(100vw, 150dvh); aspect-ratio:960 / 640; height:auto;
+    touch-action:none; user-select:none; -webkit-user-select:none; outline:none; box-shadow:0 0 60px rgba(255,200,80,0.16); }
+  @media (min-width:700px) and (min-height:520px) { canvas { border-radius:10px; } }
+  .back-link { position:fixed; right:12px; bottom:10px; z-index:30; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; color:#cfe0f0; text-decoration:none; padding:6px 10px;
+    border:1px solid rgba(207,224,240,0.3); border-radius:6px; background:rgba(8,20,36,0.6); backdrop-filter:blur(6px); }
+  .back-link:hover, .back-link:focus-visible { color:#fff; border-color:#ffa040; outline:none; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .rotate-tip { display:none; position:fixed; top:14px; left:0; right:0; z-index:20; text-align:center; font-size:13px; color:#9fb6c8; pointer-events:none; }
+  @media (orientation:portrait) and (max-width:700px) { .rotate-tip { display:block; } }
+  noscript { position:fixed; inset:0; display:grid; place-items:center; text-align:center; padding:24px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gameCanvas" tabindex="0" role="application"
+    aria-label="Kudbee Archery. Press and hold to draw the bow, move to aim, release to loose. Hold B or right-click to steady your breath. Aim off into the wind."></canvas>
+</div>
+<p class="rotate-tip" aria-hidden="true">&#8635; Rotate your phone for a bigger playfield</p>
+<a class="back-link" href="../../index.html#games">&larr; Studio</a>
+<p class="sr">Controls: press and hold the mouse button or Space to draw the bow, move the pointer or use the arrow keys to aim, release to shoot. Hold B or the right mouse button to hold your breath and steady the sight. The wind gauge shows which way the wind pushes the arrow, so aim into it. P pauses, M toggles sound, R restarts. Ten rings, worth one to ten points; the centre is an X.</p>
+<noscript>Kudbee Archery needs JavaScript to run.</noscript>
+<script src="src/util.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/sim.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>
