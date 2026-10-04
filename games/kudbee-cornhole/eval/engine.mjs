@@ -109,6 +109,19 @@ rec('geometry', Math.abs(C.THETA * 180 / Math.PI - 10.62) < 0.05 && Math.abs(C.S
   rec('store', K3.Store.data.difficulty === 2 && K3.Store.data.stats.won === 3, 'difficulty and stats survive a reload');
 }
 
+// 16. regression: after the 2nd+ bag the round must always settle (a bag creeping at ~0.6 in/s used to hang the turn)
+{
+  const rnd = K.Util.rng(5); let stuck = 0;
+  for (let t = 0; t < 400; t++) {
+    const sim = new K.Sim();
+    for (let i = 0; i < 2 + (t % 6); i++) {
+      sim.throwBag(i % 2, rnd() > 0.5 ? 'slide' : 'flop', (rnd() - 0.5) * 16, 4 + rnd() * 40, { du: (rnd() - 0.5) * 2, ds: (rnd() - 0.5) * 3 });
+      if (sim.runToRest(1 / 120, 6000) >= 6000) { stuck++; break; }
+    }
+  }
+  rec('always-settles', stuck === 0, `400 random multi-bag rounds, ${stuck} failed to settle`);
+}
+
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

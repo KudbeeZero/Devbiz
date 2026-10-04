@@ -172,6 +172,8 @@ KCH.Sim = class {
     if (sp < 0.4) {
       if (Math.abs(gs) <= fr) { b.vu = 0; b.vs = 0; }          // static: friction holds it
       else { b.vs += (gs + fr) * dt; }
+    } else if (sp <= fr * dt && Math.abs(gs) <= fr) {
+      b.vu = 0; b.vs = 0;                                      // friction stops it this step and can hold it: at rest (no creep loop)
     } else {
       const dec = Math.min(sp, fr * dt);                       // friction can slow a bag to a stop, never reverse it
       b.vu -= b.vu / sp * dec; b.vs -= b.vs / sp * dec;
