@@ -9,7 +9,7 @@
 KAB.LEVELS = [
   {
     name: 'First Contact', hint: 'Drag the bird back, then let go.',
-    birds: ['cyan', 'cyan', 'gold'], stars: [28000, 35000],
+    birds: ['cyan', 'cyan', 'gold'], stars: [15500, 25000],
     theme: { sky: ['#0b1330', '#1d2a5c'], accent: '#39e6ff', skyline: '#14224a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(610, [['wood', 40, 40], ['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
@@ -19,7 +19,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Glass House', hint: 'Tap in flight: Dash boosts forward.',
-    birds: ['cyan', 'gold', 'cyan'], stars: [21000, 26000],
+    birds: ['cyan', 'gold', 'cyan'], stars: [11500, 18500],
     theme: { sky: ['#0d1b2a', '#123a4d'], accent: '#7CFFb2', skyline: '#10303f', mood: { tint: '#7fe8d0', a: 0.22, sat: 1.05 } },
     build(b) {
       b.col(500, [['stone', 26, 92]]);
@@ -33,7 +33,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Split Decision', hint: 'Green splits in three with a tap.',
-    birds: ['green', 'cyan', 'green', 'gold'], stars: [37000, 47000],
+    birds: ['green', 'cyan', 'green', 'gold'], stars: [20500, 34000],
     theme: { sky: ['#1a1038', '#3a1a5c'], accent: '#c46bff', skyline: '#2a1650', mood: { tint: '#b08aff', a: 0.30, glow: '#ff9ad0', gx: 760 } },
     build(b) {
       b.col(520, [['stone', 30, 100]]);
@@ -46,7 +46,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Stone Keep', hint: 'Gold slams straight down. Crack the roof.',
-    birds: ['gold', 'cyan', 'green', 'gold'], stars: [34000, 43000],
+    birds: ['gold', 'cyan', 'green', 'gold'], stars: [18500, 31000],
     theme: { sky: ['#1c1220', '#4a1f3a'], accent: '#ff7ab8', skyline: '#341530', mood: { tint: '#ff9ac0', a: 0.28, glow: '#ffb070', gx: 720 } },
     build(b) {
       b.col(580, [['stone', 26, 70], ['stone', 26, 70]]);
@@ -61,7 +61,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Powder Keg', hint: 'Pop the TNT. Chain reactions score big.',
-    birds: ['cyan', 'green', 'gold', 'cyan'], stars: [28000, 36000],
+    birds: ['cyan', 'green', 'gold', 'cyan'], stars: [15500, 26000],
     theme: { sky: ['#220f0f', '#55201a'], accent: '#ff5d3c', skyline: '#3a1612', mood: { tint: '#ff8a50', a: 0.34, glow: '#ff5d3c', gx: 700, bright: 0.95 } },
     build(b) {
       b.col(500, [['wood', 28, 70], ['grunt']]);
@@ -76,7 +76,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Bridge Gap', hint: 'Mix birds. Break a pillar, drop the bridge.',
-    birds: ['cyan', 'green', 'cyan', 'gold', 'cyan'], stars: [39000, 49000],
+    birds: ['cyan', 'green', 'cyan', 'gold', 'cyan'], stars: [21500, 35500],
     theme: { sky: ['#0a1f1a', '#14463a'], accent: '#7CFFb2', skyline: '#0f3128', mood: { tint: '#9dffc2', a: 0.24, sat: 1.1 } },
     build(b) {
       b.col(560, [['stone', 40, 90], ['stone', 40, 90]]);
@@ -92,7 +92,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Twin Towers', hint: 'Topple one, crush the other.',
-    birds: ['green', 'gold', 'cyan', 'cyan', 'green'], stars: [46000, 58000],
+    birds: ['green', 'gold', 'cyan', 'cyan', 'green'], stars: [25500, 42000],
     theme: { sky: ['#101030', '#2a2a6c'], accent: '#6f5bff', skyline: '#1c1c52', mood: { tint: '#6a6aff', a: 0.42, glow: '#8a7bff', gx: 600, bright: 0.85 } },
     build(b) {
       b.col(500, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
@@ -105,7 +105,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Hive Sentinel', hint: 'The boss is armored. Use the TNT.',
-    birds: ['gold', 'green', 'cyan', 'gold', 'green', 'cyan'], stars: [55000, 69000],
+    birds: ['gold', 'green', 'cyan', 'gold', 'green', 'cyan'], stars: [30500, 49500],
     theme: { sky: ['#1d0a24', '#5a1040'], accent: '#ff3d7f', skyline: '#3a0c32', mood: { tint: '#7a1030', a: 0.55, glow: '#ff3d7f', gx: 700, bright: 0.7, night: true } },
     build(b) {
       b.col(700, [['stone', 240, 36], ['wood', 190, 28]]);
@@ -124,7 +124,7 @@ KAB.LEVELS = [
   // ---- World 2: Frostpeak --------------------------------------------------
   {
     name: 'Snow Day', hint: 'Egg Bomb: tap to lay a bomb on the roof.',
-    birds: ['egg', 'cyan', 'egg'], stars: [21000, 27000],
+    birds: ['egg', 'cyan', 'egg'], stars: [11500, 19500],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(520, [['stone', 26, 90]]);
@@ -139,7 +139,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Boulder Run', hint: 'Knock the platform out. Boulders do the rest.',
-    birds: ['cyan', 'gold', 'egg', 'cyan'], stars: [29000, 36000],
+    birds: ['cyan', 'gold', 'egg', 'cyan'], stars: [16000, 26000],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ffd7a8', a: 0.18, glow: '#ffb070', gx: 760 } },
     build(b) {
       b.col(560, [['wood', 24, 110]]);
@@ -154,7 +154,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Cart Crashers', hint: 'Wheels roll. Everything on the cart goes with it.',
-    birds: ['cyan', 'green', 'egg', 'gold'], stars: [37000, 46000],
+    birds: ['cyan', 'green', 'egg', 'gold'], stars: [20500, 33000],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#b8d4ff', a: 0.22 } },
     build(b) {
       b.ball('wood', 640, 524, 16);
@@ -168,7 +168,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Ice Palace', hint: 'Crack the pillars. Roofs fall hard.',
-    birds: ['egg', 'green', 'gold', 'egg', 'cyan'], stars: [44000, 55000],
+    birds: ['egg', 'green', 'gold', 'egg', 'cyan'], stars: [24000, 39500],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#9fd8ff', a: 0.26, glow: '#d8f0ff', gx: 640 } },
     build(b) {
       b.col(560, [['glass', 30, 60], ['glass', 30, 60]]);
@@ -186,7 +186,7 @@ KAB.LEVELS = [
   },
   {
     name: 'TNT Valley', hint: 'Light the fuse. Let the crates do the work.',
-    birds: ['cyan', 'egg', 'green', 'egg'], stars: [43000, 54000],
+    birds: ['cyan', 'egg', 'green', 'egg'], stars: [23500, 39000],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#ff9a7a', a: 0.3, glow: '#ff7a3c', gx: 700, bright: 0.95 } },
     build(b) {
       b.col(520, [['wood', 30, 50], ['grunt']]);
@@ -200,7 +200,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Behind the Hill', hint: 'Lob it over, or lay an egg behind the rock.',
-    birds: ['egg', 'green', 'gold', 'cyan', 'egg'], stars: [42000, 52000],
+    birds: ['egg', 'green', 'gold', 'cyan', 'egg'], stars: [23000, 37500],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#c9b8ff', a: 0.3, glow: '#ffa0d0', gx: 700 } },
     build(b) {
       b.hill(600, 230, 120);
@@ -212,7 +212,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Twin Peaks', hint: 'Topple the big one onto the small ones.',
-    birds: ['green', 'egg', 'gold', 'cyan', 'egg'], stars: [42000, 53000],
+    birds: ['green', 'egg', 'gold', 'cyan', 'egg'], stars: [23000, 38000],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#6a8aff', a: 0.4, glow: '#8aa0ff', gx: 600, bright: 0.85 } },
     build(b) {
       b.col(560, [['wood', 40, 40], ['wood', 40, 40], ['grunt']]);
@@ -225,7 +225,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Frost King', hint: 'The king sits on a throne of ice. Bring bombs.',
-    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [56000, 70000],
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [31000, 50500],
     theme: { world: 2, sky: ['#9bd7ff', '#e6f6ff'], accent: '#7fd0ff', skyline: '#b9c9e8', mood: { tint: '#4a1a7a', a: 0.52, glow: '#c97bff', gx: 700, bright: 0.72, night: true } },
     build(b) {
       b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
@@ -244,7 +244,7 @@ KAB.LEVELS = [
   // ---- World 3: Nightmare ----------------------------------------------------
   {
     name: 'Gloomfall', hint: 'The ruins lean. Push them over.',
-    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [41000, 52000],
+    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [22500, 37500],
     theme: { world: 3, bg: 0, sky: ['#0d0614', '#3a1030'], accent: '#c46bff', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.hill(600, 190, 90);
@@ -257,7 +257,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Blood Moon Keep', hint: 'The keep sits high. Lob it, or bomb the gate.',
-    birds: ['egg', 'gold', 'green', 'cyan', 'egg', 'gold'], stars: [60000, 76000],
+    birds: ['egg', 'gold', 'green', 'cyan', 'egg', 'gold'], stars: [33000, 54500],
     theme: { world: 3, bg: 1, sky: ['#0d0614', '#3a1030'], accent: '#ff4d6d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.hill(770, 360, 110);
@@ -270,7 +270,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Eclipse Citadel', hint: 'Spires fall hard. Find the weak pillar.',
-    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [41000, 53000],
+    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [22500, 38000],
     theme: { world: 3, bg: 2, sky: ['#0d0614', '#3a1030'], accent: '#ff3d3d', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(640, [['stone', 44, 70], ['wood', 44, 60], ['glass', 44, 46], ['wood', 44, 46]]);
@@ -285,7 +285,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Heart of the Nightmare', hint: 'The Nightmare King waits at the heart. End it.',
-    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg', 'green'], stars: [70000, 92000],
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg', 'green'], stars: [38500, 66000],
     theme: { world: 3, bg: 3, sky: ['#0d0614', '#3a1030'], accent: '#ff2d55', skyline: '#1a0a28', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);
@@ -304,7 +304,7 @@ KAB.LEVELS = [
   // ---- World 4: Krypto -------------------------------------------------------
   {
     name: 'Genesis Block', hint: 'Block one. Break the chain before it grows.',
-    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [45000, 57000],
+    birds: ['cyan', 'gold', 'egg', 'green', 'egg'], stars: [25000, 41000],
     theme: { world: 4, bg: 0, tag: 'BITCOIN', accent: '#f7b32b', sky: ['#070a24', '#14125a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(560, [['stone', 50, 50], ['stone', 50, 50], ['ball', 'stone', 20], ['grunt']]);
@@ -315,7 +315,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Solana Speed', hint: 'Fast chain, thin towers. Hit the base.',
-    birds: ['cyan', 'green', 'gold', 'egg', 'cyan', 'egg'], stars: [55000, 67000],
+    birds: ['cyan', 'green', 'gold', 'egg', 'cyan', 'egg'], stars: [30500, 48000],
     theme: { world: 4, bg: 1, tag: 'SOLANA', accent: '#a18bff', sky: ['#070a24', '#2a0f5a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(540, [['wood', 30, 70], ['wood', 30, 70], ['wood', 40, 36], ['grunt']]);
@@ -327,7 +327,7 @@ KAB.LEVELS = [
   },
   {
     name: 'Rug Pull', hint: 'The RUG blocks are explosive. Pull them all.',
-    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [48000, 60000],
+    birds: ['gold', 'egg', 'green', 'cyan', 'egg', 'gold'], stars: [26500, 43000],
     theme: { world: 4, bg: 2, tag: 'BEAR MARKET', accent: '#ff4d6d', sky: ['#070a24', '#5a1450'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(560, [['tnt', 34], ['stone', 50, 50], ['grunt']]);
@@ -340,7 +340,7 @@ KAB.LEVELS = [
   },
   {
     name: 'To The Moon', hint: 'The Whale King holds every coin. Bring bombs.',
-    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [70000, 85000],
+    birds: ['gold', 'egg', 'green', 'egg', 'cyan', 'gold', 'egg'], stars: [38500, 61000],
     theme: { world: 4, bg: 3, tag: 'KUDBEE x KRYPTO', accent: '#5af0ff', sky: ['#070a24', '#2a0f5a'], skyline: '#14125a', mood: { tint: '#ffffff', a: 0 } },
     build(b) {
       b.col(720, [['stone', 250, 36], ['wood', 200, 26]]);

@@ -1072,23 +1072,37 @@
         },
         cornhole: function (ctx, w, h, t) {
             t = t || 0;
-            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#59b8ff'); sky.addColorStop(1, '#bfe6ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-            var lawn = ctx.createLinearGradient(0, h * 0.42, 0, h); lawn.addColorStop(0, '#6fcf4a'); lawn.addColorStop(1, '#2f9a35'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.42, w, h * 0.58);
-            ctx.fillStyle = 'rgba(255,255,255,0.18)';
-            for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.5 + m * 0.09), w, h * 0.04);
-            // board, far end, in perspective
-            var cx = w * 0.5, top = h * 0.26, bw = w * 0.2, bb = h * 0.62, bbw = w * 0.34;
-            ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx + 8, bb + 6, bbw * 0.55, h * 0.03, 0, 0, 7); ctx.fill();
-            ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a52'; ctx.lineWidth = Math.max(3, w * 0.012); ctx.fillStyle = '#e8c27a';
+            var u = Math.min(w, h), OUT = '#1b2a52';
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.5); sky.addColorStop(0, '#4fb3ff'); sky.addColorStop(1, '#cfeeff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#ffffff';
+            [[0.2, 0.16, 0.06], [0.7, 0.12, 0.05], [0.9, 0.26, 0.04]].forEach(function (c) { var cx = w * c[0], cy = h * c[1], r = u * c[2]; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.arc(cx + r, cy + r * 0.2, r * 0.8, 0, 7); ctx.arc(cx - r, cy + r * 0.25, r * 0.7, 0, 7); ctx.fill(); });
+            ctx.fillStyle = '#8fd0b0'; ctx.beginPath(); ctx.moveTo(0, h * 0.42); ctx.quadraticCurveTo(w * 0.3, h * 0.2, w * 0.6, h * 0.36); ctx.quadraticCurveTo(w * 0.85, h * 0.26, w, h * 0.4); ctx.lineTo(w, h * 0.42); ctx.fill();
+            var lawn = ctx.createLinearGradient(0, h * 0.4, 0, h); lawn.addColorStop(0, '#74d44c'); lawn.addColorStop(1, '#379f38'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.4, w, h * 0.6);
+            ctx.fillStyle = 'rgba(255,255,255,0.14)'; for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.48 + m * 0.09), w, h * 0.04);
+            // far board with a shadow
+            var cx = w * 0.5, top = h * 0.3, bw = w * 0.22, bb = h * 0.66, bbw = w * 0.38;
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx + 8, bb + 6, bbw * 0.55, h * 0.03, 0, 0, 7); ctx.fill();
+            ctx.lineJoin = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(3, w * 0.014); ctx.fillStyle = '#f0c978';
             ctx.beginPath(); ctx.moveTo(cx - bw / 2, top); ctx.lineTo(cx + bw / 2, top); ctx.lineTo(cx + bbw / 2, bb); ctx.lineTo(cx - bbw / 2, bb); ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.strokeStyle = 'rgba(140,90,40,0.35)'; ctx.lineWidth = 1.5;
             for (var gI = 1; gI < 6; gI++) { var f = gI / 6; ctx.beginPath(); ctx.moveTo(cx - bw / 2 + bw * f, top + 3); ctx.lineTo(cx - bbw / 2 + bbw * f, bb - 3); ctx.stroke(); }
-            // hole
-            ctx.fillStyle = '#1a1010'; ctx.beginPath(); ctx.ellipse(cx, top + h * 0.075, w * 0.045, h * 0.024, 0, 0, 7); ctx.fill();
+            ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(3, w * 0.012); ctx.fillStyle = '#2a1a14';
+            ctx.beginPath(); ctx.ellipse(cx, top + h * 0.09, w * 0.05, h * 0.028, 0, 0, 7); ctx.fill(); ctx.stroke();
+            // legs
+            ctx.strokeStyle = OUT; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - bbw * 0.4, bb); ctx.lineTo(cx - bbw * 0.45, bb + h * 0.07); ctx.moveTo(cx + bbw * 0.4, bb); ctx.lineTo(cx + bbw * 0.45, bb + h * 0.07); ctx.stroke();
+            // pillow bag helper
+            function bag(x, y, s, rot, col, dark) {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.lineJoin = 'round';
+                ctx.fillStyle = col; ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(2.5, s * 0.07);
+                ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.46); ctx.quadraticCurveTo(0, -s * 0.58, s * 0.5, -s * 0.46); ctx.quadraticCurveTo(s * 0.58, 0, s * 0.5, s * 0.46); ctx.quadraticCurveTo(0, s * 0.58, -s * 0.5, s * 0.46); ctx.quadraticCurveTo(-s * 0.58, 0, -s * 0.5, -s * 0.46); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1.5, s * 0.035); ctx.setLineDash([s * 0.09, s * 0.07]); ctx.beginPath(); ctx.rect(-s * 0.38, -s * 0.34, s * 0.76, s * 0.68); ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(-s * 0.12, -s * 0.26, s * 0.24, s * 0.09, -0.1, 0, 7); ctx.fill();
+                ctx.restore();
+            }
+            bag(cx + bw * 0.34, top + h * 0.2, w * 0.07, 0.25, '#ff5a4a', '#ffd0c8');
             // bag arcing in
-            var k = (t * 0.0007) % 1, bx = cx + Math.sin(k * 6) * w * 0.02, by = h * 0.96 - k * h * 0.7 - Math.sin(k * Math.PI) * h * 0.16, bs = w * (0.07 - k * 0.04);
-            ctx.save(); ctx.translate(bx, by); ctx.rotate(k * 7); ctx.fillStyle = '#3d86ff'; ctx.strokeStyle = '#122a66'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.rect(-bs / 2, -bs / 2, bs, bs); ctx.fill(); ctx.stroke(); ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.strokeRect(-bs / 2 + 4, -bs / 2 + 4, bs - 8, bs - 8); ctx.restore();
+            var k = (t * 0.0007) % 1, bx = cx - w * 0.14 + k * w * 0.14, by = h * 0.94 - k * h * 0.62 - Math.sin(k * Math.PI) * h * 0.26, bs = w * (0.1 - k * 0.045);
+            bag(bx, by, bs, k * 6, '#3d86ff', '#cfe0ff');
         },
         archery: function (ctx, w, h, t) {
             t = t || 0;
@@ -1108,27 +1122,38 @@
         },
         cricket: function (ctx, w, h, t) {
             t = t || 0;
-            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.45); sky.addColorStop(0, '#4fb0ff'); sky.addColorStop(1, '#d4f0ff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-            // crowd wall
+            var u = Math.min(w, h), OUT = '#1b2a52';
+            var sky = ctx.createLinearGradient(0, 0, 0, h * 0.45); sky.addColorStop(0, '#4fb3ff'); sky.addColorStop(1, '#cfeeff'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+            // stand + crowd
             var cols = ['#ffd34d', '#ff8a7a', '#7ac7ff', '#ffffff', '#a9ec62', '#c46bff'];
-            ctx.fillStyle = '#6b7487'; ctx.fillRect(0, h * 0.12, w, h * 0.3);
-            for (var cy = 0; cy < 6; cy++) for (var cx = 0; cx < 26; cx++) { ctx.fillStyle = cols[(cx * 7 + cy * 3) % 6]; ctx.beginPath(); ctx.arc(w * (cx + 0.5 + (cy % 2) * 0.5) / 26, h * (0.16 + cy * 0.045), Math.max(2, w * 0.011), 0, 7); ctx.fill(); }
-            var lawn = ctx.createLinearGradient(0, h * 0.42, 0, h); lawn.addColorStop(0, '#6ac84c'); lawn.addColorStop(1, '#3f9a36'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.42, w, h * 0.58);
-            ctx.fillStyle = 'rgba(255,255,255,0.08)'; for (var m = 0; m < 5; m++) ctx.fillRect(0, h * (0.5 + m * 0.1), w, h * 0.05);
+            ctx.fillStyle = '#5b6680'; ctx.fillRect(0, h * 0.1, w, h * 0.34);
+            for (var cy = 0; cy < 6; cy++) for (var cx = 0; cx < 24; cx++) { var px = w * (cx + 0.5 + (cy % 2) * 0.5) / 24, py = h * (0.15 + cy * 0.046), pr = Math.max(2.5, w * 0.012); ctx.fillStyle = cols[(cx * 7 + cy * 3) % 6]; ctx.strokeStyle = 'rgba(27,42,82,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill(); ctx.stroke(); }
+            ctx.fillStyle = '#ffd34d'; ctx.fillRect(0, h * 0.44, w, h * 0.014);
+            var lawn = ctx.createLinearGradient(0, h * 0.44, 0, h); lawn.addColorStop(0, '#74d44c'); lawn.addColorStop(1, '#379f38'); ctx.fillStyle = lawn; ctx.fillRect(0, h * 0.454, w, h * 0.546);
+            ctx.fillStyle = 'rgba(255,255,255,0.12)'; for (var m = 0; m < 6; m++) ctx.fillRect(0, h * (0.52 + m * 0.09), w, h * 0.04);
             // pitch
-            ctx.fillStyle = '#dcc48c'; ctx.beginPath(); ctx.moveTo(w * 0.46, h * 0.44); ctx.lineTo(w * 0.54, h * 0.44); ctx.lineTo(w * 0.7, h * 1.0); ctx.lineTo(w * 0.3, h * 1.0); ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w * 0.36, h * 0.86); ctx.lineTo(w * 0.64, h * 0.86); ctx.stroke();
-            // bowler end stumps + batter
-            ctx.fillStyle = '#f7ecc8'; for (var s = -1; s <= 1; s++) ctx.fillRect(w * 0.5 + s * w * 0.008 - 1, h * 0.4, 2, h * 0.05);
-            ctx.fillStyle = '#e8483a'; ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(w * 0.5, h * 0.4, w * 0.012, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(w * 0.5 - w * 0.01, h * 0.415, w * 0.02, h * 0.06);
-            var bx = w * 0.45, by = h * 0.78;
-            ctx.fillStyle = '#2f86d8'; ctx.beginPath(); ctx.arc(bx, by - h * 0.17, w * 0.032, 0, 7); ctx.fill(); ctx.stroke();
-            ctx.beginPath(); ctx.rect(bx - w * 0.04, by - h * 0.14, w * 0.08, h * 0.15); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.fillRect(bx - w * 0.035, by + h * 0.01, w * 0.025, h * 0.14); ctx.fillRect(bx + w * 0.01, by + h * 0.01, w * 0.025, h * 0.14);
-            var sw = (Math.sin(t * 0.0025) * 0.5 + 0.5); ctx.save(); ctx.translate(bx + w * 0.05, by - h * 0.06); ctx.rotate(-0.4 - sw * 1.6); ctx.fillStyle = '#e8c27a'; ctx.fillRect(-w * 0.012, 0, w * 0.024, h * 0.2); ctx.restore();
+            ctx.lineJoin = 'round'; ctx.fillStyle = '#e6cd92'; ctx.strokeStyle = OUT; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(w * 0.455, h * 0.46); ctx.lineTo(w * 0.545, h * 0.46); ctx.lineTo(w * 0.72, h * 1.02); ctx.lineTo(w * 0.28, h * 1.02); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(w * 0.33, h * 0.88); ctx.lineTo(w * 0.67, h * 0.88); ctx.stroke();
+            // stumps (far end)
+            ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.fillStyle = '#fff7d6';
+            for (var s = -1; s <= 1; s++) { ctx.fillRect(w * 0.5 + s * w * 0.009 - 1.6, h * 0.41, 3.2, h * 0.06); ctx.strokeRect(w * 0.5 + s * w * 0.009 - 1.6, h * 0.41, 3.2, h * 0.06); }
+            // bowler
+            ctx.fillStyle = '#ff6b5a'; ctx.beginPath(); ctx.arc(w * 0.575, h * 0.5, w * 0.012, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(w * 0.567, h * 0.512, w * 0.016, h * 0.05); ctx.strokeRect(w * 0.567, h * 0.512, w * 0.016, h * 0.05);
+            // batter, near end
+            var bx = w * 0.45, by = h * 0.9, bs = u * 0.1;
+            ctx.fillStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeStyle = OUT;
+            ctx.fillRect(bx - bs * 0.55, by - bs * 0.9, bs * 0.4, bs * 1.5); ctx.strokeRect(bx - bs * 0.55, by - bs * 0.9, bs * 0.4, bs * 1.5);
+            ctx.fillRect(bx + bs * 0.1, by - bs * 0.9, bs * 0.4, bs * 1.5); ctx.strokeRect(bx + bs * 0.1, by - bs * 0.9, bs * 0.4, bs * 1.5);
+            ctx.fillStyle = '#2f86ff'; ctx.beginPath(); ctx.rect(bx - bs * 0.7, by - bs * 2.1, bs * 1.4, bs * 1.3); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffd7a8'; ctx.beginPath(); ctx.arc(bx, by - bs * 2.5, bs * 0.45, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#1f6fe0'; ctx.beginPath(); ctx.arc(bx, by - bs * 2.65, bs * 0.46, Math.PI, 0); ctx.fill(); ctx.stroke();
+            var sw = Math.sin(t * 0.0025) * 0.5 + 0.5;
+            ctx.save(); ctx.translate(bx + bs * 0.6, by - bs * 1.4); ctx.rotate(-0.5 - sw * 1.7); ctx.fillStyle = '#f0c978'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.rect(-bs * 0.14, 0, bs * 0.28, bs * 1.7); ctx.fill(); ctx.stroke(); ctx.restore();
             // ball
-            var k = (t * 0.0008) % 1, ballx = w * (0.5 - 0.02 * k), bally = h * (0.42 + k * 0.4) - Math.sin(k * 3.14) * h * 0.08, br = w * (0.008 + k * 0.014);
-            ctx.fillStyle = '#d63a2a'; ctx.beginPath(); ctx.arc(ballx, bally, br, 0, 7); ctx.fill(); ctx.stroke();
+            var k = (t * 0.0008) % 1, ballx = w * (0.55 - 0.1 * k), bally = h * (0.5 + k * 0.38) - Math.sin(k * 3.14) * h * 0.07, br = w * (0.01 + k * 0.016);
+            ctx.fillStyle = '#e03a2a'; ctx.strokeStyle = OUT; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ballx, bally, br, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(ballx, bally, br * 0.6, 0.5, 2.5); ctx.stroke();
         }
     };
     // Game-scene canvases get a subtle idle-loop animation (DBZ-054): reticle

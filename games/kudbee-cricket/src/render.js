@@ -220,9 +220,10 @@ KCK.Render = {
     if (!p) return;
     if (sh) { const hs = KCK.Util.clamp(1 - b.z / 25, 0.3, 1); ctx.fillStyle = 'rgba(0,0,0,' + (0.28 * hs) + ')'; ctx.beginPath(); ctx.ellipse(sh.x, sh.y, Math.max(3, 0.14 * sh.k) * (0.7 + 0.3 * hs), Math.max(1.6, 0.06 * sh.k), 0, 0, 7); ctx.fill(); }
     if (trail && trail.length) {
-      for (let i = 0; i < trail.length; i++) { const q = this.proj(trail[i].x, trail[i].y, trail[i].z); if (!q) continue; const a = (i + 1) / trail.length; ctx.fillStyle = 'rgba(255,255,255,' + (0.35 * a) + ')'; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1.5, 0.09 * q.k * a), 0, 7); ctx.fill(); }
+      for (let i = 0; i < trail.length; i++) { const q = this.proj(trail[i].x, trail[i].y, trail[i].z); if (!q) continue; const a = (i + 1) / trail.length; ctx.fillStyle = 'rgba(255,236,170,' + (0.55 * a) + ')'; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(2, 0.12 * q.k * a + 1.5 * a), 0, 7); ctx.fill(); }
     }
-    const r = Math.max(3.6 + 2.2 * this.blend, 0.17 * p.k);
+    const r = Math.max(4.6 + 2.6 * this.blend, 0.17 * p.k);
+    if (this.blend > 0.3) { ctx.save(); ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 14; ctx.fillStyle = 'rgba(255,210,90,0.5)'; ctx.beginPath(); ctx.arc(p.x, p.y, r + 2, 0, 7); ctx.fill(); ctx.restore(); }
     ctx.beginPath(); ctx.arc(p.x, p.y, r + 1.6, 0, 7); ctx.fillStyle = this.OUT; ctx.fill();
     const g = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r); g.addColorStop(0, '#ff8f7a'); g.addColorStop(1, '#c3281c');
     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fillStyle = g; ctx.fill();

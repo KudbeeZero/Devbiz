@@ -223,6 +223,7 @@ KCK.UI = {
     U.bubble(ctx, 'KUDBEE', 480, 98, 44, '#ffffff', '#cfe9ff', -0.03);
     U.bubble(ctx, 'CRICKET', 480, 188, 98, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
     U.text(ctx, 'CHASE THE TARGET  \u00b7  TIME YOUR SHOTS', 480, 226, 20, '#ffffff', 'center');
+    ctx.save(); ctx.fillStyle = 'rgba(14,30,66,0.62)'; U.rr(ctx, 236, 256, 488, 276, 22); ctx.fill(); ctx.restore();
     U.text(ctx, 'BOWLING', 480, 276, 18, '#ffe9a8', 'center');
     KCK.LEVELS.forEach((L, i) => U.button(ctx, g, 'lv' + i, 270 + i * 140, 286, 128, 44, L.name, { small: true, color: KCK.Store.data.difficulty === i ? 'green' : 'blue', selected: KCK.Store.data.difficulty === i }));
     U.text(ctx, 'MATCH', 480, 366, 18, '#ffe9a8', 'center');

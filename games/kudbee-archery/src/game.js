@@ -161,6 +161,7 @@ KAR.Game = class {
     f.done = true;
     const e = res.hit;
     if (e) this.pops.push({ x: e.x, y: e.y, age: 0, ring: res.ring, team: f.shooter });
+    if (e && res.ring >= 9) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < (res.x ? 26 : 14); i++) { const a = this.rng() * 6.283, sp = 80 + this.rng() * 220; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, g: 320, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 12, life: 0.7 + this.rng() * 0.6, col: ['#fff6a8', '#ffd34d', '#ffffff'][i % 3] }); } }
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
     if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
@@ -272,10 +273,13 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD);
-    R.drawWorld(ctx, this.time, m.wind);
-    R.drawTarget(ctx, this.time, m.wind);
-    this._drawArrows(ctx);
-    if (this.screen !== 'menu') this._drawAim(ctx);
+    if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
+    else {
+      R.drawWorld(ctx, this.time, m.wind);
+      R.drawTarget(ctx, this.time, m.wind);
+      this._drawArrows(ctx);
+    }
+    if (this.screen !== 'menu') { R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx); }
     ctx.restore();
     U.begin();
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-4, -2.5, 8, 5); ctx.restore(); }
