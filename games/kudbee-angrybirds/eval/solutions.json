@@ -1,0 +1,299 @@
+{
+ "0": {
+  "name": "First Contact",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": 8
+   }
+  ],
+  "score": 39600,
+  "stars": 2
+ },
+ "1": {
+  "name": "Glass House",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 110,
+    "ability": null
+   },
+   {
+    "angle": 28,
+    "pull": 110,
+    "ability": 35
+   }
+  ],
+  "score": 29700,
+  "stars": 1
+ },
+ "2": {
+  "name": "Split Decision",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 8,
+    "pull": 110,
+    "ability": 8
+   }
+  ],
+  "score": 53100,
+  "stars": 3
+ },
+ "3": {
+  "name": "Stone Keep",
+  "shots": [
+   {
+    "angle": 23,
+    "pull": 100,
+    "ability": null
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 35
+   }
+  ],
+  "score": 49200,
+  "stars": 2
+ },
+ "4": {
+  "name": "Powder Keg",
+  "shots": [
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 20
+   },
+   {
+    "angle": 78,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 35
+   }
+  ],
+  "score": 40500,
+  "stars": 1
+ },
+ "5": {
+  "name": "Bridge Gap",
+  "shots": [
+   {
+    "angle": 78,
+    "pull": 85,
+    "ability": 20
+   },
+   {
+    "angle": 33,
+    "pull": 100,
+    "ability": 50
+   },
+   {
+    "angle": 58,
+    "pull": 85,
+    "ability": 35
+   }
+  ],
+  "score": 56200,
+  "stars": 1
+ },
+ "6": {
+  "name": "Twin Towers",
+  "shots": [
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 48,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 65700,
+  "stars": 1
+ },
+ "7": {
+  "name": "Hive Sentinel",
+  "shots": [
+   {
+    "angle": 58,
+    "pull": 110,
+    "ability": 70
+   },
+   {
+    "angle": 13,
+    "pull": 100,
+    "ability": 35
+   },
+   {
+    "angle": 73,
+    "pull": 100,
+    "ability": 20
+   },
+   {
+    "angle": 43,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 78600,
+  "stars": 1
+ },
+ "8": {
+  "name": "Snow Day",
+  "shots": [
+   {
+    "angle": 28,
+    "pull": 70,
+    "ability": 35
+   },
+   {
+    "angle": 8,
+    "pull": 100,
+    "ability": 8
+   }
+  ],
+  "score": 30700,
+  "stars": 2
+ },
+ "9": {
+  "name": "Boulder Run",
+  "shots": [
+   {
+    "angle": 8,
+    "pull": 110,
+    "ability": 20
+   },
+   {
+    "angle": 58,
+    "pull": 100,
+    "ability": 50
+   }
+  ],
+  "score": 41000,
+  "stars": 2
+ },
+ "10": {
+  "name": "Cart Crashers",
+  "shots": [
+   {
+    "angle": 43,
+    "pull": 70,
+    "ability": 20
+   }
+  ],
+  "score": 52600,
+  "stars": 3
+ },
+ "11": {
+  "name": "Ice Palace",
+  "shots": [
+   {
+    "angle": 73,
+    "pull": 55,
+    "ability": 70
+   },
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": 20
+   }
+  ],
+  "score": 63000,
+  "stars": 2
+ },
+ "12": {
+  "name": "TNT Valley",
+  "shots": [
+   {
+    "angle": 73,
+    "pull": 85,
+    "ability": 35
+   },
+   {
+    "angle": 13,
+    "pull": 110,
+    "ability": null
+   }
+  ],
+  "score": 60900,
+  "stars": 2
+ },
+ "13": {
+  "name": "Behind the Hill",
+  "shots": [
+   {
+    "angle": 48,
+    "pull": 100,
+    "ability": 70
+   },
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": 20
+   }
+  ],
+  "score": 59500,
+  "stars": 2
+ },
+ "14": {
+  "name": "Twin Peaks",
+  "shots": [
+   {
+    "angle": 63,
+    "pull": 85,
+    "ability": 8
+   },
+   {
+    "angle": 23,
+    "pull": 70,
+    "ability": 8
+   }
+  ],
+  "score": 59800,
+  "stars": 1
+ },
+ "15": {
+  "name": "Frost King",
+  "shots": [
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": 35
+   },
+   {
+    "angle": 18,
+    "pull": 70,
+    "ability": 20
+   },
+   {
+    "angle": 78,
+    "pull": 110,
+    "ability": 8
+   },
+   {
+    "angle": 28,
+    "pull": 85,
+    "ability": 50
+   }
+  ],
+  "score": 80000,
+  "stars": 1
+ }
+}
