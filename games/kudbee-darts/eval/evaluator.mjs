@@ -18,7 +18,7 @@ const rec = (id, pass, note) => { R.push({ id, pass, note }); console.log(pass ?
 const launchOpts = { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'] };
 if (existsSync('/opt/pw-browsers/chromium')) launchOpts.executablePath = '/opt/pw-browsers/chromium';
 const browser = await chromium.launch(launchOpts);
-const page = await browser.newPage({ viewport: { width: 960, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 960, height: 720 }, deviceScaleFactor: 2 });
 
 const pageErrors = [], consoleErrs = [];
 page.on('pageerror', (e) => pageErrors.push(String(e)));
@@ -135,6 +135,7 @@ const toPx = (lx, ly) => ({ x: canvasBox.x + (lx / 960) * canvasBox.w, y: canvas
 // Aim at the treble 20, press, drag a clean flick upward, release.
 const t20 = await page.evaluate(() => window.DARTS.board.targetPoint('T20'));
 const start = toPx(t20.x, t20.y + 150), end = toPx(t20.x, t20.y);
+await page.evaluate(() => { const g = window.DARTS; window.__lens = []; let inFlight = false; const dd = g.sprites.drawDart.bind(g.sprites); g.sprites.drawDart = function (ctx, len) { if (inFlight) window.__lens.push(len); return dd.apply(null, arguments); }; const df = g.dart.drawFlight.bind(g.dart); g.dart.drawFlight = function () { inFlight = true; try { return df.apply(null, arguments); } finally { inFlight = false; } }; });
 await page.evaluate(() => { const g = window.DARTS, o = g.dart.release.bind(g.dart); g.dart.release = function () { const p = g.input.pointer; window.__rel = { relSpeed: Math.round(p.relSpeed), swipeLen: Math.round(p.swipeLen), isAI: g.dart.isAI }; return o(); }; });
 await page.mouse.move(start.x, start.y);
 await page.mouse.down(); await step(2);
@@ -152,7 +153,8 @@ rec('flick-throws', thrown.state === 'flying', `release=${JSON.stringify(thrown.
 
 // Walk the flight frame by frame, capturing frames + render timings.
 const FT = 0.42;
-const shots = { 0.35: '04-flight-early.png', 0.6: '05-flight-mid.png', 0.9: '06-flight-late.png' };
+const shots = { 0.12: '04a-flight.png', 0.35: '04-flight-early.png', 0.55: '04b-flight.png', 0.7: '05-flight-mid.png', 0.85: '04c-flight.png', 0.95: '06-flight-late.png' };
+const clips = [];
 const frameMs = [];
 let nextShot = Object.keys(shots).map(Number).sort();
 for (let i = 0; i < 40; i++) {
@@ -161,10 +163,14 @@ for (let i = 0; i < 40; i++) {
     return { ms: window.__realNow() - t0, state: g.dart.state, k: g.dart._ft / 0.42, game: g.state };
   });
   if (st.state === 'flying') frameMs.push(st.ms);
-  if (nextShot.length && st.state === 'flying' && st.k >= nextShot[0]) { await page.screenshot({ path: OUT + '/' + shots[nextShot[0]] }); nextShot.shift(); }
+  if (nextShot.length && st.state === 'flying' && st.k >= nextShot[0]) { clips.push((await page.screenshot({ clip: { x: 340, y: 90, width: 280, height: 440 } })).toString('base64')); await page.screenshot({ path: OUT + '/' + shots[nextShot[0]] }); nextShot.shift(); }
   if (st.state !== 'flying') break;
 }
+const lensFlight = await page.evaluate(() => window.__lens.slice());
 const flown = await page.evaluate(() => { const g = window.DARTS; return { dartsThisTurn: g.dartsThisTurn, stuck: g.stuckDarts.length, bounce: g.bounceDarts.length, particles: g.particles.pool.active ? g.particles.pool.active.length : null }; });
+// Depth continuity: the last in-flight draw must match the stuck dart's drawn size (40), or the dart pops on landing.
+const lastFlightLen = lensFlight.length ? lensFlight[lensFlight.length - 1] : 0;
+rec('flight-size-continuity', Math.abs(lastFlightLen - 40) <= 4 && lensFlight[0] > lastFlightLen, `first flight len ${lensFlight[0] && lensFlight[0].toFixed(1)} -> last ${lastFlightLen.toFixed(1)} vs stuck 40`);
 rec('flight-shots', nextShot.length === 0, nextShot.length ? 'missed capture points ' + nextShot.join(',') : 'captured early/mid/late flight frames');
 rec('dart-lands', flown.dartsThisTurn === 1 && (flown.stuck + flown.bounce) === 1, `dartsThisTurn=${flown.dartsThisTurn} stuck=${flown.stuck} bounce=${flown.bounce}`);
 await page.screenshot({ path: OUT + '/07-impact.png' });
@@ -182,6 +188,12 @@ const perf = { flightAvg: avg(frameMs), flightMax: mx(frameMs), impactAvg: avg(i
 console.log('  frame cost (update+render, software-rendered headless, not a device FPS): ' + JSON.stringify(Object.fromEntries(Object.entries(perf).map(([k, v]) => [k, +v.toFixed(2) + 'ms']))));
 rec('frame-cost-sane', perf.flightAvg < 33 && perf.impactAvg < 33, `flight avg ${perf.flightAvg.toFixed(1)}ms (max ${perf.flightMax.toFixed(1)}), impact avg ${perf.impactAvg.toFixed(1)}ms (max ${perf.impactMax.toFixed(1)}) — headless software canvas, relative only`);
 
+if (clips.length) {
+  const sheet = await browser.newPage({ viewport: { width: 280 * clips.length, height: 440 } });
+  await sheet.setContent('<body style="margin:0;display:flex;background:#000">' + clips.map((c) => '<img width=280 height=440 src="data:image/png;base64,' + c + '">').join('') + '</body>');
+  await sheet.screenshot({ path: OUT + '/flight-sheet.png' });
+  await sheet.close();
+}
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
 
 await browser.close();

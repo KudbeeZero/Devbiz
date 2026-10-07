@@ -24,6 +24,8 @@
   const MIN_REL_SPEED = 240;    // px/s: too slow to count as a flick
 
   const FLIGHT_TIME = 0.42;     // seconds, cosmetic (loft hang-time)
+  const BASE_LEN = 46;          // flight sprite length at scale 1
+  const STUCK_LEN = 40;         // Sprites.drawStuckDart length
 
   function Dart(game) {
     this.game = game;
@@ -443,7 +445,8 @@
     const f = this._bezierFlight(k);
     const e = f.e, x = f.x, y = f.y;
 
-    const scale = Util.lerp(1.45, 0.48, e);
+    // Ends at the stuck dart's drawn length (40/46) so the dart doesn't pop in size on contact.
+    const scale = Util.lerp(1.5, STUCK_LEN / BASE_LEN, e);
 
     // Shadow converging on the impact point: as the dart closes in, a soft
     // dark ellipse tightens onto the exact landing spot — reads as depth.
@@ -456,6 +459,18 @@
       ctx.ellipse(this.landX + (1 - sa) * 10, this.landY + (1 - sa) * 16,
         15 * (1.7 - sa * 0.7), 8 * (1.7 - sa * 0.7), 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    }
+
+    // Landing marker: a ring that tightens onto the exact scoring point as the dart
+    // closes in — the strongest depth/aim cue, and it costs one thin stroke.
+    if (e > 0.3 && !this.game.reduceMotion) {
+      const m = (e - 0.3) / 0.7;
+      ctx.save();
+      ctx.strokeStyle = (this.skin && this.skin.color) || '#39e6ff';
+      ctx.globalAlpha = 0.15 + 0.5 * m;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(this.landX, this.landY, 30 - 22 * m, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
 
@@ -492,7 +507,11 @@
     // Harder throws spin faster, softer throws spin slower.
     const powerMult = Math.max(0.7, Math.min(1.8, this._powf));
     const spin = (this._roll || 1) * (k * 13 * powerMult);
-    const roll = 0.4 + 0.6 * Math.abs(Math.cos(spin));
+    // Roll squashes the silhouette, easing to 1 on contact (a thin sliver read as a streak).
+    const roll = Util.lerp(0.55 + 0.45 * Math.abs(Math.cos(spin)), 1, e * e);
+    // Foreshortening: thrown away from the camera the dart starts pointing into the
+    // screen (short) and comes side-on as it arcs over.
+    const along = 0.6 + 0.4 * Util.smooth(Math.min(1, k * 1.6));
 
     // Tail flutter: a tiny shimmy that fades as it lands (flights "biting" air).
     const flutter = Math.sin(k * 26) * (1 - e) * 0.05;
@@ -500,8 +519,8 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang + flutter);
-    ctx.scale(1, roll);
-    this.game.sprites.drawDart(ctx, 46 * scale, this.skin, k, this.parts);
+    ctx.scale(along, roll);
+    this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
     ctx.restore();
   };
 

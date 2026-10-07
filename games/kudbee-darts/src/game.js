@@ -709,7 +709,12 @@
         const el = this.time - d.landT;
         ang += Math.sin(el * 46) * Math.max(0, 0.14 - el * 0.6);
       }
+      // Thunk: a fresh dart arrives slightly oversized and settles into the board.
+      let thunk = 1;
+      if (!this.reduceMotion && d.landT != null) thunk += 0.16 * Math.max(0, 1 - (this.time - d.landT) / 0.11);
+      if (thunk !== 1) { ctx.save(); ctx.translate(d.x, d.y); ctx.scale(thunk, thunk); ctx.translate(-d.x, -d.y); }
       this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, ang, d.parts);
+      if (thunk !== 1) ctx.restore();
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
