@@ -422,10 +422,10 @@ KAB.Game = class {
     ctx.restore();
 
     KAB.UI.begin();
-    if (this.screen === 'play' || this.screen === 'paused' || this.screen === 'won' || this.screen === 'lost') KAB.UI.hud(ctx, this);
+    if (this.screen === 'play' || this.screen === 'won' || this.screen === 'lost') KAB.UI.hud(ctx, this);
     if (this.screen === 'menu') KAB.UI.menu(ctx, this);
     else if (this.screen === 'select') KAB.UI.select(ctx, this);
-    else if (this.screen === 'paused') { KAB.UI.buttons.length = 0; KAB.UI.pause(ctx, this); }
+    else if (this.screen === 'paused') KAB.UI.pause(ctx, this);
     else if (this.screen === 'won') { KAB.UI.buttons.length = 0; KAB.UI.won(ctx, this); }
     else if (this.screen === 'lost') { KAB.UI.buttons.length = 0; KAB.UI.lost(ctx, this); }
 
