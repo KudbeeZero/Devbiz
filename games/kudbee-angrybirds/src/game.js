@@ -222,6 +222,7 @@ KAB.Game = class {
     this._firstGesture();
     const p = this._pt(e);
     const i = KAB.UI.hit(p.x, p.y);
+    console.log(`[CLICK] coords=(${p.x.toFixed(0)}, ${p.y.toFixed(0)}), button_hit=${i>=0 ? KAB.UI.buttons[i].id : 'none'}, buttons=${KAB.UI.buttons.length}`);
     if (i >= 0) { e.preventDefault(); this.activate(KAB.UI.buttons[i].id); return; }
     if (this.screen !== 'play') return;
     const w = this.world;
