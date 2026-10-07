@@ -56,11 +56,19 @@
     }
   };
 
-  /* Dart hitting the board: a tight cone of splinters + a glow flash. */
+  /* Enhanced dart impact: a tight cone of splinters + bright glow flash + secondary halo. */
   Particles.prototype.impact = function (x, y, color) {
-    this.burst(x, y, color || '#cfe9ff', 10, 220, { glow: true, life: 0.35, size: 2, drag: 3 });
-    this.burst(x, y, '#ffffff', 5, 120, { glow: true, life: 0.2, size: 1.5 });
-    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.16, size: 22, color: color || '#39e6ff', glow: true });
+    color = color || '#39e6ff';
+    // Primary splinter burst: high-velocity colored shards.
+    this.burst(x, y, color, 14, 240, { glow: true, life: 0.38, size: 2.2, drag: 2.8 });
+    // Secondary white core splinters for brightness.
+    this.burst(x, y, '#ffffff', 7, 140, { glow: true, life: 0.22, size: 1.8, drag: 3.2 });
+    // Bright initial impact flash (larger, punchier).
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.18, size: 28, color: color, glow: true });
+    // Secondary halo glow that expands slightly for depth.
+    this.emit({ x: x + Util.rand(-2, 2), y: y + Util.rand(-2, 2), vx: Util.rand(-8, 8), vy: Util.rand(-8, 8), life: 0.25, size: 16, color: color, glow: true, drag: 1.5 });
+    // Quick accent flash in white for extra punch.
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.10, size: 18, color: '#ffffff', glow: true });
   };
 
   /* Dart in-flight trail: glowing particles following the dart trajectory. */

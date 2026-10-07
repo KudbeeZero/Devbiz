@@ -345,21 +345,53 @@
     ctx.fillText(res.label + (res.score ? '  ' + res.score : ''), p.x, p.y - rr - 12);
     ctx.restore();
 
-    // Power gauge: a vertical bar beside the reticle that fills with the live
-    // flick speed; the green band is the committed-flick sweet spot.
+    // Enhanced power gauge: vertical bar beside the reticle with dynamic glow feedback.
+    // The green band is the committed-flick sweet spot.
     const gx = p.x + rr + 18, gy0 = p.y - 46, gh = 92, gw = 9;
     ctx.save();
+
+    // Outer glow/border effect scales with power input.
+    const glowIntensity = Math.min(1, this.power / 1.7) * 0.6;
+    ctx.shadowColor = 'rgba(57,230,255,0.5)';
+    ctx.shadowBlur = 8 + glowIntensity * 6;
+    ctx.fillStyle = 'rgba(10,16,32,0.85)';
+    this.game._roundRect ? this.game._roundRect(ctx, gx - 2, gy0 - 2, gw + 4, gh + 4, 4) : ctx.rect(gx - 2, gy0 - 2, gw + 4, gh + 4);
+    ctx.fill();
+
+    // Main gauge background.
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(10,16,32,0.7)';
     this.game._roundRect ? this.game._roundRect(ctx, gx, gy0, gw, gh, 4) : ctx.rect(gx, gy0, gw, gh);
     ctx.fill();
-    // sweet-spot band (0.85..1.15 of ideal)
+
+    // Sweet-spot band with enhanced glow (0.85..1.15 of ideal).
     const bandY = gy0 + gh * (1 - 1.15 / 1.7), bandH = gh * ((1.15 - 0.85) / 1.7);
-    ctx.fillStyle = 'rgba(124,255,178,0.30)'; ctx.fillRect(gx, bandY, gw, bandH);
+    ctx.fillStyle = 'rgba(124,255,178,0.35)';
+    ctx.shadowColor = 'rgba(124,255,178,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(gx - 1, bandY - 1, gw + 2, bandH + 2);
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = 'rgba(124,255,178,0.25)';
+    ctx.fillRect(gx, bandY, gw, bandH);
+
+    // Gauge fill with color feedback and dynamic glow.
     const f = Math.max(0, Math.min(1, this.power / 1.7));
     const inBand = this.power >= 0.85 && this.power <= 1.15;
-    ctx.fillStyle = inBand ? '#7CFFb2' : this.power > 1.15 ? '#ff5d3c' : '#39e6ff';
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-    ctx.fillRect(gx, gy0 + gh * (1 - f), gw, gh * f);
+    const fillCol = inBand ? '#7CFFb2' : this.power > 1.15 ? '#ff5d3c' : '#39e6ff';
+    const fillY = gy0 + gh * (1 - f);
+    const fillH = gh * f;
+
+    // Glow effect that intensifies in the sweet spot.
+    ctx.shadowColor = fillCol;
+    ctx.shadowBlur = inBand ? 12 : 8;
+    ctx.fillStyle = fillCol;
+    ctx.fillRect(gx, fillY, gw, fillH);
+
+    // Highlight line on the fill for depth.
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(gx + 1, fillY + 1, 2, fillH - 2);
+
     ctx.restore();
   };
 
@@ -417,29 +449,64 @@
       ctx.restore();
     }
 
-    // Motion streak: a short glowing ribbon along the recent arc, so the flick
-    // reads fast without ghost-drawing the whole dart repeatedly.
+    // Enhanced motion trail: multiple trailing points with fading glow for high-speed feel.
     if (k > 0.06 && !this.game.reduceMotion) {
-      const fb = this._bezierFlight(Math.max(0, k - 0.09));
-      const bxr = fb.x, byr = fb.y;
       const col = (this.skin && this.skin.color) || '#39e6ff';
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const grad = ctx.createLinearGradient(bxr, byr, x, y);
-      grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, col);
-      ctx.strokeStyle = grad;
-      ctx.globalAlpha = 0.4 * (1 - e * 0.5);
-      ctx.lineWidth = 5 * scale;
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(bxr, byr); ctx.lineTo(x, y); ctx.stroke();
+
+      // Render 4 trail segments with fading opacity for smooth glow effect.
+      const trailSteps = 4;
+      for (let i = 0; i < trailSteps; i++) {
+        const trailK = Math.max(0, k - (0.06 + i * 0.04));
+        if (trailK <= 0) continue;
+        const fb = this._bezierFlight(trailK);
+        const nextK = Math.max(0, k - (0.06 + (i - 1) * 0.04));
+        const fn = i === 0 ? f : this._bezierFlight(nextK);
+
+        const grad = ctx.createLinearGradient(fb.x, fb.y, fn.x, fn.y);
+        grad.addColorStop(0, `rgba(0,0,0,0)`);
+        grad.addColorStop(1, col);
+
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = (0.5 - i * 0.1) * (1 - e * 0.5);
+        ctx.lineWidth = (6 - i * 1.2) * scale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(fb.x, fb.y);
+        ctx.lineTo(fn.x, fn.y);
+        ctx.stroke();
+      }
+
+      // Core bright trail for extra punch.
+      if (k > 0.10) {
+        const fb = this._bezierFlight(Math.max(0, k - 0.05));
+        const grad = ctx.createLinearGradient(fb.x, fb.y, x, y);
+        grad.addColorStop(0, `rgba(0,0,0,0)`);
+        grad.addColorStop(0.6, col);
+        grad.addColorStop(1, col);
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = 0.7 * (1 - e * 0.4);
+        ctx.lineWidth = 3.5 * scale;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(fb.x, fb.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
       ctx.restore();
     }
+
     // Travel angle = Bézier tangent, with a hair of extra droop near landing.
     const ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
-    // Barrel roll: squashes the silhouette vertically as it spins.
-    const spin = (this._roll || 1) * (k * 13);
+
+    // Enhanced barrel roll: spin speed scales with throw power for realism.
+    // Harder throws spin faster, softer throws spin slower.
+    const powerMult = Math.max(0.7, Math.min(1.8, this._powf));
+    const spin = (this._roll || 1) * (k * 13 * powerMult);
     const roll = 0.4 + 0.6 * Math.abs(Math.cos(spin));
+
     // Tail flutter: a tiny shimmy that fades as it lands (flights "biting" air).
     const flutter = Math.sin(k * 26) * (1 - e) * 0.05;
 
