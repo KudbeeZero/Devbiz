@@ -49,6 +49,8 @@
     this.ready = false;
   }
 
+  // Drawn length (logical px) of a dart stuck in the board. Flight scales to match it.
+  Sprites.STUCK_LEN = 48;
   Sprites.SKINS = SKINS;
   Sprites.TIPS = TIPS;
   Sprites.FLIGHTS = FLIGHTS;
@@ -154,7 +156,7 @@
     ctx.globalAlpha = 0.32;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(x, y, 7, 3, ang, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 8, 3.5, ang, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -162,7 +164,7 @@
     ctx.translate(x, y);
     ctx.rotate(ang);
     // Tip is at origin already; nudge in micro-amount so it reads as embedded.
-    this.drawDart(ctx, 40, skin, 0, parts);
+    this.drawDart(ctx, Sprites.STUCK_LEN, skin, 0, parts);
     ctx.restore();
   };
 

@@ -239,7 +239,6 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = a * 0.55;
-    ctx.shadowColor = color; ctx.shadowBlur = Rpx * 0.06;
     const half = 9 * D2R;
 
     if (res.ring === 'inbull') {
@@ -258,14 +257,19 @@
         sector(ctx, cx, cy, R.outBull * Rpx, R.trbInner * Rpx, aS, aE, color);
         sector(ctx, cx, cy, R.trbOuter * Rpx, R.dblInner * Rpx, aS, aE, color);
       }
-      // crisp outline so the wedge pops on the brightest part of the flash.
-      ctx.globalAlpha = a * 0.9; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, Rpx * 0.01);
+      // Outline: a wide soft pass fakes the halo (a real shadowBlur on a whole
+      // wedge cost ~6ms/frame in software raster), then a crisp pass on top.
       const ro = res.ring === 'double' ? R.dblOuter : res.ring === 'treble' ? R.trbOuter : R.dblInner;
       const ri = res.ring === 'double' ? R.dblInner : res.ring === 'treble' ? R.trbInner : R.outBull;
-      ctx.beginPath();
-      ctx.arc(cx, cy, ro * Rpx, aS, aE, false);
-      ctx.arc(cx, cy, ri * Rpx, aE, aS, true);
-      ctx.closePath(); ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineJoin = 'round';
+      const outline = function () {
+        ctx.beginPath();
+        ctx.arc(cx, cy, ro * Rpx, aS, aE, false);
+        ctx.arc(cx, cy, ri * Rpx, aE, aS, true);
+        ctx.closePath(); ctx.stroke();
+      };
+      ctx.globalAlpha = a * 0.22; ctx.lineWidth = Rpx * 0.05; outline();
+      ctx.globalAlpha = a * 0.9; ctx.lineWidth = Math.max(1.5, Rpx * 0.01); outline();
     }
     ctx.restore();
     ctx.globalCompositeOperation = 'source-over';

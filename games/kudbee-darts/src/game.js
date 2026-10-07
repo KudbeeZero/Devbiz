@@ -349,7 +349,7 @@
     // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
     if (!isMiss) {
-      this.particles.impact(lx, ly, skinCol);
+      if (!this.reduceMotion) this.particles.impact(lx, ly, skinCol);
       this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
     }
     // Stuck dart: lean derives from the actual throw trajectory (hand -> landing),
@@ -486,7 +486,7 @@
       ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
       ctx.translate(b.x, b.y);
       ctx.rotate(b.rot);
-      this.sprites.drawDart(ctx, 48, b.skin, 0, b.parts);
+      this.sprites.drawDart(ctx, KD.Sprites.STUCK_LEN + 10, b.skin, 0, b.parts);
       ctx.restore();
     }
   };
@@ -709,10 +709,16 @@
         const el = this.time - d.landT;
         ang += Math.sin(el * 46) * Math.max(0, 0.14 - el * 0.6);
       }
+      // Thunk: a fresh dart arrives slightly oversized and settles into the board.
+      let thunk = 1;
+      if (!this.reduceMotion && d.landT != null) thunk += 0.16 * Math.max(0, 1 - (this.time - d.landT) / 0.11);
+      if (thunk !== 1) { ctx.save(); ctx.translate(d.x, d.y); ctx.scale(thunk, thunk); ctx.translate(-d.x, -d.y); }
       this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, ang, d.parts);
+      if (thunk !== 1) ctx.restore();
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
+    this.dart.drawHeld(ctx);
     this.particles.draw(ctx);
     this.dart.drawReticle(ctx);
     ctx.restore();

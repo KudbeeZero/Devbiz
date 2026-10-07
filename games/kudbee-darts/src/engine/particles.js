@@ -36,6 +36,23 @@
     );
   }
 
+  // Pre-blurred glow disc per colour. A drawImage of this is far cheaper than
+  // ctx.shadowBlur on every particle, which software/mobile rasterisers pay for
+  // per draw call.
+  const GLOW = {};
+  Particles.glowSprite = function (color) {
+    let c = GLOW[color];
+    if (c) return c;
+    const S = 64;
+    c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    rg.addColorStop(0, color); rg.addColorStop(0.28, color); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, S, S);
+    GLOW[color] = c;
+    return c;
+  };
+
   Particles.prototype.emit = function (cfg) { return this.pool.spawn(cfg); };
 
   Particles.prototype.burst = function (x, y, color, count, speed, opts) {
@@ -56,11 +73,34 @@
     }
   };
 
-  /* Dart hitting the board: a tight cone of splinters + a glow flash. */
+  /* Premium dart impact: ultra-dramatic multi-layer explosion + halos + streaks. */
   Particles.prototype.impact = function (x, y, color) {
-    this.burst(x, y, color || '#cfe9ff', 10, 220, { glow: true, life: 0.35, size: 2, drag: 3 });
-    this.burst(x, y, '#ffffff', 5, 120, { glow: true, life: 0.2, size: 1.5 });
-    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.16, size: 22, color: color || '#39e6ff', glow: true });
+    color = color || '#39e6ff';
+    // Primary splinter burst: high-velocity colored shards (denser).
+    this.burst(x, y, color, 18, 280, { glow: true, life: 0.42, size: 2.4, drag: 2.6 });
+    // Secondary white core splinters for brightness (more sparkle).
+    this.burst(x, y, '#ffffff', 10, 160, { glow: true, life: 0.26, size: 2.0, drag: 3.0 });
+    // Tertiary accent splinters for extra layers.
+    this.burst(x, y, color, 8, 200, { glow: true, life: 0.30, size: 1.5, drag: 2.2 });
+    // Massive initial impact flash (very bright, very large).
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.20, size: 36, color: color, glow: true });
+    // Secondary halo glow that expands for depth.
+    this.emit({ x: x + Util.rand(-3, 3), y: y + Util.rand(-3, 3), vx: Util.rand(-12, 12), vy: Util.rand(-12, 12), life: 0.28, size: 22, color: color, glow: true, drag: 1.2 });
+    // Tertiary halo for multi-ring effect.
+    this.emit({ x: x + Util.rand(-2, 2), y: y + Util.rand(-2, 2), vx: Util.rand(-6, 6), vy: Util.rand(-6, 6), life: 0.22, size: 14, color: color, glow: true, drag: 1.8 });
+    // White core flash for extreme punch.
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.12, size: 24, color: '#ffffff', glow: true });
+    // Ultra-quick accent flash for visual snap.
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.08, size: 20, color: '#ffffff', glow: true });
+    // Extra sparkle streaks for premium feel (outward light rays).
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const s = 180 + Util.rand(-40, 40);
+      this.emit({
+        x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.25, size: 1.5, color: '#ffffff', glow: true, drag: 2.8,
+      });
+    }
   };
 
   /* Dart in-flight trail: glowing particles following the dart trajectory. */
@@ -232,7 +272,8 @@
         ctx.shadowBlur = 0;
         continue;
       }
-      if (p.glow) { ctx.shadowColor = p.color; ctx.shadowBlur = 12; }
+      const dot = p.glow && !p.streak && !p.rect;
+      if (p.glow && !dot) { ctx.shadowColor = p.color; ctx.shadowBlur = 12; }
       ctx.fillStyle = p.color;
       if (p.streak) {
         const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 1;
@@ -256,9 +297,14 @@
         ctx.restore();
       } else {
         const s = p.shrink ? p.size * (0.3 + k * 0.7) : p.size;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
-        ctx.fill();
+        if (dot) {
+          const h = (s + 9) * 2;                       // halo reaches ~9px past the core, like the old blur
+          ctx.drawImage(Particles.glowSprite(p.color), p.x - h / 2, p.y - h / 2, h, h);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.shadowBlur = 0;
     }

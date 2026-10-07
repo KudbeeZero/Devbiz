@@ -24,6 +24,11 @@
   const MIN_REL_SPEED = 240;    // px/s: too slow to count as a flick
 
   const FLIGHT_TIME = 0.42;     // seconds, cosmetic (loft hang-time)
+  const BASE_LEN = 55;          // flight sprite length at scale 1
+  const START_SCALE = 1.9;      // flight size at the hand (closest to the camera)
+  const HAND_X = (g) => g.viewW / 2 + 120;   // throwing hand: right of the oche centre
+  const HAND_Y = (g) => g.viewH - 84;        // tip height — high enough to see the dart in hand
+  const STUCK_LEN = KD.Sprites.STUCK_LEN;   // Sprites.drawStuckDart length
 
   function Dart(game) {
     this.game = game;
@@ -222,8 +227,7 @@
 
     // Cosmetic flight: from the player's hand (just right of the oche centre)
     // up to the landing point, with a little hand-sway on the way.
-    this._fromX = this.game.viewW / 2 + 64;
-    this._fromY = this.game.viewH - 24;
+    this._fromX = HAND_X(this.game); this._fromY = HAND_Y(this.game);
     this._sway = (Math.random() * 2 - 1) * 22;
     this._roll = (Math.random() < 0.5 ? -1 : 1);
     if (this.isAI) { this._curl = (Math.random() * 2 - 1) * 0.25; this._powf = 1; }
@@ -345,21 +349,63 @@
     ctx.fillText(res.label + (res.score ? '  ' + res.score : ''), p.x, p.y - rr - 12);
     ctx.restore();
 
-    // Power gauge: a vertical bar beside the reticle that fills with the live
-    // flick speed; the green band is the committed-flick sweet spot.
+    // Enhanced power gauge: vertical bar beside the reticle with dynamic glow feedback.
+    // The green band is the committed-flick sweet spot.
     const gx = p.x + rr + 18, gy0 = p.y - 46, gh = 92, gw = 9;
     ctx.save();
-    ctx.fillStyle = 'rgba(10,16,32,0.7)';
-    this.game._roundRect ? this.game._roundRect(ctx, gx, gy0, gw, gh, 4) : ctx.rect(gx, gy0, gw, gh);
+
+    // Outer glow/border effect scales with power input.
+    const glowIntensity = Math.min(1, this.power / 1.7) * 0.6;
+    ctx.shadowColor = 'rgba(57,230,255,0.5)';
+    ctx.shadowBlur = 8 + glowIntensity * 6;
+    ctx.fillStyle = 'rgba(10,16,32,0.85)';
+    if (this.game._roundRect) {
+      this.game._roundRect(ctx, gx - 2, gy0 - 2, gw + 4, gh + 4, 4);
+    } else {
+      ctx.beginPath();
+      ctx.rect(gx - 2, gy0 - 2, gw + 4, gh + 4);
+    }
     ctx.fill();
-    // sweet-spot band (0.85..1.15 of ideal)
+
+    // Main gauge background.
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(10,16,32,0.7)';
+    if (this.game._roundRect) {
+      this.game._roundRect(ctx, gx, gy0, gw, gh, 4);
+    } else {
+      ctx.beginPath();
+      ctx.rect(gx, gy0, gw, gh);
+    }
+    ctx.fill();
+
+    // Sweet-spot band with enhanced glow (0.85..1.15 of ideal).
     const bandY = gy0 + gh * (1 - 1.15 / 1.7), bandH = gh * ((1.15 - 0.85) / 1.7);
-    ctx.fillStyle = 'rgba(124,255,178,0.30)'; ctx.fillRect(gx, bandY, gw, bandH);
+    ctx.fillStyle = 'rgba(124,255,178,0.35)';
+    ctx.shadowColor = 'rgba(124,255,178,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(gx - 1, bandY - 1, gw + 2, bandH + 2);
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = 'rgba(124,255,178,0.25)';
+    ctx.fillRect(gx, bandY, gw, bandH);
+
+    // Gauge fill with color feedback and dynamic glow.
     const f = Math.max(0, Math.min(1, this.power / 1.7));
     const inBand = this.power >= 0.85 && this.power <= 1.15;
-    ctx.fillStyle = inBand ? '#7CFFb2' : this.power > 1.15 ? '#ff5d3c' : '#39e6ff';
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-    ctx.fillRect(gx, gy0 + gh * (1 - f), gw, gh * f);
+    const fillCol = inBand ? '#7CFFb2' : this.power > 1.15 ? '#ff5d3c' : '#39e6ff';
+    const fillY = gy0 + gh * (1 - f);
+    const fillH = gh * f;
+
+    // Glow effect that intensifies in the sweet spot.
+    ctx.shadowColor = fillCol;
+    ctx.shadowBlur = inBand ? 12 : 8;
+    ctx.fillStyle = fillCol;
+    ctx.fillRect(gx, fillY, gw, fillH);
+
+    // Highlight line on the fill for depth.
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(gx + 1, fillY + 1, 2, fillH - 2);
+
     ctx.restore();
   };
 
@@ -392,6 +438,27 @@
     ctx.restore();
   };
 
+  // The dart in your hand: large in the foreground, tilted toward where you are
+  // aiming, so a throw starts from something you can see (first-person feel).
+  // Its tip sits on the flight's launch point, so release hands off seamlessly.
+  Dart.prototype.drawHeld = function (ctx) {
+    const g = this.game;
+    if (g.state !== 'play' || this.isAI || (this.state !== 'ready' && this.state !== 'aiming')) return;
+    const cur = g.players[g.current];
+    if (!cur || cur.isAI) return;
+    const tx = HAND_X(g), ty = HAND_Y(g);
+    const ax = this.state === 'aiming' ? this.aimX : g.board.cx;
+    const bob = g.reduceMotion ? 0 : Math.sin(g.time * 2.2) * 2.5;
+    const lean = Util.clamp((ax - tx) / g.viewW, -0.5, 0.5) * 0.7;
+    const gripped = this.state === 'aiming' ? 1 : 0;
+    ctx.save();
+    ctx.translate(tx, ty + bob);
+    ctx.rotate(-Math.PI / 2 + lean);
+    ctx.scale(0.7, 1);                       // pointing away from camera (matches the flight's first frame)
+    g.sprites.drawDart(ctx, BASE_LEN * START_SCALE, cur.skin(), 0.4 + gripped * 0.6, cur.dartParts || this.parts);
+    ctx.restore();
+  };
+
   // The cosmetic dart flying toward the board: arcs up, CURLS to the side
   // (quadratic-Bézier hook), scales for depth, rolls on its axis, and the
   // flights flutter — the Darts-of-Fury "loop in" feel.
@@ -401,7 +468,8 @@
     const f = this._bezierFlight(k);
     const e = f.e, x = f.x, y = f.y;
 
-    const scale = Util.lerp(1.45, 0.48, e);
+    // Ends at the stuck dart's drawn length (40/46) so the dart doesn't pop in size on contact.
+    const scale = Util.lerp(START_SCALE, STUCK_LEN / BASE_LEN, e);
 
     // Shadow converging on the impact point: as the dart closes in, a soft
     // dark ellipse tightens onto the exact landing spot — reads as depth.
@@ -417,37 +485,65 @@
       ctx.restore();
     }
 
-    // Motion streak: a short glowing ribbon along the recent arc, so the flick
-    // reads fast without ghost-drawing the whole dart repeatedly.
-    if (k > 0.06 && !this.game.reduceMotion) {
-      const fb = this._bezierFlight(Math.max(0, k - 0.09));
-      const bxr = fb.x, byr = fb.y;
-      const col = (this.skin && this.skin.color) || '#39e6ff';
+    // Landing marker: a ring that tightens onto the exact scoring point as the dart
+    // closes in — the strongest depth/aim cue, and it costs one thin stroke.
+    if (e > 0.3 && !this.game.reduceMotion) {
+      const m = (e - 0.3) / 0.7;
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      const grad = ctx.createLinearGradient(bxr, byr, x, y);
-      grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, col);
-      ctx.strokeStyle = grad;
-      ctx.globalAlpha = 0.4 * (1 - e * 0.5);
-      ctx.lineWidth = 5 * scale;
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(bxr, byr); ctx.lineTo(x, y); ctx.stroke();
+      ctx.strokeStyle = (this.skin && this.skin.color) || '#39e6ff';
+      ctx.globalAlpha = 0.15 + 0.5 * m;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(this.landX, this.landY, 30 - 22 * m, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
+
+    // Motion trail: tapered solid-colour segments sampled along the arc (no
+    // per-segment gradients, no shadowBlur — those dominated frame cost).
+    const col = (this.skin && this.skin.color) || '#39e6ff';
+    if (k > 0.05 && !this.game.reduceMotion) {
+      const SEG = 7, SPAN = 0.26;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = col; ctx.lineCap = 'round';
+      let px = x, py = y;
+      for (let i = 1; i <= SEG; i++) {
+        const q = this._bezierFlight(Math.max(0, k - SPAN * i / SEG));
+        const u = 1 - i / (SEG + 1);                      // 1 at the dart -> 0 at the tail
+        ctx.globalAlpha = 0.75 * u * (1 - e * 0.35);
+        ctx.lineWidth = (1.5 + 6.5 * u) * scale;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(q.x, q.y); ctx.stroke();
+        px = q.x; py = q.y;
+      }
+      // Soft halo on the dart itself (cached sprite, mid-flight).
+      const h = 54 * scale * Math.sin(Math.min(1, k) * Math.PI);
+      if (h > 2) {
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(KD.Particles.glowSprite(col), x - h / 2, y - h / 2, h, h);
+      }
+      ctx.restore();
+    }
+
     // Travel angle = Bézier tangent, with a hair of extra droop near landing.
     const ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
-    // Barrel roll: squashes the silhouette vertically as it spins.
-    const spin = (this._roll || 1) * (k * 13);
-    const roll = 0.4 + 0.6 * Math.abs(Math.cos(spin));
+
+    // Enhanced barrel roll: spin speed scales with throw power for realism.
+    // Harder throws spin faster, softer throws spin slower.
+    const powerMult = Math.max(0.7, Math.min(1.8, this._powf));
+    const spin = (this._roll || 1) * (k * 13 * powerMult);
+    // Roll squashes the silhouette, easing to 1 on contact (a thin sliver read as a streak).
+    const roll = Util.lerp(0.55 + 0.45 * Math.abs(Math.cos(spin)), 1, e * e);
+    // Foreshortening: thrown away from the camera the dart starts pointing into the
+    // screen (short) and comes side-on as it arcs over.
+    const along = 0.7 + 0.3 * Util.smooth(Math.min(1, k * 1.6));
+
     // Tail flutter: a tiny shimmy that fades as it lands (flights "biting" air).
     const flutter = Math.sin(k * 26) * (1 - e) * 0.05;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang + flutter);
-    ctx.scale(1, roll);
-    this.game.sprites.drawDart(ctx, 46 * scale, this.skin, k, this.parts);
+    ctx.scale(along, roll);
+    this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
     ctx.restore();
   };
 
