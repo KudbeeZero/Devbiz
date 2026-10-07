@@ -361,12 +361,9 @@ KAB.LEVELS = [
     birds: ['green', 'gold', 'green', 'egg', 'gold'], stars: [22500, 36500],
     theme: { world: 4, bg: 1, tag: 'BITCOIN', accent: '#f7931a', sky: ['#1a0f00', '#4a2500'], skyline: '#2a1500', mood: { tint: '#ffaa00', a: 0.35, glow: '#f7931a', gx: 700 } },
     build(b) {
-      b.col(720, [['stone', 70, 40], ['stone', 70, 40], ['armor']]);
-      b.col(660, [['stone', 50, 50], ['grunt']], 390);
-      b.col(780, [['stone', 50, 50], ['grunt']], 390);
-      b.col(600, [['wood', 30, 30], ['grunt']], 370);
-      b.col(840, [['wood', 30, 30], ['armor']], 370);
-      b.beam('stone', 720, 320, 160, 16);
+      b.col(600, [['wood', 40, 50], ['grunt']]);
+      b.col(720, [['stone', 50, 50], ['stone', 50, 50], ['armor']]);
+      b.col(840, [['wood', 40, 50], ['grunt']]);
       b.tnt(720, 500, 28);
     },
   },
@@ -375,11 +372,10 @@ KAB.LEVELS = [
     birds: ['cyan', 'green', 'gold', 'cyan', 'egg', 'green'], stars: [28000, 45000],
     theme: { world: 4, bg: 2, tag: 'ETHEREUM', accent: '#627eea', sky: ['#0a0a20', '#2a1a4a'], skyline: '#14125a', mood: { tint: '#7a7aff', a: 0.30, glow: '#627eea', gx: 650 } },
     build(b) {
-      b.col(540, [['glass', 28, 60], ['glass', 40, 40], ['grunt']]);
-      b.col(660, [['stone', 40, 70], ['tnt', 34], ['wood', 40, 40]]);
-      b.col(780, [['glass', 28, 60], ['stone', 40, 40], ['armor']]);
-      b.beam('stone', 720, 410, 160, 14);
-      b.col(900, [['stone', 40, 40], ['grunt']]);
+      b.col(540, [['glass', 30, 50], ['grunt']]);
+      b.col(720, [['stone', 50, 50], ['tnt', 34], ['armor']]);
+      b.col(900, [['glass', 30, 50], ['grunt']]);
+      b.beam('stone', 720, 420, 200, 16);
     },
   },
   {
@@ -400,11 +396,10 @@ KAB.LEVELS = [
     birds: ['gold', 'green', 'cyan', 'egg', 'gold', 'egg'], stars: [32000, 50000],
     theme: { world: 4, bg: 2, tag: 'WEB3 TREASURE', accent: '#ff00ff', sky: ['#1a0033', '#4a0a6a'], skyline: '#2a0a4a', mood: { tint: '#ff66ff', a: 0.40, glow: '#ff00ff', gx: 700 } },
     build(b) {
-      b.col(600, [['wood', 45, 45], ['wood', 45, 45], ['grunt']]);
+      b.col(600, [['wood', 40, 50], ['grunt']]);
       b.col(720, [['stone', 50, 50], ['stone', 50, 50], ['tnt', 34], ['armor']]);
-      b.col(840, [['wood', 45, 45], ['wood', 45, 45], ['grunt']]);
-      b.beam('stone', 720, 370, 150, 18);
-      b.col(720, [['glass', 28, 28]], 480);
+      b.col(840, [['wood', 40, 50], ['grunt']]);
+      b.beam('stone', 720, 410, 160, 18);
     },
   },
   {
@@ -424,11 +419,10 @@ KAB.LEVELS = [
     birds: ['gold', 'green', 'cyan', 'egg', 'gold', 'green', 'egg'], stars: [35000, 55000],
     theme: { world: 4, bg: 3, tag: 'HODL STRONG', accent: '#00ccff', sky: ['#001a3a', '#003d7a'], skyline: '#002a5a', mood: { tint: '#6af0ff', a: 0.35, glow: '#00ccff', gx: 720 } },
     build(b) {
-      b.col(580, [['stone', 60, 60], ['stone', 60, 60], ['grunt']]);
-      b.col(720, [['glass', 35, 70], ['stone', 45, 45], ['tnt', 34], ['armor']]);
-      b.col(860, [['stone', 60, 60], ['stone', 60, 60], ['grunt']]);
-      b.beam('stone', 720, 380, 180, 16);
-      b.tnt(720, 460, 30);
+      b.col(640, [['stone', 50, 50], ['grunt']]);
+      b.col(720, [['stone', 50, 50], ['stone', 50, 50], ['armor']]);
+      b.col(800, [['stone', 50, 50], ['grunt']]);
+      b.beam('stone', 720, 410, 160, 18);
     },
   },
 ];
