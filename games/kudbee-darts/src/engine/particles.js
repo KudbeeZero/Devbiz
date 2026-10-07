@@ -36,6 +36,23 @@
     );
   }
 
+  // Pre-blurred glow disc per colour. A drawImage of this is far cheaper than
+  // ctx.shadowBlur on every particle, which software/mobile rasterisers pay for
+  // per draw call.
+  const GLOW = {};
+  Particles.glowSprite = function (color) {
+    let c = GLOW[color];
+    if (c) return c;
+    const S = 64;
+    c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    rg.addColorStop(0, color); rg.addColorStop(0.28, color); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, S, S);
+    GLOW[color] = c;
+    return c;
+  };
+
   Particles.prototype.emit = function (cfg) { return this.pool.spawn(cfg); };
 
   Particles.prototype.burst = function (x, y, color, count, speed, opts) {
@@ -255,7 +272,8 @@
         ctx.shadowBlur = 0;
         continue;
       }
-      if (p.glow) { ctx.shadowColor = p.color; ctx.shadowBlur = 12; }
+      const dot = p.glow && !p.streak && !p.rect;
+      if (p.glow && !dot) { ctx.shadowColor = p.color; ctx.shadowBlur = 12; }
       ctx.fillStyle = p.color;
       if (p.streak) {
         const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 1;
@@ -279,9 +297,14 @@
         ctx.restore();
       } else {
         const s = p.shrink ? p.size * (0.3 + k * 0.7) : p.size;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
-        ctx.fill();
+        if (dot) {
+          const h = (s + 9) * 2;                       // halo reaches ~9px past the core, like the old blur
+          ctx.drawImage(Particles.glowSprite(p.color), p.x - h / 2, p.y - h / 2, h, h);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.shadowBlur = 0;
     }
