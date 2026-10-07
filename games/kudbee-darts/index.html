@@ -106,6 +106,7 @@
   (function () {
     var canvas = document.getElementById('game');
     var game = new KD.Game({ canvas: canvas });
+    window.DARTS = game;   // eval/debug hook (games/kudbee-darts/eval)
 
     // Load the asset manifest (procedural fallback if absent), then start.
     game.sprites.load('assets/manifest.json').then(function () {
