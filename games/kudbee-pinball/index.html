@@ -1343,9 +1343,6 @@ var ramp = null;                           // center loop-ramp trigger
       } else {
         b.railT = 0;
       }
-b.vy += (climbing ? launcher.LANE_G : G * levelGrav() * missionGravMod) * h;              // lighter gravity in the lane so power maps cleanly / warp speed halves gravity
-       // speed cap
-      var sp = len(b.vx, b.vy); if (sp > SPEED_CAP) { b.vx *= SPEED_CAP / sp; b.vy *= SPEED_CAP / sp; }
       // micro sub-steps so the ball never moves > r/2 before resolving.
       // The flippers' swept angle is interpolated across the same sub-steps so a
       // fast-swinging flipper can't rotate through the ball inside one phys step.
@@ -1362,6 +1359,8 @@ var move = len(b.vx, b.vy) * h;
          flipL.a = flipL.prevA + (flipL.endA - flipL.prevA) * fr;
           flipR.a = flipR.prevA + (flipR.endA - flipR.prevA) * fr;
           flipUR.a = flipUR.prevA + (flipUR.endA - flipUR.prevA) * fr;
+         b.vy += (climbing ? launcher.LANE_G : G * levelGrav() * missionGravMod) * hh2;      // apply gravity each sub-step
+         var sp_step = len(b.vx, b.vy); if (sp_step > SPEED_CAP) { b.vx *= SPEED_CAP / sp_step; b.vy *= SPEED_CAP / sp_step; }  // cap speed after gravity
          // Up to 4 time-of-impact hits per sub-step (corner/wedge contacts); whatever time is
          // left after that is spent moving freely and resolveAll() depenetrates.
          var rem = hh2;
