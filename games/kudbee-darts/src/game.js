@@ -486,7 +486,7 @@
       ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
       ctx.translate(b.x, b.y);
       ctx.rotate(b.rot);
-      this.sprites.drawDart(ctx, 48, b.skin, 0, b.parts);
+      this.sprites.drawDart(ctx, KD.Sprites.STUCK_LEN + 10, b.skin, 0, b.parts);
       ctx.restore();
     }
   };
@@ -718,6 +718,7 @@
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
+    this.dart.drawHeld(ctx);
     this.particles.draw(ctx);
     this.dart.drawReticle(ctx);
     ctx.restore();

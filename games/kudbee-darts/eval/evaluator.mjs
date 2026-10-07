@@ -5,7 +5,7 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const URL = process.env.DARTS_URL || ('file://' + resolve(HERE, '..', 'index.html'));
@@ -135,7 +135,7 @@ const toPx = (lx, ly) => ({ x: canvasBox.x + (lx / 960) * canvasBox.w, y: canvas
 // Aim at the treble 20, press, drag a clean flick upward, release.
 const t20 = await page.evaluate(() => window.DARTS.board.targetPoint('T20'));
 const start = toPx(t20.x, t20.y + 150), end = toPx(t20.x, t20.y);
-await page.evaluate(() => { const g = window.DARTS; window.__lens = []; let inFlight = false; const dd = g.sprites.drawDart.bind(g.sprites); g.sprites.drawDart = function (ctx, len) { if (inFlight) window.__lens.push(len); return dd.apply(null, arguments); }; const df = g.dart.drawFlight.bind(g.dart); g.dart.drawFlight = function () { inFlight = true; try { return df.apply(null, arguments); } finally { inFlight = false; } }; });
+await page.evaluate(() => { const g = window.DARTS; window.__lens = []; let inFlight = false, inStuck = false; window.__stuckLens = []; const dd = g.sprites.drawDart.bind(g.sprites); g.sprites.drawDart = function (ctx, len) { if (inFlight) window.__lens.push(len); if (inStuck) window.__stuckLens.push(len); return dd.apply(null, arguments); }; const ds = g.sprites.drawStuckDart.bind(g.sprites); g.sprites.drawStuckDart = function () { inStuck = true; try { return ds.apply(null, arguments); } finally { inStuck = false; } }; const df = g.dart.drawFlight.bind(g.dart); g.dart.drawFlight = function () { inFlight = true; try { return df.apply(null, arguments); } finally { inFlight = false; } }; });
 await page.evaluate(() => { const g = window.DARTS, o = g.dart.release.bind(g.dart); g.dart.release = function () { const p = g.input.pointer; window.__rel = { relSpeed: Math.round(p.relSpeed), swipeLen: Math.round(p.swipeLen), isAI: g.dart.isAI }; return o(); }; });
 await page.mouse.move(start.x, start.y);
 await page.mouse.down(); await step(2);
@@ -168,9 +168,11 @@ for (let i = 0; i < 40; i++) {
 }
 const lensFlight = await page.evaluate(() => window.__lens.slice());
 const flown = await page.evaluate(() => { const g = window.DARTS; return { dartsThisTurn: g.dartsThisTurn, stuck: g.stuckDarts.length, bounce: g.bounceDarts.length, particles: g.particles.pool.active ? g.particles.pool.active.length : null }; });
-// Depth continuity: the last in-flight draw must match the stuck dart's drawn size (40), or the dart pops on landing.
+// Depth continuity: the last in-flight draw must match the stuck dart's drawn size, or the dart pops on landing.
+await step(2);
+const stuckLen = (await page.evaluate(() => window.__stuckLens[0])) || 0;
 const lastFlightLen = lensFlight.length ? lensFlight[lensFlight.length - 1] : 0;
-rec('flight-size-continuity', Math.abs(lastFlightLen - 40) <= 4 && lensFlight[0] > lastFlightLen, `first flight len ${lensFlight[0] && lensFlight[0].toFixed(1)} -> last ${lastFlightLen.toFixed(1)} vs stuck 40`);
+rec('flight-size-continuity', stuckLen >= 46 && Math.abs(lastFlightLen - stuckLen) <= 0.1 * stuckLen && lensFlight[0] > lastFlightLen, `first flight len ${lensFlight[0] && lensFlight[0].toFixed(1)} -> last ${lastFlightLen.toFixed(1)} vs stuck ${stuckLen} (was 40; +20%)`);
 rec('flight-shots', nextShot.length === 0, nextShot.length ? 'missed capture points ' + nextShot.join(',') : 'captured early/mid/late flight frames');
 rec('dart-lands', flown.dartsThisTurn === 1 && (flown.stuck + flown.bounce) === 1, `dartsThisTurn=${flown.dartsThisTurn} stuck=${flown.stuck} bounce=${flown.bounce}`);
 await page.screenshot({ path: OUT + '/07-impact.png' });
@@ -193,6 +195,23 @@ if (clips.length) {
   await sheet.setContent('<body style="margin:0;display:flex;background:#000">' + clips.map((c) => '<img width=280 height=440 src="data:image/png;base64,' + c + '">').join('') + '</body>');
   await sheet.screenshot({ path: OUT + '/flight-sheet.png' });
   await sheet.close();
+}
+// ---------------------------------------------------------------- share card (SEO / social)
+{
+  const html = readFileSync(resolve(HERE, '..', 'index.html'), 'utf8');
+  const meta = (attr, name) => { const m = html.match(new RegExp('<meta[^>]+' + attr + '="' + name + '"[^>]+content="([^"]*)"', 'i')); return m && m[1]; };
+  const og = meta('property', 'og:image'), tw = meta('name', 'twitter:image'), card = meta('name', 'twitter:card');
+  let dims = null, bytes = 0;
+  if (og) {
+    const f = resolve(HERE, '..', '..', '..', 'assets', 'og', (og.split('/').pop() || '').split('?')[0]);
+    if (existsSync(f)) {
+      const b = readFileSync(f); bytes = b.length;
+      for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xff) { i++; continue; } const mk = b[i + 1]; if (mk >= 0xc0 && mk <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(mk)) { dims = { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) }; break; } i += 2 + b.readUInt16BE(i + 2); }
+    }
+  }
+  const ok = !!og && /^https:\/\//.test(og) && og === tw && card === 'summary_large_image' && !!dims && dims.w === 1200 && dims.h === 630 && bytes < 300 * 1024
+    && !!meta('property', 'og:title') && !!meta('property', 'og:description') && !!meta('property', 'og:url');
+  rec('share-card', ok, `og:image=${og} twitter:image matches=${og === tw} card=${card} file=${dims ? dims.w + 'x' + dims.h : 'missing'} ${(bytes / 1024).toFixed(0)}KB`);
 }
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
 

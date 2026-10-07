@@ -24,8 +24,11 @@
   const MIN_REL_SPEED = 240;    // px/s: too slow to count as a flick
 
   const FLIGHT_TIME = 0.42;     // seconds, cosmetic (loft hang-time)
-  const BASE_LEN = 46;          // flight sprite length at scale 1
-  const STUCK_LEN = 40;         // Sprites.drawStuckDart length
+  const BASE_LEN = 55;          // flight sprite length at scale 1
+  const START_SCALE = 1.9;      // flight size at the hand (closest to the camera)
+  const HAND_X = (g) => g.viewW / 2 + 120;   // throwing hand: right of the oche centre
+  const HAND_Y = (g) => g.viewH - 84;        // tip height — high enough to see the dart in hand
+  const STUCK_LEN = KD.Sprites.STUCK_LEN;   // Sprites.drawStuckDart length
 
   function Dart(game) {
     this.game = game;
@@ -224,8 +227,7 @@
 
     // Cosmetic flight: from the player's hand (just right of the oche centre)
     // up to the landing point, with a little hand-sway on the way.
-    this._fromX = this.game.viewW / 2 + 64;
-    this._fromY = this.game.viewH - 24;
+    this._fromX = HAND_X(this.game); this._fromY = HAND_Y(this.game);
     this._sway = (Math.random() * 2 - 1) * 22;
     this._roll = (Math.random() < 0.5 ? -1 : 1);
     if (this.isAI) { this._curl = (Math.random() * 2 - 1) * 0.25; this._powf = 1; }
@@ -436,6 +438,27 @@
     ctx.restore();
   };
 
+  // The dart in your hand: large in the foreground, tilted toward where you are
+  // aiming, so a throw starts from something you can see (first-person feel).
+  // Its tip sits on the flight's launch point, so release hands off seamlessly.
+  Dart.prototype.drawHeld = function (ctx) {
+    const g = this.game;
+    if (g.state !== 'play' || this.isAI || (this.state !== 'ready' && this.state !== 'aiming')) return;
+    const cur = g.players[g.current];
+    if (!cur || cur.isAI) return;
+    const tx = HAND_X(g), ty = HAND_Y(g);
+    const ax = this.state === 'aiming' ? this.aimX : g.board.cx;
+    const bob = g.reduceMotion ? 0 : Math.sin(g.time * 2.2) * 2.5;
+    const lean = Util.clamp((ax - tx) / g.viewW, -0.5, 0.5) * 0.7;
+    const gripped = this.state === 'aiming' ? 1 : 0;
+    ctx.save();
+    ctx.translate(tx, ty + bob);
+    ctx.rotate(-Math.PI / 2 + lean);
+    ctx.scale(0.7, 1);                       // pointing away from camera (matches the flight's first frame)
+    g.sprites.drawDart(ctx, BASE_LEN * START_SCALE, cur.skin(), 0.4 + gripped * 0.6, cur.dartParts || this.parts);
+    ctx.restore();
+  };
+
   // The cosmetic dart flying toward the board: arcs up, CURLS to the side
   // (quadratic-Bézier hook), scales for depth, rolls on its axis, and the
   // flights flutter — the Darts-of-Fury "loop in" feel.
@@ -446,7 +469,7 @@
     const e = f.e, x = f.x, y = f.y;
 
     // Ends at the stuck dart's drawn length (40/46) so the dart doesn't pop in size on contact.
-    const scale = Util.lerp(1.5, STUCK_LEN / BASE_LEN, e);
+    const scale = Util.lerp(START_SCALE, STUCK_LEN / BASE_LEN, e);
 
     // Shadow converging on the impact point: as the dart closes in, a soft
     // dark ellipse tightens onto the exact landing spot — reads as depth.
@@ -511,7 +534,7 @@
     const roll = Util.lerp(0.55 + 0.45 * Math.abs(Math.cos(spin)), 1, e * e);
     // Foreshortening: thrown away from the camera the dart starts pointing into the
     // screen (short) and comes side-on as it arcs over.
-    const along = 0.6 + 0.4 * Util.smooth(Math.min(1, k * 1.6));
+    const along = 0.7 + 0.3 * Util.smooth(Math.min(1, k * 1.6));
 
     // Tail flutter: a tiny shimmy that fades as it lands (flights "biting" air).
     const flutter = Math.sin(k * 26) * (1 - e) * 0.05;
