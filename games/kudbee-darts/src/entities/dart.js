@@ -355,14 +355,24 @@
     ctx.shadowColor = 'rgba(57,230,255,0.5)';
     ctx.shadowBlur = 8 + glowIntensity * 6;
     ctx.fillStyle = 'rgba(10,16,32,0.85)';
-    this.game._roundRect ? this.game._roundRect(ctx, gx - 2, gy0 - 2, gw + 4, gh + 4, 4) : ctx.rect(gx - 2, gy0 - 2, gw + 4, gh + 4);
+    if (this.game._roundRect) {
+      this.game._roundRect(ctx, gx - 2, gy0 - 2, gw + 4, gh + 4, 4);
+    } else {
+      ctx.beginPath();
+      ctx.rect(gx - 2, gy0 - 2, gw + 4, gh + 4);
+    }
     ctx.fill();
 
     // Main gauge background.
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(10,16,32,0.7)';
-    this.game._roundRect ? this.game._roundRect(ctx, gx, gy0, gw, gh, 4) : ctx.rect(gx, gy0, gw, gh);
+    if (this.game._roundRect) {
+      this.game._roundRect(ctx, gx, gy0, gw, gh, 4);
+    } else {
+      ctx.beginPath();
+      ctx.rect(gx, gy0, gw, gh);
+    }
     ctx.fill();
 
     // Sweet-spot band with enhanced glow (0.85..1.15 of ideal).
@@ -503,6 +513,8 @@
         ctx.strokeStyle = col;
         ctx.globalAlpha = 0.5 * (1 - e);
         ctx.lineWidth = 2 * scale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(fb.x, fb.y);
         ctx.lineTo(x, y);

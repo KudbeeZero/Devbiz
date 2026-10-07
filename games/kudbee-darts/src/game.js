@@ -349,7 +349,7 @@
     // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
     if (!isMiss) {
-      this.particles.impact(lx, ly, skinCol);
+      if (!this.reduceMotion) this.particles.impact(lx, ly, skinCol);
       this.particles.shockwave(lx, ly, skinCol, 80, 0.35, 2);
     }
     // Stuck dart: lean derives from the actual throw trajectory (hand -> landing),
