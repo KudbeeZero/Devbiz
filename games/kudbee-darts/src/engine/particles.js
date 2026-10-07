@@ -56,19 +56,34 @@
     }
   };
 
-  /* Enhanced dart impact: a tight cone of splinters + bright glow flash + secondary halo. */
+  /* Premium dart impact: ultra-dramatic multi-layer explosion + halos + streaks. */
   Particles.prototype.impact = function (x, y, color) {
     color = color || '#39e6ff';
-    // Primary splinter burst: high-velocity colored shards.
-    this.burst(x, y, color, 14, 240, { glow: true, life: 0.38, size: 2.2, drag: 2.8 });
-    // Secondary white core splinters for brightness.
-    this.burst(x, y, '#ffffff', 7, 140, { glow: true, life: 0.22, size: 1.8, drag: 3.2 });
-    // Bright initial impact flash (larger, punchier).
-    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.18, size: 28, color: color, glow: true });
-    // Secondary halo glow that expands slightly for depth.
-    this.emit({ x: x + Util.rand(-2, 2), y: y + Util.rand(-2, 2), vx: Util.rand(-8, 8), vy: Util.rand(-8, 8), life: 0.25, size: 16, color: color, glow: true, drag: 1.5 });
-    // Quick accent flash in white for extra punch.
-    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.10, size: 18, color: '#ffffff', glow: true });
+    // Primary splinter burst: high-velocity colored shards (denser).
+    this.burst(x, y, color, 18, 280, { glow: true, life: 0.42, size: 2.4, drag: 2.6 });
+    // Secondary white core splinters for brightness (more sparkle).
+    this.burst(x, y, '#ffffff', 10, 160, { glow: true, life: 0.26, size: 2.0, drag: 3.0 });
+    // Tertiary accent splinters for extra layers.
+    this.burst(x, y, color, 8, 200, { glow: true, life: 0.30, size: 1.5, drag: 2.2 });
+    // Massive initial impact flash (very bright, very large).
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.20, size: 36, color: color, glow: true });
+    // Secondary halo glow that expands for depth.
+    this.emit({ x: x + Util.rand(-3, 3), y: y + Util.rand(-3, 3), vx: Util.rand(-12, 12), vy: Util.rand(-12, 12), life: 0.28, size: 22, color: color, glow: true, drag: 1.2 });
+    // Tertiary halo for multi-ring effect.
+    this.emit({ x: x + Util.rand(-2, 2), y: y + Util.rand(-2, 2), vx: Util.rand(-6, 6), vy: Util.rand(-6, 6), life: 0.22, size: 14, color: color, glow: true, drag: 1.8 });
+    // White core flash for extreme punch.
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.12, size: 24, color: '#ffffff', glow: true });
+    // Ultra-quick accent flash for visual snap.
+    this.emit({ x: x, y: y, vx: 0, vy: 0, life: 0.08, size: 20, color: '#ffffff', glow: true });
+    // Extra sparkle streaks for premium feel (outward light rays).
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const s = 180 + Util.rand(-40, 40);
+      this.emit({
+        x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.25, size: 1.5, color: '#ffffff', glow: true, drag: 2.8,
+      });
+    }
   };
 
   /* Dart in-flight trail: glowing particles following the dart trajectory. */

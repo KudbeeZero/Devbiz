@@ -449,28 +449,29 @@
       ctx.restore();
     }
 
-    // Enhanced motion trail: multiple trailing points with fading glow for high-speed feel.
+    // Ultra-enhanced motion trail: 5-layer glow system with core accent for maximum impact.
     if (k > 0.06 && !this.game.reduceMotion) {
       const col = (this.skin && this.skin.color) || '#39e6ff';
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
 
-      // Render 4 trail segments with fading opacity for smooth glow effect.
-      const trailSteps = 4;
+      // Render 5 trail segments with fading opacity for ultra-smooth glow.
+      const trailSteps = 5;
       for (let i = 0; i < trailSteps; i++) {
-        const trailK = Math.max(0, k - (0.06 + i * 0.04));
+        const trailK = Math.max(0, k - (0.06 + i * 0.035));
         if (trailK <= 0) continue;
         const fb = this._bezierFlight(trailK);
-        const nextK = Math.max(0, k - (0.06 + (i - 1) * 0.04));
+        const nextK = Math.max(0, k - (0.06 + (i - 1) * 0.035));
         const fn = i === 0 ? f : this._bezierFlight(nextK);
 
         const grad = ctx.createLinearGradient(fb.x, fb.y, fn.x, fn.y);
         grad.addColorStop(0, `rgba(0,0,0,0)`);
+        grad.addColorStop(0.7, col);
         grad.addColorStop(1, col);
 
         ctx.strokeStyle = grad;
-        ctx.globalAlpha = (0.5 - i * 0.1) * (1 - e * 0.5);
-        ctx.lineWidth = (6 - i * 1.2) * scale;
+        ctx.globalAlpha = (0.6 - i * 0.11) * (1 - e * 0.4);
+        ctx.lineWidth = (7 - i * 1.3) * scale;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -479,22 +480,50 @@
         ctx.stroke();
       }
 
-      // Core bright trail for extra punch.
-      if (k > 0.10) {
-        const fb = this._bezierFlight(Math.max(0, k - 0.05));
+      // Core bright trail for maximum punch (thicker, longer).
+      if (k > 0.08) {
+        const fb = this._bezierFlight(Math.max(0, k - 0.06));
         const grad = ctx.createLinearGradient(fb.x, fb.y, x, y);
         grad.addColorStop(0, `rgba(0,0,0,0)`);
-        grad.addColorStop(0.6, col);
+        grad.addColorStop(0.5, col);
         grad.addColorStop(1, col);
         ctx.strokeStyle = grad;
-        ctx.globalAlpha = 0.7 * (1 - e * 0.4);
-        ctx.lineWidth = 3.5 * scale;
+        ctx.globalAlpha = 0.85 * (1 - e * 0.3);
+        ctx.lineWidth = 4.5 * scale;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(fb.x, fb.y);
         ctx.lineTo(x, y);
         ctx.stroke();
       }
+
+      // Bright accent core for extra visual pop.
+      if (k > 0.12) {
+        const fb = this._bezierFlight(Math.max(0, k - 0.035));
+        ctx.strokeStyle = col;
+        ctx.globalAlpha = 0.5 * (1 - e);
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath();
+        ctx.moveTo(fb.x, fb.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Glow aura around the dart body during flight (especially prominent mid-flight).
+    if (k > 0.1 && k < 0.85 && !this.game.reduceMotion) {
+      const col = (this.skin && this.skin.color) || '#39e6ff';
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const auraAlpha = Math.sin(k * Math.PI) * 0.4;  // peaks at 50% flight
+      ctx.globalAlpha = auraAlpha;
+      ctx.fillStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 20 + e * 10;
+      ctx.beginPath();
+      ctx.arc(x, y, 16 * scale, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
