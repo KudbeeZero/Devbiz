@@ -20,10 +20,14 @@ KCH.UI = {
   begin() { this.buttons.length = 0; },
   rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); },
 
-  text(ctx, s, x, y, size, color, align) {
+  text(ctx, s, x, y, size, color, align, shadow) {
     ctx.save();
     ctx.font = '400 ' + size + 'px ' + this.FONT;
     ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+    if (shadow) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillText(s, x + 2, y + 2);
+    }
     ctx.lineWidth = Math.max(3, size * 0.24); ctx.strokeStyle = this.OUT; ctx.strokeText(s, x, y);
     ctx.fillStyle = color; ctx.fillText(s, x, y);
     ctx.restore();
@@ -58,13 +62,19 @@ KCH.UI = {
     const focused = g.focusIdx === idx && !opts.disabled;
     const cs = this.COL[opts.disabled ? 'grey' : (opts.color || (opts.primary ? 'green' : 'blue'))];
     ctx.save();
-    ctx.translate(0, focused ? -1.5 : 0);
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; this.rr(ctx, x, y + 5, w, h, 16); ctx.fill();
+    ctx.translate(0, focused ? -2 : 0);
+    // Enhanced shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; this.rr(ctx, x, y + 6, w, h, 16); ctx.fill();
     this.rr(ctx, x - 3, y - 3, w + 6, h + 6, 18); ctx.fillStyle = this.OUT; ctx.fill();
-    if (focused || opts.selected) { this.rr(ctx, x - 3, y - 3, w + 6, h + 6, 18); ctx.lineWidth = 4; ctx.strokeStyle = '#fff6a8'; ctx.stroke(); }
+    if (focused || opts.selected) {
+      this.rr(ctx, x - 3, y - 3, w + 6, h + 6, 18); ctx.lineWidth = 4; ctx.strokeStyle = '#fff6a8'; ctx.stroke();
+      // Glow effect for focused button
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,246,168,0.4)';
+      this.rr(ctx, x - 6, y - 6, w + 12, h + 12, 20); ctx.stroke();
+    }
     const gr = ctx.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, cs[0]); gr.addColorStop(0.5, cs[1]); gr.addColorStop(1, cs[2]);
     this.rr(ctx, x, y, w, h, 15); ctx.fillStyle = gr; ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.32)'; this.rr(ctx, x + 5, y + 4, w - 10, h * 0.38, 10); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,' + (focused ? 0.45 : 0.32) + ')'; this.rr(ctx, x + 5, y + 4, w - 10, h * 0.38, 10); ctx.fill();
     if (label) {
       const size = opts.small ? 20 : 30;
       ctx.font = '400 ' + size + 'px ' + this.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
