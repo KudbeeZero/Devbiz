@@ -27,8 +27,6 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="preload" href="assets/fonts/space-grotesk-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/fonts/inter-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="alternate" type="text/plain" href="https://devbiz.kudbee.workers.dev/llms.txt" title="llms.txt">
     <!-- Shared motion engine (DBZ-051) — reveal/stagger/counter/marquee/magnetic/
          tilt primitives, progressive enhancement. Motion tokens live in the
@@ -525,7 +523,7 @@
             <a class="gcard" data-rv style="--acc-rgb:255,211,77" href="games/kudbee-munch/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="munch" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--amber)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Munch — Windy City</h3><span class="g-cat">Original maze-chase · Beezer vs. four surveillance drones</span></div></a>
             <a class="gcard" data-rv style="--rvd:0.07s;--acc-rgb:111,91,255" href="games/kudbee-orbital/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="orbital" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--violet)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Orbital</h3><span class="g-cat">Zero-gravity twin-stick skirmish · drone waves, splitting rocks</span></div></a>
             <a class="gcard" data-rv style="--rvd:0.14s;--acc-rgb:57,230,255" href="games/kudbee-puzzles/index.html"><span class="g-art"><canvas class="shot-canvas" data-scene="circuit" aria-hidden="true"></canvas><span class="g-badge" style="--c:var(--cyan)">New</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Puzzles — Circuit</h3><span class="g-cat">30 rotate-the-pipe boards · always solvable</span></div></a>
-            <a class="gcard" data-rv style="--rvd:0.21s;--acc-rgb:196,107,255" href="games/kudbee-abyss/index.html"><span class="g-art"><img src="games/kudbee-abyss/assets/character/queen.png" alt="Kudbee Abyss — masked queen and guardian" loading="lazy" style="object-position:top center"><span class="g-badge" style="--c:var(--pink)">Story</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Abyss — The Guardian's Gate</h3><span class="g-cat">Dark sci-fi fantasy · interactive 3D story</span></div></a>
+            <a class="gcard" data-rv style="--rvd:0.21s;--acc-rgb:196,107,255" href="games/kudbee-abyss/index.html"><span class="g-art"><img src="games/kudbee-abyss/assets/character/queen-640.webp" srcset="games/kudbee-abyss/assets/character/queen-640.webp 640w, games/kudbee-abyss/assets/character/queen-960.webp 960w" sizes="(max-width: 700px) 100vw, 50vw" width="640" height="853" alt="Kudbee Abyss — masked queen and guardian" loading="lazy" style="object-position:top center"><span class="g-badge" style="--c:var(--pink)">Story</span></span><div class="g-meta"><span class="g-play" aria-hidden="true">▶</span><h3>Kudbee Abyss — The Guardian's Gate</h3><span class="g-cat">Dark sci-fi fantasy · interactive 3D story</span></div></a>
         </div>
 
         <div class="league" data-rv>
@@ -878,8 +876,8 @@
 <!-- Kudbee Agent — on-page concierge widget (client-side demo). Calls /api/agent/*
      when a Worker backend is present; degrades to a graceful offline preview
      otherwise. The live agent backend ships separately. -->
-<script src="assets/site/agent.js"></script>
-<script src="assets/site/store.js"></script>
+<script src="assets/site/agent.js" defer></script>
+<script src="assets/site/store.js" defer></script>
 <!-- ════════ END §17 Scripts — site.js, agent.js, store.js (assets/site/) ════════ -->
 
 </body>

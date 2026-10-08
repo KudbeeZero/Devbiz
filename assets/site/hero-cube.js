@@ -45,7 +45,9 @@
         '#bff3ff'   // light cyan
       ];
 
-      this.startAnimation();
+      // Animation is armed by init() — it runs only while the canvas is on screen.
+      this.visible = false;
+      this.running = false;
     }
 
     rotate(vertices, angleX, angleY, angleZ) {
@@ -160,7 +162,11 @@
     }
 
     startAnimation() {
+      if (this.running) return;
+      this.running = true;
       const animate = (timestamp) => {
+        // Stop the loop while the canvas isn't rendered (display:none at ≤1024px); startAnimation() resumes it.
+        if (!this.visible) { this.running = false; return; }
         this.time = timestamp;
         this.drawCube();
         requestAnimationFrame(animate);
@@ -200,6 +206,20 @@
       cube.scrollMomentum = Math.max(cube.scrollMomentum, deltaScroll * 0.5);
       cube.lastScrollY = scrolled;
     }, { passive: true });
+
+    // Arm the animation after the page's load event, and only while rendered:
+    // the blur-filtered redraw is the costliest per-frame work here, and it used
+    // to run forever — even behind the intro overlay and on tablets/phones, where
+    // the wrapper is display:none and nothing was visible.
+    function armCube() {
+      if (!('IntersectionObserver' in window)) { cube.visible = true; cube.startAnimation(); return; }
+      new IntersectionObserver(function (entries) {
+        cube.visible = entries[0].isIntersecting;
+        if (cube.visible) cube.startAnimation();
+      }).observe(canvas);
+    }
+    if (document.readyState === 'complete') armCube();
+    else window.addEventListener('load', armCube, { once: true });
 
     // Responsive canvas resizing
     let resizeTimer;
