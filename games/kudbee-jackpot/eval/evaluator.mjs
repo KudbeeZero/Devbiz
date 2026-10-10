@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const URL = process.env.JACKPOT_URL || ('file://' + resolve(HERE, '..', 'index.html'));
@@ -158,6 +158,35 @@ if (bigNonce >= 0) {
   await page.screenshot({ path: OUT + '/05-big-win.png' });
   rec('big-win', v2.big === 'BIG WIN' || v2.big === 'MEGA WIN', `nonce ${bigNonce}: banner "${v2.big}", counter ${v2.winText}`);
 } else rec('big-win', false, 'no 15x+ line win found in 20k nonces');
+
+// ---------------------------------------------------------------- broke -> refill demo chips
+const shown = () => page.evaluate(() => ({ refill: !document.getElementById('refillbtn').classList.contains('hidden'), spinOff: document.getElementById('spinbtn').disabled, chips: window.__jackpotTest.state().chips }));
+const normal = await shown();
+await page.evaluate(() => localStorage.setItem('kd.jackpot.chips', '30'));
+await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(250);
+const broke = await shown();
+await page.screenshot({ path: OUT + '/07-broke.png' });
+await page.click('#refillbtn'); await page.waitForTimeout(150);
+const refilled = await shown();
+await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(250);
+const persisted = await shown();
+rec('broke-refill', !normal.refill && broke.refill && broke.spinOff && refilled.chips === 2000 && !refilled.refill && !refilled.spinOff && persisted.chips === 2000,
+  `at ${normal.chips} chips refill hidden=${!normal.refill}; at 30: refill shown=${broke.refill}, SPIN disabled=${broke.spinOff}; after click: ${refilled.chips} chips, SPIN enabled=${!refilled.spinOff}; after reload: ${persisted.chips}`);
+
+// ---------------------------------------------------------------- share card (SEO / social)
+{
+  const html = readFileSync(resolve(HERE, '..', 'index.html'), 'utf8');
+  const meta = (attr, name) => { const m = html.match(new RegExp('<meta[^>]+' + attr + '="' + name + '"[^>]+content="([^"]*)"', 'i')); return m && m[1]; };
+  const og = meta('property', 'og:image'), tw = meta('name', 'twitter:image'), cardType = meta('name', 'twitter:card');
+  let dims = null, bytes = 0;
+  const f = og && resolve(HERE, '..', '..', '..', 'assets', 'og', (og.split('/').pop() || '').split('?')[0]);
+  if (f && existsSync(f)) {
+    const b = readFileSync(f); bytes = b.length;
+    for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xff) { i++; continue; } const mk = b[i + 1]; if (mk >= 0xc0 && mk <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(mk)) { dims = { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) }; break; } i += 2 + b.readUInt16BE(i + 2); }
+  }
+  rec('share-card', !!og && /^https:\/\//.test(og) && og === tw && cardType === 'summary_large_image' && !!dims && dims.w === 1200 && dims.h === 630 && bytes < 300 * 1024,
+    `og:image=${og} twitter:image matches=${og === tw} card=${cardType} file=${dims ? dims.w + 'x' + dims.h : 'missing'} ${(bytes / 1024).toFixed(0)}KB`);
+}
 
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs[0] || pageErrors[0] || 'clean');
 await browser.close();

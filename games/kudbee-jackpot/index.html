@@ -12,14 +12,14 @@
 <meta property="og:title" content="Kudbee Jackpot — Neon Fortune">
 <meta property="og:description" content="Kudbee Jackpot — a 5-reel neon slot machine with 9 paylines, a scatter-triggered Bonus Wheel, four live progressive jackpots (Mini/Minor/Major/Grand), and a real provably-fair (HMAC-SHA256 commit-reveal) engine you can verify yourself. Demo chips and an optional read-only Phantom wallet connect — no real funds ever move. A playable browser game by Kudbee Games Studio.">
 <meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-jackpot/index.html">
-<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg">
+<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Kudbee Jackpot — Neon Fortune — gameplay preview">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kudbee Jackpot — Neon Fortune">
 <meta name="twitter:description" content="Kudbee Jackpot — a 5-reel neon slot machine with 9 paylines, a scatter-triggered Bonus Wheel, four live progressive jackpots (Mini/Minor/Major/Grand), and a real provably-fair (HMAC-SHA256 commit-reveal) engine you can verify yourself. Demo chips and an optional read-only Phantom wallet connect — no real funds ever move. A playable browser game by Kudbee Games Studio.">
-<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg">
+<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -206,6 +206,11 @@
     transition: transform 0.08s;
   }
   #spinbtn:disabled { filter: grayscale(0.6) brightness(0.7); cursor: default; box-shadow: none; }
+  #refillbtn {
+    grid-column: 1 / span 2; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    border: 1px solid #ffd36b; background: rgba(255,182,46,0.18); color: #ffe7b8;
+    font: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 0 18px rgba(255,182,46,0.3);
+  }
   #spinbtn:active:not(:disabled) { transform: scale(0.95); }
 
   .overlay {
@@ -286,6 +291,7 @@
         <button class="betbtn" data-bet="50">50</button>
       </div>
       <button id="spinbtn">SPIN</button>
+      <button id="refillbtn" class="hidden">Out of chips — refill 2,000 demo chips</button>
     </div>
 
     <div id="fairpanel" class="overlay hidden">
@@ -445,13 +451,21 @@
 
   /* ===================== DOM ===================== */
   var $ = function (id) { return document.getElementById(id); };
-  var chipValEl = $('chipVal'), lastWinEl = $('lastwin'), spinBtn = $('spinbtn');
+  var chipValEl = $('chipVal'), lastWinEl = $('lastwin'), spinBtn = $('spinbtn'), refillBtn = $('refillbtn');
+  refillBtn.addEventListener('click', function () {
+    if (spinning || chips >= MIN_TOTAL_BET) return;
+    chips = START_CHIPS; saveJSON('kd.jackpot.chips', chips); renderChips();
+  });
   var hashPreview = $('hashPreview'), curHash = $('curHash'), clientSeedInput = $('clientSeedInput');
   var jpEls = { MINI: $('jpMini'), MINOR: $('jpMinor'), MAJOR: $('jpMajor'), GRAND: $('jpGrand') };
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
+  // Demo chips only: once the balance can't cover the smallest bet the game would be stuck
+  // for good (chips persist), so offer a refill back to the starting stack.
+  var START_CHIPS = 2000, MIN_TOTAL_BET = 5 * LINES.length;
   function renderChips() {
     chipValEl.textContent = Math.max(0, Math.floor(chips));
+    refillBtn.classList.toggle('hidden', spinning || chips >= MIN_TOTAL_BET);
     spinBtn.disabled = spinning || chips < perLineBet * LINES.length;
     document.querySelectorAll('.betbtn').forEach(function (b) { b.disabled = spinning || chips < parseInt(b.dataset.bet, 10) * LINES.length; });
   }
