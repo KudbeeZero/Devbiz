@@ -180,9 +180,14 @@ const flown = await page.evaluate(() => { const g = window.DARTS; return { darts
 await step(2);
 const stuckLen = (await page.evaluate(() => window.__stuckLens[0])) || 0;
 const lastFlightLen = lensFlight.length ? lensFlight[lensFlight.length - 1] : 0;
-rec('flight-size-continuity', stuckLen >= 46 && Math.abs(lastFlightLen - stuckLen) <= 0.1 * stuckLen && lensFlight[0] > lastFlightLen, `first flight len ${lensFlight[0] && lensFlight[0].toFixed(1)} -> last ${lastFlightLen.toFixed(1)} vs stuck ${stuckLen} (was 40; +20%)`);
+rec('flight-size-continuity', stuckLen >= 60 && Math.abs(lastFlightLen - stuckLen) <= 0.1 * stuckLen && lensFlight[0] > lastFlightLen, `first flight len ${lensFlight[0] && lensFlight[0].toFixed(1)} -> last ${lastFlightLen.toFixed(1)} vs stuck ${stuckLen} (was 40, then 48)`);
 rec('flight-shots', nextShot.length === 0, nextShot.length ? 'missed capture points ' + nextShot.join(',') : 'captured early/mid/late flight frames');
 rec('dart-lands', flown.dartsThisTurn === 1 && (flown.stuck + flown.bounce) === 1, `dartsThisTurn=${flown.dartsThisTurn} stuck=${flown.stuck} bounce=${flown.bounce}`);
+// Pose: darts enter nose-down, so the flights sit ABOVE the tip (tip angle in the lower half-plane),
+// and the in-flight angle has already pitched to the embedded pose by the last frame (no flip on contact).
+const pose = await page.evaluate(() => { const g = window.DARTS, d = g.stuckDarts[0]; const diff = Math.atan2(Math.sin(g.dart._lastAng - d.ang), Math.cos(g.dart._lastAng - d.ang)); return { ang: d.ang, tailUp: Math.sin(d.ang), diff }; /* canvas y is down: tip pointing down (sin>0) means the tail is up */ });
+rec('flights-above-tip', pose.tailUp > 0.7, `stuck tip angle ${pose.ang.toFixed(2)} rad -> tip points down ${(pose.tailUp * 100).toFixed(0)}%, so the flights are above the tip`);
+rec('embed-pose-continuity', Math.abs(pose.diff) < 0.12, `last flight frame vs stuck pose differ by ${pose.diff.toFixed(3)} rad`);
 await page.screenshot({ path: OUT + '/07-impact.png' });
 const impactMs = [];
 for (let i = 0; i < 12; i++) {

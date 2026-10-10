@@ -50,7 +50,7 @@
   }
 
   // Drawn length (logical px) of a dart stuck in the board. Flight scales to match it.
-  Sprites.STUCK_LEN = 48;
+  Sprites.STUCK_LEN = 64;
   Sprites.SKINS = SKINS;
   Sprites.TIPS = TIPS;
   Sprites.FLIGHTS = FLIGHTS;

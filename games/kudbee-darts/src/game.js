@@ -368,11 +368,9 @@
     // NOT a constant. A right flick sticks pointing right; down sticks pointing down.
     // _fromX/_fromY is the hand position set in dart._releaseAt(); tip points along
     // that travel direction, tilted slightly downward for a natural "embedded" read.
-    const hx = this.dart._fromX || (this.board.cx + 64);
-    const hy = this.dart._fromY || (this.board.cy + 200);
-    const throwAng = Math.atan2(ly - hy, lx - hx);
-    // tip embeds along the incoming direction, +0.18 rad downward pitch for weight
-    const lean = throwAng + 0.18 + (Math.random() * 2 - 1) * 0.04;
+    // Embedded pose comes from the dart (nose-down, flights above the tip) — the same
+    // angle the flight pitches into on approach, so there is no flip on contact.
+    const lean = this.dart.embedAngle(lx, ly) + (Math.random() * 2 - 1) * 0.04;
     // A genuine miss doesn't stick — it clips off and tumbles away instead of
     // freezing in a scoring pose (see _spawnBounceDart). Purely cosmetic: the
     // score is 0 either way, this only changes how the whiff *reads*.

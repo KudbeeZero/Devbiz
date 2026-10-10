@@ -231,6 +231,7 @@
     this._sway = (Math.random() * 2 - 1) * 22;
     this._roll = (Math.random() < 0.5 ? -1 : 1);
     if (this.isAI) { this._curl = (Math.random() * 2 - 1) * 0.25; this._powf = 1; }
+    this._embedAng = this.embedAngle(landX, landY);
     this._ft = 0;
     this.state = 'flying';
     this.game.audio.whoosh();
@@ -244,6 +245,15 @@
     }
     if (this.game.lungeBoard) this.game.lungeBoard();
     return this.result;
+  };
+
+  // Angle (radians, canvas y-down) the tip points when the dart is embedded at (lx, ly).
+  // Real darts arc over and enter the board nose-down, so seen from the thrower the
+  // FLIGHTS sit above the tip. A sideways throw leans the tip toward the target side.
+  Dart.prototype.embedAngle = function (lx, ly) {
+    const g = this.game;
+    const dx = lx - (this._fromX || HAND_X(g));
+    return Math.PI / 2 - Util.clamp(dx / (g.viewW * 0.5), -1, 1) * 0.45;
   };
 
   Dart.prototype.update = function (dt) {
@@ -524,7 +534,15 @@
     }
 
     // Travel angle = Bézier tangent, with a hair of extra droop near landing.
-    const ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
+    // Travel angle = Bézier tangent; over the last ~40% the dart pitches nose-down into
+    // its embedded pose, so it doesn't flip when it lands.
+    let ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
+    if (this._embedAng != null) {
+      let d = this._embedAng - ang;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      ang += d * Util.smooth(Util.clamp((k - 0.6) / 0.4, 0, 1));
+    }
+    this._lastAng = ang;
 
     // Enhanced barrel roll: spin speed scales with throw power for realism.
     // Harder throws spin faster, softer throws spin slower.
