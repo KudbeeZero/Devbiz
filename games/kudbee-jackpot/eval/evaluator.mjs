@@ -112,21 +112,34 @@ const bonusNonce = await page.evaluate(async () => {
   for (let n = st.nonce; n < st.nonce + 6000; n++) if (T.evaluateSpin(T.gridFromStops(await T.drawReels(st.serverSeed, st.clientSeed, n)), 10).bonusTriggered) return n;
   return -1;
 });
-await page.evaluate((n) => { const st = JSON.parse(localStorage.getItem('kd.jackpot.pf')); st.nonce = n; localStorage.setItem('kd.jackpot.pf', JSON.stringify(st)); }, bonusNonce);
-await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
-const w0 = await page.evaluate(() => window.__jackpotTest.state());
-await page.click('#spinbtn');
-await page.waitForSelector('#wheelpanel:not(.hidden)', { timeout: 10000 });
-const xDuringSpin = await page.evaluate(() => getComputedStyle(document.getElementById('closewheel')).display === 'none');
-await page.waitForSelector('#collectBtn:not(.hidden)', { timeout: 10000 });
-await page.screenshot({ path: OUT + '/02-wheel.png' });
-await page.click('#closewheel');
-await page.waitForTimeout(400);
-const w1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(); return { s: T.state(), last: h[h.length - 1], spinOff: document.getElementById('spinbtn').disabled, panelHidden: document.getElementById('wheelpanel').classList.contains('hidden') }; });
-const credited = w1.last && w1.last.nonce === bonusNonce && Math.abs(w0.chips - w1.last.totalBet + w1.last.totalWin - w1.s.chips) < 1e-6;
-rec('wheel-close-collects', bonusNonce >= 0 && xDuringSpin && credited && !w1.spinOff && w1.panelHidden && w1.s.nonce === bonusNonce + 1,
-  `bonus at nonce ${bonusNonce}; ✕ hidden while spinning=${xDuringSpin}; after ✕: ${w0.chips} -${w1.last && w1.last.totalBet} +${w1.last && w1.last.totalWin} = ${w1.s.chips} (${w1.last && w1.last.bonusWedge}), SPIN enabled=${!w1.spinOff}`);
-await page.screenshot({ path: OUT + '/03-after-wheel.png' });
+if (bonusNonce < 0) {
+  rec('wheel-close-collects', false, 'no Bonus Wheel spin found in 6000 nonces (strip or seed changed?)');
+  rec('bonus-counter-continues', false, 'skipped: no bonus spin found');
+} else {
+  await page.evaluate((n) => { const st = JSON.parse(localStorage.getItem('kd.jackpot.pf')); st.nonce = n; localStorage.setItem('kd.jackpot.pf', JSON.stringify(st)); }, bonusNonce);
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  const w0 = await page.evaluate(() => window.__jackpotTest.state());
+  await page.click('#spinbtn');
+  await page.waitForSelector('#wheelpanel:not(.hidden)', { timeout: 10000 });
+  const xDuringSpin = await page.evaluate(() => getComputedStyle(document.getElementById('closewheel')).display === 'none');
+  await page.waitForSelector('#collectBtn:not(.hidden)', { timeout: 10000 });
+  await page.screenshot({ path: OUT + '/02-wheel.png' });
+  // Watch the WIN counter from here on: after collecting it must carry on from the base win, never dip.
+  const baseShown = await page.evaluate(() => {
+    const el = document.getElementById('winVal'), v = () => +el.textContent.replace(/[^0-9]/g, '');
+    window.__minWin = v(); (function poll() { window.__minWin = Math.min(window.__minWin, v()); if (window.__jackpotTest.view().spinning || performance.now() < (window.__pollUntil || 0)) requestAnimationFrame(poll); })();
+    window.__pollUntil = performance.now() + 2500; return v();
+  });
+  await page.click('#closewheel');
+  await page.waitForTimeout(2300);
+  const w1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(); return { s: T.state(), last: h[h.length - 1], spinOff: document.getElementById('spinbtn').disabled, panelHidden: document.getElementById('wheelpanel').classList.contains('hidden'), minWin: window.__minWin, winText: T.view().winText }; });
+  const credited = w1.last && w1.last.nonce === bonusNonce && Math.abs(w0.chips - w1.last.totalBet + w1.last.totalWin - w1.s.chips) < 1e-6;
+  rec('wheel-close-collects', xDuringSpin && credited && !w1.spinOff && w1.panelHidden && w1.s.nonce === bonusNonce + 1,
+    `bonus at nonce ${bonusNonce}; ✕ hidden while spinning=${xDuringSpin}; after ✕: ${w0.chips} -${w1.last && w1.last.totalBet} +${w1.last && w1.last.totalWin} = ${w1.s.chips} (${w1.last && w1.last.bonusWedge}), SPIN enabled=${!w1.spinOff}`);
+  rec('bonus-counter-continues', baseShown > 0 && w1.minWin >= baseShown && w1.winText === Math.round(w1.last.totalWin).toLocaleString(),
+    `base win shown ${baseShown} before collecting; lowest value after = ${w1.minWin}; final ${w1.winText}`);
+  await page.screenshot({ path: OUT + '/03-after-wheel.png' });
+}
 
 // ---------------------------------------------------------------- win presentation (real click, animated path)
 const findNonce = (pred) => page.evaluate(async (predSrc) => {
@@ -143,12 +156,55 @@ const playNonce = async (n) => {
   await page.waitForFunction(() => !document.getElementById('spinbtn').disabled, null, { timeout: 15000 });
 };
 const lineNonce = await findNonce('r.lineWin >= 90 && !r.bonusTriggered && r.lineWin + r.scatterPay < 15 * r.totalBet');
-await playNonce(lineNonce);
-await page.waitForTimeout(2200);
-const v1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(), last = h[h.length - 1]; return Object.assign(T.view(), { totalWin: last.totalWin }); });
-await page.screenshot({ path: OUT + '/04-line-win.png' });
-rec('win-presentation', lineNonce >= 0 && v1.winCells >= 3 && v1.lines >= 1 && v1.winText === Math.round(v1.totalWin).toLocaleString() && v1.spritesCached <= 16,
-  `line win at nonce ${lineNonce}: ${v1.winCells} cells framed on ${v1.lines} line(s); counter shows ${v1.winText} (won ${v1.totalWin}); ${v1.spritesCached} cached symbol sprites`);
+if (lineNonce < 0) {
+  rec('reel-landing', false, 'no line-win spin found in 20k nonces');
+  rec('win-presentation', false, 'no line-win spin found in 20k nonces');
+  rec('idle-stops-drawing', false, 'skipped: no line-win spin found');
+} else {
+  // Record every reel position frame by frame through a real animated spin.
+  await page.evaluate((nn) => { const st = JSON.parse(localStorage.getItem('kd.jackpot.pf')); st.nonce = nn; localStorage.setItem('kd.jackpot.pf', JSON.stringify(st)); localStorage.setItem('kd.jackpot.chips', '5000'); }, lineNonce);
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  await page.evaluate(() => { window.__reelTrace = []; let seen = false; (function rec() { const v = window.__jackpotTest.view(); seen = seen || v.spinning; if (seen) window.__reelTrace.push(v.reelPos); if (!seen || v.spinning) requestAnimationFrame(rec); })(); });
+  await page.click('#spinbtn');
+  await page.waitForTimeout(450);
+  await page.screenshot({ path: OUT + '/06-mid-spin.png' });
+  await page.waitForFunction(() => !document.getElementById('spinbtn').disabled, null, { timeout: 15000 });
+  const land = await page.evaluate(() => {
+    const tr = window.__reelTrace, fin = tr[tr.length - 1]; let over = 0;
+    for (let r = 0; r < 5; r++) {
+      let peak = -Infinity; for (const p of tr) peak = Math.max(peak, p[r]);
+      over = Math.max(over, peak - fin[r]);
+    }
+    return { over: +over.toFixed(3), frames: tr.length };
+  });
+  rec('reel-landing', land.over > 0.05 && land.over <= 0.5, `${land.frames} frames: reels overshoot their stop by at most ${land.over} rows before settling (a bounce, not a reverse spin)`);
+  await page.waitForTimeout(2200);
+  const v1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(), last = h[h.length - 1]; return Object.assign(T.view(), { totalWin: last.totalWin }); });
+  await page.screenshot({ path: OUT + '/04-line-win.png' });
+  rec('win-presentation', v1.winCells >= 3 && v1.lines >= 1 && v1.winText === Math.round(v1.totalWin).toLocaleString() && v1.spritesCached <= 16,
+    `line win at nonce ${lineNonce}: ${v1.winCells} cells framed on ${v1.lines} line(s); counter shows ${v1.winText} (won ${v1.totalWin}); ${v1.spritesCached} cached symbol sprites`);
+  // Once the win pulse ends the machine is idle and must stop repainting the canvas.
+  await page.waitForTimeout(2200);
+  const d0 = await page.evaluate(() => window.__jackpotTest.view().draws);
+  await page.waitForTimeout(600);
+  const d1 = await page.evaluate(() => window.__jackpotTest.view().draws);
+  rec('idle-stops-drawing', d1 === d0, `canvas repaints while idle after a win: ${d1 - d0} in 600 ms`);
+}
+
+// ---------------------------------------------------------------- Reveal can't rotate the seed under an in-flight spin
+{
+  await page.evaluate(() => localStorage.setItem('kd.jackpot.chips', '5000'));
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  const h0 = await page.evaluate(() => window.__jackpotTest.state().hash);
+  await page.click('#spinbtn');
+  await page.waitForTimeout(150);
+  const disabled = await page.evaluate(() => { const b = document.getElementById('revealBtn'); const d = b.disabled; window.__jackpotTest.reveal(); return d; });
+  await page.waitForFunction(() => !document.getElementById('spinbtn').disabled, null, { timeout: 15000 });
+  await page.waitForTimeout(100);
+  const r1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(); return { hash: T.state().hash, last: h[h.length - 1] }; });
+  rec('reveal-locked-mid-spin', disabled && r1.hash === h0 && r1.last.hash === h0,
+    `Reveal disabled while spinning=${disabled}; seed unchanged by a mid-spin reveal=${r1.hash === h0}`);
+}
 
 const bigNonce = await findNonce('!r.bonusTriggered && r.lineWin + r.scatterPay >= 15 * r.totalBet');
 if (bigNonce >= 0) {

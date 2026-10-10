@@ -47,11 +47,19 @@ frequency (any win), and a Bonus Wheel roughly every 260–270 spins.
 
 ## Checks
 
-`npm run jackpot:eval` (also part of `npm run verify`) runs headless checks against the real page:
-a 300k-spin return-to-player sample, hit rate, the exact Bonus Wheel odds computed from the strip, that the
-Fair panel shows the real strip, chip accounting across spins, a provably-fair round-trip (revealed seed
-hashes to the commitment and recomputes the same stops), and that closing the Bonus Wheel with ✕ still
-pays the win.
+`npm run jackpot:eval` (also part of `npm run verify`) runs 22 headless checks against the real page:
+
+- **Layout** at four viewports (phone, small phone, laptop, desktop): nothing in the marquee clipped,
+  every control on-screen, no horizontal scroll.
+- **Math:** a 300k-spin return-to-player sample, hit rate, the exact Bonus Wheel odds computed from the
+  strip, and that the Fair panel shows the real strip.
+- **Fairness:** chip accounting across spins, a provably-fair round-trip (revealed seed hashes to the
+  commitment and recomputes the same stops), and that Reveal can't rotate the seed under a spin in flight.
+- **Play:** closing the Bonus Wheel with ✕ still pays; the WIN counter carries on from the base win after
+  the wheel; reels land with a small bounce (never a reverse spin); winning cells and paylines are drawn;
+  BIG/MEGA WIN; the canvas stops repainting once idle; the out-of-chips refill.
+- **Share card:** og/twitter image tags and a 1200×630 `assets/og/jackpot.jpg`
+  (regenerate with `node games/kudbee-jackpot/eval/og-image.mjs`).
 
 ## Controls
 

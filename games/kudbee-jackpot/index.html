@@ -88,9 +88,11 @@
   }
   /* Slow light rays behind the marquee (pure CSS, paused under reduced motion). */
   #rays {
-    position: absolute; left: 50%; top: 46%; width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax;
+    /* Sized to the marquee (not the viewport) so the rotating layer stays small on high-DPR phones;
+       percentage margins resolve against the marquee width, so -60% centres a 120%-wide square. */
+    position: absolute; left: 50%; top: 46%; width: 120%; aspect-ratio: 1; margin: -60% 0 0 -60%;
     background: repeating-conic-gradient(from 0deg, rgba(255,190,90,0.07) 0 6deg, transparent 6deg 18deg);
-    -webkit-mask: radial-gradient(circle, #000 0, transparent 38%); mask: radial-gradient(circle, #000 0, transparent 38%);
+    -webkit-mask: radial-gradient(circle, #000 0, transparent 70%); mask: radial-gradient(circle, #000 0, transparent 70%);
     animation: rays 40s linear infinite; pointer-events: none;
   }
   @keyframes rays { to { transform: rotate(360deg); } }
@@ -462,10 +464,12 @@
   function fmt(n) { return Math.round(n).toLocaleString(); }
   // Demo chips only: once the balance can't cover the smallest bet the game would be stuck
   // for good (chips persist), so offer a refill back to the starting stack.
-  var START_CHIPS = 2000, MIN_TOTAL_BET = 5 * LINES.length;
+  var START_CHIPS = 2000;
+  var MIN_TOTAL_BET = Math.min.apply(null, Array.prototype.map.call(document.querySelectorAll('.betbtn'), function (b) { return parseInt(b.dataset.bet, 10); })) * LINES.length;
   function renderChips() {
     chipValEl.textContent = Math.max(0, Math.floor(chips));
     refillBtn.classList.toggle('hidden', spinning || chips >= MIN_TOTAL_BET);
+    $('revealBtn').disabled = spinning;   // rotating the seed mid-spin would orphan that spin's proof
     spinBtn.disabled = spinning || chips < perLineBet * LINES.length;
     document.querySelectorAll('.betbtn').forEach(function (b) { b.disabled = spinning || chips < parseInt(b.dataset.bet, 10) * LINES.length; });
   }
@@ -500,7 +504,9 @@
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var W = 0, H = 0, cellW = 0, cellH = 0;
   var reelPos = [0, 1, 2, 3, 4];     // continuous strip index per reel (float)
-  var reelSpeed = [0, 0, 0, 0, 0];   // rows per frame, drives the motion blur
+  var reelSpeed = [0, 0, 0, 0, 0];   // rows per 1/60 s (frame-rate independent), drives the motion blur
+  var lastFrameT = 0, needsDraw = true, drawCount = 0;
+  var WIN_PULSE_MS = 4000;           // after this the win display freezes and the canvas stops redrawing
   var reelAnim = null;               // { reels: [{from,to,t0,dur}], onDone }
   var win = null;                    // { cells: {'reel,row':1}, lines: [], t0, big, amount }
   var coins = [];
@@ -514,6 +520,14 @@
     W = r.width; H = r.height; cellW = W / 5; cellH = H / 3;
     spriteCache = {};
     buildBackdrops();
+    needsDraw = true;
+  }
+  // Symbol sprites bake in "Space Grotesk" text; repaint them once the webfont arrives
+  // (display=swap means the first frames can render with the fallback font).
+  function refreshSprites() { spriteCache = {}; needsDraw = true; }
+  if (document.fonts) {
+    document.fonts.ready.then(refreshSprites);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', refreshSprites);
   }
 
   function offscreen(w, h) { var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr)); var g = c.getContext('2d'); g.scale(dpr, dpr); return { c: c, g: g }; }
@@ -678,12 +692,13 @@
 
   function cellIsWin(r, row) { return !!(win && win.cells[r + ',' + row]); }
 
-  function drawReelsFrame(now) {
+  function drawReelsFrame(now, dt) {
+    drawCount++;
     ctx.clearRect(0, 0, W, H);
     if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
     var size = Math.min(cellW, cellH) * 0.86;
     var showWin = win && !reelAnim;
-    var pulse = showWin && !reduceMotion ? 0.5 + 0.5 * Math.sin((now - win.t0) / 140) : 1;
+    var pulse = showWin && !reduceMotion && now - win.t0 < WIN_PULSE_MS ? 0.5 + 0.5 * Math.sin((now - win.t0) / 140) : 1;
     for (var r = 0; r < 5; r++) {
       var pos = reelPos[r], base = Math.floor(pos), frac = pos - base;
       var blur = reduceMotion ? 0 : Math.min(1, reelSpeed[r] / 0.9);
@@ -709,18 +724,19 @@
     }
     if (shadeCanvas) ctx.drawImage(shadeCanvas, 0, 0, W, H);
     if (showWin) drawWin(now, pulse);
-    drawCoins();
+    drawCoins(dt);
   }
 
   function drawWin(now, pulse) {
     var age = (now - win.t0) / 1000;
-    // Paylines: a dark under-stroke so the colour reads on any symbol.
+    // Paylines, drawn only through the symbols that count (a 3-of-a-kind stops at reel 3),
+    // with a dark under-stroke so the colour reads on any symbol.
     win.lines.forEach(function (wl) {
-      var line = LINES[wl.idx], col = LINE_COLORS[wl.idx % LINE_COLORS.length];
+      var line = LINES[wl.idx], col = LINE_COLORS[wl.idx % LINE_COLORS.length], last = wl.count - 1;
       ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.beginPath();
-      for (var c = 0; c < 5; c++) { var x = c * cellW + cellW / 2, y = line[c] * cellH + cellH / 2; if (c === 0) ctx.moveTo(x - cellW * 0.42, y); ctx.lineTo(x, y); }
-      ctx.lineTo(4 * cellW + cellW * 0.92, line[4] * cellH + cellH / 2);
+      for (var c = 0; c <= last; c++) { var x = c * cellW + cellW / 2, y = line[c] * cellH + cellH / 2; if (c === 0) ctx.moveTo(x - cellW * 0.42, y); ctx.lineTo(x, y); }
+      ctx.lineTo(last * cellW + cellW * 0.92, line[last] * cellH + cellH / 2);
       ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 8; ctx.stroke();
       ctx.strokeStyle = col; ctx.globalAlpha = 0.65 + 0.35 * pulse; ctx.lineWidth = 4; ctx.stroke();
       ctx.restore();
@@ -756,10 +772,8 @@
     if (reduceMotion) return;
     for (var i = 0; i < n; i++) coins.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 60, vy: 60 + Math.random() * 120, rot: Math.random() * 6.28, spin: 4 + Math.random() * 8, life: 3.2 });
   }
-  var lastCoinT = 0;
-  function drawCoins() {
+  function drawCoins(dt) {
     if (!coins.length) return;
-    var now = performance.now(), dt = lastCoinT ? Math.min(0.05, (now - lastCoinT) / 1000) : 0.016; lastCoinT = now;
     var r = Math.max(5, cellW * 0.09);
     for (var i = coins.length - 1; i >= 0; i--) {
       var c = coins[i];
@@ -772,47 +786,60 @@
       ctx.beginPath(); ctx.arc(-r * 0.25, -r * 0.3, r * 0.3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fill();
       ctx.restore();
     }
-    if (!coins.length) lastCoinT = 0;
   }
 
-  // Win counter: counts up to the amount instead of snapping.
-  var winValEl = $('winVal'), winbarEl = $('winbar'), countUp = null;
+  // Win counter: counts up to the amount instead of snapping. shownWin is what's on screen,
+  // so a later count (the bonus total) carries on from there instead of restarting at 0.
+  var winValEl = $('winVal'), winbarEl = $('winbar'), countUp = null, shownWin = 0;
   function showWinAmount(amount) {
-    if (reduceMotion || amount <= 0) { countUp = null; winValEl.textContent = fmt(amount); winbarEl.classList.toggle('hot', amount > 0); return; }
-    var from = countUp ? countUp.to : 0;
-    countUp = { from: from, to: amount, t0: performance.now(), dur: Math.min(1800, 500 + amount * 1.2) };
+    if (reduceMotion || amount <= 0) { countUp = null; shownWin = amount; winValEl.textContent = fmt(amount); winbarEl.classList.toggle('hot', amount > 0); return; }
+    countUp = { from: shownWin, to: amount, t0: performance.now(), dur: Math.min(1800, 500 + Math.abs(amount - shownWin) * 1.2) };
     winbarEl.classList.add('hot');
   }
   function tickCountUp(now) {
     if (!countUp) return;
     var t = Math.min(1, (now - countUp.t0) / countUp.dur);
-    winValEl.textContent = fmt(countUp.from + (countUp.to - countUp.from) * (1 - Math.pow(1 - t, 3)));
+    shownWin = countUp.from + (countUp.to - countUp.from) * (1 - Math.pow(1 - t, 3));
+    winValEl.textContent = fmt(shownWin);
     if (t >= 1) countUp = null;
+  }
+
+  // Reel landing: decelerate to a stop BOUNCE rows past the target, then settle back onto it.
+  // The bounce is a fixed fraction of a row, not of the travel, so the player never sees the
+  // reel roll backwards through symbols that aren't the result.
+  var BOUNCE = 0.22, SETTLE = 0.14;
+  function reelEase(a, t) {
+    if (t >= 1) return a.to;
+    if (t < 1 - SETTLE) { var s = t / (1 - SETTLE); return a.from + (a.to + BOUNCE - a.from) * (1 - Math.pow(1 - s, 3)); }
+    var u = (t - (1 - SETTLE)) / SETTLE;
+    return a.to + BOUNCE * (1 - u) * (1 - u);
   }
 
   function frame(now) {
     requestAnimationFrame(frame);
+    var dt = lastFrameT ? Math.min(0.05, (now - lastFrameT) / 1000) : 1 / 60; lastFrameT = now;
     if (reelAnim) {
       var allDone = true;
       for (var r = 0; r < 5; r++) {
         var a = reelAnim.reels[r];
         var t = Math.min(1, (now - a.t0) / a.dur);
-        // Ease out with a small overshoot so each reel lands with a little bounce.
-        var c1 = 0.9, c3 = c1 + 1, e = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
         var prev = reelPos[r];
-        reelPos[r] = t < 1 ? a.from + (a.to - a.from) * e : a.to;
-        reelSpeed[r] = Math.abs(reelPos[r] - prev);
+        reelPos[r] = reelEase(a, t);
+        reelSpeed[r] = dt > 0 ? Math.abs(reelPos[r] - prev) / (dt * 60) : 0;
         if (t < 1) allDone = false;
       }
       if (allDone) { reelSpeed = [0, 0, 0, 0, 0]; var cb = reelAnim.onDone; reelAnim = null; cb(); }
     }
     tickCountUp(now);
-    drawReelsFrame(now);
+    // Only repaint while something moves; an idle machine costs nothing per frame.
+    var live = !!(reelAnim || coins.length || (win && now - win.t0 < WIN_PULSE_MS));
+    if (live || needsDraw) { drawReelsFrame(now, dt); needsDraw = live; }
   }
 
   function spinReels(stops, onDone) {
     if (reduceMotion) {
       for (var r = 0; r < 5; r++) reelPos[r] = stops[r];
+      needsDraw = true;
       onDone();
       return;
     }
@@ -834,7 +861,7 @@
     var totalBet = perLineBet * LINES.length;
     if (chips < totalBet) return;
     spinning = true; renderChips();
-    win = null; countUp = null; winValEl.textContent = '0'; winbarEl.classList.remove('hot');
+    win = null; countUp = null; shownWin = 0; needsDraw = true; winValEl.textContent = '0'; winbarEl.classList.remove('hot');
     chips -= totalBet;
     Object.keys(JP_RATE).forEach(function (k) { jp[k] += totalBet * JP_RATE[k]; });
     renderJackpots();
@@ -943,6 +970,7 @@
   $('closepanel').addEventListener('click', function () { fairpanel.classList.add('hidden'); });
   $('saveSeedBtn').addEventListener('click', function () { var v = clientSeedInput.value.trim(); if (v) { pf.clientSeed = v; saveJSON('kd.jackpot.pf', pf); } });
   $('revealBtn').addEventListener('click', async function () {
+    if (spinning) return;   // the in-flight spin was committed under the current seed
     var revealed = pf.serverSeed;
     pf.history.forEach(function (h) { if (h.hash === pf.serverSeedHash && !h.revealedSeed) h.revealedSeed = revealed; });
     var newSeed = randomHex(32);
@@ -1032,7 +1060,7 @@
     drawReels: drawReels, drawWheel: drawWheel, gridFromStops: gridFromStops, evaluateSpin: evaluateSpin,
     history: function () { return pf.history; },
     WHEEL: WHEEL, STRIP: STRIP, LINES: LINES,
-    view: function () { return { winCells: win ? Object.keys(win.cells).length : 0, lines: win ? win.lines.length : 0, big: win ? win.big : null, winText: winValEl.textContent, spritesCached: Object.keys(spriteCache).length }; },
+    view: function () { return { winCells: win ? Object.keys(win.cells).length : 0, lines: win ? win.lines.length : 0, big: win ? win.big : null, winText: winValEl.textContent, spritesCached: Object.keys(spriteCache).length, draws: drawCount, reelPos: reelPos.slice(), spinning: spinning }; },
   };
 })();
 </script>
