@@ -42,6 +42,7 @@
     this.board = new KD.Board();
     this.board.layout(480, 296, 232);
     this.progression = new KD.Progression();
+    this.board.setTheme(this.progression.data.settings.boardTheme);
     this.dart = new KD.Dart(this);
     this.humanSigma = 0.030;   // a touch more scatter -> aim matters more
 
@@ -215,8 +216,9 @@
     const btns = [];
     const cx = VIEW_W / 2;
     // Mode toggle
-    btns.push({ id: 'mode:x01', label: '501', x: cx - 150, y: 196, w: 140, h: 52, sel: this.selMode === 'x01', group: 'mode' });
-    btns.push({ id: 'mode:cricket', label: 'CRICKET', x: cx + 10, y: 196, w: 140, h: 52, sel: this.selMode === 'cricket', group: 'mode' });
+    btns.push({ id: 'mode:x301', label: '301', x: cx - 225, y: 196, w: 140, h: 52, sel: this.selMode === 'x301', group: 'mode' });
+    btns.push({ id: 'mode:x01', label: '501', x: cx - 70, y: 196, w: 140, h: 52, sel: this.selMode === 'x01', group: 'mode' });
+    btns.push({ id: 'mode:cricket', label: 'CRICKET', x: cx + 85, y: 196, w: 140, h: 52, sel: this.selMode === 'cricket', group: 'mode' });
     // Opponent
     const opps = [['career', 'CAREER'], ['hotseat', '2P'], ['Rookie', 'ROOKIE'], ['Pro', 'PRO'], ['Legend', 'LEGEND']];
     const ow = 158, gap = 8, total = opps.length * ow + (opps.length - 1) * gap;
@@ -227,10 +229,19 @@
     });
     // Play
     btns.push({ id: 'play', label: '▶  PLAY', x: cx - 130, y: 372, w: 260, h: 64, sel: false, group: 'play' });
+    // Board look: neon (default) or a classic pub board.
+    btns.push({ id: 'theme', label: 'BOARD: ' + (this.board.themeName === 'pub' ? 'PUB' : 'NEON'), x: cx + 150, y: 382, w: 180, h: 44, sel: false, group: 'theme' });
     // Secondary nav: the Dart Workshop and the League Leaderboard.
     btns.push({ id: 'nav:workshop', label: '🎯  DART WORKSHOP', x: cx - 264, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
     btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: cx + 10, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
     return btns;
+  };
+
+  Game.prototype._toggleBoardTheme = function () {
+    const next = this.board.themeName === 'pub' ? 'neon' : 'pub';
+    this.board.setTheme(next);
+    this.progression.data.settings.boardTheme = next;
+    this.progression.save();
   };
 
   Game.prototype._updateMenu = function () {
@@ -244,6 +255,7 @@
         if (b.group === 'mode') this.selMode = b.id.split(':')[1];
         else if (b.group === 'opp') this.selOpp = b.id.split(':')[1];
         else if (b.group === 'play') this._startMatch();
+        else if (b.group === 'theme') this._toggleBoardTheme();
         else if (b.group === 'nav') {
           const dest = b.id.split(':')[1];
           this.state = dest;        // 'workshop' | 'leaderboard'
@@ -275,7 +287,7 @@
     if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark' };
     else opp.dartParts = { tip: 'steel', flight: 'standard' };
 
-    this.mode = this.selMode === 'x01' ? new KD.Mode_X01(501) : new KD.Mode_Cricket();
+    this.mode = this.selMode === 'cricket' ? new KD.Mode_Cricket() : new KD.Mode_X01(this.selMode === 'x301' ? 301 : 501);
     this.players = [human, opp];
     this.players.forEach((pl) => {
       this.mode.initPlayer(pl);
@@ -681,7 +693,7 @@
       ctx.fillStyle = 'rgba(4,6,14,0.45)';
       ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     } else {
-      this.sprites.drawBackdrop(ctx, VIEW_W, VIEW_H, this.time);
+      this.sprites.drawBackdrop(ctx, VIEW_W, VIEW_H, this.time, this.board.themeName);
     }
 
     if (this.state === 'menu') { this._drawMenu(ctx); this._drawToasts(ctx); return; }
@@ -791,7 +803,7 @@
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet;
     ctx.font = '15px "Space Grotesk", sans-serif';
-    ctx.fillText('PREDICTIVE FLICK · 501 + CRICKET · CLIMB THE LEAGUE', VIEW_W / 2, 140);
+    ctx.fillText('PREDICTIVE FLICK · 301 · 501 · CRICKET · CLIMB THE LEAGUE', VIEW_W / 2, 140);
 
     // Section labels.
     ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
@@ -806,16 +818,16 @@
     const d = this.progression.data;
     const skin = KD.Sprites.SKINS[d.skins.equipped];
     ctx.save();
-    ctx.translate(VIEW_W / 2, 530);
-    ctx.rotate(-Math.PI * 0.12);
-    this.sprites.drawDart(ctx, 168, skin, 0.4, d.darts);
+    ctx.translate(VIEW_W / 2 + 48, 524);
+    ctx.rotate(-Math.PI * 0.07);
+    this.sprites.drawDart(ctx, 112, skin, 0.4, d.darts);
     ctx.restore();
     ctx.save();
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
     ctx.font = '11px "Space Grotesk", sans-serif';
     const tipN = (KD.Sprites.TIPS[d.darts.tip] || {}).name || d.darts.tip;
     const flN = (KD.Sprites.FLIGHTS[d.darts.flight] || {}).name || d.darts.flight;
-    ctx.fillText(skin.name + ' · ' + tipN + ' · ' + flN, VIEW_W / 2, 566);
+    ctx.fillText(skin.name + ' · ' + tipN + ' · ' + flN, VIEW_W / 2, 586);
     ctx.restore();
 
     // Stats footer.
@@ -1630,7 +1642,7 @@
     const lines = [
       ['Level', 'LV ' + d.level],
       ['Win streak', d.streak + '  (best ' + d.bestStreak + ')'],
-      ['501 record', x01.won + 'W / ' + (x01.played - x01.won) + 'L  · ' + pct(x01.won, x01.played)],
+      ['301 / 501 record', x01.won + 'W / ' + (x01.played - x01.won) + 'L  · ' + pct(x01.won, x01.played)],
       ['Cricket record', cri.won + 'W / ' + (cri.played - cri.won) + 'L  · ' + pct(cri.won, cri.played)],
       ['180s thrown', '' + x01.total180s],
       ['Best checkout', x01.bestCheckout ? '' + x01.bestCheckout : '—'],

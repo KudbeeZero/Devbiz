@@ -41,7 +41,24 @@
     wire: 'rgba(180,210,255,0.30)',
   };
 
+  // Board themes. Geometry is shared (one hit-test); only paint differs.
+  // glowK scales every shadowBlur in the bake (0 = flat, classic print look).
+  const THEMES = {
+    neon: {
+      glowK: 1, bg: COL.bg, catchDisc: '#05060f', rim: null,
+      singleA: COL.singleA, singleB: COL.singleB, ringA: COL.ringCyan, ringB: COL.ringViolet,
+      outBull: COL.outBull, inBull: COL.inBull, wire: COL.wire, num: '#dfeaff', numGlow: COL.ringCyan,
+    },
+    pub: {
+      glowK: 0, bg: '#0c0a09', catchDisc: '#0c0a09', rim: ['#6b4224', '#3a2412', '#24150a'],
+      singleA: '#16120f', singleB: '#efe2c0', ringA: '#c8202a', ringB: '#1d8a4a',
+      outBull: '#1d8a4a', inBull: '#c8202a', wire: 'rgba(205,210,216,0.85)', num: '#f4efe2', numGlow: null,
+    },
+  };
+
   function Board() {
+    this.themeName = 'neon';
+    this.theme = THEMES.neon;
     this.cx = 480;
     this.cy = 360;
     this.Rpx = 300;
@@ -51,6 +68,14 @@
 
   Board.WEDGES = WEDGES;
   Board.R = R;
+  Board.THEMES = THEMES;
+
+  Board.prototype.setTheme = function (name) {
+    if (!THEMES[name]) name = 'neon';
+    if (name === this.themeName) return;
+    this.themeName = name; this.theme = THEMES[name];
+    this._bake();
+  };
 
   Board.prototype.layout = function (cx, cy, Rpx) {
     this.cx = cx; this.cy = cy; this.Rpx = Rpx;
@@ -136,6 +161,7 @@
 
   Board.prototype._bake = function () {
     const Rpx = this.Rpx;
+    const T = this.theme, K = T.glowK;
     const pad = Rpx * 0.22;             // room for the numbers ring + glow
     const size = Math.ceil((Rpx + pad) * 2);
     const cv = document.createElement('canvas');
@@ -146,17 +172,27 @@
     this._bakedR = Rpx;
     this._baked = cv;
 
+    // Wooden surround (pub theme): a turned-wood ring with a lit top-left edge.
+    if (T.rim) {
+      const rg = ctx.createRadialGradient(cx - Rpx * 0.25, cy - Rpx * 0.3, Rpx * 0.9, cx, cy, Rpx * 1.22);
+      rg.addColorStop(0, T.rim[0]); rg.addColorStop(0.6, T.rim[1]); rg.addColorStop(1, T.rim[2]);
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(cx, cy, Rpx * 1.22, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = Math.max(1.5, Rpx * 0.012);
+      ctx.beginPath(); ctx.arc(cx, cy, Rpx * 1.215, 0, TAU); ctx.stroke();
+    }
+
     // Outer backdrop disc (the catch-ring) with a soft neon rim.
     ctx.save();
-    ctx.shadowColor = COL.ringCyan;
-    ctx.shadowBlur = Rpx * 0.10;
-    ctx.fillStyle = '#05060f';
+    ctx.shadowColor = T.ringA;
+    ctx.shadowBlur = Rpx * 0.10 * K;
+    ctx.fillStyle = T.catchDisc;
     ctx.beginPath();
     ctx.arc(cx, cy, Rpx * 1.16, 0, TAU);
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = COL.bg;
+    ctx.fillStyle = T.bg;
     ctx.beginPath();
     ctx.arc(cx, cy, Rpx * 1.10, 0, TAU);
     ctx.fill();
@@ -166,8 +202,8 @@
       const cAng = wedgeCanvasAngle(i);
       const aS = cAng - half, aE = cAng + half;
       const even = i % 2 === 0;
-      const single = even ? COL.singleA : COL.singleB;
-      const ring = even ? COL.ringCyan : COL.ringViolet;
+      const single = even ? T.singleA : T.singleB;
+      const ring = even ? T.ringA : T.ringB;
 
       // Inner single (bull -> treble) and outer single (treble -> double).
       sector(ctx, cx, cy, R.outBull * Rpx, R.trbInner * Rpx, aS, aE, single);
@@ -176,7 +212,7 @@
       // Glowing treble + double rings.
       ctx.save();
       ctx.shadowColor = ring;
-      ctx.shadowBlur = Rpx * 0.04;
+      ctx.shadowBlur = Rpx * 0.04 * K;
       sector(ctx, cx, cy, R.trbInner * Rpx, R.trbOuter * Rpx, aS, aE, ring);
       sector(ctx, cx, cy, R.dblInner * Rpx, R.dblOuter * Rpx, aS, aE, ring);
       ctx.restore();
@@ -184,16 +220,16 @@
 
     // Bull.
     ctx.save();
-    ctx.shadowColor = COL.outBull; ctx.shadowBlur = Rpx * 0.05;
-    ctx.fillStyle = COL.outBull;
+    ctx.shadowColor = T.outBull; ctx.shadowBlur = Rpx * 0.05 * K;
+    ctx.fillStyle = T.outBull;
     ctx.beginPath(); ctx.arc(cx, cy, R.outBull * Rpx, 0, TAU); ctx.fill();
-    ctx.shadowColor = COL.inBull; ctx.shadowBlur = Rpx * 0.07;
-    ctx.fillStyle = COL.inBull;
+    ctx.shadowColor = T.inBull; ctx.shadowBlur = Rpx * 0.07 * K;
+    ctx.fillStyle = T.inBull;
     ctx.beginPath(); ctx.arc(cx, cy, R.inBull * Rpx, 0, TAU); ctx.fill();
     ctx.restore();
 
     // Spider wires: ring circles + wedge boundaries.
-    ctx.strokeStyle = COL.wire;
+    ctx.strokeStyle = T.wire;
     ctx.lineWidth = Math.max(1, Rpx * 0.006);
     [R.outBull, R.trbInner, R.trbOuter, R.dblInner, R.dblOuter].forEach(function (rr) {
       ctx.beginPath(); ctx.arc(cx, cy, rr * Rpx, 0, TAU); ctx.stroke();
@@ -207,12 +243,12 @@
     }
 
     // Numbers ring.
-    ctx.fillStyle = '#dfeaff';
+    ctx.fillStyle = T.num;
     ctx.font = 'bold ' + Math.round(Rpx * 0.10) + 'px "Space Grotesk", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = COL.ringCyan;
-    ctx.shadowBlur = Rpx * 0.03;
+    ctx.shadowColor = T.numGlow || 'transparent';
+    ctx.shadowBlur = Rpx * 0.03 * K;
     const numR = R.dblOuter * Rpx + Rpx * 0.11;
     for (let i = 0; i < 20; i++) {
       const ang = wedgeCanvasAngle(i);

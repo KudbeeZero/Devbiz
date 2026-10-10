@@ -124,6 +124,14 @@ const tiers = await page.evaluate(() => {
 rec('ai-tier-ordering', tiers.Rookie.meanErr > tiers.Pro.meanErr && tiers.Pro.meanErr > tiers.Legend.meanErr && tiers.Legend.t20 > tiers.Rookie.t20,
   `mean miss (board radii): Rookie ${tiers.Rookie.meanErr} > Pro ${tiers.Pro.meanErr} > Legend ${tiers.Legend.meanErr}; T20 rate ${tiers.Rookie.t20}/${tiers.Pro.t20}/${tiers.Legend.t20}`);
 
+// ---------------------------------------------------------------- 301 mode
+const m301 = await page.evaluate(() => {
+  const g = window.DARTS; g.selMode = 'x301'; g.selOpp = 'hotseat'; g._startMatch(); window.__step(2);
+  const out = { label: g.mode.label, start: g.players[0].scoreState.remaining, id: g.mode.id, btns: g._menuLayout().filter((b) => b.group === 'mode').map((b) => b.label) };
+  g.selMode = 'x01'; return out;
+});
+rec('mode-301', m301.start === 301 && m301.label === '301' && m301.id === 'x01' && m301.btns.join() === '301,501,CRICKET', `301 match starts at ${m301.start} (label ${m301.label}); mode buttons: ${m301.btns.join(' / ')}`);
+
 // ---------------------------------------------------------------- real throw
 await page.evaluate(() => { const g = window.DARTS; Math.random = Math.random;  g.selMode = 'x01'; g.selOpp = 'hotseat'; g._startMatch(); window.__step(120); });
 rec('match-starts', (await page.evaluate(() => window.DARTS.state)) === 'play', 'state=play after _startMatch');
@@ -196,6 +204,43 @@ if (clips.length) {
   await sheet.screenshot({ path: OUT + '/flight-sheet.png' });
   await sheet.close();
 }
+// ---------------------------------------------------------------- board theme (neon <-> pub)
+await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
+await page.screenshot({ path: OUT + '/10-menu-neon.png' });
+const themeBtn = await page.evaluate(() => { const b = window.DARTS._menuLayout().find((x) => x.group === 'theme'); return b && { x: b.x + b.w / 2, y: b.y + b.h / 2, label: b.label }; });
+const pt = themeBtn ? toPx(themeBtn.x, themeBtn.y) : { x: 0, y: 0 };
+await page.mouse.move(pt.x, pt.y); await page.mouse.down(); await step(2); await page.mouse.up(); await step(2);
+const themed = await page.evaluate(() => {
+  const g = window.DARTS, b = g.board;
+  const px = (name) => {
+    const tp = b.targetPoint('T20'), c = b._baked.getContext('2d');
+    const d = c.getImageData(Math.round(b._bakeCx + tp.x - b.cx), Math.round(b._bakeCy + tp.y - b.cy), 1, 1).data;
+    return [d[0], d[1], d[2]];
+  };
+  const pub = { name: b.themeName, pixel: px(), label: g._menuLayout().find((x) => x.group === 'theme').label };
+  const saved = Object.keys(localStorage).map((k) => localStorage.getItem(k)).filter((v) => /boardTheme/.test(v || ''))[0] || '';
+  const probes = [[0, 0], [30, -100], [-90, 60], [200, 10], [10, 230], [0, -120]];
+  const sig = () => probes.map((p) => { const h = b.hitTest(b.cx + p[0], b.cy + p[1]); return h.score + h.ring; }).join('|');
+  const sigPub = sig();
+  g._toggleBoardTheme();
+  const neon = { name: b.themeName, pixel: px() };
+  const sigNeon = sig();
+  g._toggleBoardTheme();   // leave it on pub for the screenshots
+  return { pub, neon, savedPub: /"boardTheme":"pub"/.test(saved), sameGeometry: sigPub === sigNeon };
+});
+const isRed = (p) => p[0] > 150 && p[1] < 80 && p[2] < 90, isCyan = (p) => p[2] > 200 && p[1] > 180 && p[0] < 120;
+rec('board-theme', !!themeBtn && themed.pub.name === 'pub' && themed.pub.label === 'BOARD: PUB' && themed.savedPub && isRed(themed.pub.pixel) && themed.neon.name === 'neon' && isCyan(themed.neon.pixel) && themed.sameGeometry,
+  `menu click -> ${themed.pub.name} (${themed.pub.label}), saved=${themed.savedPub}; T20 treble pixel pub ${themed.pub.pixel} / neon ${themed.neon.pixel}; hit-test identical across themes=${themed.sameGeometry}`);
+await page.screenshot({ path: OUT + '/11-menu-pub.png' });
+await page.evaluate(() => { const g = window.DARTS; g.selOpp = 'hotseat'; g._startMatch(); window.__step(60); });
+await page.screenshot({ path: OUT + '/12-pub-play.png' });
+await page.evaluate(() => {   // land two darts on the pub board (treble 20, then bull) to eyeball flash/contrast
+  const g = window.DARTS;
+  ['T20', 'BULL'].forEach((t) => { const p = g.board.targetPoint(t); g.dart.setAI(p.x, p.y, 0.001); g.dart.skin = g.players[0].skin(); g.dart.release(); for (let i = 0; i < 60 && g.dart.state === 'flying'; i++) window.__step(1); window.__step(4); });
+});
+await page.screenshot({ path: OUT + '/13-pub-impact.png' });
+
+
 // ---------------------------------------------------------------- share card (SEO / social)
 {
   const html = readFileSync(resolve(HERE, '..', 'index.html'), 'utf8');
