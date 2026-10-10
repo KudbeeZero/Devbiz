@@ -241,6 +241,23 @@ await page.evaluate(() => {   // land two darts on the pub board (treble 20, the
 await page.screenshot({ path: OUT + '/13-pub-impact.png' });
 
 
+// ---------------------------------------------------------------- dart gallery (visual review)
+await page.evaluate(() => {
+  const cv = document.createElement('canvas'); cv.id = '__gallery'; cv.width = 960; cv.height = 720;
+  cv.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;width:960px;height:720px';
+  document.body.appendChild(cv);
+  const c = cv.getContext('2d'), sp = window.DARTS.sprites, S = KD.Sprites;
+  c.fillStyle = '#0b0f1e'; c.fillRect(0, 0, 960, 360); c.fillStyle = '#efe2c0'; c.fillRect(0, 360, 960, 360);
+  const skins = Object.keys(S.SKINS);
+  skins.forEach((k, i) => { c.save(); c.translate(330, 36 + i * 70 + 10); sp.drawDart(c, 190, S.SKINS[k], 0.4, { tip: 'steel', flight: 'standard' }); c.restore(); });
+  const tips = Object.keys(S.TIPS), fls = Object.keys(S.FLIGHTS);
+  fls.forEach((f, i) => { c.save(); c.translate(820, 40 + i * 56); sp.drawDart(c, 190, S.SKINS.violet, 0.2, { tip: tips[i % tips.length], flight: f }); c.restore(); });
+  skins.forEach((k, i) => { c.save(); c.translate(330, 400 + i * 62); sp.drawDart(c, 190, S.SKINS[k], 0, { tip: 'steel', flight: 'kite' }); c.restore(); });
+  [48, 40, 64].forEach((L, i) => { c.save(); c.translate(480 + i * 150, 600); c.rotate(-0.6); sp.drawDart(c, L, S.SKINS.cyan, 0, { tip: 'steel', flight: 'standard' }); c.restore(); });
+});
+await page.screenshot({ path: OUT + '/14-dart-gallery.png', clip: { x: 0, y: 0, width: 960, height: 720 } });
+await page.evaluate(() => document.getElementById('__gallery').remove());
+
 // ---------------------------------------------------------------- share card (SEO / social)
 {
   const html = readFileSync(resolve(HERE, '..', 'index.html'), 'utf8');
