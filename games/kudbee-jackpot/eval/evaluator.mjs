@@ -28,6 +28,31 @@ rec('loads', pageErrors.length === 0, pageErrors[0] || 'no page errors');
 rec('hook', await page.evaluate(() => !!window.__jackpotTest), 'window.__jackpotTest present');
 await page.screenshot({ path: OUT + '/01-idle.png' });
 
+// ---------------------------------------------------------------- layout (phone fills the screen, nothing clipped)
+const layoutOf = () => page.evaluate(() => {
+  const r = (el) => (typeof el === 'string' ? document.getElementById(el) : el).getBoundingClientRect();
+  const f = r('frame'), reels = r('reels'), m = document.getElementById('marquee'), mr = r(m);
+  const inside = (b, box) => b.top >= box.top - 1 && b.bottom <= box.bottom + 1 && b.left >= box.left - 1 && b.right <= box.right + 1;
+  const visible = (el) => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0;
+  const clipped = [...m.querySelectorAll('.title, .sub, #grandhero, .jptile')].filter(visible).filter((el) => !inside(r(el), mr)).map((el) => el.className || el.id);
+  const controls = ['reels', 'spinbtn', 'winVal', 'chipVal', 'walletbtn', 'fairbadge'].concat([...document.querySelectorAll('.betbtn')]).every((el) => inside(r(el), f));
+  return { vw: innerWidth, vh: innerHeight, fw: f.width, fh: f.height, reelsH: reels.height, reelsW: reels.width,
+    clipped, controls, hScroll: document.documentElement.scrollWidth > innerWidth };
+});
+const checkLayout = async (w, h, id, extra) => {
+  await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(250);
+  const L = await layoutOf();
+  await page.screenshot({ path: OUT + '/00-layout-' + w + 'x' + h + '.png' });
+  const ok = L.clipped.length === 0 && L.controls && !L.hScroll && L.reelsH >= 150 && extra(L);
+  rec(id, ok, `${w}x${h}: frame ${L.fw.toFixed(0)}x${L.fh.toFixed(0)}, reels ${L.reelsW.toFixed(0)}x${L.reelsH.toFixed(0)}, controls on-screen=${L.controls}, clipped marquee items=[${L.clipped.join(', ')}]`);
+};
+await checkLayout(390, 844, 'layout-phone', (L) => L.fh >= L.vh * 0.98 && L.reelsW >= L.vw * 0.85);
+await checkLayout(375, 667, 'layout-small-phone', (L) => L.fh >= L.vh * 0.98);
+await checkLayout(1280, 800, 'layout-desktop', (L) => L.fw <= 521 && L.fh <= 800);
+await checkLayout(1440, 900, 'layout-desktop-tall', (L) => L.fw <= 521);
+await page.setViewportSize({ width: 390, height: 844 });
+await page.waitForTimeout(250);
+
 // ---------------------------------------------------------------- math (deterministic sim on the game's own pure functions)
 const sim = await page.evaluate(() => {
   const T = window.__jackpotTest;
@@ -102,6 +127,37 @@ const credited = w1.last && w1.last.nonce === bonusNonce && Math.abs(w0.chips - 
 rec('wheel-close-collects', bonusNonce >= 0 && xDuringSpin && credited && !w1.spinOff && w1.panelHidden && w1.s.nonce === bonusNonce + 1,
   `bonus at nonce ${bonusNonce}; ✕ hidden while spinning=${xDuringSpin}; after ✕: ${w0.chips} -${w1.last && w1.last.totalBet} +${w1.last && w1.last.totalWin} = ${w1.s.chips} (${w1.last && w1.last.bonusWedge}), SPIN enabled=${!w1.spinOff}`);
 await page.screenshot({ path: OUT + '/03-after-wheel.png' });
+
+// ---------------------------------------------------------------- win presentation (real click, animated path)
+const findNonce = (pred) => page.evaluate(async (predSrc) => {
+  const T = window.__jackpotTest, st = JSON.parse(localStorage.getItem('kd.jackpot.pf')), pred = new Function('r', 'return ' + predSrc);
+  for (let n = st.nonce; n < st.nonce + 20000; n++) { const r = T.evaluateSpin(T.gridFromStops(await T.drawReels(st.serverSeed, st.clientSeed, n)), 10); if (pred(r)) return n; }
+  return -1;
+}, pred);
+const playNonce = async (n) => {
+  await page.evaluate((nn) => { const st = JSON.parse(localStorage.getItem('kd.jackpot.pf')); st.nonce = nn; localStorage.setItem('kd.jackpot.pf', JSON.stringify(st)); localStorage.setItem('kd.jackpot.chips', '5000'); }, n);
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  await page.click('#spinbtn');
+  await page.waitForTimeout(450);
+  await page.screenshot({ path: OUT + '/06-mid-spin.png' });
+  await page.waitForFunction(() => !document.getElementById('spinbtn').disabled, null, { timeout: 15000 });
+};
+const lineNonce = await findNonce('r.lineWin >= 90 && !r.bonusTriggered && r.lineWin + r.scatterPay < 15 * r.totalBet');
+await playNonce(lineNonce);
+await page.waitForTimeout(2200);
+const v1 = await page.evaluate(() => { const T = window.__jackpotTest, h = T.history(), last = h[h.length - 1]; return Object.assign(T.view(), { totalWin: last.totalWin }); });
+await page.screenshot({ path: OUT + '/04-line-win.png' });
+rec('win-presentation', lineNonce >= 0 && v1.winCells >= 3 && v1.lines >= 1 && v1.winText === Math.round(v1.totalWin).toLocaleString() && v1.spritesCached <= 16,
+  `line win at nonce ${lineNonce}: ${v1.winCells} cells framed on ${v1.lines} line(s); counter shows ${v1.winText} (won ${v1.totalWin}); ${v1.spritesCached} cached symbol sprites`);
+
+const bigNonce = await findNonce('!r.bonusTriggered && r.lineWin + r.scatterPay >= 15 * r.totalBet');
+if (bigNonce >= 0) {
+  await playNonce(bigNonce);
+  await page.waitForTimeout(700);
+  const v2 = await page.evaluate(() => window.__jackpotTest.view());
+  await page.screenshot({ path: OUT + '/05-big-win.png' });
+  rec('big-win', v2.big === 'BIG WIN' || v2.big === 'MEGA WIN', `nonce ${bigNonce}: banner "${v2.big}", counter ${v2.winText}`);
+} else rec('big-win', false, 'no 15x+ line win found in 20k nonces');
 
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs[0] || pageErrors[0] || 'clean');
 await browser.close();
