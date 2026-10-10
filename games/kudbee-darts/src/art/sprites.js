@@ -50,7 +50,7 @@
   }
 
   // Drawn length (logical px) of a dart stuck in the board. Flight scales to match it.
-  Sprites.STUCK_LEN = 48;
+  Sprites.STUCK_LEN = 64;
   Sprites.SKINS = SKINS;
   Sprites.TIPS = TIPS;
   Sprites.FLIGHTS = FLIGHTS;
@@ -81,10 +81,30 @@
 
   Sprites.prototype.has = function (key) { return !!this.images[key]; };
 
-  /* A neon dart drawn along +x with the TIP at the local origin (0,0) so the
-   * caller can place the exact scoring point under the tip. The flight code
-   * rotates the context to the travel direction before calling this.
+  // ---- colour helpers (cached) -------------------------------------------
+  const _rgbCache = {};
+  function rgb(hex) {
+    let c = _rgbCache[hex];
+    if (c) return c;
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(function (x) { return x + x; }).join('') : h, 16);
+    c = _rgbCache[hex] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    return c;
+  }
+  // k < 1 darkens toward black, k > 1 lightens toward white.
+  function shade(hex, k) {
+    const c = rgb(hex);
+    const f = k < 1 ? function (v) { return Math.round(v * k); } : function (v) { return Math.round(v + (255 - v) * (k - 1)); };
+    return 'rgb(' + f(c[0]) + ',' + f(c[1]) + ',' + f(c[2]) + ')';
+  }
+
+  /* A dart drawn along +x with the TIP at the local origin (0,0) so the caller
+   * can place the exact scoring point under the tip. The flight code rotates
+   * the context to the travel direction before calling this.
    *   parts = { tip:'steel', flight:'standard' } (optional, cosmetic)
+   * Front to back: steel point -> torpedo barrel (shaded, with grip rings) ->
+   * ringed shaft -> two-panel flight with a crease. Glow comes from a cached
+   * sprite behind the barrel, not per-shape shadowBlur.
    */
   Sprites.prototype.drawDart = function (ctx, len, skin, glowK, parts) {
     skin = skin || SKINS.cyan;
@@ -92,56 +112,106 @@
     const tip = TIPS[parts.tip] || TIPS.steel;
     const flight = FLIGHTS[parts.flight] || FLIGHTS.standard;
     const L = len, h = len * 0.16;
-    const tipCol = tip.col || skin.color;
-    // Local geometry is laid out so the very tip sits at x=0; the body runs in -x.
-    const tipBase = -L * tip.len;          // where the point meets the barrel
+    const col = skin.color, acc = skin.accent;
+    const tipCol = tip.col || col;
+    const tipBase = -L * tip.len;                 // where the point meets the barrel
+    const bLen = L * 0.34, bx = tipBase - bLen;   // barrel runs bx .. tipBase
+    const sLen = L * 0.22, sx = bx - sLen;        // shaft runs sx .. bx
+    const fTail = sx - L * 0.30;                  // flight tail
     ctx.save();
-    ctx.shadowColor = skin.color;
-    ctx.shadowBlur = 10 + (glowK || 0) * 8;
 
-    // Point (tip) — apex at origin.
-    if (tip.hot) { ctx.shadowColor = tipCol; ctx.shadowBlur = 14 + (glowK || 0) * 10; }
-    ctx.fillStyle = tipCol;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(tipBase, -h * 0.5);
-    ctx.lineTo(tipBase, h * 0.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowColor = skin.color; ctx.shadowBlur = 10 + (glowK || 0) * 8;
+    // Soft skin-coloured glow behind the barrel (cheap sprite, no blur filter).
+    const gl = (glowK || 0);
+    if (KD.Particles && KD.Particles.glowSprite) {
+      const gr = h * (2.1 + gl * 1.0);
+      ctx.globalAlpha = 0.16 + gl * 0.16;
+      ctx.drawImage(KD.Particles.glowSprite(col), tipBase - bLen * 0.5 - gr, -gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+    }
 
-    // Barrel (skin colour).
-    const bx = tipBase - L * 0.30;
-    ctx.fillStyle = skin.color;
-    this._roundRect(ctx, bx, -h * 0.55, L * 0.30, h * 1.1, h * 0.3, skin.color);
-    // Barrel knurl highlight.
-    ctx.fillStyle = skin.accent;
-    ctx.fillRect(bx + L * 0.02, -h * 0.4, L * 0.26, h * 0.16);
-
-    // Shaft.
-    const sx = bx - L * 0.26;
-    ctx.fillStyle = '#1a2236';
-    this._roundRect(ctx, sx, -h * 0.22, L * 0.26, h * 0.44, h * 0.2, '#1a2236');
-
-    // Flight (feathers) at the tail — silhouette from the equipped flight.
-    const fx = sx;                         // feathers fan out from here, toward -x
-    const fTail = fx - L * 0.28;
-    const spr = h * flight.spread;
-    const midx = fx - L * 0.28 * flight.sweep;
-    ctx.fillStyle = skin.color;
+    // ---- Flight (drawn first so shaft/barrel overlap its root) ------------
+    const spr = h * flight.spread * 1.15;
+    const fx = sx + sLen * 0.05;
+    const midx = fx - (fx - fTail) * flight.sweep;
+    const panel = function (sign) {
+      ctx.beginPath();
+      ctx.moveTo(fx, 0);
+      ctx.lineTo(fTail, sign * spr);
+      if (flight.notch) ctx.lineTo(midx, sign * spr * flight.notch);
+      ctx.lineTo(midx, 0);
+      ctx.closePath();
+    };
     ctx.globalAlpha = flight.alpha;
-    ctx.beginPath();
-    ctx.moveTo(fx, 0);
-    ctx.lineTo(fTail, -spr);
-    if (flight.notch) ctx.lineTo(midx, -spr * flight.notch);
-    ctx.lineTo(midx, 0);
-    if (flight.notch) ctx.lineTo(midx, spr * flight.notch);
-    ctx.lineTo(fTail, spr);
-    ctx.closePath();
-    ctx.fill();
+    panel(-1); ctx.fillStyle = shade(col, 1.18); ctx.fill();   // upper panel catches the light
+    panel(1);  ctx.fillStyle = shade(col, 0.62); ctx.fill();   // lower panel in shade
+    ctx.globalAlpha = 1;
+    // Accent stripe along the leading third of each panel + crease + edge light.
+    ctx.globalAlpha = flight.alpha * 0.85;
+    ctx.fillStyle = acc;
+    ctx.beginPath(); ctx.moveTo(fx - (fx - fTail) * 0.10, -spr * 0.10); ctx.lineTo(fx - (fx - fTail) * 0.24, -spr * 0.46); ctx.lineTo(fx - (fx - fTail) * 0.34, -spr * 0.40); ctx.lineTo(fx - (fx - fTail) * 0.20, -spr * 0.06); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(fx - (fx - fTail) * 0.10, spr * 0.10); ctx.lineTo(fx - (fx - fTail) * 0.24, spr * 0.46); ctx.lineTo(fx - (fx - fTail) * 0.34, spr * 0.40); ctx.lineTo(fx - (fx - fTail) * 0.20, spr * 0.06); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(0.6, h * 0.05);
+    ctx.beginPath(); ctx.moveTo(fx, -h * 0.02); ctx.lineTo(fTail, -spr); if (flight.notch) ctx.lineTo(midx, -spr * flight.notch); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.moveTo(fx, 0); ctx.lineTo(midx, 0); ctx.stroke();
     ctx.globalAlpha = 1;
 
-    ctx.shadowBlur = 0;
+    // ---- Shaft: slim steel tube with two joint rings ----------------------
+    const sh = h * 0.30;
+    const sg = ctx.createLinearGradient(0, -sh, 0, sh);
+    sg.addColorStop(0, '#e9eef5'); sg.addColorStop(0.45, '#8f99a8'); sg.addColorStop(1, '#2a303b');
+    ctx.fillStyle = sg;
+    ctx.fillRect(sx, -sh, sLen + 1, sh * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(sx + sLen * 0.30, -sh, Math.max(0.6, h * 0.06), sh * 2);
+    ctx.fillRect(sx + sLen * 0.70, -sh, Math.max(0.6, h * 0.06), sh * 2);
+
+    // ---- Barrel: torpedo profile (slim front, fat middle, slim rear) ------
+    const hw0 = h * 0.40, hw1 = h * 0.56, hw2 = h * 0.46;
+    const bg = ctx.createLinearGradient(0, -hw1, 0, hw1);
+    bg.addColorStop(0, shade(col, 1.55));
+    bg.addColorStop(0.25, shade(col, 1.12));
+    bg.addColorStop(0.62, shade(col, 0.72));
+    bg.addColorStop(1, shade(col, 0.34));
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(tipBase, -hw0);
+    ctx.quadraticCurveTo(bx + bLen * 0.45, -hw1 * 1.12, bx, -hw2);
+    ctx.lineTo(bx, hw2);
+    ctx.quadraticCurveTo(bx + bLen * 0.45, hw1 * 1.12, tipBase, hw0);
+    ctx.closePath();
+    ctx.fill();
+    // Knurled grip rings across the middle of the barrel.
+    ctx.strokeStyle = 'rgba(0,0,0,0.42)'; ctx.lineWidth = Math.max(0.5, h * 0.05);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const gx = bx + bLen * (0.22 + i * 0.105);
+      const gh = hw1 * (1 - Math.abs(i - 2.5) * 0.06);
+      ctx.moveTo(gx, -gh); ctx.lineTo(gx, gh);
+    }
+    ctx.stroke();
+    // Specular streak along the top.
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(0.7, h * 0.09); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tipBase - bLen * 0.08, -hw1 * 0.52); ctx.lineTo(bx + bLen * 0.1, -hw1 * 0.62); ctx.stroke();
+
+    // ---- Point: slim steel (or themed) cone with a lit edge ---------------
+    const tw = h * 0.20;
+    const tg = ctx.createLinearGradient(0, -tw, 0, tw);
+    tg.addColorStop(0, shade(tipCol, 1.5)); tg.addColorStop(0.5, tipCol); tg.addColorStop(1, shade(tipCol, 0.45));
+    ctx.fillStyle = tg;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(tipBase + L * 0.01, -tw * 1.6);
+    ctx.lineTo(tipBase + L * 0.01, tw * 1.6);
+    ctx.closePath(); ctx.fill();
+    if (tip.glow) {                      // themed tips keep a small hot glow
+      ctx.globalCompositeOperation = 'lighter';
+      const tr = h * (0.55 + tip.glow * 0.045) + gl * h * 0.3;
+      ctx.globalAlpha = tip.hot ? 0.7 : 0.4;
+      ctx.drawImage(KD.Particles.glowSprite(tipCol === '#ffffff' ? col : tipCol), tipBase * 0.5 - tr, -tr, tr * 2, tr * 2);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
     ctx.restore();
   };
 

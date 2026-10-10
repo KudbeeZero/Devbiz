@@ -24,7 +24,7 @@ await page.evaluate(() => {
   const skin = g.players[0].skin(), parts = g.players[0].dartParts, b = g.board;
   const tip = b.targetPoint('T20');
   KD.Sprites.STUCK_LEN = 96;   // promo card only: bigger than in-game so the darts read at thumbnail size
-  const spots = [[-12, 5, -1.05], [11, -3, -2.1], [0, 11, -1.57]];
+  const spots = [[-14, -4, 1.15], [12, -8, 1.95], [-1, 6, 1.57]];   // nose-down, flights above the tip
   spots.forEach((s, i) => g.stuckDarts.push({ x: tip.x + s[0], y: tip.y + s[1], skin, parts, ang: s[2], landT: -10 }));
   g.hitFlash = { res: b.hitTest(tip.x, tip.y), life: 1, col: '#7CFFb2' };
   g.dartsThisTurn = 3;
@@ -42,7 +42,7 @@ background:radial-gradient(ellipse at 78% 50%,#12306a 0%,#0a1230 45%,#05050f 100
 <div style="position:absolute;left:70px;top:150px;width:560px;color:#fff">
   <div style="font-size:26px;letter-spacing:6px;color:#c46bff;font-weight:700">KUDBEE GAMES STUDIO</div>
   <div style="font-size:112px;line-height:.95;font-weight:800;margin-top:14px;text-shadow:0 0 30px rgba(57,230,255,.8)">KUDBEE<br>DARTS</div>
-  <div style="font-size:34px;margin-top:26px;color:#cfe9ff;font-weight:500">Flick to throw. Hit the treble.<br>501 &amp; Cricket vs. smart AI.</div>
+  <div style="font-size:34px;margin-top:26px;color:#cfe9ff;font-weight:500">Flick to throw. Hit the treble.<br>301, 501 &amp; Cricket vs. smart AI.</div>
   <div style="display:inline-block;margin-top:34px;padding:14px 30px;border:3px solid #7CFFb2;border-radius:14px;color:#7CFFb2;font-size:30px;font-weight:700;box-shadow:0 0 24px rgba(124,255,178,.45)">PLAY FREE IN YOUR BROWSER</div>
 </div>
 </body>`);
