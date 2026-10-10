@@ -45,6 +45,14 @@ the same trigger probability as a single stop, when in fact a window is ~3× mor
 contain a given symbol than a lone stop is. Final tuned numbers: **~94.6% RTP**, ~38% hit
 frequency (any win), and a Bonus Wheel roughly every 260–270 spins.
 
+## Checks
+
+`npm run jackpot:eval` (also part of `npm run verify`) runs headless checks against the real page:
+a 300k-spin return-to-player sample, hit rate, the exact Bonus Wheel odds computed from the strip, that the
+Fair panel shows the real strip, chip accounting across spins, a provably-fair round-trip (revealed seed
+hashes to the commitment and recomputes the same stops), and that closing the Bonus Wheel with ✕ still
+pays the win.
+
 ## Controls
 
 Pick a bet-per-line amount, hit **SPIN**. Touch and mouse both work; no keyboard required.

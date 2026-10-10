@@ -583,6 +583,7 @@
       wheelPanel.classList.remove('hidden');
       $('wheelresult').textContent = '';
       $('collectBtn').classList.add('hidden');
+      $('closewheel').classList.add('hidden');   // no closing mid-spin: the result isn't known yet
       var n = WHEEL.length;
       var targetAngle = -Math.PI / 2 - ((targetIdx + 0.5) / n) * Math.PI * 2;
       var spins = 4;
@@ -601,15 +602,20 @@
           if (wedge[0] === 'X') payout = totalBet * parseInt(wedge.slice(1), 10);
           else { payout = jp[wedge]; jp[wedge] = JP_SEED[wedge]; renderJackpots(); }
           $('wheelresult').textContent = wedge[0] === 'X' ? ('You won ' + fmt(payout) + ' chips (' + wedge + ')') : ('JACKPOT! ' + wedge + ' — ' + fmt(payout) + ' chips');
+          // Collect and the ✕ both pay out; before, ✕ only hid the panel and left the spin
+          // pending forever (SPIN stayed disabled, the win was never credited).
+          wheelFinish = function () { wheelFinish = null; wheelPanel.classList.add('hidden'); resolve(payout); };
           var btn = $('collectBtn'); btn.classList.remove('hidden');
-          btn.onclick = function () { wheelPanel.classList.add('hidden'); resolve(payout); };
-          if (reduceMotion) { wheelPanel.classList.add('hidden'); resolve(payout); }
+          btn.onclick = function () { if (wheelFinish) wheelFinish(); };
+          $('closewheel').classList.remove('hidden');
+          if (reduceMotion) wheelFinish();
         }
       }
       requestAnimationFrame(step);
     });
   }
-  $('closewheel').addEventListener('click', function () { wheelPanel.classList.add('hidden'); });
+  var wheelFinish = null;
+  $('closewheel').addEventListener('click', function () { if (wheelFinish) wheelFinish(); });
 
   /* ===================== fairness panel ===================== */
   var fairpanel = $('fairpanel');
