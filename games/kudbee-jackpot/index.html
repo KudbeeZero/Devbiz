@@ -12,14 +12,14 @@
 <meta property="og:title" content="Kudbee Jackpot — Neon Fortune">
 <meta property="og:description" content="Kudbee Jackpot — a 5-reel neon slot machine with 9 paylines, a scatter-triggered Bonus Wheel, four live progressive jackpots (Mini/Minor/Major/Grand), and a real provably-fair (HMAC-SHA256 commit-reveal) engine you can verify yourself. Demo chips and an optional read-only Phantom wallet connect — no real funds ever move. A playable browser game by Kudbee Games Studio.">
 <meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-jackpot/index.html">
-<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg">
+<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Kudbee Jackpot — Neon Fortune — gameplay preview">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kudbee Jackpot — Neon Fortune">
 <meta name="twitter:description" content="Kudbee Jackpot — a 5-reel neon slot machine with 9 paylines, a scatter-triggered Bonus Wheel, four live progressive jackpots (Mini/Minor/Major/Grand), and a real provably-fair (HMAC-SHA256 commit-reveal) engine you can verify yourself. Demo chips and an optional read-only Phantom wallet connect — no real funds ever move. A playable browser game by Kudbee Games Studio.">
-<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg">
+<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/jackpot.jpg?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -44,23 +44,26 @@
   }
   #frame {
     position: relative;
-    width: min(100vw, calc(100vh * 0.82));
-    height: min(100vh, calc(100vw / 0.82));
-    box-shadow: 0 0 60px rgba(255,180,40,0.16), inset 0 0 0 1px rgba(255,180,40,0.14);
-    border-radius: 8px;
+    width: min(100vw, 520px);
+    height: 100%;
     overflow: hidden;
-    background: #05050f;
     display: flex; flex-direction: column;
+    background:
+      radial-gradient(120% 55% at 50% 0%, rgba(255,90,170,0.20), transparent 60%),
+      radial-gradient(90% 40% at 50% 100%, rgba(255,170,40,0.14), transparent 70%),
+      #07050f;
+    box-shadow: 0 0 80px rgba(255,180,40,0.16), inset 0 0 0 1px rgba(255,180,40,0.16);
   }
+  @media (min-width: 560px) { #frame { height: min(100%, 980px); border-radius: 18px; } }
   #topbar {
     position: relative; z-index: 3;
     display: flex; align-items: center; justify-content: space-between;
-    gap: 6px; padding: 7px 9px;
-    background: linear-gradient(180deg, rgba(5,5,15,0.94), rgba(5,5,15,0.6));
-    border-bottom: 1px solid rgba(255,180,40,0.18);
+    gap: 6px; padding: 8px 10px;
+    background: rgba(5,5,15,0.55);
+    border-bottom: 1px solid rgba(255,180,40,0.16);
     font-size: 11px;
   }
-  #brand { display: flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; }
+  #brand { display: flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; }
   #brand .dot { width: 7px; height: 7px; border-radius: 50%; background: #ffb62e; box-shadow: 0 0 10px #ffb62e; }
   #fairbadge {
     display: flex; align-items: center; gap: 5px; cursor: pointer;
@@ -75,55 +78,142 @@
     cursor: pointer; white-space: nowrap;
   }
   #walletinfo { font-size: 9.5px; opacity: 0.75; display: none; }
+  @media (max-width: 400px) { #fairbadge .hash { display: none; } #topbar { gap: 4px; padding: 8px; } }
 
-  #jackrow {
-    position: relative; z-index: 3; display: flex; gap: 4px; padding: 6px 8px 0;
-    background: rgba(5,5,15,0.7);
+  /* Marquee: soaks up spare height on tall phones so the machine fills the screen. */
+  #marquee {
+    position: relative; flex: 1 1 auto; min-height: 96px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(6px, 1.6vh, 16px);
+    padding: 16px 12px 10px; overflow: hidden;
   }
+  /* Slow light rays behind the marquee (pure CSS, paused under reduced motion). */
+  #rays {
+    /* Sized to the marquee (not the viewport) so the rotating layer stays small on high-DPR phones;
+       percentage margins resolve against the marquee width, so -60% centres a 120%-wide square. */
+    position: absolute; left: 50%; top: 46%; width: 120%; aspect-ratio: 1; margin: -60% 0 0 -60%;
+    background: repeating-conic-gradient(from 0deg, rgba(255,190,90,0.07) 0 6deg, transparent 6deg 18deg);
+    -webkit-mask: radial-gradient(circle, #000 0, transparent 70%); mask: radial-gradient(circle, #000 0, transparent 70%);
+    animation: rays 40s linear infinite; pointer-events: none;
+  }
+  @keyframes rays { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #rays, #marquee::before, #marquee::after { animation: none; } }
+  #marquee > :not(#rays) { position: relative; }
+  /* Short screens (laptops, small phones): tighten the marquee so nothing clips. */
+  @media (max-height: 860px) {
+    #marquee { padding: 12px 12px 8px; gap: 6px; min-height: 0; }
+    #grandhero { padding: 5px 22px 6px; }
+    #grandhero .val { font-size: clamp(26px, 8.5vw, 40px); }
+    .jptile { padding: 4px 2px; }
+  }
+  @media (max-height: 720px) {
+    #marquee .sub, #marquee::before, #marquee::after { display: none; }
+    #marquee { padding: 8px 10px 4px; gap: 5px; }
+    #grandhero .lbl { font-size: 9px; }
+    #grandhero .val { font-size: clamp(24px, 7.5vw, 34px); }
+    .jptile .val { font-size: 14px; }
+    #reels { max-height: 36vh; }
+    #winbar { padding: 0 0 2px; }
+    #winVal { font-size: 22px; }
+    #spinbtn { width: 68px; height: 68px; font-size: 15px; }
+  }
+  #marquee::before, #marquee::after {
+    content: ''; position: absolute; left: 14px; right: 14px; height: 6px;
+    background: radial-gradient(circle, #ffd36b 0 2px, transparent 2.6px) 0 0 / 14px 6px repeat-x;
+    opacity: 0.55; animation: bulbs 1.2s steps(2) infinite;
+  }
+  #marquee::before { top: 6px; } #marquee::after { bottom: 2px; animation-delay: -0.6s; }
+  @keyframes bulbs { 50% { opacity: 0.18; } }
+  #marquee .title {
+    font-weight: 800; letter-spacing: 0.14em; line-height: 1; text-align: center;
+    font-size: clamp(22px, 7.4vw, 38px); white-space: nowrap;
+    background: linear-gradient(180deg, #fff6d0 0%, #ffc54a 48%, #ff6a3d 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 14px rgba(255,160,60,0.55));
+  }
+  #marquee .sub { font-size: 10px; letter-spacing: 0.32em; color: #ff9fd6; opacity: 0.85; }
+  #grandhero {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 28px 9px; border-radius: 16px;
+    border: 1px solid rgba(255,96,96,0.6);
+    background: linear-gradient(180deg, rgba(255,80,80,0.20), rgba(255,80,80,0.05));
+    box-shadow: 0 0 26px rgba(255,80,80,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
+  }
+  #grandhero .lbl { font-size: 10px; letter-spacing: 0.28em; color: #ffb9b9; }
+  #grandhero .val {
+    font-size: clamp(28px, 10.5vw, 50px); font-weight: 800; line-height: 1.05; color: #fff0f0;
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 18px rgba(255,80,80,0.75);
+  }
+
+  #jackrow { display: flex; gap: 8px; width: 100%; max-width: 420px; }
   .jptile {
-    flex: 1; text-align: center; padding: 4px 2px; border-radius: 8px; font-size: 9.5px;
-    border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
+    flex: 1; text-align: center; padding: 6px 2px; border-radius: 12px; font-size: 10px; background: rgba(10,6,22,0.6);
+    border: 1px solid rgba(255,255,255,0.12);
   }
-  .jptile .lbl { opacity: 0.65; letter-spacing: 0.05em; }
-  .jptile .val { font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
-  .jptile.mini { border-color: rgba(57,230,255,0.35); box-shadow: 0 0 10px rgba(57,230,255,0.12); }
-  .jptile.minor { border-color: rgba(124,255,178,0.35); box-shadow: 0 0 10px rgba(124,255,178,0.12); }
-  .jptile.major { border-color: rgba(196,107,255,0.4); box-shadow: 0 0 10px rgba(196,107,255,0.16); }
-  .jptile.grand { border-color: rgba(255,90,90,0.5); box-shadow: 0 0 14px rgba(255,90,90,0.22); }
+  .jptile .lbl { opacity: 0.7; letter-spacing: 0.12em; }
+  .jptile .val { font-weight: 800; font-size: clamp(14px, 4.4vw, 20px); font-variant-numeric: tabular-nums; }
+  .jptile.mini { border-color: rgba(57,230,255,0.4); box-shadow: 0 0 12px rgba(57,230,255,0.14); }
+  .jptile.minor { border-color: rgba(124,255,178,0.4); box-shadow: 0 0 12px rgba(124,255,178,0.14); }
+  .jptile.major { border-color: rgba(196,107,255,0.45); box-shadow: 0 0 12px rgba(196,107,255,0.18); }
   .jptile.mini .val { color: #9fe9ff; }
   .jptile.minor .val { color: #b8ffcf; }
   .jptile.major .val { color: #e2bbff; }
-  .jptile.grand .val { color: #ffc2c2; }
 
-  #reelwrap { position: relative; flex: 1; min-height: 0; padding: 6px 8px; }
-  #reels { width: 100%; height: 100%; display: block; border-radius: 10px; background: #030308; border: 1px solid rgba(255,180,40,0.2); }
+  #reelwrap { position: relative; flex: 0 0 auto; padding: 8px 10px 4px; }
+  #bezel {
+    position: relative; padding: 6px; border-radius: 18px;
+    background: linear-gradient(180deg, #ffe39a 0%, #c9861f 38%, #ffd36b 52%, #8a5212 100%);
+    box-shadow: 0 0 34px rgba(255,170,60,0.32), 0 12px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  #reels {
+    width: 100%; aspect-ratio: 5 / 3.4; max-height: 40vh; display: block; border-radius: 12px; background: #07060f;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.6);
+  }
+  #winbar {
+    display: flex; align-items: baseline; justify-content: center; gap: 10px;
+    padding: 2px 0 4px; font-weight: 800;
+  }
+  #winbar .lbl { font-size: 11px; letter-spacing: 0.3em; opacity: 0.6; }
+  #winVal {
+    min-width: 3ch; text-align: center; font-size: clamp(22px, 7vw, 30px); color: #ffe7a8;
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(255,190,80,0.55);
+  }
+  #winbar.hot #winVal { color: #fff6d6; text-shadow: 0 0 22px rgba(255,200,90,0.95); }
 
   #bottombar {
     position: relative; z-index: 3;
-    padding: 8px 9px 10px;
-    background: linear-gradient(0deg, rgba(5,5,15,0.95), rgba(5,5,15,0.55));
-    border-top: 1px solid rgba(255,180,40,0.18);
+    display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; align-items: center;
+    padding: 9px 12px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, rgba(5,5,15,0.92), rgba(5,5,15,0.4));
+    border-top: 1px solid rgba(255,180,40,0.16);
   }
-  #chiprow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+  #chiprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; min-width: 0; white-space: nowrap; }
+  #chipbal { flex: 0 0 auto; }
   #chipbal .coin { filter: drop-shadow(0 0 6px rgba(255,211,77,0.7)); }
-  #lastwin { font-size: 11px; opacity: 0.75; }
+  #lastwin { font-size: 11px; opacity: 0.6; font-weight: 400; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   #betrow { display: flex; align-items: center; gap: 6px; }
   #betlabel { font-size: 10.5px; opacity: 0.7; white-space: nowrap; }
   .betbtn {
-    flex: 1; min-width: 34px; padding: 7px 3px; border-radius: 9px;
-    border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04);
-    color: #cfe9ff; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+    flex: 1; min-width: 36px; padding: 8px 3px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05);
+    color: #cfe9ff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
   }
-  .betbtn.on { border-color: #ffb62e; background: rgba(255,182,46,0.22); color: #ffe7b8; box-shadow: 0 0 14px rgba(255,182,46,0.35); }
+  .betbtn.on { border-color: #ffb62e; background: rgba(255,182,46,0.24); color: #fff0c8; box-shadow: 0 0 14px rgba(255,182,46,0.4); }
   .betbtn:disabled { opacity: 0.4; cursor: default; }
   #spinbtn {
-    padding: 9px 20px; border-radius: 12px; border: none; cursor: pointer;
-    font: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.03em;
-    color: #05050f; background: linear-gradient(180deg, #ffb62e, #ff5a5a);
-    box-shadow: 0 0 22px rgba(255,150,60,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+    grid-column: 2; grid-row: 1 / span 2;
+    width: 78px; height: 78px; border-radius: 50%; border: 3px solid #ffe39a; cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 16px; letter-spacing: 0.06em; color: #3a1300;
+    background: radial-gradient(circle at 50% 32%, #fff0b8 0%, #ffb23a 45%, #ff5a2e 100%);
+    box-shadow: 0 0 28px rgba(255,150,60,0.6), inset 0 -5px 0 rgba(120,30,0,0.35), inset 0 3px 0 rgba(255,255,255,0.65);
+    transition: transform 0.08s;
   }
-  #spinbtn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
-  #spinbtn:active:not(:disabled) { transform: translateY(1px); }
+  #spinbtn:disabled { filter: grayscale(0.6) brightness(0.7); cursor: default; box-shadow: none; }
+  #refillbtn {
+    grid-column: 1 / span 2; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    border: 1px solid #ffd36b; background: rgba(255,182,46,0.18); color: #ffe7b8;
+    font: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 0 18px rgba(255,182,46,0.3);
+  }
+  #spinbtn:active:not(:disabled) { transform: scale(0.95); }
 
   .overlay {
     position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
@@ -156,7 +246,7 @@
   .panel th { opacity: 0.6; font-weight: 600; }
   #closepanel, #closehelp, #closewheel { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #cfe9ff; font-size: 18px; cursor: pointer; opacity: 0.7; }
   #helpbtn {
-    position: absolute; top: 8px; left: 8px; z-index: 4; width: 20px; height: 20px; border-radius: 50%;
+    position: absolute; top: 2px; left: 4px; z-index: 4; width: 20px; height: 20px; border-radius: 50%;
     border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.4); color: #cfe9ff;
     font-size: 11px; cursor: pointer; line-height: 18px; text-align: center;
   }
@@ -174,20 +264,26 @@
       <div id="fairbadge" title="Provably fair — tap to verify"><span>🔒 Fair</span><span class="hash" id="hashPreview">…</span></div>
       <div><span id="walletinfo"></span><button id="walletbtn">Connect Wallet</button></div>
     </div>
-    <div id="jackrow">
-      <div class="jptile mini"><div class="lbl">MINI</div><div class="val" id="jpMini">50</div></div>
-      <div class="jptile minor"><div class="lbl">MINOR</div><div class="val" id="jpMinor">200</div></div>
-      <div class="jptile major"><div class="lbl">MAJOR</div><div class="val" id="jpMajor">1000</div></div>
-      <div class="jptile grand"><div class="lbl">GRAND</div><div class="val" id="jpGrand">5000</div></div>
+    <div id="marquee">
+      <div id="rays"></div>
+      <div class="title">NEON FORTUNE</div>
+      <div class="sub">KUDBEE JACKPOT</div>
+      <div id="grandhero"><span class="lbl">GRAND JACKPOT</span><span class="val" id="jpGrand">5,000</span></div>
+      <div id="jackrow">
+        <div class="jptile mini"><div class="lbl">MINI</div><div class="val" id="jpMini">50</div></div>
+        <div class="jptile minor"><div class="lbl">MINOR</div><div class="val" id="jpMinor">200</div></div>
+        <div class="jptile major"><div class="lbl">MAJOR</div><div class="val" id="jpMajor">1000</div></div>
+      </div>
     </div>
     <div id="reelwrap">
       <button id="helpbtn" title="How to play">?</button>
-      <canvas id="reels"></canvas>
+      <div id="bezel"><canvas id="reels"></canvas></div>
     </div>
+    <div id="winbar"><span class="lbl">WIN</span><span id="winVal">0</span></div>
     <div id="bottombar">
       <div id="chiprow">
-        <div id="chipbal"><span class="coin">🪙</span> <span id="chipVal">2000</span> DEMO CHIPS</div>
-        <div id="lastwin">Last win: 0</div>
+        <div id="chipbal"><span class="coin">🪙</span> <span id="chipVal">2000</span> <small style="opacity:.65;font-size:10px;letter-spacing:.08em">DEMO</small></div>
+        <div id="lastwin">Last 0</div>
       </div>
       <div id="betrow">
         <span id="betlabel">Bet/line</span>
@@ -195,8 +291,9 @@
         <button class="betbtn on" data-bet="10">10</button>
         <button class="betbtn" data-bet="20">20</button>
         <button class="betbtn" data-bet="50">50</button>
-        <button id="spinbtn">SPIN</button>
       </div>
+      <button id="spinbtn">SPIN</button>
+      <button id="refillbtn" class="hidden">Out of chips — refill 2,000 demo chips</button>
     </div>
 
     <div id="fairpanel" class="overlay hidden">
@@ -356,13 +453,23 @@
 
   /* ===================== DOM ===================== */
   var $ = function (id) { return document.getElementById(id); };
-  var chipValEl = $('chipVal'), lastWinEl = $('lastwin'), spinBtn = $('spinbtn');
+  var chipValEl = $('chipVal'), lastWinEl = $('lastwin'), spinBtn = $('spinbtn'), refillBtn = $('refillbtn');
+  refillBtn.addEventListener('click', function () {
+    if (spinning || chips >= MIN_TOTAL_BET) return;
+    chips = START_CHIPS; saveJSON('kd.jackpot.chips', chips); renderChips();
+  });
   var hashPreview = $('hashPreview'), curHash = $('curHash'), clientSeedInput = $('clientSeedInput');
   var jpEls = { MINI: $('jpMini'), MINOR: $('jpMinor'), MAJOR: $('jpMajor'), GRAND: $('jpGrand') };
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
+  // Demo chips only: once the balance can't cover the smallest bet the game would be stuck
+  // for good (chips persist), so offer a refill back to the starting stack.
+  var START_CHIPS = 2000;
+  var MIN_TOTAL_BET = Math.min.apply(null, Array.prototype.map.call(document.querySelectorAll('.betbtn'), function (b) { return parseInt(b.dataset.bet, 10); })) * LINES.length;
   function renderChips() {
     chipValEl.textContent = Math.max(0, Math.floor(chips));
+    refillBtn.classList.toggle('hidden', spinning || chips >= MIN_TOTAL_BET);
+    $('revealBtn').disabled = spinning;   // rotating the seed mid-spin would orphan that spin's proof
     spinBtn.disabled = spinning || chips < perLineBet * LINES.length;
     document.querySelectorAll('.betbtn').forEach(function (b) { b.disabled = spinning || chips < parseInt(b.dataset.bet, 10) * LINES.length; });
   }
@@ -396,116 +503,343 @@
   var dpr = Math.min(2, window.devicePixelRatio || 1);
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var W = 0, H = 0, cellW = 0, cellH = 0;
-  var reelPos = [0, 1, 2, 3, 4]; // continuous strip index per reel (float)
-  var reelAnim = null; // { stops, from[], to[], t0, durs[] }
-  var flashLines = [], flashT = 0;
+  var reelPos = [0, 1, 2, 3, 4];     // continuous strip index per reel (float)
+  var reelSpeed = [0, 0, 0, 0, 0];   // rows per 1/60 s (frame-rate independent), drives the motion blur
+  var lastFrameT = 0, needsDraw = true, drawCount = 0;
+  var WIN_PULSE_MS = 4000;           // after this the win display freezes and the canvas stops redrawing
+  var reelAnim = null;               // { reels: [{from,to,t0,dur}], onDone }
+  var win = null;                    // { cells: {'reel,row':1}, lines: [], t0, big, amount }
+  var coins = [];
+  var spriteCache = {}, bgCanvas = null, shadeCanvas = null;
+  var LINE_COLORS = ['#ffd34d', '#39e6ff', '#ff5ab4', '#7CFFb2', '#c46bff', '#ff8a3d', '#5ad1ff', '#ffef7a', '#ff6b6b'];
 
   function resize() {
-    var r = canvas.parentElement.getBoundingClientRect();
-    canvas.width = Math.max(2, r.width * dpr); canvas.height = Math.max(2, r.height * dpr);
+    var r = canvas.getBoundingClientRect();
+    canvas.width = Math.max(2, Math.round(r.width * dpr)); canvas.height = Math.max(2, Math.round(r.height * dpr));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     W = r.width; H = r.height; cellW = W / 5; cellH = H / 3;
+    spriteCache = {};
+    buildBackdrops();
+    needsDraw = true;
+  }
+  // Symbol sprites bake in "Space Grotesk" text; repaint them once the webfont arrives
+  // (display=swap means the first frames can render with the fallback font).
+  function refreshSprites() { spriteCache = {}; needsDraw = true; }
+  if (document.fonts) {
+    document.fonts.ready.then(refreshSprites);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', refreshSprites);
   }
 
-  function drawSymbol(sym, cx, cy, size) {
-    var c = COLORS[sym] || '200,200,200';
-    ctx.save(); ctx.shadowColor = 'rgba(' + c + ',0.9)'; ctx.shadowBlur = size * 0.18;
-    ctx.strokeStyle = 'rgba(' + c + ',0.95)'; ctx.fillStyle = 'rgba(' + c + ',0.85)'; ctx.lineWidth = Math.max(2, size * 0.05);
-    var s2 = size * 0.32;
+  function offscreen(w, h) { var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr)); var g = c.getContext('2d'); g.scale(dpr, dpr); return { c: c, g: g }; }
+  function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+  // Reel drums (behind symbols) and the curvature shading (in front), baked once per size.
+  function buildBackdrops() {
+    var bg = offscreen(W, H), g = bg.g;
+    for (var r = 0; r < 5; r++) {
+      var x = r * cellW + 2, w = cellW - 4;
+      var gr = g.createLinearGradient(0, 0, 0, H);
+      gr.addColorStop(0, '#0d0a18'); gr.addColorStop(0.5, '#1b1530'); gr.addColorStop(1, '#0d0a18');
+      g.fillStyle = gr; rrect(g, x, 2, w, H - 4, 8); g.fill();
+      g.strokeStyle = 'rgba(255,200,120,0.10)'; g.lineWidth = 1; g.stroke();
+    }
+    bgCanvas = bg.c;
+    var sh = offscreen(W, H), h2 = sh.g;
+    var vg = h2.createLinearGradient(0, 0, 0, H);
+    vg.addColorStop(0, 'rgba(0,0,0,0.78)'); vg.addColorStop(0.16, 'rgba(0,0,0,0.18)'); vg.addColorStop(0.3, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.7, 'rgba(0,0,0,0)'); vg.addColorStop(0.84, 'rgba(0,0,0,0.18)'); vg.addColorStop(1, 'rgba(0,0,0,0.78)');
+    h2.fillStyle = vg;
+    for (var r2 = 0; r2 < 5; r2++) { rrect(h2, r2 * cellW + 2, 2, cellW - 4, H - 4, 8); h2.fill(); }
+    // Glassy sheen across the top of every drum.
+    var gl = h2.createLinearGradient(0, 0, 0, H * 0.45);
+    gl.addColorStop(0, 'rgba(255,255,255,0.10)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    h2.fillStyle = gl; h2.fillRect(0, 0, W, H * 0.45);
+    shadeCanvas = sh.c;
+  }
+
+  // Each symbol is painted once per size (glow included) and reused every frame; the old
+  // renderer ran shadowBlur on all 25 visible symbols on every frame.
+  function symSprite(sym, size) {
+    var key = sym + '@' + Math.round(size);
+    if (spriteCache[key]) return spriteCache[key];
+    var box = size * 1.3, o = offscreen(box, box);
+    paintSymbol(o.g, sym, box / 2, box / 2, size);
+    spriteCache[key] = o.c;
+    return o.c;
+  }
+
+  // Pre-smeared copy of a symbol for fast spins: built once, then drawn as ONE 1:1 blit
+  // per symbol (several alpha copies per symbol per frame cost ~10-20fps on a slow CPU).
+  function symSpriteBlur(sym, size) {
+    var key = sym + '#blur@' + Math.round(size);
+    if (spriteCache[key]) return spriteCache[key];
+    var base = symSprite(sym, size), box = size * 1.3, tall = box * 1.35, o = offscreen(box, tall);
+    var steps = [[0.16, 0.35], [0.22, 0.26], [0.30, 0.17], [0.30, 0.08], [0.55, 0.0]];   // head on top, trail below (symbols travel up)
+    steps.forEach(function (st) { o.g.globalAlpha = st[0]; o.g.drawImage(base, 0, box * st[1], box, box); });
+    spriteCache[key] = o.c;
+    return o.c;
+  }
+
+  function lin(g, y0, y1, stops) { var gr = g.createLinearGradient(0, y0, 0, y1); stops.forEach(function (st) { gr.addColorStop(st[0], st[1]); }); return gr; }
+  function rad(g, x, y, r, stops) { var gr = g.createRadialGradient(x, y, 0, x, y, r); stops.forEach(function (st) { gr.addColorStop(st[0], st[1]); }); return gr; }
+
+  function paintSymbol(g, sym, cx, cy, size) {
+    var s = size * 0.36, c = COLORS[sym] || '200,200,200';
+    g.save();
+    g.shadowColor = 'rgba(' + c + ',0.65)'; g.shadowBlur = size * 0.14;
+    g.lineJoin = 'round'; g.lineCap = 'round';
     switch (sym) {
-      case 'CHERRY':
-        ctx.beginPath(); ctx.moveTo(cx - s2 * 0.4, cy - s2); ctx.lineTo(cx + s2 * 0.4, cy); ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx - s2 * 0.55, cy + s2 * 0.35, s2 * 0.42, 0, 7); ctx.fill();
-        ctx.beginPath(); ctx.arc(cx + s2 * 0.55, cy + s2 * 0.35, s2 * 0.42, 0, 7); ctx.fill();
+      case 'SEVEN':
+        g.font = '900 ' + Math.round(size * 0.84) + 'px "Space Grotesk", system-ui, sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.lineWidth = size * 0.07; g.strokeStyle = '#ffd36b'; g.strokeText('7', cx, cy + size * 0.03);
+        g.shadowBlur = 0;
+        g.fillStyle = lin(g, cy - s * 1.1, cy + s * 1.1, [[0, '#ffc2b8'], [0.45, '#ff3b3b'], [1, '#9c0b1d']]);
+        g.fillText('7', cx, cy + size * 0.03);
+        break;
+      case 'DIAMOND': {
+        var top = cy - s * 0.8, mid = cy - s * 0.3, bot = cy + s * 1.05, wv = s * 1.05, tw = s * 0.55;
+        g.beginPath(); g.moveTo(cx - tw, top); g.lineTo(cx + tw, top); g.lineTo(cx + wv, mid); g.lineTo(cx, bot); g.lineTo(cx - wv, mid); g.closePath();
+        g.fillStyle = lin(g, top, bot, [[0, '#f1d9ff'], [0.35, '#b46bff'], [1, '#4a137a']]); g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.beginPath(); g.moveTo(cx - tw, top); g.lineTo(cx, mid); g.lineTo(cx - wv, mid); g.closePath(); g.fill();
+        g.fillStyle = 'rgba(30,0,60,0.30)';
+        g.beginPath(); g.moveTo(cx + tw, top); g.lineTo(cx + wv, mid); g.lineTo(cx, mid); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(cx, mid); g.lineTo(cx + wv, mid); g.lineTo(cx, bot); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = size * 0.018;
+        g.beginPath(); g.moveTo(cx - wv, mid); g.lineTo(cx + wv, mid); g.moveTo(cx - tw, top); g.lineTo(cx, mid); g.lineTo(cx + tw, top); g.moveTo(cx, mid); g.lineTo(cx, bot); g.stroke();
+        break;
+      }
+      case 'BAR': {
+        var pw = s * 2.3, ph = s * 0.56, gap = s * 0.14, y0 = cy - (ph * 3 + gap * 2) / 2;
+        for (var i = 0; i < 3; i++) {
+          var py = y0 + i * (ph + gap);
+          rrect(g, cx - pw / 2, py, pw, ph, ph * 0.28);
+          g.fillStyle = lin(g, py, py + ph, [[0, '#1d3f2e'], [1, '#07160f']]); g.fill();
+          g.shadowBlur = 0; g.lineWidth = size * 0.022; g.strokeStyle = '#7CFFb2'; g.stroke();
+          g.fillStyle = '#b8ffd6'; g.font = '900 ' + Math.round(ph * 0.72) + 'px "Space Grotesk", system-ui, sans-serif';
+          g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BAR', cx, py + ph * 0.54);
+        }
+        break;
+      }
+      case 'ORB':
+        g.beginPath(); g.arc(cx, cy, s * 0.98, 0, Math.PI * 2);
+        g.fillStyle = rad(g, cx - s * 0.35, cy - s * 0.38, s * 1.5, [[0, '#f2feff'], [0.3, '#5ff0ff'], [0.75, '#0b8fb3'], [1, '#05344a']]); g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = 'rgba(255,255,255,0.55)';
+        g.beginPath(); g.ellipse(cx - s * 0.32, cy - s * 0.45, s * 0.36, s * 0.2, -0.6, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = 'rgba(160,250,255,0.6)'; g.lineWidth = size * 0.02;
+        g.beginPath(); g.arc(cx, cy, s * 0.98, 0.2, 1.5); g.stroke();
         break;
       case 'BELL':
-        ctx.beginPath(); for (var a = 0; a <= 6; a++) { var ang = -Math.PI + a * (Math.PI / 6) * 2; ctx.lineTo(cx + Math.cos(ang) * s2, cy + Math.sin(ang) * s2); } ctx.closePath(); ctx.fill();
+        g.beginPath();
+        g.moveTo(cx, cy - s * 0.95);
+        g.bezierCurveTo(cx - s * 0.78, cy - s * 0.95, cx - s * 0.62, cy + s * 0.15, cx - s * 1.0, cy + s * 0.58);
+        g.lineTo(cx + s * 1.0, cy + s * 0.58);
+        g.bezierCurveTo(cx + s * 0.62, cy + s * 0.15, cx + s * 0.78, cy - s * 0.95, cx, cy - s * 0.95);
+        g.closePath();
+        g.fillStyle = lin(g, cy - s, cy + s * 0.6, [[0, '#fff4c2'], [0.4, '#ffc93d'], [1, '#a8660b']]); g.fill();
+        g.shadowBlur = 0;
+        rrect(g, cx - s * 1.05, cy + s * 0.5, s * 2.1, s * 0.22, s * 0.1); g.fillStyle = '#c98712'; g.fill();
+        g.beginPath(); g.arc(cx, cy + s * 0.84, s * 0.2, 0, Math.PI * 2); g.fillStyle = '#7a4a08'; g.fill();
+        g.beginPath(); g.arc(cx, cy - s * 1.02, s * 0.14, 0, Math.PI * 2); g.fillStyle = '#e7a52a'; g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = size * 0.035;
+        g.beginPath(); g.moveTo(cx - s * 0.35, cy - s * 0.6); g.quadraticCurveTo(cx - s * 0.55, cy - s * 0.1, cx - s * 0.62, cy + s * 0.3); g.stroke();
         break;
-      case 'ORB': ctx.beginPath(); ctx.arc(cx, cy, s2, 0, 7); ctx.fill(); break;
-      case 'BAR':
-        ctx.fillRect(cx - s2 * 1.1, cy - s2 * 0.85, s2 * 2.2, s2 * 0.5);
-        ctx.fillRect(cx - s2 * 1.1, cy - s2 * 0.12, s2 * 2.2, s2 * 0.5);
-        ctx.fillRect(cx - s2 * 1.1, cy + s2 * 0.6, s2 * 2.2, s2 * 0.5);
-        break;
-      case 'DIAMOND':
-        ctx.beginPath(); ctx.moveTo(cx, cy - s2 * 1.15); ctx.lineTo(cx + s2 * 0.85, cy); ctx.lineTo(cx, cy + s2 * 1.15); ctx.lineTo(cx - s2 * 0.85, cy); ctx.closePath(); ctx.fill();
-        break;
-      case 'SEVEN':
-        ctx.font = '700 ' + (size * 0.62) + 'px "Space Grotesk", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('7', cx, cy + size * 0.02);
+      case 'CHERRY':
+        g.strokeStyle = '#3fae4a'; g.lineWidth = s * 0.13;
+        g.beginPath(); g.moveTo(cx + s * 0.2, cy - s * 0.95); g.quadraticCurveTo(cx - s * 0.2, cy - s * 0.4, cx - s * 0.45, cy + s * 0.15); g.stroke();
+        g.beginPath(); g.moveTo(cx + s * 0.2, cy - s * 0.95); g.quadraticCurveTo(cx + s * 0.4, cy - s * 0.3, cx + s * 0.5, cy + s * 0.25); g.stroke();
+        g.fillStyle = '#4fd35d';
+        g.beginPath(); g.ellipse(cx + s * 0.55, cy - s * 0.85, s * 0.42, s * 0.18, -0.5, 0, Math.PI * 2); g.fill();
+        [[cx - s * 0.48, cy + s * 0.48], [cx + s * 0.52, cy + s * 0.58]].forEach(function (p) {
+          g.beginPath(); g.arc(p[0], p[1], s * 0.47, 0, Math.PI * 2);
+          g.fillStyle = rad(g, p[0] - s * 0.15, p[1] - s * 0.18, s * 0.7, [[0, '#ffd6e0'], [0.35, '#ff3367'], [1, '#7d0020']]); g.fill();
+          g.fillStyle = 'rgba(255,255,255,0.7)';
+          g.beginPath(); g.ellipse(p[0] - s * 0.17, p[1] - s * 0.2, s * 0.12, s * 0.07, -0.6, 0, Math.PI * 2); g.fill();
+        });
         break;
       case 'WILD':
-        ctx.beginPath(); ctx.moveTo(cx - s2 * 0.15, cy - s2 * 1.15); ctx.lineTo(cx - s2 * 0.7, cy + s2 * 0.15); ctx.lineTo(cx - s2 * 0.05, cy + s2 * 0.15);
-        ctx.lineTo(cx - s2 * 0.25, cy + s2 * 1.15); ctx.lineTo(cx + s2 * 0.7, cy - s2 * 0.15); ctx.lineTo(cx + s2 * 0.05, cy - s2 * 0.15); ctx.closePath(); ctx.fill();
+        rrect(g, cx - s * 1.08, cy - s * 0.66, s * 2.16, s * 1.32, s * 0.32);
+        g.fillStyle = lin(g, cy - s * 0.66, cy + s * 0.66, [[0, '#ff8de0'], [0.5, '#c43cff'], [1, '#5a17b8']]); g.fill();
+        g.shadowBlur = 0; g.lineWidth = size * 0.045; g.strokeStyle = '#ffe08a'; g.stroke();
+        g.font = '900 ' + Math.round(size * 0.27) + 'px "Space Grotesk", system-ui, sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.lineWidth = size * 0.05; g.strokeStyle = '#3b0a6b'; g.strokeText('WILD', cx, cy + size * 0.01);
+        g.fillStyle = '#ffffff'; g.fillText('WILD', cx, cy + size * 0.01);
         break;
       case 'SCATTER':
-        ctx.beginPath();
-        for (var i = 0; i < 5; i++) {
-          var oa = -Math.PI / 2 + i * (Math.PI * 2 / 5), ia = oa + Math.PI / 5;
-          var ox = cx + Math.cos(oa) * s2 * 1.15, oy = cy + Math.sin(oa) * s2 * 1.15;
-          var ix = cx + Math.cos(ia) * s2 * 0.5, iy = cy + Math.sin(ia) * s2 * 0.5;
-          if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
-          ctx.lineTo(ix, iy);
+        g.beginPath();
+        for (var k = 0; k < 5; k++) {
+          var oa = -Math.PI / 2 + k * (Math.PI * 2 / 5), ia = oa + Math.PI / 5;
+          var ox = cx + Math.cos(oa) * s * 1.12, oy = cy - s * 0.08 + Math.sin(oa) * s * 1.12;
+          var ix = cx + Math.cos(ia) * s * 0.5, iy = cy - s * 0.08 + Math.sin(ia) * s * 0.5;
+          if (k === 0) g.moveTo(ox, oy); else g.lineTo(ox, oy);
+          g.lineTo(ix, iy);
         }
-        ctx.closePath(); ctx.fill();
+        g.closePath();
+        g.fillStyle = rad(g, cx - s * 0.2, cy - s * 0.35, s * 1.3, [[0, '#fffbe0'], [0.45, '#ffc94a'], [1, '#d9620b']]); g.fill();
+        g.shadowBlur = 0; g.lineWidth = size * 0.02; g.strokeStyle = 'rgba(255,255,255,0.7)'; g.stroke();
+        rrect(g, cx - s * 0.95, cy + s * 0.62, s * 1.9, s * 0.42, s * 0.15);
+        g.fillStyle = '#e8283f'; g.fill();
+        g.font = '900 ' + Math.round(s * 0.32) + 'px "Space Grotesk", system-ui, sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText('BONUS', cx, cy + s * 0.84);
         break;
     }
-    ctx.restore();
+    g.restore();
   }
 
-  function drawReelsFrame(now) {
+  function cellIsWin(r, row) { return !!(win && win.cells[r + ',' + row]); }
+
+  function drawReelsFrame(now, dt) {
+    drawCount++;
     ctx.clearRect(0, 0, W, H);
+    if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
+    var size = Math.min(cellW, cellH) * 0.86;
+    var showWin = win && !reelAnim;
+    var pulse = showWin && !reduceMotion && now - win.t0 < WIN_PULSE_MS ? 0.5 + 0.5 * Math.sin((now - win.t0) / 140) : 1;
     for (var r = 0; r < 5; r++) {
-      var pos = reelPos[r];
-      var base = Math.floor(pos), frac = pos - base;
+      var pos = reelPos[r], base = Math.floor(pos), frac = pos - base;
+      var blur = reduceMotion ? 0 : Math.min(1, reelSpeed[r] / 0.9);
       ctx.save();
-      ctx.beginPath(); ctx.rect(r * cellW + 2, 0, cellW - 4, H); ctx.clip();
+      ctx.beginPath(); ctx.rect(r * cellW + 2, 2, cellW - 4, H - 4); ctx.clip();
       for (var row = -1; row <= 3; row++) {
         var sym = STRIP[(((base + row) % STRIP.length) + STRIP.length) % STRIP.length];
-        var y = (row - frac + 1) * cellH;
-        drawSymbol(sym, r * cellW + cellW / 2, y + cellH / 2, Math.min(cellW, cellH) * 0.82);
+        var cy = (row - frac + 0.5) * cellH, cx = r * cellW + cellW / 2;
+        var spr = symSprite(sym, size), box = size * 1.3;
+        var winning = showWin && cellIsWin(r, row);
+        var scl = winning ? 1 + 0.07 * pulse : 1;
+        if (blur > 0.05) {
+          // Fast spin: the pre-smeared sprite, trail below the symbol since the strip scrolls up.
+          if (blur > 0.35) { var bs = symSpriteBlur(sym, size); ctx.drawImage(bs, cx - box / 2, cy - box / 2, box, box * 1.35); }
+          else ctx.drawImage(spr, cx - box / 2, cy - box / 2, box, box);
+        } else {
+          ctx.globalAlpha = showWin && !winning ? 0.38 : 1;
+          ctx.drawImage(spr, cx - box * scl / 2, cy - box * scl / 2, box * scl, box * scl);
+          ctx.globalAlpha = 1;
+        }
       }
       ctx.restore();
-      ctx.strokeStyle = 'rgba(255,180,40,0.10)'; ctx.beginPath(); ctx.moveTo(r * cellW, 0); ctx.lineTo(r * cellW, H); ctx.stroke();
     }
-    ctx.strokeStyle = 'rgba(255,180,40,0.16)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, cellH); ctx.lineTo(W, cellH); ctx.moveTo(0, cellH * 2); ctx.lineTo(W, cellH * 2); ctx.stroke();
+    if (shadeCanvas) ctx.drawImage(shadeCanvas, 0, 0, W, H);
+    if (showWin) drawWin(now, pulse);
+    drawCoins(dt);
+  }
 
-    if (flashT > 0 && flashLines.length) {
-      flashT -= 0.02;
-      flashLines.forEach(function (wl) {
-        var line = LINES[wl.idx];
-        ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,' + Math.max(0, flashT) + ')'; ctx.lineWidth = 3;
-        ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
-        ctx.beginPath();
-        for (var c2 = 0; c2 < wl.count; c2++) {
-          var x = c2 * cellW + cellW / 2, y = line[c2] * cellH + cellH / 2;
-          if (c2 === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke(); ctx.restore();
-      });
+  function drawWin(now, pulse) {
+    var age = (now - win.t0) / 1000;
+    // Paylines, drawn only through the symbols that count (a 3-of-a-kind stops at reel 3),
+    // with a dark under-stroke so the colour reads on any symbol.
+    win.lines.forEach(function (wl) {
+      var line = LINES[wl.idx], col = LINE_COLORS[wl.idx % LINE_COLORS.length], last = wl.count - 1;
+      ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (var c = 0; c <= last; c++) { var x = c * cellW + cellW / 2, y = line[c] * cellH + cellH / 2; if (c === 0) ctx.moveTo(x - cellW * 0.42, y); ctx.lineTo(x, y); }
+      ctx.lineTo(last * cellW + cellW * 0.92, line[last] * cellH + cellH / 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 8; ctx.stroke();
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.65 + 0.35 * pulse; ctx.lineWidth = 4; ctx.stroke();
+      ctx.restore();
+    });
+    // Frames on the winning cells.
+    Object.keys(win.cells).forEach(function (k) {
+      var p = k.split(','), r = +p[0], row = +p[1];
+      var x = r * cellW + 5, y = row * cellH + 5, w = cellW - 10, h = cellH - 10;
+      ctx.save();
+      rrect(ctx, x, y, w, h, 10);
+      ctx.strokeStyle = 'rgba(255,214,107,' + (0.25 + 0.25 * pulse) + ')'; ctx.lineWidth = 9; ctx.stroke();
+      ctx.strokeStyle = '#ffe39a'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.restore();
+    });
+    if (win.big && age < 3.2) {
+      var t = Math.min(1, age / 0.35), sc = (0.6 + 0.4 * (1 - Math.pow(1 - t, 3))) * (1 + 0.03 * pulse);
+      var a = age > 2.6 ? Math.max(0, 1 - (age - 2.6) / 0.6) : 1;
+      ctx.save(); ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(10,4,20,0.55)'; ctx.fillRect(0, H * 0.3, W, H * 0.4);
+      ctx.translate(W / 2, H / 2); ctx.scale(sc, sc);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '900 ' + Math.round(H * 0.17) + 'px "Space Grotesk", system-ui, sans-serif';
+      ctx.lineWidth = H * 0.025; ctx.strokeStyle = '#5a1a00'; ctx.strokeText(win.big, 0, -H * 0.055);
+      ctx.fillStyle = lin(ctx, -H * 0.13, H * 0.03, [[0, '#fff6d0'], [0.5, '#ffc54a'], [1, '#ff6a3d']]);
+      ctx.fillText(win.big, 0, -H * 0.055);
+      ctx.font = '800 ' + Math.round(H * 0.09) + 'px "Space Grotesk", system-ui, sans-serif';
+      ctx.fillStyle = '#fff'; ctx.fillText('+' + fmt(win.amount), 0, H * 0.085);
+      ctx.restore();
     }
+  }
+
+  function spawnCoins(n) {
+    if (reduceMotion) return;
+    for (var i = 0; i < n; i++) coins.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 60, vy: 60 + Math.random() * 120, rot: Math.random() * 6.28, spin: 4 + Math.random() * 8, life: 3.2 });
+  }
+  function drawCoins(dt) {
+    if (!coins.length) return;
+    var r = Math.max(5, cellW * 0.09);
+    for (var i = coins.length - 1; i >= 0; i--) {
+      var c = coins[i];
+      c.vy += 420 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.spin * dt; c.life -= dt;
+      if (c.life <= 0 || c.y > H + 30) { coins.splice(i, 1); continue; }
+      var sx = Math.abs(Math.cos(c.rot));
+      ctx.save(); ctx.translate(c.x, c.y); ctx.scale(Math.max(0.15, sx), 1);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = '#ffc93d'; ctx.fill();
+      ctx.lineWidth = r * 0.25; ctx.strokeStyle = '#b9780e'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(-r * 0.25, -r * 0.3, r * 0.3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Win counter: counts up to the amount instead of snapping. shownWin is what's on screen,
+  // so a later count (the bonus total) carries on from there instead of restarting at 0.
+  var winValEl = $('winVal'), winbarEl = $('winbar'), countUp = null, shownWin = 0;
+  function showWinAmount(amount) {
+    if (reduceMotion || amount <= 0) { countUp = null; shownWin = amount; winValEl.textContent = fmt(amount); winbarEl.classList.toggle('hot', amount > 0); return; }
+    countUp = { from: shownWin, to: amount, t0: performance.now(), dur: Math.min(1800, 500 + Math.abs(amount - shownWin) * 1.2) };
+    winbarEl.classList.add('hot');
+  }
+  function tickCountUp(now) {
+    if (!countUp) return;
+    var t = Math.min(1, (now - countUp.t0) / countUp.dur);
+    shownWin = countUp.from + (countUp.to - countUp.from) * (1 - Math.pow(1 - t, 3));
+    winValEl.textContent = fmt(shownWin);
+    if (t >= 1) countUp = null;
+  }
+
+  // Reel landing: decelerate to a stop BOUNCE rows past the target, then settle back onto it.
+  // The bounce is a fixed fraction of a row, not of the travel, so the player never sees the
+  // reel roll backwards through symbols that aren't the result.
+  var BOUNCE = 0.22, SETTLE = 0.14;
+  function reelEase(a, t) {
+    if (t >= 1) return a.to;
+    if (t < 1 - SETTLE) { var s = t / (1 - SETTLE); return a.from + (a.to + BOUNCE - a.from) * (1 - Math.pow(1 - s, 3)); }
+    var u = (t - (1 - SETTLE)) / SETTLE;
+    return a.to + BOUNCE * (1 - u) * (1 - u);
   }
 
   function frame(now) {
     requestAnimationFrame(frame);
+    var dt = lastFrameT ? Math.min(0.05, (now - lastFrameT) / 1000) : 1 / 60; lastFrameT = now;
     if (reelAnim) {
       var allDone = true;
       for (var r = 0; r < 5; r++) {
         var a = reelAnim.reels[r];
         var t = Math.min(1, (now - a.t0) / a.dur);
-        var e = 1 - Math.pow(1 - t, 3);
-        reelPos[r] = a.from + (a.to - a.from) * e;
-        if (t < 1) allDone = false; else reelPos[r] = a.to;
+        var prev = reelPos[r];
+        reelPos[r] = reelEase(a, t);
+        reelSpeed[r] = dt > 0 ? Math.abs(reelPos[r] - prev) / (dt * 60) : 0;
+        if (t < 1) allDone = false;
       }
-      if (allDone) { var cb = reelAnim.onDone; reelAnim = null; cb(); }
+      if (allDone) { reelSpeed = [0, 0, 0, 0, 0]; var cb = reelAnim.onDone; reelAnim = null; cb(); }
     }
-    drawReelsFrame(now);
+    tickCountUp(now);
+    // Only repaint while something moves; an idle machine costs nothing per frame.
+    var live = !!(reelAnim || coins.length || (win && now - win.t0 < WIN_PULSE_MS));
+    if (live || needsDraw) { drawReelsFrame(now, dt); needsDraw = live; }
   }
 
   function spinReels(stops, onDone) {
     if (reduceMotion) {
       for (var r = 0; r < 5; r++) reelPos[r] = stops[r];
+      needsDraw = true;
       onDone();
       return;
     }
@@ -515,7 +849,7 @@
       var curMod = ((from % STRIP.length) + STRIP.length) % STRIP.length;
       var forward = (stops[r2] - curMod + STRIP.length) % STRIP.length;
       var to = from + STRIP.length * (3 + r2) + forward;
-      reels.push({ from: from, to: to, t0: performance.now(), dur: 850 + r2 * 220 });
+      reels.push({ from: from, to: to, t0: performance.now(), dur: 900 + r2 * 240 });
     }
     reelAnim = { reels: reels, onDone: onDone };
   }
@@ -527,6 +861,7 @@
     var totalBet = perLineBet * LINES.length;
     if (chips < totalBet) return;
     spinning = true; renderChips();
+    win = null; countUp = null; shownWin = 0; needsDraw = true; winValEl.textContent = '0'; winbarEl.classList.remove('hot');
     chips -= totalBet;
     Object.keys(JP_RATE).forEach(function (k) { jp[k] += totalBet * JP_RATE[k]; });
     renderJackpots();
@@ -537,7 +872,12 @@
     var res = evaluateSpin(grid, perLineBet);
 
     spinReels(stops, async function () {
-      flashLines = res.winningLines; flashT = 1;
+      var cells = {};
+      res.winningLines.forEach(function (wl) { for (var c = 0; c < wl.count; c++) cells[c + ',' + LINES[wl.idx][c]] = 1; });
+      if (res.scatterCount >= 3) grid.forEach(function (col, r) { col.forEach(function (sym, row) { if (sym === 'SCATTER') cells[r + ',' + row] = 1; }); });
+      var baseWin = res.lineWin + res.scatterPay;
+      win = Object.keys(cells).length ? { cells: cells, lines: res.winningLines, t0: performance.now(), big: null, amount: baseWin } : null;
+      if (baseWin > 0) showWinAmount(baseWin);
       var bonusWedge = null, bonusPay = 0;
       if (res.bonusTriggered) {
         var wIdx = await drawWheel(seed, clientSeed, nonce);
@@ -546,11 +886,18 @@
         bonusPay = out;
       }
       var totalWin = res.lineWin + res.scatterPay + bonusPay;
+      if (bonusPay > 0) showWinAmount(totalWin);
+      var mult = totalWin / totalBet;
+      if (mult >= 15) {
+        if (!win) win = { cells: {}, lines: [], t0: performance.now(), big: null, amount: totalWin };
+        win.big = mult >= 50 ? 'MEGA WIN' : 'BIG WIN'; win.amount = totalWin; win.t0 = performance.now();
+        spawnCoins(mult >= 50 ? 90 : 50);
+      }
       chips += totalWin;
       pf.history.push({ nonce: nonce, clientSeed: clientSeed, hash: hashAtBet, stops: stops, totalBet: totalBet, totalWin: totalWin, bonusWedge: bonusWedge, revealedSeed: null });
       pf.nonce++;
       saveJSON('kd.jackpot.chips', chips); saveJSON('kd.jackpot.pools', jp); saveJSON('kd.jackpot.pf', pf);
-      lastWinEl.textContent = 'Last win: ' + fmt(totalWin) + (bonusWedge ? ' (bonus: ' + bonusWedge + ')' : '');
+      lastWinEl.textContent = 'Last ' + fmt(totalWin) + (bonusWedge ? ' · ' + bonusWedge : '');
       spinning = false; renderChips(); renderJackpots(); renderHistory();
       lbPost();
     });
@@ -583,6 +930,7 @@
       wheelPanel.classList.remove('hidden');
       $('wheelresult').textContent = '';
       $('collectBtn').classList.add('hidden');
+      $('closewheel').classList.add('hidden');   // no closing mid-spin: the result isn't known yet
       var n = WHEEL.length;
       var targetAngle = -Math.PI / 2 - ((targetIdx + 0.5) / n) * Math.PI * 2;
       var spins = 4;
@@ -601,15 +949,20 @@
           if (wedge[0] === 'X') payout = totalBet * parseInt(wedge.slice(1), 10);
           else { payout = jp[wedge]; jp[wedge] = JP_SEED[wedge]; renderJackpots(); }
           $('wheelresult').textContent = wedge[0] === 'X' ? ('You won ' + fmt(payout) + ' chips (' + wedge + ')') : ('JACKPOT! ' + wedge + ' — ' + fmt(payout) + ' chips');
+          // Collect and the ✕ both pay out; before, ✕ only hid the panel and left the spin
+          // pending forever (SPIN stayed disabled, the win was never credited).
+          wheelFinish = function () { wheelFinish = null; wheelPanel.classList.add('hidden'); resolve(payout); };
           var btn = $('collectBtn'); btn.classList.remove('hidden');
-          btn.onclick = function () { wheelPanel.classList.add('hidden'); resolve(payout); };
-          if (reduceMotion) { wheelPanel.classList.add('hidden'); resolve(payout); }
+          btn.onclick = function () { if (wheelFinish) wheelFinish(); };
+          $('closewheel').classList.remove('hidden');
+          if (reduceMotion) wheelFinish();
         }
       }
       requestAnimationFrame(step);
     });
   }
-  $('closewheel').addEventListener('click', function () { wheelPanel.classList.add('hidden'); });
+  var wheelFinish = null;
+  $('closewheel').addEventListener('click', function () { if (wheelFinish) wheelFinish(); });
 
   /* ===================== fairness panel ===================== */
   var fairpanel = $('fairpanel');
@@ -617,6 +970,7 @@
   $('closepanel').addEventListener('click', function () { fairpanel.classList.add('hidden'); });
   $('saveSeedBtn').addEventListener('click', function () { var v = clientSeedInput.value.trim(); if (v) { pf.clientSeed = v; saveJSON('kd.jackpot.pf', pf); } });
   $('revealBtn').addEventListener('click', async function () {
+    if (spinning) return;   // the in-flight spin was committed under the current seed
     var revealed = pf.serverSeed;
     pf.history.forEach(function (h) { if (h.hash === pf.serverSeedHash && !h.revealedSeed) h.revealedSeed = revealed; });
     var newSeed = randomHex(32);
@@ -706,6 +1060,7 @@
     drawReels: drawReels, drawWheel: drawWheel, gridFromStops: gridFromStops, evaluateSpin: evaluateSpin,
     history: function () { return pf.history; },
     WHEEL: WHEEL, STRIP: STRIP, LINES: LINES,
+    view: function () { return { winCells: win ? Object.keys(win.cells).length : 0, lines: win ? win.lines.length : 0, big: win ? win.big : null, winText: winValEl.textContent, spritesCached: Object.keys(spriteCache).length, draws: drawCount, reelPos: reelPos.slice(), spinning: spinning }; },
   };
 })();
 </script>

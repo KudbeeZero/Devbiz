@@ -1,0 +1,10 @@
+# wrangler.toml serves the repo root as static assets. Everything listed here is NOT uploaded:
+# without it the build shipped .git/ and node_modules/ to the public site, and the git pack file
+# outgrew Cloudflare's 25 MiB per-asset limit, failing every Workers build.
+.git
+node_modules
+.wrangler
+.agents
+.env*
+.gitignore
+.assetsignore

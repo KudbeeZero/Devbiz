@@ -34,3 +34,6 @@ coverage/
 
 # Darts evaluator screenshots (regenerated each run)
 games/kudbee-darts/eval/out/
+
+# Jackpot evaluator screenshots (regenerated each run)
+games/kudbee-jackpot/eval/out/
