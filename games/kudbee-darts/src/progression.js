@@ -46,7 +46,7 @@
       darts: { tip: 'steel', flight: 'standard' },
       ownedTips: ['steel'],
       ownedFlights: ['standard'],
-      settings: { sound: true },
+      settings: { sound: true, boardTheme: 'neon' },
     };
   }
 

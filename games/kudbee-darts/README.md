@@ -3,7 +3,7 @@
 > **Kudbee Games Studio — Game #2**
 > Predictive flick-throw darts in your browser. Original IP, zero install, 60 FPS.
 
-Play **501** and **Cricket** against a friend (pass-and-play) or a league of smart AI
+Play **301**, **501** and **Cricket** against a friend (pass-and-play) or a league of smart AI
 rivals. **Drag to aim, then swipe-release to throw** — a true flick whose speed sets the
 power and curl (a tap won't throw). Watch the score land on a **digital seven-segment
 scoreboard** that pops and sheds bricks, follow the **on-board checkout guide** that lights
@@ -36,7 +36,7 @@ honest. A wild, rushed flick scatters more than a smooth, committed one.
 
 ## Modes
 
-- **501** — race from 501 to exactly zero. You must **finish on a double** (the bull
+- **301 / 501** — race from 301 (quick game) or 501 to exactly zero. You must **finish on a double** (the bull
   counts as D25). Bust (going below 0, landing on 1, or hitting 0 without a double) reverts
   the whole turn. A live **checkout hint** plus an **on-board guide** light up your
   finishing route — the next dart brightest — doubling as a built-in training aid.
@@ -44,6 +44,12 @@ honest. A wild, rushed flick scatters more than a smooth, committed one.
   (single = 1 mark, double = 2, treble = 3). Once you've closed a number, extra hits
   **score** its value — until your opponent closes it too. Win by closing everything with
   points ≥ your opponent.
+
+## Board look
+
+The menu's **BOARD** button switches between the default **Neon** board and a classic **Pub** board
+(black/cream wedges, red/green rings, wooden surround, wood-panelled wall). It is paint only — both
+themes share one geometry and hit-test, so scoring is identical — and the choice is saved.
 
 ## Opponents & League
 

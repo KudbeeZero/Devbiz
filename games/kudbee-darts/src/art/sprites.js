@@ -168,9 +168,61 @@
     ctx.restore();
   };
 
+  /* Warm wood-panelled pub wall + plank floor for the 'pub' board theme. */
+  Sprites.prototype._drawBackdropPub = function (ctx, w, h, time) {
+    const horizon = h * 0.66, cx = w / 2;
+    const g = ctx.createLinearGradient(0, 0, 0, horizon);
+    g.addColorStop(0, '#2d1b11'); g.addColorStop(1, '#1b100a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, horizon);
+
+    // Panelling: vertical boards with a dark seam and a faint top-left sheen.
+    for (let x = 0; x < w; x += 56) {
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(x, 0, 3, horizon);
+      ctx.fillStyle = 'rgba(255,200,140,0.035)'; ctx.fillRect(x + 3, 0, 10, horizon);
+    }
+    // Picture-rail along the top and a chair-rail above the floor.
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, h * 0.045, w, 5);
+    ctx.fillStyle = '#3a2314'; ctx.fillRect(0, horizon - 14, w, 14);
+    ctx.fillStyle = 'rgba(255,200,140,0.12)'; ctx.fillRect(0, horizon - 14, w, 2);
+
+    // Warm pool of light from the lamp over the board.
+    const glow = ctx.createRadialGradient(cx, h * 0.40, 30, cx, h * 0.40, w * 0.55);
+    glow.addColorStop(0, 'rgba(255,190,110,0.30)');
+    glow.addColorStop(0.5, 'rgba(255,150,70,0.09)');
+    glow.addColorStop(1, 'rgba(255,150,70,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, w, horizon);
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx - 26, -20); ctx.lineTo(cx - 330, h * 0.62); ctx.lineTo(cx + 330, h * 0.62); ctx.lineTo(cx + 26, -20); ctx.closePath();
+    ctx.fillStyle = 'rgba(255,205,140,0.055)'; ctx.fill();
+    ctx.restore();
+
+    // Plank floor with perspective seams.
+    const fg = ctx.createLinearGradient(0, horizon, 0, h);
+    fg.addColorStop(0, '#22140c'); fg.addColorStop(1, '#0e0804');
+    ctx.fillStyle = fg; ctx.fillRect(0, horizon, w, h - horizon);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,190,120,0.07)'; ctx.lineWidth = 1.5;
+    for (let i = -6; i <= 6; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + i * (w / 8), h); ctx.lineTo(cx + i * 10, horizon); ctx.stroke();
+    }
+    ctx.restore();
+
+    // A few dust motes drifting through the light.
+    ctx.save();
+    for (let i = 0; i < 14; i++) {
+      const mx = cx - 260 + ((i * 97.3 + time * (4 + (i % 4))) % 520);
+      const my = h * 0.12 + ((i * 61 + time * 6) % (horizon * 0.8));
+      ctx.globalAlpha = 0.12 + 0.12 * Math.sin(time * 1.5 + i);
+      ctx.fillStyle = '#ffd9a8';
+      ctx.beginPath(); ctx.arc(mx, my, 1.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  };
+
   /* Procedural neon stage behind the board, used when the Firefly bg key
    * (bg.stage) is empty. Game blits the image instead when present. */
-  Sprites.prototype.drawBackdrop = function (ctx, w, h, time) {
+  Sprites.prototype.drawBackdrop = function (ctx, w, h, time, theme) {
+    if (theme === 'pub') { this._drawBackdropPub(ctx, w, h, time); return; }
     const horizon = h * 0.66;             // where the back wall meets the floor
     const cx = w / 2;
 
