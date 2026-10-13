@@ -290,13 +290,22 @@
     const e = Util.smooth(k);
     const om = 1 - e;
     const x0 = this._fromX, y0 = this._fromY, x1 = this.landX, y1 = this.landY;
-    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const mx = (x0 + x1) / 2;
     const dx = x1 - x0, dy = y1 - y0;
     const dl = Math.sqrt(dx * dx + dy * dy) || 1;
     const nx = -dy / dl, ny = dx / dl;
-    const curlPx = (this._curl || 0) * this.game.board.Rpx * 0.55 + (this._sway || 0);
+    const Rpx = this.game.board.Rpx;
+    const curlPx = (this._curl || 0) * Rpx * 0.55 + (this._sway || 0);
+    // Loft the control point ABOVE the board (min(y0,y1) is the higher point on
+    // screen) so the dart rises over the target and descends tip-first into it.
+    // The flight tangent then sweeps smoothly from a nose-up launch to a nose-
+    // down landing — no flat path that snaps over right at the board.
+    const loft = Math.min(Rpx, 0.42 * Math.abs(dy) + Rpx * 0.25);
+    let cyp = Math.min(y0, y1) - loft;
+    const minY = this.game.board.cy - Rpx;          // keep the apex off the board rim
+    if (cyp < minY) cyp = minY;
     const cxp = mx + nx * curlPx;
-    const cyp = my + ny * curlPx - 78;
+    cyp += ny * curlPx;
     const x = om * om * x0 + 2 * om * e * cxp + e * e * x1;
     const y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
     const tx = 2 * om * (cxp - x0) + 2 * e * (x1 - cxp);
@@ -549,23 +558,24 @@
       ctx.restore();
     }
 
-    // Travel angle = Bézier tangent, with a hair of extra droop near landing.
-    // Travel angle = Bézier tangent; over the last ~40% the dart pitches nose-down into
-    // its embedded pose, so it doesn't flip when it lands.
-    let ang = Math.atan2(f.ty, f.tx) + Math.cos(k * Math.PI) * 0.10;
+    // Orientation = the Bézier tangent, so the nose always points the way the
+    // dart is actually travelling (up-and-over, then down onto the board). The
+    // path already lands nose-down, so the embed-pose match is only a gentle
+    // tail-end settle over the last ~30% — not the old 180° snap.
+    let ang = Math.atan2(f.ty, f.tx);
     if (this._embedAng != null) {
       let d = this._embedAng - ang;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      ang += d * Util.smooth(Util.clamp((k - 0.6) / 0.4, 0, 1));
+      ang += d * Util.smooth(Util.clamp((k - 0.7) / 0.3, 0, 1));
     }
     this._lastAng = ang;
 
-    // Enhanced barrel roll: spin speed scales with throw power for realism.
-    // Harder throws spin faster, softer throws spin slower.
+    // Barrel roll about the long axis: a calm spin that scales with power and
+    // eases flat on contact. Shallower squash than before so it reads as a roll,
+    // not a flip.
     const powerMult = Math.max(0.7, Math.min(1.8, this._powf));
-    const spin = (this._roll || 1) * (k * 13 * powerMult);
-    // Roll squashes the silhouette, easing to 1 on contact (a thin sliver read as a streak).
-    const roll = Util.lerp(0.55 + 0.45 * Math.abs(Math.cos(spin)), 1, e * e);
+    const spin = (this._roll || 1) * (k * 8 * powerMult);
+    const roll = Util.lerp(0.72 + 0.28 * Math.abs(Math.cos(spin)), 1, e * e);
     // Foreshortening: thrown away from the camera the dart starts pointing into the
     // screen (short) and comes side-on as it arcs over.
     const along = 0.7 + 0.3 * Util.smooth(Math.min(1, k * 1.6));
