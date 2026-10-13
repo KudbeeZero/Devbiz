@@ -34,6 +34,13 @@ dart with extra weight. A live **power gauge** beside the reticle shows the comm
 sweet spot. Where the dart lands (plus a little scatter) is what scores, so the read is
 honest. A wild, rushed flick scatters more than a smooth, committed one.
 
+**The power band auto-calibrates to you.** Everyone flicks at their own pace — a short
+trackpad drag, a fast phone swipe. Over your first few throws the game learns your natural
+release speed and re-centers the sweet spot on it (persisted per device), so a clean flick
+reads as clean on any device instead of being stuck against one fixed speed. Aim and
+steadying the hand-tremor stay the skill; the band just fits your throw. In shared hotseat
+play both seats share one device profile.
+
 ## Modes
 
 - **301 / 501** — race from 301 (quick game) or 501 to exactly zero. You must **finish on a double** (the bull
@@ -112,6 +119,7 @@ slow-mo on big hits, confetti on wins. The throw has Darts-of-Fury feel: the boa
 in and snaps back on release, the dart **lofts and barrel-rolls** in flight, and the scoring
 **explosion scales with the score** (radial spray + shockwave rings, gold on big hits). The
 **exact segment you hit lights up** on the board, a quick **flick read-out** (PERFECT / TOO
-SOFT / TOO HARD) coaches the swipe, and supported phones get a **haptic thump**. Darts stick
+SOFT / TOO HARD / DIALED IN) coaches the swipe against your own auto-calibrated power band,
+and supported phones get a **haptic thump**. Darts stick
 with their **tip exactly on the scoring pixel**. No external assets required — the dartboard
 and darts are drawn procedurally so hit detection is pixel-exact. All original IP.

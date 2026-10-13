@@ -19,7 +19,10 @@
   const Util = KD.Util;
 
   // ---- Flick tuning (logical px unless noted) ---------------------------
-  const IDEAL_SPEED = 1500;     // px/s: a clean, committed flick
+  // IDEAL_SPEED is only the FALLBACK: the live ideal is learned per player by
+  // Progression (game.idealFlick()) and re-centers the power band on their own
+  // natural flick. Must match Progression.FLICK_DEFAULT.
+  const IDEAL_SPEED = 1500;     // px/s: a clean, committed flick (un-calibrated)
   const MIN_SWIPE_LEN = 24;     // below this a release is a "tap" -> no throw
   const MIN_REL_SPEED = 240;    // px/s: too slow to count as a flick
 
@@ -89,9 +92,11 @@
     // Ease toward the pointer for a weighty feel.
     this.aimX = Util.lerp(this.aimX, p.x, 1 - Math.pow(0.0001, dt));
     this.aimY = Util.lerp(this.aimY, p.y, 1 - Math.pow(0.0001, dt));
-    // Live power read-out from the pointer's smoothed speed.
+    // Live power read-out from the pointer's smoothed speed, relative to the
+    // player's own calibrated ideal (so the gauge reads the same on any device).
     const spd = (this.game.input.pointer.speed) || 0;
-    this.power = Util.lerp(this.power, Math.min(1.7, spd / IDEAL_SPEED), 1 - Math.pow(0.02, dt));
+    const ideal = this.game.idealFlick ? this.game.idealFlick() : IDEAL_SPEED;
+    this.power = Util.lerp(this.power, Math.min(1.7, spd / ideal), 1 - Math.pow(0.02, dt));
 
     // Hand-tremor sway: a subtle multi-frequency tremor a real throw has. Two
     // incommensurate sines give it an organic, non-repetitive drift. Amplitude is
@@ -139,8 +144,17 @@
     let lx = this.aimX + this._swayX, ly = this.aimY + this._swayY;
     const cx = this.game.board.cx, cy = this.game.board.cy;
 
-    // Power: release speed vs the ideal flick.
-    const powf = pt.relSpeed / IDEAL_SPEED;          // <1 soft, >1 hard
+    // Auto-calibrate: learn THIS player's natural flick speed and re-center the
+    // power band on it, then score THIS throw against the updated ideal — so a
+    // trackpad drag and a phone flick both read as a clean, committed throw.
+    let cal = null;
+    if (this.game.progression && this.game.progression.recordFlick) {
+      cal = this.game.progression.recordFlick(pt.relSpeed);
+    }
+    const ideal = (cal && cal.ideal) || (this.game.idealFlick ? this.game.idealFlick() : IDEAL_SPEED);
+
+    // Power: release speed vs the (calibrated) ideal flick.
+    const powf = pt.relSpeed / ideal;                // <1 soft, >1 hard
     this._powf = powf;
 
     // Radial (centre -> aim) for over/undershoot along the throw line.
@@ -178,8 +192,10 @@
       + Math.max(0, (90 - Math.min(90, pt.swipeLen)) / 90) * 0.4);
     const sigma = this.sigma * (1 + wildness);
 
-    // Coaching read-out so the flick power band is learnable.
-    const fb = powf < 0.82 ? { text: 'TOO SOFT', col: '#39e6ff' }
+    // Coaching read-out so the flick power band is learnable. Once the game has
+    // locked onto the player's flick, announce it once so the adaptation is felt.
+    const fb = (cal && cal.justCalibrated) ? { text: 'DIALED IN', col: '#7CFFb2' }
+      : powf < 0.82 ? { text: 'TOO SOFT', col: '#39e6ff' }
       : powf > 1.30 ? { text: 'TOO HARD', col: '#ff5d3c' }
       : (Math.abs(powf - 1) < 0.12 && Math.abs(lateral) < 0.3) ? { text: 'PERFECT FLICK', col: '#7CFFb2' }
       : { text: 'CLEAN FLICK', col: '#cfe9ff' };

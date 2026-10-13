@@ -11,6 +11,18 @@
 
   const KEY = 'kd.profile.v1';
 
+  // ---- Flick auto-calibration ------------------------------------------
+  // Every player flicks at their own natural speed — a fast phone swipe, a
+  // short trackpad drag. Rather than hold one fixed "ideal" that only suits
+  // some devices, the game learns each player's typical release speed over
+  // their first throws and re-centers the power sweet-spot on it, so a clean
+  // flick feels clean everywhere. FLICK_DEFAULT must match dart.js IDEAL_SPEED
+  // (the fallback before any throw is recorded).
+  const FLICK_DEFAULT = 1500;     // px/s, the un-calibrated starting ideal
+  const FLICK_MIN = 700, FLICK_MAX = 2600;   // clamp the learned ideal to sane bounds
+  const FLICK_RECENT = 8;         // recent flick speeds kept for the robust median
+  const FLICK_FULL_AT = 4;        // genuine flicks before the player is fully trusted
+
   // The ladder you climb in Career mode. Beating rank N unlocks rank N+1.
   const LADDER = [
     { name: 'Spark',  tier: 'Rookie', skin: 'cyan' },
@@ -46,6 +58,9 @@
       darts: { tip: 'steel', flight: 'standard' },
       ownedTips: ['steel'],
       ownedFlights: ['standard'],
+      // Learned flick model: ideal release speed this device's player tends to
+      // throw at, the running sample count, and the most recent speeds.
+      flick: { ideal: FLICK_DEFAULT, n: 0, recent: [] },
       settings: { sound: true, boardTheme: 'neon' },
     };
   }
@@ -72,6 +87,8 @@
           this.data.darts = Object.assign(d.darts, parsed.darts || {});
           this.data.ownedTips = parsed.ownedTips || d.ownedTips;
           this.data.ownedFlights = parsed.ownedFlights || d.ownedFlights;
+          this.data.flick = Object.assign(d.flick, parsed.flick || {});
+          if (!Array.isArray(this.data.flick.recent)) this.data.flick.recent = [];
           this.data.settings = Object.assign(d.settings, parsed.settings || {});
         }
       }
@@ -85,6 +102,35 @@
   Progression.prototype.reset = function () {
     this.data = defaults();
     this.save();
+  };
+
+  // ---- Flick auto-calibration ------------------------------------------
+  // The release speed the power band is currently centered on for this player.
+  Progression.prototype.flickIdeal = function () {
+    return (this.data.flick && this.data.flick.ideal) || FLICK_DEFAULT;
+  };
+
+  // Record one genuine flick's release speed (taps are filtered out upstream)
+  // and re-center the ideal on the player. Early throws stay close to the
+  // default; after a few the band sits on the player's own median speed.
+  // Returns { ideal, justCalibrated }.
+  Progression.prototype.recordFlick = function (relSpeed) {
+    const f = this.data.flick || (this.data.flick = { ideal: FLICK_DEFAULT, n: 0, recent: [] });
+    const s = Math.max(FLICK_MIN, Math.min(FLICK_MAX, relSpeed || 0));
+    f.recent.push(s);
+    if (f.recent.length > FLICK_RECENT) f.recent.shift();
+    const wasCalibrated = f.n >= FLICK_FULL_AT;
+    f.n++;
+    // Robust center: the median of recent flicks, so one wild throw can't skew it.
+    const sorted = f.recent.slice().sort(function (a, b) { return a - b; });
+    const mid = sorted.length % 2
+      ? sorted[(sorted.length - 1) / 2]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    // Blend from the default toward the player's own speed as confidence grows.
+    const conf = Math.min(1, f.n / FLICK_FULL_AT);
+    f.ideal = Math.max(FLICK_MIN, Math.min(FLICK_MAX, FLICK_DEFAULT * (1 - conf) + mid * conf));
+    this.save();
+    return { ideal: f.ideal, justCalibrated: !wasCalibrated && f.n >= FLICK_FULL_AT };
   };
 
   // ---- Skins ------------------------------------------------------------

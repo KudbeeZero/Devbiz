@@ -98,6 +98,12 @@
     this._bindMeta();
   }
 
+  // The flick release speed the power band is centered on right now — learned
+  // per player by Progression, so the sweet spot fits this device's throw.
+  Game.prototype.idealFlick = function () {
+    return this.progression ? this.progression.flickIdeal() : 1500;
+  };
+
   Game.prototype.start = function () {
     this.audio.startMusic();
     this.loop.start();
@@ -842,7 +848,7 @@
     ctx.fillStyle = C.dim; ctx.font = '11px monospace';
     ctx.fillText(d.xp + ' / ' + d.xpToNext + ' XP', VIEW_W / 2, 652);
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText('Drag to aim, then SWIPE-RELEASE to throw — flick speed sets power & curl. The checkout guide lights up your finish.', VIEW_W / 2, 686);
+    ctx.fillText('Drag to aim, then SWIPE-RELEASE to throw — the power band auto-tunes to your flick. The checkout guide lights up your finish.', VIEW_W / 2, 686);
     ctx.restore();
     ctx.textAlign = 'left';
   };

@@ -159,6 +159,30 @@ await page.mouse.up(); await step(1);
 const thrown = await page.evaluate(() => ({ rel: window.__rel, state: window.DARTS.dart.state, powf: window.DARTS.dart._powf, res: window.DARTS.dart.result && window.DARTS.dart.result.label }));
 rec('flick-throws', thrown.state === 'flying', `release=${JSON.stringify(thrown.rel)}; aiming state=${aimInfo.state} power=${aimInfo.power}; after release dart=${thrown.state}, powf=${(thrown.powf || 0).toFixed(2)}, lands on ${thrown.res}`);
 
+// ---- Flick auto-calibration: the power band re-centers on each player ----
+// Two players flick at very different speeds (slow trackpad drag vs fast phone
+// swipe). Feed each a run of consistent flicks and check the learned ideal moves
+// toward their own speed, so their typical throw sits in the sweet spot (powf in
+// 0.85..1.15) — not stuck reading TOO SOFT / TOO HARD against a fixed 1500.
+const cal = await page.evaluate(() => {
+  const g = window.DARTS, prog = g.progression;
+  const snap = JSON.parse(JSON.stringify(prog.data.flick));   // restore after, don't pollute later checks
+  const run = (speed, throws) => {
+    prog.data.flick = { ideal: 1500, n: 0, recent: [] };       // fresh player
+    let last;
+    for (let i = 0; i < throws; i++) last = prog.recordFlick(speed);
+    return { ideal: Math.round(prog.flickIdeal()), powf: +(speed / prog.flickIdeal()).toFixed(2), justCal: last.justCalibrated };
+  };
+  const slow = run(820, 6);     // a gentle, short-swipe player
+  const fast = run(2300, 6);    // a hard, fast-swipe player
+  const one = run(820, 1);      // after a single throw it must NOT be fully centered yet
+  prog.data.flick = snap; prog.save();
+  const inBand = (p) => p >= 0.85 && p <= 1.15;
+  return { slow, fast, one, ok: inBand(slow.powf) && inBand(fast.powf) && slow.ideal < 1100 && fast.ideal > 1900 && one.ideal > 820 && one.ideal < 1500 };
+});
+rec('flick-autocalibrate', cal.ok,
+  `slow player (820px/s) -> ideal ${cal.slow.ideal}, powf ${cal.slow.powf}; fast player (2300) -> ideal ${cal.fast.ideal}, powf ${cal.fast.powf}; after 1 throw ideal ${cal.one.ideal} (not yet centered)`);
+
 // Walk the flight frame by frame, capturing frames + render timings.
 const FT = 0.42;
 const shots = { 0.12: '04a-flight.png', 0.35: '04-flight-early.png', 0.55: '04b-flight.png', 0.7: '05-flight-mid.png', 0.85: '04c-flight.png', 0.95: '06-flight-late.png' };
