@@ -361,10 +361,13 @@ KAB.LEVELS = [
     birds: ['green', 'gold', 'green', 'egg', 'gold'], stars: [22500, 36500],
     theme: { world: 4, bg: 1, tag: 'BITCOIN', accent: '#f7931a', sky: ['#1a0f00', '#4a2500'], skyline: '#2a1500', mood: { tint: '#ffaa00', a: 0.35, glow: '#f7931a', gx: 700 } },
     build(b) {
-      b.col(600, [['wood', 40, 50], ['grunt']]);
-      b.col(720, [['stone', 50, 50], ['stone', 50, 50], ['armor']]);
-      b.col(840, [['wood', 40, 50], ['grunt']]);
-      b.tnt(720, 500, 28);
+      // Stone pyramid: wide base, narrowing up. TNT sits on the ground in the
+      // gaps between pillars (never overlapping them), to crack the base.
+      b.col(620, [['stone', 54, 46], ['stone', 54, 46], ['grunt']]);
+      b.col(720, [['stone', 54, 46], ['stone', 54, 46], ['stone', 54, 46], ['armor']]);
+      b.col(820, [['stone', 54, 46], ['stone', 54, 46], ['grunt']]);
+      b.tnt(670, 526, 28);
+      b.tnt(770, 526, 28);
     },
   },
   {
@@ -383,12 +386,16 @@ KAB.LEVELS = [
     birds: ['cyan', 'cyan', 'gold', 'green', 'gold'], stars: [19000, 31000],
     theme: { world: 4, bg: 1, tag: 'DOGECOIN', accent: '#ba9f33', sky: ['#1a1410', '#4a3a10'], skyline: '#2a2410', mood: { tint: '#ffdd99', a: 0.28, glow: '#ffd700', gx: 720 } },
     build(b) {
-      b.col(580, [['ball', 'wood', 24], ['ball', 'wood', 24], ['ball', 'stone', 20], ['grunt']]);
-      b.col(720, [['ball', 'glass', 22], ['ball', 'stone', 20], ['ball', 'glass', 22], ['armor']]);
-      b.col(860, [['ball', 'wood', 24], ['ball', 'wood', 24], ['grunt']]);
-      b.beam('wood', 720, 420, 180, 16);
-      b.enemyOn('grunt', 580, 400);
-      b.enemyOn('armor', 860, 400);
+      // Box towers with loose spheres resting on the ground between them: a hit
+      // sends the boulders rolling through the grubs. (Stacked balls won't rest,
+      // so the "much spheres" theme lives in the ground boulders instead.)
+      b.col(600, [['wood', 48, 48], ['wood', 48, 48], ['grunt']]);
+      b.col(720, [['stone', 52, 48], ['stone', 52, 48], ['armor']]);
+      b.col(840, [['wood', 48, 48], ['wood', 48, 48], ['grunt']]);
+      b.ball('stone', 540, 520, 20);
+      b.ball('wood', 660, 520, 20);
+      b.ball('wood', 780, 520, 20);
+      b.ball('stone', 900, 520, 20);
     },
   },
   {
@@ -396,10 +403,16 @@ KAB.LEVELS = [
     birds: ['gold', 'green', 'cyan', 'egg', 'gold', 'egg'], stars: [32000, 50000],
     theme: { world: 4, bg: 2, tag: 'WEB3 TREASURE', accent: '#ff00ff', sky: ['#1a0033', '#4a0a6a'], skyline: '#2a0a4a', mood: { tint: '#ff66ff', a: 0.40, glow: '#ff00ff', gx: 700 } },
     build(b) {
-      b.col(600, [['wood', 40, 50], ['grunt']]);
-      b.col(720, [['stone', 50, 50], ['stone', 50, 50], ['tnt', 34], ['armor']]);
-      b.col(840, [['wood', 40, 50], ['grunt']]);
-      b.beam('stone', 720, 410, 160, 18);
+      // A sealed vault: two stone walls carry a stone roof; the armored boss and
+      // the TNT sit locked inside on the ground, a grunt guards the roof. The
+      // roof underside rests exactly on the wall tops (no floating beam).
+      b.col(630, [['stone', 44, 60], ['stone', 44, 60]]);
+      b.col(810, [['stone', 44, 60], ['stone', 44, 60]]);
+      b.beam('stone', 720, 420, 220, 18);
+      b.enemyOn('armor', 700, 540);
+      b.tnt(760, 523, 30);
+      b.enemyOn('grunt', 720, 402);
+      b.col(900, [['wood', 36, 50], ['grunt']]);
     },
   },
   {
@@ -407,11 +420,17 @@ KAB.LEVELS = [
     birds: ['green', 'gold', 'egg', 'cyan', 'green', 'gold'], stars: [25000, 40000],
     theme: { world: 4, bg: 3, tag: 'CRASH', accent: '#ff3333', sky: ['#220000', '#6a0000'], skyline: '#4a0000', mood: { tint: '#ff6666', a: 0.45, glow: '#ff0000', gx: 720, bright: 0.9 } },
     build(b) {
-      b.col(540, [['glass', 26, 50], ['wood', 36, 36], ['grunt']]);
-      b.col(660, [['stone', 36, 36], ['tnt', 34], ['grunt']]);
-      b.col(780, [['glass', 26, 50], ['tnt', 34]]);
-      b.col(900, [['stone', 36, 36], ['armor']]);
-      b.beam('wood', 720, 410, 160, 12);
+      // A top-heavy "chart": two stone pillars carry a plank, and the TNT plus
+      // two grubs balance on top of it — hit a pillar and the whole thing dumps.
+      // The plank underside rests on the pillar tops, so it starts at rest.
+      b.col(560, [['glass', 28, 50], ['wood', 40, 40], ['grunt']]);
+      b.col(700, [['stone', 40, 40], ['stone', 40, 40]]);
+      b.col(820, [['stone', 40, 40], ['stone', 40, 40]]);
+      b.beam('wood', 760, 460, 180, 14);
+      b.tnt(760, 431, 30);
+      b.enemyOn('grunt', 710, 446);
+      b.enemyOn('armor', 810, 446);
+      b.col(910, [['glass', 28, 50], ['grunt']]);
     },
   },
   {
