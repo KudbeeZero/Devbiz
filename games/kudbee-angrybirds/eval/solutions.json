@@ -426,5 +426,92 @@
   ],
   "score": 130300,
   "stars": 3
+ },
+ "24": {
+  "name": "Bitcoin Fortress",
+  "shots": [
+   {
+    "angle": 8,
+    "pull": 55,
+    "ability": 20
+   }
+  ],
+  "score": 62200,
+  "stars": 3
+ },
+ "25": {
+  "name": "Smart Contract",
+  "shots": [
+   {
+    "angle": 18,
+    "pull": 100,
+    "ability": 8
+   },
+   {
+    "angle": 8,
+    "pull": 85,
+    "ability": null
+   }
+  ],
+  "score": 63000,
+  "stars": 3
+ },
+ "26": {
+  "name": "Doge Much Wow",
+  "shots": [
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": 20
+   },
+   {
+    "angle": 28,
+    "pull": 100,
+    "ability": null
+   }
+  ],
+  "score": 50000,
+  "stars": 3
+ },
+ "27": {
+  "name": "NFT Vault",
+  "shots": [
+   {
+    "angle": 43,
+    "pull": 100,
+    "ability": 50
+   },
+   {
+    "angle": 58,
+    "pull": 85,
+    "ability": 8
+   }
+  ],
+  "score": 63600,
+  "stars": 3
+ },
+ "28": {
+  "name": "Pump & Dump",
+  "shots": [
+   {
+    "angle": 73,
+    "pull": 100,
+    "ability": 70
+   }
+  ],
+  "score": 82000,
+  "stars": 3
+ },
+ "29": {
+  "name": "Whale Wallet",
+  "shots": [
+   {
+    "angle": 18,
+    "pull": 110,
+    "ability": null
+   }
+  ],
+  "score": 82600,
+  "stars": 3
  }
 }
