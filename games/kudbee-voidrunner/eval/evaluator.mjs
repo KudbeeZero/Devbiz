@@ -75,7 +75,8 @@ const blur = await page.evaluate(async () => {
   window.dispatchEvent(new Event('blur'));
   return { held, after: !!window.VOID.keys.left, paused: window.VOID.paused };
 });
-rec('blur-releases-and-pauses', blur.held && !blur.after && blur.paused, 'left held=' + blur.held + ' → after blur ' + blur.after + ' · paused=' + blur.paused);
+// blur releases held keys but must not pause: browsers fire it for benign focus moves (iframes, toolbars)
+rec('blur-releases-keys', blur.held && !blur.after && !blur.paused, 'left held=' + blur.held + ' → after blur ' + blur.after + ' · paused=' + blur.paused + ' (must stay false)');
 await page.evaluate(() => { if (window.VOID.paused) window.VOID.togglePause(); });
 
 const hid = await page.evaluate(() => {

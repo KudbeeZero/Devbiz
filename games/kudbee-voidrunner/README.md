@@ -23,11 +23,11 @@ through waves of rocks and bosses. Score scales with depth, kills, and survival 
 | Dash | `X` (brief i-frames) | **DASH** button (right of the chain gauge) |
 | Pause | `P` / `Esc` | ❚❚ button (top right) |
 
-Pause (❚❚) and audio toggles are in the HUD. The run pauses itself when the window loses focus or the tab is hidden, and held keys are released. Honors `prefers-reduced-motion` where animations allow.
+Pause (❚❚) and audio toggles are in the HUD. The run pauses itself when the tab or app is hidden; losing window focus releases held keys without pausing. Honors `prefers-reduced-motion` where animations allow.
 
 ## Verification
 
-`npm run voidrunner:eval` — Playwright + Chromium, driving the game through `window.VOID`. 13 checks: clean frames with the bloom pass on (it used to throw every frame and skip the HUD), fps, scoring, pause button, blur / hidden-tab pause, game over, and phone touch controls. Screenshots land in `eval/out/` (gitignored).
+`npm run voidrunner:eval` — Playwright + Chromium, driving the game through `window.VOID`. 13 checks: clean frames with the bloom pass on (it used to throw every frame and skip the HUD), fps, scoring, pause button, blur key release, hidden-tab pause, game over, and phone touch controls. Screenshots land in `eval/out/` (gitignored).
 
 ## Leaderboard
 

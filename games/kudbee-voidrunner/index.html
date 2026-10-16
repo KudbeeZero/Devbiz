@@ -39,7 +39,7 @@
     color:#9fb6c8; padding:6px 10px; border:1px solid rgba(159,182,200,0.25); border-radius:6px;
     background:rgba(5,5,15,0.5); backdrop-filter:blur(6px); }
   .snd-btn:hover { color:#fff; border-color:var(--cyan); }
-  .pause-btn { right:58px; font-size:12px; letter-spacing:-0.1em; }   /* touch has no P key: this is the only way to pause on a phone */
+  .pause-btn { right:66px; font-size:12px; letter-spacing:-0.1em; }   /* touch has no P key: this is the only way to pause on a phone */
   .pause-btn.hidden { display:none; }
   .overlay { position:absolute; inset:0; z-index:25; display:flex; text-align:center; padding:24px; overflow-y:auto;
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.5), rgba(3,3,10,0.9));
@@ -3202,12 +3202,16 @@
     var want = state === 'play' && !paused;
     if (want !== pauseBtnShown) { pauseBtnShown = want; pauseBtn.classList.toggle('hidden', !want); }
   }
-  // Losing focus swallows keyups (alt-tab mid-turn kept the ship sliding) and a hidden tab kept
-  // the run going unseen: drop every held input and pause.
-  function releaseInputs() { for (var k in keys) keys[k] = false; dragId = null; autofire = false; }
-  function pauseOnLeave() { releaseInputs(); if (state === 'play' && !paused) togglePause(); }
-  window.addEventListener('blur', pauseOnLeave);
-  document.addEventListener('visibilitychange', function () { if (document.hidden) pauseOnLeave(); });
+  // Losing focus swallows keyups (alt-tab mid-turn kept the ship sliding): release held keys.
+  // Blur alone never pauses — browsers fire it for benign focus moves (an embedded iframe such as
+  // a preview toolbar, devtools), which paused runs at random. Only a hidden tab/app pauses.
+  function releaseKeys() { for (var k in keys) keys[k] = false; }
+  window.addEventListener('blur', releaseKeys);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) return;
+    releaseKeys(); dragId = null; autofire = false;
+    if (state === 'play' && !paused) togglePause();
+  });
   document.getElementById('quitPauseBtn').addEventListener('click', quitToIntro);
   var paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
   if (paMute) paMute.addEventListener('change', function () { setMuted(paMute.checked); });
