@@ -248,6 +248,43 @@
   var missionTriggered = [false, false, false, false], missionComplete = [false, false, false, false];
   var missionMult = 1, missionGravMod = 1;                                 // set during missions (asteroid → score 2×, warp → gravity ½)
 
+  // ---- HURRY-UP: a bonus that drains away. Starts when a mission clears or a DROP BANK
+  // completes; the next ramp or target shot banks whatever is left. Ticks in physStep, so it
+  // pauses during hit-stop like the rest of the scoring.
+  var HURRY_S = 12, HURRY_BASE = 40000;
+  var hurry = { t: 0 };
+  function hurryValue() { return hurry.t > 0 ? Math.round(HURRY_BASE * (hurry.t / HURRY_S) / 500) * 500 : 0; }
+  function startHurry() { hurry.t = HURRY_S; sfx('mult'); }
+  function collectHurry(x, y) {
+    if (hurry.t <= 0) return;
+    var v = hurryValue(), before = score;
+    hurry.t = 0;
+    addScore(v);
+    callout('HURRY-UP!', '+' + (score - before).toLocaleString(), '#7CFFb2');
+    burst(x, y, '#7CFFb2', 26, 500); burst(x, y, '#ffffff', 12, 420);
+    shake = Math.min(shake + 0.5, 1.6);
+    colorWash(124, 255, 178, 0.8);
+    sfx('skill');
+  }
+  // Next objective, shown in the header so there is always something concrete to chase.
+  // Returns { text, frac, col }. Missions read their live counters; SUPERNOVA names the
+  // first requirement still missing.
+  function nextGoal() {
+    if (wizardActive || missionActive >= 0) return null;     // the live readout owns the header then
+    if (wizardDone) return { text: 'SUPERNOVA DONE', frac: 1, col: '#ffd34d' };
+    for (var i = 0; i < MISSION_DEFS.length; i++) {
+      if (missionComplete[i]) continue;
+      var n, of, label;
+      if (i === 0) { n = rampShots; of = 6; label = 'LOOPS'; }
+      else if (i === 1) { n = comboN; of = 5; label = 'COMBO'; }
+      else if (i === 2) { n = 0; of = rollovers.length; for (var r = 0; r < rollovers.length; r++) if (rollovers[r].lit) n++; label = 'K·U·D'; }
+      else { n = Math.min(50, Math.floor(spinner.totalSpins)); of = 50; label = 'SPINS'; }
+      return { text: 'NEXT ▸ ' + label + ' ' + Math.min(n, of) + '/' + of, frac: Math.min(1, n / of), col: MISSION_DEFS[i].col };
+    }
+    var need = level < 5 ? 'LV 5' : !hasSeenMultiball ? 'MULTIBALL' : !tripleLoopDone ? 'TRIPLE LOOP' : 'SUPERNOVA';
+    return { text: 'NEXT ▸ ' + need, frac: 0, col: '#ffd34d' };
+  }
+
   // ---- wizard mode: SUPERNOVA — 60s ultimate frenzy ----
   var wizardActive = false, wizardTimer = 0, wizardDone = false;
   var starbreakActive = false, starbreakTimer = 0;
@@ -636,7 +673,7 @@ var ramp = null;                           // center loop-ramp trigger
     levelTransT = 0; prevLevel = 1; tableHue = 0; targetHue = 0; tableFlash = 0;
     missionActive = -1; missionTimer = 0; missionFlash = 0;
     missionTriggered = [false, false, false, false]; missionComplete = [false, false, false, false];
-    missionMult = 1; missionGravMod = 1;
+    missionMult = 1; missionGravMod = 1; hurry.t = 0;
     wizardActive = false; wizardTimer = 0; wizardDone = false; wizardFlash = 0;
     starbreakActive = false; starbreakTimer = 0;
     tripleLoopDone = false; hasSeenMultiball = false; wizardKickMult = 1;
@@ -983,6 +1020,7 @@ var ramp = null;                           // center loop-ramp trigger
   }
   function onTarget(t) {
     comboHit(t.x, t.y, t.kind === 'drop' ? 'drop' : 'target');
+    collectHurry(t.x, t.y);                                          // before the bank check, so a bank that starts a new Hurry-Up doesn't collect it at once
     t.flash = 1; shake = Math.min(shake + 0.12, 1.1);
     addScore(t.kind === 'drop' ? 500 : 250);
     bonusU += t.kind === 'drop' ? 8 : 5;
@@ -993,6 +1031,7 @@ var ramp = null;                           // center loop-ramp trigger
       if (bankComplete('D')) {
         addScore(5000 + (missionActive === 2 ? 3500 : 0));           // Target Lock: extra chain bonus
         bumpMult('DROP BANK!', t.x, t.y);
+        startHurry();                                                // a cleared drop bank primes a Hurry-Up
         resetBank('D', true);
         if (missionActive === 2) { addScore(1500); callout('CHAIN BONUS!', '+' + (1500 * mult).toLocaleString(), '#ffd34d'); burst(t.x, t.y, '#ffd34d', 18, 440); }
       }
@@ -1017,6 +1056,7 @@ var ramp = null;                           // center loop-ramp trigger
     b.x = ramp.x; b.y = 180; b.vx = (Math.random() - 0.5) * 160; b.vy = 150; b.trail.length = 0;   // loop over the top, scatter back into play
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, ramp.x, 220, chained);
     else if (!chained) callout('LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), '#39e6ff');
+    collectHurry(ramp.x, ramp.y0);                       // last, so the HURRY-UP banner wins over the loop callout
   }
   // Side loop ramps — same trick as the center loop: a hard upward shot through the
   // gate teleports the ball to the top of the field with a scatter, minus the physical
@@ -1034,6 +1074,7 @@ var ramp = null;                           // center loop-ramp trigger
     b.x = 450 + r.side * 90; b.y = 190; b.vx = -r.side * 140 + (Math.random() - 0.5) * 60; b.vy = 150; b.trail.length = 0;
     if (rampShots % 2 === 0) bumpMult('LOOP × ' + rampShots, r.x, 220, chained);
     else if (!chained) callout(r.side < 0 ? 'LEFT LOOP!' : 'RIGHT LOOP!', '+' + (1000 * rampMult * mult).toLocaleString(), col);
+    collectHurry(r.x, r.y0);                             // last, so the HURRY-UP banner wins over the loop callout
   }
   // Ball-lock saucer — captures the ball outright (it's removed from live physics, not
   // bounced) and serves a fresh one from the shooter lane so play continues without costing
@@ -1311,6 +1352,7 @@ var ramp = null;                           // center loop-ramp trigger
       case 1: awardExtraBall('warp speed'); break;                            // extra ball
       case 2: mult = Math.min(6, mult + 3); multFlash = 1; break;             // +3 multiplier
     }
+    startHurry();                                                            // clearing a mission primes a Hurry-Up
   }
 
   // ===== physics step =====
@@ -1320,6 +1362,10 @@ var ramp = null;                           // center loop-ramp trigger
     flipL.update(h); flipR.update(h); flipUR.update(h);
     launcher.update(h);
     jackpot.update(h);
+    // Mission + Hurry-Up clocks tick with the physics, not the render frame: they pause during
+    // hit-stop and run headless (the evaluator never runs a live rAF loop).
+    tickMissions(h);
+    if (hurry.t > 0) hurry.t = Math.max(0, hurry.t - h);
     for (var bi = balls.length - 1; bi >= 0; bi--) {
       var b = balls[bi];
       if (launcher.holdInLane(b, h)) continue;         // parked in the plunger lane until launched
@@ -1636,6 +1682,7 @@ var move = len(b.vx, b.vy) * h;
     sfx('drain');
     if (balls.length > 0) return;             // multiball: only count when the last ball drains
     multiballActive = false;                  // multiball ends once every ball is gone
+    hurry.t = 0;                              // an unclaimed Hurry-Up dies with the ball
     // ball save: a fresh serve that drains inside the grace window comes right back
     if (saveT > 0 && !tilted) {
       saveT = 0; sfx('save');
@@ -1667,11 +1714,14 @@ var move = len(b.vx, b.vy) * h;
     state = 'over';
     launcher.release(true); ptrRole = {};
     var isBest = score > 0 && score > best;
+    var gapToBest = Math.max(0, best - score);            // read before `best` moves: how far this run fell short
     if (score > best) { best = score; try { localStorage.setItem('kudbee.pinball.best', String(best)); } catch (e) {} }
     dispScore = score;
     document.getElementById('oScore').textContent = score.toLocaleString();
     var stats = 'best ' + best.toLocaleString() + ' · loops ×' + rampShots + (bestCombo >= 2 ? ' · top combo ×' + bestCombo : '') + (launcher.bestStreak >= 2 ? ' · skill streak ×' + launcher.bestStreak : '') + (launcher.perfects ? ' · hyperdrive ×' + launcher.perfects : '');
-    document.getElementById('oSub').innerHTML = isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats;
+    // "one more ball" hook: a near miss names the exact gap instead of just ending the run
+    var tease = !isBest && gapToBest > 0 ? ' · <b style="color:#39e6ff">' + gapToBest.toLocaleString() + ' to beat your best</b>' : '';
+    document.getElementById('oSub').innerHTML = (isBest ? '<b style="color:#ffd34d">★ NEW BEST!</b> · ' + stats : stats) + tease;
     if (isBest) {
       // new-record payoff: gold table wash + a shower of bursts across the playfield + fanfare
       sfx('newbest'); colorWash(255, 211, 77, 1.6);
@@ -1802,8 +1852,6 @@ function frame(now) {
           if (guard >= 15) acc = Math.min(acc, PH);
         }
       }
-    // Mission tick: check triggers, count down, handle completion
-    tickMissions(dt);
     // fx decay
     shake *= Math.pow(0.0009, dt);
     if (co.life > 0) co.life -= dt;
@@ -2522,8 +2570,11 @@ function frame(now) {
     var lbw = Math.round(mn * 0.12), lbh = 3;
     ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(W - pad - lbw, ry + Math.round(mn * 0.056), lbw, lbh);
     ctx.fillStyle = levelCol; ctx.fillRect(W - pad - lbw, ry + Math.round(mn * 0.056), lbw * lvlProg, lbh);
-    ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText('S T A R B R E A K', W - pad, ry + Math.round(mn * 0.066));
+    // next objective (replaces the table-name tag while playing): always something concrete to chase
+    var goal = state === 'play' ? nextGoal() : null;
+    if (goal) { ctx.fillStyle = goal.col; ctx.font = '700 ' + Math.round(mn * 0.015) + 'px "Space Grotesk", sans-serif'; }
+    else { ctx.fillStyle = '#5a6276'; ctx.font = '700 ' + Math.round(mn * 0.013) + 'px "Space Grotesk", sans-serif'; }
+    ctx.fillText(goal ? goal.text : 'S T A R B R E A K', W - pad, ry + Math.round(mn * 0.066));
     // playfield multiplier (top-center)
     if (state === 'play') {
       var mx = W / 2, my = pad, ms = 1 + multFlash * 0.45;
@@ -2559,6 +2610,19 @@ function frame(now) {
         var ringR = mn * 0.11;
         ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(mx, my + mn * 0.04, ringR, -Math.PI / 2, -Math.PI / 2 + TAU * (missionTimer / MISSION_DEFS[missionActive].DUR)); ctx.stroke();
+      }
+      // HURRY-UP: the payout drains from HURRY_BASE; the next ramp or target shot banks it
+      var hv = hurryValue();
+      if (hv > 0) {
+        var hyy = hy, hbw = mn * 0.22; hy += 26;
+        var hPulse = 0.75 + 0.25 * Math.sin(frameNow / 110);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; roundRect(ctx, mx - hbw / 2, hyy, hbw, 22, 6); ctx.fill();
+        ctx.globalAlpha = hPulse;
+        ctx.fillStyle = '#7CFFb2'; ctx.font = '700 ' + Math.round(mn * 0.02) + 'px "Space Grotesk", sans-serif';
+        ctx.fillText('HURRY-UP ' + hv.toLocaleString(), mx, hyy + 2);
+        ctx.fillStyle = 'rgba(124,255,178,0.2)'; ctx.fillRect(mx - hbw / 2 + 6, hyy + 17, hbw - 12, 3);
+        ctx.fillStyle = '#7CFFb2'; ctx.fillRect(mx - hbw / 2 + 6, hyy + 17, (hbw - 12) * (hurry.t / HURRY_S), 3);
+        ctx.globalAlpha = 1;
       }
       // live combo chain: label + draining timer bar under the multiplier
       if (comboN >= 2 && comboT > 0) {
@@ -2949,6 +3013,9 @@ function frame(now) {
     get mult() { return mult; }, get targets() { return targets; }, get rollovers() { return rollovers; }, get ramp() { return ramp; },
     get tilt() { return tilt; }, get tilted() { return tilted; },
     get saveT() { return saveT; }, get combo() { return comboN; }, get bonusU() { return bonusU; },
+    get hurry() { return { t: hurry.t, value: hurryValue() }; }, get goal() { return nextGoal(); },
+    get missionTimer() { return missionTimer; }, get missionActive() { return missionActive; },
+    startHurry: startHurry, activateMission: activateMission, gameOver: gameOver,
     get muted() { return muted; }, get ballsLeft() { return ballsLeft; },
     get skillStreak() { return launcher.streak; }, get bestSkillStreak() { return launcher.bestStreak; }, get perfects() { return launcher.perfects; },
     setMuted: setMuted,

@@ -233,6 +233,50 @@ rec('multiball-jackpot', jpOk,
   jpOk ? 'armed 3/3 → escalating ' + jp.g1 + '/' + jp.g2 + '/' + jp.g3 + ' → SUPER +' + jp.superGain + ' → relit'
        : JSON.stringify(jp));
 
+// ---- Hurry-Up + physics-driven mission clock + next-goal readout ----------
+const hurryRun = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest, H = 1 / 300;
+  T.forceStart();
+  const goal0 = P.goal;                          // fresh game: first mission is the next goal
+  // mission clock must advance from physStep alone (no rAF involved): 1 s of physics = 1 s
+  P.activateMission(0);
+  const m0 = P.missionTimer;
+  for (let k = 0; k < 300; k++) P.physStep(H);
+  const mDrop = m0 - P.missionTimer;
+  // Hurry-Up: primed, drains with physics, and the next loop banks what is left
+  P.startHurry();
+  const v0 = P.hurry.value;
+  for (let k = 0; k < 60; k++) P.physStep(H);
+  const v1 = P.hurry.value;
+  const s0 = P.score; T.fireLeftRamp(); const gain = P.score - s0;
+  return { goal0, mDrop, v0, v1, gain, tAfter: P.hurry.t, callout: P.lastCallout, valueAfter: P.hurry.value };
+});
+const goalOk = hurryRun.goal0 && hurryRun.goal0.text === 'NEXT ▸ LOOPS 0/6'
+  && hurryRun.goal0.frac === 0 && hurryRun.goal0.col === '#39e6ff';
+rec('goal-tracker', goalOk,
+  goalOk ? 'fresh game → "' + hurryRun.goal0.text + '"' : JSON.stringify(hurryRun.goal0));
+const clockOk = Math.abs(hurryRun.mDrop - 1) < 0.02;
+rec('mission-clock-physics', clockOk,
+  clockOk ? '1.00 s of physStep drains the mission timer by ' + hurryRun.mDrop.toFixed(3) + ' s (no rAF needed)'
+          : 'drained ' + hurryRun.mDrop + ' s in 300 steps');
+const huOk = hurryRun.v0 === 40000 && hurryRun.v1 < hurryRun.v0 && hurryRun.v1 > 30000
+  && hurryRun.gain > hurryRun.v1 && hurryRun.tAfter === 0 && hurryRun.valueAfter === 0
+  && hurryRun.callout === 'HURRY-UP!';
+rec('hurry-up-collect', huOk,
+  huOk ? 'primed ' + hurryRun.v0 + ' → drained to ' + hurryRun.v1 + ' → next loop banked +' + hurryRun.gain + ' · callout HURRY-UP!'
+       : JSON.stringify(hurryRun));
+
+// Game-over "one more ball" hook: a run that falls short names the exact gap to the best
+const tease = await page.evaluate(() => {
+  const P = window.PINBALL, T = window.__kbTest;
+  T.forceStart(); T.fireLeftRamp(); P.gameOver();        // a scoring run sets the best (or keeps it)
+  T.forceStart(); P.gameOver();                           // next run scores 0 → the gap is the whole best
+  return document.getElementById('oSub').innerHTML;
+});
+const teaseOk = /to beat your best/.test(tease) && !/NEW BEST/.test(tease);
+rec('beat-your-best-tease', teaseOk,
+  teaseOk ? 'short run shows the gap to beat your best, no NEW BEST' : tease.slice(0, 200));
+
 rec('no-real-console-errors', consoleErrs.length===0, consoleErrs.length?consoleErrs.slice(0,2).join(' | '):'clean (blocked web-font requests ignored)');
 
 const pass=R.filter(r=>r.pass).length,total=R.length;
