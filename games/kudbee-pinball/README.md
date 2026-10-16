@@ -4,7 +4,7 @@
 > procedural table art and Web Audio.
 
 Clear drop targets, spell **K·U·D**, rip loop ramps, build **combos** and **multiplier**, chase
-modes and multiball. Ball save on fresh serves; one **kickback** per outlane.
+modes and multiball. Ball save on fresh serves. There are no outlanes: the flippers are the only way past the bottom.
 
 ## Play
 
