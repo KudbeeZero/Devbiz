@@ -45,7 +45,7 @@
   .topright { position: absolute; right: 16px; top: 14px; text-align: right; }
   .score { font-family: "Space Grotesk"; font-weight: 700; font-size: clamp(24px, 4.4vw, 40px); color: #fff; line-height: 1; }
   .score-lab { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a93a8; margin-top: 3px; }
-  .topleft { position: absolute; left: 16px; top: 14px; }
+  .topleft { position: absolute; left: 16px; top: 52px; }   /* below the back link, which shares the corner */
   .wave { font-family: "Space Grotesk"; font-weight: 700; font-size: 18px; color: var(--cyan); }
   .mult { font-size: 12px; color: #8a93a8; margin-top: 2px; }
   .mult b { color: var(--amber); }
@@ -60,6 +60,19 @@
   .reticle::before { width: 100%; height: 100%; }
   .reticle::after { width: 5px; height: 5px; background: var(--cyan); border: none; box-shadow: 0 0 8px var(--cyan); }
   .reticle.lock::before { border-color: var(--amber); box-shadow: 0 0 12px rgba(255,211,77,0.6); }
+  .reticle.nolock::before { border-color: var(--red); box-shadow: 0 0 12px rgba(255,92,122,0.6); }
+
+  /* Wave banner: "WAVE 3" on arrival, "WAVE 2 CLEAR" on a clear */
+  .banner { position: absolute; left: 50%; top: 30%; transform: translate(-50%,-50%); z-index: 11; text-align: center; pointer-events: none; opacity: 0; white-space: nowrap; }
+  .banner.show { animation: bannerIn 1.7s ease-out forwards; }
+  .banner b { display: block; font-family: "Space Grotesk"; font-weight: 700; font-size: clamp(30px, 7vw, 56px); letter-spacing: 0.08em; color: #fff; text-shadow: 0 0 24px rgba(57,230,255,0.7); }
+  .banner span { font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--cyan); }
+  @keyframes bannerIn { 0% { opacity: 0; transform: translate(-50%,-50%) scale(1.15); } 12% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes bannerFade { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .banner.show { animation-name: bannerFade; } }
+  .snd { position: absolute; right: 16px; top: 74px; pointer-events: auto; width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+    border: 1px solid rgba(159,182,200,0.25); background: rgba(5,5,15,0.5); color: #cfe9ff; font-size: 15px; display: grid; place-items: center; }
+  .snd:hover { border-color: var(--cyan); }
 
   /* Damage vignette */
   .vignette { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
@@ -90,7 +103,8 @@
   .rstat span { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7a8398; }
 
   /* Touch controls */
-  #touch { position: absolute; inset: 0; z-index: 15; display: none; }
+  /* The layer only hosts the buttons: it must not swallow drags, or touch steering on the canvas never fires. */
+  #touch { position: absolute; inset: 0; z-index: 15; display: none; pointer-events: none; }
   @media (pointer: coarse) { #touch { display: block; } .controls-grid { display: none; } }
   .tbtn { position: absolute; pointer-events: auto; border-radius: 50%; border: 1px solid rgba(159,182,200,0.3);
     background: rgba(14,20,30,0.32); color: #cfe9ff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
@@ -125,9 +139,11 @@
       <div class="gauge"><div class="lab"><span>Boost</span><span id="hudBoostN">100</span></div><div class="bar boost"><i id="hudBoost"></i></div></div>
     </div>
     <div class="ammo"><b id="hudMsl">3</b> missiles</div>
+    <button class="snd" id="sndBtn" type="button" aria-label="Toggle sound">🔊</button>
   </div>
   <div class="reticle" id="reticle"></div>
   <div class="vignette" id="vignette"></div>
+  <div class="banner" id="banner" aria-live="polite"><b id="bannerT"></b><span id="bannerS"></span></div>
 
   <!-- Touch -->
   <div id="touch">
@@ -152,7 +168,7 @@
         <span>Mute</span><b>M</b>
       </div>
       <button class="btn" id="startBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Launch</button>
-      <div class="ov-foot">Playable slice · Phase 1 · Kudbee Games Studio</div>
+      <div class="ov-foot">Early access · Kudbee Games Studio</div>
     </div>
   </div>
 
@@ -183,7 +199,7 @@
     </div>
   </div>
 
-  <div class="hint">Mouse/WASD steer · Click/Space fire · X missile · Shift boost · P pause</div>
+  <div class="hint">Mouse/WASD steer · Click/Space fire · X missile · Shift boost · P pause · M sound</div>
 </div>
 
 <script src="vendor/three.min.js"></script>
@@ -212,6 +228,71 @@
   var FLY_SPEED = 46, BOOST_MUL = 1.85;
   var SPAWN_Z = -170, PASS_Z = 12;  // objects spawn far, despawn past the camera
   var BOLT_SPEED = 240;
+  var WAVE_BREAK_S = 1.8;           // pause between a cleared wave and the next (ticks in update, so pause stops it)
+
+  // ---- Audio: tiny procedural Web Audio (no assets). Created on the first launch gesture. ----
+  var AC = null, master = null, noiseBuf = null, engOsc = null, engGain = null, engState = '', sfxLast = {};
+  function audioInit() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    var Ctor = window.AudioContext || window.webkitAudioContext; if (!Ctor) return;
+    AC = new Ctor();
+    master = AC.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(AC.destination);
+    noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 0.6), AC.sampleRate);
+    var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // engine: a low filtered hum that rises with boost
+    engOsc = AC.createOscillator(); engOsc.type = 'sawtooth'; engOsc.frequency.value = 55;
+    var lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260;
+    engGain = AC.createGain(); engGain.gain.value = 0;
+    engOsc.connect(lp); lp.connect(engGain); engGain.connect(master); engOsc.start();
+  }
+  function setMuted(m) {
+    muted = m;
+    if (master) master.gain.setTargetAtTime(m ? 0 : 0.5, AC.currentTime, 0.02);
+    sndBtn.textContent = m ? '🔇' : '🔊';
+    try { localStorage.setItem('aw-muted', m ? '1' : '0'); } catch (e) {}
+  }
+  function tone(freq, dur, type, vol, slideTo, at) {
+    var t = AC.currentTime + (at || 0);
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol, freq) {
+    var t = AC.currentTime, src = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+    src.buffer = noiseBuf; f.type = 'lowpass';
+    f.frequency.setValueAtTime(freq, t); f.frequency.exponentialRampToValueAtTime(80, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t + dur);
+  }
+  var SFX_GAP = { shot: 0.05, hit: 0.03, boom: 0.04, rock: 0.04 };
+  function sfx(name) {
+    if (!AC || muted) return;
+    var now = AC.currentTime;
+    if (now - (sfxLast[name] || -1) < (SFX_GAP[name] || 0)) return;
+    sfxLast[name] = now;
+    switch (name) {
+      case 'shot':    tone(880, 0.06, 'square', 0.035, 520); break;
+      case 'hit':     tone(1400, 0.05, 'triangle', 0.07, 900); break;
+      case 'boom':    noise(0.45, 0.32, 1800); tone(95, 0.4, 'sine', 0.25, 40); break;
+      case 'rock':    noise(0.25, 0.18, 1100); break;
+      case 'missile': tone(220, 0.35, 'sawtooth', 0.06, 880); break;
+      case 'empty':   tone(180, 0.08, 'square', 0.05, 140); break;
+      case 'dmg':     tone(120, 0.25, 'square', 0.12, 50); noise(0.2, 0.2, 600); break;
+      case 'wave':    tone(523, 0.14, 'triangle', 0.1); tone(784, 0.24, 'triangle', 0.1, null, 0.12); break;
+      case 'clear':   tone(659, 0.12, 'triangle', 0.1); tone(880, 0.12, 'triangle', 0.1, null, 0.1); tone(1175, 0.3, 'triangle', 0.1, null, 0.2); break;
+      case 'over':    tone(330, 0.7, 'sawtooth', 0.1, 90); break;
+    }
+  }
+  // Engine hum level: 'off' | 'cruise' | 'boost' (only touches the audio graph when it changes)
+  function engine(level) {
+    if (!engGain || level === engState) return;
+    engState = level;
+    var t = AC.currentTime;
+    engGain.gain.setTargetAtTime(level === 'off' ? 0 : level === 'boost' ? 0.09 : 0.045, t, 0.08);
+    engOsc.frequency.setTargetAtTime(level === 'boost' ? 92 : 55, t, 0.15);
+  }
 
   // ---- Renderer / scene ----
   var canvas = document.getElementById('view');
@@ -443,7 +524,7 @@
     keys[k] = true;
     if (k === ' ' || k === 'enter') { if (state === 'gate') { e.preventDefault(); startGame(); return; } }
     if (k === 'p' || k === 'escape') { if (state === 'play') pause(); else if (state === 'pause') resume(); return; }
-    if (k === 'm') { muted = !muted; return; }
+    if (k === 'm') { audioInit(); setMuted(!muted); return; }
     if (k === 'r') { if (state === 'pause' || state === 'over') restart(); return; }
     if (k === ' ') { if (state === 'play') { e.preventDefault(); held.fire = true; } }
     if (k === 'x') { if (state === 'play') fireMissile(); }
@@ -467,12 +548,12 @@
   var state = 'gate', muted = false;
   var hull, shield, boost, score, wave, mult, kills, shotsFired, shotsHit;
   var shieldRegenT, boostRegenLock, mslCount, mslRegenT, fireCd, spawnT, waveActive, waveSpawned, waveKillTarget, mslMax = 3;
-  var shake = 0, best = +(localStorage.getItem('aw-best') || 0);
+  var shake = 0, best = +(localStorage.getItem('aw-best') || 0), waveBreakT = 0;
 
   function resetGame() {
     hull = 100; shield = 100; boost = 100; score = 0; wave = 1; mult = 1; kills = 0; shotsFired = 0; shotsHit = 0;
     shieldRegenT = 0; mslCount = mslMax; mslRegenT = 0; fireCd = 0; spawnT = 0; shake = 0;
-    waveActive = false; waveSpawned = 0; waveKillTarget = 0;
+    waveActive = false; waveSpawned = 0; waveKillTarget = 0; waveBreakT = 0;
     [asteroids, drones, bolts, eBolts, missiles].forEach(function (arr) { arr.forEach(function (o) { o.visible = false; o.userData.alive = false; }); });
     for (var k2 = 0; k2 < PARTS; k2++) { partLife[k2] = 0; partPos[k2*3+2] = 9999; }
     ship.position.set(0, 0, 0); steer.x = 0; steer.y = 0;
@@ -486,6 +567,16 @@
     spawnT = 0;
   }
   var waveDroneBudget = 0;
+  var bannerEl = document.getElementById('banner'), bannerT = document.getElementById('bannerT'), bannerS = document.getElementById('bannerS');
+  function banner(title, sub) {
+    bannerT.textContent = title; bannerS.textContent = sub || '';
+    bannerEl.classList.remove('show'); void bannerEl.offsetWidth; bannerEl.classList.add('show');   // restart the animation
+  }
+  function announceWave() { banner('WAVE ' + wave, waveKillTarget + ' drones inbound'); sfx('wave'); }
+  function onWaveClear() {
+    var bonus = 250 * wave, before = score; addScore(bonus);
+    banner('WAVE ' + wave + ' CLEAR', '+' + (score - before).toLocaleString() + ' bonus'); sfx('clear');
+  }
 
   // ---- Spawning ----
   function spawnAsteroid() {
@@ -499,7 +590,7 @@
   function spawnDrone(x, y, z) {
     var o = take(drones); if (!o) return null;
     o.position.set(x != null ? x : (Math.random()-0.5)*30, y != null ? y : (Math.random()-0.5)*16, z != null ? z : SPAWN_Z - Math.random()*30);
-    o.scale.set(1,1,1); o.userData.alive = true; o.visible = true; o.userData.hp = 3; o.userData.r = 1.1;
+    o.scale.set(1,1,1); o.userData.alive = true; o.visible = true; o.userData.hp = 3; o.userData.r = 1.1; o.userData.punch = 0;
     o.userData.fireT = 1.2 + Math.random() * 1.4; o.userData.phase = Math.random() * Math.PI * 2;
     waveSpawned++;
     return o;
@@ -513,13 +604,13 @@
     o.userData.alive = true; o.visible = true; o.userData.r = 0.5;
     o.userData.vx = ship.position.x * -0.6;        // slight convergence to center-forward
     o.userData.vy = (0.2 - ship.position.y) * 0.6;
-    shotsFired++;
+    shotsFired++; sfx('shot');
   }
   function fireMissile() {
-    if (mslCount <= 0) return;
-    var tgt = nearestForward(60, 0.6); if (!tgt) return;
-    var o = take(missiles); if (!o) return;
-    mslCount--; mslRegenT = 0;
+    var tgt = mslCount > 0 ? nearestForward(60, 0.6) : null;
+    var o = tgt ? take(missiles) : null;
+    if (!o) { sfx('empty'); noLock(); return; }        // empty rack or nothing to lock: say so instead of failing silently
+    mslCount--; mslRegenT = 0; sfx('missile');
     o.position.set(ship.position.x + (Math.random()-0.5), ship.position.y, ship.position.z - 1);
     o.userData.alive = true; o.visible = true; o.userData.r = 0.6; o.userData.target = tgt; o.userData.life = 3;
   }
@@ -535,10 +626,13 @@
     return best;
   }
 
+  var noLockT = 0;
+  function noLock() { reticleEl.classList.add('nolock'); clearTimeout(noLockT); noLockT = setTimeout(function () { reticleEl.classList.remove('nolock'); }, 260); }
+
   // ---- Damage ----
   function damage(amount) {
     if (state !== 'play') return;
-    mult = 1; shieldRegenT = 0; shake = Math.min(1, shake + amount / 60); flashVignette();
+    mult = 1; shieldRegenT = 0; shake = Math.min(1, shake + amount / 60); flashVignette(); sfx('dmg');
     if (shield > 0) { shield -= amount; if (shield < 0) { hull += shield; shield = 0; } }
     else hull -= amount;
     if (hull <= 0) { hull = 0; gameOver(); }
@@ -548,7 +642,8 @@
 
   function addScore(n) { score += Math.round(n * mult); }
   function onKill(pos, col) {
-    kills++; explode(pos, col, reduce ? 10 : 26); addScore(100);
+    kills++; explode(pos, col, reduce ? 10 : 26); addScore(100); sfx('boom');
+    shake = Math.min(1, shake + 0.12);              // small camera kick on every kill
     if (kills % 4 === 0) mult = Math.min(8, mult + 1);
     if (waveActive && kills >= cumKillTargetForWave()) { /* handled in update */ }
   }
@@ -563,12 +658,12 @@
     document.getElementById('hud').classList.toggle('dim', which === 'gate' || which === 'over');
     document.getElementById('reticle').style.opacity = (which === null) ? '1' : '0';
   }
-  function startGame() { resetGame(); killsAtWaveStart = 0; state = 'play'; show(null); kick(); }
-  function restart() { state = 'play'; resetGame(); killsAtWaveStart = 0; show(null); kick(); }
-  function pause() { if (state !== 'play') return; state = 'pause'; show('pause'); }
+  function startGame() { audioInit(); resetGame(); killsAtWaveStart = 0; state = 'play'; show(null); announceWave(); kick(); }
+  function restart() { audioInit(); state = 'play'; resetGame(); killsAtWaveStart = 0; show(null); announceWave(); kick(); }
+  function pause() { if (state !== 'play') return; state = 'pause'; engine('off'); show('pause'); }
   function resume() { if (state !== 'pause') return; state = 'play'; show(null); kick(); }
   function gameOver() {
-    state = 'over';
+    state = 'over'; engine('off'); sfx('over');
     if (score > best) { best = score; localStorage.setItem('aw-best', String(best)); }
     var acc = shotsFired ? Math.round(shotsHit / shotsFired * 100) : 0;
     document.getElementById('rScore').textContent = score.toLocaleString();
@@ -584,6 +679,8 @@
   document.getElementById('resumeBtn').addEventListener('click', resume);
   document.getElementById('restartBtn').addEventListener('click', restart);
   document.getElementById('againBtn').addEventListener('click', restart);
+  var sndBtn = document.getElementById('sndBtn');
+  sndBtn.addEventListener('click', function () { audioInit(); setMuted(!muted); sndBtn.blur(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden && state === 'play') pause(); });
 
   // ---- Resize ----
@@ -651,6 +748,7 @@
     var boosting = held.boost && boost > 1;
     if (boosting) { boost = Math.max(0, boost - 34 * dt); } else { boost = Math.min(100, boost + 16 * dt); }
     var speed = FLY_SPEED * (boosting ? BOOST_MUL : 1);
+    engine(boosting ? 'boost' : 'cruise');
     camera.fov += ((boosting ? 82 : 72) - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
 
     // camera chase + shake
@@ -700,6 +798,7 @@
       o.position.x += Math.cos(o.userData.phase * 1.3) * 3 * dt;
       o.position.y += Math.sin(o.userData.phase) * 1.8 * dt;
       o.userData.ring.rotation.z += dt * 2;
+      if (o.userData.punch > 0) { o.userData.punch = Math.max(0, o.userData.punch - dt * 6); o.scale.setScalar(1 + o.userData.punch * 0.3); }
       o.lookAt(ship.position.x, ship.position.y, ship.position.z);
       // fire at player
       o.userData.fireT -= dt;
@@ -731,10 +830,13 @@
         o.userData.alive = false; o.visible = false; shotsHit++;
         hitObj.userData.hp -= 1;
         explode(o.position, 0x9ff4ff, 5);
+        var isDrone = drones.indexOf(hitObj) >= 0;
         if (hitObj.userData.hp <= 0) {
-          var isDrone = drones.indexOf(hitObj) >= 0;
           hitObj.userData.alive = false; hitObj.visible = false;
-          if (isDrone) onKill(hitObj.position, 0xff8aa0); else { explode(hitObj.position, 0xffd9a0, 12); addScore(25); }
+          if (isDrone) onKill(hitObj.position, 0xff8aa0); else { explode(hitObj.position, 0xffd9a0, 12); addScore(25); sfx('rock'); }
+        } else {
+          if (isDrone) hitObj.userData.punch = 1;       // scale punch reads as "that hit landed"
+          sfx('hit');
         }
       }
     });
@@ -781,8 +883,10 @@
     // ---- wave progression ----
     if (waveActive && waveSpawned >= waveDroneBudget) {
       var anyDrone = false; for (var di = 0; di < drones.length; di++) if (drones[di].userData.alive) { anyDrone = true; break; }
-      if (!anyDrone) { waveActive = false; killsAtWaveStart = kills; setTimeout(function () { if (state === 'play') startWave(wave + 1); }, 1400); }
+      if (!anyDrone) { waveActive = false; killsAtWaveStart = kills; waveBreakT = WAVE_BREAK_S; onWaveClear(); }
     }
+    // The break ticks here (not a setTimeout), so pausing holds it and a restart clears it.
+    if (!waveActive && waveBreakT > 0) { waveBreakT -= dt; if (waveBreakT <= 0) { startWave(wave + 1); announceWave(); } }
 
     // ---- missile regen ----
     if (mslCount < mslMax) { mslRegenT += dt; if (mslRegenT > 7) { mslCount++; mslRegenT = 0; } }
@@ -848,6 +952,7 @@
   }
 
   // ---- Boot ----
+  try { if (localStorage.getItem('aw-muted') === '1') setMuted(true); } catch (e) {}
   resize(); resetGame(); state = 'gate'; show('gate');
   // place ship forward-facing for the menu beauty shot
   ship.position.set(0, 0, 0);
@@ -864,7 +969,12 @@
     spawnDroneAhead: function () { return spawnDrone(ship.position.x, ship.position.y, ship.position.z - 40); },
     fire: function () { fireBlaster(); },
     hold: function (on) { held.fire = !!on; },
-    hurt: function (n) { damage(n || 30); }
+    hurt: function (n) { damage(n || 30); },
+    get ship() { return { x: ship.position.x, y: ship.position.y }; },
+    get sound() { return { ctx: !!AC, muted: muted, engine: engState }; },
+    get waveBreak() { return waveBreakT; },
+    get banner() { return bannerT.textContent; },
+    pause: pause, resume: resume, restart: restart, missile: function () { fireMissile(); }
   };
 })();
 </script>
