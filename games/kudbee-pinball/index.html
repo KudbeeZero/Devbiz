@@ -362,6 +362,11 @@ var ramp = null;                           // center loop-ramp trigger
     // Funnel starts below the slingshot band so it meets the inner wall at a shallow
     // angle (no V-pocket at y=1180 that trapped balls on the right gutter).
     seg(LIN, 1225, 629.3, 1288.3, { rest: 0.22 });            // right funnel → right flipper pivot
+    // Pivot caps: a ball that bounces off the outer side of each pivot used to fall into the
+    // dead pocket beside the flipper and drain. These slopes run from just outside the cap
+    // down into the centre drain, so anything that gets past the cap rolls to the middle.
+    seg(660, 1300, 600, 1400, { rest: 0.22 });            // right pivot cap → centre drain
+    seg(280, 1300, 340, 1400, { rest: 0.22 });            // left pivot cap → centre drain
     // inlane/outlane guides end ON the flipper pivot (no crossing): inside face feeds the
     // flipper, outside face rolls off the pivot into the outlane. Crossing the pivot made a V-pocket.
     // slingshots (kickers above each flipper)
