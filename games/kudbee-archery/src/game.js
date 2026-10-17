@@ -121,7 +121,8 @@ KAR.Game = class {
     const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
     c.addEventListener('touchstart', block, { passive: false });
     c.addEventListener('touchmove', block, { passive: false });
-    const lift = e => { if (e.touches.length === 0 && this.drawing && !this.cpu) this._loose(); };
+    const lift = e => { this._firstGesture(); if (e.touches.length === 0 && this.drawing && !this.cpu) this._loose(); };
+    window.addEventListener('click', () => this._firstGesture());          // iOS unlocks audio on touchend / click
     window.addEventListener('touchend', lift); window.addEventListener('touchcancel', lift);
     c.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => this._onKey(e, true));
@@ -132,7 +133,7 @@ KAR.Game = class {
     window.addEventListener('blur', () => { this.holding = false; if (this.drawing && !this.cpu && !this.coarse) { this.drawing = false; this.draw = 0; } });
   }
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
-  _beginDraw() { if (this.human() && !this.drawing) { this.drawing = true; this.draw = 0; this.holdT = 0; this.breath = 1; this.audio.draw(0); } }
+  _beginDraw() { if (this.human() && !this.drawing) { this.drawing = true; this.draw = 0; this.holdT = 0; this.breath = 1; this.audio.drawStart(); } }
 
   _onDown(e) {
     this._firstGesture();
@@ -319,6 +320,8 @@ KAR.Game = class {
     this.particles = this.particles.filter(p => p.life > 0);
     this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * (this.zoomTarget > this.zoom ? 4.2 : 6));
     if (this.screen === 'play') this._updateShot(dt); else this.overlayT += dt;
+    if (!this.drawing) this.audio.drawStop();
+    this.audio.setWind(this.screen === 'play' || this.screen === 'over' ? Math.min(1, Math.abs(this.match.wind) / 4) : 0.15);
   }
 
   _updateShot(dt) {
@@ -331,7 +334,8 @@ KAR.Game = class {
         const wasFull = this.draw >= 1;
         // a recurve gets heavier toward the anchor: quick off the brace, slow into the last few inches
         this.draw = Math.min(1, this.draw + dt / C.DRAW_T * 1.044 * (1.35 - 0.7 * this.draw));
-        if (this.draw >= 1 && !wasFull) this.audio.full(); else if (this.draw < 1) this.audio.draw(this.draw);
+        if (this.draw >= 1 && !wasFull) this.audio.full();
+        this.audio.drawSet(this.draw);
         if (this.draw >= 1) this.holdT += dt;
         // breath: holding steadies the sight for a couple of seconds; empty lungs make it worse
         if (this.holding && this.breath > 0 && this.gasp <= 0) this.breath = Math.max(0, this.breath - dt / 2.4);
@@ -383,7 +387,7 @@ KAR.Game = class {
     if (c.stage === 'think' && c.t > 0.9) {
       const lv = m.level, s = KAR.Bot.shot(m, this.rng, lv.sigma, lv.read);
       c.plan = s; c.sx = s.sx; c.sy = s.sy; c.stage = 'aim'; c.t = 0;
-      this.drawing = true; this.draw = 0; this.holdT = 0;
+      this.drawing = true; this.draw = 0; this.holdT = 0; this.audio.drawStart();
       c.from = { x: 0, y: KAR.CFG.FACE_Y - m.faceD * 0.7 };
     } else if (c.stage === 'aim') {
       const k = KAR.Util.smooth(c.t / 1.0);

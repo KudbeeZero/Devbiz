@@ -15,6 +15,7 @@ Read the wind, hold your breath, hit the gold. Zero-build Canvas 2D, no dependen
 - **The landing:** arrows are real 3D objects (shaft, three spinning vanes, nock). On impact the point drives in, the shaft flexes from its flight line to a tail-up rest and quivers; it punches a hole and casts a shadow on the face. After an arrow-cam shot the camera swings round to a three-quarter view of the arrow standing out of the boss.
 - **Moments:** a fresh hit kicks up chaff; consecutive 9s and better build a **GOLD STREAK** (the chime climbs a tone each time; best streak is saved); an arrow that lands in the hole of one already in the face this end is a **ROBIN HOOD** and splits it.
 - **Last-arrow pressure:** on a range's final arrow the screen shows what you need for a new best and for 3 stars; in a duel, what the CPU needs on its last arrow to take the end.
+- **Sound:** all synthesized, no files. A bow creak that tightens with the draw (and settles to a faint strain at anchor), the clicker at full draw, the string slap + twang + limb thump on release, an arrow whoosh that falls in pitch as it flies, a straw thud with the shaft quivering, chimes, crowd, a calm loop, and an outdoor bed: wind that rises and brightens with the wind gauge, plus birds. A compressor keeps it loud on phone speakers. iOS: audio unlocks on touchend/click with a silent buffer inside the gesture, and the page asks for a "playback" audio session so the ringer switch doesn't silence it (Safari 16.4+). M or the speaker button mutes.
 - **Focus:** a hidden tab pauses; a plain window blur (iframes, toolbars) only drops held input.
 
 ## Layout
@@ -22,6 +23,6 @@ Read the wind, hold your breath, hit the gold. Zero-build Canvas 2D, no dependen
 
 ## Tests
 - `npm run archery:engine` — 29 headless checks (Swinger pendulum/lead/arrows/flow, daily seed, 70 m unlock, sight solver, wind/drag, power, ring + X scoring, range and duel flow, determinism, bot skill curves, stars, ROBIN HOOD, last-arrow needs, Balloon Pop leading/combo/gold/double/flow, persistence).
-- `npm run archery:eval` — 47 Playwright checks with real pointer/keyboard and emulated-phone touch input, plus the 70 m lock, Swinger, Daily + share, the bow draw, Balloon Pop, the release kick, face colours, arrow cam, landing replay, arrow rest pose, streak, ROBIN HOOD, last-arrow line and focus rules (screenshots in `eval/out/`, git-ignored).
+- `npm run archery:eval` — 49 Playwright checks with real pointer/keyboard and emulated-phone touch input, plus audible output (creak while drawing, twang on release, measured on the master bus), the 70 m lock, Swinger, Daily + share, the bow draw, Balloon Pop, the release kick, face colours, arrow cam, landing replay, arrow rest pose, streak, ROBIN HOOD, last-arrow line and focus rules (screenshots in `eval/out/`, git-ignored).
 
 Font: Lilita One (OFL), self-hosted.

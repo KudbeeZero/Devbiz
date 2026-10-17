@@ -240,12 +240,21 @@ await page.screenshot({ path: `${OUT}/daily-over.png` });
   const play = await T(() => { const x = KAR.UI.buttons.find(b => b.id === 'play'); return { x: x.x + x.w / 2, y: x.y + x.h / 2 }; });
   await touch('touchStart', [at(play.x, play.y)]); await touch('touchEnd', []);
   await tp.waitForFunction(() => KARGame.screen === 'play' && KARGame.bp === 'ready', null, { timeout: 5000 });
+  // sound: the first touch unlocked the AudioContext; listen to the master output through an analyser
+  await T(() => { const a = KARGame.audio; a.setMuted(false); window.__an = a.actx.createAnalyser(); window.__an.fftSize = 2048; a.comp.connect(window.__an);
+    window.__rms = () => { const d = new Float32Array(2048); window.__an.getFloatTimeDomainData(d); let s = 0; for (const v of d) s += v * v; return Math.sqrt(s / d.length); }; });
+  const lvl = async (ms) => { let m = 0; for (let i = 0; i < ms / 30; i++) { await tp.waitForTimeout(30); m = Math.max(m, await T(() => window.__rms())); } return m; };
+  rec('audio-unlocks-on-touch', await T(() => KARGame.audio.actx && KARGame.audio.actx.state === 'running' && !!KARGame.audio.comp), 'the first touch starts the audio engine (compressor on the master)');
   // 1. hold still for a full draw, drag a little, lift: the arrow goes
   const p0 = at(480, 420); await touch('touchStart', [p0]);
-  for (let i = 0; i < 18; i++) { await tp.waitForTimeout(60); await touch('touchMove', [{ x: p0.x + i * 0.5, y: p0.y + i }]); }
+  for (let i = 0; i < 6; i++) { await tp.waitForTimeout(60); await touch('touchMove', [{ x: p0.x + i * 0.5, y: p0.y + i }]); }
+  const creak = await lvl(300), creaking = await T(() => !!KARGame.audio.creak);
+  for (let i = 6; i < 18; i++) { await tp.waitForTimeout(40); await touch('touchMove', [{ x: p0.x + i * 0.5, y: p0.y + i }]); }
   const full = await T(() => KARGame.draw >= 1 && KARGame.drawing);
-  await touch('touchEnd', []); await tp.waitForTimeout(60);
-  rec('touch-hold-release', full && await T(() => KARGame.bp === 'flight'), 'touch & hold draws to full, lifting the finger looses the arrow');
+  await touch('touchEnd', []); await tp.waitForTimeout(20);
+  const twang = await lvl(240), stopped = await T(() => !KARGame.audio.creak);
+  rec('touch-hold-release', full && await T(() => KARGame.bp === 'flight' || KARGame.bp === 'result'), 'touch & hold draws to full, lifting the finger looses the arrow');
+  rec('sound-draw-and-release', creaking && creak > 0.01 && twang > 0.03 && stopped, `audible output: bow creak while drawing (rms ${creak.toFixed(3)}), the twang on release (rms ${twang.toFixed(3)}); the creak stops on the loose`);
   await tp.waitForFunction(() => KARGame.bp === 'ready', null, { timeout: 12000 });
   // 2. the phone cancels the pointer mid-draw (long-press gesture) and never sends pointerup: lifting still looses
   await touch('touchStart', [p0]); await tp.waitForTimeout(1100);
