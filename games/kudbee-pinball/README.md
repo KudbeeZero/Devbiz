@@ -4,7 +4,12 @@
 > procedural table art and Web Audio.
 
 Clear drop targets, spell **K·U·D**, rip loop ramps, build **combos** and **multiplier**, chase
-modes and multiball. Ball save on fresh serves; one **kickback** per outlane.
+modes and multiball. Ball save on fresh serves. There are no outlanes: the flippers are the only way past the bottom.
+
+The header always shows your **next goal** (`NEXT ▸ LOOPS 2/6`, `NEXT ▸ MULTIBALL`). Clearing a
+mission or a DROP BANK starts a **HURRY-UP** bonus that drains over 12 seconds; the next loop or
+target banks whatever is left. A near-miss game-over tells you exactly how far you were from your
+best.
 
 ## Play
 
@@ -38,7 +43,7 @@ Live cloud needs Worker + `API_BASE` — see `leaderboard/README.md`.
 
 ## Verification (developers)
 
-Automated playability rubric (**21 checks**, Playwright + Chromium):
+Automated playability rubric (**28 checks**, Playwright + Chromium):
 
 ```bash
 npm run pinball:eval    # from repo root

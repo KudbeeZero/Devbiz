@@ -15,6 +15,8 @@
 
 User-agent: *
 Disallow: /api/
+# Public game: listed before the /lab/ block so first-match crawlers allow it too.
+Allow: /lab/aether-wing/
 Disallow: /lab/
 Disallow: /dogfight
 Disallow: /flight-lab

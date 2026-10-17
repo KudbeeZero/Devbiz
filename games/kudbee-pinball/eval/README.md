@@ -28,7 +28,7 @@ over the table (x 80–790 step 30, y 150–1400 step 40, a few velocities, 6s) 
 exactly on a round post top or started inside the sealed pocket above the deflector
 (was 2566). Run it before and after any physics or lower-table change.
 
-## Rubric (21 checks)
+## Rubric (28 checks)
 
 | ID | What it proves |
 |---|---|
@@ -48,11 +48,18 @@ exactly on a round post top or started inside the sealed pocket above the deflec
 | `phys-wall-regression` | 9 deterministic wall/corner cases via `__kbTest.runPhysWallRegression()` |
 | `nudge-impulse` | `__kbTest.nudgeImpulseTest()` — straight nudge adds ball speed (DBZ-067) |
 | `solar-sail-mission` | `__kbTest.solarSailMissionTest()` — spinner totalSpins ≥50 lights mission C |
-| `lower-playfield-geo` | Drain 1430 · kick 1382–1426 · flip py 1300 len 150 |
+| `lower-playfield-geo` | Drain 1430 · flip py 1300 len 150 |
 | `lower-funnel-band` | `prepBall(250,1280)` + 200 `physStep` — stuck counter ≤50 |
 | `right-gutter-band` | `runLowerBandRegression()` — right gutter + hug-low |
 | `flipper-band-edges` | `runLowerBandRegression()` — flipR / between / flipL alleys |
 | `drain-lip-crawl` | `runLowerBandRegression()` — center drain lip (y≈1345) clears without hang |
+| `multiball-lane` | Lock during play parks the ball; a non-first lane ball still launches (`laneBall()`) |
+| `hyperdrive-launch` | Perfect plunge → HYPERDRIVE skill bonus; a weak plunge is re-parked |
+| `multiball-jackpot` | 3/3 ramps armed → escalating jackpots → SUPER → relit |
+| `goal-tracker` | Fresh game's header readout is `NEXT ▸ LOOPS 0/6` |
+| `mission-clock-physics` | 300 `physStep` calls (1 s) drain the mission timer by 1 s, with no rAF loop |
+| `hurry-up-collect` | Hurry-Up primed at 40,000, drains with physics, and the next loop banks it (`HURRY-UP!`) |
+| `beat-your-best-tease` | A run that falls short of the best shows `… to beat your best` on game over |
 | `no-real-console-errors` | Ignores blocked fonts + `file://` `/api/leaderboard` noise when `API_BASE` is empty |
 
 Extend the rubric as features land; run before claiming pinball gameplay green.

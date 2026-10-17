@@ -27,7 +27,27 @@
 # Private testing surfaces — keep out of search indexes. The real access control
 # is Cloudflare Access (see docs/PRIVATE_TESTING_GATE.md); this header is hygiene
 # so the gated hub/game routes are never indexed even before Access is configured.
-/lab/*
+# FRONTIER: Aether Wing is public (owner decision) and is listed on the front page,
+# so it is excluded here and in robots.txt. Every other /lab page stays private.
+/lab/
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/index.html
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/music-video/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/music-video-2/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/ai-command-center/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/mission-control/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/lab/grow/*
   X-Robots-Tag: noindex, nofollow
   Cache-Control: no-store
 
