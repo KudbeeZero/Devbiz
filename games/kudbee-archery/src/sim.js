@@ -115,13 +115,17 @@ KAR.Match = class {
     const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
     const fl = KAR.Flight.run(this.dist, sol.yaw, sol.pitch, speed, wind);
     const res = { shooter: sh, end: this.endNo, wind, samples: fl.samples, hit: fl.hit, ground: fl.ground, ring: 0, x: false, short: false };
+    let hl = fl.hit;                     // the hit in the target's own frame (the same thing unless the target moves)
+    if (fl.hit && this.offAt) { const o = this.offAt(this.T + fl.hit.t); hl = { x: fl.hit.x - o.x, y: fl.hit.y - o.y }; }
     if (fl.hit) {
-      const sc = KAR.Score.ring(this.distIdx, fl.hit.x, fl.hit.y); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
+      const sc = KAR.Score.ring(this.distIdx, hl.x, hl.y); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
       // ROBIN HOOD: on the face, within a shaft's width of an arrow already in it this end (it would split that arrow)
-      if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && Math.hypot(a.hit.x - fl.hit.x, a.hit.y - fl.hit.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
+      if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && Math.hypot(a.hit.x - hl.x, a.hit.y - hl.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
     }
     else { res.miss = true; res.short = true; }
-    this.arrows[sh].push({ ring: res.ring, x: res.x, robin: !!res.robin, end: this.endNo, hit: fl.hit ? { x: fl.hit.x, y: fl.hit.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
+    // a moving target carries its arrows with it - one that missed the boss altogether just flies on through
+    const keep = fl.hit && !(this.offAt && res.miss && !this.onBoss(hl));
+    this.arrows[sh].push({ ring: res.ring, x: res.x, robin: !!res.robin, end: this.endNo, hit: keep ? { x: hl.x, y: hl.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
     this.arrowNo++;
     this.log.push(res);
     res.endDone = this.arrowNo >= this.per * this.shooters;
@@ -147,7 +151,7 @@ KAR.Match = class {
   // for 3 stars. Duel (CPU's last arrow of an end): points the CPU needs to win the end. null when not the last.
   needs(best) {
     const C = KAR.CFG;
-    if (this.over || this.arrowsLeft !== 1) return null;
+    if (this.over || this.arrowsLeft !== 1 || this.mode === 'swing') return null;
     if (this.mode === 'range') {
       if (this.endNo !== this.ends - 1) return null;
       const t = this.total(0), T3 = KAR.STARS[this.distIdx][1];
@@ -164,6 +168,45 @@ KAR.Match = class {
   }
 };
 KAR.STARS = [[112, 130], [118, 134], [112, 130], [92, 116]];       // [2-star, 3-star] out of 150
+// 70 m opens once you have 6 stars across 18/30/50 (or you already have a score there).
+KAR.UNLOCK70 = 6;
+KAR.locked = (dist, data) => dist === 3 && !(data.best[3] > 0) && data.stars[0] + data.stars[1] + data.stars[2] < KAR.UNLOCK70;
+
+// ---- SWINGER ------------------------------------------------------------------------
+// The 30 m boss hangs from a frame on two parallel ropes, so it swings side to side like a playground swing
+// and stays upright (rising a little at each end of the arc). A real pendulum: period 2*pi*sqrt(L/g). The
+// swing grows each end. You score it like a range - 4 ends of 3 - but the face is wherever it will be when
+// the arrow arrives, so you lead it. The clock T runs only when the game ticks it, like BALLOON POP.
+KAR.Swing = class extends KAR.Match {
+  constructor(opts) {
+    opts = opts || {};
+    super({ mode: 'range', dist: 1, seed: opts.seed });
+    this.mode = 'swing'; this.ends = KAR.Swing.ENDS; this.T = 0;
+    this.viewD = 2.0;                                   // the scope frames the whole swing, not just the face
+  }
+  _newEnd() {
+    super._newEnd();
+    this.th0 = KAR.Swing.AMP[Math.min(this.endNo || 0, KAR.Swing.AMP.length - 1)];
+    this.ph = this.rng() * 6.283;
+  }
+  tick(dt) { this.T += dt; }
+  offAt(T) {
+    const L = KAR.Swing.L, w = Math.sqrt(KAR.CFG.G / L), th = this.th0 * Math.sin(w * T + this.ph);
+    return { x: L * Math.sin(th), y: L * (1 - Math.cos(th)), th };
+  }
+  onBoss(h) { const bw = this.faceD * 0.62 + 0.06; return Math.abs(h.x) < bw && Math.abs(h.y - KAR.CFG.FACE_Y) < bw; }
+};
+KAR.Swing.L = 2.4; KAR.Swing.ENDS = 4; KAR.Swing.AMP = [0.16, 0.22, 0.28, 0.34];
+
+// ---- DAILY ----------------------------------------------------------------------------
+// One BALLOON POP a day, the same for everyone: the seed comes from the UTC date, so the wind and the order,
+// colours, heights and speeds of the balloons match on every device that day. #1 is 2026-10-17.
+KAR.Daily = {
+  EPOCH: 20743,
+  day(now) { return Math.floor((now === undefined ? Date.now() : now) / 86400000) - this.EPOCH + 1; },
+  seed(day) { let h = (day * 2654435761) >>> 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) >>> 0; return (h ^ (h >>> 16)) >>> 0; },
+  date(day) { return new Date((day + this.EPOCH - 1) * 86400000).toISOString().slice(0, 10); },
+};
 
 // ---- BALLOON POP (arcade) ---------------------------------------------------------------
 // Balloons drift across a plane DIST metres down-range, pushed by the wind and bobbing. You have a quiver
@@ -180,7 +223,7 @@ KAR.Trick = class {
     this.shooters = 1; this.shooter = 0; this.per = 1; this.ends = 1; this.endNo = 0; this.arrowNo = 0;
     this.arrows = [[], []]; this.sets = [0, 0]; this.endScores = []; this.log = [];
     this.quiver = KAR.Trick.ARROWS; this.score = 0; this.combo = 0; this.bestCombo = 0; this.popped = 0;
-    this.over = false; this.winner = -1;
+    this.over = false; this.winner = -1; this.daily = opts.daily || 0;
     this.T = 0; this.balloons = []; this.nextId = 1; this.spawnT = 0;
     this.wind = (this.rng() * 2 - 1) * C.WIND[1] * 0.8; this.baseWind = this.wind;
     for (let i = 0; i < 4; i++) this._spawn(-3 + i * 1.6);       // a few already crossing at the start

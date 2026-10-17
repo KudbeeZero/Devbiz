@@ -161,7 +161,8 @@ KAR.UI = {
       const n = m.quiver;
       for (let k = 0; k < Math.min(n, 14); k++) { const x = 30 + k * 13; ctx.save(); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, 66); ctx.lineTo(x, 92); ctx.strokeStyle = U.OUT; ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = '#f2e6c8'; ctx.lineWidth = 2.6; ctx.stroke(); ctx.fillStyle = k % 2 ? '#2f86d8' : '#7ac7ff'; ctx.fillRect(x - 3.5, 86, 7, 8); ctx.restore(); }
       U.text(ctx, n > 14 ? '+' + (n - 14) : '', 30 + 14 * 13, 90, 16, '#ffffff', 'left');
-      U.text(ctx, 'BEST ' + (KAR.Store.data.trickBest || 0), 290, 98, 16, '#ffe9a8', 'right');
+      const dd = KAR.Store.data.daily;
+      U.text(ctx, m.daily ? 'TODAY ' + (dd.day === m.daily ? dd.best : 0) : 'BEST ' + (KAR.Store.data.trickBest || 0), 290, 98, 16, '#ffe9a8', 'right');
     }
     const rows = trick ? [] : duel ? [0, 1] : [0];
     rows.forEach((s, i) => {
@@ -174,7 +175,7 @@ KAR.UI = {
       if (m.xs(s)) U.text(ctx, m.xs(s) + 'X', 276, y + 6, 15, '#ffd34d', 'right');
     });
     if (trick) { /* no ends */ }
-    else if (!duel) U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M', 28, 98, 17, '#ffe9a8', 'left');
+    else if (!duel) U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M' + (m.mode === 'swing' ? '   \u00b7   SWINGER' : ''), 28, 98, 17, '#ffe9a8', 'left');
     else U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, 16, '#ffe9a8', 'left');
     U.roundIcon(ctx, g, 'pause', 926, 36, 'pause');
     U.roundIcon(ctx, g, 'mute', 876, 36, g.audio.muted ? 'mute' : 'sound');
@@ -236,18 +237,33 @@ KAR.UI = {
     U.bubble(ctx, 'KUDBEE', 480, 92, 42, '#ffffff', '#cfe9ff', -0.03);
     U.bubble(ctx, 'ARCHERY', 480, 178, 92, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
     U.text(ctx, 'READ THE WIND  \u00b7  HOLD YOUR BREATH  \u00b7  HIT THE GOLD', 480, 212, 17, '#ffffff', 'center');
-    const trick = D.mode === 2;
-    ['RANGE', 'DUEL VS CPU', 'BALLOON POP'].forEach((n, i) => U.button(ctx, g, 'mode' + i, 135 + i * 236, 232, 220, 44, n, { small: true, color: D.mode === i ? 'green' : (i === 2 ? 'red' : 'blue'), selected: D.mode === i }));
+    const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
+    ['RANGE', 'DUEL VS CPU', 'BALLOON POP', 'SWINGER', 'DAILY'].forEach((n, i) => U.button(ctx, g, 'mode' + i, 40 + i * 178, 232, 164, 44, n, { small: true, color: D.mode === i ? 'green' : (i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
+    if (swing) {
+      U.text(ctx, 'THE TARGET HANGS ON ROPES AND SWINGS', 480, 318, 20, '#ffffff', 'center');
+      U.text(ctx, 'lead it  \u00b7  loose as it swings toward your sight  \u00b7  the arc grows every end', 480, 350, 17, '#ffe9a8', 'center');
+      U.text(ctx, '30 m  \u00b7  4 ends of 3 arrows  \u00b7  out of 120', 480, 378, 17, '#ffe9a8', 'center');
+      U.text(ctx, 'BEST ' + (D.swingBest || 0), 480, 428, 26, '#fff27a', 'center');
+    }
+    if (daily) {
+      const day = KAR.Daily.day(), dd = D.daily, today = dd.day === day;
+      U.text(ctx, 'DAILY #' + day + '  \u00b7  ' + KAR.Daily.date(day), 480, 318, 22, '#ffffff', 'center');
+      U.text(ctx, 'today\'s BALLOON POP: the same wind and balloons for everyone', 480, 350, 17, '#ffe9a8', 'center');
+      U.text(ctx, 'play it, then share your score  \u00b7  a new one every day (UTC)', 480, 378, 17, '#ffe9a8', 'center');
+      U.text(ctx, today ? 'TODAY ' + dd.best + '   \u00b7   FIRST TRY ' + dd.first + '   \u00b7   ' + dd.plays + (dd.plays > 1 ? ' PLAYS' : ' PLAY') : 'NOT PLAYED YET TODAY', 480, 428, 24, '#fff27a', 'center');
+    }
     if (trick) {
       U.text(ctx, 'BALLOONS DRIFT ACROSS THE RANGE IN THE WIND', 480, 318, 20, '#ffffff', 'center');
       U.text(ctx, 'lead the movers  \u00b7  pop in a row for a combo  \u00b7  one arrow can pop two', 480, 350, 17, '#ffe9a8', 'center');
       U.text(ctx, 'gold balloons refill 2 arrows  \u00b7  12 arrows to start', 480, 378, 17, '#ffe9a8', 'center');
       U.text(ctx, 'BEST ' + (D.trickBest || 0), 480, 428, 26, '#fff27a', 'center');
     }
-    if (!trick) U.text(ctx, 'DISTANCE', 480, 308, 17, '#ffe9a8', 'center');
-    if (!trick) KAR.CFG.DISTS.forEach((d, i) => {
-      const x = 144 + i * 170;
-      U.button(ctx, g, 'd' + i, x, 316, 156, 46, d + ' M', { small: true, color: D.dist === i ? 'green' : 'blue', selected: D.dist === i });
+    const plain = D.mode < 2;
+    if (plain) U.text(ctx, 'DISTANCE', 480, 308, 17, '#ffe9a8', 'center');
+    if (plain) KAR.CFG.DISTS.forEach((d, i) => {
+      const x = 144 + i * 170, lock = KAR.locked(i, D);
+      U.button(ctx, g, 'd' + i, x, 316, 156, 46, d + ' M', { small: true, color: D.dist === i && !lock ? 'green' : 'blue', selected: D.dist === i && !lock, disabled: lock });
+      if (lock) { const n = D.stars[0] + D.stars[1] + D.stars[2]; U.text(ctx, 'LOCKED', x + 78, 386, 15, '#ffffff', 'center'); U.text(ctx, '\u2605 ' + n + ' / ' + KAR.UNLOCK70 + ' TO OPEN', x + 78, 408, 14, '#ffe9a8', 'center'); return; }
       if (!duel) for (let k = 0; k < 3; k++) U.star(ctx, x + 38 + k * 40, 382, 11, k < D.stars[i], 1);
       if (!duel && D.best[i]) U.text(ctx, 'BEST ' + D.best[i], x + 78, 412, 14, '#ffffff', 'center');
     });
@@ -255,7 +271,7 @@ KAR.UI = {
       U.text(ctx, 'CPU SKILL', 480, 396, 17, '#ffe9a8', 'center');
       KAR.LEVELS.forEach((L, i) => U.button(ctx, g, 'lv' + i, 270 + i * 140, 404, 128, 40, L.name, { small: true, color: D.level === i ? 'green' : 'blue', selected: D.level === i }));
     }
-    U.button(ctx, g, 'play', 330, 462, 300, 70, trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
+    U.button(ctx, g, 'play', 330, 462, 300, 70, daily ? 'PLAY TODAY' : swing ? 'START SWINGER' : trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
     U.text(ctx, 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose', 480, 568, 16, '#ffffff', 'center');
     U.text(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, 15, '#ffe9a8', 'center');
     U.roundIcon(ctx, g, 'mute', 926, 36, g.audio.muted ? 'mute' : 'sound');
@@ -266,12 +282,18 @@ KAR.UI = {
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 240, 104, 480, 430, g.newBest ? 'blue' : 'red');
-    U.ribbon(ctx, 480, 76, 400, 'OUT OF ARROWS', g.newBest ? 'green' : 'red');
+    U.ribbon(ctx, 480, 76, 400, m.daily ? 'DAILY #' + m.daily : 'OUT OF ARROWS', g.newBest ? 'green' : 'red');
     U.text(ctx, String(m.score), 480, 226, 86, '#ffffff', 'center');
     U.text(ctx, m.popped + ' POPPED   \u00b7   BEST COMBO \u00d7' + Math.max(1, Math.min(5, m.bestCombo)) + '   \u00b7   ' + m.arrowNo + ' ARROWS', 480, 266, 19, '#ffe9a8', 'center');
-    if (g.newBest && m.score > 0) U.text(ctx, 'NEW BEST!', 480, 340, 40, '#fff27a', 'center');
+    if (m.daily) {
+      const dd = KAR.Store.data.daily;
+      U.text(ctx, g.newBest && dd.plays > 1 ? 'NEW BEST TODAY!' : 'TODAY\'S BEST ' + dd.best, 480, 322, 30, g.newBest && dd.plays > 1 ? '#fff27a' : '#ffffff', 'center');
+      U.text(ctx, 'same balloons for everyone today  \u00b7  first try ' + dd.first, 480, 352, 17, '#ffe9a8', 'center');
+      const copied = g.time - g.shared < 2.5;
+      U.button(ctx, g, 'share', 330, 376, 300, 52, copied ? 'COPIED!' : 'SHARE SCORE', { small: true, color: copied ? 'green' : 'yellow' });
+    } else if (g.newBest && m.score > 0) U.text(ctx, 'NEW BEST!', 480, 340, 40, '#fff27a', 'center');
     else U.text(ctx, 'BEST ' + (KAR.Store.data.trickBest || 0), 480, 340, 28, '#ffffff', 'center');
-    U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
+    U.button(ctx, g, 'rematch', 270, 450, 270, 56, m.daily ? 'TRY AGAIN' : 'PLAY AGAIN', { primary: true });
     U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
     ctx.restore();
   },
@@ -290,20 +312,25 @@ KAR.UI = {
   over(ctx, g) {
     const U = this, m = g.match, T = g.overlayT, duel = m.mode === 'duel';
     if (m.mode === 'trick') return this.overTrick(ctx, g);
-    const won = duel ? m.winner === 0 : m.stars() >= 1;
+    const swing = m.mode === 'swing', won = duel ? m.winner === 0 : swing ? g.newBest || m.total(0) >= 80 : m.stars() >= 1;
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 240, 104, 480, 430, won ? 'blue' : 'red');
-    U.ribbon(ctx, 480, 76, 400, duel ? (m.winner === 0 ? 'YOU WIN!' : m.winner === 1 ? 'CPU WINS' : 'DRAW') : 'RANGE COMPLETE', won ? 'green' : 'red');
+    U.ribbon(ctx, 480, 76, 400, duel ? (m.winner === 0 ? 'YOU WIN!' : m.winner === 1 ? 'CPU WINS' : 'DRAW') : swing ? 'SWINGER DONE' : 'RANGE COMPLETE', won ? 'green' : 'red');
     if (duel) {
       U.text(ctx, m.total(0) + '  \u2013  ' + m.total(1), 480, 218, 70, '#ffffff', 'center');
       U.text(ctx, 'SETS ' + m.sets[0] + ' \u2013 ' + m.sets[1] + '   \u00b7   X ' + m.xs(0) + ' \u2013 ' + m.xs(1), 480, 256, 20, '#ffe9a8', 'center');
+    } else if (swing) {
+      U.text(ctx, String(m.total(0)), 480, 222, 86, '#ffffff', 'center');
+      U.text(ctx, 'OUT OF 120   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M ON THE SWING', 480, 258, 20, '#ffe9a8', 'center');
+      U.text(ctx, g.newBest && m.total(0) > 0 ? 'NEW BEST!' : 'BEST ' + (KAR.Store.data.swingBest || 0), 480, 340, g.newBest ? 40 : 28, g.newBest ? '#fff27a' : '#ffffff', 'center');
     } else {
       U.text(ctx, String(m.total(0)), 480, 222, 86, '#ffffff', 'center');
       U.text(ctx, 'OUT OF 150   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 258, 20, '#ffe9a8', 'center');
       for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < m.stars(), T > 0.4 + i * 0.3 ? 1 : 0.01);
-      if (g.newBest) U.text(ctx, 'NEW BEST!', 480, 392, 28, '#fff27a', 'center');
+      if (g.unlocked) U.text(ctx, '70 M UNLOCKED!', 480, 396, 30, '#9be35a', 'center');
+      else if (g.newBest) U.text(ctx, 'NEW BEST!', 480, 392, 28, '#fff27a', 'center');
     }
     const ends = m.endScores.map((e, i) => (duel ? e[0] + ':' + e[1] : String(e[0]))).join('   ');
     U.text(ctx, 'ENDS  ' + ends, 480, 420, 17, '#ffffff', 'center');

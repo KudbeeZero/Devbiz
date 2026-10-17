@@ -38,13 +38,17 @@ KAR.Game = class {
   startMatch() {
     const D = KAR.Store.data;
     const seed = (this.rng() * 4294967296) >>> 0;
-    this.match = D.mode === 2 ? new KAR.Trick({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: D.dist, level: D.level, seed });
+    const day = KAR.Daily.day();
+    this.match = D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
+      : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
+    this.shared = -9; this.unlocked = false;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
     this.focusIdx = -1; this.focusPending = true; this.showEnd = 0; this.zoom = 1; this.zoomTarget = 1;
     this.camB = 0; this.camTip = null; this.streak = 0; this.drama = '';
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
-    if (this.match.mode === 'trick') { this.hint = 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
+    if (this.match.mode === 'trick') { this.hint = (this.match.daily ? 'DAILY #' + this.match.daily + '  ·  ' : '') + 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
+    if (this.match.mode === 'swing') { this.hint = 'THE TARGET SWINGS  ·  LEAD IT  ·  LOOSE AS IT COMES TO YOU'; this.hintT = 6; }
     this._nextShot();
   }
 
@@ -84,7 +88,8 @@ KAR.Game = class {
     const D = KAR.Store.data;
     if (id === 'play' || id === 'restart' || id === 'rematch' || id === 'retry') this.startMatch();
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
-    else if (/^d\d$/.test(id)) { D.dist = +id[1]; KAR.Store.save(); }
+    else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
+    else if (id === 'share') this._share();
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
     else if (id === 'pause') this.togglePause();
     else if (id === 'resume') this.screen = 'play';
@@ -99,7 +104,8 @@ KAR.Game = class {
   _setAimFromPtr() {
     const m = this.match, y = this.ptr.y - (this.coarse ? 70 : 0);
     const q = KAR.Render.unproj(this.ptr.x, y, m.dist);
-    this.aimX = KAR.Util.clamp(q.x, -m.faceD * 1.3, m.faceD * 1.3); this.aimY = KAR.Util.clamp(q.y, KAR.CFG.FACE_Y - m.faceD * 1.3, KAR.CFG.FACE_Y + m.faceD * 1.3);
+    const S = (m.viewD || m.faceD) * 1.3;
+    this.aimX = KAR.Util.clamp(q.x, -S, S); this.aimY = KAR.Util.clamp(q.y, KAR.CFG.FACE_Y - S, KAR.CFG.FACE_Y + S);
   }
   _bind() {
     const c = this.canvas;
@@ -180,7 +186,7 @@ KAR.Game = class {
     this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
-    if (/^(PRESS|TOUCH|POP)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
+    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
@@ -240,8 +246,32 @@ KAR.Game = class {
     for (let i = 0; i < n; i++) this.particles.push({ x: 140 + this.rng() * 680, y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
   }
 
+  // the daily result as one line to paste to friends (same balloons for everyone, so the numbers compare)
+  _shareText() {
+    const m = this.match;
+    return 'Kudbee Archery \u00b7 Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') \u00b7 ' + m.score + ' pts \u00b7 ' + m.popped + ' popped \u00b7 best combo \u00d7' + Math.max(1, Math.min(5, m.bestCombo)) + ' \u00b7 ' + location.origin + location.pathname;
+  }
+  _share() {
+    const txt = this._shareText(); this.shared = this.time; this.shareText = txt;
+    try { if (navigator.share && this.coarse) navigator.share({ text: txt }).catch(() => {}); else navigator.clipboard.writeText(txt).catch(() => {}); } catch (e) { /* no clipboard: the line is shown on screen */ }
+  }
+
   _finishMatch() {
     const m = this.match, D = KAR.Store.data;
+    if (m.daily) {
+      const dd = D.daily;
+      if (dd.day !== m.daily) { dd.day = m.daily; dd.best = 0; dd.plays = 0; dd.first = m.score; }
+      dd.plays++; this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
+      KAR.Store.save(); this.setScreen('over');
+      if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
+      return;
+    }
+    if (m.mode === 'swing') {
+      const sc = m.total(0); this.newBest = sc > (D.swingBest || 0); D.swingBest = Math.max(D.swingBest || 0, sc);
+      KAR.Store.save(); this.setScreen('over');
+      if (this.newBest && sc > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
+      return;
+    }
     if (m.mode === 'trick') {
       this.newBest = m.score > (D.trickBest || 0); D.trickBest = Math.max(D.trickBest || 0, m.score);
       KAR.Store.save(); this.setScreen('over');
@@ -249,8 +279,9 @@ KAR.Game = class {
       return;
     }
     if (m.mode === 'range') {
-      const sc = m.total(0), stars = m.stars();
+      const sc = m.total(0), stars = m.stars(), was = KAR.locked(3, D);
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
+      this.unlocked = was && !KAR.locked(3, D);
     } else { D.stats.duels++; if (m.winner === 0) D.stats.wins++; }
     KAR.Store.save();
     this.setScreen('over');
@@ -282,7 +313,7 @@ KAR.Game = class {
   _updateShot(dt) {
     const m = this.match, C = KAR.CFG, trick = m.mode === 'trick';
     this.bpT += dt;
-    if (trick && this.bp !== 'flight') m.tick(dt);
+    if (m.tick && this.bp !== 'flight') m.tick(dt);
     if (this.bp === 'ready') {
       if (this.cpu) this._updateCpu(dt);
       if (this.drawing) {
@@ -319,8 +350,8 @@ KAR.Game = class {
         this.zoomTarget = frac < 0.5 ? 0 : 1;
       }
       f.t += dt * this.timeScale;
+      if (m.tick) m.tick(dt * this.timeScale);            // the world slows with the arrow, so pops / the swing land where computed
       if (trick) {
-        m.tick(dt * this.timeScale);                      // the world slows with the arrow, so pops land where computed
         if (!f.popDone && f.res.popT !== undefined && f.t >= f.res.popT) { f.popDone = true; this._pop(f.res); }
         if (!f.popDone && f.res.popT === undefined && f.t > 0.3) { f.popDone = true; this._pop(f.res); }
       }
@@ -357,12 +388,13 @@ KAR.Game = class {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
-    R.setView(this.zoom, m.dist, m.faceD);
+    R.setView(this.zoom, m.dist, m.faceD, m.viewD);
+    R.tOff = m.offAt ? m.offAt(m.T) : null;
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
     if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
-      if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind);
+      if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, !!m.offAt);
       this._drawArrows(ctx);
     }
     if (this.screen !== 'menu') {

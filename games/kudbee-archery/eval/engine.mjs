@@ -136,14 +136,42 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const sig = () => { const t = new K.Trick({ seed: 12 }); const out = []; for (let i = 0; i < 6; i++) { t.tick(0.7); out.push(t.balloons.map(x => x.id + ':' + t.pos(x, t.T).x.toFixed(3)).join(',')); } return out.join('|'); };
   rec('pop-flow', e.over && n === K.Trick.ARROWS && sig() === sig(), `${n} misses empty the quiver and end the round; balloon traffic replays exactly per seed`);
 }
+// 12b. SWINGER: a pendulum on ropes; you have to lead it, arrows ride with it, misses fly through
+{
+  const m = new K.Swing({ seed: 5 }); m.wind = 0; m.tick(0.37);
+  const L = K.Swing.L, P = 2 * Math.PI * Math.sqrt(L / C.G), o0 = m.offAt(m.T), o1 = m.offAt(m.T + P);
+  rec('swing-pendulum', Math.abs(o0.x - o1.x) < 1e-9 && Math.abs(P - 3.11) < 0.02 && Math.abs(m.offAt(m.T).y - L * (1 - Math.cos(m.offAt(m.T).th))) < 1e-12, `period ${P.toFixed(2)} s = 2\u03c0\u221a(L/g); the boss rises at the ends of the arc`);
+  // aim where it IS -> the face has moved on; aim where it WILL BE -> a ten
+  const tf = K.Flight.run(30, K.Flight.solve(30, 0, C.FACE_Y).yaw, K.Flight.solve(30, 0, C.FACE_Y).pitch, C.V0, 0).hit.t;
+  let best = null; for (let i = 0; i < 200 && !best; i++) { m.tick(0.02); const now = m.offAt(m.T), then = m.offAt(m.T + tf); if (Math.abs(now.x - then.x) > 0.35) best = { now, then }; }
+  const at = m.shoot(best.now.x, C.FACE_Y + best.now.y, 0, 0, 1).ring, lead = m.shoot(best.then.x, C.FACE_Y + best.then.y, 0, 0, 1).ring;
+  rec('swing-lead', lead >= 9 && at < lead, `aiming at the face scores ${at}; leading it by the ${tf.toFixed(2)} s flight scores ${lead}`);
+  const a = m.arrows[0][1], o = m.offAt(m.T);
+  rec('swing-arrows-ride', a.hit && Math.hypot(a.hit.x, a.hit.y - C.FACE_Y) < 0.08, `the arrow is kept in the boss's own frame (${a.hit.x.toFixed(3)}, ${(a.hit.y - C.FACE_Y).toFixed(3)}) and drawn ${o.x.toFixed(2)} m off centre as it swings`);
+  const miss = m.shoot(o.x + 2.5, C.FACE_Y, 0, 0, 1); m.shoot(0, C.FACE_Y, 0, 0, 1);
+  let amp = []; while (!m.over) { amp.push(m.th0); for (let i = 0; i < 3 && !m.over; i++) m.shoot(0, C.FACE_Y, 0, 0, 1); }
+  rec('swing-flow', miss.miss && m.arrows[0][2].hit === null && m.endScores.length === 4 && amp.every((v, i) => !i || v > amp[i - 1]) && m.needs() === null, `a miss off the boss leaves nothing hanging in the air; 4 ends, the swing grows each end (${amp.map(v => v.toFixed(2)).join(' < ')})`);
+}
+// 12c. DAILY: one seed per UTC day, the same on every device
+{
+  const D = K.Daily, day = D.day(Date.UTC(2026, 9, 17, 23, 59)), next = D.day(Date.UTC(2026, 9, 18, 0, 1));
+  const sig = s => { const t = new K.Trick({ seed: s, daily: 1 }); const out = [t.wind.toFixed(4)]; for (let i = 0; i < 8; i++) { t.tick(0.5); out.push(t.balloons.map(b => b.id + ':' + b.y0.toFixed(3) + ':' + b.vx.toFixed(3) + ':' + b.gold).join(',')); } return out.join('|'); };
+  rec('daily-seed', day === 1 && next === 2 && D.date(1) === '2026-10-17' && sig(D.seed(day)) === sig(D.seed(day)) && sig(D.seed(day)) !== sig(D.seed(next)), `#1 is 2026-10-17 (UTC); the same day gives identical wind and balloons, the next day different`);
+}
+// 12d. 70 m unlock: 6 stars across the shorter distances (or an existing 70 m score)
+{
+  const d = { best: [0, 0, 0, 0], stars: [3, 2, 0, 0] };
+  const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
+  rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
+}
 // 13. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
   const K2 = loadKAR(['util.js'], ls);
-  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.save();
+  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
-  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200, 'distance, best scores, stars, BALLOON POP mode and best survive a reload');
+  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500, 'distance, best scores, stars, BALLOON POP mode and best survive a reload');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

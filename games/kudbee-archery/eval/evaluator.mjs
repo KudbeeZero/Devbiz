@@ -198,6 +198,36 @@ rec('pop-out-of-arrows', await waitFor(() => KARGame.screen === 'over', 8000), '
 await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/pop-over.png` });
 rec('pop-best-saved', await G(() => JSON.parse(localStorage.getItem('kudbee.archery.v1')).trickBest === KARGame.match.score && KARGame.match.score > 0), 'the BALLOON POP best is saved');
 
+// 70 m is locked on a fresh profile, opens with 6 stars from the shorter distances
+await clickWhen('menu');
+const lock = await G(() => { const b = KAR.UI.buttons.find(x => x.id === 'd3'); return b && b.disabled; });
+await G(() => { KAR.Store.data.mode = 0; });
+await page.waitForTimeout(80);
+const lock0 = await G(() => { const b = KAR.UI.buttons.find(x => x.id === 'd3'); return !!(b && b.disabled); });
+await click('d3'); const still = await G(() => KAR.Store.data.dist !== 3);
+await G(() => { KAR.Store.data.stars = [3, 2, 1, 0]; }); await page.waitForTimeout(80); await click('d3');
+rec('unlock-70', lock0 && still && await G(() => KAR.Store.data.dist === 3), '70 M is greyed out and won\'t select until 6 stars are earned at 18/30/50');
+await G(() => { KAR.Store.data.stars = [0, 0, 0, 0]; KAR.Store.data.dist = 1; });
+// SWINGER: the boss swings on its ropes and a leading shot scores
+await click('mode3'); await click('play');
+rec('swing-starts', await G(() => KARGame.screen === 'play' && KARGame.match.mode === 'swing'), 'SWINGER starts from the menu');
+const sx0 = await G(() => KARGame.match.offAt(KARGame.match.T).x); await page.waitForTimeout(500);
+rec('swing-moves', Math.abs(await G(() => KAR.Render.tOff && KAR.Render.tOff.x) - sx0) > 0.05, 'the target swings while you aim');
+const lead2 = await G(() => { const g = KARGame, m = g.match, C = KAR.CFG; m.wind = 0; const s = KAR.Flight.solve(m.dist, 0, C.FACE_Y), tf = KAR.Flight.run(m.dist, s.yaw, s.pitch, C.V0, 0).hit.t, o = m.offAt(m.T + tf); g.drawing = true; g.draw = 1; g.aimX = o.x; g.aimY = C.FACE_Y + o.y; g.sway = { x: 0, y: 0 }; g._loose(); return g.flight.res.ring; });
+await waitFor(() => KARGame.bp === 'ready', 9000); await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}/swing.png` });
+rec('swing-lead-scores', lead2 >= 9 && await G(() => KARGame.match.arrows[0][0].hit !== null), `leading the swing scores a ${lead2}, and the arrow rides in the boss`);
+// DAILY: today's seed, the share line, today's best kept
+await G(() => KARGame.activate('menu')); await page.waitForTimeout(80); await click('mode4'); await click('play');
+const dl = await G(() => ({ d: KARGame.match.daily, w: KARGame.match.wind, ok: KARGame.match.daily === KAR.Daily.day() }));
+const w2 = await G(() => new KAR.Trick({ seed: KAR.Daily.seed(KAR.Daily.day()), daily: 1 }).wind);
+rec('daily-starts', dl.ok && Math.abs(dl.w - w2) < 1e-12, `DAILY #${dl.d} plays today's seed (same wind on any device: ${dl.w.toFixed(3)})`);
+await G(() => { KARGame.match.quiver = 1; const g = KARGame; g.drawing = true; g.draw = 1; g.aimX = 0; g.aimY = 5.4; g._loose(); });
+await waitFor(() => KARGame.screen === 'over', 9000); await page.waitForTimeout(400);
+await clickWhen('share');
+const sh = await G(() => ({ t: KARGame.shareText || '', d: JSON.parse(localStorage.getItem('kudbee.archery.v1')).daily }));
+rec('daily-share', /Daily #\d+ \(\d{4}-\d\d-\d\d\) · \d+ pts/.test(sh.t) && sh.d.day === dl.d && sh.d.plays === 1, `share line: "${sh.t.split(' · http')[0]}"; today's plays saved`);
+await page.screenshot({ path: `${OUT}/daily-over.png` });
+
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
 rec('no-errors', errors.length === 0, `${errors.length} page errors${errors.length ? ': ' + errors[0] : ''}`);
