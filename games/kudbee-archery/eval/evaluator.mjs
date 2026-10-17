@@ -282,6 +282,19 @@ rec('gear-locker', g0.scr === 'gear' && g0.lockedBow && stay0 && g1.saved.bow ==
 await G(() => { KAR.Store.data.gear = { bow: 0, fletch: 0, sight: 0 }; });
 await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 
+// SHARING: the page carries a share card (Open Graph + Twitter large image, absolute https URLs) whose image is a real 1200x630
+// file in the repo, and the menu's share button shares the game's public (canonical) link
+{
+  const meta = await G(() => { const q = n => (document.querySelector(`meta[property="${n}"], meta[name="${n}"]`) || {}).content || ''; return { img: q('og:image'), tw: q('twitter:image'), card: q('twitter:card'), title: q('og:title'), desc: q('og:description'), url: q('og:url'), canon: document.querySelector('link[rel=canonical]').href }; });
+  const local = meta.img.replace(/^https:\/\/[^/]+/, '').split('?')[0];
+  const dims = await page.evaluate(src => new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r([0, 0]); im.src = src; }), local);
+  await G(() => { KARGame.activate('menu'); }); await page.waitForTimeout(80);
+  await click('shareGame'); await page.waitForTimeout(80);
+  const st = await G(() => KARGame.shareText || '');
+  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /24 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
+    `og/twitter image ${meta.img} (${dims.join('x')}), large-image card; SHARE copies "${st.slice(0, 60)}... ${meta.canon}"`);
+}
+
 // --- a phone: real touch input (CDP touch events, coarse pointer) ---
 {
   const tctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

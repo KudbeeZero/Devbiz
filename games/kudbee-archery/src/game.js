@@ -153,7 +153,7 @@ KAR.Game = class {
     if (id === 'play' || id === 'restart' || id === 'rematch' || id === 'retry') this.startMatch();
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
-    else if (id === 'share') this._share();
+    else if (id === 'share' || id === 'shareGame' || id === 'shareLevel') this._share(id);
     else if (id === 'levels') { this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
     else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
@@ -367,13 +367,19 @@ KAR.Game = class {
   }
 
   // the daily result as one line to paste to friends (same balloons for everyone, so the numbers compare)
-  _shareText() {
+  // The game's public link: the page's canonical URL (so a share from a preview deploy still points at the live
+  // game, and the link unfurls with the share card from the og: tags), else wherever we are.
+  link() { const c = document.querySelector('link[rel=canonical]'); return (c && c.href) || location.origin + location.pathname; }
+  _shareText(kind) {
     const m = this.match;
-    return 'Kudbee Archery \u00b7 Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') \u00b7 ' + m.score + ' pts \u00b7 ' + m.popped + ' popped \u00b7 best combo \u00d7' + Math.max(1, Math.min(5, m.bestCombo)) + ' \u00b7 ' + location.origin + location.pathname;
+    if (kind === 'shareGame') return 'Kudbee Archery \u2014 read the wind, hold your breath, hit the gold. 24 levels, 4 worlds, a boss at the end of each. Free in your browser:';
+    if (kind === 'shareLevel') return 'I scored ' + m.total(0) + ' on Level ' + (m.lv + 1) + ' \u00b7 ' + m.def.name + ' ' + '\u2605'.repeat(m.stars()) + ' in Kudbee Archery. Can you beat it?';
+    return 'Kudbee Archery \u00b7 Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') \u00b7 ' + m.score + ' pts \u00b7 ' + m.popped + ' popped \u00b7 best combo \u00d7' + Math.max(1, Math.min(5, m.bestCombo));
   }
-  _share() {
-    const txt = this._shareText(); this.shared = this.time; this.shareText = txt;
-    try { if (navigator.share && this.coarse) navigator.share({ text: txt }).catch(() => {}); else navigator.clipboard.writeText(txt).catch(() => {}); } catch (e) { /* no clipboard: the line is shown on screen */ }
+  // phones (and browsers with a share sheet) open the share sheet; otherwise the line + link go to the clipboard
+  _share(kind) {
+    const url = this.link(), txt = this._shareText(kind); this.shared = this.time; this.sharedKind = kind; this.shareText = txt + ' \u00b7 ' + url;
+    try { if (navigator.share && this.coarse) navigator.share({ title: 'Kudbee Archery', text: txt, url }).catch(() => {}); else navigator.clipboard.writeText(this.shareText).catch(() => {}); } catch (e) { /* no clipboard: the line is shown on screen */ }
   }
 
   _finishMatch() {

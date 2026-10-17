@@ -123,6 +123,10 @@ KAR.UI = {
     ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (kind === 'pause') { ctx.fillRect(cx - 7, cy - 8, 5, 16); ctx.fillRect(cx + 2, cy - 8, 5, 16); }
     else if (kind === 'retry') { ctx.beginPath(); ctx.arc(cx, cy, 8, 0.6, 5.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + 8, cy - 9); ctx.lineTo(cx + 8, cy - 1); ctx.lineTo(cx, cy - 2); ctx.stroke(); }
+    else if (kind === 'share') {                              // three linked dots
+      ctx.lineWidth = 2.8; ctx.beginPath(); ctx.moveTo(cx + 6, cy - 7); ctx.lineTo(cx - 6, cy); ctx.lineTo(cx + 6, cy + 7); ctx.stroke();
+      for (const [x, y] of [[cx + 7, cy - 8], [cx - 7, cy], [cx + 7, cy + 8]]) { ctx.beginPath(); ctx.arc(x, y, 4.2, 0, 6.283); ctx.fill(); }
+    }
     else if (kind === 'prev' || kind === 'next') {          // a chunky chevron
       const d = kind === 'next' ? 1 : -1; ctx.lineWidth = 7; ctx.strokeStyle = this.OUT;
       for (const [w, c] of [[9, this.OUT], [5, color]]) { ctx.lineWidth = w; ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(cx - d * 6, cy - 12); ctx.lineTo(cx + d * 6, cy); ctx.lineTo(cx - d * 6, cy + 12); ctx.stroke(); }
@@ -331,7 +335,10 @@ KAR.UI = {
     if (!tour) U.fit(ctx, (C ? 'touch & hold to draw  \u00b7  drag anywhere to aim  \u00b7  lift to loose' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose'), 480, 568, U.sz(g, 16), '#ffffff', 900);
     if (!C) U.fit(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, U.sz(g, 15), '#ffe9a8', 900);
     U.roundIcon(ctx, g, 'mute', 926 + xr - (C ? 4 : 0), C ? 40 : 36, g.audio.muted ? 'mute' : 'sound', C);
-    if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - 66, 40, g.isFull() ? 'unfull' : 'full', true);
+    const ri = C ? 66 : 50;
+    if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
+    U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
+    if (g.sharedKind === 'shareGame' && g.time - g.shared < 2.5) U.text(ctx, g.coarse && navigator.share ? 'SHARING\u2026' : 'LINK COPIED!', 926 + xr - ri * 2, C ? 100 : 88, U.sz(g, 16), '#9be35a', 'center');
     // iPhone Safari has no full-screen mode for pages; added to the home screen the game opens full screen
     if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
   },
@@ -461,6 +468,7 @@ KAR.UI = {
     U.text(ctx, msg[0], 480, 394, msg[2], msg[1], 'center');
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
+    if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); if (g.sharedKind === 'shareLevel' && g.time - g.shared < 2.5) U.text(ctx, 'COPIED!', 690, 186, 16, '#9be35a', 'center'); }
     const next = !last && KAR.tourOpen(m.lv + 1, D);
     if (next && won) {
       U.button(ctx, g, 'next', 256, 450, 210, 56, 'NEXT LEVEL', { primary: true });
