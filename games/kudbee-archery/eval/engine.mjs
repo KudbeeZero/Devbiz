@@ -191,9 +191,16 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const sh = new K.Stage({ level: 26, seed: 5 }), s0 = K.Flight.solve(sh.dist, 0, C.FACE_Y), tf = K.Flight.run(sh.dist - K.BOXZ, s0.yaw, s0.pitch, C.V0, 0).hit.t;
   const off = () => Math.abs(sh.boxOff(0, sh.T + tf)), find = ok => { for (let i = 0; i < 400 && !ok(off()); i++) sh.tick(0.02); };   // the cart is 60 cm wide
   find(o => o < 0.2); const blockedC = shot(sh, 0, C.FACE_Y); find(o => o > 0.4); const clearC = shot(sh, 0, C.FACE_Y);
+  // the STAR BOX is whole until the arrow gets there, and still shows smashed after that arrow closes the end
+  const sl = new K.Stage({ level: 25, seed: 2 }); shot(sl, 0, C.FACE_Y); shot(sl, 0, C.FACE_Y); const e0 = sl.endNo, si = sl.boxes.findIndex(x => x.star), last = shot(sl, bx, by);
+  const timing = last.star && sl.endNo === e0 + 1 && !sl.boxGone(si, e0, sl.T) && sl.boxGone(si, e0, sl.T + last.hit.t) && !sl.boxGone(si);
+  // an arrow over the wall (no boss behind it there) flies on rather than hanging in the air; one that gets in through
+  // a window but clips the crates' sides further back is still blocked
+  const ov = new K.Stage({ level: 24, seed: 2 }), over = shot(ov, 0.6, 2.4), gone = ov.arrows[0][0].hit === null && over.miss && !over.blocked;
+  const jb = new K.Stage({ level: 24, seed: 2 }), zb = jb.dist - K.BOXZ + K.BOXD, jam = shot(jb, 0.123, C.FACE_Y), deep = jam.blocked && jam.hit.z === zb;
   const D = { tour: { stars: Array(30).fill(0) } }, closed = K.tourOpen(24, D); D.tour.stars[23] = 3; const not23 = K.tourOpen(24, D); D.tour.stars[5] = 1;
-  rec('think-box', gold.ring >= 9 && !gold.blocked && wall.blocked && wall.ring === 0 && stuck && stuck.z === pe.dist - K.BOXZ && stuck.bi >= 0 && s1.star && s1.ring === 10 && !s2.star && s2.ring === 0 && s3.star && blockedC.blocked && !clearC.blocked && clearC.ring >= 9 && !closed && !not23 && K.tourOpen(24, D) && !K.tourOpen(25, D),
-    `the window scores ${gold.ring}, the crates stop a shot dead (kept in the crate); the STAR BOX scores ${s1.ring} once an end (then ${s2.ring}, back next end); the cart blocks the gold, then clears for a ${clearC.ring}; THINK BOX opens off the Village Cup`);
+  rec('think-box', gold.ring >= 9 && !gold.blocked && wall.blocked && wall.ring === 0 && stuck && stuck.z === pe.dist - K.BOXZ && stuck.bi >= 0 && s1.star && s1.ring === 10 && !s2.star && s2.ring === 0 && s3.star && blockedC.blocked && !clearC.blocked && clearC.ring >= 9 && !closed && !not23 && K.tourOpen(24, D) && !K.tourOpen(25, D) && timing && gone && deep,
+    `the window scores ${gold.ring}, the crates stop a shot dead (kept in the crate); the STAR BOX scores ${s1.ring} once an end (then ${s2.ring}, back next end); the cart blocks the gold, then clears for a ${clearC.ring}; THINK BOX opens off the Village Cup; the STAR BOX smashes when the arrow arrives (${timing}); over the wall flies on (${gone}); a window shot that clips the jamb is blocked (${deep})`);
 }
 // 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
 {
@@ -221,7 +228,11 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const s24 = { stars: Array(24).fill(2), best: Array(24).fill(70) }, ls3 = { s: JSON.stringify({ tour: s24, tourLv: 23 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K5 = loadKAR(['util.js', 'sim.js'], ls3); K5.Store.load(); const T5 = K5.Store.data.tour;
   const kept = T5.stars.length === 30 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
-  rec('store-tour-upgrade', moved && kept, 'an old 15-level save maps onto the worlds (VILLAGE CUP keeps its 2 stars as the world 1 boss, the player stays on ROPE SWING); a 24-level save keeps every star and THINK BOX is open');
+  // a corrupt save (stars out of 0..3, fractions) can't open levels or gear; the save arrays fit the Tour
+  const ls4 = { s: JSON.stringify({ tour: { stars: [99, -4, 2.5, 3], best: [500, 70] } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K6 = loadKAR(['util.js', 'sim.js'], ls4); K6.Store.load(); const T6 = K6.Store.data.tour;
+  const sane = T6.stars.slice(0, 4).join() === '0,0,0,3' && T6.best[0] === 0 && T6.best[1] === 70 && T6.stars.length === K6.TOUR.length && T6.best.length === K6.TOUR.length;
+  rec('store-tour-upgrade', moved && kept && sane, 'an old 15-level save maps onto the worlds (VILLAGE CUP keeps its 2 stars as the world 1 boss, the player stays on ROPE SWING); a 24-level save keeps every star and THINK BOX is open; corrupt star/best values are dropped; the save arrays fit the Tour');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

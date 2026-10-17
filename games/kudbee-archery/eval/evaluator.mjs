@@ -234,13 +234,14 @@ await click('mode5'); await page.waitForTimeout(80); await click('play'); await 
 const tiles = await G(() => [KARGame.screen].concat(['L00', 'L01', 'L05'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'locked' : 'open') : 'none'; })));
 await page.screenshot({ path: `${OUT}/tour-map.png` });
 // the map is a bright cartoon world (blue sky up top, green hills low down), not a dimmed photo
-const mapPx = await G(() => { const g = KARGame, c = g.ctx, R = KAR.Render, px = (x, y) => Array.from(c.getImageData(Math.round((x - R.XL) * g.res), Math.round(y * g.res), 1, 1).data); return { sky: px(30, 20), hill: px(330, 600) }; });
+const mapPx = await G(() => { const g = KARGame, c = g.ctx, R = KAR.Render, px = (x, y) => Array.from(c.getImageData(Math.round((x - R.XL) * g.res), Math.round(y * g.res), 1, 1).data); return { sky: px(30, 20), hill: px(330, 600), sun: px(788, 112) }; });
 await click('L01'); await page.waitForTimeout(80); const stay = await G(() => KAR.Store.data.tourLv === 0 && KARGame.screen === 'levels');
 await click('wnext'); await page.waitForTimeout(80); const wp = await G(() => ({ v: KARGame.worldView, ids: KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join(), boss: KAR.TOUR[11].boss }));
 await click('wprev'); await page.waitForTimeout(80);
-const skyOk = mapPx.sky[2] > 150 && mapPx.sky[2] > mapPx.sky[0] + 40, hillOk = mapPx.hill[1] > mapPx.hill[0] && mapPx.hill[1] > mapPx.hill[2];
-rec('tour-map', tiles.join() === 'levels,open,locked,locked' && stay && wp.v === 1 && wp.ids === "L06,L07,L08,L09,L10,L11" && wp.boss && skyOk && hillOk,
-  `PLAY opens the level map (${tiles[0]}) on a cartoon world (sky rgb ${mapPx.sky.slice(0, 3)}, hill rgb ${mapPx.hill.slice(0, 3)}): on a fresh profile level 1 ${tiles[1]}, 2 ${tiles[2]}, the world 1 boss ${tiles[3]}; a locked tile can't be picked; > pages to world ${wp.v + 1} (${wp.ids}, boss last), stayed ${stay}`);
+// (and the cartoon sun is there - the photo range has a blue sky and green grass too, so those alone prove nothing)
+const skyOk = mapPx.sky[2] > 150 && mapPx.sky[2] > mapPx.sky[0] + 40, hillOk = mapPx.hill[1] > mapPx.hill[0] && mapPx.hill[1] > mapPx.hill[2], sunOk = mapPx.sun[0] > 190 && mapPx.sun[1] > 160 && mapPx.sun[2] < mapPx.sun[0] - 90;
+rec('tour-map', tiles.join() === 'levels,open,locked,locked' && stay && wp.v === 1 && wp.ids === "L06,L07,L08,L09,L10,L11" && wp.boss && skyOk && hillOk && sunOk,
+  `PLAY opens the level map (${tiles[0]}) on a cartoon world (sky rgb ${mapPx.sky.slice(0, 3)}, hill rgb ${mapPx.hill.slice(0, 3)}, sun rgb ${mapPx.sun.slice(0, 3)}): on a fresh profile level 1 ${tiles[1]}, 2 ${tiles[2]}, the world 1 boss ${tiles[3]}; a locked tile can't be picked; > pages to world ${wp.v + 1} (${wp.ids}, boss last), stayed ${stay}`);
 await click('L00');
 const st1 = await G(() => ({ m: KARGame.match.mode, lv: KARGame.match.lv, hint: KARGame.hint }));
 // shoot the level clean: a bot with a steady hand that reads the wind exactly
@@ -281,6 +282,23 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
 
   rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood[0] > wood[2] + 60 && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
     `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood}); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
+}
+// the results card around the side world: clearing the Village Cup the first time opens world 2 AND THINK BOX; the
+// world 4 boss doesn't offer NEXT into THINK BOX; TOUR COMPLETE only for the win that beats the last boss standing
+{
+  const card = await G(() => {
+    const g = KARGame, D = KAR.Store.data, C = KAR.CFG;
+    const win = lv => { D.tourLv = lv; D.mode = 5; g.startMatch(); const m = g.match; m._gust = () => { m.wind = 0; }; while (!m.over) { m.wind = 0; const sv = KAR.Flight.solve(m.dist, 0, C.FACE_Y), tf = KAR.Flight.run(m.dist, sv.yaw, sv.pitch, C.V0, 0).hit.t, o = m.offAt ? m.offAt(m.T + tf) : { x: 0, y: 0 }; m.shoot(o.x, C.FACE_Y + o.y, 0, 0, 1); } g._finishMatch(); g._render(); return { side: g.sideOpen, un: g.unlocked, done: g.tourDone, next: KAR.UI.buttons.some(b => b.id === 'next'), st: m.stars(), scr: g.screen }; };
+    D.tour.stars.fill(0); D.tour.stars.fill(1, 0, 5);
+    const cup = win(5);                                          // first clear of the world 1 boss
+    D.tour.stars.fill(1); D.tour.stars[23] = 0; D.tour.stars[22] = 1;
+    const king = win(23);                                        // the last boss standing (THINK BOX already done)
+    const replay = win(5);                                       // a boss replay after the tour is done
+    return { cup, king, replay };
+  });
+  rec('think-card', card.cup.side === 4 && card.cup.un && !card.cup.done && card.king.done && !card.king.next && !card.replay.done,
+    `Village Cup first clear opens world 2 and THINK BOX (side ${card.cup.side}); the world 4 boss as the last boss standing reads TOUR COMPLETE with no NEXT into THINK BOX; a boss replay after that doesn't (${card.replay.done})`);
+  await G(() => { KAR.Store.data.tour.stars.fill(0); KARGame.activate('menu'); });
 }
 // the first-shot tutorial: level 1 coaches the basics (aim at the gold), then breath; level 2 marks the wind hold-off
 const tut1 = await G(() => { const D = KAR.Store.data; D.tut = 0; D.tourLv = 0; D.mode = 5; KARGame.startMatch(); const c = KARGame.coach; return c && { bit: c.bit, mk: !!c.marker, x: c.marker && c.marker.x }; });

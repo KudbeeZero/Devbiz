@@ -1,4 +1,5 @@
 const KAR = {};
+// (the Tour's save arrays below are sized for its 30 levels; engine.mjs checks this against KAR.TOUR.length)
 
 KAR.Util = {
   clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; },
@@ -45,7 +46,9 @@ KAR.Store = {
           if (pick(d.tourLv, v1 ? 15 : 30) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
           if (d.gear && typeof d.gear === 'object') for (const k in D.gear) if (pick(d.gear[k], KAR.GEAR ? KAR.GEAR[k].length : 5) !== null) D.gear[k] = d.gear[k];
           if (Number.isInteger(d.tut)) D.tut = d.tut;
-          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(30, d.tour[k].length); i++) if (typeof d.tour[k][i] === 'number') D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
+          // stars are whole numbers 0..3 and bests 0..150 (a corrupt or hand-edited save can't open every level and all the gear)
+          const ok = (k, v) => Number.isInteger(v) && v >= 0 && v <= (k === 'stars' ? 3 : 150);
+          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(v1 ? v1.length : 30, d.tour[k].length); i++) if (ok(k, d.tour[k][i])) D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
           if (typeof d.trickBest === 'number') D.trickBest = d.trickBest;
           if (typeof d.swingBest === 'number') D.swingBest = d.swingBest;
           if (d.daily && typeof d.daily === 'object') for (const k in D.daily) if (typeof d.daily[k] === 'number') D.daily[k] = d.daily[k];

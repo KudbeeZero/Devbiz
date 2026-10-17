@@ -190,7 +190,7 @@ KAR.UI = {
       const y = 38 + i * 50, col = R.TEAM[s], active = !m.over && m.shooter === s && g.screen === 'play';
       if (active) { ctx.save(); ctx.fillStyle = 'rgba(255,246,168,0.22)'; U.rr(ctx, 20, y - 20, 284, 44, 12); ctx.fill(); ctx.restore(); }
       U.text(ctx, duel ? col.name : 'SCORE', 28, y + 8, 20, col.light, 'left');
-      U.text(ctx, String(m.total(s)), 142, y + 12, 36, '#ffffff', 'right');
+      U.fit(ctx, String(m.total(s)), 142, y + 12, 36, '#ffffff', 46, 'right');          // 100+ shrinks rather than covering the label
       const arrows = m.arrows[s].filter(a => a.end === m.endNo);
       for (let k = 0; k < m.per; k++) U.pip(ctx, 172 + k * 32, y - 1, s, arrows[k]);
       if (m.xs(s)) U.text(ctx, m.xs(s) + 'X', 276, y + 6, 15, '#ffd34d', 'right');
@@ -201,9 +201,11 @@ KAR.UI = {
     else U.fit(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, U.sz(g, 16), '#ffe9a8', 272, 'left');
     ctx.restore();
     const big = g.coarse, ri = big ? 62 : 50, ry = big ? 40 : 36, rx = 926 - (big ? 4 : 0) + xr;
-    U.roundIcon(ctx, g, 'pause', rx, ry, 'pause', big);
-    U.roundIcon(ctx, g, 'mute', rx - ri, ry, g.audio.muted ? 'mute' : 'sound', big);
-    U.roundIcon(ctx, g, 'retry', rx - ri * 2, ry, 'retry', big);
+    if (g.screen !== 'over') {          // (behind the results card they would still take clicks and keyboard focus)
+      U.roundIcon(ctx, g, 'pause', rx, ry, 'pause', big);
+      U.roundIcon(ctx, g, 'mute', rx - ri, ry, g.audio.muted ? 'mute' : 'sound', big);
+      U.roundIcon(ctx, g, 'retry', rx - ri * 2, ry, 'retry', big);
+    }
     // the tutorial card, top centre while the tip applies (between the score panel and the round buttons)
     if (g.coach && g.screen === 'play' && g.bp === 'ready' && !g.banner && !m.over) {
       const room = Math.min(480 - (322 + xl), rx - ri * 2 - (big ? 27 : 21) - 10 - 480), cw = Math.min(big ? 640 : 520, room * 2), cx = 480 - cw / 2, ch = big ? 84 : 70;
@@ -398,10 +400,10 @@ KAR.UI = {
     // the tiles leave gaps between them, so the world's hills and props show through (still big taps on a phone)
     for (let j = 0; j < 6; j++) {
       const i = v * 6 + j, L = KAR.TOUR[i], x = 118 + (j % 3) * 262, y = 160 + Math.floor(j / 3) * 160, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
-      U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 200, 132, '', { small: true, color: sel ? 'green' : L.boss ? 'yellow' : 'blue', selected: sel, disabled: !open });
-      if (L.boss) { U.crown(ctx, x + 172, y + 26, 13); U.text(ctx, 'BOSS', x + 172, y + 56, 14, '#ffffff', 'center'); }
+      U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 200, 132, '', { small: true, color: sel ? 'green' : L.boss ? 'yellow' : 'blue', selected: sel, disabled: !open, primary: sel });   // primary: keyboard focus starts on it
+      if (L.boss) { U.crown(ctx, x + 172, y + 26, 13); U.text(ctx, 'BOSS', x + 172, y + 58, U.sz(g, 14), '#ffffff', 'center'); }
       U.text(ctx, String(i + 1), x + 100, y + 60, 50, open ? '#ffffff' : '#e6e9ee', 'center');
-      if (!open) { const why = L.after !== undefined && j === 0 ? 'BEAT LEVEL ' + (L.after + 1) : ''; this.lock(ctx, x + 100, y + (why ? 88 : 98)); if (why) U.fit(ctx, why, x + 100, y + 120, U.sz(g, 13), '#ffffff', 180); continue; }
+      if (!open) { const why = L.after !== undefined && j === 0 ? 'BEAT LEVEL ' + (L.after + 1) : ''; this.lock(ctx, x + 100, y + (why ? 88 : 98)); if (why) U.fit(ctx, why, x + 100, y + 122, U.sz(g, 15), '#ffffff', 186); continue; }
       U.fit(ctx, L.name, x + 100, y + 88, U.sz(g, 16), '#ffffff', 180);
       for (let k = 0; k < 3; k++) U.star(ctx, x + 66 + k * 34, y + 112, 12, k < T.stars[i], 1);
     }
@@ -453,13 +455,13 @@ KAR.UI = {
 
   overStage(ctx, g) {
     const U = this, m = g.match, T = g.overlayT, st = m.stars(), won = st >= 1, D = KAR.Store.data, last = m.lv === KAR.TOUR.length - 1;
-    const all = KAR.TOUR.every((L, i) => !L.boss || D.tour.stars[i] > 0), side = g.sideOpen;         // side: a side world this win opened
+    const side = g.sideOpen;           // side: a side world this win opened; g.tourDone: this win beat the last boss standing
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 240, 104, 480, 430, won ? 'blue' : 'red');
     const boss = !!m.def.boss;
-    U.ribbon(ctx, 480, 76, 440, won ? (boss && all ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
+    U.ribbon(ctx, 480, 76, 440, won ? (g.tourDone ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
     U.text(ctx, String(m.total(0)), 480, 236, 80, '#ffffff', 'center');
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
@@ -471,7 +473,8 @@ KAR.UI = {
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
     if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); if (g.sharedKind === 'shareLevel' && g.time - g.shared < 2.5) U.text(ctx, 'COPIED!', 690, 186, 16, '#9be35a', 'center'); }
-    const next = !last && KAR.tourOpen(m.lv + 1, D);
+    // NEXT never walks into a side world (THINK BOX after the world 4 boss): that one is picked on the map
+    const next = !last && KAR.tourOpen(m.lv + 1, D) && KAR.TOUR[m.lv + 1].after === undefined;
     if (next && won) {
       U.button(ctx, g, 'next', 256, 450, 210, 56, 'NEXT LEVEL', { primary: true });
       U.button(ctx, g, 'rematch', 480, 450, 116, 56, 'RETRY', { small: true });

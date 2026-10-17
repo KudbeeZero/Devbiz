@@ -360,7 +360,7 @@ KAR.Render = {
     { sky: ['#3fb2f2', '#8fdbff', '#e6f9ff'], sun: [770, 96, '#ffd84a'], cloud: '#ffffff', hills: [['#b9e88a', '#86c95a'], ['#86d14e', '#55ad35'], ['#62bb3a', '#37892a']], tuft: ['#7fd04a'] },
     { sky: ['#6ea8dc', '#bfe0ea', '#ffe3a6'], sun: [180, 120, '#ffe27a'], cloud: '#fff8ea', hills: [['#9cc48a', '#6f9e68'], ['#5f9e58', '#3c7440'], ['#3f8a46', '#235a30']], tuft: ['#5fae4a'] },
     { sky: ['#3a3f86', '#9b5c9e', '#f5876a', '#ffd27a'], sun: [700, 300, '#ffc864'], cloud: '#ffd8cc', hills: [['#9a7ab8', '#6e5f96'], ['#5a6a8a', '#3d4a6c'], ['#6e9a4a', '#3f6a2e']], tuft: ['#7aa04a'] },
-    { sky: ['#070b24', '#16245a', '#33457e'], moon: [230, 110], cloud: '#3c4d84', hills: [['#24356a', '#18264f'], ['#1b2b55', '#121d3c'], ['#244a34', '#12301f']], tuft: ['#2f6a3e'] },
+    { sky: ['#070b24', '#16245a', '#33457e'], moon: [230, 110], cloud: '#2c3a6a', hills: [['#24356a', '#18264f'], ['#1b2b55', '#121d3c'], ['#244a34', '#12301f']], tuft: ['#2f6a3e'] },
     { sky: ['#1fa2e4', '#7fd6ff', '#fff1c2'], sun: [800, 90, '#ffd84a'], cloud: '#ffffff', hills: [['#c9e58a', '#a2cc63'], ['#9ad35a', '#6db53e'], ['#d9c27a', '#b89a52']], tuft: ['#8ccf4e'] },
   ],
   mapScene(ctx, v, t) {
@@ -386,12 +386,13 @@ KAR.Render = {
     }
     for (let i = 0; i < 6; i++) {        // clouds drifting right, in two depths
       const far = i % 2, s = far ? 0.55 : 0.85, x = XL + (((i * 271 + t * (far ? 7 : 13)) % (XW + 360)) - 180), y = (far ? 70 : 150) + (i * 37) % 60;
-      ctx.globalAlpha = M.moon ? 0.55 : 1; this._cloud(ctx, x, y, s, M.cloud); ctx.globalAlpha = 1;
+      this._cloud(ctx, x, y, s, M.cloud);
     }
+    // (a full-screen canvas each: only the last two worlds viewed are kept, and dropMap frees them off the map)
     const key = v + ':' + XW + ':' + (this.res || 1);
     const c = this._mapC || (this._mapC = {});
     if (!(key in c)) {
-      if (Object.keys(c).length > 6) for (const k in c) delete c[k];
+      for (const k of Object.keys(c).slice(0, -1)) { if (c[k]) c[k].width = 0; delete c[k]; }
       c[key] = null;
       try {
         const cv = document.createElement('canvas'), r = this.res || 1; cv.width = Math.round(XW * r); cv.height = Math.round(H * r);
@@ -407,6 +408,7 @@ KAR.Render = {
     const sh = ctx.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(10,20,40,0.28)'); sh.addColorStop(0.3, 'rgba(10,20,40,0.05)'); sh.addColorStop(0.75, 'rgba(10,20,40,0.08)'); sh.addColorStop(1, 'rgba(10,20,40,0.35)');
     ctx.fillStyle = sh; ctx.fillRect(XL, 0, XW, H);
   },
+  dropMap() { for (const k in this._mapC) if (this._mapC[k]) this._mapC[k].width = 0; this._mapC = null; },
   // the still part of a world's map: three hill layers and their props
   _mapLayer(ctx, v) {
     const XL = this.XL, XW = this.XW, M = this.MAP[v] || this.MAP[0], rnd = KAR.Util.rng(91 + v), X = f => XL + XW * f;
@@ -594,8 +596,9 @@ KAR.Render = {
   drawBoxes(ctx, t, wind, swing) {
     const B = this.boxes; if (!B || !B.length) return;
     const zf = this.dist - KAR.BOXZ, zb = zf + KAR.BOXD, c = this.cam, OUT = this.OUT, P = (x, y, z) => this.proj(x, y, z);
-    // tiles about a crate-width on screen whatever the range (smaller crates up close), outlines kept bold but sane
-    const k0 = (P(0, 1, zf) || { k: 100 }).k, lw = KAR.Util.clamp(0.006 * k0, 1.4, 3.2), tile = KAR.Util.clamp(150 / k0, 0.2, 0.6);
+    // tiles about a crate-width in the scope at that range (fixed per level, so they don't re-split as the camera zooms),
+    // outlines bold but sane
+    const k0 = (P(0, 1, zf) || { k: 100 }).k, lw = KAR.Util.clamp(0.006 * k0, 1.4, 3.2), tile = KAR.Util.clamp(this.dist * 0.012, 0.22, 0.6);
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     // rails under the carts
     for (const b of B) if (b.mv && !b.gone) { const A = b.mv.a + (b.x1 - b.x0) / 2 + 0.25; this.line3(ctx, [-A, 0.02, zf + 0.1], [A, 0.02, zf + 0.1], OUT, lw * 2.6); this.line3(ctx, [-A, 0.02, zf + 0.1], [A, 0.02, zf + 0.1], '#9aa3ad', lw * 1.3); }
@@ -626,7 +629,7 @@ KAR.Render = {
     ctx.restore();
     // a wall would hide the wind pennants, so the level plants them in front of it ([x, height]) where they stay clear
     // of the windows
-    if (this.flags) { const [fx, fh] = this.flags; this._flag(ctx, -fx, zf - 0.4, wind, t, '#ff5d5d', fh); this._flag(ctx, fx, zf - 0.4, wind, t, '#ffd34d', fh); }
+    if (this.flags && this.chaseB < 0.3) { const [fx, fh] = this.flags; this._flag(ctx, -fx, zf - 0.1, wind, t, '#ff5d5d', fh); this._flag(ctx, fx, zf - 0.1, wind, t, '#ffd34d', fh); }
   },
   // one crate tile on the front plane z: frame, recessed planks, a brace corner to corner (alternating), nails
   _crate3(ctx, x0, x1, y0, y1, z, lw, star, v) {
@@ -952,7 +955,8 @@ KAR.Render = {
         for (let i = 1; i <= N; i++) { const f = i / N, q = Pr(lerp3(sh[0], sh[1], f)), w = W8((q.s + prev.s) / 2);
           ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y);
           ctx.lineWidth = w; ctx.strokeStyle = f > 0.93 ? '#d8dee6' : '#f2e6c8'; ctx.stroke();
-          if (w > 4 && f <= 0.93) { ctx.lineWidth = w * 0.28; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(prev.x - w * 0.18, prev.y - w * 0.18); ctx.lineTo(q.x - w * 0.18, q.y - w * 0.18); ctx.stroke(); }
+          if (w > 4 && f <= 0.93) { const dx = q.x - prev.x, dy = q.y - prev.y, dl = Math.hypot(dx, dy) || 1, sg = dx > 0 ? -1 : 1, ex = -dy / dl * sg * w * 0.22, ey = dx / dl * sg * w * 0.22;
+            ctx.lineWidth = w * 0.28; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(prev.x + ex, prev.y + ey); ctx.lineTo(q.x + ex, q.y + ey); ctx.stroke(); }
           prev = q; }
         // vanes, near the nock (out of frame at full draw, in view early in the draw)
         const ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1, u = { x: ux / ul, y: 0, z: uz / ul };
@@ -1003,7 +1007,7 @@ KAR.Render = {
       // toward the elbow - its screen direction from where the wrist projects - into a rolled sleeve
       const W = { x: nock.x + 0.055, y: nock.y - 0.018, z: nock.z - 0.035 };
       const n = P(nock), ns = 0.085 * n.s, wq = P(W);
-      this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns }, col);
+      if (n.y - ns * 0.7 < this.H) this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns }, col);   // (off the bottom of the screen at full draw)
     }
     ctx.restore();
   },
