@@ -25,11 +25,12 @@
   @font-face { font-family:"Lilita One"; src:url(assets/fonts/lilita-one.woff2) format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; background:#0b1b2e; color:#cfe9ff; overflow:hidden; overscroll-behavior:none;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(1200px 700px at 50% 40%, #16385a, #0b1b2e); }
   canvas { display:block; width:min(100vw, 150vh); width:min(100vw, 150dvh); aspect-ratio:960 / 640; height:auto;
-    touch-action:none; user-select:none; -webkit-user-select:none; outline:none; box-shadow:0 0 60px rgba(255,200,80,0.16); }
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; outline:none; box-shadow:0 0 60px rgba(255,200,80,0.16); }
   @media (min-width:700px) and (min-height:520px) { canvas { border-radius:10px; } }
   .back-link { position:fixed; right:12px; bottom:10px; z-index:30; font-size:12px; letter-spacing:0.06em;
     text-transform:uppercase; color:#cfe0f0; text-decoration:none; padding:6px 10px;

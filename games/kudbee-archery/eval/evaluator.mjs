@@ -228,6 +228,39 @@ const sh = await G(() => ({ t: KARGame.shareText || '', d: JSON.parse(localStora
 rec('daily-share', /Daily #\d+ \(\d{4}-\d\d-\d\d\) · \d+ pts/.test(sh.t) && sh.d.day === dl.d && sh.d.plays === 1, `share line: "${sh.t.split(' · http')[0]}"; today's plays saved`);
 await page.screenshot({ path: `${OUT}/daily-over.png` });
 
+// --- a phone: real touch input (CDP touch events, coarse pointer) ---
+{
+  const tctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const tp = await tctx.newPage(), cdp = await tctx.newCDPSession(tp);
+  tp.on('pageerror', e => errors.push(e.message));
+  await tp.goto(URL); await tp.waitForFunction(() => window.KARGame);
+  const tb = await tp.locator('#gameCanvas').boundingBox(), at = (x, y) => ({ x: tb.x + x * tb.width / 960, y: tb.y + y * tb.height / 640 });
+  const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, i) => ({ x: p.x, y: p.y, id: i })) });
+  const T = fn => tp.evaluate(fn);
+  const play = await T(() => { const x = KAR.UI.buttons.find(b => b.id === 'play'); return { x: x.x + x.w / 2, y: x.y + x.h / 2 }; });
+  await touch('touchStart', [at(play.x, play.y)]); await touch('touchEnd', []);
+  await tp.waitForFunction(() => KARGame.screen === 'play' && KARGame.bp === 'ready', null, { timeout: 5000 });
+  // 1. hold still for a full draw, drag a little, lift: the arrow goes
+  const p0 = at(480, 420); await touch('touchStart', [p0]);
+  for (let i = 0; i < 18; i++) { await tp.waitForTimeout(60); await touch('touchMove', [{ x: p0.x + i * 0.5, y: p0.y + i }]); }
+  const full = await T(() => KARGame.draw >= 1 && KARGame.drawing);
+  await touch('touchEnd', []); await tp.waitForTimeout(60);
+  rec('touch-hold-release', full && await T(() => KARGame.bp === 'flight'), 'touch & hold draws to full, lifting the finger looses the arrow');
+  await tp.waitForFunction(() => KARGame.bp === 'ready', null, { timeout: 12000 });
+  // 2. the phone cancels the pointer mid-draw (long-press gesture) and never sends pointerup: lifting still looses
+  await touch('touchStart', [p0]); await tp.waitForTimeout(1100);
+  await T(() => { window.__eatUp = e => e.stopImmediatePropagation(); window.addEventListener('pointerup', window.__eatUp, true);
+    KARGame.canvas.dispatchEvent(new PointerEvent('pointercancel', { pointerType: 'touch', bubbles: true })); });
+  const kept = await T(() => KARGame.drawing && KARGame.draw >= 1);
+  await touch('touchEnd', []); await tp.waitForTimeout(60);
+  const went = await T(() => KARGame.bp === 'flight');
+  await T(() => window.removeEventListener('pointerup', window.__eatUp, true));
+  rec('touch-cancel-still-looses', kept && went, `a touch pointercancel keeps the draw (${kept}); lifting the finger still looses (${went})`);
+  // 3. no long-press callout / selection on the play area
+  rec('touch-no-callout', await T(() => (document.querySelector('style').textContent.match(/-webkit-touch-callout:none/g) || []).length >= 2 && getComputedStyle(document.body).userSelect === 'none'), 'long-press callout and text selection are off');
+  await tctx.close();
+}
+
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
 rec('no-errors', errors.length === 0, `${errors.length} page errors${errors.length ? ': ' + errors[0] : ''}`);

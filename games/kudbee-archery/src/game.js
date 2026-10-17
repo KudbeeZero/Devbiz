@@ -112,13 +112,24 @@ KAR.Game = class {
     c.addEventListener('pointerdown', e => this._onDown(e));
     c.addEventListener('pointermove', e => this._onMove(e));
     c.addEventListener('pointerup', e => this._onUp(e));
-    c.addEventListener('pointercancel', () => { this.drawing = false; this.draw = 0; this.holding = false; });
+    // Phones: a still finger held for a second is exactly a full draw, and also what iOS/Android read as a
+    // long-press (callout, magnifier, text selection). They answer with pointercancel and then no pointerup,
+    // which used to throw the draw away - the bow came back but the arrow never left. So: block those
+    // gestures at the touch level, keep the draw through a touch pointercancel, and loose when the last
+    // finger actually lifts (touchend fires even after the pointer stream was cancelled).
+    c.addEventListener('pointercancel', e => { if (e.pointerType !== 'touch') { this.drawing = false; this.draw = 0; this.holding = false; } });
+    const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
+    c.addEventListener('touchstart', block, { passive: false });
+    c.addEventListener('touchmove', block, { passive: false });
+    const lift = e => { if (e.touches.length === 0 && this.drawing && !this.cpu) this._loose(); };
+    window.addEventListener('touchend', lift); window.addEventListener('touchcancel', lift);
     c.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => this._onKey(e, true));
     window.addEventListener('keyup', e => this._onKey(e, false));
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
     // blur fires for benign focus moves (iframes, preview toolbars): only drop held input; a hidden tab pauses
-    window.addEventListener('blur', () => { this.holding = false; if (this.drawing && !this.cpu) { this.drawing = false; this.draw = 0; } });
+    // (a mouse button released outside the window is lost, so a desktop draw is dropped; touch keeps it - see above)
+    window.addEventListener('blur', () => { this.holding = false; if (this.drawing && !this.cpu && !this.coarse) { this.drawing = false; this.draw = 0; } });
   }
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
   _beginDraw() { if (this.human() && !this.drawing) { this.drawing = true; this.draw = 0; this.holdT = 0; this.breath = 1; this.audio.draw(0); } }
