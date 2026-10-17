@@ -120,6 +120,14 @@ rec('arrow-cam', hero && camIn, `a gold shot gets the arrow cam (hero=${hero}); 
 await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(200);
 await page.screenshot({ path: `${OUT}/arrowcam-hit.png` });
 rec('cam-holds-on-hit', await G(() => KARGame.camB > 0.9 && KAR.Render.cam.z > KARGame.match.dist * 0.8), 'the cam holds close on the hit before pulling back');
+const swung = await waitFor(() => KARGame.orbit > 0.95 && Math.abs(KAR.Render.cam.yaw) > 0.15 && KARGame.camB > 0.9, 3000);
+await page.screenshot({ path: `${OUT}/landing.png` });
+rec('landing-replay', swung, `after the hit the camera swings round (yaw ${(await G(() => KAR.Render.cam.yaw * 57.3)).toFixed(0)}°) to show the arrow standing out of the boss`);
+const pose = await G(() => {
+  const R = KAR.Render, a = R.restDir({ x: 0.02, y: 1.31, vx: 0.1, vy: -3, vz: 58 }), b = R.restDir({ x: 0.02, y: 1.31, vx: 0.1, vy: -3, vz: 58 }), c = R.restDir({ x: -0.07, y: 1.25, vx: 0.1, vy: -3, vz: 58 });
+  return { tailUp: a.y < 0 && c.y < 0, stable: a.x === b.x && a.y === b.y, varied: a.x !== c.x, intoFace: a.z > 0.95 };
+});
+rec('arrow-rest-pose', pose.tailUp && pose.stable && pose.varied && pose.intoFace, `stuck arrows lean tail-up into the face, each its own way, and never flicker (${JSON.stringify(pose)})`);
 await waitFor(() => KARGame.bp === 'ready', 8000);
 const r2 = await perfect(); await page.keyboard.press(' ');
 const skipped = await G(() => KARGame.flight.skip);

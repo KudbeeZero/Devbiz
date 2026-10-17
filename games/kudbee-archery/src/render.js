@@ -9,7 +9,7 @@
 
 KAR.Render = {
   W: 960, H: 640, OUT: '#1d2a3a',
-  cam: { x: 0, y: 1.6, z: -0.2, pitch: 0.004, F: 14000, CX: 480, CY: 330 },
+  cam: { x: 0, y: 1.6, z: -0.2, pitch: 0.004, yaw: 0, F: 14000, CX: 480, CY: 330 },
   TEAM: [
     { base: '#2f86d8', light: '#7ac7ff', dark: '#1a4f8a', name: 'YOU' },
     { base: '#e8483a', light: '#ff9a8a', dark: '#97271d', name: 'CPU' },
@@ -25,7 +25,7 @@ KAR.Render = {
     c.F = Math.exp(U.lerp(Math.log(Fw), Math.log(Fs), e));
     const ex = U.lerp(0.8, 0, e), ey = U.lerp(1.9, 1.6, e), ez = U.lerp(-2.5, -0.2, e);
     const ty = U.lerp(1.0, C.FACE_Y, e), tz = U.lerp(dist * 0.55, dist, e);
-    c.x = ex; c.y = ey; c.z = ez;
+    c.x = ex; c.y = ey; c.z = ez; c.yaw = 0;
     c.pitch = Math.atan2(ey - ty, tz - ez);
     c.CX = 480 + U.lerp(0, 0, e); c.CY = U.lerp(300, 318, e);
     this.chaseB = 0;
@@ -33,19 +33,24 @@ KAR.Render = {
 
   // ARROW CAM: blend the camera (b 0..1) from wherever setView put it to a chase position just behind and
   // above the flying arrow, looking down-range at the face. Called after setView, only for hero shots.
-  chase(tip, b) {
+  // orbit 0..1 (after the hit): swing round to a three-quarter view so the arrow reads in profile, sunk in the
+  // boss, the camera turning (yaw) to keep the hit centred.
+  chase(tip, b, orbit) {
     if (!(b > 0)) return;
-    const C = KAR.CFG, U = KAR.Util, c = this.cam, e = U.smooth(b);
-    const x = tip.x * 0.92, y = tip.y + 0.16, z = tip.z - 1.7;
+    const C = KAR.CFG, U = KAR.Util, c = this.cam, e = U.smooth(b), o = U.smooth(orbit || 0);
+    const x = tip.x * 0.92 + 0.95 * o, y = tip.y + 0.16 + 0.14 * o, z = tip.z - 1.7 - 0.35 * o;
     c.x = U.lerp(c.x, x, e); c.y = U.lerp(c.y, y, e); c.z = U.lerp(c.z, z, e);
     c.pitch = U.lerp(c.pitch, Math.atan2(y - C.FACE_Y, Math.max(1, this.dist - z)), e);
-    c.F = Math.exp(U.lerp(Math.log(c.F), Math.log(820), e));
+    c.F = Math.exp(U.lerp(Math.log(c.F), Math.log(820 + 330 * o), e));
     c.CY = U.lerp(c.CY, 300, e);
+    c.yaw = Math.atan2(tip.x - c.x, tip.z - c.z) * o * e;           // turn to face the hit as we swing round
     this.chaseB = e;
   },
 
   proj(x, y, z) {
-    const c = this.cam, dx = x - c.x, dy = y - c.y, dz = z - c.z;
+    const c = this.cam, dy = y - c.y;
+    let dx = x - c.x, dz = z - c.z;
+    if (c.yaw) { const cy = Math.cos(c.yaw), sy = Math.sin(c.yaw), rx = dx * cy - dz * sy; dz = dx * sy + dz * cy; dx = rx; }
     const cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
     const zc = dz * cp - dy * sp;
     if (zc < 0.5) return null;
@@ -166,28 +171,44 @@ KAR.Render = {
     const bw = F * 0.62 + 0.06;                       // half-width of the straw butt
     const legTop = Y - bw, bx = bw * 0.9;
     for (const s of [-1, 1]) { this.line3(ctx, [s * bx, legTop + 0.1, D + 0.15], [s * (bx + 0.35), 0, D + 0.5], OUT, lw * 4.2); this.line3(ctx, [s * bx, legTop + 0.1, D + 0.15], [s * (bx + 0.35), 0, D + 0.5], '#b9884e', lw * 2.6); }
-    // straw butt: rounded square, with straw streaks
-    const x0 = ctr.x - bw * k, y0 = ctr.y - bw * k, w = bw * 2 * k;
-    ctx.save();
-    ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(x0, y0, w, w, 0.12 * k) : ctx.rect(x0, y0, w, w));
-    const sg = ctx.createLinearGradient(0, y0, 0, y0 + w); sg.addColorStop(0, '#f3d56f'); sg.addColorStop(1, '#c99a38');
-    ctx.fillStyle = sg; ctx.fill(); ctx.lineWidth = lw * 1.6; ctx.strokeStyle = OUT; ctx.lineJoin = 'round'; ctx.stroke();
+    // straw butt: a rounded square boss 45 cm deep, built in 3D so it foreshortens when the camera swings round
+    const rc = 0.12, T = 0.45, rim = (z) => {
+      const pts = [];
+      for (const [cx, cy, a0] of [[bw - rc, bw - rc, 0], [-bw + rc, bw - rc, 1.571], [-bw + rc, -bw + rc, 3.142], [bw - rc, -bw + rc, 4.712]])
+        for (let i = 0; i <= 4; i++) { const a = a0 + i * 0.3927; pts.push(this.proj(cx + Math.cos(a) * rc, Y + cy + Math.sin(a) * rc, z)); }
+      return pts;
+    };
+    const front = rim(D), back = rim(D + T);
+    if (front.some(q => !q) || back.some(q => !q)) return;
+    const path = pts => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); ctx.closePath(); };
+    ctx.save(); ctx.lineJoin = 'round';
+    if (Math.abs(this.cam.yaw) > 0.01) {         // the visible side of the boss
+      const sd = this.cam.x > 0 ? 1 : -1, side = [this.proj(sd * bw, Y + bw - rc, D), this.proj(sd * bw, Y + bw - rc, D + T), this.proj(sd * bw, Y - bw + rc, D + T), this.proj(sd * bw, Y - bw + rc, D)];
+      if (!side.some(q => !q)) { path(side); ctx.fillStyle = '#b68a32'; ctx.fill(); ctx.lineWidth = lw * 1.6; ctx.strokeStyle = OUT; ctx.stroke(); }
+    }
+    const top = front.reduce((a, q) => Math.min(a, q.y), 1e9), bot = front.reduce((a, q) => Math.max(a, q.y), -1e9);
+    const x0 = front.reduce((a, q) => Math.min(a, q.x), 1e9), w = front.reduce((a, q) => Math.max(a, q.x), -1e9) - x0, y0 = top;
+    path(front);
+    const sg = ctx.createLinearGradient(0, top, 0, bot); sg.addColorStop(0, '#f3d56f'); sg.addColorStop(1, '#c99a38');
+    ctx.fillStyle = sg; ctx.fill(); ctx.lineWidth = lw * 1.6; ctx.strokeStyle = OUT; ctx.stroke();
     ctx.clip();
     const rnd = KAR.Util.rng(31);
     ctx.strokeStyle = 'rgba(140,90,20,0.45)'; ctx.lineWidth = Math.max(1, lw * 0.5); ctx.beginPath();
-    for (let i = 0; i < 80; i++) { const sx = x0 + rnd() * w, sy = y0 + rnd() * w; ctx.moveTo(sx, sy); ctx.lineTo(sx + (rnd() - 0.5) * 0.18 * k, sy + 0.04 * k + rnd() * 0.07 * k); }
+    for (let i = 0; i < 80; i++) { const sx = x0 + rnd() * w, sy = y0 + rnd() * (bot - top); ctx.moveTo(sx, sy); ctx.lineTo(sx + (rnd() - 0.5) * 0.18 * k, sy + 0.04 * k + rnd() * 0.07 * k); }
     ctx.stroke();
     ctx.strokeStyle = 'rgba(70,40,10,0.45)'; ctx.lineWidth = Math.max(1.4, lw);              // binding twine
-    for (const f of [0.28, 0.72]) { ctx.beginPath(); ctx.moveTo(x0, y0 + w * f); ctx.lineTo(x0 + w, y0 + w * f); ctx.stroke(); }
+    for (const f of [0.28, 0.72]) { const a = this.proj(-bw, Y + bw - 2 * bw * f, D), b = this.proj(bw, Y + bw - 2 * bw * f, D); if (a && b) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } }
     ctx.restore();
     // face: ten rings
+    // the face as a projected ellipse (a circle when seen square-on)
+    const ring = (r) => { const a = this.proj(-r, Y, D), b = this.proj(r, Y, D), c = this.proj(0, Y + r, D), d = this.proj(0, Y - r, D); if (!a || !b || !c || !d) return false; ctx.beginPath(); ctx.ellipse((a.x + b.x) / 2, (c.y + d.y) / 2, Math.abs(b.x - a.x) / 2, Math.abs(d.y - c.y) / 2, 0, 0, 6.283); return true; };
     for (let i = 9; i >= 0; i--) {
-      const r = R * (i + 1) / 10 * k;
-      ctx.beginPath(); ctx.arc(ctr.x, ctr.y, r, 0, 6.283); ctx.fillStyle = this.RING[i]; ctx.fill();
+      if (!ring(R * (i + 1) / 10)) continue;
+      ctx.fillStyle = this.RING[i]; ctx.fill();
       ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.strokeStyle = (i === 6 || i === 7) ? 'rgba(255,255,255,0.55)' : 'rgba(20,20,30,0.55)'; ctx.stroke();
     }
-    ctx.beginPath(); ctx.arc(ctr.x, ctr.y, R * 0.05 * k, 0, 6.283); ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.stroke();
-    ctx.beginPath(); ctx.arc(ctr.x, ctr.y, R * k, 0, 6.283); ctx.strokeStyle = OUT; ctx.lineWidth = lw * 1.4; ctx.stroke();
+    if (ring(R * 0.05)) { ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.stroke(); }
+    if (ring(R)) { ctx.strokeStyle = OUT; ctx.lineWidth = lw * 1.4; ctx.stroke(); }
     // pennants either side, streaming with the wind
     this._flag(ctx, -(bw + 0.35), D + 0.3, wind, t, '#ff5d5d'); this._flag(ctx, (bw + 0.35), D + 0.3, wind, t, '#ffd34d');
   },
@@ -226,12 +247,84 @@ KAR.Render = {
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.8, w * 0.7), 0, 6.283); ctx.fillStyle = '#cfd6de'; ctx.fill();
     ctx.restore();
   },
-  // wob: 0..1 quiver of a fresh hit (the shaft shivers and settles); split: a ROBIN HOOD victim, drawn cracked open
-  stuck(ctx, a, team, wob, t) {
+  // ---- the arrow as a real 3D object -----------------------------------------------
+  // A 75 cm shaft along unit d ending at tip, three vanes 120° apart near the nock, drawn with the same
+  // camera as everything else, so a stuck arrow seen from the shooting line foreshortens to its nock and
+  // vane "star" (what an archer actually sees in a boss) and the arrow cam sees it from behind.
+  // o: { stuck, split, rot, shadow }
+  arrow3(ctx, tip, d, len, team, o) {
+    o = o || {};
+    const col = this.TEAM[team || 0], OUT = this.OUT;
+    const tail = { x: tip.x - d.x * len, y: tip.y - d.y * len, z: tip.z - d.z * len };
+    const p = this.proj(tip.x, tip.y, tip.z), q = this.proj(tail.x, tail.y, tail.z);
+    if (!p || !q) return;
+    // a frame around the shaft: u sideways, v "up" (both perpendicular to d)
+    let ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul;
+    const u = { x: ux, y: 0, z: uz }, v = { x: d.y * uz, y: d.z * ux - d.x * uz, z: -d.y * ux };
+    const at = (s, ra, rb) => this.proj(tail.x + d.x * s + u.x * ra + v.x * rb, tail.y + d.y * s + u.y * ra + v.y * rb, tail.z + d.z * s + u.z * ra + v.z * rb);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // shadow on the face + the hole the point punched (sun high on the right: shadow falls down-left)
+    if (o.shadow) {
+      const D = tip.z, e = this.proj(tip.x + (tail.x - tip.x) * 0.5 - 0.05, tip.y - 0.09, D);
+      if (e) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(e.x, e.y); ctx.strokeStyle = 'rgba(40,25,5,0.2)'; ctx.lineWidth = Math.max(2.5, 0.016 * p.k); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, Math.max(2.2, 0.009 * p.k), Math.max(1.8, 0.007 * p.k), 0, 0, 6.283); ctx.fillStyle = 'rgba(25,15,5,0.6)'; ctx.fill();
+    }
+    const wT = Math.max(1.6, 0.011 * p.k), wN = Math.max(1.8, 0.011 * q.k);
+    const shaft = (a, b, w0, w1, c) => {
+      const dx = b.x - a.x, dy = b.y - a.y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
+      ctx.beginPath(); ctx.moveTo(a.x + nx * w0 / 2, a.y + ny * w0 / 2); ctx.lineTo(b.x + nx * w1 / 2, b.y + ny * w1 / 2); ctx.lineTo(b.x - nx * w1 / 2, b.y - ny * w1 / 2); ctx.lineTo(a.x - nx * w0 / 2, a.y - ny * w0 / 2); ctx.closePath();
+      ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = OUT; ctx.stroke();
+    };
+    if (o.split) {                      // ROBIN HOOD victim: the shaft peeled into two splinters, vanes shredded
+      for (const sg of [-1, 1]) { const b = at(0, sg * 0.05, 0.02); if (b) shaft(p, b, wT * 0.7, wN * 0.6, '#e8d6a8'); }
+      ctx.restore(); return;
+    }
+    // vanes: draw the ones on the far side of the shaft first
+    const rot = o.rot || 0, cam = this.cam, vanes = [];
+    for (let i = 0; i < 3; i++) {
+      const a = rot + i * 2.0944, ca = Math.cos(a), sa = Math.sin(a);
+      const r = { x: u.x * ca + v.x * sa, y: u.y * ca + v.y * sa, z: u.z * ca + v.z * sa };
+      const toCam = (cam.x - tail.x) * r.x + (cam.y - tail.y) * r.y + (cam.z - tail.z) * r.z;
+      vanes.push({ ca, sa, i, far: toCam < 0 });
+    }
+    const vane = (V) => {
+      const R = 0.032, pts = [at(0.03, 0, 0), at(0.05, V.ca * R, V.sa * R), at(0.11, V.ca * R * 0.85, V.sa * R * 0.85), at(0.15, 0, 0)];
+      if (pts.some(x => !x)) return;
+      ctx.beginPath(); pts.forEach((x, k) => (k ? ctx.lineTo(x.x, x.y) : ctx.moveTo(x.x, x.y))); ctx.closePath();
+      ctx.fillStyle = V.i === 0 ? col.light : col.base; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
+    };
+    vanes.filter(V => V.far).forEach(vane);
+    shaft(p, q, wT, wN, '#f2e6c8');
+    // a highlight down the shaft
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = Math.max(0.8, Math.min(wT, wN) * 0.3); ctx.stroke();
+    vanes.filter(V => !V.far).forEach(vane);
+    // nock
+    ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1.8, wN * 0.75), 0, 6.283); ctx.fillStyle = col.dark; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = OUT; ctx.stroke();
+    if (!o.stuck) { ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.6, wT * 0.6), 0, 6.283); ctx.fillStyle = '#cfd6de'; ctx.fill(); }
+    ctx.restore();
+  },
+
+  // How a stuck arrow rests: the flight direction plus a small per-arrow lean (shaft flex and the way it bit),
+  // tail up. Deterministic from where it hit, so it never flickers between frames.
+  restDir(h) {
+    const L = Math.hypot(h.vx, h.vy, h.vz) || 1, f = n => { const x = Math.sin(h.x * 127.1 + h.y * 311.7 + n * 74.7) * 43758.5453; return x - Math.floor(x); };
+    const d = { x: h.vx / L + (f(1) - 0.5) * 0.24, y: h.vy / L - 0.06 - f(2) * 0.10, z: h.vz / L }, l = Math.hypot(d.x, d.y, d.z);
+    return { x: d.x / l, y: d.y / l, z: d.z / l, rot: f(3) * 2.09 };
+  },
+  // age: seconds since this arrow landed (fresh hits sink in, flex from the flight line to rest, and quiver)
+  stuck(ctx, a, team, age) {
     if (!a.hit) return;
-    const D = this.dist, h = a.hit, L = Math.hypot(h.vx, h.vy, h.vz) || 1;
-    const q = wob > 0 ? Math.sin((t || 0) * 55) * wob * 0.22 : 0;
-    this.arrow(ctx, { x: h.x, y: h.y, z: D }, { x: h.vx / L + q, y: h.vy / L * 3.5 + q * 0.6, z: h.vz / L }, 0.9, team, 52 * Math.min(1, 0.4 + this.zoom), a.split);
+    const h = a.hit, rd = this.restDir(h), L = Math.hypot(h.vx, h.vy, h.vz) || 1;
+    let d = rd, len = 0.62;
+    if (age !== undefined && age < 1.4) {
+      const bite = Math.min(1, age / 0.07), settle = KAR.Util.easeOut(Math.min(1, age / 0.12));
+      len = 0.75 - 0.13 * bite;                                                    // the point drives in
+      const fl = { x: h.vx / L, y: h.vy / L, z: h.vz / L };
+      d = { x: KAR.Util.lerp(fl.x, rd.x, settle), y: KAR.Util.lerp(fl.y, rd.y, settle), z: KAR.Util.lerp(fl.z, rd.z, settle) };
+      const qv = Math.exp(-age * 4.5) * Math.sin(age * 58) * 0.07, qh = Math.exp(-age * 4.5) * Math.cos(age * 47) * 0.035;   // the tail shivers, the tip is held
+      d.x += qh; d.y += qv; const l = Math.hypot(d.x, d.y, d.z); d.x /= l; d.y /= l; d.z /= l;
+    }
+    this.arrow3(ctx, { x: h.x, y: h.y, z: this.dist }, d, len, team, { stuck: true, split: a.split, rot: rd.rot, shadow: true });
   },
 
   // ---- first-person bow + sight ----------------------------------------------------------

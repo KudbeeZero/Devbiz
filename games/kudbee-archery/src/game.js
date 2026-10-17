@@ -51,7 +51,7 @@ KAR.Game = class {
     const m = this.match;
     this._resetShot();
     if (m.arrowNo === 0) this.showEnd = m.endNo;
-    this.bp = 'ready'; this.bpT = 0; this.zoomTarget = 1; this.camB = 0;
+    this.bp = 'ready'; this.bpT = 0; this.zoomTarget = 1; this.camB = 0; this.orbit = 0;
     this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
     this.ptr = { x: 480, y: 330 }; this._setAimFromPtr();
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
@@ -285,9 +285,11 @@ KAR.Game = class {
       if (f.t >= f.tEnd) { f.t = f.tEnd; this.timeScale = 1; this._land(); }
       this.camTip = this._tip(f);
     } else if (this.bp === 'result') {
-      // hold the arrow cam on the hit for a beat, then pull back to the scope
-      if (this.camB > 0) this.camB = this.bpT < 0.55 ? this.camB : Math.max(0, this.camB - dt / 0.4);
-      if (this.bpT > (this.flight.res.endDone ? 2.1 : 1.3)) { if (m.over) this._finishMatch(); else this._nextShot(); }
+      // arrow cam: swing round to the landing (three-quarter view of the arrow in the boss), hold, pull back
+      const hero = this.flight.hero;
+      this.orbit = hero ? KAR.Util.clamp((this.bpT - 0.15) / 0.7, 0, 1) : 0;
+      if (this.camB > 0) this.camB = this.bpT < (hero ? 1.45 : 0.55) ? this.camB : Math.max(0, this.camB - dt / 0.4);
+      if (this.bpT > (this.flight.res.endDone ? 2.1 : 1.3) + (this.flight.hero ? 0.7 : 0)) { if (m.over) this._finishMatch(); else this._nextShot(); }
     }
   }
 
@@ -314,7 +316,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD);
-    if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB);
+    if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
     if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
@@ -344,8 +346,8 @@ KAR.Game = class {
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
     if (this.screen === 'menu') return;
-    const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null, wob = Math.exp(-(this.time - this.landT) * 4.5);
-    for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest && wob > 0.02 ? wob : 0, this.time);
+    const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
+    for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined);
     // impact rings
     for (const p of this.pops) { const q = R.proj(p.x, p.y, m.dist); if (!q) continue; ctx.beginPath(); ctx.arc(q.x, q.y, (0.05 + p.age * 0.25) * q.k, 0, 6.283); ctx.strokeStyle = 'rgba(255,255,255,' + (1 - p.age / 1.2) + ')'; ctx.lineWidth = 3; ctx.stroke(); }
     if (this.bp === 'flight' && this.flight) {
@@ -358,9 +360,10 @@ KAR.Game = class {
       if (!f.done) {
         // arrow cam: speed lines streaming past the lens
         if (this.camB > 0.3) { ctx.save(); ctx.globalAlpha = (this.camB - 0.3) * 0.9; ctx.strokeStyle = '#ffffff'; ctx.lineCap = 'round'; for (let j = 0; j < 14; j++) { const a = j * 2.399, r0 = 250 + ((j * 97 + this.time * 1600) % 240); ctx.lineWidth = 1.5 + (j % 3); ctx.beginPath(); ctx.moveTo(480 + Math.cos(a) * r0, 300 + Math.sin(a) * r0 * 0.7); ctx.lineTo(480 + Math.cos(a) * (r0 + 70), 300 + Math.sin(a) * (r0 + 70) * 0.7); ctx.stroke(); } ctx.restore(); }
-        R.arrow(ctx, tip, dir, 0.8 + 3.2 * (1 - this.zoom), f.shooter, 0);
+        // arrow cam: the real 3D arrow seen from behind; otherwise the stretched long-shot arrow so it reads in the wide view
+        if (this.camB > 0.3) { const L = Math.hypot(dir.x, dir.y, dir.z) || 1; R.arrow3(ctx, tip, { x: dir.x / L, y: dir.y / L, z: dir.z / L }, 0.75, f.shooter, { rot: f.t * 40 }); }   // vanes spin the arrow in flight
+        else R.arrow(ctx, tip, dir, 0.8 + 3.2 * (1 - this.zoom), f.shooter, 0);
       }
-      else if (f.res.hit) R.stuck(ctx, { hit: f.res.hit }, f.shooter);
     } else if (this.bp === 'result' && this.flight && this.flight.res.hit) { /* stuck arrow already drawn from match.arrows */ }
   }
 

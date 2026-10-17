@@ -9,7 +9,8 @@ Read the wind, hold your breath, hit the gold. Zero-build Canvas 2D, no dependen
 - **Physics:** metres. Gravity plus quadratic drag against the *air* (so wind matters); a bisection solver zeroes the sight for each distance. Less than a full draw means a slower, lower arrow. Fixed seeds replay identically.
 - **Camera:** one pinhole camera blends between a zoomed scope view (aiming) and a wide view that follows the arc, then punches back in on the hit.
 - **Arrow cam:** golds (plus the odd 7 or 8, so the cam alone doesn't give it away), the last arrow of a range and the CPU's X ride the arrow in, in slow motion, with speed lines, then hold close on the hit. Press (or Space) to skip.
-- **Moments:** a fresh hit quivers in the straw and kicks up chaff; consecutive 9s and better build a **GOLD STREAK** (the chime climbs a tone each time; best streak is saved); an arrow that lands in the hole of one already in the face this end is a **ROBIN HOOD** and splits it.
+- **The landing:** arrows are real 3D objects (shaft, three spinning vanes, nock). On impact the point drives in, the shaft flexes from its flight line to a tail-up rest and quivers; it punches a hole and casts a shadow on the face. After an arrow-cam shot the camera swings round to a three-quarter view of the arrow standing out of the boss.
+- **Moments:** a fresh hit kicks up chaff; consecutive 9s and better build a **GOLD STREAK** (the chime climbs a tone each time; best streak is saved); an arrow that lands in the hole of one already in the face this end is a **ROBIN HOOD** and splits it.
 - **Last-arrow pressure:** on a range's final arrow the screen shows what you need for a new best and for 3 stars; in a duel, what the CPU needs on its last arrow to take the end.
 - **Focus:** a hidden tab pauses; a plain window blur (iframes, toolbars) only drops held input.
 
@@ -18,6 +19,6 @@ Read the wind, hold your breath, hit the gold. Zero-build Canvas 2D, no dependen
 
 ## Tests
 - `npm run archery:engine` — 19 headless checks (sight solver, wind/drag, power, ring + X scoring, range and duel flow, determinism, bot skill curves, stars, ROBIN HOOD, last-arrow needs, persistence).
-- `npm run archery:eval` — 26 Playwright checks with real pointer/keyboard input, plus face colours, arrow cam, streak, ROBIN HOOD, last-arrow line and focus rules (screenshots in `eval/out/`, git-ignored).
+- `npm run archery:eval` — 28 Playwright checks with real pointer/keyboard input, plus face colours, arrow cam, landing replay, arrow rest pose, streak, ROBIN HOOD, last-arrow line and focus rules (screenshots in `eval/out/`, git-ignored).
 
 Font: Lilita One (OFL), self-hosted.
