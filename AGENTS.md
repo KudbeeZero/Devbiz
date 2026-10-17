@@ -272,4 +272,4 @@ Stuck-ball reports are almost always a **physics bug, not a missing rescue**. Be
 - **Shooter lane holds one ball.** Plunger code finds it with `laneBall()` — never `balls[0]` (during multiball the lane ball is rarely first). Locks serve a lane ball only when nothing else is live and the lane is empty (`serveAfterLock`); otherwise the saucer kicks the ball back out.
 - **Frame loop must catch up to real time** (step cap 15 = the 50ms dt cap). A cap of 5 only keeps pace at a steady 60fps; iOS Low Power Mode (30fps rAF) ran the game at half speed.
 - **Round apexes are unstable** (`apexRoll`): a ball dead-centre on a post/cap/target top is tipped off, never balanced.
-- Lower geo is gated: drain 1430, kick 1382–1426, flip **py 1300 / len 150**. Pivot x / rest angle may move to keep the center drain open (~34px clear).
+- Lower geo is gated: drain 1430, flip **py 1300 / len 150**. There are no outlanes or kickbacks: each outer funnel runs onto its flipper pivot, and the funnel meets the flipper's top surface (offset 13px along its normal) so there is no ledge. Pivot x / rest angle may move to keep the center drain open (~34px clear).

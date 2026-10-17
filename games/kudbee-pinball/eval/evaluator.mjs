@@ -136,12 +136,10 @@ const lower = await page.evaluate(() => {
   const g = T.geometry();
   const geo = {
     drain: g.DRAIN_Y,
-    kickY0: g.kickZoneL && g.kickZoneL.y0,
-    kickY1: g.kickZoneL && g.kickZoneL.y1,
     flipY: P.flipL && P.flipL.py,
     flipLen: P.flipL && P.flipL.len,
   };
-  const geoOk = geo.drain === 1430 && geo.kickY0 === 1382 && geo.kickY1 === 1426 && geo.flipY === 1300 && geo.flipLen === 150;
+  const geoOk = geo.drain === 1430 && geo.flipY === 1300 && geo.flipLen === 150;
   const b = T.prepBall(250, 1280, 20, 40);
   if (!b) return { geo, geoOk, stuck: 99, reason: 'no ball' };
   b.midT = 0; b.lowT2 = 0;

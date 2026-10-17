@@ -48,7 +48,7 @@ exactly on a round post top or started inside the sealed pocket above the deflec
 | `phys-wall-regression` | 9 deterministic wall/corner cases via `__kbTest.runPhysWallRegression()` |
 | `nudge-impulse` | `__kbTest.nudgeImpulseTest()` — straight nudge adds ball speed (DBZ-067) |
 | `solar-sail-mission` | `__kbTest.solarSailMissionTest()` — spinner totalSpins ≥50 lights mission C |
-| `lower-playfield-geo` | Drain 1430 · kick 1382–1426 · flip py 1300 len 150 |
+| `lower-playfield-geo` | Drain 1430 · flip py 1300 len 150 |
 | `lower-funnel-band` | `prepBall(250,1280)` + 200 `physStep` — stuck counter ≤50 |
 | `right-gutter-band` | `runLowerBandRegression()` — right gutter + hug-low |
 | `flipper-band-edges` | `runLowerBandRegression()` — flipR / between / flipL alleys |
