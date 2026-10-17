@@ -66,6 +66,12 @@ KCH.Game = class {
 
   _afterSettle() {
     const m = this.match;
+    // "+1" over every bag that has come to rest on the board (holes already pop "+3")
+    for (const b of m.sim.bags) {
+      if (b.state !== 'board' || b.popped) continue;
+      b.popped = true;
+      this.popups.push({ x: b.x, y: b.y + 4, z: b.z, text: '+1', color: KCH.Render.TEAM[b.team].light, life: 1.1, age: 0, size: 28 });
+    }
     const r = m.afterSettle();
     if (r) {
       this.camTarget = 0;
@@ -208,8 +214,9 @@ KCH.Game = class {
     c.addEventListener('pointercancel', () => { this.aim.active = false; });
     c.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => this._onKey(e));
+    // A hidden tab/app pauses. Window blur deliberately does not: browsers fire it for benign
+    // focus moves (an embedded iframe such as a preview toolbar), which paused matches at random.
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
-    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
   }
 
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
@@ -356,7 +363,10 @@ KCH.Game = class {
     const inMenu = this.screen === 'menu';
     if (!inMenu) R.drawBoard(ctx, this.time);
 
-    const m = this.match, bags = inMenu ? [] : m.sim.bags.slice().sort((a, b) => b.z - a.z);
+    // painter's order by depth; a stacked bag draws right after the bag it rides on
+    const m = this.match, sim = m.sim;
+    const depth = (b, n) => { const base = b.stack && (n || 0) < 8 && sim._byId(b.stack); return base ? depth(base, (n || 0) + 1) - 1e-3 : b.z; };
+    const bags = inMenu ? [] : sim.bags.slice().sort((a, b) => depth(b) - depth(a));
     for (const b of bags) R.drawBag(ctx, b);
     R.drawParticles(ctx, this.particles);
 

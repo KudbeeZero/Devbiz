@@ -176,6 +176,9 @@ KCH.UI = {
       if (active) { ctx.save(); ctx.fillStyle = 'rgba(255,246,168,0.22)'; U.rr(ctx, 20, y - 21, 246, 38, 12); ctx.fill(); ctx.restore(); }
       U.text(ctx, solo ? 'YOU' : (t === 0 ? 'YOU' : 'CPU'), 30, y + 8, 22, col.light, 'left');
       U.text(ctx, String(m.score[t]), 142, y + 11, 34, '#ffffff', 'right');
+      // live points for the round in progress (holes 3, board 1) — before, they only appeared on the summary card
+      const live = m.phase !== 'roundEnd' && m.sim ? m.sim.tally().pts[t] : 0;
+      if (live > 0) U.text(ctx, '+' + live + ' THIS ROUND', 166, y + 19, 12, '#ffe14d', 'left');   // under the bag pips
       for (let k = 0; k < m.bagsPer; k++) U.pip(ctx, 166 + k * 24, y - 2, t, k < m.bagsLeft(t));
     });
     // round chip

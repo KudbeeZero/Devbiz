@@ -19,7 +19,9 @@ const URL = `http://localhost:${server.address().port}/games/kudbee-cornhole/ind
 
 const R = [];
 const rec = (id, pass, note) => { R.push(pass); console.log(pass ? 'PASS' : 'FAIL', id, '—', note); };
-const browser = await chromium.launch();
+// Cloud containers: use the pre-installed Chromium when present (avoids `playwright install`).
+const launchOpts = existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {};
+const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
@@ -87,6 +89,28 @@ await waitFor(() => KCHGame.screen === 'menu' && KCH.UI.buttons.some(b => b.id =
 await click('practice');
 await waitFor(() => KCHGame.screen === 'play', 3000);
 rec('practice', await G(() => KCHGame.screen === 'play' && KCHGame.match.solo), 'practice mode: solo');
+
+// window blur fires for benign focus moves (iframes, preview toolbars): it must not pause; a hidden tab must
+const pauseRules = await G(() => {
+  window.dispatchEvent(new Event('blur'));
+  const afterBlur = KCHGame.screen;
+  Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+  const afterHide = KCHGame.screen;
+  Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+  if (KCHGame.screen === 'paused') KCHGame.togglePause();
+  return { afterBlur, afterHide };
+});
+rec('no-pause-on-blur', pauseRules.afterBlur === 'play', 'screen after blur: ' + pauseRules.afterBlur);
+rec('hidden-tab-pauses', pauseRules.afterHide === 'paused', 'screen after hiding the tab: ' + pauseRules.afterHide);
+
+// a bag that comes to rest on the board pops "+1" (holes already pop "+3")
+await waitFor(() => KCHGame.humanTurn(), 5000);
+await G(() => KCHGame._launch('flop', 0, 18, { du: 0, ds: 0 }));
+const plusOne = await waitFor(() => KCHGame.popups.some(p => p.text === '+1'), 10000);
+await page.screenshot({ path: `${OUT}/board-plus-one.png` });
+rec('board-plus-one', plusOne && await G(() => KCHGame.match.sim.tally().board[0] >= 1), 'a flop mid-board settles and pops +1');
 
 // mobile viewport: no horizontal scroll, canvas fits
 await page.setViewportSize({ width: 390, height: 780 });

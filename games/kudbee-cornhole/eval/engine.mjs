@@ -52,6 +52,51 @@ rec('geometry', Math.abs(C.THETA * 180 / Math.PI - 10.62) < 0.05 && Math.abs(C.S
   const t = sim.tally();
   rec('bag-pushes-bag', blocker.state === 'hole' && t.pts[1] === 3, `a sliding bag shoves the blocker in: blocker ${blocker.state}, pusher ${pusher.state}, points ${t.pts.join('/')}`);
 }
+// 7b. landing ON a bag: it stacks (no half-a-bag teleport), and the impact knocks the blocker forward
+{
+  const sim = new K.Sim();
+  const blocker = sim.throwBag(1, 'flop', 0, 20, null); sim.runToRest(1 / 120, 4000);
+  const b0 = { u: blocker.u, s: blocker.s };
+  const lander = sim.throwBag(0, 'slide', 0, 20, null);
+  let jump = 0, last = null;
+  for (let i = 0; i < 4000 && !sim.settled(); i++) {
+    const before = [blocker.u, blocker.s, lander.state === 'board' ? lander.u : null, lander.s];
+    sim.step(1 / 120);
+    jump = Math.max(jump, Math.hypot(blocker.u - before[0], blocker.s - before[1]));
+    if (before[2] !== null) jump = Math.max(jump, Math.hypot(lander.u - before[2], lander.s - before[3]));
+  }
+  const t = sim.tally(), du = blocker.u - b0.u, ds = blocker.s - b0.s;
+  rec('bag-lands-on-bag', lander.stack === blocker.id && lander.state === 'board' && jump < 0.6 && t.board[0] === 1 && t.board[1] === 1,
+    `lander rides the blocker (stack=${lander.stack === blocker.id}), largest per-step jump ${jump.toFixed(2)} in (was 3.4), both score 1`);
+  rec('impact-knocks-forward', ds > 1 && Math.abs(du) < 0.5,
+    `blocker knocked ${ds.toFixed(1)} in up the board, ${Math.abs(du).toFixed(2)} in sideways (used to be split sideways)`);
+}
+// 7b2. three flops on one spot make a pile (levels 0/1/2), not two bags sharing a level
+{
+  const sim = new K.Sim();
+  const bags = [];
+  for (let i = 0; i < 3; i++) { bags.push(sim.throwBag(0, 'flop', 0, 22, null)); sim.runToRest(1 / 120, 4000); }
+  const lv = bags.map(b => sim.stackLevel(b)).join('/');
+  rec('pile-climbs', lv === '0/1/2' && sim.tally().board[0] === 3, `stack levels ${lv}, all three on the board`);
+}
+// 7c. a rider is carried when its base is shoved, and tips into the hole from a blocker on the lip
+{
+  const sim = new K.Sim();
+  const mk = (team, u, s, vs, stack) => { const b = { id: sim._id++, team, style: 'flop', state: 'board', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, u, s, vu: 0, vs, yaw: 0, yawV: 0, tilt: 0, tiltV: 0, airmail: false, touched: true, flight: 1, stack: stack || 0, justLanded: false, sq: 0, sqV: 0 }; sim.bags.push(b); return b; };
+  const base = mk(1, 0, 16, 0), top = mk(1, 0, 16.5, 0, base.id);
+  mk(0, 0, 4, 120);                                                   // a slider rams the base from below
+  const t0 = top.s, b0s = base.s;
+  sim.runToRest(1 / 120, 4000);
+  // a sudden shove lets the rider slip back a little before the cloth catches it (inertia), so not 1:1
+rec('rider-carried', base.s - b0s > 1 && top.s - t0 > 0.4 * (base.s - b0s),
+    `base shoved ${(base.s - b0s).toFixed(1)} in, rider moved ${(top.s - t0).toFixed(1)} in with it (stack=${top.stack === base.id})`);
+  const sim2 = new K.Sim();
+  const mk2 = (u, s, stack) => { const b = { id: sim2._id++, team: 0, style: 'flop', state: 'board', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, u, s, vu: 0, vs: 0, yaw: 0, yawV: 0, tilt: 0, tiltV: 0, airmail: false, touched: true, flight: 1, stack: stack || 0, justLanded: false, sq: 0, sqV: 0 }; sim2.bags.push(b); return b; };
+  const lip = mk2(0, C.HOLE_S - 5), hanger = mk2(0, C.HOLE_S - 1, lip.id);
+  for (let i = 0; i < 120; i++) sim2.step(1 / 120);           // both start at rest, so runToRest() would not step at all
+  rec('rider-tips-in', hanger.state === 'hole' && lip.state === 'board' && sim2.tally().pts[0] === 4,
+    `a bag hanging over the hole from a blocker on the lip drops in (hanger ${hanger.state}, blocker ${lip.state}, 3+1 points)`);
+}
 // 8. determinism
 {
   const sig = () => { const m = new K.Match({ first: 0 }); const rnd = K.Util.rng(99); for (let i = 0; i < 8; i++) { m.throw(i % 3 ? 'slide' : 'flop', rnd.gauss() * 3, 28 + rnd.gauss() * 6, null); m.sim.runToRest(1 / 120, 4000); m.afterSettle(); } return JSON.stringify(m.sim.bags.map(b => [b.state, +b.u.toFixed(5), +b.s.toFixed(5)])); };
