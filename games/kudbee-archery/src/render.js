@@ -354,37 +354,135 @@ KAR.Render = {
   },
 
   // ---- first-person bow + sight ----------------------------------------------------------
-  // rel 0..1: the moment after the release - no arrow on the string, the bow kicks forward and drops away
-  // (a loose bow hand), the string snaps and shivers.
-  bow(ctx, sx, sy, draw, team, t, rel) {
-    const col = this.TEAM[team || 0], OUT = this.OUT, W = this.W, H = this.H;
-    const cx = 480, base = H + 8, pull = draw * 70;
-    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // A right-handed recurve seen from the archer's eye. It is built in camera space (metres: x right,
+  // y up, z forward) and projected around the sight: the aperture sits on the aim axis at (sx, sy),
+  // so the whole rig follows the sight and its sway. draw 0..1 brings the bow up and pulls the nock
+  // from brace height back to the anchor under the chin: the limbs bend back, the recurves unroll,
+  // the string folds into a V and the arrow slides back through the rest until its point clicks past
+  // the clicker. o.creep (seconds held past the steady window) lets the draw shake and creep forward.
+  // rel 0..1: the moment after the release - the string slaps home and shivers, and the bow rolls
+  // forward out of a loose hand.
+  bow(ctx, sx, sy, draw, team, t, rel, o) {
+    o = o || {};
+    const col = this.TEAM[team || 0], OUT = this.OUT, U = KAR.Util;
+    const F = 330, ZN = 0.07, GX = 0.045, GZ = 0.74, MID = -0.06, GRIP = -0.15;
+    let p = U.clamp(draw, 0, 1), roll = 0, ox = sx, oy = sy, vib = 0;
     if (rel > 0) {
-      const e = KAR.Util.easeOut(rel);
-      ctx.translate(cx, base - 100); ctx.rotate(0.22 * e); ctx.scale(1 - 0.12 * e, 1 - 0.12 * e); ctx.translate(-cx, -(base - 100) - 40 + e * 150);
-      const vib = Math.sin(rel * 70) * (1 - rel) * 16;
-      const limb = (s) => { ctx.beginPath(); ctx.moveTo(cx + s * 70, base - 200); ctx.quadraticCurveTo(cx + s * 175, base - 80, cx + s * 74, base + 10); ctx.lineWidth = 14; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 8; ctx.strokeStyle = '#a8703a'; ctx.stroke(); };
-      limb(-1); limb(1);
-      ctx.beginPath(); ctx.moveTo(cx - 70, base - 200); ctx.quadraticCurveTo(cx + vib, base - 140, cx + 74, base - 200); ctx.lineWidth = 3.4; ctx.strokeStyle = '#fff6e0'; ctx.stroke(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
-      ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(cx - 168, base - 110, 34, 100, 12) : ctx.rect(cx - 168, base - 110, 34, 100)); ctx.fillStyle = '#8a5a2c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(cx - 152, base - 60, 34, 26, -0.2, 0, 7); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.stroke();
-      ctx.restore(); return;
+      const e = U.easeOut(rel); p = 0; roll = 0.6 * e; ox -= 40 * e; oy += 60 * e + 240 * rel * rel;
+      vib = Math.sin(rel * 70) * (1 - rel) * 0.014;
+    } else {
+      oy += (1 - U.easeOut(Math.min(1, p * 3.5))) * 170;                 // the bow comes up as the draw starts
+      const c = o.creep || 0;
+      if (c > 0) { p -= Math.min(0.05, c * 0.02) + Math.abs(Math.sin(t * 19)) * Math.min(0.012, c * 0.006); ox += Math.sin(t * 23) * Math.min(3, c * 1.5); }
     }
-    // the arrow: tapered from the string up to the sight point
-    const tx = sx, ty = sy + 10, sxp = cx, syp = base - 62 + pull * 0.2;
-    const ang = Math.atan2(ty - syp, tx - sxp), nx = -Math.sin(ang), ny = Math.cos(ang);
-    ctx.beginPath(); ctx.moveTo(sxp + nx * 6, syp + ny * 6); ctx.lineTo(tx + nx * 0.8, ty + ny * 0.8); ctx.lineTo(tx - nx * 0.8, ty - ny * 0.8); ctx.lineTo(sxp - nx * 6, syp - ny * 6); ctx.closePath();
-    ctx.fillStyle = '#f2e6c8'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
-    // fletching at the nock
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sxp, syp); ctx.lineTo(sxp + nx * s * 26 - Math.cos(ang) * 6, syp + ny * s * 26 - Math.sin(ang) * 6); ctx.lineTo(sxp + Math.cos(ang) * 58 + nx * s * 8, syp + Math.sin(ang) * 58 + ny * s * 8); ctx.closePath(); ctx.fillStyle = s > 0 ? col.base : col.light; ctx.fill(); ctx.stroke(); }
-    // bow limbs + string
-    const limb = (s) => { ctx.beginPath(); ctx.moveTo(cx + s * 70, base - 200); ctx.quadraticCurveTo(cx + s * 175, base - 80, cx + s * 74, base + 10); ctx.lineWidth = 14; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 8; ctx.strokeStyle = '#a8703a'; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,230,170,0.7)'; ctx.stroke(); };
-    limb(-1); limb(1);
-    ctx.beginPath(); ctx.moveTo(cx - 70, base - 200); ctx.lineTo(sxp, syp + 14); ctx.lineTo(cx + 74, base - 200); ctx.lineWidth = 3.4; ctx.strokeStyle = '#fff6e0'; ctx.stroke(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
-    // riser (grip) and the bow hand
-    ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(cx - 168, base - 110, 34, 100, 12) : ctx.rect(cx - 168, base - 110, 34, 100)); ctx.fillStyle = '#8a5a2c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx - 152, base - 60, 34, 26, -0.2, 0, 7); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.stroke();
+    // the bow rolls forward about the grip after the release
+    const rot = v => { if (!roll) return v; const dy = v.y - GRIP, dz = v.z - GZ, c = Math.cos(roll), s = Math.sin(roll); return { x: v.x, y: GRIP + dy * c - dz * s, z: GZ + dy * s + dz * c }; };
+    const P = v => { v = rot(v); const z = Math.max(ZN, v.z); return { x: ox + F * v.x / z, y: oy - F * v.y / z, s: F / z }; };
+    const lerp3 = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k });
+    // a camera-space segment cut at the near plane (the anchor end sits almost at the eye)
+    const seg = (a, b) => { a = rot(a); b = rot(b); if (a.z < ZN && b.z < ZN) return null; if (a.z < ZN) a = lerp3(a, b, (ZN - a.z) / (b.z - a.z)); if (b.z < ZN) b = lerp3(b, a, (ZN - b.z) / (a.z - b.z)); return [a, b]; };
+    const Pr = v => ({ x: ox + F * v.x / v.z, y: oy - F * v.y / v.z, s: F / v.z });
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    // limbs: they bend back toward the archer as the draw comes on, and the recurve curls unroll
+    const k = 0.298 + 0.096 * p, curl = 1.2 - 0.7 * p;
+    // the eye sits right of the bow's plane, so a limb bending back toward the archer swings left on screen
+    const YS = Math.sin(0.45), YC = Math.cos(0.45), yaw = (y, d) => ({ x: GX + d * YS, y, z: GZ + d * YC });
+    const limb = sg => { const pts = []; for (let i = 0; i <= 16; i++) { const s = i / 16; pts.push({ s, v: yaw(MID + sg * (0.27 + 0.55 * s - 0.04 * p * s * s), 0.03 * s - k * s * s + curl * Math.max(0, s - 0.78) ** 2) }); } return pts; };
+    const drawLimb = pts => {
+      const L = [], Rr = [];
+      for (const { s, v } of pts) { const w = 0.042 - 0.026 * s; L.push(P({ x: v.x - w / 2, y: v.y, z: v.z })); Rr.push(P({ x: v.x + w / 2, y: v.y, z: v.z })); }
+      ctx.beginPath(); L.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); for (let i = Rr.length - 1; i >= 0; i--) ctx.lineTo(Rr[i].x, Rr[i].y); ctx.closePath();
+      ctx.fillStyle = '#a8703a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.beginPath(); pts.forEach(({ v }, i) => { const q = P({ x: v.x - 0.006, y: v.y, z: v.z }); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,230,170,0.6)'; ctx.stroke();
+      const tp = P(pts[pts.length - 1].v); ctx.beginPath(); ctx.arc(tp.x, tp.y, Math.max(4, 0.016 * tp.s), 0, 6.283); ctx.fillStyle = col.base; ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke();
+      return pts[pts.length - 1].v;
+    };
+    const up = limb(1), lo = limb(-1);
+    const tipU = drawLimb(up), tipL = drawLimb(lo);
+
+    // riser: dark wood, cut away into a sight window above the grip, a team-colour stripe down the back
+    const RT = MID + 0.27, RB = MID - 0.27, hw = 0.019;
+    const rs = [[RT, 0], [0.06, 0], [0.035, 0.009], [-0.07, 0.009], [-0.085, 0], [RB, 0]];
+    ctx.beginPath();
+    rs.forEach(([y, cut], i) => { const q = P({ x: GX - hw + cut, y, z: GZ }); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); });
+    for (let i = rs.length - 1; i >= 0; i--) { const y = rs[i][0], q = P({ x: GX + hw + (y < -0.1 && y > -0.22 ? 0.006 : 0), y, z: GZ }); ctx.lineTo(q.x, q.y); }
+    ctx.closePath(); ctx.fillStyle = '#6b4322'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+    { const a = P({ x: GX + hw * 0.45, y: RT - 0.02, z: GZ }), b = P({ x: GX + hw * 0.45, y: RB + 0.02, z: GZ }); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = Math.max(2, 0.006 * a.s); ctx.strokeStyle = col.base; ctx.stroke(); }
+
+    // sight: a block on the riser and an extension rod out to the aperture (the reticle ring)
+    { const a = P({ x: GX - hw, y: 0.02, z: GZ + 0.02 }), b = P({ x: 0.012, y: 0.004, z: 1.0 });
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = 7; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 3.5; ctx.strokeStyle = '#8c96a3'; ctx.stroke();
+      const m1 = P({ x: GX - hw - 0.006, y: 0.045, z: GZ }), m2 = P({ x: GX - hw + 0.004, y: -0.005, z: GZ });
+      ctx.beginPath(); ctx.rect(m1.x, m1.y, m2.x - m1.x, m2.y - m1.y); ctx.fillStyle = '#3a414c'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke(); }
+
+    // bow arm + hand wrapped round the grip
+    { const sh = seg({ x: -0.16, y: -0.42, z: 0.12 }, { x: GX - 0.01, y: GRIP - 0.03, z: GZ - 0.03 });
+      if (sh) { const a = Pr(sh[0]), b = Pr(sh[1]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = 0.075 * b.s + 10; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 0.075 * b.s + 4; ctx.strokeStyle = col.base; ctx.stroke();
+        const w = lerp3(sh[1], sh[0], 0.12), wq = Pr(w); ctx.beginPath(); ctx.moveTo(wq.x, wq.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = 0.062 * b.s; ctx.strokeStyle = '#f0b98a'; ctx.stroke(); }
+      const h = P({ x: GX - 0.004, y: GRIP, z: GZ - 0.02 }), r = 0.05 * h.s;
+      ctx.beginPath(); ctx.ellipse(h.x, h.y, r * 0.95, r * 1.15, 0.1, 0, 6.283); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(h.x + r * 0.15, h.y - r * 0.45 + i * r * 0.42); ctx.lineTo(h.x + r * 0.85, h.y - r * 0.38 + i * r * 0.42); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(120,70,40,0.6)'; ctx.stroke(); }
+      const th = P({ x: GX - 0.026, y: GRIP + 0.05, z: GZ + 0.01 }); ctx.beginPath(); ctx.ellipse(th.x, th.y, r * 0.32, r * 0.55, -0.35, 0, 6.283); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke(); }
+
+    // nock: on the braced string at rest, under the chin at full draw
+    const brace = yaw(-0.075, -0.21), anchor = { x: 0.02, y: -0.11, z: 0.035 };
+    const nock = lerp3(brace, anchor, U.easeOut(p) * 0.35 + p * 0.65);
+    const REST = { x: 0.027, y: -0.075, z: GZ - 0.01 }, CLICK_Z = GZ + 0.025;
+    let tip = null;
+    if (rel <= 0) {
+      // the arrow: shaft from the nock through the rest, three vanes at the back, a steel point
+      const d = { x: REST.x - nock.x, y: REST.y - nock.y, z: REST.z - nock.z }, dl = Math.hypot(d.x, d.y, d.z); d.x /= dl; d.y /= dl; d.z /= dl;
+      const at = s => ({ x: nock.x + d.x * s, y: nock.y + d.y * s, z: nock.z + d.z * s });
+      tip = at(0.74);
+      const sh = seg(nock, tip);
+      if (sh) {
+        const N = 12; let prev = Pr(sh[0]);
+        for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sh[0], sh[1], i / N)), w = Math.max(2.4, 0.008 * (q.s + prev.s) / 2);
+          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w + 3; ctx.strokeStyle = OUT; ctx.stroke(); prev = q; }
+        prev = Pr(sh[0]);
+        for (let i = 1; i <= N; i++) { const f = i / N, q = Pr(lerp3(sh[0], sh[1], f)), w = Math.max(2.4, 0.008 * (q.s + prev.s) / 2);
+          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w; ctx.strokeStyle = f > 0.96 ? '#c9d1d9' : '#f2e6c8'; ctx.stroke(); prev = q; }
+        // vanes - big and soft while the nock is close to the eye
+        const ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1, u = { x: ux / ul, y: 0, z: uz / ul };
+        const v = { x: u.y * d.z - u.z * d.y, y: u.z * d.x - u.x * d.z, z: u.x * d.y - u.y * d.x };
+        for (const [ang, c] of [[Math.PI, col.base], [Math.PI / 3, col.light], [-Math.PI / 3, col.light]]) {
+          const ca = Math.cos(ang), sa = Math.sin(ang), dir = { x: u.x * ca + v.x * sa, y: u.y * ca + v.y * sa, z: u.z * ca + v.z * sa };
+          const off = (s, h) => { const b = at(s); return { x: b.x + dir.x * h, y: b.y + dir.y * h, z: b.z + dir.z * h }; };
+          const pts = [off(0.025, 0), off(0.035, 0.016), off(0.075, 0.013), off(0.115, 0)];
+          if (pts.some(q => rot(q).z < ZN + 0.02)) continue;
+          ctx.beginPath(); pts.forEach((q, i) => { const r = P(q); i ? ctx.lineTo(r.x, r.y) : ctx.moveTo(r.x, r.y); }); ctx.closePath();
+          ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+        }
+      }
+    }
+    // clicker: a thin blade on the riser that rides on the arrow until the point is drawn past it
+    { const passed = !tip || tip.z < CLICK_Z, top = P({ x: GX - hw - 0.002, y: -0.025, z: CLICK_Z }), bot = P({ x: passed ? GX - hw - 0.002 : GX - hw - 0.009, y: passed ? -0.07 : -0.069, z: CLICK_Z });
+      ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bot.x, bot.y); ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = '#d8dee6'; ctx.stroke(); }
+
+    // string: tip to nock to tip - fine and sharp at the bow, a soft blur where it passes the eye
+    const sn = rel > 0 ? { x: brace.x + vib, y: brace.y, z: brace.z } : nock;
+    for (const end of [tipU, tipL]) {
+      const sg = seg(end, sn); if (!sg) continue;
+      const N = 10; let prev = Pr(sg[0]);
+      for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sg[0], sg[1], i / N)), w = Math.max(1.6, Math.min(9, 0.0024 * q.s));
+        ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y);
+        if (w > 4) { ctx.lineWidth = w; ctx.strokeStyle = 'rgba(255,246,224,' + Math.min(0.7, 3 / w) + ')'; ctx.stroke(); }
+        else { ctx.lineWidth = w + 1.6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = w; ctx.strokeStyle = '#fff6e0'; ctx.stroke(); }
+        prev = q; }
+    }
+
+    // the draw hand: a leather tab on three fingers hooked round the string, gone below frame at anchor
+    if (rel <= 0 && nock.z > 0.2) {
+      const h = P({ x: nock.x + 0.012, y: nock.y - 0.004, z: nock.z }), r = 0.03 * h.s, fade = U.clamp((nock.z - 0.2) / 0.12, 0, 1);
+      ctx.globalAlpha = fade;
+      const arm = seg({ x: nock.x + 0.03, y: nock.y - 0.01, z: nock.z }, { x: 0.22, y: -0.34, z: 0.06 });
+      if (arm) { const a = Pr(arm[0]), b = Pr(arm[1]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = 0.07 * a.s + 6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 0.07 * a.s; ctx.strokeStyle = '#f0b98a'; ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(h.x + r * 0.5, h.y + r * 0.2, r * 1.2, r * 0.95, 0.3, 0, 6.283); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke();
+      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.ellipse(h.x - r * 0.25, h.y + i * r * 0.55, r * 0.5, r * 0.3, 0, 0, 6.283); ctx.fillStyle = '#e6a877'; ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(h.x - r * 0.05, h.y, r * 0.42, r * 1.05, 0, 0, 6.283); ctx.fillStyle = '#4a2d18'; ctx.fill(); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   },
   sight(ctx, x, y, r, steady, t) {

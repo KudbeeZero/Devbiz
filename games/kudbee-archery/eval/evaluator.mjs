@@ -51,6 +51,20 @@ const d1 = await G(() => KARGame.draw);
 await waitFor(() => KARGame.draw >= 1, 3000);
 rec('draw-meter', d1 > 0.25 && d1 < 0.9 && await G(() => KARGame.draw >= 1), `drawing climbs (${d1.toFixed(2)} at 0.5 s) to a full draw`);
 await page.screenshot({ path: `${OUT}/aim.png` });
+// a recurve gets heavier toward the anchor: the draw comes off the brace quickly and slows into full draw
+const rate = await G(() => { const g = KARGame, keep = [g.draw, g.holdT]; const step = d => { g.draw = d; g._updateShot(0.05); return g.draw - d; }; const r = [step(0), step(0.9)]; g.draw = keep[0]; g.holdT = keep[1]; return r; });
+rec('draw-gets-heavier', rate[0] > rate[1] * 1.6 && rate[1] > 0, `draw speed off the brace ${rate[0].toFixed(3)} vs near anchor ${rate[1].toFixed(3)} per 50 ms`);
+// the first-person bow: it follows the sight, and drawing it pulls the string and arrow back toward the eye
+const bowPix = await G(() => {
+  const c = document.createElement('canvas'); c.width = 960; c.height = 640; const ctx = c.getContext('2d');
+  const shot = (sx, d) => { ctx.clearRect(0, 0, 960, 640); KAR.Render.bow(ctx, sx, 300, d, 0, 1, 0, {}); return ctx.getImageData(0, 0, 960, 640).data; };
+  const cx = px => { let s = 0, n = 0; for (let i = 3; i < px.length; i += 16) if (px[i] > 0) { s += (i >> 2) % 960; n++; } return n ? s / n : 0; };
+  const a = shot(380, 1), b = shot(580, 1), lo = shot(480, 0.3), hi = shot(480, 1);
+  let diff = 0; for (let y = 480; y < 640; y++) for (let x = 0; x < 960; x += 2) { const i = (y * 960 + x) * 4 + 3; if ((lo[i] > 0) !== (hi[i] > 0)) diff++; }
+  return { shift: cx(b) - cx(a), diff };
+});
+rec('bow-follows-sight', Math.abs(bowPix.shift - 200) < 25, `moving the sight 200 px moves the bow ${bowPix.shift.toFixed(0)} px`);
+rec('bow-draws-back', bowPix.diff > 800, `drawing from 30% to full changes ${bowPix.diff} px of string, arrow and hand below the grip`);
 
 // the sight sways at full draw; holding breath (B) shrinks the sway
 const amp = async hold => {

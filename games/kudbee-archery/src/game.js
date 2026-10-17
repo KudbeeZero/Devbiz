@@ -287,7 +287,8 @@ KAR.Game = class {
       if (this.cpu) this._updateCpu(dt);
       if (this.drawing) {
         const wasFull = this.draw >= 1;
-        this.draw = Math.min(1, this.draw + dt / C.DRAW_T);
+        // a recurve gets heavier toward the anchor: quick off the brace, slow into the last few inches
+        this.draw = Math.min(1, this.draw + dt / C.DRAW_T * 1.044 * (1.35 - 0.7 * this.draw));
         if (this.draw >= 1 && !wasFull) this.audio.full(); else if (this.draw < 1) this.audio.draw(this.draw);
         if (this.draw >= 1) this.holdT += dt;
         // breath: holding steadies the sight for a couple of seconds; empty lungs make it worse
@@ -367,7 +368,7 @@ KAR.Game = class {
     if (this.screen !== 'menu') {
       R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx);
       const rel = (this.time - this.relT) / 0.45;
-      if (rel >= 0 && rel < 1 && this.screen === 'play') R.bow(ctx, 0, 0, 0, this.relTeam ? 1 : 0, this.time, Math.max(0.001, rel));
+      if (rel >= 0 && rel < 1 && this.screen === 'play') R.bow(ctx, this.relX || 480, this.relY || 300, 0, this.relTeam ? 1 : 0, this.time, Math.max(0.001, rel));
     }
     ctx.restore();
     U.begin();
@@ -419,7 +420,8 @@ KAR.Game = class {
     if (!this.drawing && !cpu) return;
     const sx = this.aimX + this.sway.x, sy = this.aimY + this.sway.y, q = R.proj(sx, sy, m.dist);
     if (!q) return;
-    R.bow(ctx, q.x, q.y, this.draw, cpu ? 1 : 0, this.time);
+    R.bow(ctx, q.x, q.y, this.draw, cpu ? 1 : 0, this.time, 0, { creep: this.draw >= 1 && !cpu ? Math.max(0, this.holdT - KAR.CFG.STEADY_T) : 0 });
+    this.relX = q.x; this.relY = q.y;
     const r = Math.max(14, 0.12 * q.k * Math.min(1, m.faceD / 0.6) + 8);
     R.sight(ctx, q.x, q.y, Math.min(26, r), this.steady, this.time);
     // wind-hold helper on the easier levels: a faint tick where a still-air arrow would be pushed to
