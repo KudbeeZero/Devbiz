@@ -373,15 +373,15 @@ KAR.Render = {
   // from brace height back to the anchor under the chin: the limbs bend back, the recurves unroll,
   // the string folds into a V and the arrow slides back through the rest until its point clicks past
   // the clicker. o.creep (seconds held past the steady window) lets the draw shake and creep forward.
-  // rel 0..1: the moment after the release - the string slaps home and shivers, and the bow rolls
-  // forward out of a loose hand.
+  // rel 0..1: the moment after the release - the string slaps home and shivers, the bow hand opens and the
+  // bow tips forward into the finger sling while the arm follows through.
   bow(ctx, sx, sy, draw, team, t, rel, o) {
     o = o || {};
     const col = this.TEAM[team || 0], OUT = this.OUT, U = KAR.Util;
     const F = 330, ZN = 0.07, GX = 0.045, GZ = 0.74, MID = -0.06, GRIP = -0.15;
     let p = U.clamp(draw, 0, 1), roll = 0, ox = sx, oy = sy, vib = 0;
     if (rel > 0) {
-      const e = U.easeOut(rel); p = 0; roll = 0.6 * e; ox -= 40 * e; oy += 60 * e + 240 * rel * rel;
+      const e = U.easeOut(rel); p = 0; roll = 0.9 * e; ox -= 30 * e; oy += 40 * e + 110 * rel * rel;
       vib = Math.sin(rel * 70) * (1 - rel) * 0.014;
     } else {
       oy += (1 - U.easeOut(Math.min(1, p * 3.5))) * 170;                 // the bow comes up as the draw starts
@@ -414,6 +414,45 @@ KAR.Render = {
     const up = limb(1), lo = limb(-1);
     const tipU = drawLimb(up), tipL = drawLimb(lo);
 
+    // ---- arms ----------------------------------------------------------------------------
+    // The arms have their own frame: after the release they don't roll with the bow - the arm follows
+    // through (drops a little, swings out) while the bow tips forward out of the open hand into the sling.
+    const fe = rel > 0 ? U.easeOut(rel) : 0, ax = rel > 0 ? sx - 22 * fe : ox, ay = rel > 0 ? sy + 30 * fe : oy;
+    const PA = v => ({ x: ax + F * v.x / v.z, y: ay - F * v.y / v.z, s: F / v.z });
+    const SKIN = ['#ffd9b5', '#f0b98a', '#c98a5a'], LEATHER = ['#a8733f', '#7a4a26', '#4a2a12'];
+    const SLEEVE = [col.light, col.base, col.dark], CUFF = [col.base, col.dark, '#122a44'];
+    const along = (a, b, k) => lerp3(a, b, k);
+    // a rounded arm section between two camera-space points (radii in metres), shaded across its width so it
+    // reads as a limb, not a ribbon. Cut where it comes inside zc of the eye so it runs off frame instead of
+    // ballooning. pr: the projector (arm frame by default). Returns the screen axis for detailing.
+    const tube = (a, b, ra, rb, pal, zc, pr) => {
+      pr = pr || PA; zc = zc || 0.12;
+      if (a.z < zc && b.z < zc) return null;
+      if (a.z < zc) { const k = (zc - a.z) / (b.z - a.z); ra += (rb - ra) * k; a = lerp3(a, b, k); }
+      if (b.z < zc) { const k = (zc - b.z) / (a.z - b.z); rb += (ra - rb) * k; b = lerp3(b, a, k); }
+      const p = pr(a), q = pr(b), wa = ra * p.s, wb = rb * q.s, dx = q.x - p.x, dy = q.y - p.y, dl = Math.hypot(dx, dy) || 1;
+      let nx = -dy / dl, ny = dx / dl; if (ny > 0) { nx = -nx; ny = -ny; }           // n points to the lit (upper) side
+      const an = Math.atan2(ny, nx);
+      ctx.beginPath(); ctx.moveTo(p.x + nx * wa, p.y + ny * wa); ctx.lineTo(q.x + nx * wb, q.y + ny * wb);
+      ctx.arc(q.x, q.y, wb, an, an + Math.PI, dx * ny - dy * nx > 0); ctx.lineTo(p.x - nx * wa, p.y - ny * wa); ctx.closePath();
+      const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2, w = (wa + wb) / 2, g = ctx.createLinearGradient(mx + nx * w, my + ny * w, mx - nx * w, my - ny * w);
+      g.addColorStop(0, pal[0]); g.addColorStop(0.35, pal[1]); g.addColorStop(1, pal[2]);
+      ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke();
+      return { p, q, wa, wb, nx, ny, ux: dx / dl, uy: dy / dl };
+    };
+    const capsule = (x1, y1, x2, y2, w, pal) => {      // a small screen-space capsule (fingers, thumb)
+      const dx = x2 - x1, dy = y2 - y1, dl = Math.hypot(dx, dy) || 1; let nx = -dy / dl, ny = dx / dl; if (ny > 0) { nx = -nx; ny = -ny; }
+      const g = ctx.createLinearGradient(x1 + nx * w, y1 + ny * w, x1 - nx * w, y1 - ny * w); g.addColorStop(0, pal[0]); g.addColorStop(0.4, pal[1]); g.addColorStop(1, pal[2]);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineCap = 'round'; ctx.lineWidth = w * 2 + 5; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = w * 2; ctx.strokeStyle = g; ctx.stroke();
+    };
+    // the bow hand: wrist, back of the hand, thumb up the left of the grip, fingers round the front of it
+    const BH = { x: GX - 0.012, y: GRIP, z: GZ - 0.035 }, bh = PA(BH), hr = 0.056 * bh.s;
+    const riserR = P({ x: GX + 0.019, y: GRIP, z: GZ });
+    if (rel <= 0) for (let i = 0; i < 4; i++) {         // fingertips curl round the far side of the riser and peek out to its right
+      const fy = bh.y - hr * 0.55 + i * hr * 0.42, fx = riserR.x + hr * (0.18 - 0.05 * Math.abs(i - 1.5));
+      capsule(bh.x + hr * 0.2, fy, fx, fy + hr * 0.08, hr * (i === 3 ? 0.16 : 0.2), SKIN);
+    }
+
     // riser: dark wood, cut away into a sight window above the grip, a team-colour stripe down the back
     const RT = MID + 0.27, RB = MID - 0.27, hw = 0.019;
     const rs = [[RT, 0], [0.06, 0], [0.035, 0.009], [-0.07, 0.009], [-0.085, 0], [RB, 0]];
@@ -429,40 +468,44 @@ KAR.Render = {
       const m1 = P({ x: GX - hw - 0.006, y: 0.045, z: GZ }), m2 = P({ x: GX - hw + 0.004, y: -0.005, z: GZ });
       ctx.beginPath(); ctx.rect(m1.x, m1.y, m2.x - m1.x, m2.y - m1.y); ctx.fillStyle = '#3a414c'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke(); }
 
-    // a tapered arm section between two camera-space points (radii in metres), cut where it leaves the eye's
-    // near zone so it runs off the edge of frame instead of ballooning
-    const SKIN = '#f0b98a', LEATHER = '#7a4a26';
-    const tube = (a, b, ra, rb, fill, zc) => {
-      a = rot(a); b = rot(b); zc = zc || 0.12;
-      if (a.z < zc && b.z < zc) return;
-      if (a.z < zc) { const k = (zc - a.z) / (b.z - a.z); ra += (rb - ra) * k; a = lerp3(a, b, k); }
-      if (b.z < zc) { const k = (zc - b.z) / (a.z - b.z); rb += (ra - rb) * k; b = lerp3(b, a, k); }
-      const p = Pr(a), q = Pr(b), wa = ra * p.s, wb = rb * q.s, dx = q.x - p.x, dy = q.y - p.y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
-      ctx.beginPath(); ctx.moveTo(p.x + nx * wa, p.y + ny * wa); ctx.lineTo(q.x + nx * wb, q.y + ny * wb);
-      ctx.arc(q.x, q.y, wb, Math.atan2(ny, nx), Math.atan2(ny, nx) + Math.PI, true); ctx.lineTo(p.x - nx * wa, p.y - ny * wa); ctx.closePath();
-      ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
-      // a soft highlight down the lit (upper) side
-      ctx.beginPath(); ctx.moveTo(p.x + nx * wa * 0.55, p.y + ny * wa * 0.55); ctx.lineTo(q.x + nx * wb * 0.55, q.y + ny * wb * 0.55);
-      ctx.lineWidth = Math.max(1.5, Math.min(wa, wb) * 0.3); ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.stroke();
-    };
-    const along = (a, b, k) => lerp3(a, b, k);
-
-    // bow arm: straight from the left shoulder to the grip - sleeve, bare forearm, leather arm guard, wrist
-    { const S = { x: -0.21, y: -0.27, z: 0.02 }, W = { x: GX - 0.012, y: GRIP - 0.03, z: GZ - 0.09 }, E = along(S, W, 0.5);
-      tube(S, E, 0.058, 0.05, col.base);
-      tube(along(E, S, 0.08), along(S, W, 0.53), 0.052, 0.051, col.dark);                 // sleeve cuff
-      tube(E, W, 0.043, 0.03, SKIN);
-      tube(along(E, W, 0.18), along(E, W, 0.82), 0.047, 0.037, LEATHER);                  // arm guard
-      for (const k of [0.32, 0.66]) { const a = Pr(rot(along(E, W, k))), r = (0.047 - 0.01 * k) * a.s, d = Pr(rot(along(E, W, k + 0.05)));
-        const ang = Math.atan2(d.y - a.y, d.x - a.x) + Math.PI / 2;
-        ctx.beginPath(); ctx.moveTo(a.x + Math.cos(ang) * r, a.y + Math.sin(ang) * r); ctx.lineTo(a.x - Math.cos(ang) * r, a.y - Math.sin(ang) * r); ctx.lineWidth = Math.max(2, 0.008 * a.s); ctx.strokeStyle = col.light; ctx.stroke(); }
-      // hand: a loose fist round the grip, knuckles toward the target, thumb along the riser
-      const h = P({ x: GX - 0.006, y: GRIP, z: GZ - 0.025 }), r = 0.048 * h.s;
-      ctx.beginPath(); ctx.ellipse(h.x - r * 0.1, h.y + r * 0.05, r * 0.95, r * 1.12, 0.12, 0, 6.283); ctx.fillStyle = SKIN; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
-      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(150,85,45,0.7)';
-      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(h.x + r * 0.55, h.y - r * 0.42 + i * r * 0.42, r * 0.26, -1.2, 1.2); ctx.stroke(); }
-      const th = P({ x: GX - 0.028, y: GRIP + 0.045, z: GZ - 0.005 });
-      ctx.beginPath(); ctx.ellipse(th.x, th.y, r * 0.3, r * 0.58, -0.3, 0, 6.283); ctx.fillStyle = SKIN; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke(); }
+    // bow arm: straight from the left shoulder to the grip - sleeve with a cuff, forearm, laced leather arm guard
+    { const S = { x: -0.21, y: -0.27, z: 0.02 }, W = { x: GX - 0.016, y: GRIP - 0.035, z: GZ - 0.1 }, E = along(S, W, 0.5); E.x -= 0.015; E.y -= 0.01;
+      const up = tube(S, E, 0.062, 0.052, SLEEVE);
+      if (up) for (const k of [0.45, 0.7]) {             // fabric creases
+        const cx = up.p.x + (up.q.x - up.p.x) * k, cy = up.p.y + (up.q.y - up.p.y) * k, w = up.wa + (up.wb - up.wa) * k;
+        ctx.beginPath(); ctx.moveTo(cx + up.nx * w * 0.8, cy + up.ny * w * 0.8); ctx.quadraticCurveTo(cx + up.ux * w * 0.35, cy + up.uy * w * 0.35, cx - up.nx * w * 0.5, cy - up.ny * w * 0.5);
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(10,30,60,0.35)'; ctx.stroke();
+      }
+      const M = along(E, W, 0.45);
+      tube(E, M, 0.047, 0.041, SKIN); tube(M, W, 0.041, 0.03, SKIN);
+      tube(along(E, S, 0.07), along(E, W, 0.06), 0.055, 0.053, CUFF);                     // rolled sleeve cuff
+      const g = tube(along(E, W, 0.2), along(E, W, 0.84), 0.05, 0.037, LEATHER);           // arm guard
+      if (g) {
+        ctx.lineWidth = Math.max(1.5, g.wb * 0.08); ctx.strokeStyle = col.light; ctx.beginPath();
+        for (let i = 0; i <= 6; i++) { const k = 0.1 + i * 0.13, cx = g.p.x + (g.q.x - g.p.x) * k, cy = g.p.y + (g.q.y - g.p.y) * k, w = (g.wa + (g.wb - g.wa) * k) * 0.35, sg = i % 2 ? 1 : -1;
+          ctx[i ? 'lineTo' : 'moveTo'](cx + g.nx * w * sg, cy + g.ny * w * sg); }
+        ctx.stroke();                                                                   // the lace, zig-zagging down the guard
+        for (const k of [0.04, 0.96]) { const cx = g.p.x + (g.q.x - g.p.x) * k, cy = g.p.y + (g.q.y - g.p.y) * k, w = g.wa + (g.wb - g.wa) * k;
+          ctx.beginPath(); ctx.moveTo(cx + g.nx * w, cy + g.ny * w); ctx.lineTo(cx - g.nx * w, cy - g.ny * w); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(30,15,5,0.6)'; ctx.stroke(); }
+      }
+      // back of the hand, knuckles along the front of the grip
+      const wq = PA(W), ang = Math.atan2(bh.y - wq.y, bh.x - wq.x);
+      ctx.save(); ctx.translate(bh.x, bh.y); ctx.rotate(ang);
+      const hg = ctx.createLinearGradient(0, -hr, 0, hr); hg.addColorStop(0, SKIN[0]); hg.addColorStop(0.4, SKIN[1]); hg.addColorStop(1, SKIN[2]);
+      ctx.beginPath(); ctx.moveTo(-hr * 0.95, -hr * 0.55); ctx.quadraticCurveTo(-hr * 0.2, -hr * 0.95, hr * 0.55, -hr * 0.8);
+      ctx.quadraticCurveTo(hr * 1.05, -hr * 0.2, hr * 0.7, hr * 0.75); ctx.quadraticCurveTo(-hr * 0.1, hr * 1.0, -hr * 0.95, hr * 0.5); ctx.closePath();
+      ctx.fillStyle = hg; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.strokeStyle = 'rgba(150,85,45,0.55)'; ctx.lineWidth = 1.6;                      // knuckles + tendons
+      for (let i = 0; i < 4; i++) { const ky = -hr * 0.55 + i * hr * 0.4; ctx.beginPath(); ctx.arc(hr * 0.62, ky, hr * 0.12, -1.6, 1.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-hr * 0.5, ky * 0.6); ctx.lineTo(hr * 0.45, ky); ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; }
+      ctx.restore();
+      // thumb up the left of the grip, toward the target; the hand opens after the release
+      const tb = { x: bh.x - hr * 0.45, y: bh.y - hr * 0.55 }, tt = rel > 0 ? { x: tb.x - hr * (0.4 + 0.5 * fe), y: tb.y - hr * (0.7 - 0.3 * fe) } : { x: tb.x + hr * 0.15, y: tb.y - hr * 0.95 };
+      capsule(tb.x, tb.y, tt.x, tt.y, hr * 0.22, SKIN);
+      if (rel > 0) for (let i = 0; i < 4; i++) { const fy = bh.y - hr * 0.45 + i * hr * 0.36; capsule(bh.x + hr * 0.5, fy, bh.x + hr * (0.9 + 0.5 * fe), fy - hr * 0.25 * fe, hr * 0.17, SKIN); }
+      // finger sling: a cord from thumb to forefinger round the front of the riser - it catches the bow
+      const ra = P({ x: GX + 0.02, y: GRIP + 0.045, z: GZ + 0.02 }), rb = P({ x: GX - 0.02, y: GRIP + 0.04, z: GZ + 0.02 });
+      ctx.beginPath(); ctx.moveTo(tt.x, tt.y); ctx.quadraticCurveTo(rb.x, rb.y, (ra.x + rb.x) / 2, (ra.y + rb.y) / 2 - 2); ctx.quadraticCurveTo(ra.x + hr * 0.3, ra.y, bh.x + hr * 0.75, bh.y - hr * 0.7);
+      ctx.lineWidth = 4.5; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 2.4; ctx.strokeStyle = col.light; ctx.stroke(); }
 
     // nock: on the braced string at rest, under the chin at full draw
     const brace = yaw(-0.075, -0.21), anchor = { x: 0.02, y: -0.11, z: 0.035 };
@@ -511,19 +554,27 @@ KAR.Render = {
         prev = q; }
     }
 
-    // the draw arm: hand hooked on the string, the forearm running back past the cheek to an elbow behind the
-    // eye - it sweeps out of frame as the nock comes back to the anchor
-    if (rel <= 0 && nock.z > 0.2) {
-      const fade = U.clamp((nock.z - 0.2) / 0.12, 0, 1);
-      ctx.globalAlpha = fade;
-      const W = { x: nock.x + 0.05, y: nock.y - 0.012, z: nock.z - 0.03 }, E = { x: 0.32, y: -0.12, z: -0.2 };
-      tube(W, E, 0.031, 0.048, SKIN);
-      tube(along(W, E, 0.4), E, 0.04, 0.052, col.base);
-      const h = P({ x: nock.x + 0.018, y: nock.y - 0.006, z: nock.z }), r = 0.03 * h.s;
-      ctx.beginPath(); ctx.ellipse(h.x + r * 0.55, h.y + r * 0.15, r * 1.15, r * 0.95, 0.25, 0, 6.283); ctx.fillStyle = SKIN; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke();
-      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.ellipse(h.x - r * 0.2, h.y + i * r * 0.5, r * 0.46, r * 0.27, 0, 0, 6.283); ctx.fillStyle = '#e6a877'; ctx.fill(); ctx.lineWidth = 2; ctx.stroke(); }
-      ctx.beginPath(); ctx.ellipse(h.x - r * 0.02, h.y, r * 0.36, r * 0.98, 0, 0, 6.283); ctx.fillStyle = '#4a2d18'; ctx.fill(); ctx.stroke();   // finger tab
-      ctx.globalAlpha = 1;
+    // the draw arm: three fingers hooked on the string (one above the arrow, two below) behind a leather tab,
+    // the forearm running back past the cheek to an elbow behind the eye. As the nock comes back to the anchor
+    // under the chin the hand slides down out of frame on its own.
+    if (rel <= 0 && nock.z > 0.09) {
+      const W = { x: nock.x + 0.055, y: nock.y - 0.018, z: nock.z - 0.035 }, E = { x: 0.34, y: -0.1, z: -0.25 }, M = along(W, E, 0.35);
+      tube(W, M, 0.029, 0.04, SKIN, 0.1, P); tube(M, E, 0.046, 0.056, SLEEVE, 0.1, P);
+      const h = P({ x: nock.x + 0.022, y: nock.y - 0.006, z: nock.z - 0.01 }), r = 0.03 * h.s, n = P(nock);
+      // back of the hand
+      const hg = ctx.createLinearGradient(h.x, h.y - r, h.x, h.y + r); hg.addColorStop(0, SKIN[0]); hg.addColorStop(0.4, SKIN[1]); hg.addColorStop(1, SKIN[2]);
+      ctx.beginPath(); ctx.moveTo(h.x - r * 0.1, h.y - r * 0.95); ctx.quadraticCurveTo(h.x + r * 1.3, h.y - r * 1.0, h.x + r * 1.45, h.y + r * 0.1);
+      ctx.quadraticCurveTo(h.x + r * 1.2, h.y + r * 1.1, h.x - r * 0.1, h.y + r * 1.05); ctx.closePath();
+      ctx.fillStyle = hg; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = OUT; ctx.stroke();
+      // leather tab on the string face, then the three fingers curled round the string in front of it
+      ctx.beginPath(); ctx.ellipse(n.x + r * 0.05, n.y + r * 0.1, r * 0.32, r * 1.05, 0, 0, 6.283); ctx.fillStyle = '#4a2d18'; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+      for (const fy of [-0.55, 0.3, 0.78]) {                // each finger: a joint over the knuckle, then curled round the string
+        const y0 = n.y + fy * r, kx = h.x + r * 0.45;
+        capsule(kx, y0 - r * 0.04, n.x + r * 0.05, y0, r * 0.19, SKIN);
+        capsule(n.x + r * 0.05, y0, n.x - r * 0.2, y0 + r * 0.14, r * 0.17, SKIN);
+        ctx.beginPath(); ctx.arc(kx, y0 - r * 0.04, r * 0.13, -1.9, 1.3); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(150,85,45,0.6)'; ctx.stroke();
+      }
+      capsule(h.x + r * 0.7, h.y + r * 0.85, h.x + r * 0.15, h.y + r * 1.15, r * 0.24, SKIN);   // thumb tucked under
     }
     ctx.restore();
   },
