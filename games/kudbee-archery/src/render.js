@@ -9,6 +9,8 @@
 
 KAR.Render = {
   W: 960, H: 640, OUT: '#1d2a3a',
+  // a wide screen (a landscape phone) shows more scenery either side of the 960 x 640 stage: XL is its left edge, XW the full width
+  XL: 0, XW: 960,
   cam: { x: 0, y: 1.6, z: -0.2, pitch: 0.004, yaw: 0, F: 14000, CX: 480, CY: 330 },
   TEAM: [
     { base: '#2f86d8', light: '#7ac7ff', dark: '#1a4f8a', name: 'YOU' },
@@ -95,41 +97,41 @@ KAR.Render = {
   },
   drawMenuPhoto(ctx) {
     const im = this._photo('bg-menu'); if (!im) return false;
-    const W = this.W, H = this.H, s = Math.max(W / im.width, H / im.height);
-    ctx.drawImage(im, (W - im.width * s) / 2, (H - im.height * s) / 2, im.width * s, im.height * s);
+    const W = this.XW, H = this.H, s = Math.max(W / im.width, H / im.height);
+    ctx.drawImage(im, this.XL + (W - im.width * s) / 2, (H - im.height * s) / 2, im.width * s, im.height * s);
     return true;
   },
   drawWorld(ctx, t, wind) {
-    const W = this.W, H = this.H, hy = Math.max(60, Math.min(H - 120, this.horizonY()));
+    const W = this.W, H = this.H, XL = this.XL, XW = this.XW, hy = Math.max(60, Math.min(H - 120, this.horizonY()));
     const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#4aa8ff'); sky.addColorStop(1, '#d6f1ff');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, H);
     if (this.venue === 1) return this._forest(ctx, t, hy);
     if (this.venue === 2) return this._mountain(ctx, t, hy);
     const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
     if (ph) {
-      const s = Math.max(W / ph.width, hy / ph.height);
-      ctx.drawImage(ph, (W - ph.width * s) / 2, hy - ph.height * s, ph.width * s, ph.height * s);
+      const s = Math.max(XW / ph.width, hy / ph.height);
+      ctx.drawImage(ph, XL + (XW - ph.width * s) / 2, hy - ph.height * s, ph.width * s, ph.height * s);
       this._field(ctx, hy, true);
       return;
     }
     // sun glow + clouds
     const sg = ctx.createRadialGradient(780, hy - 150, 10, 780, hy - 150, 220); sg.addColorStop(0, 'rgba(255,248,200,0.9)'); sg.addColorStop(1, 'rgba(255,248,200,0)');
-    ctx.fillStyle = sg; ctx.fillRect(560, 0, 400, hy + 40);
+    ctx.fillStyle = sg; ctx.fillRect(560, 0, 400 + XW - W + XL, hy + 40);
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (let i = 0; i < 5; i++) { const cx = ((i * 251 + t * (5 + i)) % (W + 300)) - 150, cy = 50 + (i % 3) * 38 + (hy > 200 ? 0 : -10); ctx.beginPath(); ctx.ellipse(cx, cy, 80, 22, 0, 0, 7); ctx.ellipse(cx - 40, cy + 6, 50, 16, 0, 0, 7); ctx.ellipse(cx + 46, cy + 8, 56, 16, 0, 0, 7); ctx.fill(); }
+    for (let i = 0; i < 5; i++) { const cx = ((i * 251 + t * (5 + i)) % (this.XW + 300)) - 150 + this.XL, cy = 50 + (i % 3) * 38 + (hy > 200 ? 0 : -10); ctx.beginPath(); ctx.ellipse(cx, cy, 80, 22, 0, 0, 7); ctx.ellipse(cx - 40, cy + 6, 50, 16, 0, 0, 7); ctx.ellipse(cx + 46, cy + 8, 56, 16, 0, 0, 7); ctx.fill(); }
     // far hills (three layers) and a tree line
-    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hy + 2); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(W, hy + 2); ctx.closePath(); ctx.fill(); };
+    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(this.XL, hy + 2); for (let x = this.XL; x <= this.XL + this.XW + 16; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(this.XL + this.XW + 16, hy + 2); ctx.closePath(); ctx.fill(); };
     hill(46, 26, '#9bc7d8', 0.006, 1); hill(30, 20, '#78b093', 0.009, 2.4); hill(14, 10, '#4f9a55', 0.014, 4);
     const rnd = KAR.Util.rng(77);
-    for (let x = -10; x < W + 20; x += 11 + rnd() * 13) { const th = 10 + rnd() * 20; ctx.fillStyle = rnd() > 0.5 ? '#2f7a3c' : '#3a8a45'; ctx.beginPath(); ctx.arc(x, hy - 6 - th * 0.35, th * 0.55, 0, 7); ctx.fill(); }
+    for (let x = XL - 10; x < XL + XW + 20; x += 11 + rnd() * 13) { const th = 10 + rnd() * 20; ctx.fillStyle = rnd() > 0.5 ? '#2f7a3c' : '#3a8a45'; ctx.beginPath(); ctx.arc(x, hy - 6 - th * 0.35, th * 0.55, 0, 7); ctx.fill(); }
     this._field(ctx, hy);
   },
   // ---- the TOUR venues: painted scenes keyed to the horizon, so they track the camera like the photos do ----
   // pines: a ragged band of conifer silhouettes along y = base (h: typical height, seed: layout)
   _pines(ctx, base, h, col, seed, step) {
-    const W = this.W, rnd = KAR.Util.rng(seed);
-    ctx.fillStyle = col; ctx.beginPath(); ctx.rect(-20, base - 2, W + 40, 60);
-    for (let x = -20; x < W + 40; x += step * (0.55 + rnd() * 0.9)) {
+    const XL = this.XL, XW = this.XW, rnd = KAR.Util.rng(seed);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.rect(XL - 20, base - 2, XW + 40, 60);
+    for (let x = XL - 20; x < XL + XW + 40; x += step * (0.55 + rnd() * 0.9)) {
       const th = h * (0.55 + rnd() * 0.75), w = th * (0.2 + rnd() * 0.06), lean = (rnd() - 0.5) * th * 0.04;
       for (let k = 0; k < 4; k++) {                       // four tiers of boughs, narrowing to the tip
         const top = base - th * (0.3 + k * 0.24), bot = base - th * k * 0.2 + 2, ww = w * (1 - k * 0.22);
@@ -141,12 +143,12 @@ KAR.Render = {
   _forest(ctx, t, hy) {
     const W = this.W, H = this.H;
     const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#5f9ad8'); sky.addColorStop(0.6, '#bcd8e8'); sky.addColorStop(1, '#ffe2a8');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.fillStyle = sky; ctx.fillRect(this.XL, 0, this.XW, hy + 2);
     const sx = 170, sy = hy - 170, sg = ctx.createRadialGradient(sx, sy, 8, sx, sy, 300); sg.addColorStop(0, 'rgba(255,246,210,1)'); sg.addColorStop(0.12, 'rgba(255,230,160,0.8)'); sg.addColorStop(1, 'rgba(255,220,150,0)');
-    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.fillStyle = sg; ctx.fillRect(this.XL, 0, this.XW, hy + 2);
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    for (let i = 0; i < 4; i++) { const cx = ((i * 290 + t * (4 + i)) % (W + 300)) - 150, cy = 40 + (i % 2) * 44; ctx.beginPath(); ctx.ellipse(cx, cy, 90, 16, 0, 0, 7); ctx.ellipse(cx + 50, cy + 6, 60, 12, 0, 0, 7); ctx.fill(); }
-    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hy + 2); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(W, hy + 2); ctx.closePath(); ctx.fill(); };
+    for (let i = 0; i < 4; i++) { const cx = ((i * 290 + t * (4 + i)) % (this.XW + 300)) - 150 + this.XL, cy = 40 + (i % 2) * 44; ctx.beginPath(); ctx.ellipse(cx, cy, 90, 16, 0, 0, 7); ctx.ellipse(cx + 50, cy + 6, 60, 12, 0, 0, 7); ctx.fill(); }
+    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(this.XL, hy + 2); for (let x = this.XL; x <= this.XL + this.XW + 16; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(this.XL + this.XW + 16, hy + 2); ctx.closePath(); ctx.fill(); };
     hill(70, 30, '#a9c3c9', 0.005, 2);
     this._pines(ctx, hy - 34, 70, '#6f9a8a', 11, 26); this._pines(ctx, hy - 14, 90, '#3f6e52', 12, 30); this._pines(ctx, hy + 2, 120, '#24503a', 13, 38);
     // shafts of late light through the trees
@@ -155,22 +157,22 @@ KAR.Render = {
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(a - 0.035) * 800, sy + Math.sin(a - 0.035) * 800); ctx.lineTo(sx + Math.cos(a + 0.035) * 800, sy + Math.sin(a + 0.035) * 800); ctx.closePath(); ctx.fill(); }
     ctx.restore();
     this._field(ctx, hy, false, ['#86bb4c', '#3a7a2c']);
-    const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, H * 0.95); v.addColorStop(0, 'rgba(40,30,10,0)'); v.addColorStop(1, 'rgba(40,30,10,0.28)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, H * 0.95); v.addColorStop(0, 'rgba(40,30,10,0)'); v.addColorStop(1, 'rgba(40,30,10,0.28)'); ctx.fillStyle = v; ctx.fillRect(this.XL, 0, this.XW, H);
   },
   _mountain(ctx, t, hy) {
     const W = this.W, H = this.H;
     const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#2c3470'); sky.addColorStop(0.45, '#8a5a9a'); sky.addColorStop(0.8, '#f2876a'); sky.addColorStop(1, '#ffcf7a');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.fillStyle = sky; ctx.fillRect(this.XL, 0, this.XW, hy + 2);
     const sx = 700, sy = hy - 64, sg = ctx.createRadialGradient(sx, sy, 10, sx, sy, 360); sg.addColorStop(0, 'rgba(255,240,190,0.95)'); sg.addColorStop(0.1, 'rgba(255,190,110,0.6)'); sg.addColorStop(1, 'rgba(255,150,90,0)');
-    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.fillStyle = sg; ctx.fillRect(this.XL, 0, this.XW, hy + 2);
     ctx.beginPath(); ctx.arc(sx, sy, 34, 0, 6.283); ctx.fillStyle = '#fff1c4'; ctx.fill();
     ctx.fillStyle = 'rgba(255,200,170,0.55)';
-    for (let i = 0; i < 4; i++) { const cx = ((i * 270 + t * (3 + i)) % (W + 300)) - 150, cy = 60 + (i % 2) * 50; ctx.beginPath(); ctx.ellipse(cx, cy, 110, 9, 0, 0, 7); ctx.ellipse(cx + 70, cy + 7, 70, 7, 0, 0, 7); ctx.fill(); }
+    for (let i = 0; i < 4; i++) { const cx = ((i * 270 + t * (3 + i)) % (this.XW + 300)) - 150 + this.XL, cy = 60 + (i % 2) * 50; ctx.beginPath(); ctx.ellipse(cx, cy, 110, 9, 0, 0, 7); ctx.ellipse(cx + 70, cy + 7, 70, 7, 0, 0, 7); ctx.fill(); }
     // two ranges of peaks: the far one hazy violet with snow, the near one dark
     const range = (base, hgt, col, snow, seed, n) => {
       const rnd = KAR.Util.rng(seed), pts = [];
-      for (let i = 0; i <= n * 2; i++) pts.push([i * (W + 120) / (n * 2) - 60 + (rnd() - 0.5) * 30, base - hgt * (i % 2 ? 0.5 + rnd() * 0.5 : 0.08 + rnd() * 0.22)]);
-      ctx.beginPath(); ctx.moveTo(-60, hy + 2); pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(W + 60, hy + 2); ctx.closePath();
+      for (let i = 0; i <= n * 2; i++) pts.push([this.XL + i * (this.XW + 120) / (n * 2) - 60 + (rnd() - 0.5) * 30, base - hgt * (i % 2 ? 0.5 + rnd() * 0.5 : 0.08 + rnd() * 0.22)]);
+      ctx.beginPath(); ctx.moveTo(this.XL - 60, hy + 2); pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(this.XL + this.XW + 60, hy + 2); ctx.closePath();
       const g = ctx.createLinearGradient(0, base - hgt, 0, hy); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]); ctx.fillStyle = g; ctx.fill();
       // the lit (sun-side, right) face of each peak, then a snow cap with a ragged lower edge
       for (let i = 1; i < pts.length - 1; i += 2) {
@@ -187,13 +189,13 @@ KAR.Render = {
     range(hy - 8, 100, ['#4e4a7a', '#6e5f86'], null, 9, 8);
     this._pines(ctx, hy + 2, 60, '#2a2f4a', 21, 22);
     this._field(ctx, hy, false, ['#a8b45a', '#466a2e']);
-    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,200,170,0.3)'; ctx.fillRect(0, hy, W, H - hy); ctx.restore();
-    const v = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(30,10,40,0)'); v.addColorStop(1, 'rgba(30,10,40,0.35)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,200,170,0.3)'; ctx.fillRect(this.XL, hy, this.XW, H - hy); ctx.restore();
+    const v = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(30,10,40,0)'); v.addColorStop(1, 'rgba(30,10,40,0.35)'); ctx.fillStyle = v; ctx.fillRect(this.XL, 0, this.XW, H);
   },
   _field(ctx, hy, photo, pal) {
     const W = this.W, H = this.H;
     const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, pal ? pal[0] : photo ? '#7aa83e' : '#79cc55'); gg.addColorStop(1, pal ? pal[1] : photo ? '#4a8a2e' : '#3f9a36');
-    ctx.fillStyle = gg; ctx.fillRect(0, hy, W, H - hy);
+    ctx.fillStyle = gg; ctx.fillRect(this.XL, hy, this.XW, H - hy);
     const D = this.dist;
     for (let i = 0; i < 40; i++) {
       const za = -4 + i * (D + 80) / 40 * (1 + i * 0.05), zb = za + (D + 80) / 40 * (1 + i * 0.05);
@@ -230,8 +232,8 @@ KAR.Render = {
     const W = this.W, H = this.H, a = Math.min(1, Math.abs(wind) / 4), dir = Math.sign(wind) || 1;
     ctx.save();
     for (let i = 0; i < 16; i++) {
-      const sp = 40 + a * 260 + (i % 4) * 14, ph = (i * 137.5) % W;
-      let x = ((ph + dir * t * sp) % (W + 80) + (W + 80)) % (W + 80) - 40;
+      const sp = 40 + a * 260 + (i % 4) * 14, ph = (i * 137.5) % W, WW = this.XW + 80;
+      let x = ((ph + dir * t * sp) % WW + WW) % WW - 40 + this.XL;
       const y = H * (0.3 + 0.55 * ((i * 53) % 100) / 100) + Math.sin(t * 1.7 + i) * (10 + 14 * (1 - a));
       ctx.globalAlpha = 0.5 + 0.35 * a; ctx.fillStyle = i % 3 ? '#8fd24a' : '#e6c54a';
       ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 3 + i) * 0.9 + dir * a * 0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5 + (i % 3), 2.2, 0, 0, 7); ctx.fill(); ctx.restore();

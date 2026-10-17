@@ -13,6 +13,7 @@ KAR.CFG = {
   FACE_Y: 1.3,
   DISTS: [18, 30, 50, 70], FACE: [0.40, 0.80, 1.22, 1.22], WIND: [1.2, 2.2, 3.5, 5.0],
   ENDS: 5, PER: 3,
+  TOUCH_GAIN: 0.7,                                      // touch aims like a trackpad: sight px per finger px
   DRAW_T: 0.9, STEADY_T: 3.0, BASE_SWAY: 0.0016,       // radians of sight wobble at rest
   ROBIN: 0.009,                                          // metres: closer than this to an arrow in the face splits it
 };

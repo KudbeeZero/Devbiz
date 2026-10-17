@@ -10,9 +10,10 @@ KAR.Game = class {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = KAR.Render.W * this.dpr; canvas.height = KAR.Render.H * this.dpr;
     this.coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    this.ios = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    this.standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches));
+    this.quality = 1; this.slow = 0; this.slowN = 0; this._fit();
     KAR.Store.load();
     this.audio = new KAR.Audio();
     this.screen = 'menu';              // menu | play | paused | over
@@ -27,6 +28,20 @@ KAR.Game = class {
     this._bind();
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
+  }
+
+  // Size the canvas to the screen. The game is laid out on a 960 x 640 stage; a wider screen (a landscape phone is
+  // about 2.2 : 1) gets extra scenery either side instead of black bars, and the HUD rides out to the real edges.
+  // The backing store matches the device pixels it is shown at (x quality, which drops if frames run slow).
+  _fit() {
+    const c = this.canvas, R = KAR.Render, vw = window.innerWidth || 960, vh = window.innerHeight || 640;
+    const LW = Math.round(KAR.Util.clamp(640 * vw / vh, 960, 1480));
+    R.XW = LW; R.XL = -(LW - 960) / 2;
+    const cssW = Math.min(vw, vh * LW / 640), cssH = cssW * 640 / LW;
+    c.style.width = cssW + 'px'; c.style.height = cssH + 'px';
+    this.res = KAR.Util.clamp(cssH * (window.devicePixelRatio || 1) / 640, 0.6, 2) * this.quality;
+    c.width = Math.round(LW * this.res); c.height = Math.round(640 * this.res);
+    if (this.coarse && vh > vw && this.screen === 'play') this.togglePause();      // turned upright mid-range: pause under the 'turn sideways' card
   }
 
   _resetShot() {
@@ -44,6 +59,8 @@ KAR.Game = class {
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
     this.shared = -9; this.unlocked = false;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
+    if (this.canFull() && !this.fsLeft) this.goFull(true);
+    this.wake(true);
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
     this.focusIdx = -1; this.focusPending = true; this.showEnd = 0; this.zoom = 1; this.zoomTarget = 1;
     this.camB = 0; this.camTip = null; this.streak = 0; this.drama = '';
@@ -63,6 +80,7 @@ KAR.Game = class {
     this.bp = 'ready'; this.bpT = 0; this.zoomTarget = 1; this.camB = 0; this.orbit = 0;
     this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
     this.ptr = { x: 480, y: 330 }; this._setAimFromPtr();
+    if (this.coarse) { this.aimX = 0; this.aimY = KAR.CFG.FACE_Y; }      // touch: a new arrow's sight starts dead on the gold (drag from there)
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
     this.drama = this._drama();
     this.coach = this._coach();
@@ -107,6 +125,27 @@ KAR.Game = class {
 
   setScreen(s) { this.screen = s; this.overlayT = 0; this.focusPending = true; }
 
+  // ---- phone comforts ------------------------------------------------------------
+  // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
+  buzz(p) { if (this.coarse && KAR.Store.data.haptics && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* ignore */ } }
+  canFull() { const d = document.documentElement; return this.coarse && !!(d.requestFullscreen || d.webkitRequestFullscreen); }
+  isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  // full screen + landscape lock where the browser allows it (Android Chrome, iPad); must run inside a tap
+  goFull(on) {
+    try {
+      const d = document.documentElement;
+      if (on && !this.isFull()) { const p = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); const lock = () => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }; if (p && p.then) p.then(lock, () => {}); else lock(); }
+      else if (!on && this.isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } catch (e) { /* not allowed here */ }
+  }
+  // keep the screen awake through a range (it would dim between arrows)
+  wake(on) {
+    try {
+      if (on && !this.wakeLock && navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').then(l => { this.wakeLock = l; l.addEventListener('release', () => { if (this.wakeLock === l) this.wakeLock = null; }); }, () => {});
+      else if (!on && this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+    } catch (e) { /* ignore */ }
+  }
+
   activate(id) {
     this.audio.ensure(); this.audio.click();
     const D = KAR.Store.data;
@@ -123,22 +162,29 @@ KAR.Game = class {
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
     else if (id === 'pause') this.togglePause();
     else if (id === 'resume') this.screen = 'play';
-    else if (id === 'menu') { this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
+    else if (id === 'full') { const on = !this.isFull(); this.fsLeft = !on; this.goFull(on); }
+    else if (id === 'buzz') { D.haptics = !D.haptics; KAR.Store.save(); this.buzz(20); }
+    else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
     else if (id === 'breath') this.holding = !this.holding;
   }
   togglePause() { if (this.screen === 'play') { this.setScreen('paused'); this.drawing = false; } else if (this.screen === 'paused') this.screen = 'play'; }
 
   // ---- input --------------------------------------------------------------------
-  _pt(e) { const r = this.canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * KAR.Render.W / r.width, y: (e.clientY - r.top) * KAR.Render.H / r.height }; }
+  _pt(e) { const r = this.canvas.getBoundingClientRect(), R = KAR.Render; return { x: R.XL + (e.clientX - r.left) * R.XW / r.width, y: (e.clientY - r.top) * R.H / r.height }; }
   _setAimFromPtr() {
-    const m = this.match, y = this.ptr.y - (this.coarse ? 70 : 0);
-    const q = KAR.Render.unproj(this.ptr.x, y, m.dist);
+    const m = this.match;
+    const q = KAR.Render.unproj(this.ptr.x, this.ptr.y, m.dist);
     const S = (m.viewD || m.faceD) * 1.3;
     this.aimX = KAR.Util.clamp(q.x, -S, S); this.aimY = KAR.Util.clamp(q.y, KAR.CFG.FACE_Y - S, KAR.CFG.FACE_Y + S);
   }
   _bind() {
     const c = this.canvas;
+    const refit = () => { this._fit(); this.focusPending = this.screen !== 'play'; };
+    window.addEventListener('resize', refit); window.addEventListener('orientationchange', () => setTimeout(refit, 120));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+    const fsc = () => { if (!this.isFull() && this.screen === 'play') this.fsLeft = true; setTimeout(refit, 60); };
+    document.addEventListener('fullscreenchange', fsc); document.addEventListener('webkitfullscreenchange', fsc);
     c.addEventListener('pointerdown', e => this._onDown(e));
     c.addEventListener('pointermove', e => this._onMove(e));
     c.addEventListener('pointerup', e => this._onUp(e));
@@ -151,13 +197,13 @@ KAR.Game = class {
     const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
     c.addEventListener('touchstart', block, { passive: false });
     c.addEventListener('touchmove', block, { passive: false });
-    const lift = e => { this._firstGesture(); if (e.touches.length === 0 && this.drawing && !this.cpu) this._loose(); };
+    const lift = e => { this._firstGesture(); if (e.touches.length === 0) { if (this.breathId !== undefined) this.holding = false; this.breathId = undefined; this.touchId = undefined; this.grab = null; if (this.drawing && !this.cpu) this._loose(); } };
     window.addEventListener('click', () => this._firstGesture());          // iOS unlocks audio on touchend / click
     window.addEventListener('touchend', lift); window.addEventListener('touchcancel', lift);
     c.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => this._onKey(e, true));
     window.addEventListener('keyup', e => this._onKey(e, false));
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else { this.audio.resume(); if (this.screen === 'play' || this.screen === 'paused') this.wake(true); } });
     // blur fires for benign focus moves (iframes, preview toolbars): only drop held input; a hidden tab pauses
     // (a mouse button released outside the window is lost, so a desktop draw is dropped; touch keeps it - see above)
     window.addEventListener('blur', () => { this.holding = false; if (this.drawing && !this.cpu && !this.coarse) { this.drawing = false; this.draw = 0; } });
@@ -165,25 +211,43 @@ KAR.Game = class {
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
   _beginDraw() { if (this.human() && !this.drawing) { this.drawing = true; this.draw = 0; this.holdT = 0; this.breath = 1; this.audio.drawStart(); } }
 
+  // Touch aims like a trackpad: wherever the finger lands, the sight starts where it is (on the gold for a new
+  // arrow) and follows the drag at TOUCH_GAIN, so your thumb never covers the target and small moves are precise.
+  // While one finger draws, a second finger anywhere holds your breath for as long as it stays down.
   _onDown(e) {
     this._firstGesture();
-    const p = this._pt(e), i = KAR.UI.hit(p.x, p.y);
+    const p = this._pt(e), i = KAR.UI.hit(p.x, p.y), touch = e.pointerType === 'touch';
     if (i >= 0) { e.preventDefault(); this.activate(KAR.UI.buttons[i].id); return; }
     if (this.screen !== 'play') return;
     if (this.bp === 'flight' && this.flight && this.flight.hero) { this.flight.skip = true; return; }
-    this.ptr = p; if (this.drawing || this.human()) this._setAimFromPtr();
+    if (touch && this.drawing && this.touchId !== undefined && e.pointerId !== this.touchId) { this.holding = true; this.breathId = e.pointerId; return; }
+    if (touch) {
+      const q = KAR.Render.proj(this.aimX, this.aimY, this.match.dist) || { x: 480, y: 318 };
+      this.touchId = e.pointerId; this.grab = { px: p.x, py: p.y, sx: q.x, sy: q.y };
+    } else { this.ptr = p; if (this.drawing || this.human()) this._setAimFromPtr(); }
     if (e.button === 2) { this.holding = true; return; }
     this._beginDraw();
     try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   }
   _onMove(e) {
-    const p = this._pt(e), i = KAR.UI.hit(p.x, p.y);
-    if (i >= 0) this.focusIdx = i; else if (this.screen === 'play') this.focusIdx = -1;
+    const p = this._pt(e), i = KAR.UI.hit(p.x, p.y), touch = e.pointerType === 'touch';
+    if (!touch) { if (i >= 0) this.focusIdx = i; else if (this.screen === 'play') this.focusIdx = -1; }
     this.canvas.style.cursor = i >= 0 ? 'pointer' : (this.screen === 'play' ? 'crosshair' : 'default');
-    if (this.screen === 'play' && (i < 0 || this.drawing)) { this.ptr = p; if (this.human()) this._setAimFromPtr(); }
+    if (this.screen !== 'play') return;
+    if (touch) {
+      if (e.pointerId !== this.touchId || !this.grab) return;
+      const k = KAR.CFG.TOUCH_GAIN, gb = this.grab;
+      this.ptr = { x: gb.sx + (p.x - gb.px) * k, y: gb.sy + (p.y - gb.py) * k };
+      if (this.human()) this._setAimFromPtr();
+    } else if (i < 0 || this.drawing) { this.ptr = p; if (this.human()) this._setAimFromPtr(); }
   }
   _onUp(e) {
     if (e.button === 2) { this.holding = false; return; }
+    if (e.pointerType === 'touch') {
+      if (e.pointerId === this.breathId) { this.holding = false; this.breathId = undefined; return; }
+      if (this.touchId !== undefined && e.pointerId !== this.touchId) return;
+      this.touchId = undefined; this.grab = null;
+    }
     if (this.drawing) this._loose();
   }
   _onKey(e, down) {
@@ -229,6 +293,7 @@ KAR.Game = class {
     this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
+    if (shooter === 0) this.buzz(22);
     if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
@@ -248,6 +313,7 @@ KAR.Game = class {
     const streak = f.shooter === 0 ? this.streak : 0, row = streak >= 2 ? streak + ' IN A ROW!' : '';
     if (e && res.ring >= 9) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < (res.x ? 26 : 14); i++) { const a = this.rng() * 6.283, sp = 80 + this.rng() * 220; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, g: 320, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 12, life: 0.7 + this.rng() * 0.6, col: ['#fff6a8', '#ffd34d', '#ffffff'][i % 3] }); } }
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
+    if (f.shooter === 0) this.buzz(res.robin ? [40, 60, 40, 60, 80] : res.ring >= 10 ? [30, 50, 45] : res.ring >= 9 ? 30 : res.miss ? 0 : 14);
     if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
     else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
@@ -280,7 +346,7 @@ KAR.Game = class {
     this.trickShown = m.score; this.trickCombo = res.mult; this.shake = Math.max(this.shake, 5);
     const two = res.pops.length > 1, gold = res.bonusArrows > 0;
     this._banner(two ? 'DOUBLE POP!' : 'POP!', '#ffffff', gold ? '#ffb82e' : '#ff5d8a', '+' + res.points + (res.mult > 1 ? '  \u00b7  COMBO \u00d7' + res.mult : '') + (gold ? '  \u00b7  +' + res.bonusArrows + ' ARROWS' : ''), two ? 76 : 88);
-    this.audio.pop(res.pops.length, res.mult); if (two || gold) this._burst(30);
+    this.audio.pop(res.pops.length, res.mult); this.buzz(res.pops.length > 1 ? [25, 40, 25] : 25); if (two || gold) this._burst(30);
   }
 
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.5 }; }
@@ -346,6 +412,10 @@ KAR.Game = class {
     requestAnimationFrame(this._frame);
     const dt = Math.min(0.1, (ts - this.last) / 1000) || 0;
     this.last = ts;
+    if (this.screen === 'play' && dt > 0 && !document.hidden) {
+      this.slow += dt; this.slowN++;
+      if (this.slowN >= 90) { if (this.slow / this.slowN > 0.026 && this.quality > 0.55) { this.quality = Math.max(0.55, this.quality * 0.8); this._fit(); } this.slow = 0; this.slowN = 0; }
+    }
     this._update(dt);
     this._render();
   }
@@ -375,7 +445,7 @@ KAR.Game = class {
         const wasFull = this.draw >= 1;
         // a recurve gets heavier toward the anchor: quick off the brace, slow into the last few inches
         this.draw = Math.min(1, this.draw + dt / C.DRAW_T * 1.044 * (1.35 - 0.7 * this.draw));
-        if (this.draw >= 1 && !wasFull) this.audio.full();
+        if (this.draw >= 1 && !wasFull) { this.audio.full(); if (!this.cpu) this.buzz(12); }
         this.audio.drawSet(this.draw);
         if (this.draw >= 1) this.holdT += dt;
         // breath: holding steadies the sight for a couple of seconds; empty lungs make it worse
@@ -441,7 +511,8 @@ KAR.Game = class {
   // ---- drawing ------------------------------------------------------------------
   _render() {
     const ctx = this.ctx, R = KAR.Render, U = KAR.UI, m = this.match;
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.setTransform(this.res, 0, 0, this.res, -R.XL * this.res, 0);
+    if (document.body.dataset.screen !== this.screen) document.body.dataset.screen = this.screen;
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);

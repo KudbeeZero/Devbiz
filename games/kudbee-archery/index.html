@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#4aa8ff">
+<meta name="theme-color" content="#0b1b2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Archery">
 <meta name="description" content="Kudbee Archery — read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres, plus a head-to-head duel with a CPU. Plays in your browser.">
 <title>Kudbee Archery</title>
 <link rel="canonical" href="https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html">
@@ -37,8 +43,17 @@
     border:1px solid rgba(207,224,240,0.3); border-radius:6px; background:rgba(8,20,36,0.6); backdrop-filter:blur(6px); }
   .back-link:hover, .back-link:focus-visible { color:#fff; border-color:#ffa040; outline:none; }
   .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-  .rotate-tip { display:none; position:fixed; top:14px; left:0; right:0; z-index:20; text-align:center; font-size:13px; color:#9fb6c8; pointer-events:none; }
-  @media (orientation:portrait) and (max-width:700px) { .rotate-tip { display:block; } }
+  /* the game sizes the canvas to the screen (wider screens get more scenery); the studio link only shows on the menu */
+  body[data-screen]:not([data-screen="menu"]) .back-link { display:none; }
+  /* phones held upright: a full-screen card asking to turn sideways (the game pauses underneath) */
+  .rotate-tip { display:none; position:fixed; inset:0; z-index:40; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    background:radial-gradient(800px 600px at 50% 40%, #16385a, #0b1b2e); color:#fff; text-align:center; padding:24px;
+    font:400 26px/1.25 "Lilita One","Arial Black",system-ui,sans-serif; letter-spacing:0.02em; }
+  .rotate-tip small { font:500 15px/1.4 system-ui,-apple-system,sans-serif; color:#9fc4e4; letter-spacing:0; }
+  .rotate-tip svg { width:92px; height:92px; animation:turn 2.4s ease-in-out infinite; }
+  @keyframes turn { 0%, 25% { transform:rotate(0deg); } 55%, 85% { transform:rotate(-90deg); } 100% { transform:rotate(0deg); } }
+  @media (prefers-reduced-motion:reduce) { .rotate-tip svg { animation:none; transform:rotate(-90deg); } }
+  @media (orientation:portrait) and (pointer:coarse) { .rotate-tip { display:flex; } }
   noscript { position:fixed; inset:0; display:grid; place-items:center; text-align:center; padding:24px; }
 </style>
 </head>
@@ -47,7 +62,10 @@
   <canvas id="gameCanvas" tabindex="0" role="application"
     aria-label="Kudbee Archery. Press and hold to draw the bow, move to aim, release to loose. Hold B or right-click to steady your breath. Aim off into the wind."></canvas>
 </div>
-<p class="rotate-tip" aria-hidden="true">&#8635; Rotate your phone for a bigger playfield</p>
+<div class="rotate-tip" role="status">
+  <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="6" width="28" height="52" rx="6" fill="#2f86d8" stroke="#fff" stroke-width="3"/><circle cx="32" cy="27" r="9" fill="#f4f1e6"/><circle cx="32" cy="27" r="6" fill="#e4453a"/><circle cx="32" cy="27" r="3" fill="#ffd34d"/><rect x="27" y="50" width="10" height="3" rx="1.5" fill="#fff"/></svg>
+  Turn your phone sideways<small>Kudbee Archery plays in landscape</small>
+</div>
 <a class="back-link" href="../../index.html#games">&larr; Studio</a>
 <p class="sr">Controls: press and hold the mouse button or Space to draw the bow, move the pointer or use the arrow keys to aim, release to shoot. Hold B or the right mouse button to hold your breath and steady the sight. The wind gauge shows which way the wind pushes the arrow, so aim into it. P pauses, M toggles sound, R restarts. Ten rings, worth one to ten points; the centre is an X.</p>
 <noscript>Kudbee Archery needs JavaScript to run.</noscript>

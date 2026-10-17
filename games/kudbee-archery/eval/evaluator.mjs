@@ -122,8 +122,8 @@ await G(() => { KAR.Store.data.mode = 0; KAR.Store.data.dist = 1; KARGame.startM
 await waitFor(() => KARGame.bp === 'ready' && KARGame.zoom > 0.98, 5000);
 await G(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // a frame drawn with the new range's camera
 const px = await G(() => {
-  const c = document.getElementById('gameCanvas'), x = c.getContext('2d'), R = KAR.Render, m = KARGame.match, d = KARGame.dpr;
-  const at = (dx) => { const q = R.proj(dx, KAR.CFG.FACE_Y, m.dist); return Array.from(x.getImageData(Math.round(q.x * d), Math.round(q.y * d), 1, 1).data); };
+  const c = document.getElementById('gameCanvas'), x = c.getContext('2d'), R = KAR.Render, m = KARGame.match, d = KARGame.res;
+  const at = (dx) => { const q = R.proj(dx, KAR.CFG.FACE_Y, m.dist); return Array.from(x.getImageData(Math.round((q.x - R.XL) * d), Math.round(q.y * d), 1, 1).data); };
   return { mid: at(m.faceD / 2 * 0.15), outer: at(m.faceD / 2 * 0.95) };   // middle of the 9 band; middle of the 1 band
 });
 rec('face-colours', px.mid[0] > 200 && px.mid[1] > 160 && px.mid[2] < 140 && px.outer[0] > 200 && px.outer[1] > 200 && px.outer[2] > 190, `gold in the middle rgb(${px.mid.slice(0, 3)}), white on the outside rgb(${px.outer.slice(0, 3)})`);
@@ -285,7 +285,8 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const tp = await tctx.newPage(), cdp = await tctx.newCDPSession(tp);
   tp.on('pageerror', e => errors.push(e.message));
   await tp.goto(URL); await tp.waitForFunction(() => window.KARGame);
-  const tb = await tp.locator('#gameCanvas').boundingBox(), at = (x, y) => ({ x: tb.x + x * tb.width / 960, y: tb.y + y * tb.height / 640 });
+  const tb = await tp.locator('#gameCanvas').boundingBox(), stage = await tp.evaluate(() => ({ XL: KAR.Render.XL, XW: KAR.Render.XW }));
+  const at = (x, y) => ({ x: tb.x + (x - stage.XL) * tb.width / stage.XW, y: tb.y + y * tb.height / 640 });   // the phone's wide stage: x runs XL .. XL + XW
   const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, i) => ({ x: p.x, y: p.y, id: i })) });
   const T = fn => tp.evaluate(fn);
   const play = await T(() => { const x = KAR.UI.buttons.find(b => b.id === 'play'); return { x: x.x + x.w / 2, y: x.y + x.h / 2 }; });
@@ -316,6 +317,31 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const went = await T(() => KARGame.bp === 'flight');
   await T(() => window.removeEventListener('pointerup', window.__eatUp, true));
   rec('touch-cancel-still-looses', kept && went, `a touch pointercancel keeps the draw (${kept}); lifting the finger still looses (${went})`);
+  // 2b. the phone's wide screen is used edge to edge: more scenery either side, the HUD out at the real edges, no studio link mid-game
+  const fill = await T(() => { const c = KARGame.canvas.getBoundingClientRect(), R = KAR.Render, p = KAR.UI.buttons.find(b => b.id === 'pause');
+    return { w: c.width, vw: innerWidth, XW: R.XW, right: p.x + p.w, edge: R.XL + R.XW, link: getComputedStyle(document.querySelector('.back-link')).display }; });
+  await tp.screenshot({ path: `${OUT}/phone-wide.png` });
+  rec('phone-fills-screen', Math.abs(fill.w - fill.vw) < 2 && fill.XW > 1300 && fill.edge - fill.right < 40 && fill.link === 'none',
+    `canvas ${fill.w.toFixed(0)} of ${fill.vw} CSS px wide (stage ${fill.XW} wide, was 960), pause button ${(fill.edge - fill.right).toFixed(0)} px from the right edge, studio link hidden in play`);
+  // 2c. touch aims like a trackpad: the finger lands anywhere (here bottom-left), the sight starts on the gold and follows the drag at TOUCH_GAIN
+  await tp.waitForFunction(() => KARGame.bp === 'ready' && KARGame.human(), null, { timeout: 12000 });
+  const f0 = at(-60, 560); await touch('touchStart', [f0]); await tp.waitForTimeout(60);
+  const a0 = await T(() => { const g = KARGame, q = KAR.Render.proj(g.aimX, g.aimY, g.match.dist); return { x: q.x, y: q.y, onGold: Math.hypot(g.aimX, g.aimY - KAR.CFG.FACE_Y) < 0.002 }; });
+  for (let i = 1; i <= 5; i++) { await touch('touchMove', [{ x: f0.x + i * 10 * tb.width / stage.XW, y: f0.y - i * 6 * tb.height / 640 }]); await tp.waitForTimeout(30); }
+  const a1 = await T(() => { const g = KARGame, q = KAR.Render.proj(g.aimX, g.aimY, g.match.dist); return { x: q.x, y: q.y }; });
+  const gain = await T(() => KAR.CFG.TOUCH_GAIN), dx = a1.x - a0.x, dy = a1.y - a0.y;
+  rec('phone-drag-aim', a0.onGold && Math.abs(dx - 50 * gain) < 3 && Math.abs(dy + 30 * gain) < 3,
+    `a touch far from the target leaves the sight on the gold; a 50, -30 px drag moves it ${dx.toFixed(1)}, ${dy.toFixed(1)} (x${gain})`);
+  // 2d. while drawing, a second finger holds your breath; lifting it doesn't loose the arrow, lifting the first does
+  await tp.waitForFunction(() => KARGame.draw >= 1, null, { timeout: 3000 });
+  await touch('touchStart', [{ x: f0.x + 50 * tb.width / stage.XW, y: f0.y - 30 * tb.height / 640 }, at(700, 300)]); await tp.waitForTimeout(60);
+  const b1 = await T(() => ({ hold: KARGame.holding, drawing: KARGame.drawing, aim: KARGame.aimX }));
+  const lift2 = at(700, 300); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ x: lift2.x, y: lift2.y, id: 1 }] }); await tp.waitForTimeout(60);   // CDP lifts the points listed: just the second finger
+  const b2 = await T(() => ({ hold: KARGame.holding, drawing: KARGame.drawing, bp: KARGame.bp, aim: KARGame.aimX }));
+  await touch('touchEnd', []); await tp.waitForTimeout(40);
+  const b3 = await T(() => KARGame.bp);
+  rec('phone-second-finger-breath', b1.hold && b1.drawing && !b2.hold && b2.drawing && b2.bp === 'ready' && Math.abs(b2.aim - b1.aim) < 1e-6 && b3 === 'flight',
+    `second finger down: holding ${b1.hold}; lifted: holding ${b2.hold}, still drawing ${b2.drawing}, aim unmoved; first finger lifted: ${b3}`);
   // 3. no long-press callout / selection on the play area
   rec('touch-no-callout', await T(() => (document.querySelector('style').textContent.match(/-webkit-touch-callout:none/g) || []).length >= 2 && getComputedStyle(document.body).userSelect === 'none'), 'long-press callout and text selection are off');
   // 4. phone layout: the menu buttons and level tiles are big enough to hit (about 40 pt and up), and work by touch
@@ -327,6 +353,14 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await tp.screenshot({ path: `${OUT}/phone-menu.png` });
   rec('phone-big-taps', sizes.length >= 15 && Math.min(...sizes) * k >= 31 && tiles === 'L05,L06,L07,L08,L09' && pick === 6,
     `${sizes.length} menu targets, the smallest ${(Math.min(...sizes) * k).toFixed(0)} CSS px tall; the FOREST GLADE tab shows levels 6-10 and a tap picks level 7`);
+  // 5. held upright: a full-screen 'turn sideways' card, and a range in progress pauses under it
+  await T(() => { KAR.Store.data.mode = 0; KARGame.startMatch(); });
+  await tp.setViewportSize({ width: 390, height: 844 }); await tp.waitForTimeout(250);
+  const port = await T(() => ({ card: getComputedStyle(document.querySelector('.rotate-tip')).display, scr: KARGame.screen }));
+  await tp.screenshot({ path: `${OUT}/phone-portrait.png` });
+  await tp.setViewportSize({ width: 844, height: 390 }); await tp.waitForTimeout(250);
+  const land = await T(() => getComputedStyle(document.querySelector('.rotate-tip')).display);
+  rec('phone-portrait-card', port.card === 'flex' && port.scr === 'paused' && land === 'none', `upright: card ${port.card}, game ${port.scr}; sideways again: card ${land}`);
   await tctx.close();
 }
 
