@@ -40,6 +40,7 @@ KAR.Game = class {
     const cssW = Math.min(vw, vh * LW / 640), cssH = cssW * 640 / LW;
     c.style.width = cssW + 'px'; c.style.height = cssH + 'px';
     this.res = KAR.Util.clamp(cssH * (window.devicePixelRatio || 1) / 640, 0.6, 2) * this.quality;
+    R.res = this.res;                                   // the level map paints its still layers at this resolution
     c.width = Math.round(LW * this.res); c.height = Math.round(640 * this.res);
     if (this.coarse && vh > vw && this.screen === 'play') this.togglePause();      // turned upright mid-range: pause under the 'turn sideways' card
   }
@@ -57,7 +58,7 @@ KAR.Game = class {
     if (D.mode === 5 && !KAR.tourOpen(D.tourLv, D)) D.tourLv = 0;
     this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
-    this.shared = -9; this.unlocked = false;
+    this.shared = -9; this.unlocked = false; this.sideOpen = undefined;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
     if (this.canFull() && !this.fsLeft) this.goFull(true);
     this.wake(true);
@@ -317,15 +318,17 @@ KAR.Game = class {
     f.done = true;
     if (res.trick) { this.bp = 'result'; this.bpT = 0; return; }       // balloons pop mid-flight (_pop); the arrow just runs out
     const e = res.hit;
-    if (e) this.pops.push({ x: e.x, y: e.y, age: 0, ring: res.ring, team: f.shooter });
+    if (e) this.pops.push({ x: e.x, y: e.y, z: e.z, age: 0, ring: res.ring, team: f.shooter });
     this.landT = this.time;
-    if (e) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < 12; i++) { const a = -Math.PI * (0.1 + this.rng() * 0.8), sp = 60 + this.rng() * 160; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 420, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 14, life: 0.35 + this.rng() * 0.35, col: i % 2 ? '#f3d56f' : '#c99a38', w: 5, h: 2 }); } }
+    if (e) { const q = KAR.Render.proj(e.x, e.y, e.z || m.dist), wood = res.blocked || res.star, n = res.star ? 30 : 12; if (q) for (let i = 0; i < n; i++) { const a = -Math.PI * (0.1 + this.rng() * 0.8), sp = 60 + this.rng() * 160; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 420, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 14, life: 0.35 + this.rng() * 0.35, col: wood ? (res.star ? ['#ffe27a', '#f0b52e', '#ffffff'][i % 3] : i % 2 ? '#c98d48' : '#8e5a28') : i % 2 ? '#f3d56f' : '#c99a38', w: wood ? 9 : 5, h: wood ? 3 : 2 }); } }
     if (f.shooter === 0) { this.streak = res.ring >= 9 ? this.streak + 1 : 0; if (this.streak > st.bestStreak) st.bestStreak = this.streak; if (res.robin) st.robins++; }
     const streak = f.shooter === 0 ? this.streak : 0, row = streak >= 2 ? streak + ' IN A ROW!' : '';
     if (e && res.ring >= 9) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < (res.x ? 26 : 14); i++) { const a = this.rng() * 6.283, sp = 80 + this.rng() * 220; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, g: 320, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 12, life: 0.7 + this.rng() * 0.6, col: ['#fff6a8', '#ffd34d', '#ffffff'][i % 3] }); } }
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
     if (f.shooter === 0) this.buzz(res.robin ? [40, 60, 40, 60, 80] : res.ring >= 10 ? [30, 50, 45] : res.ring >= 9 ? 30 : res.miss ? 0 : 14);
     if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
+    else if (res.star) { this._banner('STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  smashed', 88); this.audio.gold(streak); this._burst(30); }
+    else if (res.blocked) { this.audio.miss(); this._banner('BLOCKED!', '#ffe0b0', '#b9783a', 'into the crates', 76); }
     else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
       this.audio.thud(res.ring);
@@ -372,7 +375,7 @@ KAR.Game = class {
   link() { const c = document.querySelector('link[rel=canonical]'); return (c && c.href) || location.origin + location.pathname; }
   _shareText(kind) {
     const m = this.match;
-    if (kind === 'shareGame') return 'Kudbee Archery \u2014 read the wind, hold your breath, hit the gold. 24 levels, 4 worlds, a boss at the end of each. Free in your browser:';
+    if (kind === 'shareGame') return 'Kudbee Archery \u2014 read the wind, hold your breath, hit the gold. ' + KAR.TOUR.length + ' levels, ' + KAR.VENUES.length + ' worlds, a boss at the end of each. Free in your browser:';
     if (kind === 'shareLevel') return 'I scored ' + m.total(0) + ' on Level ' + (m.lv + 1) + ' \u00b7 ' + m.def.name + ' ' + '\u2605'.repeat(m.stars()) + ' in Kudbee Archery. Can you beat it?';
     return 'Kudbee Archery \u00b7 Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') \u00b7 ' + m.score + ' pts \u00b7 ' + m.popped + ' popped \u00b7 best combo \u00d7' + Math.max(1, Math.min(5, m.bestCombo));
   }
@@ -396,8 +399,10 @@ KAR.Game = class {
     }
     if (m.mode === 'stage') {
       const T = D.tour, i = m.lv, sc = m.total(0), st = m.stars(), wasOpen = KAR.tourOpen(i + 1, D);
+      const sides = KAR.TOUR.map((L, j) => L.after === i && !KAR.tourOpen(j, D) ? L.v : -1).filter(v => v >= 0);   // side worlds this level opens
       this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); T.stars[i] = Math.max(T.stars[i], st);
-      this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D);
+      this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D) && KAR.TOUR[i + 1].after === undefined;
+      this.sideOpen = st >= 1 && sides.length ? sides[0] : undefined;
       gearUp(); KAR.Store.save(); this.setScreen('over');
       if (st >= 1) { this.audio.win(); this._burst(60 + st * 20); } else this.audio.lose();
       return;
@@ -534,11 +539,12 @@ KAR.Game = class {
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
     const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || sel;
-    if (sel) R.setView(0, 30, 0.8);                    // the level map: a wide view of that world's range
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
+    R.flags = !menuish && m.def && m.def.flags || null;
+    R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i) })) : null;
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
     if (menuish && !sel && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
-    else if (sel) { R.drawWorld(ctx, this.time, 0.6); R.railA = 0; R.drawTarget(ctx, this.time, 0.6, null); }
+    else if (sel) R.mapScene(ctx, this.worldView | 0, this.time);
     else {
       R.drawWorld(ctx, this.time, m.wind);
       if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, m.offAt ? (m.move || 'swing') : null);
@@ -574,9 +580,12 @@ KAR.Game = class {
     const R = KAR.Render, m = this.match;
     if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'levels') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
-    for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined);
+    // arrows in the face, then the THINK BOX crates in front of it, then the arrows stuck in the crates
+    const stuck = inCrate => { for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !!(a.hit && a.hit.z !== undefined) === inCrate && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined); };
+    stuck(false);
+    if (R.boxes) { R.drawBoxes(ctx, this.time, m.wind, m.offAt ? m.move : null); stuck(true); }
     // impact rings
-    for (const p of this.pops) { const q = R.proj(p.x, p.y, m.dist); if (!q) continue; ctx.beginPath(); ctx.arc(q.x, q.y, (0.05 + p.age * 0.25) * q.k, 0, 6.283); ctx.strokeStyle = 'rgba(255,255,255,' + (1 - p.age / 1.2) + ')'; ctx.lineWidth = 3; ctx.stroke(); }
+    for (const p of this.pops) { const q = R.proj(p.x, p.y, p.z || m.dist); if (!q) continue; ctx.beginPath(); ctx.arc(q.x, q.y, (0.05 + p.age * 0.25) * q.k, 0, 6.283); ctx.strokeStyle = 'rgba(255,255,255,' + (1 - p.age / 1.2) + ')'; ctx.lineWidth = 3; ctx.stroke(); }
     if (this.bp === 'flight' && this.flight) {
       const f = this.flight, S = f.res.samples, tip = this._tip(f), i = tip.i, b = S[Math.min(S.length - 1, i + 1)];
       const prev = S[Math.max(0, i - 1)], dir = { x: b.x - prev.x, y: b.y - prev.y, z: b.z - prev.z };

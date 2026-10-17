@@ -117,17 +117,23 @@ KAR.Match = class {
     const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
     const fl = KAR.Flight.run(this.dist, sol.yaw, sol.pitch, speed, wind);
     const res = { shooter: sh, end: this.endNo, wind, samples: fl.samples, hit: fl.hit, ground: fl.ground, ring: 0, x: false, short: false };
-    let hl = fl.hit;                     // the hit in the target's own frame (the same thing unless the target moves)
-    if (fl.hit && this.offAt) { const o = this.offAt(this.T + fl.hit.t); hl = { x: fl.hit.x - o.x, y: fl.hit.y - o.y }; }
-    if (fl.hit) {
-      const sc = KAR.Score.ring(this.distIdx, hl.x, hl.y, this.faceD); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
-      // ROBIN HOOD: on the face, within a shaft's width of an arrow already in it this end (it would split that arrow)
-      if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && Math.hypot(a.hit.x - hl.x, a.hit.y - hl.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
+    const bk = this.boxes ? this._crate(sol, speed, wind) : null;          // THINK BOX: crates in front of the boss stop it first
+    if (bk) {
+      res.samples = bk.samples; res.hit = bk.hit; res.ring = bk.star ? 10 : 0; res.miss = !bk.star; res.blocked = !bk.star; res.star = bk.star;
+      this.arrows[sh].push({ ring: res.ring, x: false, robin: false, end: this.endNo, hit: bk.star ? null : bk.local });
+    } else {
+      let hl = fl.hit;                     // the hit in the target's own frame (the same thing unless the target moves)
+      if (fl.hit && this.offAt) { const o = this.offAt(this.T + fl.hit.t); hl = { x: fl.hit.x - o.x, y: fl.hit.y - o.y }; }
+      if (fl.hit) {
+        const sc = KAR.Score.ring(this.distIdx, hl.x, hl.y, this.faceD); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
+        // ROBIN HOOD: on the face, within a shaft's width of an arrow already in it this end (it would split that arrow)
+        if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && a.hit.z === undefined && Math.hypot(a.hit.x - hl.x, a.hit.y - hl.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
+      }
+      else { res.miss = true; res.short = true; }
+      // a moving target carries its arrows with it - one that missed the boss altogether just flies on through
+      const keep = fl.hit && !(this.offAt && res.miss && !this.onBoss(hl));
+      this.arrows[sh].push({ ring: res.ring, x: res.x, robin: !!res.robin, end: this.endNo, hit: keep ? { x: hl.x, y: hl.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
     }
-    else { res.miss = true; res.short = true; }
-    // a moving target carries its arrows with it - one that missed the boss altogether just flies on through
-    const keep = fl.hit && !(this.offAt && res.miss && !this.onBoss(hl));
-    this.arrows[sh].push({ ring: res.ring, x: res.x, robin: !!res.robin, end: this.endNo, hit: keep ? { x: hl.x, y: hl.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
     this.arrowNo++;
     this.log.push(res);
     res.endDone = this.arrowNo >= this.per * this.shooters;
@@ -201,17 +207,35 @@ KAR.Swing = class extends KAR.Match {
 KAR.Swing.L = 2.4; KAR.Swing.ENDS = 4; KAR.Swing.AMP = [0.16, 0.22, 0.28, 0.34];
 
 // ---- THE TOUR (levels) ------------------------------------------------------------------
-// Fifteen levels across three venues, each a short range with its own twist: the wind, a smaller face, a boss
-// that slides along a rail or swings on ropes, gusts that change arrow to arrow. Stars come from the level's
+// Five worlds of six levels, each a short range with its own twist: the wind, a smaller face, a boss that slides
+// along a rail or swings on ropes, gusts that change arrow to arrow, crates in the way. Stars come from the level's
 // own thresholds; one star opens the next level. move: 'slide' (amp in metres, w rad/s) or 'swing' (amp in
-// radians on Swing.L ropes). face: the face size as a fraction of the standard one at that distance.
+// radians on Swing.L ropes). face: the face size as a fraction of the standard one at that distance. boxes: crates
+// (THINK BOX, below); flags: [x, height] of the wind pennants planted in front of a crate wall. view: how much the
+// scope frames, in metres, when it should take in more than the face.
 KAR.VENUES = [
   { name: 'VILLAGE GREEN', sub: 'a still morning on the club field' },
   { name: 'FOREST GLADE', sub: 'late sun through the pines' },
   { name: 'MOUNTAIN PASS', sub: 'sunset, and the wind off the peaks' },
   { name: 'LANTERN NIGHT', sub: 'floodlights, fireflies and a cold wind' },
+  { name: 'THINK BOX', sub: 'crates, windows and carts · think before you shoot' },
 ];
-// Four worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
+// THINK BOX builders. Crates stand BOXZ metres in front of the boss (BOXD deep) and stop an arrow dead (0 points);
+// a STAR BOX (star: true) breaks and scores 10 (once an end); a CART (mv: { a: metres, w: rad/s, p: phase }) is a
+// stack of crates on wheels that rolls to and fro across the lane. All in target-plane metres: x across, y up.
+// wall: crates from the ground up to `top`, `half` metres either side of the lane, with windows [x0, x1, y0, y1] cut in it
+KAR.BOXZ = 0.8; KAR.BOXD = 0.6;
+KAR.wall = (half, top, wins) => {
+  const out = []; let x = -half;
+  for (const [x0, x1, y0, y1] of wins.slice().sort((a, b) => a[0] - b[0])) {
+    if (x0 > x) out.push({ x0: x, x1: x0, y0: 0, y1: top });
+    out.push({ x0, x1, y0: 0, y1: y0 }); if (y1 < top) out.push({ x0, x1, y0: y1, y1: top });
+    x = x1;
+  }
+  if (x < half) out.push({ x0: x, x1: half, y0: 0, y1: top });
+  return out;
+};
+// Five worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
 // Star targets are tuned with bots (casual / good / expert, leading the movers): see eval/calibrate.mjs.
 KAR.TOUR = [
   { v: 0, name: 'FIRST ARROWS',  dist: 0, ends: 2, wind: 0.25, stars: [36, 46, 54], tip: 'a calm day at 18 m · find the gold' },
@@ -238,11 +262,19 @@ KAR.TOUR = [
   { v: 3, name: 'MIDNIGHT SWING',dist: 3, ends: 3, wind: 0.7,  move: 'swing', amp: 0.12, stars: [42, 58, 74], tip: 'a swing at 70 m · time it long' },
   { v: 3, name: 'NIGHT GALE',    dist: 3, ends: 3, wind: 1.6,  gust: 0.4, stars: [40, 54, 70], tip: 'a gale that changes every arrow' },
   { v: 3, name: 'LANTERN KING',  dist: 3, ends: 5, wind: 1.1,  gust: 0.25, move: 'slide', amp: 0.8, w: 1.2, face: 0.85, boss: true, stars: [74, 98, 120], tip: 'the last boss · five ends at 70 m on the rail' },
+  // THINK BOX: a puzzle world that opens once the Village Cup falls (after: the level whose star opens it)
+  { v: 4, name: 'PEEPHOLE',      dist: 0, ends: 3, wind: 0.5,  after: 5, boxes: KAR.wall(0.95, 1.62, [[-0.12, 0.12, 1.18, 1.42]]), flags: [0.55, 1.52], stars: [51, 68, 79], tip: 'a crate wall · the gold is through the window' },
+  { v: 4, name: 'STAR BOX',      dist: 1, ends: 3, wind: 0.6,  view: 1.0, boxes: KAR.wall(1.3, 1.92, [[-0.15, 0.15, 1.15, 1.45]]).concat([{ x0: 0.72, x1: 1.08, y0: 1.92, y1: 2.28, star: true }]), flags: [0.55, 1.52], stars: [56, 75, 83], tip: 'the STAR BOX scores 10 once an end · then go through the window' },
+  { v: 4, name: 'SHUTTER',       dist: 0, ends: 3, wind: 0.3,  boxes: [{ x0: -0.3, x1: 0.3, y0: 0, y1: 1.62, mv: { a: 0.62, w: 1.5 } }], stars: [47, 64, 77], tip: 'a crate cart rolls across · loose when the gold is clear' },
+  { v: 4, name: 'TWO WINDOWS',   dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.0, w: 0.8, boxes: KAR.wall(2.2, 2.0, [[-1.15, -0.45, 0.8, 1.8], [0.45, 1.15, 0.8, 1.8]]), flags: [1.35, 2.15], stars: [50, 66, 79], tip: 'the boss rides behind the wall · hit it in a window' },
+  { v: 4, name: 'CRISS-CROSS',   dist: 1, ends: 3, wind: 0.9,  gust: 0.35, boxes: [{ x0: -0.25, x1: 0.25, y0: 0, y1: 1.9, mv: { a: 1.0, w: 1.1 } }, { x0: -0.25, x1: 0.25, y0: 0, y1: 1.9, mv: { a: 1.0, w: 1.1, p: Math.PI } }], stars: [51, 67, 79], tip: 'two carts criss-cross · find the gap' },
+  { v: 4, name: 'THE BIG BOX',   dist: 2, ends: 4, wind: 0.9,  gust: 0.25, move: 'swing', amp: 0.14, face: 0.6, view: 1.15, boss: true, boxes: KAR.wall(2.6, 2.05, [[-0.7, 0.7, 0.85, 1.75]]).concat([{ x0: 1.1, x1: 1.5, y0: 2.05, y1: 2.45, star: true }]), flags: [1.05, 2.2], stars: [56, 84, 102], tip: 'the boss swings behind a window · and a STAR BOX up top' },
 ];
 // the 15-level tour (before the worlds) saved progress by these indices
 KAR.TOUR_V1 = [0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 17];
-// one star opens the next level; a level you already have stars on stays open (so older saves keep their place)
-KAR.tourOpen = (i, data) => i === 0 || (data.tour.stars[i - 1] || 0) > 0 || (data.tour.stars[i] || 0) > 0;
+// one star opens the next level (or, for a side world, the level named by `after`); a level you already have stars
+// on stays open (so older saves keep their place)
+KAR.tourOpen = (i, data) => { const s = data.tour.stars, L = KAR.TOUR[i], need = L && L.after !== undefined ? L.after : i - 1; return i === 0 || (s[need] || 0) > 0 || (s[i] || 0) > 0; };
 KAR.Stage = class extends KAR.Match {
   constructor(opts) {
     opts = opts || {};
@@ -257,6 +289,25 @@ KAR.Stage = class extends KAR.Match {
       const span = def.move === 'swing' ? KAR.Swing.L * Math.sin(def.amp) : def.amp;
       this.viewD = Math.max(this.faceD, span * 1.25 + this.faceD * 0.75);
     }
+    if (def.view) this.viewD = Math.max(this.viewD || 0, def.view);
+    if (def.boxes) { this.boxes = def.boxes; this.broken = {}; }       // broken[i] = the end a STAR BOX broke in
+  }
+  // a cart's sideways offset at time T (0 for a crate that stays put)
+  boxOff(i, T) { const mv = this.boxes[i].mv; return mv ? mv.a * Math.sin(mv.w * T + this.ph + (mv.p || 0)) : 0; }
+  boxGone(i) { return this.broken[i] === this.endNo; }
+  // does the arrow meet a crate? It flies to the crates' front plane; if it is inside a crate there (where that crate
+  // will be when the arrow arrives) it stops - or breaks a STAR BOX. The hit is kept in the crate's own frame.
+  _crate(sol, speed, wind) {
+    const zf = this.dist - KAR.BOXZ, fl = KAR.Flight.run(zf, sol.yaw, sol.pitch, speed, wind); if (!fl.hit) return null;
+    const h = fl.hit;
+    for (let i = 0; i < this.boxes.length; i++) {
+      const b = this.boxes[i]; if (this.boxGone(i)) continue;
+      const o = this.boxOff(i, this.T + h.t);
+      if (h.x < b.x0 + o || h.x > b.x1 + o || h.y < b.y0 || h.y > b.y1) continue;
+      if (b.star) this.broken[i] = this.endNo;
+      return { samples: fl.samples, star: !!b.star, hit: { x: h.x, y: h.y, z: zf, t: h.t, vx: h.vx, vy: h.vy, vz: h.vz }, local: { x: h.x - o, y: h.y, z: zf, bi: i, vx: h.vx, vy: h.vy, vz: h.vz } };
+    }
+    return null;
   }
   get max() { return this.ends * this.per * 10; }
   _newEnd() {

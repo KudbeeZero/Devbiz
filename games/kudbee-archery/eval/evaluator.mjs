@@ -233,11 +233,14 @@ await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.best.fill
 await click('mode5'); await page.waitForTimeout(80); await click('play'); await page.waitForTimeout(120);
 const tiles = await G(() => [KARGame.screen].concat(['L00', 'L01', 'L05'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'locked' : 'open') : 'none'; })));
 await page.screenshot({ path: `${OUT}/tour-map.png` });
+// the map is a bright cartoon world (blue sky up top, green hills low down), not a dimmed photo
+const mapPx = await G(() => { const g = KARGame, c = g.ctx, R = KAR.Render, px = (x, y) => Array.from(c.getImageData(Math.round((x - R.XL) * g.res), Math.round(y * g.res), 1, 1).data); return { sky: px(30, 20), hill: px(330, 600) }; });
 await click('L01'); await page.waitForTimeout(80); const stay = await G(() => KAR.Store.data.tourLv === 0 && KARGame.screen === 'levels');
 await click('wnext'); await page.waitForTimeout(80); const wp = await G(() => ({ v: KARGame.worldView, ids: KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join(), boss: KAR.TOUR[11].boss }));
 await click('wprev'); await page.waitForTimeout(80);
-rec('tour-map', tiles.join() === 'levels,open,locked,locked' && stay && wp.v === 1 && wp.ids === "L06,L07,L08,L09,L10,L11" && wp.boss,
-  `PLAY opens the level map (${tiles[0]}): on a fresh profile level 1 ${tiles[1]}, 2 ${tiles[2]}, the world 1 boss ${tiles[3]}; a locked tile can't be picked; > pages to world ${wp.v + 1} (${wp.ids}, boss last), stayed ${stay}`);
+const skyOk = mapPx.sky[2] > 150 && mapPx.sky[2] > mapPx.sky[0] + 40, hillOk = mapPx.hill[1] > mapPx.hill[0] && mapPx.hill[1] > mapPx.hill[2];
+rec('tour-map', tiles.join() === 'levels,open,locked,locked' && stay && wp.v === 1 && wp.ids === "L06,L07,L08,L09,L10,L11" && wp.boss && skyOk && hillOk,
+  `PLAY opens the level map (${tiles[0]}) on a cartoon world (sky rgb ${mapPx.sky.slice(0, 3)}, hill rgb ${mapPx.hill.slice(0, 3)}): on a fresh profile level 1 ${tiles[1]}, 2 ${tiles[2]}, the world 1 boss ${tiles[3]}; a locked tile can't be picked; > pages to world ${wp.v + 1} (${wp.ids}, boss last), stayed ${stay}`);
 await click('L00');
 const st1 = await G(() => ({ m: KARGame.match.mode, lv: KARGame.match.lv, hint: KARGame.hint }));
 // shoot the level clean: a bot with a steady hand that reads the wind exactly
@@ -251,9 +254,34 @@ await click('next');
 const st2 = await G(() => ({ lv: KARGame.match.lv, saved: KAR.Store.data.tourLv }));
 rec('tour-next', st2.lv === 1 && st2.saved === 1, `NEXT LEVEL starts level ${st2.lv + 1}`);
 // the venues: each paints its own scene, and moving levels draw their rail / swing frame
-const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 7, 12, 18]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
+const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 7, 12, 18, 27]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
 await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/tour-venue.png` });
-rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-' && errors.length === 0, `levels 3 / 8 / 13 / 19 render in venue:move ${venues.join(', ')} with no errors`);
+rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors.length === 0, `levels 3 / 8 / 13 / 19 / 28 render in venue:move ${venues.join(', ')} with no errors`);
+// THINK BOX: the world 5 page is locked until the Village Cup falls (and says so); a shot into the crate wall is BLOCKED,
+// scores 0 and stays stuck in the crate (drawn in front of the face); through the window it scores
+{
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars[23] = 2; D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 4; }); await page.waitForTimeout(120);
+  const shut = await G(() => KAR.UI.buttons.filter(b => /^L2\d$/.test(b.id)).every(b => b.disabled));
+  await G(() => { KAR.Store.data.tour.stars[5] = 1; }); await page.waitForTimeout(120);
+  const open = await G(() => KAR.UI.buttons.filter(b => /^L2\d$/.test(b.id) && !b.disabled).map(b => b.id).join());
+  await page.screenshot({ path: `${OUT}/think-map.png` });
+  await click('L24'); await page.waitForTimeout(150);
+  const lv = await G(() => ({ lv: KARGame.match.lv, boxes: KAR.Render.boxes && KAR.Render.boxes.length, hint: KARGame.hint }));
+  const wood = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(0.6, 1.0, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+
+  await waitFor(() => KARGame.bp === 'ready', 8000);
+  const b1 = await page.evaluate(([x, y]) => { const g = KARGame; g.match.wind = 0; g.match._gust = () => { g.match.wind = 0; }; g.drawing = true; g.draw = 1; g.aimX = x; g.aimY = y; g.sway = { x: 0, y: 0 }; g._loose(); const r = g.flight.res; return { blocked: r.blocked, ring: r.ring }; }, [0.5, 1.0]);
+  await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(250);
+  const ban = await G(() => KARGame.banner && KARGame.banner.text);
+  await page.screenshot({ path: `${OUT}/think-blocked.png` });
+  await waitFor(() => KARGame.bp === 'ready', 8000);
+  const b2 = await page.evaluate(([x, y]) => { const g = KARGame; g.drawing = true; g.draw = 1; g.aimX = x; g.aimY = y; g.sway = { x: 0, y: 0 }; g._loose(); const r = g.flight.res; return { blocked: !!r.blocked, ring: r.ring }; }, [0, 1.3]);
+  await waitFor(() => KARGame.bp === 'ready', 12000);
+  const kept = await G(() => { const a = KARGame.match.arrows[0]; return a.length === 2 && a[0].hit && a[0].hit.z === KARGame.match.dist - KAR.BOXZ && a[1].ring >= 9; });
+
+  rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood[0] > wood[2] + 60 && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
+    `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood}); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
+}
 // the first-shot tutorial: level 1 coaches the basics (aim at the gold), then breath; level 2 marks the wind hold-off
 const tut1 = await G(() => { const D = KAR.Store.data; D.tut = 0; D.tourLv = 0; D.mode = 5; KARGame.startMatch(); const c = KARGame.coach; return c && { bit: c.bit, mk: !!c.marker, x: c.marker && c.marker.x }; });
 await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/tutorial-1.png` });
@@ -291,7 +319,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await G(() => { KARGame.activate('menu'); }); await page.waitForTimeout(80);
   await click('shareGame'); await page.waitForTimeout(80);
   const st = await G(() => KARGame.shareText || '');
-  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /24 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
+  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /30 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
     `og/twitter image ${meta.img} (${dims.join('x')}), large-image card; SHARE copies "${st.slice(0, 60)}... ${meta.canon}"`);
 }
 

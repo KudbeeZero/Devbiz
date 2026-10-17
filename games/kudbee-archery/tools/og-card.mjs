@@ -36,7 +36,7 @@ await page.evaluate(() => {
     U.text(ctx, 'HOLD YOUR BREATH', x, 336, 30, '#ffffff', 'center');
     U.text(ctx, 'HIT THE GOLD', x, 376, 30, '#ffe14d', 'center');
     const chip = (t, y, c) => { ctx.font = '400 26px ' + U.FONT; const w = ctx.measureText(t).width + 44; U.rr(ctx, x - w / 2 - 3, y - 3, w + 6, 52, 18); ctx.fillStyle = U.OUT; ctx.fill(); const gr = ctx.createLinearGradient(0, y, 0, y + 46); gr.addColorStop(0, c[0]); gr.addColorStop(1, c[1]); U.rr(ctx, x - w / 2, y, w, 46, 15); ctx.fillStyle = gr; ctx.fill(); U.text(ctx, t, x, y + 33, 26, '#ffffff', 'center'); };
-    chip('24 LEVELS · 4 WORLDS · BOSSES', 410, ['#7ac7ff', '#1f5fa8']);
+    chip(KAR.TOUR.length + ' LEVELS · ' + KAR.VENUES.length + ' WORLDS · BOSSES', 410, ['#7ac7ff', '#1f5fa8']);
     chip('PLAY FREE IN YOUR BROWSER', 476, ['#a9ec62', '#2f8a2a']);
     U.text(ctx, 'KUDBEE GAMES STUDIO', x, 590, 20, '#cfe9ff', 'center');
     ctx.restore();

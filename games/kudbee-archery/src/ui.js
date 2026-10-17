@@ -289,11 +289,11 @@ KAR.UI = {
       const T = D.tour, tot = T.stars.reduce((a, b) => a + b, 0), L = KAR.TOUR[D.tourLv], W = KAR.VENUES[L.v];
       U.fit(ctx, KAR.VENUES.length + ' WORLDS  \u00b7  ' + KAR.TOUR.length + ' LEVELS  \u00b7  A BOSS AT THE END OF EACH WORLD', 480, C ? 300 : 300, U.sz(g, 18), '#ffffff', 900);
       for (let v = 0; v < KAR.VENUES.length; v++) {               // a medal per world: its stars, and a crown once its boss falls
-        const x = 480 + (v - (KAR.VENUES.length - 1) / 2) * 200, y = C ? 356 : 352, ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0), open = KAR.tourOpen(v * 6, D), done = T.stars[v * 6 + 5] > 0;
-        U.rr(ctx, x - 90, y - 30, 180, 72, 16); ctx.fillStyle = U.OUT; ctx.fill();
-        U.rr(ctx, x - 87, y - 27, 174, 66, 13); ctx.fillStyle = open ? ['#3e7fd0', '#3f8a3c', '#9a4e7a', '#26386e'][v] : '#5b6470'; ctx.fill();
-        U.fit(ctx, W === KAR.VENUES[v] ? '\u25b8 ' + KAR.VENUES[v].name : KAR.VENUES[v].name, x, y - 4, U.sz(g, 15), '#ffffff', 164);
-        if (open) { U.star(ctx, x - 26, y + 22, 10, true, 1); U.text(ctx, ws + ' / 18', x - 10, y + 29, U.sz(g, 15), '#ffe9a8', 'left'); if (done) U.crown(ctx, x + 64, y + 22, 9); }
+        const x = 480 + (v - (KAR.VENUES.length - 1) / 2) * 182, y = C ? 356 : 352, ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0), open = KAR.tourOpen(v * 6, D), done = T.stars[v * 6 + 5] > 0;
+        U.rr(ctx, x - 86, y - 30, 172, 72, 16); ctx.fillStyle = U.OUT; ctx.fill();
+        U.rr(ctx, x - 83, y - 27, 166, 66, 13); ctx.fillStyle = open ? ['#3e7fd0', '#3f8a3c', '#9a4e7a', '#26386e', '#c9802e'][v] : '#5b6470'; ctx.fill();
+        U.fit(ctx, W === KAR.VENUES[v] ? '\u25b8 ' + KAR.VENUES[v].name : KAR.VENUES[v].name, x, y - 4, U.sz(g, 15), '#ffffff', 156);
+        if (open) { U.star(ctx, x - 26, y + 22, 10, true, 1); U.text(ctx, ws + ' / 18', x - 10, y + 29, U.sz(g, 15), '#ffe9a8', 'left'); if (done) U.crown(ctx, x + 60, y + 22, 9); }
         else this.lock(ctx, x, y + 20);
       }
       U.fit(ctx, 'NEXT UP: LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + (L.boss ? '  \u00b7  BOSS' : '') + '   \u2605 ' + tot + ' / ' + KAR.TOUR.length * 3, 480, C ? 428 : 432, U.sz(g, 19), '#fff27a', 900);
@@ -391,19 +391,19 @@ KAR.UI = {
   // < 1/4 > to page (or swipe), BACK to the menu. A tile shows its number, name and stars, or a padlock.
   levels(ctx, g) {
     const U = this, D = KAR.Store.data, T = D.tour, v = g.worldView | 0, W = KAR.VENUES[v], C = g.coarse, xl = KAR.Render.XL;
-    U.backdrop(ctx, 0.28);
-    U.bubble(ctx, 'WORLD ' + (v + 1), 480, 74, 60, '#ffffff', '#cfe9ff', -0.02);
-    U.text(ctx, W.name, 480, 112, 28, '#fff27a', 'center');
+    U.bubble(ctx, 'WORLD ' + (v + 1), 480, 70, 58, '#ffffff', '#cfe9ff', -0.02);
+    U.text(ctx, W.name, 480, 108, 28, '#fff27a', 'center');
     const ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0);
-    U.fit(ctx, W.sub + '   \u2605 ' + ws + ' / 18', 480, 140, U.sz(g, 16), '#ffffff', 700);
+    U.fit(ctx, W.sub + '   \u2605 ' + ws + ' / 18', 480, 136, U.sz(g, 16), '#ffffff', 700);
+    // the tiles leave gaps between them, so the world's hills and props show through (still big taps on a phone)
     for (let j = 0; j < 6; j++) {
-      const i = v * 6 + j, L = KAR.TOUR[i], x = 86 + (j % 3) * 270, y = 158 + Math.floor(j / 3) * 168, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
-      U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 248, 150, '', { small: true, color: sel ? 'green' : L.boss ? 'yellow' : 'blue', selected: sel, disabled: !open });
-      if (L.boss) { U.crown(ctx, x + 214, y + 30, 15); U.text(ctx, 'BOSS', x + 214, y + 64, 16, '#ffffff', 'center'); }
-      U.text(ctx, String(i + 1), x + 124, y + 66, 54, open ? '#ffffff' : '#e6e9ee', 'center');
-      if (!open) { this.lock(ctx, x + 124, y + 108); continue; }
-      U.fit(ctx, L.name, x + 124, y + 96, U.sz(g, 17), '#ffffff', 226);
-      for (let k = 0; k < 3; k++) U.star(ctx, x + 84 + k * 40, y + 124, 14, k < T.stars[i], 1);
+      const i = v * 6 + j, L = KAR.TOUR[i], x = 118 + (j % 3) * 262, y = 160 + Math.floor(j / 3) * 160, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
+      U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 200, 132, '', { small: true, color: sel ? 'green' : L.boss ? 'yellow' : 'blue', selected: sel, disabled: !open });
+      if (L.boss) { U.crown(ctx, x + 172, y + 26, 13); U.text(ctx, 'BOSS', x + 172, y + 56, 14, '#ffffff', 'center'); }
+      U.text(ctx, String(i + 1), x + 100, y + 60, 50, open ? '#ffffff' : '#e6e9ee', 'center');
+      if (!open) { const why = L.after !== undefined && j === 0 ? 'BEAT LEVEL ' + (L.after + 1) : ''; this.lock(ctx, x + 100, y + (why ? 88 : 98)); if (why) U.fit(ctx, why, x + 100, y + 120, U.sz(g, 13), '#ffffff', 180); continue; }
+      U.fit(ctx, L.name, x + 100, y + 88, U.sz(g, 16), '#ffffff', 180);
+      for (let k = 0; k < 3; k++) U.star(ctx, x + 66 + k * 34, y + 112, 12, k < T.stars[i], 1);
     }
     const n = KAR.VENUES.length;
     U.button(ctx, g, 'wprev', 352, 506, 82, 68, '', { color: v > 0 ? 'blue' : 'grey', disabled: v === 0 });
@@ -453,19 +453,21 @@ KAR.UI = {
 
   overStage(ctx, g) {
     const U = this, m = g.match, T = g.overlayT, st = m.stars(), won = st >= 1, D = KAR.Store.data, last = m.lv === KAR.TOUR.length - 1;
+    const all = KAR.TOUR.every((L, i) => !L.boss || D.tour.stars[i] > 0), side = g.sideOpen;         // side: a side world this win opened
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 240, 104, 480, 430, won ? 'blue' : 'red');
     const boss = !!m.def.boss;
-    U.ribbon(ctx, 480, 76, 440, won ? (last ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
+    U.ribbon(ctx, 480, 76, 440, won ? (boss && all ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
     U.text(ctx, String(m.total(0)), 480, 236, 80, '#ffffff', 'center');
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
     for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < st, T > 0.4 + i * 0.3 ? 1 : 0.01);
-    const S = m.def.stars, msg = g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28]) : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
+    const S = m.def.stars, msg = side !== undefined && g.unlocked ? ['WORLD ' + (m.venue + 2) + ' + ' + KAR.VENUES[side].name + ' OPEN!', '#9be35a', 26] : side !== undefined ? [KAR.VENUES[side].name + ' WORLD OPEN!', '#9be35a', 26]
+      : g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28]) : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
       : !won ? [(S[0] - m.total(0)) + ' MORE TO CLEAR IT', '#ffffff', 22] : st < 3 ? [(S[st] - m.total(0)) + ' MORE FOR ' + (st + 1) + ' STARS', '#ffffff', 20] : ['PERFECT', '#fff27a', 28];
-    U.text(ctx, msg[0], 480, 394, msg[2], msg[1], 'center');
+    U.fit(ctx, msg[0], 480, 394, msg[2], msg[1], 450);
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
     if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); if (g.sharedKind === 'shareLevel' && g.time - g.shared < 2.5) U.text(ctx, 'COPIED!', 690, 186, 16, '#9be35a', 'center'); }

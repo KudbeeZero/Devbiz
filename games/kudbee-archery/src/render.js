@@ -108,6 +108,7 @@ KAR.Render = {
     if (this.venue === 1) return this._forest(ctx, t, hy);
     if (this.venue === 2) return this._mountain(ctx, t, hy);
     if (this.venue === 3) return this._night(ctx, t, hy);
+    if (this.venue === 4) return this._yard(ctx, t, hy);
     const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
     if (ph) {
       const s = Math.max(XW / ph.width, hy / ph.height);
@@ -236,6 +237,221 @@ KAR.Render = {
     }
     const v = ctx.createRadialGradient(480, H * 0.5, H * 0.3, 480, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(5,8,25,0)'); v.addColorStop(1, 'rgba(5,8,25,0.45)'); ctx.fillStyle = v; ctx.fillRect(XL, 0, XW, H);
   },
+  // THINK BOX: a sunny builder's yard - cartoon clouds, rolling hills with crate forts on them, a sandy field
+  _yard(ctx, t, hy) {
+    const XL = this.XL, XW = this.XW, H = this.H;
+    const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#2fa8e6'); sky.addColorStop(0.7, '#8fdcff'); sky.addColorStop(1, '#fff1c2');
+    ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, hy + 2);
+    for (let i = 0; i < 5; i++) { const s = 0.5 + (i % 3) * 0.18, x = XL + (((i * 337 + t * (6 + i * 2)) % (XW + 320)) - 160), y = hy - 150 - (i % 3) * 46; if (y > 20) this._cloud(ctx, x, y, s); }
+    const far = this._hillBand(ctx, hy - 40, 26, 0.006, 1.3, ['#b7e07a', '#8cc653'], hy + 2);
+    for (const [x, n] of [[0.18, 3], [0.52, 2], [0.83, 4]]) { const px = XL + XW * x; this._fort(ctx, px, far(px), 0.55, n, 7 + n); }
+    const near = this._hillBand(ctx, hy - 14, 14, 0.011, 4.1, ['#8ccf4e', '#5fae36'], hy + 2);
+    for (const x of [0.07, 0.36, 0.64, 0.95]) { const px = XL + XW * x; this._lolly(ctx, px, near(px) + 4, 0.55); }
+    this._field(ctx, hy, false, ['#c7d77a', '#7ea544']);
+    const v = ctx.createRadialGradient(480, H * 0.55, H * 0.4, 480, H * 0.55, H); v.addColorStop(0, 'rgba(60,40,10,0)'); v.addColorStop(1, 'rgba(60,40,10,0.22)'); ctx.fillStyle = v; ctx.fillRect(XL, 0, XW, H);
+  },
+
+  // ---- the cartoon kit (the level map and the THINK BOX yard), drawn in the Kudbee Birds style: flat colours,
+  // one highlight, a bold dark outline ------------------------------------------------------------------
+  // a puffy cloud: outline every puff first, then fill them all, so the union has one clean outline
+  _cloud(ctx, x, y, s, fill) {
+    const P = [[-62, 8, 30], [-30, -10, 38], [8, -20, 44], [46, -4, 34], [74, 10, 24], [10, 10, 34]];
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.fillStyle = this.OUT; for (const [px, py, r] of P) { ctx.beginPath(); ctx.arc(px, py, r + 5, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = fill || '#ffffff'; for (const [px, py, r] of P) { ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = 'rgba(120,170,220,0.25)'; ctx.beginPath(); ctx.ellipse(6, 26, 74, 12, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.ellipse(-12, -30, 18, 8, -0.3, 0, 6.283); ctx.fill();
+    ctx.restore();
+  },
+  // a band of rolling hills from y = base down to `bottom` (default the screen's foot): gradient fill, a bold top
+  // edge and a lighter lip just under it. Returns the hill line y(x) so props can stand on it.
+  _hillBand(ctx, base, amp, f, ph, col, bottom) {
+    const XL = this.XL, XW = this.XW, y = x => base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.17 + ph * 1.7) * amp * 0.38;
+    const edge = () => { ctx.moveTo(XL - 20, y(XL - 20)); for (let x = XL - 20; x <= XL + XW + 20; x += 10) ctx.lineTo(x, y(x)); };
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.beginPath(); edge(); ctx.lineTo(XL + XW + 20, bottom || this.H); ctx.lineTo(XL - 20, bottom || this.H); ctx.closePath();
+    const g = ctx.createLinearGradient(0, base - amp * 1.4, 0, bottom || this.H); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]); ctx.fillStyle = g; ctx.fill();
+    ctx.translate(0, 5); ctx.beginPath(); edge(); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.stroke();
+    ctx.translate(0, -5); ctx.beginPath(); edge(); ctx.lineWidth = 3.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.restore();
+    return y;
+  },
+  // a lollipop tree standing on (x, y)
+  _lolly(ctx, x, y, s, col) {
+    col = col || ['#7fd04a', '#3f9a2c'];
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-5, -46); ctx.lineTo(5, -46); ctx.lineTo(7, 0); ctx.closePath(); ctx.fillStyle = '#9a6332'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = this.OUT; ctx.stroke();
+    const g = ctx.createRadialGradient(-12, -86, 6, 0, -70, 44); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
+    ctx.beginPath(); ctx.arc(0, -72, 38, 0, 6.283); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 4.5; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-12, -88, 12, 7, -0.5, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+    ctx.restore();
+  },
+  // a cartoon pine on (x, y): three outlined tiers
+  _cpine(ctx, x, y, s, col) {
+    col = col || ['#4fa65a', '#2b6e3a'];
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round';
+    ctx.fillStyle = '#7a4a26'; ctx.fillRect(-5, -14, 10, 16); ctx.lineWidth = 3.5; ctx.strokeStyle = this.OUT; ctx.strokeRect(-5, -14, 10, 16);
+    for (let k = 0; k < 3; k++) {
+      const w = 40 - k * 9, b = -12 - k * 26, h = 42 - k * 4;
+      ctx.beginPath(); ctx.moveTo(-w, b); ctx.quadraticCurveTo(0, b + 8, w, b); ctx.lineTo(0, b - h); ctx.closePath();
+      const g = ctx.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
+    }
+    ctx.restore();
+  },
+  // a straw target on its stand, an arrow or two in it (the archery world's "pig")
+  _target2(ctx, x, y, s, arrows) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 22, -30); ctx.lineTo(sx * 34, 0); ctx.lineWidth = 9; ctx.strokeStyle = this.OUT; ctx.stroke(); ctx.lineWidth = 5; ctx.strokeStyle = '#b9884e'; ctx.stroke(); }
+    KAR.UI.rr(ctx, -40, -112, 80, 80, 16); ctx.fillStyle = '#efcd62'; ctx.fill(); ctx.lineWidth = 4.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+    for (const [r, c] of [[32, '#f4f1e6'], [26, '#26262e'], [20, '#3c8fe0'], [14, '#e4453a'], [7, '#ffd34d']]) { ctx.beginPath(); ctx.arc(0, -72, r, 0, 6.283); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.stroke(); }
+    for (let i = 0; i < (arrows || 0); i++) {
+      const ax = [-4, 9, -12][i], ay = [-76, -66, -62][i];
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + 30, ay - 22); ctx.lineWidth = 6; ctx.strokeStyle = this.OUT; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#f2e6c8'; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax + 22, ay - 16); ctx.lineTo(ax + 36, ay - 30); ctx.lineTo(ax + 38, ay - 18); ctx.closePath(); ctx.fillStyle = '#2f86d8'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+    }
+    ctx.restore();
+  },
+  // a flat wooden crate, w x h, bottom-left at (x, y)
+  _crate2(ctx, x, y, w, h, star) {
+    const i = Math.min(w, h) * 0.14, OUT = this.OUT;
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.fillStyle = star ? '#ffd34d' : '#e4ad62'; ctx.fillRect(x, y - h, w, h); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.strokeRect(x, y - h, w, h);
+    ctx.fillStyle = star ? '#f0b52e' : '#c48542'; ctx.fillRect(x + i, y - h + i, w - 2 * i, h - 2 * i); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(60,30,8,0.6)'; ctx.strokeRect(x + i, y - h + i, w - 2 * i, h - 2 * i);
+    if (star) KAR.UI.star(ctx, x + w / 2, y - h / 2, Math.min(w, h) * 0.3, true, 1);
+    else { ctx.beginPath(); ctx.moveTo(x + i, y - i); ctx.lineTo(x + w - i, y - h + i); ctx.lineWidth = i * 1.2; ctx.strokeStyle = '#e4ad62'; ctx.stroke(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(60,30,8,0.5)'; ctx.stroke(); }
+    ctx.restore();
+  },
+  // a crate fort on (x, y): n crates wide at the bottom, stacked into a pyramid, planks across, a target on top
+  _fort(ctx, x, y, s, n, seed) {
+    const c = 34 * s, rnd = KAR.Util.rng(seed || 1);
+    let row = 0;
+    for (let k = n; k > 0; k--, row++) for (let i = 0; i < k; i++) this._crate2(ctx, x - k * c / 2 + i * c, y - row * c, c, c, rnd() < 0.12);
+    const top = y - n * c;
+    ctx.save(); ctx.fillStyle = '#c98d48'; ctx.fillRect(x - c * 0.9, top - 5 * s, c * 1.8, 6 * s); ctx.lineWidth = 2.5; ctx.strokeStyle = this.OUT; ctx.strokeRect(x - c * 0.9, top - 5 * s, c * 1.8, 6 * s); ctx.restore();
+    this._target2(ctx, x, top - 5 * s, s * 0.55, 1);
+  },
+  _fence(ctx, y, x0, x1, s) {
+    ctx.save(); ctx.lineCap = 'round';
+    for (const h of [18, 34]) { ctx.beginPath(); ctx.moveTo(x0, y - h * s); ctx.lineTo(x1, y - h * s); ctx.lineWidth = 9 * s; ctx.strokeStyle = this.OUT; ctx.stroke(); ctx.lineWidth = 5 * s; ctx.strokeStyle = '#c99256'; ctx.stroke(); }
+    for (let x = x0; x <= x1; x += 46 * s) { KAR.UI.rr(ctx, x - 5 * s, y - 46 * s, 10 * s, 48 * s, 3 * s); ctx.fillStyle = '#b07a40'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = this.OUT; ctx.stroke(); }
+    ctx.restore();
+  },
+  // a tuft of grass and a flower or two along the foreground hill
+  _tufts(ctx, yf, seed, cols) {
+    const rnd = KAR.Util.rng(seed), XL = this.XL, XW = this.XW;
+    ctx.save(); ctx.lineJoin = 'round';
+    for (let x = XL + 10; x < XL + XW; x += 40 + rnd() * 70) {
+      const y = yf(x) + 8, h = 10 + rnd() * 10;
+      ctx.beginPath(); ctx.moveTo(x - 9, y); ctx.lineTo(x - 5, y - h); ctx.lineTo(x - 1, y - 3); ctx.lineTo(x + 3, y - h * 1.2); ctx.lineTo(x + 6, y - 2); ctx.lineTo(x + 10, y - h * 0.8); ctx.lineTo(x + 12, y); ctx.closePath();
+      ctx.fillStyle = cols[0]; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+      if (rnd() < 0.45) { const fx = x + 20, fy = yf(fx) + 2, fc = ['#ff6b8a', '#ffd34d', '#ffffff', '#c46bff'][Math.floor(rnd() * 4)];
+        for (let p = 0; p < 5; p++) { const a = p * 1.2566; ctx.beginPath(); ctx.arc(fx + Math.cos(a) * 4.5, fy - 6 + Math.sin(a) * 4.5, 3.6, 0, 6.283); ctx.fillStyle = fc; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); }
+        ctx.beginPath(); ctx.arc(fx, fy - 6, 2.6, 0, 6.283); ctx.fillStyle = '#ffb11f'; ctx.fill(); }
+    }
+    ctx.restore();
+  },
+
+  // ---- the LEVEL MAP backdrop: one cartoon world per page, Kudbee Birds style -----------------------------------
+  // A big sky with the sun (or moon) and slow rays, puffy clouds drifting, three layers of rolling hills with the
+  // world's own props on them - straw targets with arrows in, trees, peaks, lanterns, crate forts - and a grassy
+  // foreground lip. The hills and props are painted once into an offscreen canvas (per world and screen size);
+  // the sky, clouds, rays, twinkles and fireflies are drawn live over and under it.
+  MAP: [
+    { sky: ['#3fb2f2', '#8fdbff', '#e6f9ff'], sun: [770, 96, '#ffd84a'], cloud: '#ffffff', hills: [['#b9e88a', '#86c95a'], ['#86d14e', '#55ad35'], ['#62bb3a', '#37892a']], tuft: ['#7fd04a'] },
+    { sky: ['#6ea8dc', '#bfe0ea', '#ffe3a6'], sun: [180, 120, '#ffe27a'], cloud: '#fff8ea', hills: [['#9cc48a', '#6f9e68'], ['#5f9e58', '#3c7440'], ['#3f8a46', '#235a30']], tuft: ['#5fae4a'] },
+    { sky: ['#3a3f86', '#9b5c9e', '#f5876a', '#ffd27a'], sun: [700, 300, '#ffc864'], cloud: '#ffd8cc', hills: [['#9a7ab8', '#6e5f96'], ['#5a6a8a', '#3d4a6c'], ['#6e9a4a', '#3f6a2e']], tuft: ['#7aa04a'] },
+    { sky: ['#070b24', '#16245a', '#33457e'], moon: [230, 110], cloud: '#3c4d84', hills: [['#24356a', '#18264f'], ['#1b2b55', '#121d3c'], ['#244a34', '#12301f']], tuft: ['#2f6a3e'] },
+    { sky: ['#1fa2e4', '#7fd6ff', '#fff1c2'], sun: [800, 90, '#ffd84a'], cloud: '#ffffff', hills: [['#c9e58a', '#a2cc63'], ['#9ad35a', '#6db53e'], ['#d9c27a', '#b89a52']], tuft: ['#8ccf4e'] },
+  ],
+  mapScene(ctx, v, t) {
+    const XL = this.XL, XW = this.XW, H = this.H, M = this.MAP[v] || this.MAP[0];
+    const sky = ctx.createLinearGradient(0, 0, 0, 470); M.sky.forEach((c, i) => sky.addColorStop(i / (M.sky.length - 1), c));
+    ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, H);
+    if (M.sun) {                       // the sun and its slowly turning rays
+      const [sx, sy, sc] = M.sun;
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(t * 0.05); ctx.fillStyle = 'rgba(255,255,255,0.13)';
+      for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(900, -70); ctx.lineTo(900, 70); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+      const g = ctx.createRadialGradient(sx, sy, 20, sx, sy, 140); g.addColorStop(0, 'rgba(255,250,210,0.8)'); g.addColorStop(1, 'rgba(255,250,210,0)'); ctx.fillStyle = g; ctx.fillRect(sx - 140, sy - 140, 280, 280);
+      ctx.beginPath(); ctx.arc(sx, sy, 44, 0, 6.283); ctx.fillStyle = sc; ctx.fill(); ctx.lineWidth = 4.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(sx - 14, sy - 16, 14, 8, -0.6, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+    }
+    if (M.moon) {                      // night: stars twinkle, a big round moon with craters
+      const rnd = KAR.Util.rng(11);
+      for (let i = 0; i < 110; i++) { const x = XL + rnd() * XW, y = rnd() * 400, r = 0.8 + rnd() * 1.8, a = 0.4 + 0.6 * Math.abs(Math.sin(t * (0.8 + rnd() * 1.6) + i)); ctx.globalAlpha = a; ctx.fillStyle = '#fff6e0'; ctx.fillRect(x, y, r, r); }
+      ctx.globalAlpha = 1;
+      const [mx, my] = M.moon, g = ctx.createRadialGradient(mx, my, 30, mx, my, 170); g.addColorStop(0, 'rgba(220,230,255,0.35)'); g.addColorStop(1, 'rgba(220,230,255,0)'); ctx.fillStyle = g; ctx.fillRect(mx - 170, my - 170, 340, 340);
+      ctx.beginPath(); ctx.arc(mx, my, 50, 0, 6.283); ctx.fillStyle = '#f4f0d8'; ctx.fill(); ctx.lineWidth = 4.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+      for (const [cx, cy, r] of [[-16, -10, 11], [14, 14, 8], [18, -18, 5], [-10, 22, 6]]) { ctx.beginPath(); ctx.arc(mx + cx, my + cy, r, 0, 6.283); ctx.fillStyle = 'rgba(180,170,140,0.45)'; ctx.fill(); }
+    }
+    for (let i = 0; i < 6; i++) {        // clouds drifting right, in two depths
+      const far = i % 2, s = far ? 0.55 : 0.85, x = XL + (((i * 271 + t * (far ? 7 : 13)) % (XW + 360)) - 180), y = (far ? 70 : 150) + (i * 37) % 60;
+      ctx.globalAlpha = M.moon ? 0.55 : 1; this._cloud(ctx, x, y, s, M.cloud); ctx.globalAlpha = 1;
+    }
+    const key = v + ':' + XW + ':' + (this.res || 1);
+    const c = this._mapC || (this._mapC = {});
+    if (!(key in c)) {
+      if (Object.keys(c).length > 6) for (const k in c) delete c[k];
+      c[key] = null;
+      try {
+        const cv = document.createElement('canvas'), r = this.res || 1; cv.width = Math.round(XW * r); cv.height = Math.round(H * r);
+        const cx = cv.getContext('2d'); cx.setTransform(r, 0, 0, r, -XL * r, 0); this._mapLayer(cx, v); c[key] = cv;
+      } catch (e) { /* no offscreen canvas: paint it live */ }
+    }
+    if (c[key]) ctx.drawImage(c[key], XL, 0, XW, H); else this._mapLayer(ctx, v);
+    if (v === 3) for (let i = 0; i < 22; i++) {    // fireflies
+      const x = XL + ((i * 97.3 + t * (8 + i % 5)) % XW), y = 360 + ((i * 53) % 100) * 2.4 + Math.sin(t * 1.3 + i) * 14, a = 0.35 + 0.65 * Math.max(0, Math.sin(t * 2.2 + i * 1.7));
+      const fg = ctx.createRadialGradient(x, y, 0, x, y, 9); fg.addColorStop(0, 'rgba(230,255,140,' + a + ')'); fg.addColorStop(1, 'rgba(230,255,140,0)'); ctx.fillStyle = fg; ctx.fillRect(x - 9, y - 9, 18, 18);
+    }
+    // a soft shade behind the title and the tiles, so the white text always reads
+    const sh = ctx.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(10,20,40,0.28)'); sh.addColorStop(0.3, 'rgba(10,20,40,0.05)'); sh.addColorStop(0.75, 'rgba(10,20,40,0.08)'); sh.addColorStop(1, 'rgba(10,20,40,0.35)');
+    ctx.fillStyle = sh; ctx.fillRect(XL, 0, XW, H);
+  },
+  // the still part of a world's map: three hill layers and their props
+  _mapLayer(ctx, v) {
+    const XL = this.XL, XW = this.XW, M = this.MAP[v] || this.MAP[0], rnd = KAR.Util.rng(91 + v), X = f => XL + XW * f;
+    if (v === 2) {                      // MOUNTAIN PASS: big cartoon peaks with snow caps behind the hills
+      for (const [f, h, w] of [[0.12, 250, 210], [0.38, 300, 260], [0.66, 230, 220], [0.9, 280, 240]]) {
+        const x = X(f), b = 420, top = b - h;
+        ctx.beginPath(); ctx.moveTo(x - w, b); ctx.lineTo(x - w * 0.12, top + 8); ctx.quadraticCurveTo(x, top - 6, x + w * 0.12, top + 8); ctx.lineTo(x + w, b); ctx.closePath();
+        const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, '#8c78b8'); g.addColorStop(0.5, '#a58ac4'); g.addColorStop(0.51, '#6d5a98'); g.addColorStop(1, '#5a4a86'); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 4.5; ctx.strokeStyle = this.OUT; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - w * 0.12, top + 8); ctx.quadraticCurveTo(x, top - 6, x + w * 0.12, top + 8); ctx.lineTo(x + w * 0.3, top + h * 0.3); ctx.lineTo(x + w * 0.14, top + h * 0.24); ctx.lineTo(x, top + h * 0.34); ctx.lineTo(x - w * 0.14, top + h * 0.24); ctx.lineTo(x - w * 0.3, top + h * 0.3); ctx.closePath();
+        ctx.fillStyle = '#fff6f0'; ctx.fill(); ctx.lineWidth = 3.5; ctx.stroke();
+      }
+    }
+    const h1 = this._hillBand(ctx, 372, 30, 0.0052, 0.7 + v, M.hills[0]);
+    // props stand where the level tiles leave gaps: the two alleys between the columns (x 350, 610), the margins
+    // either side of the tiles (and beyond, on a wide phone screen)
+    const gaps = [XL + 40, 350, 610, 920, XL + XW - 40].filter((x, i, a) => i === 0 || x - a[i - 1] > 60);
+    if (v === 0) { for (const x of gaps) this._lolly(ctx, x, h1(x) + 6, 0.6); }
+    if (v === 1 || v === 2) for (let x = XL - 10; x < XL + XW + 20; x += 34 + rnd() * 30) this._cpine(ctx, x, h1(x) + 8, 0.5 + rnd() * 0.25, v === 2 ? ['#4d6e8a', '#2f4a66'] : ['#5aa86a', '#2f6e44']);
+    if (v === 3) {                      // LANTERN NIGHT: a far town's lit windows on the back hill
+      for (let i = 0; i < 9; i++) { const x = X(0.05 + i * 0.11 + rnd() * 0.03), y = h1(x) + 4, w = 22 + rnd() * 16, h = 20 + rnd() * 26;
+        ctx.fillStyle = '#1a2348'; ctx.fillRect(x - w / 2, y - h, w, h + 6); ctx.lineWidth = 3; ctx.strokeStyle = this.OUT; ctx.strokeRect(x - w / 2, y - h, w, h + 6);
+        ctx.beginPath(); ctx.moveTo(x - w / 2 - 4, y - h); ctx.lineTo(x, y - h - 14); ctx.lineTo(x + w / 2 + 4, y - h); ctx.closePath(); ctx.fillStyle = '#2a3366'; ctx.fill(); ctx.stroke();
+        for (let k = 0; k < 2; k++) { ctx.fillStyle = rnd() < 0.7 ? '#ffd27a' : '#2a3366'; ctx.fillRect(x - w / 2 + 4 + k * (w / 2 - 2), y - h + 6, w / 2 - 8, 8); } }
+    }
+    if (v === 4) gaps.forEach((x, i) => this._fort(ctx, x, h1(x) + 4, 0.6, [2, 3, 3, 2, 2][i], 3 + i));
+    const h2 = this._hillBand(ctx, 432, 24, 0.0085, 2.2 + v * 0.6, M.hills[1]);
+    // the world's straw targets out on the middle hill, arrows in them
+    gaps.forEach((x, i) => {
+      if (v === 4) { this._crate2(ctx, x - 24, h2(x) + 4, 48, 48, i === 2); this._crate2(ctx, x - 12, h2(x) - 44, 24, 24, false); return; }
+      this._target2(ctx, x + (i % 2 ? 6 : -6), h2(x) + 6, 0.55 + (i % 3) * 0.08, 1 + i % 3);
+    });
+    if (v === 0) this._fence(ctx, h2(260) + 14, 210, 300, 0.8);
+    if (v === 1) for (const x of [XL + 20, XL + XW - 20]) this._cpine(ctx, x, h2(x) + 10, 1.0, ['#4f9e5a', '#245a32']);
+    const h3 = this._hillBand(ctx, 548, 18, 0.011, 4 + v, M.hills[2]);
+    if (v === 3) {                      // a string of paper lanterns along the front
+      ctx.save(); ctx.lineCap = 'round';
+      ctx.beginPath(); for (let x = XL - 10; x <= XL + XW + 10; x += 10) { const y = 470 + Math.cos((x - XL) / XW * Math.PI * 4) * 14; x === XL - 10 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.lineWidth = 2.5; ctx.strokeStyle = '#0b1124'; ctx.stroke();
+      for (let x = XL + 40; x < XL + XW; x += 92) { const y = 470 + Math.cos((x - XL) / XW * Math.PI * 4) * 14 + 4, c = ['#ff7a5a', '#ffd34d', '#ff9a3c'][Math.round(x) % 3];
+        const g = ctx.createRadialGradient(x, y + 14, 2, x, y + 14, 40); g.addColorStop(0, 'rgba(255,220,140,0.55)'); g.addColorStop(1, 'rgba(255,220,140,0)'); ctx.fillStyle = g; ctx.fillRect(x - 40, y - 26, 80, 80);
+        KAR.UI.rr(ctx, x - 11, y, 22, 28, 9); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = this.OUT; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(x - 6, y + 5, 4, 16); }
+      ctx.restore();
+    }
+    this._tufts(ctx, h3, 7 + v, M.tuft);
+  },
+
   _field(ctx, hy, photo, pal) {
     const W = this.W, H = this.H;
     const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, pal ? pal[0] : photo ? '#7aa83e' : '#79cc55'); gg.addColorStop(1, pal ? pal[1] : photo ? '#4a8a2e' : '#3f9a36');
@@ -348,8 +564,9 @@ KAR.Render = {
       }
     }
     // pennants either side, streaming with the wind
+    // (behind a THINK BOX wall drawBoxes plants them in front of it instead)
     const fx = swing === 'slide' ? (this.railA || 1) + bw + 0.8 : swing ? 2.9 : bw + 0.35;
-    this._flag(ctx, -fx, D + 0.3, wind, t, '#ff5d5d'); this._flag(ctx, fx, D + 0.3, wind, t, '#ffd34d');
+    if (!this.flags) { this._flag(ctx, -fx, D + 0.3, wind, t, '#ff5d5d'); this._flag(ctx, fx, D + 0.3, wind, t, '#ffd34d'); }
   },
   // SWINGER frame: two timber posts and a cross-beam, two ropes down to the top of the boss (parallel ropes keep it upright)
   _gantry(ctx, o, bw, Y, D, lw) {
@@ -369,9 +586,74 @@ KAR.Render = {
       const w = this.proj(x, ry + 0.06, z); if (w) { const r = Math.max(2.5, 0.06 * w.k); ctx.beginPath(); ctx.arc(w.x, w.y, r, 0, 6.283); ctx.fillStyle = '#3a414c'; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke(); ctx.beginPath(); ctx.arc(w.x, w.y, r * 0.35, 0, 6.283); ctx.fillStyle = '#c9d1d9'; ctx.fill(); }
     }
   },
-  _flag(ctx, x, z, wind, t, col) {
-    const top = this.proj(x, 1.9, z), bot = this.proj(x, 0, z); if (!top || !bot) return;
-    const k = top.k, OUT = this.OUT;
+  // ---- THINK BOX crates ------------------------------------------------------------------
+  // Each crate is a 3D block (front face BOXZ in front of the boss, BOXD deep), split into crate-sized tiles: a
+  // light frame, recessed planks, a diagonal brace and nails, all projected point by point so they stay right in
+  // perspective (and as the arrow cam swings round). The window jambs and tops show their depth. A STAR BOX is gold
+  // with a star on it; a CART rides on wheels along a ground rail. this.boxes: [{x0,x1,y0,y1,star,mv,off,gone}].
+  drawBoxes(ctx, t, wind, swing) {
+    const B = this.boxes; if (!B || !B.length) return;
+    const zf = this.dist - KAR.BOXZ, zb = zf + KAR.BOXD, c = this.cam, OUT = this.OUT, P = (x, y, z) => this.proj(x, y, z);
+    // tiles about a crate-width on screen whatever the range (smaller crates up close), outlines kept bold but sane
+    const k0 = (P(0, 1, zf) || { k: 100 }).k, lw = KAR.Util.clamp(0.006 * k0, 1.4, 3.2), tile = KAR.Util.clamp(150 / k0, 0.2, 0.6);
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // rails under the carts
+    for (const b of B) if (b.mv && !b.gone) { const A = b.mv.a + (b.x1 - b.x0) / 2 + 0.25; this.line3(ctx, [-A, 0.02, zf + 0.1], [A, 0.02, zf + 0.1], OUT, lw * 2.6); this.line3(ctx, [-A, 0.02, zf + 0.1], [A, 0.02, zf + 0.1], '#9aa3ad', lw * 1.3); }
+    // sides and tops first (the depth of the window jambs), then the fronts over them
+    for (const b of B) {
+      if (b.gone) continue;
+      const x0 = b.x0 + b.off, x1 = b.x1 + b.off, side = b.star ? '#c9800e' : '#9c6a32', top = b.star ? '#ffe888' : '#e2b46a';
+      if (c.x > x1) this.poly(ctx, [P(x1, b.y0, zf), P(x1, b.y1, zf), P(x1, b.y1, zb), P(x1, b.y0, zb)], side, OUT, lw);
+      if (c.x < x0) this.poly(ctx, [P(x0, b.y0, zf), P(x0, b.y1, zf), P(x0, b.y1, zb), P(x0, b.y0, zb)], side, OUT, lw);
+      if (c.y > b.y1) this.poly(ctx, [P(x0, b.y1, zf), P(x1, b.y1, zf), P(x1, b.y1, zb), P(x0, b.y1, zb)], top, OUT, lw);
+      if (c.y < b.y0) this.poly(ctx, [P(x0, b.y0, zf), P(x1, b.y0, zf), P(x1, b.y0, zb), P(x0, b.y0, zb)], '#7a4f22', OUT, lw);
+    }
+    for (const b of B) {
+      if (b.gone) continue;
+      const x0 = b.x0 + b.off, x1 = b.x1 + b.off, nx = Math.max(1, Math.round((x1 - x0) / tile)), ny = Math.max(1, Math.round((b.y1 - b.y0) / tile));
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) this._crate3(ctx, x0 + (x1 - x0) * i / nx, x0 + (x1 - x0) * (i + 1) / nx, b.y0 + (b.y1 - b.y0) * j / ny, b.y0 + (b.y1 - b.y0) * (j + 1) / ny, zf, lw, b.star, (i * 7 + j * 3) % 5);
+      // one outline round the whole stack, so a wall reads as one solid thing
+      this.poly(ctx, [P(x0, b.y0, zf), P(x1, b.y0, zf), P(x1, b.y1, zf), P(x0, b.y1, zf)], null, OUT, lw * 2);
+      if (b.star) {                     // the star emblem, gently pulsing
+        const q = P((x0 + x1) / 2, (b.y0 + b.y1) / 2, zf); if (q) KAR.UI.star(ctx, q.x, q.y, (x1 - x0) * 0.3 * q.k * (1 + 0.06 * Math.sin(t * 5)), true, 1);
+      }
+      if (b.mv) for (const wx of [x0 + 0.1, x1 - 0.1]) {           // the cart's wheels
+        const q = P(wx, 0.07, zf - 0.02); if (!q) continue; const r = Math.max(3, 0.08 * q.k);
+        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 6.283); ctx.fillStyle = '#3a414c'; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke();
+        ctx.beginPath(); ctx.arc(q.x, q.y, r * 0.4, 0, 6.283); ctx.fillStyle = '#c9d1d9'; ctx.fill();
+      }
+    }
+    ctx.restore();
+    // a wall would hide the wind pennants, so the level plants them in front of it ([x, height]) where they stay clear
+    // of the windows
+    if (this.flags) { const [fx, fh] = this.flags; this._flag(ctx, -fx, zf - 0.4, wind, t, '#ff5d5d', fh); this._flag(ctx, fx, zf - 0.4, wind, t, '#ffd34d', fh); }
+  },
+  // one crate tile on the front plane z: frame, recessed planks, a brace corner to corner (alternating), nails
+  _crate3(ctx, x0, x1, y0, y1, z, lw, star, v) {
+    const P = (x, y) => this.proj(x, y, z), OUT = this.OUT, i = Math.min(x1 - x0, y1 - y0) * 0.13;
+    const pal = star ? ['#ffe27a', '#f0b52e', '#c9800e'] : [['#e9b56c', '#c98d48', '#8e5a28'], ['#e4ad62', '#c48542', '#8a5524'], ['#efbd76', '#cf954f', '#94602c']][v % 3];
+    const a = P(x0, y0), b = P(x1, y0), c = P(x1, y1), d = P(x0, y1); if (!a || !b || !c || !d) return;
+    this.poly(ctx, [a, b, c, d], pal[0], OUT, lw);
+    const ia = P(x0 + i, y0 + i), ib = P(x1 - i, y0 + i), ic = P(x1 - i, y1 - i), id = P(x0 + i, y1 - i);
+    this.poly(ctx, [ia, ib, ic, id], pal[1], 'rgba(60,30,8,0.55)', lw * 0.8);
+    // plank seams
+    ctx.strokeStyle = 'rgba(70,38,10,0.45)'; ctx.lineWidth = Math.max(1, lw * 0.6);
+    for (const f of [1 / 3, 2 / 3]) { const p = P(x0 + i, y0 + i + (y1 - y0 - 2 * i) * f), q = P(x1 - i, y0 + i + (y1 - y0 - 2 * i) * f); if (p && q) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); } }
+    // the brace: a light board corner to corner
+    if (!star) {
+      const up = v % 2 === 0, e0 = up ? [x0 + i, y0 + i] : [x0 + i, y1 - i], e1 = up ? [x1 - i, y1 - i] : [x1 - i, y0 + i], w = i * 0.7;
+      const dx = e1[0] - e0[0], dy = e1[1] - e0[1], dl = Math.hypot(dx, dy) || 1, nx = -dy / dl * w, ny = dx / dl * w;
+      this.poly(ctx, [P(e0[0] + nx, e0[1] + ny), P(e1[0] + nx, e1[1] + ny), P(e1[0] - nx, e1[1] - ny), P(e0[0] - nx, e0[1] - ny)], pal[0], 'rgba(60,30,8,0.6)', lw * 0.8);
+    }
+    // a highlight along the top of the frame, nails in the corners
+    const h0 = P(x0 + i * 0.5, y1 - i * 0.35), h1 = P(x1 - i * 0.5, y1 - i * 0.35); if (h0 && h1) { ctx.beginPath(); ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = Math.max(1, lw * 0.7); ctx.stroke(); }
+    for (const [nx, ny] of [[x0 + i * 0.5, y0 + i * 0.5], [x1 - i * 0.5, y0 + i * 0.5], [x1 - i * 0.5, y1 - i * 0.5], [x0 + i * 0.5, y1 - i * 0.5]]) { const q = P(nx, ny); if (q) { ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, 0.012 * q.k), 0, 6.283); ctx.fillStyle = '#4a4f57'; ctx.fill(); } }
+  },
+
+  // hgt: the pole's height (the pennant keeps the standard 1.9 m pole's size, scaled with it)
+  _flag(ctx, x, z, wind, t, col, hgt) {
+    const top = this.proj(x, hgt || 1.9, z), bot = this.proj(x, 0, z); if (!top || !bot) return;
+    const k = top.k * (hgt || 1.9) / 1.9, OUT = this.OUT;
     ctx.beginPath(); ctx.moveTo(bot.x, bot.y); ctx.lineTo(top.x, top.y); ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(2, 0.05 * k); ctx.lineCap = 'round'; ctx.stroke();
     ctx.strokeStyle = '#d8dde3'; ctx.lineWidth = Math.max(1, 0.03 * k); ctx.stroke();
     const sg = Math.sign(wind) || 1, a = Math.min(1, Math.abs(wind) / 2.5), len = (0.35 + 0.65 * a) * 0.6 * k, flap = Math.sin(t * (4 + a * 8)) * 0.07 * k * (0.4 + a);
@@ -481,8 +763,10 @@ KAR.Render = {
       const qv = Math.exp(-age * 4.5) * Math.sin(age * 58) * 0.07, qh = Math.exp(-age * 4.5) * Math.cos(age * 47) * 0.035;   // the tail shivers, the tip is held
       d.x += qh; d.y += qv; const l = Math.hypot(d.x, d.y, d.z); d.x /= l; d.y /= l; d.z /= l;
     }
-    const o = this.tOff || { x: 0, y: 0 };            // a swinging boss carries its arrows
-    this.arrow3(ctx, { x: h.x + o.x, y: h.y + o.y, z: this.dist }, d, len, team, { stuck: true, split: a.split, rot: rd.rot, shadow: true });
+    // a swinging boss carries its arrows; so does a cart (an arrow in a crate keeps its crate, bi, and plane, z)
+    const bx = h.bi !== undefined && this.boxes && this.boxes[h.bi], o = bx ? { x: bx.off, y: 0 } : h.z !== undefined ? { x: 0, y: 0 } : this.tOff || { x: 0, y: 0 };
+    if (bx && bx.gone) return;
+    this.arrow3(ctx, { x: h.x + o.x, y: h.y + o.y, z: h.z !== undefined ? h.z : this.dist }, d, len, team, { stuck: true, split: a.split, rot: rd.rot, shadow: true });
   },
 
   // ---- BALLOON POP ------------------------------------------------------------------
@@ -644,8 +928,10 @@ KAR.Render = {
       ctx.lineWidth = 3.6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = col.dark; ctx.stroke();
       ctx.save(); ctx.setLineDash([2, 2.5]); ctx.lineWidth = 1; ctx.strokeStyle = col.light; ctx.stroke(); ctx.restore(); }
 
-    // nock: on the braced string at rest, under the chin at full draw
-    const brace = yaw(-0.075, -0.21), anchor = { x: 0.02, y: -0.11, z: 0.035 };
+    // nock: on the braced string at rest, back at the anchor at full draw. The anchor sits low and to the right of
+    // the eye (a side anchor on the jaw), so the drawn arrow lies on a slant from the bottom-right corner up to the
+    // rest instead of running straight down the line of sight, where it hid behind itself as a blur
+    const brace = yaw(-0.075, -0.21), anchor = { x: 0.15, y: -0.175, z: 0.11 };
     const nock = lerp3(brace, anchor, U.easeOut(p) * 0.35 + p * 0.65);
     const REST = { x: GX - 0.031, y: -0.075, z: GZ - 0.01 }, CLICK_Z = GZ + 0.025;
     let tip = null;
@@ -656,18 +942,19 @@ KAR.Render = {
       tip = at(0.74);
       const sh = seg(nock, tip);
       if (sh) {
-        // close to the eye it is out of focus: wide segments are drawn soft, with no outline, and capped in width
-        const N = 14, W8 = s => Math.max(2.4, 0.008 * s), soft = w => w > 9;
+        // a solid, outlined shaft that tapers toward the rest (its width capped where it nears the eye), so it reads
+        // clearly against the target; a highlight runs along its lit edge and the steel point is bright
+        const N = 14, W8 = s => KAR.Util.clamp(0.008 * s, 2.6, 15);
         let prev = Pr(sh[0]);
         for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sh[0], sh[1], i / N)), w = W8((q.s + prev.s) / 2);
-          if (!soft(w)) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w + 3; ctx.strokeStyle = OUT; ctx.stroke(); } prev = q; }
+          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w + 3.5; ctx.strokeStyle = OUT; ctx.stroke(); prev = q; }
         prev = Pr(sh[0]);
         for (let i = 1; i <= N; i++) { const f = i / N, q = Pr(lerp3(sh[0], sh[1], f)), w = W8((q.s + prev.s) / 2);
           ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y);
-          if (soft(w)) { ctx.lineWidth = Math.min(16, w); ctx.strokeStyle = 'rgba(242,230,200,' + Math.max(0.25, Math.min(0.85, 9 / w)).toFixed(2) + ')'; }
-          else { ctx.lineWidth = w; ctx.strokeStyle = f > 0.96 ? '#c9d1d9' : '#f2e6c8'; }
-          ctx.stroke(); prev = q; }
-        // vanes - big and soft while the nock is close to the eye
+          ctx.lineWidth = w; ctx.strokeStyle = f > 0.93 ? '#d8dee6' : '#f2e6c8'; ctx.stroke();
+          if (w > 4 && f <= 0.93) { ctx.lineWidth = w * 0.28; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(prev.x - w * 0.18, prev.y - w * 0.18); ctx.lineTo(q.x - w * 0.18, q.y - w * 0.18); ctx.stroke(); }
+          prev = q; }
+        // vanes, near the nock (out of frame at full draw, in view early in the draw)
         const ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1, u = { x: ux / ul, y: 0, z: uz / ul };
         const v = { x: u.y * d.z - u.z * d.y, y: u.z * d.x - u.x * d.z, z: u.x * d.y - u.y * d.x };
         for (const [ang, c] of [[Math.PI, kit.v[1]], [Math.PI / 3, kit.v[0]], [-Math.PI / 3, kit.v[2]]]) {
