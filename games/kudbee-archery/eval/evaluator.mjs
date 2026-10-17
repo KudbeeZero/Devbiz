@@ -251,6 +251,32 @@ rec('tour-next', st2.lv === 1 && st2.saved === 1, `NEXT LEVEL starts level ${st2
 const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 6, 10]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
 await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/tour-venue.png` });
 rec('tour-venues', venues.join() === '0:slide,1:swing,2:-' && errors.length === 0, `levels 3 / 7 / 11 render in venue:move ${venues.join(', ')} with no errors`);
+// the first-shot tutorial: level 1 coaches the basics (aim at the gold), then breath; level 2 marks the wind hold-off
+const tut1 = await G(() => { const D = KAR.Store.data; D.tut = 0; D.tourLv = 0; D.mode = 5; KARGame.startMatch(); const c = KARGame.coach; return c && { bit: c.bit, mk: !!c.marker, x: c.marker && c.marker.x }; });
+await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/tutorial-1.png` });
+await G(() => { const g = KARGame; g.drawing = true; g.draw = 1; g.aimX = 0; g.aimY = KAR.CFG.FACE_Y; g.sway = { x: 0, y: 0 }; g._loose(); });
+const tutSaved = await G(() => JSON.parse(localStorage.getItem('kudbee.archery.v1')).tut);
+await waitFor(() => KARGame.bp === 'ready', 12000);
+const tut2 = await G(() => KARGame.coach && KARGame.coach.bit);
+const tutW = await G(() => { const D = KAR.Store.data; D.tour.stars[0] = 1; D.tourLv = 1; KARGame.startMatch(); const g = KARGame, c = g.coach, h = KAR.Bot.hold(g.match); return c && { bit: c.bit, dx: Math.abs(c.marker.x - h.x), off: Math.abs(c.marker.x), wind: Math.abs(g.match.wind) }; });
+await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/tutorial-wind.png` });
+const tutHit = await G(() => { const g = KARGame, mk = g.coach.marker; g.drawing = true; g.draw = 1; g.aimX = mk.x; g.aimY = mk.y; g.sway = { x: 0, y: 0 }; g._loose(); return g.flight.res.ring; });
+rec('tutorial', tut1 && tut1.bit === 1 && tut1.mk && tut1.x === 0 && (tutSaved & 1) && tut2 === 2 && tutW && tutW.bit === 4 && tutW.dx < 1e-9 && tutW.off > 0.01 && tutHit >= 9,
+  `level 1 coaches "aim at the gold" (saved once shot), then breath; level 2 marks the wind hold-off ${(tutW.off * 100).toFixed(1)} cm off the gold in a ${tutW.wind.toFixed(1)} wind - aiming there scores ${tutHit}`);
+await waitFor(() => KARGame.bp === 'ready', 12000);
+// the GEAR LOCKER: kit opens with stars, equips, and the bow and fletching you see change (the CPU keeps club kit)
+await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.stars = [0, 0, 0, 0]; D.gear = { bow: 0, fletch: 0, sight: 0 }; KARGame.activate('menu'); }); await page.waitForTimeout(80);
+await click('gear'); await page.waitForTimeout(80);
+const g0 = await G(() => ({ scr: KARGame.screen, lockedBow: KAR.UI.buttons.find(b => b.id === 'gb1').disabled }));
+await click('gb1'); const stay0 = await G(() => KAR.Store.data.gear.bow === 0);
+await G(() => { KAR.Store.data.tour.stars.fill(2, 0, 6); }); await page.waitForTimeout(80);
+await click('gb2'); await click('gf2'); await click('gs1'); await page.waitForTimeout(150);
+await page.screenshot({ path: `${OUT}/gear.png` });
+const g1 = await G(() => { const R = KAR.Render, G = KAR.GEAR, D = KAR.Store.data; return { saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).gear, mine: R.kit(0).limb === G.bow[2].limb && R.kit(0).v[0] === G.fletch[2].v[0] && R.kit(0).steady === G.sight[1].steady, cpu: R.kit(1).limb === G.bow[0].limb }; });
+await click('back');
+rec('gear-locker', g0.scr === 'gear' && g0.lockedBow && stay0 && g1.saved.bow === 2 && g1.saved.fletch === 2 && g1.saved.sight === 1 && g1.mine && g1.cpu && await G(() => KARGame.screen === 'menu'),
+  `locked kit won't equip at 0 stars; at 12 stars the Royal Blue bow, Lime fletching and Ice sight equip, save, and draw on your bow (the CPU keeps club kit)`);
+await G(() => { KAR.Store.data.gear = { bow: 0, fletch: 0, sight: 0 }; });
 await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 
 // --- a phone: real touch input (CDP touch events, coarse pointer) ---
@@ -292,6 +318,15 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   rec('touch-cancel-still-looses', kept && went, `a touch pointercancel keeps the draw (${kept}); lifting the finger still looses (${went})`);
   // 3. no long-press callout / selection on the play area
   rec('touch-no-callout', await T(() => (document.querySelector('style').textContent.match(/-webkit-touch-callout:none/g) || []).length >= 2 && getComputedStyle(document.body).userSelect === 'none'), 'long-press callout and text selection are off');
+  // 4. phone layout: the menu buttons and level tiles are big enough to hit (about 40 pt and up), and work by touch
+  await T(() => { const D = KAR.Store.data; D.mode = 5; D.tour.stars.fill(0); D.tour.stars[0] = 1; D.tour.stars[5] = 1; KARGame.activate('menu'); }); await tp.waitForTimeout(150);
+  const k = tb.height / 640, sizes = await T(() => KAR.UI.buttons.filter(b => /^(mode\d|V\d|L\d\d|play|gear)$/.test(b.id)).map(b => b.h));
+  const tap = async id => { const b = await T(new Function('return (' + (i => { const x = KAR.UI.buttons.find(b => b.id === i); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; }) + ')(' + JSON.stringify(id) + ')')); await touch('touchStart', [at(b.x, b.y)]); await touch('touchEnd', []); await tp.waitForTimeout(80); };
+  await tap('V1'); const tiles = await T(() => KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join());
+  await tap('L06'); const pick = await T(() => KAR.Store.data.tourLv);
+  await tp.screenshot({ path: `${OUT}/phone-menu.png` });
+  rec('phone-big-taps', sizes.length >= 15 && Math.min(...sizes) * k >= 31 && tiles === 'L05,L06,L07,L08,L09' && pick === 6,
+    `${sizes.length} menu targets, the smallest ${(Math.min(...sizes) * k).toFixed(0)} CSS px tall; the FOREST GLADE tab shows levels 6-10 and a tap picks level 7`);
   await tctx.close();
 }
 

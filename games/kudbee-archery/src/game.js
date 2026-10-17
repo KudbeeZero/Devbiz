@@ -65,6 +65,24 @@ KAR.Game = class {
     this.ptr = { x: 480, y: 330 }; this._setAimFromPtr();
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
     this.drama = this._drama();
+    this.coach = this._coach();
+  }
+
+  // The first-shot tutorial, one card at a time on levels 1 and 2 (each shown once; D.tut keeps a bit per tip):
+  // aim at the gold; hold your breath; the wind pushes the arrow - aim at the marker; then read it yourself.
+  _coach() {
+    const m = this.match, D = KAR.Store.data;
+    if (m.mode !== 'stage' || m.shooter !== 0 || m.lv > 1) return null;
+    const touch = this.coarse, done = b => (D.tut & b) !== 0, fired = m.arrows[0].length;
+    if (m.lv === 0 && !done(1)) return { bit: 1, text: 'AIM AT THE GOLD', sub: touch ? 'touch & hold to draw  \u00b7  drag to aim  \u00b7  lift to shoot' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to shoot', marker: { x: 0, y: KAR.CFG.FACE_Y, label: 'GOLD' } };
+    if (m.lv === 0 && !done(2) && fired >= 1) return { bit: 2, text: 'STEADY YOUR AIM', sub: touch ? 'at full draw, hold HOLD BREATH to calm the sight for a moment' : 'at full draw, hold B (or right-click) to hold your breath' };
+    if (m.lv === 1 && !done(4)) {
+      if (Math.abs(m.wind) < 2.2) { const sg = Math.sign(m.wind) || 1; m.wind = sg * 2.3; }   // a gust strong enough to see the hold-off at 18 m
+      const h = KAR.Bot.hold(m);
+      return { bit: 4, text: 'THE WIND PUSHES YOUR ARROW', sub: 'aim at the marker  \u00b7  off the gold, into the wind', marker: { x: h.x, y: h.y, label: 'AIM HERE', wind: true } };
+    }
+    if (m.lv === 1 && done(4) && !done(8)) return { bit: 8, text: 'NOW READ IT YOURSELF', sub: 'watch the wind gauge and the flags  \u00b7  aim off the same way' };
+    return null;
   }
 
   // Last-arrow pressure, shown across the top while that arrow is up.
@@ -96,6 +114,10 @@ KAR.Game = class {
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
     else if (id === 'share') this._share();
+    else if (/^V\d$/.test(id)) this.venueView = +id[1];
+    else if (id === 'gear') this.setScreen('gear');
+    else if (id === 'back') this.setScreen('menu');
+    else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
     else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; KAR.Store.save(); } }
     else if (id === 'next') { if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
@@ -197,6 +219,7 @@ KAR.Game = class {
     const power = this.cpu ? 1 : KAR.Util.clamp(this.draw, 0, 1);
     const sw = this.cpu ? { x: this.cpu.sx, y: this.cpu.sy } : { x: this.sway.x, y: this.sway.y };
     const shooter = m.shooter;
+    if (this.coach && shooter === 0) { const D = KAR.Store.data; D.tut |= this.coach.bit; KAR.Store.save(); this.coach = null; }
     const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power);
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
     // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
@@ -277,7 +300,9 @@ KAR.Game = class {
   }
 
   _finishMatch() {
-    const m = this.match, D = KAR.Store.data;
+    const m = this.match, D = KAR.Store.data, s0 = KAR.starTotal(D);
+    this.newGear = [];
+    const gearUp = () => { this.newGear = KAR.gearBetween(s0, KAR.starTotal(D)); };
     if (m.daily) {
       const dd = D.daily;
       if (dd.day !== m.daily) { dd.day = m.daily; dd.best = 0; dd.plays = 0; dd.first = m.score; }
@@ -290,7 +315,7 @@ KAR.Game = class {
       const T = D.tour, i = m.lv, sc = m.total(0), st = m.stars(), wasOpen = KAR.tourOpen(i + 1, D);
       this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); T.stars[i] = Math.max(T.stars[i], st);
       this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D);
-      KAR.Store.save(); this.setScreen('over');
+      gearUp(); KAR.Store.save(); this.setScreen('over');
       if (st >= 1) { this.audio.win(); this._burst(60 + st * 20); } else this.audio.lose();
       return;
     }
@@ -309,7 +334,7 @@ KAR.Game = class {
     if (m.mode === 'range') {
       const sc = m.total(0), stars = m.stars(), was = KAR.locked(3, D);
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
-      this.unlocked = was && !KAR.locked(3, D);
+      this.unlocked = was && !KAR.locked(3, D); gearUp();
     } else { D.stats.duels++; if (m.winner === 0) D.stats.wins++; }
     KAR.Store.save();
     this.setScreen('over');
@@ -420,15 +445,16 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    R.tOff = m.offAt ? m.offAt(m.T) : null; R.venue = this.screen === 'menu' ? 0 : (m.venue || 0); R.railA = m.move === 'slide' ? m.def.amp : 0;
+    const menuish = this.screen === 'menu' || this.screen === 'gear';
+    R.tOff = m.offAt ? m.offAt(m.T) : null; R.venue = menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0;
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
-    if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
+    if (menuish && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
       if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, m.offAt ? (m.move || 'swing') : null);
       this._drawArrows(ctx);
     }
-    if (this.screen !== 'menu') {
+    if (!menuish) {
       R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx);
       const rel = (this.time - this.relT) / 0.45;
       if (rel >= 0 && rel < 1 && this.screen === 'play') R.bow(ctx, this.relX || 480, this.relY || 300, 0, this.relTeam ? 1 : 0, this.time, Math.max(0.001, rel));
@@ -437,6 +463,7 @@ KAR.Game = class {
     U.begin();
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }
     if (this.screen === 'menu') U.menu(ctx, this);
+    else if (this.screen === 'gear') U.gearScreen(ctx, this);
     else {
       U.hud(ctx, this);
       if (this.screen === 'paused') U.pause(ctx, this);
@@ -454,7 +481,7 @@ KAR.Game = class {
 
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
-    if (this.screen === 'menu') return;
+    if (this.screen === 'menu' || this.screen === 'gear') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
     for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined);
     // impact rings
@@ -480,14 +507,14 @@ KAR.Game = class {
     const R = KAR.Render, m = this.match;
     if (this.bp !== 'ready' || this.zoom < 0.85 || this.screen === 'over') return;
     const cpu = !!this.cpu;
+    if (this.coach && this.coach.marker && !cpu) R.marker(ctx, this.coach.marker, m, this.time);
     if (!this.drawing && !cpu) return;
     const sx = this.aimX + this.sway.x, sy = this.aimY + this.sway.y, q = R.proj(sx, sy, m.dist);
     if (!q) return;
     R.bow(ctx, q.x, q.y, this.draw, cpu ? 1 : 0, this.time, 0, { creep: this.draw >= 1 && !cpu ? Math.max(0, this.holdT - KAR.CFG.STEADY_T) : 0 });
     this.relX = q.x; this.relY = q.y;
     const r = Math.max(14, 0.12 * q.k * Math.min(1, m.faceD / 0.6) + 8);
-    R.sight(ctx, q.x, q.y, Math.min(26, r), this.steady, this.time);
-    // wind-hold helper on the easier levels: a faint tick where a still-air arrow would be pushed to
+    R.sight(ctx, q.x, q.y, Math.min(26, r), this.steady, this.time, cpu ? 1 : 0);
   }
 };
 

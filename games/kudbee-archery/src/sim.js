@@ -265,6 +265,36 @@ KAR.Stage = class extends KAR.Match {
   }
 };
 
+// ---- GEAR --------------------------------------------------------------------------------
+// Cosmetic kit for your bow, unlocked by the stars you have earned (levels + ranges). Stars are never spent:
+// an item opens for good once your total reaches its number. Nothing here changes how an arrow flies.
+KAR.GEAR = {
+  bow: [
+    { name: 'CLUB OAK',      need: 0,  limb: '#a8703a', riser: '#6b4322', tip: null },
+    { name: 'BLACK CARBON',  need: 6,  limb: '#3a3f47', riser: '#22262c', tip: '#e8483a' },
+    { name: 'ROYAL BLUE',    need: 12, limb: '#2f6fc8', riser: '#1b3a6e', tip: '#ffd34d' },
+    { name: 'CHERRY',        need: 20, limb: '#c0453e', riser: '#6e1f1c', tip: '#ffe9a8' },
+    { name: 'GOLD LEAF',     need: 34, limb: '#e0a92e', riser: '#7a4f12', tip: '#fff6c8' },
+  ],
+  fletch: [
+    { name: 'TEAM',          need: 0,  v: null },
+    { name: 'FLAME',         need: 3,  v: ['#ff5a2a', '#ffb02e', '#ff5a2a'] },
+    { name: 'LIME',          need: 9,  v: ['#7fe03a', '#e8ff9a', '#7fe03a'] },
+    { name: 'RAINBOW',       need: 16, v: ['#ff4f5e', '#3fa0ff', '#ffd34d'] },
+    { name: 'GOLD',          need: 28, v: ['#ffd34d', '#fff2a8', '#ffd34d'] },
+  ],
+  sight: [
+    { name: 'CLASSIC',       need: 0,  c: '#fff6a8', steady: '#a9ff7a' },
+    { name: 'ICE',           need: 5,  c: '#bff4ff', steady: '#6fe8ff' },
+    { name: 'RUBY',          need: 14, c: '#ffc2cf', steady: '#ff5d8a' },
+    { name: 'GOLD',          need: 24, c: '#ffe58a', steady: '#ffc21f' },
+  ],
+};
+KAR.starTotal = data => data.tour.stars.reduce((a, b) => a + b, 0) + data.stars.reduce((a, b) => a + b, 0);
+KAR.gearOpen = (kind, i, data) => KAR.starTotal(data) >= KAR.GEAR[kind][i].need;
+// gear that opened between two star totals (for the results card)
+KAR.gearBetween = (s0, s1) => { const out = []; for (const k of ['bow', 'fletch', 'sight']) for (const g of KAR.GEAR[k]) if (g.need > s0 && g.need <= s1) out.push({ kind: k, name: g.name }); return out; };
+
 // ---- DAILY ----------------------------------------------------------------------------
 // One BALLOON POP a day, the same for everyone: the seed comes from the UTC date, so the wind and the order,
 // colours, heights and speeds of the balloons match on every device that day. #1 is 2026-10-17.
@@ -365,6 +395,13 @@ KAR.Bot = {
     }
     const sx = rng.gauss() * sigma * D, sy = rng.gauss() * sigma * D;
     return { aimX: ax, aimY: C.FACE_Y, sx, sy, power: 1 };
+  },
+  // the steady-hand, perfect-read aim for the current wind (the tutorial's AIM HERE marker)
+  hold(match, ty) {
+    const C = KAR.CFG, D = match.dist; ty = ty === undefined ? C.FACE_Y : ty;
+    let ax = 0;
+    for (let i = 0; i < 4; i++) { const sol = KAR.Flight.solve(D, ax, ty), r = KAR.Flight.run(D, sol.yaw, sol.pitch, C.V0, match.wind); if (!r.hit) break; ax -= r.hit.x; }
+    return { x: ax, y: ty };
   },
   play(opts, sigma, readErr, seed) {
     const m = new KAR.Match(opts), rng = KAR.Util.rng(seed || 3);

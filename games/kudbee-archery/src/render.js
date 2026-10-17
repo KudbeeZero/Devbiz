@@ -14,6 +14,13 @@ KAR.Render = {
     { base: '#2f86d8', light: '#7ac7ff', dark: '#1a4f8a', name: 'YOU' },
     { base: '#e8483a', light: '#ff9a8a', dark: '#97271d', name: 'CPU' },
   ],
+  // the kit a shooter carries: your GEAR choices for team 0 (set by the game in this.gear), club issue for the CPU
+  gear: null,
+  kit(team) {
+    const G = KAR.GEAR, g = (!team && this.gear) || { bow: 0, fletch: 0, sight: 0 }, col = this.TEAM[team || 0];
+    const b = G.bow[g.bow] || G.bow[0], f = G.fletch[g.fletch] || G.fletch[0], sg = G.sight[g.sight] || G.sight[0];
+    return { limb: b.limb, riser: b.riser, tip: b.tip || col.base, v: f.v || [col.light, col.base, col.base], sight: sg.c, steady: sg.steady };
+  },
   // RING[i] fills the band from (i)/10 to (i+1)/10 of the radius: gold in the middle, white on the outside (WA face)
   RING: ['#ffd34d', '#ffd34d', '#e4453a', '#e4453a', '#3c8fe0', '#3c8fe0', '#26262e', '#26262e', '#f4f1e6', '#f4f1e6'],
   zoom: 1, dist: 30, faceD: 0.8,
@@ -335,7 +342,7 @@ KAR.Render = {
     ctx.strokeStyle = '#f2e6c8'; ctx.lineWidth = w; ctx.stroke();
     // fletching: three vanes at the tail
     const dx = q.x - p.x, dy = q.y - p.y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl, fl = Math.min(dl * 0.28, 26 + 0.05 * p.k);
-    for (const s of [-1, 0, 1]) { ctx.beginPath(); ctx.moveTo(q.x - dx / dl * 0.1, q.y - dy / dl * 0.1); ctx.lineTo(q.x + dx / dl * fl * 0.2 + nx * s * fl * 0.5, q.y + dy / dl * fl * 0.2 + ny * s * fl * 0.5); ctx.lineTo(q.x - dx / dl * fl + nx * s * fl * 0.1, q.y - dy / dl * fl + ny * s * fl * 0.1); ctx.closePath(); ctx.fillStyle = s ? col.base : col.light; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = this.OUT; ctx.stroke(); }
+    for (const s of [-1, 0, 1]) { ctx.beginPath(); ctx.moveTo(q.x - dx / dl * 0.1, q.y - dy / dl * 0.1); ctx.lineTo(q.x + dx / dl * fl * 0.2 + nx * s * fl * 0.5, q.y + dy / dl * fl * 0.2 + ny * s * fl * 0.5); ctx.lineTo(q.x - dx / dl * fl + nx * s * fl * 0.1, q.y - dy / dl * fl + ny * s * fl * 0.1); ctx.closePath(); ctx.fillStyle = this.kit(team).v[s + 1]; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = this.OUT; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.8, w * 0.7), 0, 6.283); ctx.fillStyle = '#cfd6de'; ctx.fill();
     ctx.restore();
   },
@@ -383,7 +390,7 @@ KAR.Render = {
       const R = 0.032, pts = [at(0.03, 0, 0), at(0.05, V.ca * R, V.sa * R), at(0.11, V.ca * R * 0.85, V.sa * R * 0.85), at(0.15, 0, 0)];
       if (pts.some(x => !x)) return;
       ctx.beginPath(); pts.forEach((x, k) => (k ? ctx.lineTo(x.x, x.y) : ctx.moveTo(x.x, x.y))); ctx.closePath();
-      ctx.fillStyle = V.i === 0 ? col.light : col.base; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.fillStyle = this.kit(team).v[V.i]; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
     };
     vanes.filter(V => V.far).forEach(vane);
     shaft(p, q, wT, wN, '#f2e6c8');
@@ -457,7 +464,7 @@ KAR.Render = {
   // bow tips forward into the finger sling while the arm follows through.
   bow(ctx, sx, sy, draw, team, t, rel, o) {
     o = o || {};
-    const col = this.TEAM[team || 0], OUT = this.OUT, U = KAR.Util;
+    const col = this.TEAM[team || 0], OUT = this.OUT, U = KAR.Util, kit = this.kit(team);
     const F = 330, ZN = 0.07, GX = 0.085, GZ = 0.74, MID = -0.06, GRIP = -0.15;
     let p = U.clamp(draw, 0, 1), roll = 0, ox = sx, oy = sy, vib = 0;
     if (rel > 0) {
@@ -487,9 +494,9 @@ KAR.Render = {
       const L = [], Rr = [];
       for (const { s, v } of pts) { const w = 0.042 - 0.026 * s; L.push(P({ x: v.x - w / 2, y: v.y, z: v.z })); Rr.push(P({ x: v.x + w / 2, y: v.y, z: v.z })); }
       ctx.beginPath(); L.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); for (let i = Rr.length - 1; i >= 0; i--) ctx.lineTo(Rr[i].x, Rr[i].y); ctx.closePath();
-      ctx.fillStyle = '#a8703a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.fillStyle = kit.limb; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
       ctx.beginPath(); pts.forEach(({ v }, i) => { const q = P({ x: v.x - 0.006, y: v.y, z: v.z }); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,230,170,0.6)'; ctx.stroke();
-      const tp = P(pts[pts.length - 1].v); ctx.beginPath(); ctx.arc(tp.x, tp.y, Math.max(4, 0.016 * tp.s), 0, 6.283); ctx.fillStyle = col.base; ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke();
+      const tp = P(pts[pts.length - 1].v); ctx.beginPath(); ctx.arc(tp.x, tp.y, Math.max(4, 0.016 * tp.s), 0, 6.283); ctx.fillStyle = kit.tip; ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke();
       return pts[pts.length - 1].v;
     };
     const up = limb(1), lo = limb(-1);
@@ -530,7 +537,7 @@ KAR.Render = {
     ctx.beginPath();
     rs.forEach(([y, cut], i) => { const q = P({ x: GX - hw + cut, y, z: GZ }); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); });
     for (let i = rs.length - 1; i >= 0; i--) { const y = rs[i][0], q = P({ x: GX + hw + (y < -0.1 && y > -0.22 ? 0.006 : 0), y, z: GZ }); ctx.lineTo(q.x, q.y); }
-    ctx.closePath(); ctx.fillStyle = '#6b4322'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.closePath(); ctx.fillStyle = kit.riser; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
     { const a = P({ x: GX + hw * 0.45, y: RT - 0.02, z: GZ }), b = P({ x: GX + hw * 0.45, y: RB + 0.02, z: GZ }); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = Math.max(2, 0.006 * a.s); ctx.strokeStyle = col.base; ctx.stroke(); }
 
     // sight: a block on the riser and an extension rod out to the aperture (the reticle ring)
@@ -605,7 +612,7 @@ KAR.Render = {
         // vanes - big and soft while the nock is close to the eye
         const ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1, u = { x: ux / ul, y: 0, z: uz / ul };
         const v = { x: u.y * d.z - u.z * d.y, y: u.z * d.x - u.x * d.z, z: u.x * d.y - u.y * d.x };
-        for (const [ang, c] of [[Math.PI, col.base], [Math.PI / 3, col.light], [-Math.PI / 3, col.light]]) {
+        for (const [ang, c] of [[Math.PI, kit.v[1]], [Math.PI / 3, kit.v[0]], [-Math.PI / 3, kit.v[2]]]) {
           const ca = Math.cos(ang), sa = Math.sin(ang), dir = { x: u.x * ca + v.x * sa, y: u.y * ca + v.y * sa, z: u.z * ca + v.z * sa };
           const off = (s, h) => { const b = at(s); return { x: b.x + dir.x * h, y: b.y + dir.y * h, z: b.z + dir.z * h }; };
           const pts = [off(0.025, 0), off(0.035, 0.016), off(0.075, 0.013), off(0.115, 0)];
@@ -801,12 +808,31 @@ KAR.Render = {
     }
     ctx.restore();
   },
-  sight(ctx, x, y, r, steady, t) {
+  // the tutorial's target marker on the face: a pulsing dashed ring with a label; for the wind lesson, an arrow
+  // from the gold to the marker (the hold-off)
+  marker(ctx, mk, m, t) {
+    const q = this.proj(mk.x, mk.y, m.dist); if (!q) return;
+    const r = mk.wind ? 9 + 2 * Math.sin(t * 5) : 16 + 3 * Math.sin(t * 5), g = this.proj(0, KAR.CFG.FACE_Y, m.dist);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // the wind lesson: a curved arrow from the marker down and across to the gold - where the wind will carry it
+    if (mk.wind && g && Math.abs(g.x - q.x) > 4) {
+      const sg = Math.sign(g.x - q.x), my = Math.max(q.y, g.y) + 50, ex = g.x, ey = g.y + 9;
+      const path = () => { ctx.beginPath(); ctx.moveTo(q.x, q.y + r + 3); ctx.bezierCurveTo(q.x - sg * 30, my, ex + sg * 30, my, ex, ey + 4); ctx.moveTo(ex - 7, ey + 12); ctx.lineTo(ex, ey + 3); ctx.lineTo(ex + 7, ey + 12); };
+      path(); ctx.lineWidth = 6; ctx.strokeStyle = this.OUT; ctx.stroke(); path(); ctx.lineWidth = 3; ctx.strokeStyle = '#9be35a'; ctx.stroke();
+      KAR.UI.text(ctx, 'THE WIND CARRIES IT TO THE GOLD', (q.x + g.x) / 2, my + 8, 13, '#9be35a', 'center');
+    }
+    ctx.setLineDash([5, 4]); ctx.lineDashOffset = -t * 20;
+    ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 6.283); ctx.lineWidth = 6; ctx.strokeStyle = this.OUT; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    ctx.restore();
+    KAR.UI.text(ctx, mk.label, q.x, q.y - r - 10, 16, '#ffffff', 'center');
+  },
+  sight(ctx, x, y, r, steady, t, team) {
+    const kit = this.kit(team), on = steady ? kit.steady : kit.sight;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
-    ctx.strokeStyle = steady ? '#a9ff7a' : '#fff6a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
-    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * (r - 4), y + Math.sin(a) * (r - 4)); ctx.lineTo(x + Math.cos(a) * (r + 12), y + Math.sin(a) * (r + 12)); ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = steady ? '#a9ff7a' : '#fff6a8'; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.strokeStyle = on; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * (r - 4), y + Math.sin(a) * (r - 4)); ctx.lineTo(x + Math.cos(a) * (r + 12), y + Math.sin(a) * (r + 12)); ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = on; ctx.lineWidth = 3; ctx.stroke(); }
     ctx.fillStyle = '#ff5d5d'; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 6.283); ctx.fill();
     ctx.restore();
   },

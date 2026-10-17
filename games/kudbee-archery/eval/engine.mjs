@@ -181,14 +181,24 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rl.wind = 0; const o2 = rl.offAt(rl.T), still = rl.shoot(o2.x - 0.45 * Math.sign(rl.offAt(rl.T + tf).x - o2.x || 1), C.FACE_Y, 0, 0, 1);
   rec('tour-rail', moved > 0.2 && led.ring >= 9 && rl.arrows[0][0].hit && still.ring < led.ring, `the rail boss slides across ${(moved * 100) | 0} cm; leading it scores ${led.ring}, aiming behind it ${still.ring}`);
 }
+// 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
+{
+  const D = { tour: { stars: Array(15).fill(0) }, stars: [0, 0, 0, 0] }, G = K.GEAR;
+  const first = ['bow', 'fletch', 'sight'].every(k => K.gearOpen(k, 0, D) && !K.gearOpen(k, 1, D) && G[k].every((g, i) => !i || g.need > G[k][i - 1].need));
+  D.tour.stars.fill(2, 0, 4); D.stars[1] = 3;                                         // 11 stars
+  const opened = K.gearBetween(5, K.starTotal(D)).map(g => g.name).join(', ');
+  const m = new K.Stage({ level: 1, seed: 4 }); m.wind = 2.3; const h = K.Bot.hold(m), s0 = K.Flight.solve(m.dist, h.x, h.y), r = K.Flight.run(m.dist, s0.yaw, s0.pitch, C.V0, m.wind).hit;
+  rec('gear-and-hold', first && K.starTotal(D) === 11 && K.gearOpen('bow', 1, D) && !K.gearOpen('bow', 2, D) && opened === 'BLACK CARBON, LIME' && Math.hypot(r.x, r.y - C.FACE_Y) < 0.002,
+    `starting kit is open, the rest locked; 11 stars open ${opened} (crossing from 5); aiming at the tutorial's hold-off lands ${(Math.hypot(r.x, r.y - C.FACE_Y) * 1000).toFixed(1)} mm from centre`);
+}
 // 13. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
   const K2 = loadKAR(['util.js'], ls);
-  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.data.tour.stars[4] = 2; K2.Store.data.tour.best[4] = 99; K2.Store.data.tourLv = 5; K2.Store.save();
+  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.data.tour.stars[4] = 2; K2.Store.data.tour.best[4] = 99; K2.Store.data.tourLv = 5; K2.Store.data.gear.bow = 3; K2.Store.data.tut = 5; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
-  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500 && K3.Store.data.tour.stars[4] === 2 && K3.Store.data.tour.best[4] === 99 && K3.Store.data.tourLv === 5, 'distance, best scores, stars, BALLOON POP mode and best, and level progress survive a reload');
+  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500 && K3.Store.data.tour.stars[4] === 2 && K3.Store.data.tour.best[4] === 99 && K3.Store.data.tourLv === 5 && K3.Store.data.gear.bow === 3 && K3.Store.data.tut === 5, 'distance, best scores, stars, BALLOON POP mode and best, level progress, gear and tutorial progress survive a reload');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

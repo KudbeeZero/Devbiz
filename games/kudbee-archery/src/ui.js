@@ -123,8 +123,8 @@ KAR.UI = {
     ctx.restore();
   },
 
-  roundIcon(ctx, g, id, cx, cy, kind) {
-    const r = 21, idx = this.buttons.length;
+  roundIcon(ctx, g, id, cx, cy, kind, big) {
+    const r = big ? 27 : 21, idx = this.buttons.length;
     this.buttons.push({ id, x: cx - r, y: cy - r, w: r * 2, h: r * 2, disabled: false, primary: false, hud: true });
     const focused = g.focusIdx === idx;
     ctx.save();
@@ -178,9 +178,19 @@ KAR.UI = {
     else if (m.mode === 'stage') U.text(ctx, 'LEVEL ' + (m.lv + 1) + '   \u00b7   END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M', 28, 98, 17, '#ffe9a8', 'left');
     else if (!duel) U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M' + (m.mode === 'swing' ? '   \u00b7   SWINGER' : ''), 28, 98, 17, '#ffe9a8', 'left');
     else U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, 16, '#ffe9a8', 'left');
-    U.roundIcon(ctx, g, 'pause', 926, 36, 'pause');
-    U.roundIcon(ctx, g, 'mute', 876, 36, g.audio.muted ? 'mute' : 'sound');
-    U.roundIcon(ctx, g, 'retry', 826, 36, 'retry');
+    const big = g.coarse, ri = big ? 62 : 50, ry = big ? 40 : 36;
+    U.roundIcon(ctx, g, 'pause', 926 - (big ? 4 : 0), ry, 'pause', big);
+    U.roundIcon(ctx, g, 'mute', 926 - (big ? 4 : 0) - ri, ry, g.audio.muted ? 'mute' : 'sound', big);
+    U.roundIcon(ctx, g, 'retry', 926 - (big ? 4 : 0) - ri * 2, ry, 'retry', big);
+    // the tutorial card, top centre while the tip applies
+    if (g.coach && g.screen === 'play' && g.bp === 'ready' && !g.banner && !m.over) {
+      const cx = 322, cw = (big ? 762 : 796) - cx;          // between the score panel and the round buttons
+      U.rr(ctx, cx, 14, cw, 70, 16); ctx.fillStyle = U.OUT; ctx.fill();
+      const cg = ctx.createLinearGradient(0, 17, 0, 81); cg.addColorStop(0, '#ffe888'); cg.addColorStop(1, '#ffb82e');
+      U.rr(ctx, cx + 3, 17, cw - 6, 64, 13); ctx.fillStyle = cg; ctx.fill();
+      U.text(ctx, g.coach.text, cx + cw / 2, 46, 22, '#ffffff', 'center');
+      U.text(ctx, g.coach.sub, cx + cw / 2, 70, 13, '#ffffff', 'center');
+    }
     // wind gauge
     const w = m.wind, a = Math.min(1, Math.abs(w) / (KAR.CFG.WIND[m.distIdx] || 3)), wy = h + 30;
     U.rr(ctx, 12, wy, 172, 56, 16); ctx.fillStyle = U.OUT; ctx.fill(); U.rr(ctx, 15, wy + 3, 166, 50, 13); ctx.fillStyle = '#2a3f66'; ctx.fill();
@@ -235,12 +245,17 @@ KAR.UI = {
   menu(ctx, g) {
     const U = this, t = g.time, D = KAR.Store.data, duel = D.mode === 1;
     U.backdrop(ctx, 0.3);
-    U.bubble(ctx, 'KUDBEE', 480, 92, 42, '#ffffff', '#cfe9ff', -0.03);
-    U.bubble(ctx, 'ARCHERY', 480, 178, 92, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
-    U.text(ctx, 'READ THE WIND  \u00b7  HOLD YOUR BREATH  \u00b7  HIT THE GOLD', 480, 212, 17, '#ffffff', 'center');
+    const C = g.coarse;                    // phones: a compact title and two rows of big buttons (taps of ~40 pt and up)
+    if (C) { U.bubble(ctx, 'KUDBEE', 480, 46, 28, '#ffffff', '#cfe9ff', -0.03); U.bubble(ctx, 'ARCHERY', 480, 106, 62, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008); }
+    else {
+      U.bubble(ctx, 'KUDBEE', 480, 92, 42, '#ffffff', '#cfe9ff', -0.03);
+      U.bubble(ctx, 'ARCHERY', 480, 178, 92, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
+      U.text(ctx, 'READ THE WIND  \u00b7  HOLD YOUR BREATH  \u00b7  HIT THE GOLD', 480, 212, 17, '#ffffff', 'center');
+    }
+    U.button(ctx, g, 'gear', 16, 14, C ? 190 : 170, C ? 60 : 48, 'GEAR \u2605' + KAR.starTotal(D), { small: true, color: 'yellow' });
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
-    [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, 24 + k * 154, 232, 142, 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
+    [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 3) * 300 : 24 + k * 154, C ? 126 + Math.floor(k / 3) * 66 : 232, C ? 288 : 142, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
     if (tour) this.tourMenu(ctx, g);
     if (swing) {
       U.text(ctx, 'THE TARGET HANGS ON ROPES AND SWINGS', 480, 318, 20, '#ffffff', 'center');
@@ -274,16 +289,75 @@ KAR.UI = {
       U.text(ctx, 'CPU SKILL', 480, 396, 17, '#ffe9a8', 'center');
       KAR.LEVELS.forEach((L, i) => U.button(ctx, g, 'lv' + i, 270 + i * 140, 404, 128, 40, L.name, { small: true, color: D.level === i ? 'green' : 'blue', selected: D.level === i }));
     }
-    if (tour) U.button(ctx, g, 'play', 330, 484, 300, 60, 'PLAY LEVEL ' + (D.tourLv + 1), { primary: true });
+    if (tour) U.button(ctx, g, 'play', 330, C ? 450 : 484, 300, C ? 70 : 60, 'PLAY LEVEL ' + (D.tourLv + 1), { primary: true });
     else U.button(ctx, g, 'play', 330, 462, 300, 70, daily ? 'PLAY TODAY' : swing ? 'START SWINGER' : trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
     if (!tour) U.text(ctx, 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose', 480, 568, 16, '#ffffff', 'center');
     U.text(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, 15, '#ffe9a8', 'center');
-    U.roundIcon(ctx, g, 'mute', 926, 36, g.audio.muted ? 'mute' : 'sound');
+    U.roundIcon(ctx, g, 'mute', 926, 36, g.audio.muted ? 'mute' : 'sound', g.coarse);
+  },
+
+  // ---- the GEAR LOCKER: bow finishes, fletching and sight colours, opened by your star total ----
+  gearScreen(ctx, g) {
+    const U = this, D = KAR.Store.data, S = KAR.starTotal(D);
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 100, 74, 760, 520, 'blue');
+    U.ribbon(ctx, 480, 46, 380, 'GEAR LOCKER', 'yellow');
+    U.text(ctx, '\u2605 ' + S + ' STARS EARNED  \u00b7  kit opens as your stars grow  \u00b7  looks only, no stat changes', 480, 136, 16, '#ffe9a8', 'center');
+    [['bow', 'BOW'], ['fletch', 'FLETCHING'], ['sight', 'SIGHT']].forEach(([k, label], r) => {
+      const y = 152 + r * 122;
+      U.text(ctx, label, 128, y + 18, 16, '#ffffff', 'left');
+      KAR.GEAR[k].forEach((it, i) => {
+        const x = 128 + i * 142, open = KAR.gearOpen(k, i, D), on = D.gear[k] === i;
+        U.button(ctx, g, 'g' + k[0] + i, x, y + 26, 130, 88, '', { small: true, color: on ? 'green' : 'blue', selected: on, disabled: !open });
+        if (open) this.swatch(ctx, k, it, x + 65, y + 58);
+        else { this.lock(ctx, x + 65, y + 52); }
+        U.text(ctx, open ? it.name : '\u2605 ' + it.need, x + 65, y + 104, 12, open ? '#ffffff' : '#ffe9a8', 'center');
+      });
+    });
+    U.button(ctx, g, 'back', 380, 520, 200, 56, 'BACK', { primary: true });
+  },
+  // a little picture of a gear item, centred on (x, y)
+  swatch(ctx, kind, it, x, y) {
+    const OUT = this.OUT, col = KAR.Render.TEAM[0];
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (kind === 'bow') {
+      const limb = () => { ctx.beginPath(); ctx.moveTo(x - 10, y - 26); ctx.quadraticCurveTo(x + 4, y - 22, x + 6, y); ctx.quadraticCurveTo(x + 4, y + 22, x - 10, y + 26); };
+      ctx.beginPath(); ctx.moveTo(x - 10, y - 26); ctx.lineTo(x - 10, y + 26); ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff6e0'; ctx.stroke();
+      limb(); ctx.lineWidth = 9; ctx.strokeStyle = OUT; ctx.stroke(); limb(); ctx.lineWidth = 5; ctx.strokeStyle = it.limb; ctx.stroke();
+      this.rr(ctx, x + 1, y - 9, 9, 18, 3); ctx.fillStyle = it.riser; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+      for (const sy of [-1, 1]) { ctx.beginPath(); ctx.arc(x - 10, y + sy * 26, 3.5, 0, 6.283); ctx.fillStyle = it.tip || col.base; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); }
+    } else if (kind === 'fletch') {
+      const v = it.v || [col.light, col.base, col.base];
+      ctx.beginPath(); ctx.moveTo(x - 30, y + 8); ctx.lineTo(x + 30, y + 8); ctx.lineWidth = 6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#f2e6c8'; ctx.stroke();
+      v.forEach((c, i) => { const ox = x - 22 + i * 15; ctx.beginPath(); ctx.moveTo(ox, y + 6); ctx.lineTo(ox + 4, y - 16 + i % 2 * 4); ctx.lineTo(ox + 16, y - 12 + i % 2 * 4); ctx.lineTo(ox + 18, y + 6); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke(); });
+    } else {
+      for (const [w, c] of [[6, 'rgba(0,0,0,0.55)'], [3, it.c]]) {
+        ctx.beginPath(); ctx.arc(x, y, 14, 0, 6.283); ctx.lineWidth = w; ctx.strokeStyle = c; ctx.stroke();
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 10, y + Math.sin(a) * 10); ctx.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); ctx.stroke(); }
+      }
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.283); ctx.fillStyle = it.steady; ctx.fill();
+    }
+    ctx.restore();
   },
 
   // the TOUR: a row of five level tiles per venue - stars earned, padlocks on the ones not yet open
   tourMenu(ctx, g) {
     const U = this, D = KAR.Store.data, T = D.tour;
+    if (g.coarse) {
+      const view = g.venueView === undefined || g.venueView === null ? KAR.TOUR[D.tourLv].v : g.venueView;
+      KAR.VENUES.forEach((V, v) => U.button(ctx, g, 'V' + v, 36 + v * 300, 262, 288, 52, V.name, { small: true, color: v === view ? 'green' : ['blue', 'yellow', 'red'][v], selected: v === view }));
+      for (let j = 0; j < 5; j++) {
+        const i = view * 5 + j, x = 36 + j * 180, y = 326, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
+        U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 168, 84, '', { small: true, color: sel ? 'green' : ['blue', 'yellow', 'red'][view], selected: sel, disabled: !open });
+        if (!open) { this.lock(ctx, x + 84, y + 42); continue; }
+        U.text(ctx, String(i + 1), x + 84, y + 40, 30, '#ffffff', 'center');
+        for (let k = 0; k < 3; k++) U.star(ctx, x + 54 + k * 30, y + 62, 11, k < T.stars[i], 1);
+      }
+      const L = KAR.TOUR[D.tourLv];
+      U.text(ctx, 'LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + '  \u00b7  ' + KAR.CFG.DISTS[L.dist] + ' M' + (T.best[D.tourLv] ? '  \u00b7  BEST ' + T.best[D.tourLv] : ''), 480, 438, 19, '#fff27a', 'center');
+      U.text(ctx, L.tip, 480, 548, 16, '#ffe9a8', 'center');
+      return;
+    }
     KAR.VENUES.forEach((V, v) => {
       const y = 294 + v * 52;
       U.text(ctx, V.name, 34, y + 22, 17, ['#bff28a', '#ffd88a', '#ffb0c8'][v], 'left');
@@ -343,7 +417,8 @@ KAR.UI = {
     const S = m.def.stars, msg = g.unlocked ? ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28] : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
       : !won ? [(S[0] - m.total(0)) + ' MORE TO CLEAR IT', '#ffffff', 22] : st < 3 ? [(S[st] - m.total(0)) + ' MORE FOR ' + (st + 1) + ' STARS', '#ffffff', 20] : ['PERFECT', '#fff27a', 28];
     U.text(ctx, msg[0], 480, 394, msg[2], msg[1], 'center');
-    U.text(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, 15, '#ffffff', 'center');
+    if (g.newGear && g.newGear.length) U.text(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, 16, '#9be35a', 'center');
+    else U.text(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, 15, '#ffffff', 'center');
     const next = !last && KAR.tourOpen(m.lv + 1, D);
     if (next && won) {
       U.button(ctx, g, 'next', 256, 450, 210, 56, 'NEXT LEVEL', { primary: true });
@@ -392,7 +467,8 @@ KAR.UI = {
       U.text(ctx, String(m.total(0)), 480, 222, 86, '#ffffff', 'center');
       U.text(ctx, 'OUT OF 150   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 258, 20, '#ffe9a8', 'center');
       for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < m.stars(), T > 0.4 + i * 0.3 ? 1 : 0.01);
-      if (g.unlocked) U.text(ctx, '70 M UNLOCKED!', 480, 396, 30, '#9be35a', 'center');
+      if (g.newGear && g.newGear.length) U.text(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name).join(' \u00b7 '), 480, 396, g.unlocked ? 18 : 22, '#9be35a', 'center');
+      if (g.unlocked) U.text(ctx, '70 M UNLOCKED!', 480, g.newGear && g.newGear.length ? 376 : 396, 30, '#9be35a', 'center');
       else if (g.newBest) U.text(ctx, 'NEW BEST!', 480, 392, 28, '#fff27a', 'center');
     }
     const ends = m.endScores.map((e, i) => (duel ? e[0] + ':' + e[1] : String(e[0]))).join('   ');
