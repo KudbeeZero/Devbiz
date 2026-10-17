@@ -85,7 +85,30 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   let wins = 0; for (let i = 1; i <= 30; i++) { const m2 = K.Bot.play({ mode: 'duel', dist: 1, level: 0, seed: i }, lg.sigma, lg.read, i); if (m2.winner === 0) wins++; }
   rec('duel-cpu-beatable', wins > 15, `a LEGEND-grade player beats the ROOKIE CPU ${wins}/30`);
 }
-// 10. persistence
+// 10. ROBIN HOOD: a second arrow into the same hole splits the first; a near miss doesn't
+{
+  const m = new K.Match({ mode: 'range', dist: 0, seed: 4 }); m.wind = 0;
+  const a = m.shoot(0.05, C.FACE_Y, 0, 0, 1); m.wind = 0;
+  const b = m.shoot(0.05, C.FACE_Y, 0, 0, 1); m.wind = 0;
+  const c = m.shoot(0.05 + C.ROBIN * 2, C.FACE_Y, 0, 0, 1);
+  rec('robin-hood', !a.robin && b.robin && !c.robin && m.arrows[0][0].split && !m.arrows[0][2].split && b.ring === a.ring,
+    `same spot -> ROBIN HOOD (first arrow split=${m.arrows[0][0].split}); ${(C.ROBIN * 200).toFixed(1)} cm away is not; the score is unchanged (${a.ring}/${b.ring})`);
+  const n = new K.Match({ mode: 'range', dist: 0, seed: 4 }); n.wind = 0; n.shoot(0.05, C.FACE_Y, 0, 0, 1); n._newEnd(); n.endNo = 1; n.arrowNo = 0; n.wind = 0;
+  rec('robin-same-end-only', !n.shoot(0.05, C.FACE_Y, 0, 0, 1).robin, 'arrows are pulled between ends, so last end\'s hole can\'t be split');
+}
+// 11. last-arrow pressure: what the shooter needs
+{
+  const m = new K.Match({ mode: 'range', dist: 1, seed: 6 });
+  const none = m.needs(100);
+  m.endNo = 4; m.arrowNo = 2; for (let i = 0; i < 14; i++) m.arrows[0].push({ ring: 8, end: 0 });   // 112 so far
+  const n = m.needs(115), T3 = K.STARS[1][1];
+  const d = new K.Match({ mode: 'duel', dist: 1, seed: 6 });
+  for (let i = 0; i < 5; i++) d.arrows[i % 2].push({ ring: i % 2 ? 7 : 10, end: 0 });                 // you 30, CPU 14 so far
+  d.arrowNo = 5; const dn = d.needs();
+  rec('needs', none === null && n.best === 4 && n.star3 === T3 - 112 && dn.win === 17 && dn.tie === 16,
+    `mid-range: nothing; last arrow on 112 vs best 115 -> needs ${n.best} (3 stars: ${n.star3}); duel CPU needs ${dn.win} to take the end (can't)`);
+}
+// 12. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };

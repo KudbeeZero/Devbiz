@@ -176,6 +176,21 @@ KAR.UI = {
     ctx.save(); ctx.translate(120, wy + 28); ctx.scale(Math.sign(w) || 1, 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const L = 14 + a * 34; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(L, 0); ctx.moveTo(L - 11, -9); ctx.lineTo(L, 0); ctx.lineTo(L - 11, 9); ctx.lineWidth = 8; ctx.strokeStyle = U.OUT; ctx.stroke(); ctx.lineWidth = 4.5; ctx.strokeStyle = a > 0.66 ? '#ff9a7a' : a > 0.33 ? '#ffe14d' : '#9be35a'; ctx.stroke(); ctx.restore();
     U.text(ctx, Math.abs(w).toFixed(1), 26, wy + 46, 20, '#ffffff', 'left');
+    // gold streak chip: 9s and better in a row
+    if (g.streak >= 2) {
+      const pulse = 1 + 0.06 * Math.sin(g.time * 8), sy = wy + 66;
+      ctx.save(); ctx.translate(12, sy); ctx.scale(pulse, pulse);
+      U.rr(ctx, 0, 0, 172, 40, 14); ctx.fillStyle = U.OUT; ctx.fill();
+      const sg = ctx.createLinearGradient(0, 3, 0, 37); sg.addColorStop(0, '#ffe888'); sg.addColorStop(1, '#ff9a1f');
+      U.rr(ctx, 3, 3, 166, 34, 11); ctx.fillStyle = sg; ctx.fill();
+      ctx.restore();
+      U.text(ctx, 'GOLD STREAK \u00d7' + g.streak, 98, sy + 28, 18, '#ffffff', 'center');
+    }
+    // last-arrow pressure line
+    if (g.drama && g.screen === 'play' && g.bp === 'ready' && !g.banner) {
+      const k = 1 + 0.04 * Math.sin(g.time * 6);
+      ctx.save(); ctx.translate(480, 158); ctx.scale(k, k); U.text(ctx, g.drama, 0, 0, 22, '#fff27a', 'center'); ctx.restore();
+    }
     // draw + breath meters while a shot is being prepared
     if (g.screen === 'play' && g.human() && g.drawing) {
       const bx = 330, by = 598;
@@ -196,7 +211,7 @@ KAR.UI = {
     // banner
     if (g.banner) {
       const b = g.banner, k = KAR.Util.easeOut(Math.min(1, b.age * 5)), fade = Math.min(1, b.life * 3);
-      ctx.save(); ctx.globalAlpha = fade; ctx.translate(480, 188); ctx.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+      ctx.save(); ctx.globalAlpha = fade; ctx.translate(480, 150); ctx.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);   // high enough that the gold (and your arrow) stays in view
       U.bubble(ctx, b.text, 0, 0, b.size || 80, b.c1 || '#fff27a', b.c2 || '#ff9a1f', -0.03);
       if (b.sub) U.text(ctx, b.sub, 0, 42, 24, '#ffffff', 'center');
       ctx.restore();
@@ -224,7 +239,7 @@ KAR.UI = {
     }
     U.button(ctx, g, 'play', 330, 462, 300, 70, duel ? 'START DUEL' : 'START RANGE', { primary: true });
     U.text(ctx, 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose', 480, 568, 16, '#ffffff', 'center');
-    U.text(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X', 480, 594, 15, '#ffe9a8', 'center');
+    U.text(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, 15, '#ffe9a8', 'center');
     U.roundIcon(ctx, g, 'mute', 926, 36, g.audio.muted ? 'mute' : 'sound');
   },
 

@@ -14,6 +14,7 @@ KAR.CFG = {
   DISTS: [18, 30, 50, 70], FACE: [0.40, 0.80, 1.22, 1.22], WIND: [1.2, 2.2, 3.5, 5.0],
   ENDS: 5, PER: 3,
   DRAW_T: 0.9, STEADY_T: 3.0, BASE_SWAY: 0.0016,       // radians of sight wobble at rest
+  ROBIN: 0.009,                                          // metres: closer than this to an arrow in the face splits it
 };
 KAR.LEVELS = [
   { name: 'ROOKIE', sigma: 0.0034, wind: 0.55, read: 0.40 },
@@ -114,9 +115,13 @@ KAR.Match = class {
     const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
     const fl = KAR.Flight.run(this.dist, sol.yaw, sol.pitch, speed, wind);
     const res = { shooter: sh, end: this.endNo, wind, samples: fl.samples, hit: fl.hit, ground: fl.ground, ring: 0, x: false, short: false };
-    if (fl.hit) { const sc = KAR.Score.ring(this.distIdx, fl.hit.x, fl.hit.y); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0; }
+    if (fl.hit) {
+      const sc = KAR.Score.ring(this.distIdx, fl.hit.x, fl.hit.y); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
+      // ROBIN HOOD: on the face, within a shaft's width of an arrow already in it this end (it would split that arrow)
+      if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && Math.hypot(a.hit.x - fl.hit.x, a.hit.y - fl.hit.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
+    }
     else { res.miss = true; res.short = true; }
-    this.arrows[sh].push({ ring: res.ring, x: res.x, end: this.endNo, hit: fl.hit ? { x: fl.hit.x, y: fl.hit.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
+    this.arrows[sh].push({ ring: res.ring, x: res.x, robin: !!res.robin, end: this.endNo, hit: fl.hit ? { x: fl.hit.x, y: fl.hit.y, vx: fl.hit.vx, vy: fl.hit.vy, vz: fl.hit.vz } : null });
     this.arrowNo++;
     this.log.push(res);
     res.endDone = this.arrowNo >= this.per * this.shooters;
@@ -137,6 +142,19 @@ KAR.Match = class {
       }
     } else if (this.endNo >= this.ends) this.over = true;
     if (!this.over) this._newEnd();
+  }
+  // Before the shooter's LAST arrow of the match/end: what does it need? Range: points for a new best and
+  // for 3 stars. Duel (CPU's last arrow of an end): points the CPU needs to win the end. null when not the last.
+  needs(best) {
+    const C = KAR.CFG;
+    if (this.over || this.arrowsLeft !== 1) return null;
+    if (this.mode === 'range') {
+      if (this.endNo !== this.ends - 1) return null;
+      const t = this.total(0), T3 = KAR.STARS[this.distIdx][1];
+      return { best: best ? best + 1 - t : null, star3: t < T3 ? T3 - t : null };
+    }
+    const a = this.endTotal(0, this.endNo), b = this.endTotal(1, this.endNo);
+    return { win: a - b + 1, tie: a - b };
   }
   // stars for a finished range (0..3)
   stars() {

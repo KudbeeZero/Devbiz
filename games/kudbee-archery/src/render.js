@@ -14,7 +14,8 @@ KAR.Render = {
     { base: '#2f86d8', light: '#7ac7ff', dark: '#1a4f8a', name: 'YOU' },
     { base: '#e8483a', light: '#ff9a8a', dark: '#97271d', name: 'CPU' },
   ],
-  RING: ['#f4f1e6', '#f4f1e6', '#26262e', '#26262e', '#3c8fe0', '#3c8fe0', '#e4453a', '#e4453a', '#ffd34d', '#ffd34d'],
+  // RING[i] fills the band from (i)/10 to (i+1)/10 of the radius: gold in the middle, white on the outside (WA face)
+  RING: ['#ffd34d', '#ffd34d', '#e4453a', '#e4453a', '#3c8fe0', '#3c8fe0', '#26262e', '#26262e', '#f4f1e6', '#f4f1e6'],
   zoom: 1, dist: 30, faceD: 0.8,
 
   setView(zoom, dist, faceD) {
@@ -27,6 +28,20 @@ KAR.Render = {
     c.x = ex; c.y = ey; c.z = ez;
     c.pitch = Math.atan2(ey - ty, tz - ez);
     c.CX = 480 + U.lerp(0, 0, e); c.CY = U.lerp(300, 318, e);
+    this.chaseB = 0;
+  },
+
+  // ARROW CAM: blend the camera (b 0..1) from wherever setView put it to a chase position just behind and
+  // above the flying arrow, looking down-range at the face. Called after setView, only for hero shots.
+  chase(tip, b) {
+    if (!(b > 0)) return;
+    const C = KAR.CFG, U = KAR.Util, c = this.cam, e = U.smooth(b);
+    const x = tip.x * 0.92, y = tip.y + 0.16, z = tip.z - 1.7;
+    c.x = U.lerp(c.x, x, e); c.y = U.lerp(c.y, y, e); c.z = U.lerp(c.z, z, e);
+    c.pitch = U.lerp(c.pitch, Math.atan2(y - C.FACE_Y, Math.max(1, this.dist - z)), e);
+    c.F = Math.exp(U.lerp(Math.log(c.F), Math.log(820), e));
+    c.CY = U.lerp(c.CY, 300, e);
+    this.chaseB = e;
   },
 
   proj(x, y, z) {
@@ -169,7 +184,7 @@ KAR.Render = {
     for (let i = 9; i >= 0; i--) {
       const r = R * (i + 1) / 10 * k;
       ctx.beginPath(); ctx.arc(ctr.x, ctr.y, r, 0, 6.283); ctx.fillStyle = this.RING[i]; ctx.fill();
-      ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.strokeStyle = (i === 2 || i === 3) ? 'rgba(255,255,255,0.55)' : 'rgba(20,20,30,0.55)'; ctx.stroke();
+      ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.strokeStyle = (i === 6 || i === 7) ? 'rgba(255,255,255,0.55)' : 'rgba(20,20,30,0.55)'; ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(ctr.x, ctr.y, R * 0.05 * k, 0, 6.283); ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.stroke();
     ctx.beginPath(); ctx.arc(ctr.x, ctr.y, R * k, 0, 6.283); ctx.strokeStyle = OUT; ctx.lineWidth = lw * 1.4; ctx.stroke();
@@ -191,13 +206,18 @@ KAR.Render = {
   },
 
   // ---- arrows ----------------------------------------------------------------------
-  arrow(ctx, tip, dir, len, team, minLen) {
+  arrow(ctx, tip, dir, len, team, minLen, split) {
     const L = Math.hypot(dir.x, dir.y, dir.z) || 1, d = { x: dir.x / L, y: dir.y / L, z: dir.z / L };
     const tail = { x: tip.x - d.x * len, y: tip.y - d.y * len, z: tip.z - d.z * len };
     const p = this.proj(tip.x, tip.y, tip.z); let q = this.proj(tail.x, tail.y, tail.z); if (!p || !q) return;
     if (minLen) { let vx = q.x - p.x, vy = q.y - p.y, vl = Math.hypot(vx, vy); if (vl < minLen) { if (vl < 1) { vx = 0.25; vy = -1; vl = Math.hypot(vx, vy); } q = { x: p.x + vx / vl * minLen, y: p.y + vy / vl * minLen, k: q.k, zc: q.zc }; } }
     const col = this.TEAM[team || 0], w = Math.max(2.2 + 2.2 * (1 - this.zoom), 0.016 * p.k);
     ctx.save(); ctx.lineCap = 'round';
+    if (split) {        // two splinters peeled apart from the tip, no fletching left to speak of
+      const dx = q.x - p.x, dy = q.y - p.y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl * dl * 0.16, ny = dx / dl * dl * 0.16;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(p.x + dx * 0.5 + nx * s * 0.6, p.y + dy * 0.5 + ny * s * 0.6, q.x + nx * s, q.y + ny * s); ctx.strokeStyle = this.OUT; ctx.lineWidth = w * 0.6 + 2.4; ctx.stroke(); ctx.strokeStyle = '#e8d6a8'; ctx.lineWidth = w * 0.6; ctx.stroke(); }
+      ctx.restore(); return;
+    }
     ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.strokeStyle = this.OUT; ctx.lineWidth = w + 2.4; ctx.stroke();
     ctx.strokeStyle = '#f2e6c8'; ctx.lineWidth = w; ctx.stroke();
     // fletching: three vanes at the tail
@@ -206,10 +226,12 @@ KAR.Render = {
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.8, w * 0.7), 0, 6.283); ctx.fillStyle = '#cfd6de'; ctx.fill();
     ctx.restore();
   },
-  stuck(ctx, a, team) {
+  // wob: 0..1 quiver of a fresh hit (the shaft shivers and settles); split: a ROBIN HOOD victim, drawn cracked open
+  stuck(ctx, a, team, wob, t) {
     if (!a.hit) return;
     const D = this.dist, h = a.hit, L = Math.hypot(h.vx, h.vy, h.vz) || 1;
-    this.arrow(ctx, { x: h.x, y: h.y, z: D }, { x: h.vx / L, y: h.vy / L * 3.5, z: h.vz / L }, 0.9, team, 52 * Math.min(1, 0.4 + this.zoom));
+    const q = wob > 0 ? Math.sin((t || 0) * 55) * wob * 0.22 : 0;
+    this.arrow(ctx, { x: h.x, y: h.y, z: D }, { x: h.vx / L + q, y: h.vy / L * 3.5 + q * 0.6, z: h.vz / L }, 0.9, team, 52 * Math.min(1, 0.4 + this.zoom), a.split);
   },
 
   // ---- first-person bow + sight ----------------------------------------------------------

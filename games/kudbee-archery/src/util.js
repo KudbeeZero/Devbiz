@@ -30,7 +30,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, mode: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0 } },
+  data: { muted: false, mode: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);

@@ -21,6 +21,7 @@ KAR.Game = class {
     this.rng = KAR.Util.rng((Date.now() ^ 0x1f3d5b79) >>> 0);
     this.match = new KAR.Match({ mode: 'range', dist: 1, seed: 1 });
     this.bp = 'idle'; this.bpT = 0; this.zoom = 1; this.zoomTarget = 1; this.timeScale = 1;
+    this.camB = 0; this.camTip = null; this.landT = -9; this.streak = 0; this.drama = '';
     this.ptr = { x: 480, y: 330 }; this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
     this._resetShot();
     this._bind();
@@ -39,6 +40,7 @@ KAR.Game = class {
     this.match = new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: D.dist, level: D.level, seed: (this.rng() * 4294967296) >>> 0 });
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
     this.focusIdx = -1; this.focusPending = true; this.showEnd = 0; this.zoom = 1; this.zoomTarget = 1;
+    this.camB = 0; this.camTip = null; this.streak = 0; this.drama = '';
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
     this._nextShot();
   }
@@ -49,10 +51,27 @@ KAR.Game = class {
     const m = this.match;
     this._resetShot();
     if (m.arrowNo === 0) this.showEnd = m.endNo;
-    this.bp = 'ready'; this.bpT = 0; this.zoomTarget = 1;
+    this.bp = 'ready'; this.bpT = 0; this.zoomTarget = 1; this.camB = 0;
     this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
     this.ptr = { x: 480, y: 330 }; this._setAimFromPtr();
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
+    this.drama = this._drama();
+  }
+
+  // Last-arrow pressure, shown across the top while that arrow is up.
+  _drama() {
+    const m = this.match, n = m.needs(KAR.Store.data.best[m.distIdx]);
+    if (!n) return '';
+    if (m.mode === 'range') {
+      const parts = [];
+      if (n.best !== null && n.best <= 0) return 'NEW BEST LOCKED IN \u00b7 FINISH IT!';
+      if (n.best !== null && n.best <= 10) parts.push('NEED ' + n.best + ' FOR A NEW BEST');
+      if (n.star3 !== null && n.star3 <= 10) parts.push(n.star3 + ' FOR 3 STARS');
+      return parts.length ? 'LAST ARROW \u00b7 ' + parts.join(' \u00b7 ') : 'LAST ARROW';
+    }
+    if (n.win > 10) return n.tie === 10 ? 'CPU NEEDS A 10 TO TIE THE END' : 'THE END IS YOURS';
+    if (n.win > 0) return 'CPU NEEDS ' + n.win + ' TO TAKE THE END';
+    return '';
   }
 
   setScreen(s) { this.screen = s; this.overlayT = 0; this.focusPending = true; }
@@ -89,7 +108,8 @@ KAR.Game = class {
     window.addEventListener('keydown', e => this._onKey(e, true));
     window.addEventListener('keyup', e => this._onKey(e, false));
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
-    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
+    // blur fires for benign focus moves (iframes, preview toolbars): only drop held input; a hidden tab pauses
+    window.addEventListener('blur', () => { this.holding = false; if (this.drawing && !this.cpu) { this.drawing = false; this.draw = 0; } });
   }
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
   _beginDraw() { if (this.human() && !this.drawing) { this.drawing = true; this.draw = 0; this.holdT = 0; this.breath = 1; this.audio.draw(0); } }
@@ -99,6 +119,7 @@ KAR.Game = class {
     const p = this._pt(e), i = KAR.UI.hit(p.x, p.y);
     if (i >= 0) { e.preventDefault(); this.activate(KAR.UI.buttons[i].id); return; }
     if (this.screen !== 'play') return;
+    if (this.bp === 'flight' && this.flight && this.flight.hero) { this.flight.skip = true; return; }
     this.ptr = p; if (this.drawing || this.human()) this._setAimFromPtr();
     if (e.button === 2) { this.holding = true; return; }
     this._beginDraw();
@@ -130,7 +151,7 @@ KAR.Game = class {
       return;
     }
     if (down && (k === 'r' || k === 'R')) { this.startMatch(); return; }
-    if (k === ' ' || k === 'Enter') { e.preventDefault(); if (down) this._beginDraw(); else if (this.drawing) this._loose(); return; }
+    if (k === ' ' || k === 'Enter') { e.preventDefault(); if (down && this.bp === 'flight' && this.flight && this.flight.hero) this.flight.skip = true; else if (down) this._beginDraw(); else if (this.drawing) this._loose(); return; }
     if (down && this.human()) {
       const st = 7;
       if (k === 'ArrowLeft') this.ptr.x -= st; else if (k === 'ArrowRight') this.ptr.x += st; else if (k === 'ArrowUp') this.ptr.y -= st; else if (k === 'ArrowDown') this.ptr.y += st; else return;
@@ -149,9 +170,15 @@ KAR.Game = class {
     const shooter = m.shooter;
     const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power);
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
-    this.flight = { res, t: 0, tEnd, shooter, done: false };
-    this.bp = 'flight'; this.bpT = 0; this.zoomTarget = 0; this.draw = 0;
-    this.audio.loose(); this.audio.fly(tEnd * 0.9);
+    // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
+    // the last arrow of a range, and the CPU's X. The camera rides the arrow in, in slow motion.
+    const last = m.over && m.mode === 'range';
+    const hero = !!res.hit && (shooter === 0 ? (res.ring >= 9 || last || (res.ring >= 7 && this.rng() < 0.3)) : (res.x || (res.ring === 10 && this.rng() < 0.5)));
+    this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
+    this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
+    this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
+    if (/^(PRESS|TOUCH)/.test(this.hint)) this.hintT = 0;            // the how-to line has done its job
+    if (hero) this.audio.heroIn();
     this.cpu = null;
     if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; }
   }
@@ -161,15 +188,20 @@ KAR.Game = class {
     f.done = true;
     const e = res.hit;
     if (e) this.pops.push({ x: e.x, y: e.y, age: 0, ring: res.ring, team: f.shooter });
+    this.landT = this.time;
+    if (e) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < 12; i++) { const a = -Math.PI * (0.1 + this.rng() * 0.8), sp = 60 + this.rng() * 160; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 420, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 14, life: 0.35 + this.rng() * 0.35, col: i % 2 ? '#f3d56f' : '#c99a38', w: 5, h: 2 }); } }
+    if (f.shooter === 0) { this.streak = res.ring >= 9 ? this.streak + 1 : 0; if (this.streak > st.bestStreak) st.bestStreak = this.streak; if (res.robin) st.robins++; }
+    const streak = f.shooter === 0 ? this.streak : 0, row = streak >= 2 ? streak + ' IN A ROW!' : '';
     if (e && res.ring >= 9) { const q = KAR.Render.proj(e.x, e.y, m.dist); if (q) for (let i = 0; i < (res.x ? 26 : 14); i++) { const a = this.rng() * 6.283, sp = 80 + this.rng() * 220; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, g: 320, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 12, life: 0.7 + this.rng() * 0.6, col: ['#fff6a8', '#ffd34d', '#ffffff'][i % 3] }); } }
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
-    if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
+    if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
+    else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
       this.audio.thud(res.ring);
       const nm = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'];
-      if (res.x) { this._banner('X!', '#fff6a8', '#ffb82e', 'PERFECT CENTRE', 110); this.audio.gold(); this._burst(40); }
-      else if (res.ring === 10) { this._banner('TEN!', '#fff6a8', '#ffb82e', 'gold', 96); this.audio.gold(); this._burst(26); }
-      else if (res.ring === 9) { this._banner('NINE', '#fff6a8', '#ff9a1f', 'gold', 84); this.audio.cheer(false); }
+      if (res.x) { this._banner('X!', '#fff6a8', '#ffb82e', row || 'PERFECT CENTRE', 110); this.audio.gold(streak); this._burst(40 + streak * 8); }
+      else if (res.ring === 10) { this._banner('TEN!', '#fff6a8', '#ffb82e', row || 'gold', 96); this.audio.gold(streak); this._burst(26 + streak * 6); }
+      else if (res.ring === 9) { this._banner('NINE', '#fff6a8', '#ff9a1f', row || 'gold', 84); this.audio.cheer(false); if (streak >= 2) this.audio.gold(streak); }
       else this._banner(nm[res.ring], res.ring >= 7 ? '#ffd0c8' : '#c4ecff', res.ring >= 7 ? '#e8483a' : '#2f86d8', '', 70);
     }
     if (f.shooter === 0) { if (res.ring === 10) st.tens++; if (res.x) st.xs++; }
@@ -241,11 +273,20 @@ KAR.Game = class {
       } else { this.sway.x = 0; this.sway.y = 0; this.steady = false; }
     } else if (this.bp === 'flight') {
       const f = this.flight, frac = f.t / f.tEnd;
-      this.timeScale = frac > 0.86 ? 0.4 : 1;
+      f.real += dt;
+      if (f.hero) {
+        this.timeScale = f.skip ? 4 : frac < 0.75 ? 0.6 : 0.25;          // press to skip
+        this.camB = Math.min(1, f.real / 0.3);
+      } else {
+        this.timeScale = frac > 0.86 ? 0.4 : 1;
+        this.zoomTarget = frac < 0.5 ? 0 : 1;
+      }
       f.t += dt * this.timeScale;
-      this.zoomTarget = frac < 0.5 ? 0 : 1;
       if (f.t >= f.tEnd) { f.t = f.tEnd; this.timeScale = 1; this._land(); }
+      this.camTip = this._tip(f);
     } else if (this.bp === 'result') {
+      // hold the arrow cam on the hit for a beat, then pull back to the scope
+      if (this.camB > 0) this.camB = this.bpT < 0.55 ? this.camB : Math.max(0, this.camB - dt / 0.4);
       if (this.bpT > (this.flight.res.endDone ? 2.1 : 1.3)) { if (m.over) this._finishMatch(); else this._nextShot(); }
     }
   }
@@ -273,6 +314,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD);
+    if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB);
     if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
@@ -282,7 +324,7 @@ KAR.Game = class {
     if (this.screen !== 'menu') { R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx); }
     ctx.restore();
     U.begin();
-    for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-4, -2.5, 8, 5); ctx.restore(); }
+    for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }
     if (this.screen === 'menu') U.menu(ctx, this);
     else {
       U.hud(ctx, this);
@@ -292,23 +334,32 @@ KAR.Game = class {
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }
   }
 
+  _tip(f) {
+    const S = f.res.samples;
+    let i = 0; while (i < S.length - 2 && S[i + 1].t < f.t) i++;
+    const a = S[i], b = S[Math.min(S.length - 1, i + 1)], u = b.t > a.t ? KAR.Util.clamp((f.t - a.t) / (b.t - a.t), 0, 1) : 0;
+    return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z + (b.z - a.z) * u, i };
+  }
+
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
     if (this.screen === 'menu') return;
-    for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && this.flight && a === m.arrows[this.flight.shooter][m.arrows[this.flight.shooter].length - 1])) R.stuck(ctx, a, s);
+    const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null, wob = Math.exp(-(this.time - this.landT) * 4.5);
+    for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest && wob > 0.02 ? wob : 0, this.time);
     // impact rings
     for (const p of this.pops) { const q = R.proj(p.x, p.y, m.dist); if (!q) continue; ctx.beginPath(); ctx.arc(q.x, q.y, (0.05 + p.age * 0.25) * q.k, 0, 6.283); ctx.strokeStyle = 'rgba(255,255,255,' + (1 - p.age / 1.2) + ')'; ctx.lineWidth = 3; ctx.stroke(); }
     if (this.bp === 'flight' && this.flight) {
-      const f = this.flight, S = f.res.samples;
-      let i = 0; while (i < S.length - 2 && S[i + 1].t < f.t) i++;
-      const a = S[i], b = S[Math.min(S.length - 1, i + 1)], u = b.t > a.t ? KAR.Util.clamp((f.t - a.t) / (b.t - a.t), 0, 1) : 0;
-      const tip = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z + (b.z - a.z) * u };
+      const f = this.flight, S = f.res.samples, tip = this._tip(f), i = tip.i, b = S[Math.min(S.length - 1, i + 1)];
       const prev = S[Math.max(0, i - 1)], dir = { x: b.x - prev.x, y: b.y - prev.y, z: b.z - prev.z };
-      // faint trail
+      // faint trail (not from the arrow cam: it would be drawn through the lens)
       ctx.save(); ctx.lineCap = 'round';
-      for (let j = Math.max(0, i - 14); j < i; j++) { const p = R.proj(S[j].x, S[j].y, S[j].z), q = R.proj(S[j + 1].x, S[j + 1].y, S[j + 1].z); if (!p || !q) continue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 * (j - (i - 14)) / 14) + ')'; ctx.lineWidth = 2 + 3 * (1 - this.zoom); ctx.stroke(); }
+      if (this.camB < 0.5) for (let j = Math.max(0, i - 14); j < i; j++) { const p = R.proj(S[j].x, S[j].y, S[j].z), q = R.proj(S[j + 1].x, S[j + 1].y, S[j + 1].z); if (!p || !q) continue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 * (j - (i - 14)) / 14) + ')'; ctx.lineWidth = 2 + 3 * (1 - this.zoom); ctx.stroke(); }
       ctx.restore();
-      if (!f.done) R.arrow(ctx, tip, dir, 0.8 + 3.2 * (1 - this.zoom), f.shooter, 0);
+      if (!f.done) {
+        // arrow cam: speed lines streaming past the lens
+        if (this.camB > 0.3) { ctx.save(); ctx.globalAlpha = (this.camB - 0.3) * 0.9; ctx.strokeStyle = '#ffffff'; ctx.lineCap = 'round'; for (let j = 0; j < 14; j++) { const a = j * 2.399, r0 = 250 + ((j * 97 + this.time * 1600) % 240); ctx.lineWidth = 1.5 + (j % 3); ctx.beginPath(); ctx.moveTo(480 + Math.cos(a) * r0, 300 + Math.sin(a) * r0 * 0.7); ctx.lineTo(480 + Math.cos(a) * (r0 + 70), 300 + Math.sin(a) * (r0 + 70) * 0.7); ctx.stroke(); } ctx.restore(); }
+        R.arrow(ctx, tip, dir, 0.8 + 3.2 * (1 - this.zoom), f.shooter, 0);
+      }
       else if (f.res.hit) R.stuck(ctx, { hit: f.res.hit }, f.shooter);
     } else if (this.bp === 'result' && this.flight && this.flight.res.hit) { /* stuck arrow already drawn from match.arrows */ }
   }

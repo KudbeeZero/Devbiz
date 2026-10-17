@@ -19,7 +19,9 @@ const URL = `http://localhost:${server.address().port}/games/kudbee-archery/inde
 
 const R = [];
 const rec = (id, pass, note) => { R.push(pass); console.log(pass ? 'PASS' : 'FAIL', id, '—', note); };
-const browser = await chromium.launch();
+// Cloud containers: use the pre-installed Chromium when present (avoids `playwright install`).
+const launchOpts = existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {};
+const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
@@ -100,6 +102,47 @@ await waitFor(() => KARGame.bp === 'ready' && KARGame.match.shooter === 0, 5000)
 await page.mouse.move(...toPx(480, 318)); await page.mouse.down(); await waitFor(() => KARGame.draw >= 1, 3000); await page.mouse.up();
 rec('cpu-replies', await waitFor(() => KARGame.match.arrows[1].length === 1, 20000), 'after your arrow the CPU draws, aims and shoots one of its own');
 await page.screenshot({ path: `${OUT}/duel.png` });
+
+// --- the new layer: correct face, arrow cam, streaks, ROBIN HOOD, last-arrow pressure, focus rules ---
+await G(() => { KAR.Store.data.mode = 0; KAR.Store.data.dist = 1; KARGame.startMatch(); });
+await waitFor(() => KARGame.bp === 'ready' && KARGame.zoom > 0.98, 5000);
+const px = await G(() => {
+  const c = document.getElementById('gameCanvas'), x = c.getContext('2d'), R = KAR.Render, m = KARGame.match, d = KARGame.dpr;
+  const at = (dx) => { const q = R.proj(dx, KAR.CFG.FACE_Y, m.dist); return Array.from(x.getImageData(Math.round(q.x * d), Math.round(q.y * d), 1, 1).data); };
+  return { mid: at(m.faceD / 2 * 0.15), outer: at(m.faceD / 2 * 0.95) };   // middle of the 9 band; middle of the 1 band
+});
+rec('face-colours', px.mid[0] > 200 && px.mid[1] > 160 && px.mid[2] < 140 && px.outer[0] > 200 && px.outer[1] > 200 && px.outer[2] > 190, `gold in the middle rgb(${px.mid.slice(0, 3)}), white on the outside rgb(${px.outer.slice(0, 3)})`);
+const perfect = () => G(() => { const g = KARGame; g.match.wind = 0; g.drawing = true; g.draw = 1; g.aimX = 0.03; g.aimY = KAR.CFG.FACE_Y; g.sway = { x: 0, y: 0 }; g._loose(); return g.flight && g.flight.hero; });
+const hero = await perfect();
+const camIn = await waitFor(() => KARGame.camB > 0.95 && KAR.Render.cam.z > KARGame.match.dist * 0.3, 3000);
+await page.screenshot({ path: `${OUT}/arrowcam.png` });
+rec('arrow-cam', hero && camIn, `a gold shot gets the arrow cam (hero=${hero}); the camera rides down-range behind the arrow`);
+await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(200);
+await page.screenshot({ path: `${OUT}/arrowcam-hit.png` });
+rec('cam-holds-on-hit', await G(() => KARGame.camB > 0.9 && KAR.Render.cam.z > KARGame.match.dist * 0.8), 'the cam holds close on the hit before pulling back');
+await waitFor(() => KARGame.bp === 'ready', 8000);
+const r2 = await perfect(); await page.keyboard.press(' ');
+const skipped = await G(() => KARGame.flight.skip);
+await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(250);
+await page.screenshot({ path: `${OUT}/robin.png` });
+const st = await G(() => ({ robin: KARGame.flight.res.robin, banner: KARGame.banner && KARGame.banner.text, streak: KARGame.streak, saved: KAR.Store.data.stats.robins, split: KARGame.match.arrows[0][0].split }));
+rec('skip-arrow-cam', r2 && skipped, 'Space during the arrow cam fast-forwards it');
+rec('robin-hood', st.robin && st.split && st.banner === 'ROBIN HOOD!' && st.saved >= 1, `the same spot twice splits the first arrow (${st.banner}), counted in stats`);
+rec('gold-streak', st.streak === 2, `two golds in a row -> streak ${st.streak}`);
+await waitFor(() => KARGame.bp === 'ready', 8000);
+const drama = await G(() => { const g = KARGame, m = g.match; KAR.Store.data.best[1] = 200; m.endNo = m.ends - 1; m.arrowNo = m.per - 1; g._nextShot(); return g.drama; });
+await page.screenshot({ path: `${OUT}/last-arrow.png` });
+rec('last-arrow-line', /^LAST ARROW/.test(drama), `the final arrow shows the pressure line: "${drama}"`);
+const focus = await G(() => {
+  window.dispatchEvent(new Event('blur')); const afterBlur = KARGame.screen;
+  Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange'));
+  const afterHide = KARGame.screen;
+  Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange'));
+  if (KARGame.screen === 'paused') KARGame.togglePause();
+  return { afterBlur, afterHide };
+});
+rec('no-pause-on-blur', focus.afterBlur === 'play', 'screen after a window blur: ' + focus.afterBlur);
+rec('hidden-tab-pauses', focus.afterHide === 'paused', 'screen after hiding the tab: ' + focus.afterHide);
 
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
