@@ -165,6 +165,82 @@ KAR.Match = class {
 };
 KAR.STARS = [[112, 130], [118, 134], [112, 130], [92, 116]];       // [2-star, 3-star] out of 150
 
+// ---- BALLOON POP (arcade) ---------------------------------------------------------------
+// Balloons drift across a plane DIST metres down-range, pushed by the wind and bobbing. You have a quiver
+// of arrows; each balloon popped scores (gold ones score more and refill 2 arrows), arrows that pop in
+// consecutive shots build a combo multiplier, and an arrow flies on after a pop, so lined-up balloons can
+// go together. The trick clock T only runs when the game ticks it (it slows with the slow-mo), so a shot
+// fired at T0 meets each balloon where it will be at T0 + the arrow's flight time. Deterministic per seed.
+KAR.Trick = class {
+  constructor(opts) {
+    opts = opts || {};
+    const C = KAR.CFG;
+    this.mode = 'trick'; this.distIdx = 1; this.dist = KAR.Trick.DIST; this.faceD = 3.2;
+    this.rng = KAR.Util.rng(opts.seed === undefined ? 1 : opts.seed);
+    this.shooters = 1; this.shooter = 0; this.per = 1; this.ends = 1; this.endNo = 0; this.arrowNo = 0;
+    this.arrows = [[], []]; this.sets = [0, 0]; this.endScores = []; this.log = [];
+    this.quiver = KAR.Trick.ARROWS; this.score = 0; this.combo = 0; this.bestCombo = 0; this.popped = 0;
+    this.over = false; this.winner = -1;
+    this.T = 0; this.balloons = []; this.nextId = 1; this.spawnT = 0;
+    this.wind = (this.rng() * 2 - 1) * C.WIND[1] * 0.8; this.baseWind = this.wind;
+    for (let i = 0; i < 4; i++) this._spawn(-3 + i * 1.6);       // a few already crossing at the start
+  }
+  get arrowsLeft() { return this.quiver; }
+  total() { return this.score; }
+  xs() { return 0; }
+  stars() { return 0; }
+  needs() { return null; }
+  mult() { return Math.max(1, Math.min(5, this.combo)); }      // 1st pop x1, 2nd in a row x2 ... up to x5
+  _spawn(age) {
+    const r = this.rng, side = r() < 0.5 ? -1 : 1, heat = Math.min(1, this.popped / 24);
+    const speed = (0.7 + r() * 1.2) * (1 + heat * 0.9);
+    const b = { id: this.nextId++, born: this.T - (age || 0), x0: side * 7.2, vx: -side * speed, y0: 0.9 + r() * 2.1, ph: r() * 6.28,
+      gold: r() < 0.12, col: Math.floor(r() * 4), popAt: null };
+    this.balloons.push(b); return b;
+  }
+  pos(b, T) {
+    const a = T - b.born;
+    return { x: b.x0 + b.vx * a + this.wind * 0.18 * a, y: b.y0 + 0.22 * Math.sin(1.3 * a + b.ph) + 0.04 * a };
+  }
+  // advance the trick clock: retire popped / escaped balloons, keep the sky full
+  tick(dt) {
+    this.T += dt;
+    this.balloons = this.balloons.filter(b => (b.popAt === null || this.T < b.popAt) && Math.abs(this.pos(b, this.T).x) < 7.6);
+    this.spawnT -= dt;
+    if (this.spawnT <= 0 && this.balloons.length < 7) { this._spawn(0); this.spawnT = 0.7 + this.rng() * 0.9; }
+  }
+  shoot(aimX, aimY, sx, sy, power) {
+    const C = KAR.CFG, D = this.dist, T0 = this.T, R = KAR.Trick.R;
+    const sol = KAR.Flight.solve(D, aimX + sx, aimY + sy);
+    const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
+    const plane = KAR.Flight.run(D, sol.yaw, sol.pitch, speed, this.wind);              // where it crosses the balloons
+    const fl = KAR.Flight.run(D + 45, sol.yaw, sol.pitch, speed, this.wind);            // ...and where it goes after
+    const res = { shooter: 0, end: 0, wind: this.wind, samples: fl.samples, hit: null, ground: true, ring: 0, x: false, miss: true, short: !plane.hit, pops: [], points: 0, trick: true };
+    if (plane.hit) {
+      const h = plane.hit, tc = h.t;
+      res.popT = tc; res.cross = { x: h.x, y: h.y };
+      for (const b of this.balloons) {
+        if (b.popAt !== null) continue;
+        const p = this.pos(b, T0 + tc);
+        if (Math.hypot(p.x - h.x, p.y - h.y) < R) { b.popAt = T0 + tc; res.pops.push({ id: b.id, x: p.x, y: p.y, gold: b.gold, col: b.col }); }
+      }
+    }
+    this.quiver--;
+    if (res.pops.length) {
+      this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo); this.popped += res.pops.length;
+      const m = this.mult(), base = res.pops.reduce((a, p) => a + (p.gold ? 250 : 100), 0);
+      res.points = base * m * res.pops.length;                     // two in one arrow scores double each
+      this.score += res.points; res.mult = m; res.miss = false;
+      const golds = res.pops.filter(p => p.gold).length; this.quiver += golds * 2; res.bonusArrows = golds * 2;
+    } else this.combo = 0;
+    this.arrowNo++; this.log.push(res);
+    res.endDone = false;
+    if (this.quiver <= 0) this.over = true;
+    return res;
+  }
+};
+KAR.Trick.DIST = 25; KAR.Trick.ARROWS = 12; KAR.Trick.R = 0.26;
+
 // ---- the CPU / test bot -----------------------------------------------------------
 KAR.Bot = {
   // Reads the wind with some error, aims off to compensate, then shakes by the skill's sigma.

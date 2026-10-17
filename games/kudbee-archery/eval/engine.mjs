@@ -108,14 +108,42 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rec('needs', none === null && n.best === 4 && n.star3 === T3 - 112 && dn.win === 17 && dn.tie === 16,
     `mid-range: nothing; last arrow on 112 vs best 115 -> needs ${n.best} (3 stars: ${n.star3}); duel CPU needs ${dn.win} to take the end (can't)`);
 }
-// 12. persistence
+// 12. BALLOON POP: lead a mover and it pops; quiver, combo, gold refill, double pops, game over
+{
+  const C2 = K.CFG, D = K.Trick.DIST;
+  // aim where the balloon WILL be when the arrow arrives (fixed point on the flight time)
+  const lead = (m, b) => { let t = 0.4; for (let i = 0; i < 4; i++) { const p = m.pos(b, m.T + t), s = K.Flight.solve(D, p.x, p.y), r = K.Flight.run(D, s.yaw, s.pitch, C2.V0, m.wind); t = r.hit.t; } const p = m.pos(b, m.T + t); return p; };
+  const m = new K.Trick({ seed: 3 }); m.tick(0.5);
+  const b = m.balloons.find(x => Math.abs(m.pos(x, m.T).x) < 4) || m.balloons[0];
+  const p = lead(m, b), q0 = m.quiver;
+  const r1 = m.shoot(p.x, p.y, 0, 0, 1);
+  const naive = new K.Trick({ seed: 3 }); naive.tick(0.5);
+  const nb = naive.balloons.find(x => x.id === b.id), np = naive.pos(nb, naive.T), fast = Math.abs(nb.vx) > 0.6;
+  const r0 = naive.shoot(np.x, np.y, 0, 0, 1);
+  rec('pop-leads', r1.pops.some(x => x.id === b.id) && m.quiver === q0 - 1 + (r1.bonusArrows || 0) && r1.points >= 100 && (!fast || !r0.pops.some(x => x.id === b.id)),
+    `leading the balloon pops it (+${r1.points}); aiming where it is now ${r0.pops.length ? 'also popped (slow drifter)' : 'misses'}`);
+  // combo: pop again straight away -> multiplier 2
+  m.tick(0.1); const b2 = m.balloons.find(x => x.popAt === null && Math.abs(m.pos(x, m.T).x) < 5);
+  const r2 = b2 ? m.shoot(lead(m, b2).x, lead(m, b2).y, 0, 0, 1) : { pops: [] };
+  const r3 = m.shoot(0, -2, 0, 0, 1);
+  rec('pop-combo', r2.pops.length > 0 && r2.mult === 2 && !r3.pops.length && m.combo === 0, `second pop in a row scores at x${r2.mult}; a miss resets the combo`);
+  // gold refills two arrows; double pop scores double each
+  const g = new K.Trick({ seed: 3 }); g.balloons = [{ id: 90, born: 0, x0: 0, vx: 0, y0: 1.5, ph: 0, gold: true, col: 0, popAt: null }, { id: 91, born: 0, x0: 0.05, vx: 0, y0: 1.52, ph: 0, gold: false, col: 1, popAt: null }]; g.wind = 0;
+  const gp = g.pos(g.balloons[0], g.T + 0.45), qg = g.quiver, rg = g.shoot(gp.x, gp.y, 0, 0, 1);
+  rec('pop-gold-double', rg.pops.length === 2 && g.quiver === qg - 1 + 2 && rg.points === (250 + 100) * 2, `one arrow through two lined-up balloons: both pop (+${rg.points}); the gold one refills 2 arrows`);
+  // over when the quiver is empty; deterministic
+  const e = new K.Trick({ seed: 8 }); let n = 0; while (!e.over && n++ < 100) { e.tick(0.6); e.shoot(0, 5, 0, 0, 1); }
+  const sig = () => { const t = new K.Trick({ seed: 12 }); const out = []; for (let i = 0; i < 6; i++) { t.tick(0.7); out.push(t.balloons.map(x => x.id + ':' + t.pos(x, t.T).x.toFixed(3)).join(',')); } return out.join('|'); };
+  rec('pop-flow', e.over && n === K.Trick.ARROWS && sig() === sig(), `${n} misses empty the quiver and end the round; balloon traffic replays exactly per seed`);
+}
+// 13. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
   const K2 = loadKAR(['util.js'], ls);
-  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.save();
+  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
-  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2, 'distance, best scores and stars survive a reload');
+  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200, 'distance, best scores, stars, BALLOON POP mode and best survive a reload');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

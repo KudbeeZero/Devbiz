@@ -106,6 +106,7 @@ await page.screenshot({ path: `${OUT}/duel.png` });
 // --- the new layer: correct face, arrow cam, streaks, ROBIN HOOD, last-arrow pressure, focus rules ---
 await G(() => { KAR.Store.data.mode = 0; KAR.Store.data.dist = 1; KARGame.startMatch(); });
 await waitFor(() => KARGame.bp === 'ready' && KARGame.zoom > 0.98, 5000);
+await G(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // a frame drawn with the new range's camera
 const px = await G(() => {
   const c = document.getElementById('gameCanvas'), x = c.getContext('2d'), R = KAR.Render, m = KARGame.match, d = KARGame.dpr;
   const at = (dx) => { const q = R.proj(dx, KAR.CFG.FACE_Y, m.dist); return Array.from(x.getImageData(Math.round(q.x * d), Math.round(q.y * d), 1, 1).data); };
@@ -151,6 +152,37 @@ const focus = await G(() => {
 });
 rec('no-pause-on-blur', focus.afterBlur === 'play', 'screen after a window blur: ' + focus.afterBlur);
 rec('hidden-tab-pauses', focus.afterHide === 'paused', 'screen after hiding the tab: ' + focus.afterHide);
+
+// --- BALLOON POP + release feel ---
+await G(() => KARGame.activate('menu')); await clickWhen('mode2');
+rec('pop-mode-menu', await G(() => KAR.Store.data.mode === 2 && KAR.UI.buttons.some(b => b.id === 'mode2')), 'BALLOON POP is a third mode on the menu');
+await clickWhen('play');
+rec('pop-starts', await waitFor(() => KARGame.screen === 'play' && KARGame.match.mode === 'trick' && KARGame.match.balloons.length >= 3, 3000), 'balloons drift across the range');
+await waitFor(() => KARGame.bp === 'ready', 3000);
+const tb0 = await G(() => KARGame.match.T); await page.waitForTimeout(400);
+rec('pop-balloons-move', await page.evaluate(v => KARGame.match.T > v + 0.2, tb0), 'the balloon clock runs while you aim');
+// a real press-and-hold shot first: the bow kicks away on release
+await page.mouse.move(...toPx(480, 300)); await page.mouse.down(); await waitFor(() => KARGame.draw >= 1, 3000); await page.mouse.up();
+const rel = await G(() => KARGame.time - KARGame.relT);
+await page.waitForTimeout(90); await page.screenshot({ path: `${OUT}/release.png` });
+rec('release-kick', rel >= 0 && rel < 0.2, 'releasing starts the bow kick-away animation');
+await waitFor(() => KARGame.bp === 'ready', 8000);
+const lead = await G(() => {
+  const g = KARGame, m = g.match, C = KAR.CFG, D = m.dist, b = m.balloons.find(x => x.popAt === null && Math.abs(m.pos(x, m.T).x) < 3) || m.balloons.find(x => x.popAt === null);
+  let t = 0.4; for (let i = 0; i < 4; i++) { const p = m.pos(b, m.T + t), s = KAR.Flight.solve(D, p.x, p.y), r = KAR.Flight.run(D, s.yaw, s.pitch, C.V0, m.wind); t = r.hit.t; }
+  const p = m.pos(b, m.T + t), before = m.score; g.drawing = true; g.draw = 1; g.aimX = p.x; g.aimY = p.y; g.sway = { x: 0, y: 0 }; g._loose();
+  return { id: b.id, pops: g.flight.res.pops.map(x => x.id), before };
+});
+await waitFor(() => KARGame.flight && KARGame.flight.popDone, 5000); await page.waitForTimeout(100);
+await page.screenshot({ path: `${OUT}/pop.png` });
+const popped = await G(() => ({ shown: KARGame.trickShown, score: KARGame.match.score, banner: KARGame.banner && KARGame.banner.text }));
+rec('pop-leading-shot', lead.pops.includes(lead.id) && popped.shown === popped.score && popped.score > lead.before && /POP/.test(popped.banner || ''), `leading a balloon pops it on screen (${popped.banner}, score ${popped.score})`);
+await G(() => { KARGame.match.quiver = 1; });
+await waitFor(() => KARGame.bp === 'ready', 8000);
+await G(() => { const g = KARGame; g.drawing = true; g.draw = 1; g.aimX = 0; g.aimY = 5.4; g.sway = { x: 0, y: 0 }; g._loose(); });
+rec('pop-out-of-arrows', await waitFor(() => KARGame.screen === 'over', 8000), 'the last arrow ends the round on the results card');
+await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/pop-over.png` });
+rec('pop-best-saved', await G(() => JSON.parse(localStorage.getItem('kudbee.archery.v1')).trickBest === KARGame.match.score && KARGame.match.score > 0), 'the BALLOON POP best is saved');
 
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');

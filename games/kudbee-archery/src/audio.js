@@ -85,6 +85,7 @@ KAR.Audio = class {
   // streak: each extra gold in a row lifts the chime a whole tone
   gold(streak) { const k = Math.pow(2, Math.min(6, Math.max(0, (streak || 1) - 1)) * 2 / 12); [784, 988, 1175].forEach((f, i) => this.tone(f * k, 0.18, 'triangle', 0.1, null, i * 0.07)); if (streak >= 3) this.tone(1568 * k, 0.3, 'sine', 0.06, null, 0.22); }
   heroIn() { this.tone(70, 0.9, 'sine', 0.2, 45); this.noise(0.9, 0.06, 900, 'bandpass', 0, 2); }
+  pop(n, mult) { for (let i = 0; i < (n || 1); i++) { this.noise(0.09, 0.32, 3800, 'highpass', i * 0.07); this.tone(900 + (mult || 1) * 120, 0.08, 'square', 0.05, 300, i * 0.07); } if (mult > 1) [659, 784, 988].slice(0, Math.min(3, mult - 1)).forEach((f, i) => this.tone(f * (1 + mult * 0.06), 0.14, 'triangle', 0.08, null, 0.1 + i * 0.06)); }
   robin() { this.noise(0.08, 0.3, 3200, 'highpass'); [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => this.tone(f, 0.22, 'square', 0.05, null, 0.06 + i * 0.08)); this.cheer(true); }
   cheer(big) { this.noise(big ? 1.4 : 0.8, big ? 0.15 : 0.09, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.09, 1200, 'bandpass', 0.1, 0.6); }
   groan() { this.noise(0.7, 0.07, 500, 'bandpass', 0, 0.7); this.tone(150, 0.6, 'sawtooth', 0.03, 95); }

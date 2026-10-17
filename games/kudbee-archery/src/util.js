@@ -30,7 +30,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, mode: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
+  data: { muted: false, mode: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -39,7 +39,8 @@ KAR.Store = {
         if (d && typeof d === 'object') {
           const D = this.data, pick = (v, n) => (Number.isInteger(v) && v >= 0 && v < n ? v : null);
           D.muted = !!d.muted;
-          if (pick(d.mode, 2) !== null) D.mode = d.mode;
+          if (pick(d.mode, 3) !== null) D.mode = d.mode;
+          if (typeof d.trickBest === 'number') D.trickBest = d.trickBest;
           if (pick(d.dist, 4) !== null) D.dist = d.dist;
           if (pick(d.level, 3) !== null) D.level = d.level;
           for (const k of ['best', 'stars']) if (Array.isArray(d[k])) for (let i = 0; i < 4; i++) if (typeof d[k][i] === 'number') D[k][i] = d[k][i];

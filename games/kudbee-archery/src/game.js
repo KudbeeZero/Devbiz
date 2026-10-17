@@ -37,11 +37,14 @@ KAR.Game = class {
   // ---- flow ---------------------------------------------------------------------
   startMatch() {
     const D = KAR.Store.data;
-    this.match = new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: D.dist, level: D.level, seed: (this.rng() * 4294967296) >>> 0 });
+    const seed = (this.rng() * 4294967296) >>> 0;
+    this.match = D.mode === 2 ? new KAR.Trick({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: D.dist, level: D.level, seed });
+    this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
     this.focusIdx = -1; this.focusPending = true; this.showEnd = 0; this.zoom = 1; this.zoomTarget = 1;
     this.camB = 0; this.camTip = null; this.streak = 0; this.drama = '';
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
+    if (this.match.mode === 'trick') { this.hint = 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
     this._nextShot();
   }
 
@@ -173,11 +176,12 @@ KAR.Game = class {
     // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
     // the last arrow of a range, and the CPU's X. The camera rides the arrow in, in slow motion.
     const last = m.over && m.mode === 'range';
-    const hero = !!res.hit && (shooter === 0 ? (res.ring >= 9 || last || (res.ring >= 7 && this.rng() < 0.3)) : (res.x || (res.ring === 10 && this.rng() < 0.5)));
+    const hero = !res.trick && !!res.hit && (shooter === 0 ? (res.ring >= 9 || last || (res.ring >= 7 && this.rng() < 0.3)) : (res.x || (res.ring === 10 && this.rng() < 0.5)));
     this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
-    if (/^(PRESS|TOUCH)/.test(this.hint)) this.hintT = 0;            // the how-to line has done its job
+    if (/^(PRESS|TOUCH|POP)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
+    this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
     if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; }
@@ -186,6 +190,7 @@ KAR.Game = class {
   _land() {
     const f = this.flight, res = f.res, m = this.match, st = KAR.Store.data.stats;
     f.done = true;
+    if (res.trick) { this.bp = 'result'; this.bpT = 0; return; }       // balloons pop mid-flight (_pop); the arrow just runs out
     const e = res.hit;
     if (e) this.pops.push({ x: e.x, y: e.y, age: 0, ring: res.ring, team: f.shooter });
     this.landT = this.time;
@@ -209,6 +214,26 @@ KAR.Game = class {
     if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
   }
 
+  // BALLOON POP: the arrow reaches the balloons' plane
+  _pop(res) {
+    const m = this.match;
+    if (!res.pops.length) {
+      if (this.trickCombo >= 2) { this.hint = 'COMBO BROKEN'; this.hintT = 1; } else { this.hint = 'MISS'; this.hintT = 0.8; }
+      this.trickCombo = 0; this.audio.miss(); return;
+    }
+    const R = KAR.Render, cols = R.BALLOON;
+    for (const p of res.pops) {
+      const q = R.proj(p.x, p.y, m.dist); if (!q) continue;
+      const col = p.gold ? '#ffd34d' : cols[p.col];
+      for (let i = 0; i < 22; i++) { const a = this.rng() * 6.283, sp = 120 + this.rng() * 320; this.particles.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, g: 520, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 18, life: 0.5 + this.rng() * 0.5, col: i % 4 ? col : '#ffffff', w: 7, h: 4 }); }
+      this.pops.push({ x: p.x, y: p.y, age: 0, ring: 10, team: 0 });
+    }
+    this.trickShown = m.score; this.trickCombo = res.mult; this.shake = Math.max(this.shake, 5);
+    const two = res.pops.length > 1, gold = res.bonusArrows > 0;
+    this._banner(two ? 'DOUBLE POP!' : 'POP!', '#ffffff', gold ? '#ffb82e' : '#ff5d8a', '+' + res.points + (res.mult > 1 ? '  \u00b7  COMBO \u00d7' + res.mult : '') + (gold ? '  \u00b7  +' + res.bonusArrows + ' ARROWS' : ''), two ? 76 : 88);
+    this.audio.pop(res.pops.length, res.mult); if (two || gold) this._burst(30);
+  }
+
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.5 }; }
   _burst(n) {
     const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'];
@@ -217,6 +242,12 @@ KAR.Game = class {
 
   _finishMatch() {
     const m = this.match, D = KAR.Store.data;
+    if (m.mode === 'trick') {
+      this.newBest = m.score > (D.trickBest || 0); D.trickBest = Math.max(D.trickBest || 0, m.score);
+      KAR.Store.save(); this.setScreen('over');
+      if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
+      return;
+    }
     if (m.mode === 'range') {
       const sc = m.total(0), stars = m.stars();
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
@@ -249,8 +280,9 @@ KAR.Game = class {
   }
 
   _updateShot(dt) {
-    const m = this.match, C = KAR.CFG;
+    const m = this.match, C = KAR.CFG, trick = m.mode === 'trick';
     this.bpT += dt;
+    if (trick && this.bp !== 'flight') m.tick(dt);
     if (this.bp === 'ready') {
       if (this.cpu) this._updateCpu(dt);
       if (this.drawing) {
@@ -277,11 +309,20 @@ KAR.Game = class {
       if (f.hero) {
         this.timeScale = f.skip ? 4 : frac < 0.75 ? 0.6 : 0.25;          // press to skip
         this.camB = Math.min(1, f.real / 0.3);
+      } else if (f.res.trick) {
+        // stay on the balloons; a beat of slow motion as the arrow meets the ones it is about to pop
+        const pt = f.res.popT, near = f.res.pops.length && pt !== undefined && f.t > pt - 0.14 && f.t < pt + 0.2;
+        this.timeScale = near ? 0.3 : 1; this.zoomTarget = 1;
       } else {
         this.timeScale = frac > 0.86 ? 0.4 : 1;
         this.zoomTarget = frac < 0.5 ? 0 : 1;
       }
       f.t += dt * this.timeScale;
+      if (trick) {
+        m.tick(dt * this.timeScale);                      // the world slows with the arrow, so pops land where computed
+        if (!f.popDone && f.res.popT !== undefined && f.t >= f.res.popT) { f.popDone = true; this._pop(f.res); }
+        if (!f.popDone && f.res.popT === undefined && f.t > 0.3) { f.popDone = true; this._pop(f.res); }
+      }
       if (f.t >= f.tEnd) { f.t = f.tEnd; this.timeScale = 1; this._land(); }
       this.camTip = this._tip(f);
     } else if (this.bp === 'result') {
@@ -289,7 +330,7 @@ KAR.Game = class {
       const hero = this.flight.hero;
       this.orbit = hero ? KAR.Util.clamp((this.bpT - 0.15) / 0.7, 0, 1) : 0;
       if (this.camB > 0) this.camB = this.bpT < (hero ? 1.45 : 0.55) ? this.camB : Math.max(0, this.camB - dt / 0.4);
-      if (this.bpT > (this.flight.res.endDone ? 2.1 : 1.3) + (this.flight.hero ? 0.7 : 0)) { if (m.over) this._finishMatch(); else this._nextShot(); }
+      if (this.bpT > (trick ? 0.25 : (this.flight.res.endDone ? 2.1 : 1.3) + (this.flight.hero ? 0.7 : 0))) { if (m.over) this._finishMatch(); else this._nextShot(); }
     }
   }
 
@@ -320,10 +361,14 @@ KAR.Game = class {
     if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
-      R.drawTarget(ctx, this.time, m.wind);
+      if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind);
       this._drawArrows(ctx);
     }
-    if (this.screen !== 'menu') { R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx); }
+    if (this.screen !== 'menu') {
+      R.drawWind(ctx, this.time, m.wind); this._drawAim(ctx);
+      const rel = (this.time - this.relT) / 0.45;
+      if (rel >= 0 && rel < 1 && this.screen === 'play') R.bow(ctx, 0, 0, 0, this.relTeam ? 1 : 0, this.time, Math.max(0.001, rel));
+    }
     ctx.restore();
     U.begin();
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }

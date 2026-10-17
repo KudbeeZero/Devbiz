@@ -148,13 +148,22 @@ KAR.UI = {
   },
 
   hud(ctx, g) {
-    const U = this, m = g.match, duel = m.mode === 'duel', R = KAR.Render;
+    const U = this, m = g.match, duel = m.mode === 'duel', trick = m.mode === 'trick', R = KAR.Render;
     const h = duel ? 138 : 104;
     U.rr(ctx, 14, 16, 300, h, 18); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     U.rr(ctx, 12, 12, 300, h, 18); ctx.fillStyle = U.OUT; ctx.fill();
     const pg = ctx.createLinearGradient(0, 12, 0, 12 + h); pg.addColorStop(0, '#47628f'); pg.addColorStop(1, '#2a3f66');
     U.rr(ctx, 15, 15, 294, h - 6, 15); ctx.fillStyle = pg; ctx.fill();
-    const rows = duel ? [0, 1] : [0];
+    if (trick) {
+      // score, quiver (one tick per arrow left), best
+      U.text(ctx, 'SCORE', 28, 46, 20, '#7ac7ff', 'left');
+      U.text(ctx, String(g.trickShown), 290, 50, 36, '#ffffff', 'right');
+      const n = m.quiver;
+      for (let k = 0; k < Math.min(n, 14); k++) { const x = 30 + k * 13; ctx.save(); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, 66); ctx.lineTo(x, 92); ctx.strokeStyle = U.OUT; ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = '#f2e6c8'; ctx.lineWidth = 2.6; ctx.stroke(); ctx.fillStyle = k % 2 ? '#2f86d8' : '#7ac7ff'; ctx.fillRect(x - 3.5, 86, 7, 8); ctx.restore(); }
+      U.text(ctx, n > 14 ? '+' + (n - 14) : '', 30 + 14 * 13, 90, 16, '#ffffff', 'left');
+      U.text(ctx, 'BEST ' + (KAR.Store.data.trickBest || 0), 290, 98, 16, '#ffe9a8', 'right');
+    }
+    const rows = trick ? [] : duel ? [0, 1] : [0];
     rows.forEach((s, i) => {
       const y = 38 + i * 50, col = R.TEAM[s], active = !m.over && m.shooter === s && g.screen === 'play';
       if (active) { ctx.save(); ctx.fillStyle = 'rgba(255,246,168,0.22)'; U.rr(ctx, 20, y - 20, 284, 44, 12); ctx.fill(); ctx.restore(); }
@@ -164,7 +173,8 @@ KAR.UI = {
       for (let k = 0; k < m.per; k++) U.pip(ctx, 160 + k * 32, y - 1, s, arrows[k]);
       if (m.xs(s)) U.text(ctx, m.xs(s) + 'X', 276, y + 6, 15, '#ffd34d', 'right');
     });
-    if (!duel) U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M', 28, 98, 17, '#ffe9a8', 'left');
+    if (trick) { /* no ends */ }
+    else if (!duel) U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   ' + m.dist + ' M', 28, 98, 17, '#ffe9a8', 'left');
     else U.text(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '   \u00b7   SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, 16, '#ffe9a8', 'left');
     U.roundIcon(ctx, g, 'pause', 926, 36, 'pause');
     U.roundIcon(ctx, g, 'mute', 876, 36, g.audio.muted ? 'mute' : 'sound');
@@ -177,14 +187,15 @@ KAR.UI = {
     const L = 14 + a * 34; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(L, 0); ctx.moveTo(L - 11, -9); ctx.lineTo(L, 0); ctx.lineTo(L - 11, 9); ctx.lineWidth = 8; ctx.strokeStyle = U.OUT; ctx.stroke(); ctx.lineWidth = 4.5; ctx.strokeStyle = a > 0.66 ? '#ff9a7a' : a > 0.33 ? '#ffe14d' : '#9be35a'; ctx.stroke(); ctx.restore();
     U.text(ctx, Math.abs(w).toFixed(1), 26, wy + 46, 20, '#ffffff', 'left');
     // gold streak chip: 9s and better in a row
-    if (g.streak >= 2) {
+    const chip = trick ? (g.trickCombo >= 2 ? 'COMBO \u00d7' + g.trickCombo : '') : (g.streak >= 2 ? 'GOLD STREAK \u00d7' + g.streak : '');
+    if (chip) {
       const pulse = 1 + 0.06 * Math.sin(g.time * 8), sy = wy + 66;
       ctx.save(); ctx.translate(12, sy); ctx.scale(pulse, pulse);
       U.rr(ctx, 0, 0, 172, 40, 14); ctx.fillStyle = U.OUT; ctx.fill();
       const sg = ctx.createLinearGradient(0, 3, 0, 37); sg.addColorStop(0, '#ffe888'); sg.addColorStop(1, '#ff9a1f');
       U.rr(ctx, 3, 3, 166, 34, 11); ctx.fillStyle = sg; ctx.fill();
       ctx.restore();
-      U.text(ctx, 'GOLD STREAK \u00d7' + g.streak, 98, sy + 28, 18, '#ffffff', 'center');
+      U.text(ctx, chip, 98, sy + 28, 18, '#ffffff', 'center');
     }
     // last-arrow pressure line
     if (g.drama && g.screen === 'play' && g.bp === 'ready' && !g.banner) {
@@ -225,9 +236,16 @@ KAR.UI = {
     U.bubble(ctx, 'KUDBEE', 480, 92, 42, '#ffffff', '#cfe9ff', -0.03);
     U.bubble(ctx, 'ARCHERY', 480, 178, 92, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
     U.text(ctx, 'READ THE WIND  \u00b7  HOLD YOUR BREATH  \u00b7  HIT THE GOLD', 480, 212, 17, '#ffffff', 'center');
-    ['RANGE', 'DUEL VS CPU'].forEach((n, i) => U.button(ctx, g, 'mode' + i, 250 + i * 240, 232, 220, 44, n, { small: true, color: D.mode === i ? 'green' : 'blue', selected: D.mode === i }));
-    U.text(ctx, 'DISTANCE', 480, 308, 17, '#ffe9a8', 'center');
-    KAR.CFG.DISTS.forEach((d, i) => {
+    const trick = D.mode === 2;
+    ['RANGE', 'DUEL VS CPU', 'BALLOON POP'].forEach((n, i) => U.button(ctx, g, 'mode' + i, 135 + i * 236, 232, 220, 44, n, { small: true, color: D.mode === i ? 'green' : (i === 2 ? 'red' : 'blue'), selected: D.mode === i }));
+    if (trick) {
+      U.text(ctx, 'BALLOONS DRIFT ACROSS THE RANGE IN THE WIND', 480, 318, 20, '#ffffff', 'center');
+      U.text(ctx, 'lead the movers  \u00b7  pop in a row for a combo  \u00b7  one arrow can pop two', 480, 350, 17, '#ffe9a8', 'center');
+      U.text(ctx, 'gold balloons refill 2 arrows  \u00b7  12 arrows to start', 480, 378, 17, '#ffe9a8', 'center');
+      U.text(ctx, 'BEST ' + (D.trickBest || 0), 480, 428, 26, '#fff27a', 'center');
+    }
+    if (!trick) U.text(ctx, 'DISTANCE', 480, 308, 17, '#ffe9a8', 'center');
+    if (!trick) KAR.CFG.DISTS.forEach((d, i) => {
       const x = 144 + i * 170;
       U.button(ctx, g, 'd' + i, x, 316, 156, 46, d + ' M', { small: true, color: D.dist === i ? 'green' : 'blue', selected: D.dist === i });
       if (!duel) for (let k = 0; k < 3; k++) U.star(ctx, x + 38 + k * 40, 382, 11, k < D.stars[i], 1);
@@ -237,10 +255,25 @@ KAR.UI = {
       U.text(ctx, 'CPU SKILL', 480, 396, 17, '#ffe9a8', 'center');
       KAR.LEVELS.forEach((L, i) => U.button(ctx, g, 'lv' + i, 270 + i * 140, 404, 128, 40, L.name, { small: true, color: D.level === i ? 'green' : 'blue', selected: D.level === i }));
     }
-    U.button(ctx, g, 'play', 330, 462, 300, 70, duel ? 'START DUEL' : 'START RANGE', { primary: true });
+    U.button(ctx, g, 'play', 330, 462, 300, 70, trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
     U.text(ctx, 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose', 480, 568, 16, '#ffffff', 'center');
     U.text(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, 15, '#ffe9a8', 'center');
     U.roundIcon(ctx, g, 'mute', 926, 36, g.audio.muted ? 'mute' : 'sound');
+  },
+
+  overTrick(ctx, g) {
+    const U = this, m = g.match, T = g.overlayT, k = KAR.Util.easeOut(Math.min(1, T * 2.2));
+    U.backdrop(ctx, Math.min(0.55, T * 1.4));
+    ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
+    U.panel(ctx, 240, 104, 480, 430, g.newBest ? 'blue' : 'red');
+    U.ribbon(ctx, 480, 76, 400, 'OUT OF ARROWS', g.newBest ? 'green' : 'red');
+    U.text(ctx, String(m.score), 480, 226, 86, '#ffffff', 'center');
+    U.text(ctx, m.popped + ' POPPED   \u00b7   BEST COMBO \u00d7' + Math.max(1, Math.min(5, m.bestCombo)) + '   \u00b7   ' + m.arrowNo + ' ARROWS', 480, 266, 19, '#ffe9a8', 'center');
+    if (g.newBest && m.score > 0) U.text(ctx, 'NEW BEST!', 480, 340, 40, '#fff27a', 'center');
+    else U.text(ctx, 'BEST ' + (KAR.Store.data.trickBest || 0), 480, 340, 28, '#ffffff', 'center');
+    U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
+    U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
+    ctx.restore();
   },
 
   pause(ctx, g) {
@@ -256,6 +289,7 @@ KAR.UI = {
 
   over(ctx, g) {
     const U = this, m = g.match, T = g.overlayT, duel = m.mode === 'duel';
+    if (m.mode === 'trick') return this.overTrick(ctx, g);
     const won = duel ? m.winner === 0 : m.stars() >= 1;
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));

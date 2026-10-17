@@ -327,11 +327,50 @@ KAR.Render = {
     this.arrow3(ctx, { x: h.x, y: h.y, z: this.dist }, d, len, team, { stuck: true, split: a.split, rot: rd.rot, shadow: true });
   },
 
+  // ---- BALLOON POP ------------------------------------------------------------------
+  BALLOON: ['#ff4f5e', '#3fa0ff', '#8fdc3e', '#c46bff'],
+  drawBalloons(ctx, m, t) {
+    const R = KAR.Trick.R, D = m.dist, OUT = this.OUT;
+    for (const b of m.balloons) {
+      if (b.popAt !== null && m.T >= b.popAt) continue;
+      const p = m.pos(b, m.T), q = this.proj(p.x, p.y, D); if (!q) continue;
+      const r = R * q.k, col = b.gold ? '#ffd34d' : this.BALLOON[b.col];
+      // string, swinging under the knot
+      ctx.save(); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(q.x, q.y + r * 1.12);
+      for (let i = 1; i <= 6; i++) ctx.lineTo(q.x + Math.sin(t * 2.4 + b.ph + i * 0.9) * r * 0.16 * i / 6, q.y + r * 1.12 + i * r * 0.55);
+      ctx.strokeStyle = 'rgba(40,40,50,0.7)'; ctx.lineWidth = Math.max(1, r * 0.05); ctx.stroke();
+      // body + knot
+      ctx.beginPath(); ctx.moveTo(q.x - r * 0.14, q.y + r * 1.2); ctx.lineTo(q.x + r * 0.14, q.y + r * 1.2); ctx.lineTo(q.x, q.y + r * 1.02); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = Math.max(1.2, r * 0.07); ctx.strokeStyle = OUT; ctx.stroke();
+      const g = ctx.createRadialGradient(q.x - r * 0.35, q.y - r * 0.4, r * 0.1, q.x, q.y, r * 1.15);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.18, col); g.addColorStop(1, b.gold ? '#c9800e' : 'rgba(0,0,0,0.55)');
+      ctx.beginPath(); ctx.ellipse(q.x, q.y, r * 0.9, r * 1.08, Math.sin(t * 1.3 + b.ph) * 0.08, 0, 6.283);
+      ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 0.55; ctx.fillStyle = g; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.lineWidth = Math.max(1.4, r * 0.08); ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(q.x - r * 0.36, q.y - r * 0.44, r * 0.16, r * 0.26, -0.5, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fill();
+      if (b.gold) { const s = r * (0.35 + 0.15 * Math.sin(t * 9 + b.ph)); ctx.translate(q.x + r * 0.6, q.y - r * 0.8); ctx.rotate(t * 2); ctx.fillStyle = '#ffffff'; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i * 0.785, rr = i % 2 ? s * 0.3 : s; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    }
+  },
+
   // ---- first-person bow + sight ----------------------------------------------------------
-  bow(ctx, sx, sy, draw, team, t) {
+  // rel 0..1: the moment after the release - no arrow on the string, the bow kicks forward and drops away
+  // (a loose bow hand), the string snaps and shivers.
+  bow(ctx, sx, sy, draw, team, t, rel) {
     const col = this.TEAM[team || 0], OUT = this.OUT, W = this.W, H = this.H;
     const cx = 480, base = H + 8, pull = draw * 70;
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (rel > 0) {
+      const e = KAR.Util.easeOut(rel);
+      ctx.translate(cx, base - 100); ctx.rotate(0.22 * e); ctx.scale(1 - 0.12 * e, 1 - 0.12 * e); ctx.translate(-cx, -(base - 100) - 40 + e * 150);
+      const vib = Math.sin(rel * 70) * (1 - rel) * 16;
+      const limb = (s) => { ctx.beginPath(); ctx.moveTo(cx + s * 70, base - 200); ctx.quadraticCurveTo(cx + s * 175, base - 80, cx + s * 74, base + 10); ctx.lineWidth = 14; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 8; ctx.strokeStyle = '#a8703a'; ctx.stroke(); };
+      limb(-1); limb(1);
+      ctx.beginPath(); ctx.moveTo(cx - 70, base - 200); ctx.quadraticCurveTo(cx + vib, base - 140, cx + 74, base - 200); ctx.lineWidth = 3.4; ctx.strokeStyle = '#fff6e0'; ctx.stroke(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(cx - 168, base - 110, 34, 100, 12) : ctx.rect(cx - 168, base - 110, 34, 100)); ctx.fillStyle = '#8a5a2c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx - 152, base - 60, 34, 26, -0.2, 0, 7); ctx.fillStyle = '#f0b98a'; ctx.fill(); ctx.stroke();
+      ctx.restore(); return;
+    }
     // the arrow: tapered from the string up to the sight point
     const tx = sx, ty = sy + 10, sxp = cx, syp = base - 62 + pull * 0.2;
     const ang = Math.atan2(ty - syp, tx - sxp), nx = -Math.sin(ang), ny = Math.cos(ang);
