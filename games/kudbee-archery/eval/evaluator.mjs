@@ -230,12 +230,15 @@ await page.screenshot({ path: `${OUT}/daily-over.png` });
 
 // THE TOUR: fresh progress shows level 1 open and the rest locked; a cleared level saves its stars and NEXT LEVEL opens level 2
 await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.best.fill(0); D.tourLv = 0; KARGame.activate('menu'); }); await page.waitForTimeout(80);
-await click('mode5'); await page.waitForTimeout(80);
-const tiles = await G(() => ['L00', 'L01', 'L14'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'locked' : 'open') : 'none'; }));
-await page.screenshot({ path: `${OUT}/tour-menu.png` });
-await click('L01'); const stay = await G(() => KAR.Store.data.tourLv === 0);
-rec('tour-menu', tiles.join() === 'open,locked,locked' && stay, `level tiles on a fresh profile: 1 ${tiles[0]}, 2 ${tiles[1]}, 15 ${tiles[2]}; a locked tile can't be picked`);
-await click('play');
+await click('mode5'); await page.waitForTimeout(80); await click('play'); await page.waitForTimeout(120);
+const tiles = await G(() => [KARGame.screen].concat(['L00', 'L01', 'L05'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'locked' : 'open') : 'none'; })));
+await page.screenshot({ path: `${OUT}/tour-map.png` });
+await click('L01'); await page.waitForTimeout(80); const stay = await G(() => KAR.Store.data.tourLv === 0 && KARGame.screen === 'levels');
+await click('wnext'); await page.waitForTimeout(80); const wp = await G(() => ({ v: KARGame.worldView, ids: KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join(), boss: KAR.TOUR[11].boss }));
+await click('wprev'); await page.waitForTimeout(80);
+rec('tour-map', tiles.join() === 'levels,open,locked,locked' && stay && wp.v === 1 && wp.ids === "L06,L07,L08,L09,L10,L11" && wp.boss,
+  `PLAY opens the level map (${tiles[0]}): on a fresh profile level 1 ${tiles[1]}, 2 ${tiles[2]}, the world 1 boss ${tiles[3]}; a locked tile can't be picked; > pages to world ${wp.v + 1} (${wp.ids}, boss last), stayed ${stay}`);
+await click('L00');
 const st1 = await G(() => ({ m: KARGame.match.mode, lv: KARGame.match.lv, hint: KARGame.hint }));
 // shoot the level clean: a bot with a steady hand that reads the wind exactly
 await G(() => { const g = KARGame, m = g.match, rng = KAR.Util.rng(5); g._clear = () => { if (g.bp !== 'ready' || m.over) return; const s = KAR.Bot.shot(m, rng, 0, 0); g.drawing = true; g.draw = 1; g.aimX = s.aimX; g.aimY = s.aimY; g.sway = { x: 0, y: 0 }; g._loose(); if (g.flight) g.flight.skip = true; }; });
@@ -248,9 +251,9 @@ await click('next');
 const st2 = await G(() => ({ lv: KARGame.match.lv, saved: KAR.Store.data.tourLv }));
 rec('tour-next', st2.lv === 1 && st2.saved === 1, `NEXT LEVEL starts level ${st2.lv + 1}`);
 // the venues: each paints its own scene, and moving levels draw their rail / swing frame
-const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 6, 10]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
+const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 7, 12, 18]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
 await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/tour-venue.png` });
-rec('tour-venues', venues.join() === '0:slide,1:swing,2:-' && errors.length === 0, `levels 3 / 7 / 11 render in venue:move ${venues.join(', ')} with no errors`);
+rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-' && errors.length === 0, `levels 3 / 8 / 13 / 19 render in venue:move ${venues.join(', ')} with no errors`);
 // the first-shot tutorial: level 1 coaches the basics (aim at the gold), then breath; level 2 marks the wind hold-off
 const tut1 = await G(() => { const D = KAR.Store.data; D.tut = 0; D.tourLv = 0; D.mode = 5; KARGame.startMatch(); const c = KARGame.coach; return c && { bit: c.bit, mk: !!c.marker, x: c.marker && c.marker.x }; });
 await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/tutorial-1.png` });
@@ -289,6 +292,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const at = (x, y) => ({ x: tb.x + (x - stage.XL) * tb.width / stage.XW, y: tb.y + y * tb.height / 640 });   // the phone's wide stage: x runs XL .. XL + XW
   const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, i) => ({ x: p.x, y: p.y, id: i })) });
   const T = fn => tp.evaluate(fn);
+  await T(() => { KAR.Store.data.mode = 0; });            // a plain range (a fresh profile opens on LEVELS, whose PLAY goes to the map)
   const play = await T(() => { const x = KAR.UI.buttons.find(b => b.id === 'play'); return { x: x.x + x.w / 2, y: x.y + x.h / 2 }; });
   await touch('touchStart', [at(play.x, play.y)]); await touch('touchEnd', []);
   await tp.waitForFunction(() => KARGame.screen === 'play' && KARGame.bp === 'ready', null, { timeout: 5000 });
@@ -346,13 +350,18 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   rec('touch-no-callout', await T(() => (document.querySelector('style').textContent.match(/-webkit-touch-callout:none/g) || []).length >= 2 && getComputedStyle(document.body).userSelect === 'none'), 'long-press callout and text selection are off');
   // 4. phone layout: the menu buttons and level tiles are big enough to hit (about 40 pt and up), and work by touch
   await T(() => { const D = KAR.Store.data; D.mode = 5; D.tour.stars.fill(0); D.tour.stars[0] = 1; D.tour.stars[5] = 1; KARGame.activate('menu'); }); await tp.waitForTimeout(150);
-  const k = tb.height / 640, sizes = await T(() => KAR.UI.buttons.filter(b => /^(mode\d|V\d|L\d\d|play|gear)$/.test(b.id)).map(b => b.h));
+  const k = tb.height / 640, hs = () => T(() => KAR.UI.buttons.filter(b => /^(mode\d|wprev|wnext|back|L\d\d|play|gear)$/.test(b.id)).map(b => b.h));
   const tap = async id => { const b = await T(new Function('return (' + (i => { const x = KAR.UI.buttons.find(b => b.id === i); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; }) + ')(' + JSON.stringify(id) + ')')); await touch('touchStart', [at(b.x, b.y)]); await touch('touchEnd', []); await tp.waitForTimeout(80); };
-  await tap('V1'); const tiles = await T(() => KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join());
-  await tap('L06'); const pick = await T(() => KAR.Store.data.tourLv);
-  await tp.screenshot({ path: `${OUT}/phone-menu.png` });
-  rec('phone-big-taps', sizes.length >= 15 && Math.min(...sizes) * k >= 31 && tiles === 'L05,L06,L07,L08,L09' && pick === 6,
-    `${sizes.length} menu targets, the smallest ${(Math.min(...sizes) * k).toFixed(0)} CSS px tall; the FOREST GLADE tab shows levels 6-10 and a tap picks level 7`);
+  const sizes = await hs(); await tap('play'); const sizes2 = await hs(), onMap = await T(() => KARGame.screen);
+  // swipe left across the map: the next world
+  const s0 = at(700, 300), s1 = at(380, 310); await touch('touchStart', [s0]); for (let i = 1; i <= 6; i++) { await touch('touchMove', [{ x: s0.x + (s1.x - s0.x) * i / 6, y: s0.y + (s1.y - s0.y) * i / 6 }]); await tp.waitForTimeout(20); } await touch('touchEnd', []); await tp.waitForTimeout(80);
+  const tiles = await T(() => KARGame.worldView + ':' + KAR.UI.buttons.filter(b => /^L\d\d$/.test(b.id)).map(b => b.id).join());
+  await tp.screenshot({ path: `${OUT}/phone-map.png` });
+  await tap('L06'); const pick = await T(() => ({ lv: KAR.Store.data.tourLv, scr: KARGame.screen, m: KARGame.match.lv }));
+  const all = sizes.concat(sizes2);
+  rec('phone-big-taps', all.length >= 15 && Math.min(...all) * k >= 31 && onMap === 'levels' && tiles === '1:L06,L07,L08,L09,L10,L11' && pick.lv === 6 && pick.scr === 'play' && pick.m === 6,
+    `${all.length} menu + map targets, the smallest ${(Math.min(...all) * k).toFixed(0)} CSS px tall; PLAY opens the map, a swipe turns to world 2 (${tiles}), a tap starts level 7`);
+  await T(() => KARGame.activate('menu'));
   // 5. held upright: a full-screen 'turn sideways' card, and a range in progress pauses under it
   await T(() => { KAR.Store.data.mode = 0; KARGame.startMatch(); });
   await tp.setViewportSize({ width: 390, height: 844 }); await tp.waitForTimeout(250);

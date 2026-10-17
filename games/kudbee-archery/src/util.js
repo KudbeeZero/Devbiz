@@ -30,7 +30,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(15).fill(0), best: Array(15).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(24).fill(0), best: Array(24).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -41,10 +41,11 @@ KAR.Store = {
           D.muted = !!d.muted;
           if (typeof d.haptics === 'boolean') D.haptics = d.haptics;
           if (pick(d.mode, 6) !== null) D.mode = d.mode;
-          if (pick(d.tourLv, 15) !== null) D.tourLv = d.tourLv;
+          const v1 = d.tour && Array.isArray(d.tour.stars) && d.tour.stars.length === 15 && KAR.TOUR_V1;   // a save from the 15-level tour
+          if (pick(d.tourLv, v1 ? 15 : 24) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
           if (d.gear && typeof d.gear === 'object') for (const k in D.gear) if (pick(d.gear[k], KAR.GEAR ? KAR.GEAR[k].length : 5) !== null) D.gear[k] = d.gear[k];
           if (Number.isInteger(d.tut)) D.tut = d.tut;
-          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < 15; i++) if (typeof d.tour[k][i] === 'number') D.tour[k][i] = d.tour[k][i];
+          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(24, d.tour[k].length); i++) if (typeof d.tour[k][i] === 'number') D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
           if (typeof d.trickBest === 'number') D.trickBest = d.trickBest;
           if (typeof d.swingBest === 'number') D.swingBest = d.swingBest;
           if (d.daily && typeof d.daily === 'object') for (const k in D.daily) if (typeof d.daily[k] === 'number') D.daily[k] = d.daily[k];

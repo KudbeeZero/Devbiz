@@ -209,25 +209,40 @@ KAR.VENUES = [
   { name: 'VILLAGE GREEN', sub: 'a still morning on the club field' },
   { name: 'FOREST GLADE', sub: 'late sun through the pines' },
   { name: 'MOUNTAIN PASS', sub: 'sunset, and the wind off the peaks' },
+  { name: 'LANTERN NIGHT', sub: 'floodlights, fireflies and a cold wind' },
 ];
+// Four worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
+// Star targets are tuned with bots (casual / good / expert, leading the movers): see eval/calibrate.mjs.
 KAR.TOUR = [
   { v: 0, name: 'FIRST ARROWS',  dist: 0, ends: 2, wind: 0.25, stars: [36, 46, 54], tip: 'a calm day at 18 m · find the gold' },
   { v: 0, name: 'BREEZE',        dist: 0, ends: 3, wind: 0.8,  stars: [58, 70, 80], tip: 'a light crosswind · aim off into it' },
   { v: 0, name: 'ON THE RAIL',   dist: 0, ends: 3, wind: 0.3,  move: 'slide', amp: 0.7, w: 0.9, stars: [50, 64, 76], tip: 'the boss slides along a rail · lead it' },
   { v: 0, name: 'THIRTY METRES', dist: 1, ends: 3, wind: 0.8,  stars: [60, 72, 82], tip: 'further out, and the wind has longer to work' },
-  { v: 0, name: 'VILLAGE CUP',   dist: 1, ends: 4, wind: 1.0,  stars: [80, 96, 108], tip: 'four ends for the cup' },
+  { v: 0, name: 'GARDEN SWING',  dist: 0, ends: 3, wind: 0.4,  move: 'swing', amp: 0.14, stars: [50, 63, 76], tip: 'a gentle swing at 18 m · loose as it comes to you' },
+  { v: 0, name: 'VILLAGE CUP',   dist: 1, ends: 4, wind: 1.0,  boss: true, stars: [80, 96, 108], tip: 'four ends for the cup' },
   { v: 1, name: 'SMALL GOLD',    dist: 1, ends: 3, wind: 0.6,  face: 0.6, stars: [48, 62, 74], tip: 'a 48 cm face · every ring is narrower' },
   { v: 1, name: 'ROPE SWING',    dist: 1, ends: 3, wind: 0.5,  move: 'swing', amp: 0.2, stars: [54, 68, 79], tip: 'the boss swings on ropes · loose as it comes to you' },
   { v: 1, name: 'GUSTS',         dist: 1, ends: 3, wind: 0.9,  gust: 0.45, stars: [56, 70, 82], tip: 'the wind changes arrow to arrow · watch the flags' },
   { v: 1, name: 'FAST RAIL',     dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.0, w: 1.5, stars: [50, 64, 77], tip: 'a quicker rail · lead it more' },
-  { v: 1, name: 'FOREST CROWN',  dist: 2, ends: 4, wind: 0.9,  stars: [76, 94, 106], tip: '50 m for the crown' },
+  { v: 1, name: 'NEEDLE',        dist: 1, ends: 3, wind: 0.7,  gust: 0.3, face: 0.5, stars: [42, 56, 70], tip: 'a 40 cm face at 30 m in a fickle wind' },
+  { v: 1, name: 'FOREST CROWN',  dist: 2, ends: 4, wind: 0.9,  boss: true, stars: [76, 94, 106], tip: '50 m for the crown' },
   { v: 2, name: 'HIGH WIND',     dist: 2, ends: 3, wind: 1.5,  stars: [54, 68, 79], tip: 'a strong crosswind · hold well off' },
   { v: 2, name: 'PENDULUM',      dist: 2, ends: 3, wind: 0.7,  move: 'swing', amp: 0.16, stars: [52, 66, 79], tip: 'a long swing at 50 m · time it' },
   { v: 2, name: 'EAGLE EYE',     dist: 3, ends: 3, wind: 0.7,  face: 0.75, stars: [40, 54, 66], tip: '70 m at a smaller face' },
   { v: 2, name: 'STORM RAIL',    dist: 2, ends: 3, wind: 1.2,  gust: 0.3, move: 'slide', amp: 0.9, w: 1.1, stars: [52, 66, 79], tip: 'a moving boss in a gusty wind' },
-  { v: 2, name: 'THE SUMMIT',    dist: 3, ends: 5, wind: 1.3,  gust: 0.25, stars: [80, 104, 124], tip: 'five ends at 70 m · the final' },
+  { v: 2, name: 'SWING STORM',   dist: 2, ends: 3, wind: 1.2,  gust: 0.3, move: 'swing', amp: 0.14, stars: [52, 66, 79], tip: 'a swing in a crosswind · lead it and hold off' },
+  { v: 2, name: 'THE SUMMIT',    dist: 3, ends: 5, wind: 1.3,  gust: 0.25, boss: true, stars: [80, 104, 124], tip: 'five ends at 70 m · the peak' },
+  { v: 3, name: 'FIRST LANTERN', dist: 2, ends: 3, wind: 0.6,  stars: [57, 70, 80], tip: '50 m under the floodlights' },
+  { v: 3, name: 'NIGHT RAIL',    dist: 2, ends: 3, wind: 0.6,  move: 'slide', amp: 1.0, w: 1.6, stars: [52, 66, 79], tip: 'a fast rail at 50 m · lead it in the dark' },
+  { v: 3, name: 'FIREFLY',       dist: 3, ends: 3, wind: 0.6,  face: 0.65, stars: [36, 50, 64], tip: 'a tiny face at 70 m' },
+  { v: 3, name: 'MIDNIGHT SWING',dist: 3, ends: 3, wind: 0.7,  move: 'swing', amp: 0.12, stars: [42, 58, 74], tip: 'a swing at 70 m · time it long' },
+  { v: 3, name: 'NIGHT GALE',    dist: 3, ends: 3, wind: 1.6,  gust: 0.4, stars: [40, 54, 70], tip: 'a gale that changes every arrow' },
+  { v: 3, name: 'LANTERN KING',  dist: 3, ends: 5, wind: 1.1,  gust: 0.25, move: 'slide', amp: 0.8, w: 1.2, face: 0.85, boss: true, stars: [74, 98, 120], tip: 'the last boss · five ends at 70 m on the rail' },
 ];
-KAR.tourOpen = (i, data) => i === 0 || (data.tour.stars[i - 1] || 0) > 0;
+// the 15-level tour (before the worlds) saved progress by these indices
+KAR.TOUR_V1 = [0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 17];
+// one star opens the next level; a level you already have stars on stays open (so older saves keep their place)
+KAR.tourOpen = (i, data) => i === 0 || (data.tour.stars[i - 1] || 0) > 0 || (data.tour.stars[i] || 0) > 0;
 KAR.Stage = class extends KAR.Match {
   constructor(opts) {
     opts = opts || {};

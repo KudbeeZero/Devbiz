@@ -164,14 +164,14 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
   rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
 }
-// 12b. THE TOUR: fifteen levels in three venues, each one opens the next
+// 12b. THE TOUR: four worlds of six levels, a boss last in each; each level opens the next
 {
-  const T = K.TOUR, ok = T.length === 15 && K.VENUES.length === 3 && T.every((L, i) => L.v === Math.floor(i / 5) && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
-  const D = { tour: { stars: Array(15).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
-  rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}; star targets rise; one star opens the next level`);
+  const T = K.TOUR, ok = T.length === 24 && K.VENUES.length === 4 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
+  const D = { tour: { stars: Array(24).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
+  rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}, a boss ending each world; star targets rise; one star opens the next level`);
   // a perfect still-air run earns 3 stars; a smaller face scores tighter rings
   const st = new K.Stage({ level: 0, seed: 3 }); st.wind = 0; while (!st.over) { st._gust = () => { st.wind = 0; }; st.wind = 0; st.shoot(0, C.FACE_Y, 0, 0, 1); }
-  const small = new K.Stage({ level: 5, seed: 1 }), sc = K.Score.ring(1, 0.2, C.FACE_Y, small.faceD).ring, std = K.Score.ring(1, 0.2, C.FACE_Y).ring;
+  const small = new K.Stage({ level: 6, seed: 1 }), sc = K.Score.ring(1, 0.2, C.FACE_Y, small.faceD).ring, std = K.Score.ring(1, 0.2, C.FACE_Y).ring;
   rec('tour-stars-face', st.stars() === 3 && st.total(0) === st.max && new K.Stage({ level: 0 }).stars() === 0 && small.faceD < C.FACE[1] && sc < std,
     `a perfect run scores ${st.total(0)}/${st.max} for 3 stars; the 48 cm face scores a 20 cm miss as ${sc} (standard face: ${std})`);
   // ON THE RAIL: the boss slides; a shot led to where it will be scores, and the arrow rides in the boss
@@ -183,7 +183,7 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
 }
 // 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
 {
-  const D = { tour: { stars: Array(15).fill(0) }, stars: [0, 0, 0, 0] }, G = K.GEAR;
+  const D = { tour: { stars: Array(24).fill(0) }, stars: [0, 0, 0, 0] }, G = K.GEAR;
   const first = ['bow', 'fletch', 'sight'].every(k => K.gearOpen(k, 0, D) && !K.gearOpen(k, 1, D) && G[k].every((g, i) => !i || g.need > G[k][i - 1].need));
   D.tour.stars.fill(2, 0, 4); D.stars[1] = 3;                                         // 11 stars
   const opened = K.gearBetween(5, K.starTotal(D)).map(g => g.name).join(', ');
@@ -199,6 +199,11 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.data.tour.stars[4] = 2; K2.Store.data.tour.best[4] = 99; K2.Store.data.tourLv = 5; K2.Store.data.gear.bow = 3; K2.Store.data.tut = 5; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
   rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500 && K3.Store.data.tour.stars[4] === 2 && K3.Store.data.tour.best[4] === 99 && K3.Store.data.tourLv === 5 && K3.Store.data.gear.bow === 3 && K3.Store.data.tut === 5, 'distance, best scores, stars, BALLOON POP mode and best, level progress, gear and tutorial progress survive a reload');
+  // a save from the old 15-level tour: each level's stars and best move to where that level now sits, so nothing is lost or re-locked
+  const old = { stars: [3, 2, 1, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], best: [54, 70, 60, 80, 99, 50, 52, 0, 0, 0, 0, 0, 0, 0, 0] }, ls2 = { s: JSON.stringify({ tour: old, tourLv: 6 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K4 = loadKAR(['util.js', 'sim.js'], ls2); K4.Store.load(); const T4 = K4.Store.data.tour;
+  const moved = old.stars.every((v, i) => T4.stars[K4.TOUR_V1[i]] === v) && T4.best[5] === 99 && T4.stars[4] === 0 && K4.Store.data.tourLv === 7 && K4.TOUR[7].name === 'ROPE SWING' && K4.tourOpen(5, K4.Store.data) && K4.tourOpen(4, K4.Store.data) && K4.tourOpen(8, K4.Store.data) && !K4.tourOpen(9, K4.Store.data);
+  rec('store-tour-upgrade', moved, 'an old 15-level save maps onto the 24 levels: VILLAGE CUP keeps its 2 stars as the world 1 boss, the new GARDEN SWING opens, the player stays on ROPE SWING');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

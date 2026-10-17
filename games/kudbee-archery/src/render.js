@@ -107,6 +107,7 @@ KAR.Render = {
     ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, H);
     if (this.venue === 1) return this._forest(ctx, t, hy);
     if (this.venue === 2) return this._mountain(ctx, t, hy);
+    if (this.venue === 3) return this._night(ctx, t, hy);
     const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
     if (ph) {
       const s = Math.max(XW / ph.width, hy / ph.height);
@@ -191,6 +192,49 @@ KAR.Render = {
     this._field(ctx, hy, false, ['#a8b45a', '#466a2e']);
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,200,170,0.3)'; ctx.fillRect(this.XL, hy, this.XW, H - hy); ctx.restore();
     const v = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(30,10,40,0)'); v.addColorStop(1, 'rgba(30,10,40,0.35)'); ctx.fillStyle = v; ctx.fillRect(this.XL, 0, this.XW, H);
+  },
+  // LANTERN NIGHT: a floodlit range under the stars - moon, a far town on the hills, floodlight towers, fireflies
+  _night(ctx, t, hy) {
+    const XL = this.XL, XW = this.XW, H = this.H, rnd = KAR.Util.rng(31);
+    const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#060a1e'); sky.addColorStop(0.7, '#14224a'); sky.addColorStop(1, '#2e3f6e');
+    ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, hy + 2);
+    for (let i = 0; i < 90; i++) {                         // stars, a few twinkling
+      const x = XL + rnd() * XW, y = rnd() * (hy - 30), r = 0.6 + rnd() * 1.3, tw = 0.55 + 0.45 * Math.sin(t * (1 + rnd() * 2) + i);
+      ctx.globalAlpha = 0.35 + 0.65 * tw * rnd(); ctx.fillStyle = '#fff6e0'; ctx.fillRect(x, y, r, r);
+    }
+    ctx.globalAlpha = 1;
+    const mx = 250, my = hy - 210, mg = ctx.createRadialGradient(mx, my, 20, mx, my, 160); mg.addColorStop(0, 'rgba(220,230,255,0.35)'); mg.addColorStop(1, 'rgba(220,230,255,0)');
+    ctx.fillStyle = mg; ctx.fillRect(mx - 160, my - 160, 320, 320);
+    ctx.beginPath(); ctx.arc(mx, my, 30, 0, 6.283); ctx.fillStyle = '#f2f0dc'; ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 11, my - 6, 26, 0, 6.283); ctx.fillStyle = 'rgba(10,16,40,0.9)'; ctx.fill();       // a crescent
+    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(XL, hy + 2); for (let x = XL; x <= XL + XW + 16; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(XL + XW + 16, hy + 2); ctx.closePath(); ctx.fill(); };
+    hill(40, 22, '#1c2748', 0.006, 3);
+    for (let i = 0; i < 46; i++) { const x = XL + rnd() * XW, y = hy - 22 - rnd() * 22; ctx.fillStyle = rnd() > 0.3 ? 'rgba(255,214,120,0.85)' : 'rgba(255,170,90,0.8)'; ctx.fillRect(x, y, 2, 2); }   // the town's windows
+    hill(16, 10, '#121a33', 0.012, 1);
+    this._pines(ctx, hy + 2, 54, '#0b1124', 41, 24);
+    this._field(ctx, hy, false, ['#2f5a3a', '#16301f']);
+    // two floodlight towers flooding the lane with warm light
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const sx of [-1, 1]) {
+      const top = this.proj(sx * 14, 12, this.dist * 0.45), foot = this.proj(sx * 14, 0, this.dist * 0.45), aim = this.proj(0, 0, this.dist);
+      if (!top || !foot || !aim) continue;
+      const g = ctx.createLinearGradient(top.x, top.y, aim.x, aim.y); g.addColorStop(0, 'rgba(255,236,180,0.22)'); g.addColorStop(1, 'rgba(255,236,180,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(aim.x - 260, H); ctx.lineTo(aim.x + 260, H); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    for (const sx of [-1, 1]) {
+      const top = this.proj(sx * 14, 12, this.dist * 0.45), foot = this.proj(sx * 14, 0, this.dist * 0.45);
+      if (!top || !foot) continue;
+      ctx.beginPath(); ctx.moveTo(foot.x, foot.y); ctx.lineTo(top.x, top.y); ctx.strokeStyle = '#0a0f20'; ctx.lineWidth = Math.max(2, 0.3 * top.k); ctx.stroke();
+      const w = Math.max(6, 1.4 * top.k), lg = ctx.createRadialGradient(top.x, top.y, 1, top.x, top.y, w * 3); lg.addColorStop(0, 'rgba(255,250,220,1)'); lg.addColorStop(0.3, 'rgba(255,230,160,0.6)'); lg.addColorStop(1, 'rgba(255,230,160,0)');
+      ctx.fillStyle = lg; ctx.fillRect(top.x - w * 3, top.y - w * 3, w * 6, w * 6);
+    }
+    // fireflies drifting over the grass
+    for (let i = 0; i < 18; i++) {
+      const x = XL + ((i * 97.3 + t * (6 + i % 5)) % XW), y = hy + 30 + ((i * 53) % 100) / 100 * (H - hy - 60) + Math.sin(t * 1.3 + i) * 12, a = 0.4 + 0.6 * Math.max(0, Math.sin(t * 2.2 + i * 1.7));
+      const fg = ctx.createRadialGradient(x, y, 0, x, y, 7); fg.addColorStop(0, 'rgba(230,255,140,' + a + ')'); fg.addColorStop(1, 'rgba(230,255,140,0)'); ctx.fillStyle = fg; ctx.fillRect(x - 7, y - 7, 14, 14);
+    }
+    const v = ctx.createRadialGradient(480, H * 0.5, H * 0.3, 480, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(5,8,25,0)'); v.addColorStop(1, 'rgba(5,8,25,0.45)'); ctx.fillStyle = v; ctx.fillRect(XL, 0, XW, H);
   },
   _field(ctx, hy, photo, pal) {
     const W = this.W, H = this.H;
@@ -291,6 +335,18 @@ KAR.Render = {
     }
     if (ring(R * 0.05)) { ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.stroke(); }
     if (ring(R)) { ctx.strokeStyle = OUT; ctx.lineWidth = lw * 1.4; ctx.stroke(); }
+    // a BOSS level: a gold crown sits on top of the boss
+    if (this.boss) {
+      const c = P(0, Y + bw + 0.02, D); if (c) {
+        const u = 0.16 * c.k, x = c.x, y = c.y;
+        ctx.save(); ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(x - u, y); ctx.lineTo(x - u * 1.1, y - u * 0.95); ctx.lineTo(x - u * 0.5, y - u * 0.45); ctx.lineTo(x, y - u * 1.2); ctx.lineTo(x + u * 0.5, y - u * 0.45); ctx.lineTo(x + u * 1.1, y - u * 0.95); ctx.lineTo(x + u, y); ctx.closePath();
+        const cg = ctx.createLinearGradient(0, y - u * 1.2, 0, y); cg.addColorStop(0, '#fff09a'); cg.addColorStop(1, '#e09a1a'); ctx.fillStyle = cg; ctx.fill();
+        ctx.lineWidth = Math.max(1.5, u * 0.12); ctx.strokeStyle = OUT; ctx.stroke();
+        for (const [jx, jy, jc] of [[-1.1, -0.95, '#e8483a'], [0, -1.2, '#3c8fe0'], [1.1, -0.95, '#e8483a']]) { ctx.beginPath(); ctx.arc(x + jx * u, y + jy * u, u * 0.14, 0, 6.283); ctx.fillStyle = jc; ctx.fill(); ctx.stroke(); }
+        ctx.restore();
+      }
+    }
     // pennants either side, streaming with the wind
     const fx = swing === 'slide' ? (this.railA || 1) + bw + 0.8 : swing ? 2.9 : bw + 0.35;
     this._flag(ctx, -fx, D + 0.3, wind, t, '#ff5d5d'); this._flag(ctx, fx, D + 0.3, wind, t, '#ffd34d');

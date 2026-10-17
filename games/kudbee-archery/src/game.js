@@ -67,7 +67,7 @@ KAR.Game = class {
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
     if (this.match.mode === 'trick') { this.hint = (this.match.daily ? 'DAILY #' + this.match.daily + '  ·  ' : '') + 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
     if (this.match.mode === 'swing') { this.hint = 'THE TARGET SWINGS  ·  LEAD IT  ·  LOOSE AS IT COMES TO YOU'; this.hintT = 6; }
-    if (this.match.mode === 'stage') { const L = this.match.def; this.hint = 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
+    if (this.match.mode === 'stage') { const L = this.match.def; this.hint = (L.boss ? 'BOSS!  ·  ' : '') + 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
     this._nextShot();
   }
 
@@ -149,15 +149,17 @@ KAR.Game = class {
   activate(id) {
     this.audio.ensure(); this.audio.click();
     const D = KAR.Store.data;
+    if (id === 'play' && D.mode === 5) return this.activate('levels');
     if (id === 'play' || id === 'restart' || id === 'rematch' || id === 'retry') this.startMatch();
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
     else if (id === 'share') this._share();
-    else if (/^V\d$/.test(id)) this.venueView = +id[1];
+    else if (id === 'levels') { this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
+    else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
     else if (id === 'back') this.setScreen('menu');
     else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
-    else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; KAR.Store.save(); } }
+    else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; D.mode = 5; KAR.Store.save(); if (this.screen === 'levels') this.startMatch(); } }
     else if (id === 'next') { if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
     else if (id === 'pause') this.togglePause();
@@ -217,6 +219,8 @@ KAR.Game = class {
   _onDown(e) {
     this._firstGesture();
     const p = this._pt(e), i = KAR.UI.hit(p.x, p.y), touch = e.pointerType === 'touch';
+    // the level map: taps act on lift, so a sideways swipe (to the next world) never starts the tile under it
+    if (this.screen === 'levels') { this.swipe = { x: p.x, y: p.y, i }; e.preventDefault(); return; }
     if (i >= 0) { e.preventDefault(); this.activate(KAR.UI.buttons[i].id); return; }
     if (this.screen !== 'play') return;
     if (this.bp === 'flight' && this.flight && this.flight.hero) { this.flight.skip = true; return; }
@@ -242,6 +246,12 @@ KAR.Game = class {
     } else if (i < 0 || this.drawing) { this.ptr = p; if (this.human()) this._setAimFromPtr(); }
   }
   _onUp(e) {
+    if (this.screen === 'levels' && this.swipe) {
+      const p = this._pt(e), sw = this.swipe, dx = p.x - sw.x, dy = p.y - sw.y; this.swipe = null;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) this.activate(dx < 0 ? 'wnext' : 'wprev');
+      else if (Math.hypot(dx, dy) < 30 && sw.i >= 0 && KAR.UI.hit(p.x, p.y) === sw.i) this.activate(KAR.UI.buttons[sw.i].id);
+      return;
+    }
     if (e.button === 2) { this.holding = false; return; }
     if (e.pointerType === 'touch') {
       if (e.pointerId === this.breathId) { this.holding = false; this.breathId = undefined; return; }
@@ -255,6 +265,7 @@ KAR.Game = class {
     const k = e.key;
     if (down) this._firstGesture();
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
+    if (down && k === 'Escape' && this.screen === 'levels') { this.activate('back'); return; }
     if (down && (k === 'p' || k === 'P' || k === 'Escape')) { e.preventDefault(); if (this.screen === 'play' || this.screen === 'paused') this.togglePause(); return; }
     if (k === 'b' || k === 'B' || k === 'Shift') { this.holding = down; return; }
     if (this.screen !== 'play') {
@@ -516,10 +527,12 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const menuish = this.screen === 'menu' || this.screen === 'gear';
-    R.tOff = m.offAt ? m.offAt(m.T) : null; R.venue = menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0;
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || sel;
+    if (sel) R.setView(0, 30, 0.8);                    // the level map: a wide view of that world's range
+    R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
-    if (menuish && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
+    if (menuish && !sel && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
+    else if (sel) { R.drawWorld(ctx, this.time, 0.6); R.railA = 0; R.drawTarget(ctx, this.time, 0.6, null); }
     else {
       R.drawWorld(ctx, this.time, m.wind);
       if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, m.offAt ? (m.move || 'swing') : null);
@@ -535,6 +548,7 @@ KAR.Game = class {
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }
     if (this.screen === 'menu') U.menu(ctx, this);
     else if (this.screen === 'gear') U.gearScreen(ctx, this);
+    else if (sel) U.levels(ctx, this);
     else {
       U.hud(ctx, this);
       if (this.screen === 'paused') U.pause(ctx, this);
@@ -552,7 +566,7 @@ KAR.Game = class {
 
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
-    if (this.screen === 'menu' || this.screen === 'gear') return;
+    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'levels') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
     for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined);
     // impact rings

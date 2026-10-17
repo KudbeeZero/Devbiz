@@ -123,6 +123,10 @@ KAR.UI = {
     ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (kind === 'pause') { ctx.fillRect(cx - 7, cy - 8, 5, 16); ctx.fillRect(cx + 2, cy - 8, 5, 16); }
     else if (kind === 'retry') { ctx.beginPath(); ctx.arc(cx, cy, 8, 0.6, 5.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + 8, cy - 9); ctx.lineTo(cx + 8, cy - 1); ctx.lineTo(cx, cy - 2); ctx.stroke(); }
+    else if (kind === 'prev' || kind === 'next') {          // a chunky chevron
+      const d = kind === 'next' ? 1 : -1; ctx.lineWidth = 7; ctx.strokeStyle = this.OUT;
+      for (const [w, c] of [[9, this.OUT], [5, color]]) { ctx.lineWidth = w; ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(cx - d * 6, cy - 12); ctx.lineTo(cx + d * 6, cy); ctx.lineTo(cx - d * 6, cy + 12); ctx.stroke(); }
+    }
     else if (kind === 'full' || kind === 'unfull') {          // four corner brackets: out = go full screen, in = leave it
       const out = kind === 'full', d = out ? 9 : 3, o = out ? -1 : 1;
       for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const x = cx + sx * d, y = cy + sy * d; ctx.beginPath(); ctx.moveTo(x, y - o * -sy * 6); ctx.lineTo(x, y); ctx.lineTo(x - o * -sx * 6, y); ctx.stroke(); }
@@ -210,8 +214,8 @@ KAR.UI = {
     const w = m.wind, a = Math.min(1, Math.abs(w) / (KAR.CFG.WIND[m.distIdx] || 3)), wy = h + 30;
     U.rr(ctx, 12, wy, 172, 56, 16); ctx.fillStyle = U.OUT; ctx.fill(); U.rr(ctx, 15, wy + 3, 166, 50, 13); ctx.fillStyle = '#2a3f66'; ctx.fill();
     U.text(ctx, 'WIND', 26, wy + 24, U.sz(g, 14), '#ffe9a8', 'left');
-    ctx.save(); ctx.translate(120, wy + 28); ctx.scale(Math.sign(w) || 1, 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const L = 14 + a * 34; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(L, 0); ctx.moveTo(L - 11, -9); ctx.lineTo(L, 0); ctx.lineTo(L - 11, 9); ctx.lineWidth = 8; ctx.strokeStyle = U.OUT; ctx.stroke(); ctx.lineWidth = 4.5; ctx.strokeStyle = a > 0.66 ? '#ff9a7a' : a > 0.33 ? '#ffe14d' : '#9be35a'; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.translate(g.coarse ? 128 : 120, wy + 28); ctx.scale(Math.sign(w) || 1, 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const L = g.coarse ? 12 + a * 28 : 14 + a * 34; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(L, 0); ctx.moveTo(L - 11, -9); ctx.lineTo(L, 0); ctx.lineTo(L - 11, 9); ctx.lineWidth = 8; ctx.strokeStyle = U.OUT; ctx.stroke(); ctx.lineWidth = 4.5; ctx.strokeStyle = a > 0.66 ? '#ff9a7a' : a > 0.33 ? '#ffe14d' : '#9be35a'; ctx.stroke(); ctx.restore();
     U.text(ctx, Math.abs(w).toFixed(1), 26, wy + 46, 20, '#ffffff', 'left');
     // gold streak chip: 9s and better in a row
     const chip = trick ? (g.trickCombo >= 2 ? 'COMBO \u00d7' + g.trickCombo : '') : (g.streak >= 2 ? 'GOLD STREAK \u00d7' + g.streak : '');
@@ -277,7 +281,19 @@ KAR.UI = {
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 3) * 300 : 24 + k * 154, C ? 126 + Math.floor(k / 3) * 66 : 232, C ? 288 : 142, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
-    if (tour) this.tourMenu(ctx, g);
+    if (tour) {
+      const T = D.tour, tot = T.stars.reduce((a, b) => a + b, 0), L = KAR.TOUR[D.tourLv], W = KAR.VENUES[L.v];
+      U.fit(ctx, KAR.VENUES.length + ' WORLDS  \u00b7  ' + KAR.TOUR.length + ' LEVELS  \u00b7  A BOSS AT THE END OF EACH WORLD', 480, C ? 300 : 300, U.sz(g, 18), '#ffffff', 900);
+      for (let v = 0; v < KAR.VENUES.length; v++) {               // a medal per world: its stars, and a crown once its boss falls
+        const x = 480 + (v - (KAR.VENUES.length - 1) / 2) * 200, y = C ? 356 : 352, ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0), open = KAR.tourOpen(v * 6, D), done = T.stars[v * 6 + 5] > 0;
+        U.rr(ctx, x - 90, y - 30, 180, 72, 16); ctx.fillStyle = U.OUT; ctx.fill();
+        U.rr(ctx, x - 87, y - 27, 174, 66, 13); ctx.fillStyle = open ? ['#3e7fd0', '#3f8a3c', '#9a4e7a', '#26386e'][v] : '#5b6470'; ctx.fill();
+        U.fit(ctx, W === KAR.VENUES[v] ? '\u25b8 ' + KAR.VENUES[v].name : KAR.VENUES[v].name, x, y - 4, U.sz(g, 15), '#ffffff', 164);
+        if (open) { U.star(ctx, x - 26, y + 22, 10, true, 1); U.text(ctx, ws + ' / 18', x - 10, y + 29, U.sz(g, 15), '#ffe9a8', 'left'); if (done) U.crown(ctx, x + 64, y + 22, 9); }
+        else this.lock(ctx, x, y + 20);
+      }
+      U.fit(ctx, 'NEXT UP: LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + (L.boss ? '  \u00b7  BOSS' : '') + '   \u2605 ' + tot + ' / ' + KAR.TOUR.length * 3, 480, C ? 428 : 432, U.sz(g, 19), '#fff27a', 900);
+    }
     if (swing) {
       U.text(ctx, 'THE TARGET HANGS ON ROPES AND SWINGS', 480, 318, 20, '#ffffff', 'center');
       U.fit(ctx, 'lead it  \u00b7  loose as it swings toward your sight  \u00b7  the arc grows every end', 480, 350, U.sz(g, 17), '#ffe9a8', 900);
@@ -310,7 +326,7 @@ KAR.UI = {
       U.fit(ctx, 'CPU SKILL', 480, 396, U.sz(g, 17), '#ffe9a8', 900);
       KAR.LEVELS.forEach((L, i) => U.button(ctx, g, 'lv' + i, 270 + i * 140, 404, 128, 40, L.name, { small: true, color: D.level === i ? 'green' : 'blue', selected: D.level === i }));
     }
-    if (tour) U.button(ctx, g, 'play', 330, C ? 450 : 484, 300, C ? 70 : 60, 'PLAY LEVEL ' + (D.tourLv + 1), { primary: true });
+    if (tour) U.button(ctx, g, 'play', 330, 452, 300, 70, 'PLAY', { primary: true });
     else U.button(ctx, g, 'play', 330, 462, 300, 70, daily ? 'PLAY TODAY' : swing ? 'START SWINGER' : trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
     if (!tour) U.fit(ctx, (C ? 'touch & hold to draw  \u00b7  drag anywhere to aim  \u00b7  lift to loose' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose'), 480, 568, U.sz(g, 16), '#ffffff', 900);
     if (!C) U.fit(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, U.sz(g, 15), '#ffe9a8', 900);
@@ -364,39 +380,40 @@ KAR.UI = {
     ctx.restore();
   },
 
-  // the TOUR: a row of five level tiles per venue - stars earned, padlocks on the ones not yet open
-  tourMenu(ctx, g) {
-    const U = this, D = KAR.Store.data, T = D.tour;
-    if (g.coarse) {
-      const view = g.venueView === undefined || g.venueView === null ? KAR.TOUR[D.tourLv].v : g.venueView;
-      KAR.VENUES.forEach((V, v) => U.button(ctx, g, 'V' + v, 36 + v * 300, 262, 288, 52, V.name, { small: true, color: v === view ? 'green' : ['blue', 'yellow', 'red'][v], selected: v === view }));
-      for (let j = 0; j < 5; j++) {
-        const i = view * 5 + j, x = 36 + j * 180, y = 326, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
-        U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 168, 84, '', { small: true, color: sel ? 'green' : ['blue', 'yellow', 'red'][view], selected: sel, disabled: !open });
-        if (!open) { this.lock(ctx, x + 84, y + 42); continue; }
-        U.text(ctx, String(i + 1), x + 84, y + 40, 30, '#ffffff', 'center');
-        for (let k = 0; k < 3; k++) U.star(ctx, x + 54 + k * 30, y + 62, 11, k < T.stars[i], 1);
-      }
-      const L = KAR.TOUR[D.tourLv];
-      U.text(ctx, 'LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + '  \u00b7  ' + KAR.CFG.DISTS[L.dist] + ' M' + (T.best[D.tourLv] ? '  \u00b7  BEST ' + T.best[D.tourLv] : ''), 480, 440, 22, '#fff27a', 'center');
-      U.text(ctx, L.tip, 480, 548, 20, '#ffe9a8', 'center');
-      return;
+  // the LEVEL MAP, one world per page (like the Kudbee Birds worlds): six big tiles, the boss last with a crown,
+  // < 1/4 > to page (or swipe), BACK to the menu. A tile shows its number, name and stars, or a padlock.
+  levels(ctx, g) {
+    const U = this, D = KAR.Store.data, T = D.tour, v = g.worldView | 0, W = KAR.VENUES[v], C = g.coarse, xl = KAR.Render.XL;
+    U.backdrop(ctx, 0.28);
+    U.bubble(ctx, 'WORLD ' + (v + 1), 480, 74, 60, '#ffffff', '#cfe9ff', -0.02);
+    U.text(ctx, W.name, 480, 112, 28, '#fff27a', 'center');
+    const ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0);
+    U.fit(ctx, W.sub + '   \u2605 ' + ws + ' / 18', 480, 140, U.sz(g, 16), '#ffffff', 700);
+    for (let j = 0; j < 6; j++) {
+      const i = v * 6 + j, L = KAR.TOUR[i], x = 86 + (j % 3) * 270, y = 158 + Math.floor(j / 3) * 168, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
+      U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 248, 150, '', { small: true, color: sel ? 'green' : L.boss ? 'yellow' : 'blue', selected: sel, disabled: !open });
+      if (L.boss) { U.crown(ctx, x + 214, y + 30, 15); U.text(ctx, 'BOSS', x + 214, y + 64, 16, '#ffffff', 'center'); }
+      U.text(ctx, String(i + 1), x + 124, y + 66, 54, open ? '#ffffff' : '#e6e9ee', 'center');
+      if (!open) { this.lock(ctx, x + 124, y + 108); continue; }
+      U.fit(ctx, L.name, x + 124, y + 96, U.sz(g, 17), '#ffffff', 226);
+      for (let k = 0; k < 3; k++) U.star(ctx, x + 84 + k * 40, y + 124, 14, k < T.stars[i], 1);
     }
-    KAR.VENUES.forEach((V, v) => {
-      const y = 294 + v * 52;
-      U.text(ctx, V.name, 34, y + 22, 17, ['#bff28a', '#ffd88a', '#ffb0c8'][v], 'left');
-      U.text(ctx, ['MORNING', 'LATE SUN', 'SUNSET'][v], 34, y + 40, 12, '#ffffff', 'left');
-      for (let j = 0; j < 5; j++) {
-        const i = v * 5 + j, x = 196 + j * 150, open = KAR.tourOpen(i, D), sel = D.tourLv === i;
-        U.button(ctx, g, 'L' + String(i).padStart(2, '0'), x, y, 138, 44, '', { small: true, color: sel ? 'green' : ['blue', 'yellow', 'red'][v], selected: sel, disabled: !open });
-        if (!open) { this.lock(ctx, x + 69, y + 22); continue; }
-        U.text(ctx, String(i + 1), x + 26, y + 32, 24, '#ffffff', 'center');
-        for (let k = 0; k < 3; k++) U.star(ctx, x + 62 + k * 25, y + 22, 9.5, k < T.stars[i], 1);
-      }
-    });
-    const L = KAR.TOUR[D.tourLv], tot = T.stars.reduce((a, b) => a + b, 0);
-    U.text(ctx, 'LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + '  \u00b7  ' + KAR.CFG.DISTS[L.dist] + ' M  \u00b7  ' + L.ends + ' ENDS' + (T.best[D.tourLv] ? '  \u00b7  BEST ' + T.best[D.tourLv] : ''), 480, 470, 19, '#fff27a', 'center');
-    U.text(ctx, L.tip + '  \u00b7  \u2605 ' + tot + ' / ' + KAR.TOUR.length * 3, 480, 562, 15, '#ffe9a8', 'center');
+    const n = KAR.VENUES.length;
+    U.button(ctx, g, 'wprev', 352, 506, 82, 68, '', { color: v > 0 ? 'blue' : 'grey', disabled: v === 0 });
+    U.icon(ctx, 'prev', 393, 540, '#ffffff');
+    U.text(ctx, (v + 1) + ' / ' + n, 480, 552, 26, '#ffffff', 'center');
+    U.button(ctx, g, 'wnext', 526, 506, 82, 68, '', { color: v < n - 1 ? 'blue' : 'grey', disabled: v === n - 1 });
+    U.icon(ctx, 'next', 567, 540, '#ffffff');
+    U.button(ctx, g, 'back', 24 + xl, 510, 180, 64, 'BACK', { small: true, color: 'yellow' });
+    if (C) U.text(ctx, 'or swipe', 480, 604, 17, '#ffffff', 'center');
+  },
+  // a little gold crown (the boss levels)
+  crown(ctx, x, y, u) {
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(x - u, y + u * 0.6); ctx.lineTo(x - u * 1.1, y - u * 0.6); ctx.lineTo(x - u * 0.45, y - u * 0.05); ctx.lineTo(x, y - u * 0.8); ctx.lineTo(x + u * 0.45, y - u * 0.05); ctx.lineTo(x + u * 1.1, y - u * 0.6); ctx.lineTo(x + u, y + u * 0.6); ctx.closePath();
+    const cg = ctx.createLinearGradient(0, y - u, 0, y + u); cg.addColorStop(0, '#fff09a'); cg.addColorStop(1, '#ffb11f'); ctx.fillStyle = cg; ctx.fill();
+    ctx.lineWidth = Math.max(2, u * 0.2); ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.restore();
   },
   lock(ctx, x, y) {
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -433,12 +450,13 @@ KAR.UI = {
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 240, 104, 480, 430, won ? 'blue' : 'red');
-    U.ribbon(ctx, 480, 76, 420, won ? (last ? 'TOUR COMPLETE!' : 'LEVEL ' + (m.lv + 1) + ' CLEAR!') : 'NOT THIS TIME', won ? 'green' : 'red');
+    const boss = !!m.def.boss;
+    U.ribbon(ctx, 480, 76, 440, won ? (last ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
     U.text(ctx, String(m.total(0)), 480, 236, 80, '#ffffff', 'center');
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
     for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < st, T > 0.4 + i * 0.3 ? 1 : 0.01);
-    const S = m.def.stars, msg = g.unlocked ? ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28] : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
+    const S = m.def.stars, msg = g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28]) : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
       : !won ? [(S[0] - m.total(0)) + ' MORE TO CLEAR IT', '#ffffff', 22] : st < 3 ? [(S[st] - m.total(0)) + ' MORE FOR ' + (st + 1) + ' STARS', '#ffffff', 20] : ['PERFECT', '#fff27a', 28];
     U.text(ctx, msg[0], 480, 394, msg[2], msg[1], 'center');
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
@@ -447,14 +465,14 @@ KAR.UI = {
     if (next && won) {
       U.button(ctx, g, 'next', 256, 450, 210, 56, 'NEXT LEVEL', { primary: true });
       U.button(ctx, g, 'rematch', 480, 450, 116, 56, 'RETRY', { small: true });
-      U.button(ctx, g, 'menu', 610, 450, 96, 56, 'MENU', { small: true, color: 'yellow' });
+      U.button(ctx, g, 'levels', 610, 450, 104, 56, 'LEVELS', { small: true, color: 'yellow' });
     } else if (next) {
       U.button(ctx, g, 'rematch', 256, 450, 210, 56, 'TRY AGAIN', { primary: true });
       U.button(ctx, g, 'next', 480, 450, 116, 56, 'SKIP', { small: true });
-      U.button(ctx, g, 'menu', 610, 450, 96, 56, 'MENU', { small: true, color: 'yellow' });
+      U.button(ctx, g, 'levels', 610, 450, 104, 56, 'LEVELS', { small: true, color: 'yellow' });
     } else {
       U.button(ctx, g, 'rematch', 270, 450, 270, 56, won ? 'PLAY AGAIN' : 'TRY AGAIN', { primary: true });
-      U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
+      U.button(ctx, g, 'levels', 560, 450, 150, 56, 'LEVELS', { small: true, color: 'yellow' });
     }
     ctx.restore();
   },
