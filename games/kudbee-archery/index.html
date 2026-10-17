@@ -3,41 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#4aa8ff">
-<meta name="description" content="Kudbee Archery — read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres, plus a head-to-head duel with a CPU. Plays in your browser.">
-<title>Kudbee Archery</title>
+<meta name="theme-color" content="#0b1b2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Archery">
+<meta name="description" content="Kudbee Archery — Read the wind, hold your breath and hit the gold. 30 levels across 5 worlds with a boss at the end of each, THINK BOX crate puzzles, duels, Balloon Pop and a Daily challenge. Free in your browser, built for phones.">
+<title>Kudbee Archery — Read the Wind</title>
 <link rel="canonical" href="https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html">
+<!-- share cards (Open Graph: iMessage, WhatsApp, Facebook, LinkedIn, Discord, Slack; Twitter/X below).
+     The image is rendered from the game by tools/og-card.mjs; bump ?v= whenever it changes so the apps refetch it. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kudbee">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="Kudbee Archery — Read the Wind">
-<meta property="og:description" content="Read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres plus a head-to-head duel with a CPU. Plays in your browser.">
+<meta property="og:description" content="Read the wind, hold your breath and hit the gold. 30 levels across 5 worlds with a boss at the end of each, THINK BOX crate puzzles, duels, Balloon Pop and a Daily challenge. Free in your browser, built for phones.">
 <meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html">
-<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg">
+<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg?v=5">
+<meta property="og:image:secure_url" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg?v=5">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Kudbee Archery — Read the Wind — gameplay preview">
+<meta property="og:image:alt" content="Kudbee Archery: a first-person bow at full draw on a straw target at a sunset mountain range, with the title and '30 levels, 5 worlds, bosses'">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kudbee Archery — Read the Wind">
-<meta name="twitter:description" content="Read the wind, hold your breath and hit the gold. Four ranges from 18 to 70 metres plus a head-to-head duel with a CPU. Plays in your browser.">
-<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg">
+<meta name="twitter:description" content="Read the wind, hold your breath and hit the gold. 30 levels across 5 worlds with a boss at the end of each, THINK BOX crate puzzles, duels, Balloon Pop and a Daily challenge. Free in your browser, built for phones.">
+<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/archery.jpg?v=5">
+<meta name="twitter:image:alt" content="Kudbee Archery: a first-person bow at full draw on a straw target at a sunset mountain range, with the title and '30 levels, 5 worlds, bosses'">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Kudbee Archery","url":"https://devbiz.kudbee.workers.dev/games/kudbee-archery/index.html","image":"https://devbiz.kudbee.workers.dev/assets/og/archery.jpg?v=5","description":"Read the wind, hold your breath and hit the gold. 30 levels across 5 worlds with a boss at the end of each, THINK BOX crate puzzles, duels, Balloon Pop and a Daily challenge. Free in your browser, built for phones.","genre":["Sports","Archery"],"gamePlatform":["Web browser","Mobile web"],"applicationCategory":"Game","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Kudbee","url":"https://devbiz.kudbee.workers.dev/"}}</script>
 <link rel="preload" href="assets/fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
 <style>
   @font-face { font-family:"Lilita One"; src:url(assets/fonts/lilita-one.woff2) format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; background:#0b1b2e; color:#cfe9ff; overflow:hidden; overscroll-behavior:none;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(1200px 700px at 50% 40%, #16385a, #0b1b2e); }
   canvas { display:block; width:min(100vw, 150vh); width:min(100vw, 150dvh); aspect-ratio:960 / 640; height:auto;
-    touch-action:none; user-select:none; -webkit-user-select:none; outline:none; box-shadow:0 0 60px rgba(255,200,80,0.16); }
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; outline:none; box-shadow:0 0 60px rgba(255,200,80,0.16); }
   @media (min-width:700px) and (min-height:520px) { canvas { border-radius:10px; } }
   .back-link { position:fixed; right:12px; bottom:10px; z-index:30; font-size:12px; letter-spacing:0.06em;
     text-transform:uppercase; color:#cfe0f0; text-decoration:none; padding:6px 10px;
     border:1px solid rgba(207,224,240,0.3); border-radius:6px; background:rgba(8,20,36,0.6); backdrop-filter:blur(6px); }
   .back-link:hover, .back-link:focus-visible { color:#fff; border-color:#ffa040; outline:none; }
   .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-  .rotate-tip { display:none; position:fixed; top:14px; left:0; right:0; z-index:20; text-align:center; font-size:13px; color:#9fb6c8; pointer-events:none; }
-  @media (orientation:portrait) and (max-width:700px) { .rotate-tip { display:block; } }
+  /* the game sizes the canvas to the screen (wider screens get more scenery); the studio link only shows on the menu */
+  body[data-screen]:not([data-screen="menu"]) .back-link { display:none; }
+  /* phones held upright: a full-screen card asking to turn sideways (the game pauses underneath) */
+  .rotate-tip { display:none; position:fixed; inset:0; z-index:40; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    background:radial-gradient(800px 600px at 50% 40%, #16385a, #0b1b2e); color:#fff; text-align:center; padding:24px;
+    font:400 26px/1.25 "Lilita One","Arial Black",system-ui,sans-serif; letter-spacing:0.02em; }
+  .rotate-tip small { font:500 15px/1.4 system-ui,-apple-system,sans-serif; color:#9fc4e4; letter-spacing:0; }
+  .rotate-tip svg { width:92px; height:92px; animation:turn 2.4s ease-in-out infinite; }
+  @keyframes turn { 0%, 25% { transform:rotate(0deg); } 55%, 85% { transform:rotate(-90deg); } 100% { transform:rotate(0deg); } }
+  @media (prefers-reduced-motion:reduce) { .rotate-tip svg { animation:none; transform:rotate(-90deg); } }
+  @media (orientation:portrait) and (pointer:coarse) { .rotate-tip { display:flex; } }
   noscript { position:fixed; inset:0; display:grid; place-items:center; text-align:center; padding:24px; }
 </style>
 </head>
@@ -46,7 +69,10 @@
   <canvas id="gameCanvas" tabindex="0" role="application"
     aria-label="Kudbee Archery. Press and hold to draw the bow, move to aim, release to loose. Hold B or right-click to steady your breath. Aim off into the wind."></canvas>
 </div>
-<p class="rotate-tip" aria-hidden="true">&#8635; Rotate your phone for a bigger playfield</p>
+<div class="rotate-tip" role="status">
+  <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="6" width="28" height="52" rx="6" fill="#2f86d8" stroke="#fff" stroke-width="3"/><circle cx="32" cy="27" r="9" fill="#f4f1e6"/><circle cx="32" cy="27" r="6" fill="#e4453a"/><circle cx="32" cy="27" r="3" fill="#ffd34d"/><rect x="27" y="50" width="10" height="3" rx="1.5" fill="#fff"/></svg>
+  Turn your phone sideways<small>Kudbee Archery plays in landscape</small>
+</div>
 <a class="back-link" href="../../index.html#games">&larr; Studio</a>
 <p class="sr">Controls: press and hold the mouse button or Space to draw the bow, move the pointer or use the arrow keys to aim, release to shoot. Hold B or the right mouse button to hold your breath and steady the sight. The wind gauge shows which way the wind pushes the arrow, so aim into it. P pauses, M toggles sound, R restarts. Ten rings, worth one to ten points; the centre is an X.</p>
 <noscript>Kudbee Archery needs JavaScript to run.</noscript>

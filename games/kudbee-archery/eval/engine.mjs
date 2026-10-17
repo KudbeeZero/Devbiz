@@ -85,14 +85,154 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   let wins = 0; for (let i = 1; i <= 30; i++) { const m2 = K.Bot.play({ mode: 'duel', dist: 1, level: 0, seed: i }, lg.sigma, lg.read, i); if (m2.winner === 0) wins++; }
   rec('duel-cpu-beatable', wins > 15, `a LEGEND-grade player beats the ROOKIE CPU ${wins}/30`);
 }
-// 10. persistence
+// 10. ROBIN HOOD: a second arrow into the same hole splits the first; a near miss doesn't
+{
+  const m = new K.Match({ mode: 'range', dist: 0, seed: 4 }); m.wind = 0;
+  const a = m.shoot(0.05, C.FACE_Y, 0, 0, 1); m.wind = 0;
+  const b = m.shoot(0.05, C.FACE_Y, 0, 0, 1); m.wind = 0;
+  const c = m.shoot(0.05 + C.ROBIN * 2, C.FACE_Y, 0, 0, 1);
+  rec('robin-hood', !a.robin && b.robin && !c.robin && m.arrows[0][0].split && !m.arrows[0][2].split && b.ring === a.ring,
+    `same spot -> ROBIN HOOD (first arrow split=${m.arrows[0][0].split}); ${(C.ROBIN * 200).toFixed(1)} cm away is not; the score is unchanged (${a.ring}/${b.ring})`);
+  const n = new K.Match({ mode: 'range', dist: 0, seed: 4 }); n.wind = 0; n.shoot(0.05, C.FACE_Y, 0, 0, 1); n._newEnd(); n.endNo = 1; n.arrowNo = 0; n.wind = 0;
+  rec('robin-same-end-only', !n.shoot(0.05, C.FACE_Y, 0, 0, 1).robin, 'arrows are pulled between ends, so last end\'s hole can\'t be split');
+}
+// 11. last-arrow pressure: what the shooter needs
+{
+  const m = new K.Match({ mode: 'range', dist: 1, seed: 6 });
+  const none = m.needs(100);
+  m.endNo = 4; m.arrowNo = 2; for (let i = 0; i < 14; i++) m.arrows[0].push({ ring: 8, end: 0 });   // 112 so far
+  const n = m.needs(115), T3 = K.STARS[1][1];
+  const d = new K.Match({ mode: 'duel', dist: 1, seed: 6 });
+  for (let i = 0; i < 5; i++) d.arrows[i % 2].push({ ring: i % 2 ? 7 : 10, end: 0 });                 // you 30, CPU 14 so far
+  d.arrowNo = 5; const dn = d.needs();
+  rec('needs', none === null && n.best === 4 && n.star3 === T3 - 112 && dn.win === 17 && dn.tie === 16,
+    `mid-range: nothing; last arrow on 112 vs best 115 -> needs ${n.best} (3 stars: ${n.star3}); duel CPU needs ${dn.win} to take the end (can't)`);
+}
+// 12. BALLOON POP: lead a mover and it pops; quiver, combo, gold refill, double pops, game over
+{
+  const C2 = K.CFG, D = K.Trick.DIST;
+  // aim where the balloon WILL be when the arrow arrives (fixed point on the flight time)
+  const lead = (m, b) => { let t = 0.4; for (let i = 0; i < 4; i++) { const p = m.pos(b, m.T + t), s = K.Flight.solve(D, p.x, p.y), r = K.Flight.run(D, s.yaw, s.pitch, C2.V0, m.wind); t = r.hit.t; } const p = m.pos(b, m.T + t); return p; };
+  const m = new K.Trick({ seed: 3 }); m.tick(0.5);
+  const b = m.balloons.find(x => Math.abs(m.pos(x, m.T).x) < 4) || m.balloons[0];
+  const p = lead(m, b), q0 = m.quiver;
+  const r1 = m.shoot(p.x, p.y, 0, 0, 1);
+  const naive = new K.Trick({ seed: 3 }); naive.tick(0.5);
+  const nb = naive.balloons.find(x => x.id === b.id), np = naive.pos(nb, naive.T), fast = Math.abs(nb.vx) > 0.6;
+  const r0 = naive.shoot(np.x, np.y, 0, 0, 1);
+  rec('pop-leads', r1.pops.some(x => x.id === b.id) && m.quiver === q0 - 1 + (r1.bonusArrows || 0) && r1.points >= 100 && (!fast || !r0.pops.some(x => x.id === b.id)),
+    `leading the balloon pops it (+${r1.points}); aiming where it is now ${r0.pops.length ? 'also popped (slow drifter)' : 'misses'}`);
+  // combo: pop again straight away -> multiplier 2
+  m.tick(0.1); const b2 = m.balloons.find(x => x.popAt === null && Math.abs(m.pos(x, m.T).x) < 5);
+  const r2 = b2 ? m.shoot(lead(m, b2).x, lead(m, b2).y, 0, 0, 1) : { pops: [] };
+  const r3 = m.shoot(0, -2, 0, 0, 1);
+  rec('pop-combo', r2.pops.length > 0 && r2.mult === 2 && !r3.pops.length && m.combo === 0, `second pop in a row scores at x${r2.mult}; a miss resets the combo`);
+  // gold refills two arrows; double pop scores double each
+  const g = new K.Trick({ seed: 3 }); g.balloons = [{ id: 90, born: 0, x0: 0, vx: 0, y0: 1.5, ph: 0, gold: true, col: 0, popAt: null }, { id: 91, born: 0, x0: 0.05, vx: 0, y0: 1.52, ph: 0, gold: false, col: 1, popAt: null }]; g.wind = 0;
+  const gp = g.pos(g.balloons[0], g.T + 0.45), qg = g.quiver, rg = g.shoot(gp.x, gp.y, 0, 0, 1);
+  rec('pop-gold-double', rg.pops.length === 2 && g.quiver === qg - 1 + 2 && rg.points === (250 + 100) * 2, `one arrow through two lined-up balloons: both pop (+${rg.points}); the gold one refills 2 arrows`);
+  // over when the quiver is empty; deterministic
+  const e = new K.Trick({ seed: 8 }); let n = 0; while (!e.over && n++ < 100) { e.tick(0.6); e.shoot(0, 5, 0, 0, 1); }
+  const sig = () => { const t = new K.Trick({ seed: 12 }); const out = []; for (let i = 0; i < 6; i++) { t.tick(0.7); out.push(t.balloons.map(x => x.id + ':' + t.pos(x, t.T).x.toFixed(3)).join(',')); } return out.join('|'); };
+  rec('pop-flow', e.over && n === K.Trick.ARROWS && sig() === sig(), `${n} misses empty the quiver and end the round; balloon traffic replays exactly per seed`);
+}
+// 12b. SWINGER: a pendulum on ropes; you have to lead it, arrows ride with it, misses fly through
+{
+  const m = new K.Swing({ seed: 5 }); m.wind = 0; m.tick(0.37);
+  const L = K.Swing.L, P = 2 * Math.PI * Math.sqrt(L / C.G), o0 = m.offAt(m.T), o1 = m.offAt(m.T + P);
+  rec('swing-pendulum', Math.abs(o0.x - o1.x) < 1e-9 && Math.abs(P - 3.11) < 0.02 && Math.abs(m.offAt(m.T).y - L * (1 - Math.cos(m.offAt(m.T).th))) < 1e-12, `period ${P.toFixed(2)} s = 2\u03c0\u221a(L/g); the boss rises at the ends of the arc`);
+  // aim where it IS -> the face has moved on; aim where it WILL BE -> a ten
+  const tf = K.Flight.run(30, K.Flight.solve(30, 0, C.FACE_Y).yaw, K.Flight.solve(30, 0, C.FACE_Y).pitch, C.V0, 0).hit.t;
+  let best = null; for (let i = 0; i < 200 && !best; i++) { m.tick(0.02); const now = m.offAt(m.T), then = m.offAt(m.T + tf); if (Math.abs(now.x - then.x) > 0.35) best = { now, then }; }
+  const at = m.shoot(best.now.x, C.FACE_Y + best.now.y, 0, 0, 1).ring, lead = m.shoot(best.then.x, C.FACE_Y + best.then.y, 0, 0, 1).ring;
+  rec('swing-lead', lead >= 9 && at < lead, `aiming at the face scores ${at}; leading it by the ${tf.toFixed(2)} s flight scores ${lead}`);
+  const a = m.arrows[0][1], o = m.offAt(m.T);
+  rec('swing-arrows-ride', a.hit && Math.hypot(a.hit.x, a.hit.y - C.FACE_Y) < 0.08, `the arrow is kept in the boss's own frame (${a.hit.x.toFixed(3)}, ${(a.hit.y - C.FACE_Y).toFixed(3)}) and drawn ${o.x.toFixed(2)} m off centre as it swings`);
+  const miss = m.shoot(o.x + 2.5, C.FACE_Y, 0, 0, 1); m.shoot(0, C.FACE_Y, 0, 0, 1);
+  let amp = []; while (!m.over) { amp.push(m.th0); for (let i = 0; i < 3 && !m.over; i++) m.shoot(0, C.FACE_Y, 0, 0, 1); }
+  rec('swing-flow', miss.miss && m.arrows[0][2].hit === null && m.endScores.length === 4 && amp.every((v, i) => !i || v > amp[i - 1]) && m.needs() === null, `a miss off the boss leaves nothing hanging in the air; 4 ends, the swing grows each end (${amp.map(v => v.toFixed(2)).join(' < ')})`);
+}
+// 12c. DAILY: one seed per UTC day, the same on every device
+{
+  const D = K.Daily, day = D.day(Date.UTC(2026, 9, 17, 23, 59)), next = D.day(Date.UTC(2026, 9, 18, 0, 1));
+  const sig = s => { const t = new K.Trick({ seed: s, daily: 1 }); const out = [t.wind.toFixed(4)]; for (let i = 0; i < 8; i++) { t.tick(0.5); out.push(t.balloons.map(b => b.id + ':' + b.y0.toFixed(3) + ':' + b.vx.toFixed(3) + ':' + b.gold).join(',')); } return out.join('|'); };
+  rec('daily-seed', day === 1 && next === 2 && D.date(1) === '2026-10-17' && sig(D.seed(day)) === sig(D.seed(day)) && sig(D.seed(day)) !== sig(D.seed(next)), `#1 is 2026-10-17 (UTC); the same day gives identical wind and balloons, the next day different`);
+}
+// 12d. 70 m unlock: 6 stars across the shorter distances (or an existing 70 m score)
+{
+  const d = { best: [0, 0, 0, 0], stars: [3, 2, 0, 0] };
+  const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
+  rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
+}
+// 12b. THE TOUR: five worlds of six levels, a boss last in each; each level opens the next
+{
+  const T = K.TOUR, ok = T.length === 30 && K.VENUES.length === 5 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
+  const D = { tour: { stars: Array(30).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
+  rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}, a boss ending each world; star targets rise; one star opens the next level`);
+  // a perfect still-air run earns 3 stars; a smaller face scores tighter rings
+  const st = new K.Stage({ level: 0, seed: 3 }); st.wind = 0; while (!st.over) { st._gust = () => { st.wind = 0; }; st.wind = 0; st.shoot(0, C.FACE_Y, 0, 0, 1); }
+  const small = new K.Stage({ level: 6, seed: 1 }), sc = K.Score.ring(1, 0.2, C.FACE_Y, small.faceD).ring, std = K.Score.ring(1, 0.2, C.FACE_Y).ring;
+  rec('tour-stars-face', st.stars() === 3 && st.total(0) === st.max && new K.Stage({ level: 0 }).stars() === 0 && small.faceD < C.FACE[1] && sc < std,
+    `a perfect run scores ${st.total(0)}/${st.max} for 3 stars; the 48 cm face scores a 20 cm miss as ${sc} (standard face: ${std})`);
+  // ON THE RAIL: the boss slides; a shot led to where it will be scores, and the arrow rides in the boss
+  const rl = new K.Stage({ level: 2, seed: 9 }), xs = Array.from({ length: 40 }, (_, i) => rl.offAt(i * 0.1).x), moved = Math.max(...xs) - Math.min(...xs); rl.tick(0.8);
+  rl.wind = 0; const s0 = K.Flight.solve(rl.dist, 0, C.FACE_Y), tf = K.Flight.run(rl.dist, s0.yaw, s0.pitch, C.V0, 0).hit.t, o = rl.offAt(rl.T + tf);
+  const led = rl.shoot(o.x, C.FACE_Y + o.y, 0, 0, 1);
+  rl.wind = 0; const o2 = rl.offAt(rl.T), still = rl.shoot(o2.x - 0.45 * Math.sign(rl.offAt(rl.T + tf).x - o2.x || 1), C.FACE_Y, 0, 0, 1);
+  rec('tour-rail', moved > 0.2 && led.ring >= 9 && rl.arrows[0][0].hit && still.ring < led.ring, `the rail boss slides across ${(moved * 100) | 0} cm; leading it scores ${led.ring}, aiming behind it ${still.ring}`);
+}
+// 12e. THINK BOX: crates stop an arrow (0, kept in the crate), the window lets it through, a STAR BOX breaks for a 10
+// once an end, a cart blocks the gold only while it is in front of it; the world opens off the world 1 boss
+{
+  const shot = (m, x, y) => { m.wind = 0; m._gust = () => { m.wind = 0; }; return m.shoot(x, y, 0, 0, 1); };
+  const pe = new K.Stage({ level: 24, seed: 2 }), gold = shot(pe, 0, C.FACE_Y), wall = shot(pe, 0.4, C.FACE_Y), stuck = pe.arrows[0][1].hit;
+  const sb = new K.Stage({ level: 25, seed: 2 }), b = sb.boxes.find(x => x.star), bx = (b.x0 + b.x1) / 2, by = (b.y0 + b.y1) / 2;
+  const s1 = shot(sb, bx, by), s2 = shot(sb, bx, by); shot(sb, 0, C.FACE_Y); const s3 = shot(sb, bx, by);       // the third arrow closes the end; next end it is back
+  const sh = new K.Stage({ level: 26, seed: 5 }), s0 = K.Flight.solve(sh.dist, 0, C.FACE_Y), tf = K.Flight.run(sh.dist - K.BOXZ, s0.yaw, s0.pitch, C.V0, 0).hit.t;
+  const off = () => Math.abs(sh.boxOff(0, sh.T + tf)), find = ok => { for (let i = 0; i < 400 && !ok(off()); i++) sh.tick(0.02); };   // the cart is 60 cm wide
+  find(o => o < 0.2); const blockedC = shot(sh, 0, C.FACE_Y); find(o => o > 0.4); const clearC = shot(sh, 0, C.FACE_Y);
+  // the STAR BOX is whole until the arrow gets there, and still shows smashed after that arrow closes the end
+  const sl = new K.Stage({ level: 25, seed: 2 }); shot(sl, 0, C.FACE_Y); shot(sl, 0, C.FACE_Y); const e0 = sl.endNo, si = sl.boxes.findIndex(x => x.star), last = shot(sl, bx, by);
+  const timing = last.star && sl.endNo === e0 + 1 && !sl.boxGone(si, e0, sl.T) && sl.boxGone(si, e0, sl.T + last.hit.t) && !sl.boxGone(si);
+  // an arrow over the wall (no boss behind it there) flies on rather than hanging in the air; one that gets in through
+  // a window but clips the crates' sides further back is still blocked
+  const ov = new K.Stage({ level: 24, seed: 2 }), over = shot(ov, 0.6, 2.4), gone = ov.arrows[0][0].hit === null && over.miss && !over.blocked;
+  const jb = new K.Stage({ level: 24, seed: 2 }), zb = jb.dist - K.BOXZ + K.BOXD, jam = shot(jb, 0.123, C.FACE_Y), deep = jam.blocked && jam.hit.z === zb;
+  const D = { tour: { stars: Array(30).fill(0) } }, closed = K.tourOpen(24, D); D.tour.stars[23] = 3; const not23 = K.tourOpen(24, D); D.tour.stars[5] = 1;
+  rec('think-box', gold.ring >= 9 && !gold.blocked && wall.blocked && wall.ring === 0 && stuck && stuck.z === pe.dist - K.BOXZ && stuck.bi >= 0 && s1.star && s1.ring === 10 && !s2.star && s2.ring === 0 && s3.star && blockedC.blocked && !clearC.blocked && clearC.ring >= 9 && !closed && !not23 && K.tourOpen(24, D) && !K.tourOpen(25, D) && timing && gone && deep,
+    `the window scores ${gold.ring}, the crates stop a shot dead (kept in the crate); the STAR BOX scores ${s1.ring} once an end (then ${s2.ring}, back next end); the cart blocks the gold, then clears for a ${clearC.ring}; THINK BOX opens off the Village Cup; the STAR BOX smashes when the arrow arrives (${timing}); over the wall flies on (${gone}); a window shot that clips the jamb is blocked (${deep})`);
+}
+// 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
+{
+  const D = { tour: { stars: Array(30).fill(0) }, stars: [0, 0, 0, 0] }, G = K.GEAR;
+  const first = ['bow', 'fletch', 'sight'].every(k => K.gearOpen(k, 0, D) && !K.gearOpen(k, 1, D) && G[k].every((g, i) => !i || g.need > G[k][i - 1].need));
+  D.tour.stars.fill(2, 0, 4); D.stars[1] = 3;                                         // 11 stars
+  const opened = K.gearBetween(5, K.starTotal(D)).map(g => g.name).join(', ');
+  const m = new K.Stage({ level: 1, seed: 4 }); m.wind = 2.3; const h = K.Bot.hold(m), s0 = K.Flight.solve(m.dist, h.x, h.y), r = K.Flight.run(m.dist, s0.yaw, s0.pitch, C.V0, m.wind).hit;
+  rec('gear-and-hold', first && K.starTotal(D) === 11 && K.gearOpen('bow', 1, D) && !K.gearOpen('bow', 2, D) && opened === 'BLACK CARBON, LIME' && Math.hypot(r.x, r.y - C.FACE_Y) < 0.002,
+    `starting kit is open, the rest locked; 11 stars open ${opened} (crossing from 5); aiming at the tutorial's hold-off lands ${(Math.hypot(r.x, r.y - C.FACE_Y) * 1000).toFixed(1)} mm from centre`);
+}
+// 13. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
   const K2 = loadKAR(['util.js'], ls);
-  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.save();
+  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.data.tour.stars[4] = 2; K2.Store.data.tour.best[4] = 99; K2.Store.data.tourLv = 5; K2.Store.data.gear.bow = 3; K2.Store.data.tut = 5; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
-  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2, 'distance, best scores and stars survive a reload');
+  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500 && K3.Store.data.tour.stars[4] === 2 && K3.Store.data.tour.best[4] === 99 && K3.Store.data.tourLv === 5 && K3.Store.data.gear.bow === 3 && K3.Store.data.tut === 5, 'distance, best scores, stars, BALLOON POP mode and best, level progress, gear and tutorial progress survive a reload');
+  // a save from the old 15-level tour: each level's stars and best move to where that level now sits, so nothing is lost or re-locked
+  const old = { stars: [3, 2, 1, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], best: [54, 70, 60, 80, 99, 50, 52, 0, 0, 0, 0, 0, 0, 0, 0] }, ls2 = { s: JSON.stringify({ tour: old, tourLv: 6 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K4 = loadKAR(['util.js', 'sim.js'], ls2); K4.Store.load(); const T4 = K4.Store.data.tour;
+  const moved = old.stars.every((v, i) => T4.stars[K4.TOUR_V1[i]] === v) && T4.best[5] === 99 && T4.stars[4] === 0 && K4.Store.data.tourLv === 7 && K4.TOUR[7].name === 'ROPE SWING' && K4.tourOpen(5, K4.Store.data) && K4.tourOpen(4, K4.Store.data) && K4.tourOpen(8, K4.Store.data) && !K4.tourOpen(9, K4.Store.data);
+  // a save from the 24-level tour (before THINK BOX) loads as it was, with the new world's levels empty
+  const s24 = { stars: Array(24).fill(2), best: Array(24).fill(70) }, ls3 = { s: JSON.stringify({ tour: s24, tourLv: 23 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K5 = loadKAR(['util.js', 'sim.js'], ls3); K5.Store.load(); const T5 = K5.Store.data.tour;
+  const kept = T5.stars.length === 30 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
+  // a corrupt save (stars out of 0..3, fractions) can't open levels or gear; the save arrays fit the Tour
+  const ls4 = { s: JSON.stringify({ tour: { stars: [99, -4, 2.5, 3], best: [500, 70] } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K6 = loadKAR(['util.js', 'sim.js'], ls4); K6.Store.load(); const T6 = K6.Store.data.tour;
+  const sane = T6.stars.slice(0, 4).join() === '0,0,0,3' && T6.best[0] === 0 && T6.best[1] === 70 && T6.stars.length === K6.TOUR.length && T6.best.length === K6.TOUR.length;
+  rec('store-tour-upgrade', moved && kept && sane, 'an old 15-level save maps onto the worlds (VILLAGE CUP keeps its 2 stars as the world 1 boss, the player stays on ROPE SWING); a 24-level save keeps every star and THINK BOX is open; corrupt star/best values are dropped; the save arrays fit the Tour');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
