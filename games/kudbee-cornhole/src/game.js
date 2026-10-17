@@ -363,7 +363,10 @@ KCH.Game = class {
     const inMenu = this.screen === 'menu';
     if (!inMenu) R.drawBoard(ctx, this.time);
 
-    const m = this.match, bags = inMenu ? [] : m.sim.bags.slice().sort((a, b) => b.z - a.z);
+    // painter's order by depth; a stacked bag draws right after the bag it rides on
+    const m = this.match, sim = m.sim;
+    const depth = (b, n) => { const base = b.stack && (n || 0) < 8 && sim._byId(b.stack); return base ? depth(base, (n || 0) + 1) - 1e-3 : b.z; };
+    const bags = inMenu ? [] : sim.bags.slice().sort((a, b) => depth(b) - depth(a));
     for (const b of bags) R.drawBag(ctx, b);
     R.drawParticles(ctx, this.particles);
 

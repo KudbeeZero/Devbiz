@@ -15,6 +15,7 @@ KCH.CFG = {
   NEAR_H: 3, FAR_H: 12,
   HOLE_R: 3,
   BAG_T: 1.6, BAG_R: 3.4,
+  MU_CLOTH: 0.9,                      // bag-on-bag friction: corn-filled duck cloth grabs
   HAND: { x: 0, y: 46, z: 36 },       // release point
   LAUNCH_DEG: 50,
 };
@@ -90,6 +91,7 @@ KCH.Sim = class {
       u: 0, s: 0, vu: 0, vs: 0,
       yaw: 0, yawV: (du >= 0 ? 1 : -1) * st.spin, tilt: 0, tiltV: st.flip ? (Math.PI * 2 * st.flip) / flight : 0,
       airmail: false, touched: false, pushedIn: false, flight,
+      stack: 0, justLanded: false,                   // stack = id of the bag this one is riding on (0 = on the board itself)
       sq: 0, sqV: 0,                                  // cosmetic squash-and-wobble of the filled bag (never feeds back into the physics)
     };
     this.bags.push(b);
@@ -146,6 +148,7 @@ KCH.Sim = class {
     const impact = Math.abs(vn);
     // thud: tiny bounce, and friction at the contact eats tangential speed
     let tu = b.vx, ts = vs;
+    b.hitU = tu; b.hitS = ts;                      // tangential speed at impact (before friction) — drives the shove on a bag it lands on
     const tm = Math.hypot(tu, ts);
     const lose = st.muImpact * (1 + st.e) * impact;
     const keep = tm > 1e-6 ? Math.max(0, tm - lose) / tm : 0;
@@ -154,6 +157,7 @@ KCH.Sim = class {
     b.tilt = 0; b.yawV *= 0.4;
     this._place(b);
     b.sq = Math.min(1.1, 0.25 + impact / 170); b.sqV = 0;
+    b.justLanded = true;                           // _collide decides this step whether it came down ON another bag
     this.emit('land', b, impact);
   }
 
@@ -161,10 +165,49 @@ KCH.Sim = class {
     const C = KCH.CFG;
     const p = KCH.surface.point(b.u, b.s);
     const n = { y: Math.cos(C.THETA), z: -Math.sin(C.THETA) };
-    b.x = p.x + 0; b.y = p.y + n.y * C.BAG_T / 2; b.z = p.z + n.z * C.BAG_T / 2;
+    const h = C.BAG_T / 2 + this.stackLevel(b) * C.BAG_T;    // a riding bag sits a bag-thickness up per level
+    b.x = p.x + 0; b.y = p.y + n.y * h; b.z = p.z + n.z * h;
+  }
+
+  _byId(id) { for (const b of this.bags) if (b.id === id) return b; return null; }
+  _riderUnder(base, lander, R) {
+    for (const x of this.bags) if (x !== lander && x.state === 'board' && x.stack === base.id && Math.hypot(x.u - lander.u, x.s - lander.s) < R * 0.8) return x;
+    return null;
+  }
+  // how many bags this one is piled on (0 = lying on the board)
+  stackLevel(b) {
+    let n = 0;
+    for (let c = b; c && c.stack && n < 8; c = this._byId(c.stack)) n++;
+    return n;
+  }
+
+  // A bag riding on another: cloth friction drags it toward the base's velocity (so it is carried
+  // when the base is shoved), it can tip into the hole, and it drops to the board once its centre
+  // passes the edge of the bag beneath. Returns false once it is no longer riding.
+  _ride(b, dt) {
+    const C = KCH.CFG, base = this._byId(b.stack);
+    if (!base || base.state !== 'board') { b.stack = 0; return false; }    // base went in the hole / off the board
+    const fr = C.MU_CLOTH * C.G * Math.cos(C.THETA);                     // holds easily against the 10.6° slope
+    let ru = b.vu - base.vu, rs = b.vs - base.vs;
+    const rsp = Math.hypot(ru, rs);
+    if (rsp <= fr * dt) { ru = 0; rs = 0; } else { ru -= ru / rsp * fr * dt; rs -= rs / rsp * fr * dt; }
+    b.vu = base.vu + ru; b.vs = base.vs + rs;
+    b.u += b.vu * dt; b.s += b.vs * dt;
+    b.yaw += b.yawV * dt; b.yawV *= Math.max(0, 1 - 6 * dt);
+    if (Math.hypot(b.u, b.s - C.HOLE_S) < C.HOLE_R) {                   // hanging over the lip: it tips in
+      b.stack = 0; b.state = 'hole'; b.holeT = 0; this.emit('hole', b, Math.hypot(b.vu, b.vs)); return true;
+    }
+    if (Math.hypot(b.u - base.u, b.s - base.s) > C.BAG_R * 1.7) {      // slid off the edge of the bag beneath
+      b.stack = 0; b.justLanded = true; b.sq = Math.max(b.sq || 0, 0.35); b.sqV = 0;
+      this.emit('land', b, 30);
+      return false;
+    }
+    this._place(b);
+    return true;
   }
 
   _board(b, dt) {
+    if (b.stack && this._ride(b, dt)) return;
     const C = KCH.CFG, st = KCH.STYLE[b.style];
     const sp = Math.hypot(b.vu, b.vs);
     const gs = -C.G * Math.sin(C.THETA);                       // gravity along the slope (down = negative s)
@@ -208,15 +251,25 @@ KCH.Sim = class {
     if (b.y <= C.BAG_T / 2) { b.y = C.BAG_T / 2; b.state = 'ground'; b.vx *= 0.1; b.vz *= 0.1; b.vy = 0; this.emit('ground', b, 0); }
   }
 
-  // bag-on-bag: circles in the board plane, a soft cloth thud, momentum is shared
+  // bag-on-bag: circles in the board plane, a soft cloth thud, momentum is shared.
+  // A bag that comes down mostly on top of another stacks on it instead of being split apart
+  // sideways (that used to teleport both half a bag-width in one frame).
   _collide() {
     const R = KCH.CFG.BAG_R * 2;
     const list = this.bags.filter(b => b.state === 'board');
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         const A = list[i], B = list[j];
+        if (A.stack || B.stack) continue;                         // a riding bag is above the board plane
         const dx = B.u - A.u, ds = B.s - A.s, d = Math.hypot(dx, ds);
         if (d >= R) continue;
+        const lander = A.justLanded && !B.justLanded ? A : B.justLanded && !A.justLanded ? B : null;
+        if (lander && d < R * 0.8) {
+          // climb to the highest bag under the lander (a pile, not two bags sharing one level)
+          let base = lander === A ? B : A;
+          for (let up = this._riderUnder(base, lander, R); up; up = this._riderUnder(base, lander, R)) base = up;
+          this._stackOn(lander, base); continue;
+        }
         const nx = d > 1e-6 ? dx / d : 1, ns = d > 1e-6 ? ds / d : 0, ov = R - d;
         const aStill = Math.hypot(A.vu, A.vs) < 0.5, bStill = Math.hypot(B.vu, B.vs) < 0.5;
         // separate (a resting bag is shoved only if the mover has momentum)
@@ -232,6 +285,21 @@ KCH.Sim = class {
         }
       }
     }
+    for (const b of list) b.justLanded = false;
+  }
+
+  // `top` has just landed on `base`: the impact shoves the base along the lander's line of travel
+  // (a hard slider knocks a blocker forward, maybe into the hole) and the cloth grabs the lander.
+  _stackOn(top, base) {
+    const k = 0.25;
+    base.vu += (top.hitU || 0) * k; base.vs += (top.hitS || 0) * k;
+    top.vu *= 0.5; top.vs *= 0.5;
+    top.stack = base.id; top.justLanded = false;
+    base.touched = true;
+    const shove = Math.hypot(top.hitU || 0, top.hitS || 0) * k;
+    base.sq = Math.max(base.sq || 0, Math.min(0.7, 0.3 + shove / 150)); base.sqV = 0;
+    this.emit('push', base, shove);
+    this._place(top);
   }
 
   // Everything has come to rest (or is gone).
