@@ -39,6 +39,8 @@
     color:#9fb6c8; padding:6px 10px; border:1px solid rgba(159,182,200,0.25); border-radius:6px;
     background:rgba(5,5,15,0.5); backdrop-filter:blur(6px); }
   .snd-btn:hover { color:#fff; border-color:var(--cyan); }
+  .pause-btn { right:66px; font-size:12px; letter-spacing:-0.1em; }   /* touch has no P key: this is the only way to pause on a phone */
+  .pause-btn.hidden { display:none; }
   .overlay { position:absolute; inset:0; z-index:25; display:flex; text-align:center; padding:24px; overflow-y:auto;
     background:radial-gradient(900px 600px at 50% 35%, rgba(10,10,28,0.5), rgba(3,3,10,0.9));
     backdrop-filter:blur(3px); transition:opacity 0.4s ease; }
@@ -119,7 +121,7 @@
     transition:width 0.35s ease, background 0.35s; }
   .wingman.link-up .wm-com { width:100%; }
   .wingman.link-down .wm-com { width:18%; background:#5a6276; }
-  @media (pointer:coarse){ .wingman { bottom:64px; } }
+  @media (pointer:coarse){ .wingman { bottom:88px; } }   /* clears the touch MSL / DASH buttons */
   /* short viewports (landscape phones): the gate/game-over panel can be taller than the
      screen, so it scrolls instead of clipping — but tighten spacing first so the common
      cases (launch button, restart button) fit without needing a scroll at all. */
@@ -190,6 +192,7 @@
 <div id="stage">
   <a class="back-link" href="../../index.html#games">&larr; Studio</a>
   <button class="snd-btn" id="muteBtn" type="button" aria-label="Mute" title="Mute (M)">🔊</button>
+  <button class="snd-btn pause-btn hidden" id="pauseBtn" type="button" aria-label="Pause" title="Pause (P)">❚❚</button>
   <canvas id="game"></canvas>
 
   <audio id="introAudio" src="./assets/intro.mp3" preload="auto" playsinline></audio>
@@ -257,7 +260,7 @@
     </div>
   </div>
 
-  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile · X dash</div>
+  <div class="hint">← → ↑ ↓ steer · Space fire · Shift boost · C chain · V missile · X dash · P pause · M sound</div>
 
   <div class="wingman" id="wingman" aria-live="polite">
     <div class="wm-label">SIMURGH · WINGMAN</div>
@@ -311,6 +314,11 @@
   var bloomCvs = document.createElement('canvas');
   var bCtx = bloomCvs.getContext('2d');
   var BLOOM_SCALE = 0.5;                       // half-res for perf; CSS blur smooths it
+  // The blur itself runs at quarter res, then the soft result is upscaled onto the frame.
+  // Blurring the full-size frame twice per frame (blur 8px + 20px) halved the frame rate.
+  var GLOW_SCALE = 0.25;
+  var glowCvs = document.createElement('canvas'), gCtx = glowCvs.getContext('2d');
+  var haloCvs = document.createElement('canvas'), hCtx = haloCvs.getContext('2d');
   var bloomReady = false;
 
   // ---- canvas sizing ----
@@ -326,6 +334,8 @@
     MINSCALE = Math.max(W, H);                 // for clamping huge near-plane sprites
     // resize bloom buffer
     bloomCvs.width = Math.round(W * BLOOM_SCALE); bloomCvs.height = Math.round(H * BLOOM_SCALE);
+    glowCvs.width = haloCvs.width = Math.max(1, Math.round(W * GLOW_SCALE));
+    glowCvs.height = haloCvs.height = Math.max(1, Math.round(H * GLOW_SCALE));
     bloomReady = true;
   }
   window.addEventListener('resize', resize);
@@ -340,6 +350,14 @@
     if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
     var n = parseInt(h, 16);
     return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+  }
+  // Any colour this file uses ('#rgb', '#rrggbb', 'rgb()', 'rgba()') with its alpha set to `a`.
+  // The bloom pass used to string-patch 'rgb' into 'rgba', which turned the exhaust's 'rgba(...)'
+  // into an invalid 'rgbaa(...)'; addColorStop threw mid-frame and every draw after it — the
+  // whole canvas HUD included — was skipped while the engines were lit.
+  function withAlpha(col, a) {
+    var rgb = col.charAt(0) === '#' ? hexRGB(col) : col.replace(/^rgba?\(|\)$/g, '').split(',').slice(0, 3).join(',');
+    return 'rgba(' + rgb + ',' + a.toFixed(2) + ')';
   }
 
   // ===== audio — procedural Web-Audio SFX + engine drone (no asset files) =====
@@ -1808,6 +1826,7 @@
     while (pops.length && pops[0].life <= 0) pops.shift();
     for (var ri = rings.length - 1; ri >= 0; ri--) { rings[ri].life -= dt; if (rings[ri].life <= 0) rings.splice(ri, 1); }
     if (chainBeam) { chainBeam.life -= dt; if (chainBeam.life <= 0) chainBeam = null; }
+    syncPauseBtn();
     draw(now);
   }
 
@@ -1884,10 +1903,13 @@
       for (var e = -1; e <= 1; e += 2) {
         var ex = bx + e * 15 * (Math.min(W, H) / 840 * 1.3);
         var ey = by + 24 * (Math.min(W, H) / 840 * 1.3);
-        var gr = bCtx.createRadialGradient(ex, ey, 0, ex, ey, 40 + boost * 60);
-        gr.addColorStop(0, 'rgba(120,255,200,' + (0.6 + boost * 0.3).toFixed(2) + ')');
+        // sized for play: at the old 40 + 60·boost the boosted halo swallowed the ship (it was
+        // only ever seen on the title screen while the bloom pass was crashing in play)
+        var egR = 30 + boost * 34;
+        var gr = bCtx.createRadialGradient(ex, ey, 0, ex, ey, egR);
+        gr.addColorStop(0, 'rgba(120,255,200,' + (0.5 + boost * 0.2).toFixed(2) + ')');
         gr.addColorStop(1, 'rgba(120,255,200,0)');
-        bCtx.fillStyle = gr; bCtx.beginPath(); bCtx.arc(ex, ey, 40 + boost * 60, 0, TAU); bCtx.fill();
+        bCtx.fillStyle = gr; bCtx.beginPath(); bCtx.arc(ex, ey, egR, 0, TAU); bCtx.fill();
       }
     }
 
@@ -1929,7 +1951,7 @@
     for (var pp = 0; pp < PMAX; pp++) {
       var q = P[pp]; if (q.life <= 0.3) continue;
       var pg = bCtx.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.sz * 4);
-      pg.addColorStop(0, q.col.replace(')', ',' + (q.life * 0.5).toFixed(2) + ')').replace('rgb', 'rgba'));
+      pg.addColorStop(0, withAlpha(q.col, q.life * 0.5));
       pg.addColorStop(1, 'rgba(0,0,0,0)');
       bCtx.fillStyle = pg; bCtx.beginPath(); bCtx.arc(q.x, q.y, q.sz * 4, 0, TAU); bCtx.fill();
     }
@@ -1939,7 +1961,7 @@
       var rg = rings[ri], k = rg.life / rg.max, e = 1 - k;
       var rr = 6 + rg.r1 * e * (2 - e);
       var rgg = bCtx.createRadialGradient(rg.x, rg.y, rr * 0.5, rg.x, rg.y, rr * 1.5);
-      rgg.addColorStop(0, rg.col.replace(')', ',' + (k * 0.4).toFixed(2) + ')').replace('rgb', 'rgba'));
+      rgg.addColorStop(0, withAlpha(rg.col, k * 0.4));
       rgg.addColorStop(1, 'rgba(0,0,0,0)');
       bCtx.fillStyle = rgg; bCtx.beginPath(); bCtx.arc(rg.x, rg.y, rr * 1.5, 0, TAU); bCtx.fill();
     }
@@ -1966,18 +1988,18 @@
 
     bCtx.restore();
 
-    // composite bloom onto main canvas with additive blend
+    // blur at quarter res (2px / 5px there ≈ the old 8px / 20px full-size blurs), then
+    // composite both soft layers onto the main canvas with an additive blend
+    var gw = glowCvs.width, gh = glowCvs.height;
+    gCtx.clearRect(0, 0, gw, gh); gCtx.filter = 'blur(2px)';
+    gCtx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, gw, gh); gCtx.filter = 'none';
+    hCtx.clearRect(0, 0, gw, gh); hCtx.filter = 'blur(5px)';
+    hCtx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, gw, gh); hCtx.filter = 'none';
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.filter = 'blur(8px)';
-    ctx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, W, H);
-    ctx.filter = 'none';
+    ctx.drawImage(glowCvs, 0, 0, gw, gh, 0, 0, W, H);
     ctx.globalAlpha = 0.5;
-    ctx.filter = 'blur(20px)';
-    ctx.drawImage(bloomCvs, 0, 0, bw, bh, 0, 0, W, H);
-    ctx.filter = 'none';
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(haloCvs, 0, 0, gw, gh, 0, 0, W, H);
     ctx.restore();
   }
   // brief screen-space damage vignette on a hit — reads as impact even where the
@@ -2889,38 +2911,39 @@
 
   function drawHUD() {
     var pad = Math.round(Math.min(W, H) * 0.035);
+    var top = Math.max(pad, 48);               // top rows sit below the DOM back link + pause/mute buttons
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillStyle = '#fff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.05) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText(Math.round(score).toLocaleString(), pad, pad);
+    ctx.fillText(Math.round(score).toLocaleString(), pad, top);
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.017) + 'px Inter, sans-serif';
-    ctx.fillText('SCORE', pad, pad + Math.round(Math.min(W, H) * 0.052));
-    if (combo > 1) { ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.02) + 'px "Space Grotesk", sans-serif'; ctx.fillText('×' + combo + ' chain', pad, pad + Math.round(Math.min(W, H) * 0.075)); }
+    ctx.fillText('SCORE', pad, top + Math.round(Math.min(W, H) * 0.052));
+    if (combo > 1) { ctx.fillStyle = '#ffd34d'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.02) + 'px "Space Grotesk", sans-serif'; ctx.fillText('×' + combo + ' chain', pad, top + Math.round(Math.min(W, H) * 0.075)); }
     if (chainMult > 1 && state === 'play') {
       var cmx = pad + Math.round(Math.min(W, H) * 0.16), cmStep = Math.round(Math.min(W, H) * 0.02);
       // small "×N" multiplier badge that pops on new tiers
       ctx.fillStyle = chainMult >= 4 ? '#ff5d3c' : chainMult >= 3 ? '#ffd34d' : '#7CFFb2';
       if (chainMultFlash > 0 && !reduceMotion) { ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10; }
       ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.028 + chainMultFlash * 4) + 'px "Space Grotesk", sans-serif';
-      ctx.fillText('×' + chainMult, cmx, pad);
+      ctx.fillText('×' + chainMult, cmx, top);
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.013) + 'px Inter, sans-serif';
-      ctx.fillText('CHAIN', cmx, pad + Math.round(Math.min(W, H) * 0.032));
+      ctx.fillText('CHAIN', cmx, top + Math.round(Math.min(W, H) * 0.032));
     }
     // depth (right)
     ctx.textAlign = 'right';
     ctx.fillStyle = '#cfe9ff'; ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.03) + 'px "Space Grotesk", sans-serif';
-    ctx.fillText(Math.round(dist).toLocaleString() + ' km', W - pad, pad);
+    ctx.fillText(Math.round(dist).toLocaleString() + ' km', W - pad, top);
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
-    ctx.fillText('DEPTH', W - pad, pad + Math.round(Math.min(W, H) * 0.034));
+    ctx.fillText('DEPTH', W - pad, top + Math.round(Math.min(W, H) * 0.034));
     // current sector name (subtle, colored to the zone)
     if (zoneTintCur) {
       ctx.fillStyle = 'rgba(' + zoneTintCur.tint + ',0.9)'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
-      ctx.fillText(zoneTintCur.name, W - pad, pad + Math.round(Math.min(W, H) * 0.056));
+      ctx.fillText(zoneTintCur.name, W - pad, top + Math.round(Math.min(W, H) * 0.056));
     }
     if (best > 0) {
       ctx.fillStyle = Math.round(score) > best ? '#7CFFb2' : '#5a6276';
       ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.015) + 'px Inter, sans-serif';
-      ctx.fillText((Math.round(score) > best ? '★ NEW BEST' : 'BEST ' + best.toLocaleString()), W - pad, pad + Math.round(Math.min(W, H) * 0.058));
+      ctx.fillText((Math.round(score) > best ? '★ NEW BEST' : 'BEST ' + best.toLocaleString()), W - pad, top + Math.round(Math.min(W, H) * (zoneTintCur ? 0.08 : 0.058)));   // under the sector name, not on it
     }
     // boss health bar (top-center); flashes + labels ENRAGED below ~30% HP
     if (boss && boss.alive) {
@@ -2960,6 +2983,7 @@
     drawChallengeHUD();
     drawFrenzyHUD();
     drawChainMeter();
+    drawTouchButtons();
   }
 
   // ---- homing missile HUD: ammo pips + reload progress (bottom-left under shields) ----
@@ -2970,8 +2994,9 @@
     var ammoInt = Math.floor(missileAmmo);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillStyle = '#8a93a8'; ctx.font = '600 ' + Math.round(Math.min(W, H) * 0.014) + 'px Inter, sans-serif';
-    // place at bottom-left, offset right of the shields block
-    var sx = pad + sR * 3;
+    // place at bottom-left, right of the shields block (same geometry as drawHUD's chevrons)
+    var sRs = Math.max(7, Math.min(W, H) * 0.016), slots = Math.max(3, shields);
+    var sx = pad + sRs * 2 + (slots - 1) * sRs * 3 + sRs * 2.5;
     for (var a = 0; a < MSL_AMMO_MAX; a++) {
       var on = a < ammoInt;
       ctx.globalAlpha = on ? 1 : 0.25;
@@ -2982,8 +3007,9 @@
     ctx.fillStyle = missileAmmo > 0 ? '#ffb36b' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
     ctx.fillText('MSL', sx, sy - sR * 2.2);
-    // dash readout + cooldown — bottom-right near the ship
-    var dx2 = W - pad - Math.min(W, H) * 0.12, dy2 = H - pad;
+    // dash readout + cooldown — bottom-right, left of the boost meter (touch draws its own DASH button)
+    if (touchUI) return;
+    var dx2 = W - pad - Math.min(W, H) * 0.30, dy2 = H - pad;
     var ready = dashCd <= 0 && dashT <= 0;
     ctx.fillStyle = ready ? '#9be8ff' : '#5a6276';
     ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.016) + 'px "Space Grotesk", sans-serif';
@@ -3047,6 +3073,27 @@
   // bright white with a "READY" callout once full — doubles as the touch hit-target
   // (see chainMeterRect(), shared with the pointerdown handler) so the single-button
   // trigger works the same way on desktop (C key) and mobile (tap the gauge).
+  var touchUI = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  function drawTouchButtons() {
+    if (!touchUI || state !== 'play') return;
+    var dashReady = dashCd <= 0 && dashT <= 0;
+    var btns = [
+      { r: missileRect(), label: 'MSL ×' + Math.floor(missileAmmo), on: missileAmmo >= 1, col: '255,179,107', frac: 1 },
+      { r: dashRect(), label: 'DASH', on: dashReady, col: '155,232,255', frac: dashReady ? 1 : clamp(1 - dashCd / DASH_CD, 0, 1) }
+    ];
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 ' + Math.round(Math.min(W, H) * 0.032) + 'px "Space Grotesk", sans-serif';
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i], r = b.r, rad = r.h / 2;
+      ctx.beginPath(); ctx.moveTo(r.x + rad, r.y); ctx.arcTo(r.x + r.w, r.y, r.x + r.w, r.y + r.h, rad); ctx.arcTo(r.x + r.w, r.y + r.h, r.x, r.y + r.h, rad);
+      ctx.arcTo(r.x, r.y + r.h, r.x, r.y, rad); ctx.arcTo(r.x, r.y, r.x + r.w, r.y, rad); ctx.closePath();
+      ctx.fillStyle = 'rgba(' + b.col + ',' + (b.on ? 0.16 : 0.05) + ')'; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(' + b.col + ',' + (b.on ? 0.75 : 0.25) + ')'; ctx.stroke();
+      if (b.frac < 1) { ctx.fillStyle = 'rgba(' + b.col + ',0.5)'; ctx.fillRect(r.x + rad, r.y + r.h - 4, (r.w - rad * 2) * b.frac, 2); }
+      ctx.fillStyle = 'rgba(' + b.col + ',' + (b.on ? 1 : 0.45) + ')'; ctx.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+    }
+    ctx.restore();
+  }
   function chainMeterRect() {
     var w = Math.min(W, H) * 0.34, h = Math.round(Math.min(W, H) * 0.03);
     return { x: cx - w / 2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
@@ -3099,14 +3146,15 @@
 
   // touch: drag to steer (relative), tap to fire, hold = autofire
   var dragId = null, lastFx = 0, lastFy = 0, autofire = false;
-  function missileRect() {
-    var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
-    return { x: cx - w / 2 - Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
+  // Touch MSL / DASH buttons: drawn (drawTouchButtons) one row above the chain gauge, flanking it.
+  // They used to be invisible tap zones, and the missile one overlapped the chain gauge's left half.
+  function touchBtnRect(side) {
+    var cr = chainMeterRect(), w = Math.max(64, Math.min(W, H) * 0.16), h = Math.max(30, Math.round(Math.min(W, H) * 0.055));
+    var y = cr.y - h - 10;
+    return { x: side < 0 ? cx - w - 6 : cx + 6, y: y, w: w, h: h };
   }
-  function dashRect() {
-    var w = Math.min(W, H) * 0.14, h = Math.round(Math.min(W, H) * 0.03);
-    return { x: cx - w / 2 + Math.min(W, H) * 0.2, y: H - Math.round(Math.min(W, H) * 0.035) - h - 8, w: w, h: h };
-  }
+  function missileRect() { return touchBtnRect(-1); }
+  function dashRect() { return touchBtnRect(1); }
   canvas.addEventListener('pointerdown', function (e) {
     if (state !== 'play') return;
     // tapping the chain gauge fires the chain weapon instead of steering/autofire —
@@ -3117,17 +3165,16 @@
         fireChain(); return;
       }
     }
-    // tapping the missile gauge fires a homing missile (matches V on desktop)
-    if (missileAmmo > 0) {
+    // touch-only MSL / DASH buttons (desktop has V / X; a mouse click there should still steer + fire)
+    if (e.pointerType !== 'mouse') {
       var mr = missileRect();
-      if (e.clientX >= mr.x - 10 && e.clientX <= mr.x + mr.w + 10 && e.clientY >= mr.y - 22 && e.clientY <= mr.y + mr.h + 10) {
-        fireMissile(); return;
+      if (e.clientX >= mr.x - 6 && e.clientX <= mr.x + mr.w + 6 && e.clientY >= mr.y - 6 && e.clientY <= mr.y + mr.h + 6) {
+        if (missileAmmo > 0) fireMissile(); return;
       }
-    }
-    // tapping the dash gauge dashes (matches X on desktop)
-    var drr = dashRect();
-    if (e.clientX >= drr.x - 10 && e.clientX <= drr.x + drr.w + 10 && e.clientY >= drr.y - 22 && e.clientY <= drr.y + drr.h + 10) {
-      doDash(); return;
+      var drr = dashRect();
+      if (e.clientX >= drr.x - 6 && e.clientX <= drr.x + drr.w + 6 && e.clientY >= drr.y - 6 && e.clientY <= drr.y + drr.h + 6) {
+        doDash(); return;
+      }
     }
     dragId = e.pointerId; lastFx = e.clientX; lastFy = e.clientY; autofire = true; fire();
   }, { passive: true });
@@ -3149,6 +3196,22 @@
   setMuted(muted);   // sync the button glyph with the stored preference
 
   document.getElementById('resumeBtn').addEventListener('click', resumeBtnH);
+  var pauseBtn = document.getElementById('pauseBtn'), pauseBtnShown = false;
+  pauseBtn.addEventListener('click', function (e) { e.stopPropagation(); if (state === 'play' && !paused) togglePause(); pauseBtn.blur(); });
+  function syncPauseBtn() {
+    var want = state === 'play' && !paused;
+    if (want !== pauseBtnShown) { pauseBtnShown = want; pauseBtn.classList.toggle('hidden', !want); }
+  }
+  // Losing focus swallows keyups (alt-tab mid-turn kept the ship sliding): release held keys.
+  // Blur alone never pauses — browsers fire it for benign focus moves (an embedded iframe such as
+  // a preview toolbar, devtools), which paused runs at random. Only a hidden tab/app pauses.
+  function releaseKeys() { for (var k in keys) keys[k] = false; }
+  window.addEventListener('blur', releaseKeys);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) return;
+    releaseKeys(); dragId = null; autofire = false;
+    if (state === 'play' && !paused) togglePause();
+  });
   document.getElementById('quitPauseBtn').addEventListener('click', quitToIntro);
   var paMute = document.getElementById('paMute'), paRm = document.getElementById('paRm');
   if (paMute) paMute.addEventListener('change', function () { setMuted(paMute.checked); });
@@ -3460,7 +3523,7 @@
     get frenzy() { return frenzy; }, get frenzyHeat() { return frenzyHeat; }, triggerFrenzy: function () { triggerFrenzy(); }, forceFrenzyHeat: function (h) { frenzyHeat = clamp(h >= 0 ? h : frenzyMax, 0, frenzyMax); },
     get plasmaT() { return plasmaT; }, get plasmaWaves() { return plasmaWaves; }, forcePlasma: function () { plasmaT = PLASMA_DUR; },
     doDash: function () { doDash(); }, get dashCd() { return dashCd; }, get dashT() { return dashT; },
-    get paused() { return paused; }, togglePause: function () { togglePause(); }, setReducedMotion: function (v) { rmOverride = !!v; applyReducedMotion(); },
+    get paused() { return paused; }, togglePause: function () { togglePause(); }, get keys() { return keys; }, setReducedMotion: function (v) { rmOverride = !!v; applyReducedMotion(); },
     // ---- SIMURGH wingman hooks ----
     get wingmanUrl() { return wingmanUrl; }, get wingmanLinkUp() { return !!(wingmanEl && wingmanEl.classList.contains('link-up')); },
     wingmanTakeInbound: function () { return wingmanTakeInbound(); },
