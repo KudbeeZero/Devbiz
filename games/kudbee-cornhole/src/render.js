@@ -228,8 +228,9 @@ KCH.Render = {
     ctx.beginPath(); ctx.moveTo(-2.4, 5); ctx.lineTo(1.2, 5); ctx.lineTo(-0.2, 1.4); ctx.lineTo(2.6, 1.4); ctx.lineTo(-1.8, -5.4); ctx.lineTo(-0.9, -0.4); ctx.lineTo(-3.4, -0.4); ctx.closePath(); ctx.fill();
     ctx.lineWidth = 0.6; ctx.strokeStyle = '#2a1a10'; ctx.lineJoin = 'round'; ctx.stroke();
     ctx.font = '400 3.4px "Lilita One","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#2a3040';
-    ctx.scale(1, -1);
-    ctx.fillText('KUDBEE', 0, 9.8);
+    // Stay in the flipped frame: +y runs down the board here, so glyphs draw upright. (A second
+    // scale(1,-1) used to sit here and painted the wordmark upside down — only the U showed it.)
+    ctx.fillText('KUDBEE', 0, -9.8);
     ctx.restore();
   },
 
@@ -407,8 +408,9 @@ KCH.Render = {
       const q = this.proj(p.x, p.y, p.z);
       if (!q) continue;
       if (p.kind === 'dust') {
-        ctx.globalAlpha = a * 0.7; ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(110,90,60,0.5)'; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.arc(q.x, q.y, p.size * q.k * (1.5 - a * 0.5), 0, 6.283); ctx.fill(); ctx.stroke();
+        // a light puff: big opaque circles used to cover the bag right where it landed
+        ctx.globalAlpha = a * 0.38; ctx.fillStyle = '#fff6e4'; ctx.strokeStyle = 'rgba(110,90,60,0.35)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(q.x, q.y, p.size * q.k * 0.6 * (1.5 - a * 0.5), 0, 6.283); ctx.fill(); ctx.stroke();
       }
     }
     ctx.globalAlpha = 1;

@@ -66,6 +66,12 @@ KCH.Game = class {
 
   _afterSettle() {
     const m = this.match;
+    // "+1" over every bag that has come to rest on the board (holes already pop "+3")
+    for (const b of m.sim.bags) {
+      if (b.state !== 'board' || b.popped) continue;
+      b.popped = true;
+      this.popups.push({ x: b.x, y: b.y + 4, z: b.z, text: '+1', color: KCH.Render.TEAM[b.team].light, life: 1.1, age: 0, size: 28 });
+    }
     const r = m.afterSettle();
     if (r) {
       this.camTarget = 0;
@@ -208,8 +214,9 @@ KCH.Game = class {
     c.addEventListener('pointercancel', () => { this.aim.active = false; });
     c.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => this._onKey(e));
+    // A hidden tab/app pauses. Window blur deliberately does not: browsers fire it for benign
+    // focus moves (an embedded iframe such as a preview toolbar), which paused matches at random.
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
-    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
   }
 
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
