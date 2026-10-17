@@ -39,7 +39,8 @@ KAR.Game = class {
     const D = KAR.Store.data;
     const seed = (this.rng() * 4294967296) >>> 0;
     const day = KAR.Daily.day();
-    this.match = D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
+    if (D.mode === 5 && !KAR.tourOpen(D.tourLv, D)) D.tourLv = 0;
+    this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
     this.shared = -9; this.unlocked = false;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
@@ -49,6 +50,7 @@ KAR.Game = class {
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
     if (this.match.mode === 'trick') { this.hint = (this.match.daily ? 'DAILY #' + this.match.daily + '  ·  ' : '') + 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
     if (this.match.mode === 'swing') { this.hint = 'THE TARGET SWINGS  ·  LEAD IT  ·  LOOSE AS IT COMES TO YOU'; this.hintT = 6; }
+    if (this.match.mode === 'stage') { const L = this.match.def; this.hint = 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
     this._nextShot();
   }
 
@@ -67,8 +69,12 @@ KAR.Game = class {
 
   // Last-arrow pressure, shown across the top while that arrow is up.
   _drama() {
-    const m = this.match, n = m.needs(KAR.Store.data.best[m.distIdx]);
+    const m = this.match, D = KAR.Store.data, n = m.needs(m.mode === 'stage' ? D.tour.best[m.lv] : D.best[m.distIdx]);
     if (!n) return '';
+    if (m.mode === 'stage') {
+      if (n.clear !== null) return n.clear > 10 ? 'LAST ARROW' : 'LAST ARROW \u00b7 NEED ' + n.clear + ' TO CLEAR THE LEVEL';
+      return n.star3 !== null && n.star3 <= 10 ? 'LAST ARROW \u00b7 ' + n.star3 + ' FOR 3 STARS' : 'LAST ARROW';
+    }
     if (m.mode === 'range') {
       const parts = [];
       if (n.best !== null && n.best <= 0) return 'NEW BEST LOCKED IN \u00b7 FINISH IT!';
@@ -90,6 +96,8 @@ KAR.Game = class {
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
     else if (id === 'share') this._share();
+    else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; KAR.Store.save(); } }
+    else if (id === 'next') { if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
     else if (id === 'pause') this.togglePause();
     else if (id === 'resume') this.screen = 'play';
@@ -193,12 +201,12 @@ KAR.Game = class {
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
     // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
     // the last arrow of a range, and the CPU's X. The camera rides the arrow in, in slow motion.
-    const last = m.over && m.mode === 'range';
+    const last = m.over && (m.mode === 'range' || m.mode === 'stage');
     const hero = !res.trick && !!res.hit && (shooter === 0 ? (res.ring >= 9 || last || (res.ring >= 7 && this.rng() < 0.3)) : (res.x || (res.ring === 10 && this.rng() < 0.5)));
     this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
-    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
+    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
@@ -276,6 +284,14 @@ KAR.Game = class {
       dd.plays++; this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
       KAR.Store.save(); this.setScreen('over');
       if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
+      return;
+    }
+    if (m.mode === 'stage') {
+      const T = D.tour, i = m.lv, sc = m.total(0), st = m.stars(), wasOpen = KAR.tourOpen(i + 1, D);
+      this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); T.stars[i] = Math.max(T.stars[i], st);
+      this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D);
+      KAR.Store.save(); this.setScreen('over');
+      if (st >= 1) { this.audio.win(); this._burst(60 + st * 20); } else this.audio.lose();
       return;
     }
     if (m.mode === 'swing') {
@@ -404,12 +420,12 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    R.tOff = m.offAt ? m.offAt(m.T) : null;
+    R.tOff = m.offAt ? m.offAt(m.T) : null; R.venue = this.screen === 'menu' ? 0 : (m.venue || 0); R.railA = m.move === 'slide' ? m.def.amp : 0;
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);
     if (this.screen === 'menu' && R.drawMenuPhoto(ctx)) { /* photo carries its own target */ }
     else {
       R.drawWorld(ctx, this.time, m.wind);
-      if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, !!m.offAt);
+      if (m.mode === 'trick') R.drawBalloons(ctx, m, this.time); else R.drawTarget(ctx, this.time, m.wind, m.offAt ? (m.move || 'swing') : null);
       this._drawArrows(ctx);
     }
     if (this.screen !== 'menu') {

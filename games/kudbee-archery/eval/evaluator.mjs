@@ -38,7 +38,7 @@ const waitFor = (fn, ms = 20000) => page.waitForFunction(fn, null, { timeout: ms
 rec('boots-clean', errors.length === 0 && await G(() => KAR.UI.buttons.length > 0), `menu renders with ${await G(() => KAR.UI.buttons.length)} buttons, ${errors.length} console errors`);
 await page.screenshot({ path: `${OUT}/menu.png` });
 
-await click('d3'); await click('d2');
+await click('mode0'); await click('d3'); await click('d2');
 rec('settings-persist', await G(() => { const d = JSON.parse(localStorage.getItem('kudbee.archery.v1')); return d.dist === 2 && d.mode === 0; }), '50 m selected and saved');
 
 await click('play');
@@ -227,6 +227,31 @@ await clickWhen('share');
 const sh = await G(() => ({ t: KARGame.shareText || '', d: JSON.parse(localStorage.getItem('kudbee.archery.v1')).daily }));
 rec('daily-share', /Daily #\d+ \(\d{4}-\d\d-\d\d\) · \d+ pts/.test(sh.t) && sh.d.day === dl.d && sh.d.plays === 1, `share line: "${sh.t.split(' · http')[0]}"; today's plays saved`);
 await page.screenshot({ path: `${OUT}/daily-over.png` });
+
+// THE TOUR: fresh progress shows level 1 open and the rest locked; a cleared level saves its stars and NEXT LEVEL opens level 2
+await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.best.fill(0); D.tourLv = 0; KARGame.activate('menu'); }); await page.waitForTimeout(80);
+await click('mode5'); await page.waitForTimeout(80);
+const tiles = await G(() => ['L00', 'L01', 'L14'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'locked' : 'open') : 'none'; }));
+await page.screenshot({ path: `${OUT}/tour-menu.png` });
+await click('L01'); const stay = await G(() => KAR.Store.data.tourLv === 0);
+rec('tour-menu', tiles.join() === 'open,locked,locked' && stay, `level tiles on a fresh profile: 1 ${tiles[0]}, 2 ${tiles[1]}, 15 ${tiles[2]}; a locked tile can't be picked`);
+await click('play');
+const st1 = await G(() => ({ m: KARGame.match.mode, lv: KARGame.match.lv, hint: KARGame.hint }));
+// shoot the level clean: a bot with a steady hand that reads the wind exactly
+await G(() => { const g = KARGame, m = g.match, rng = KAR.Util.rng(5); g._clear = () => { if (g.bp !== 'ready' || m.over) return; const s = KAR.Bot.shot(m, rng, 0, 0); g.drawing = true; g.draw = 1; g.aimX = s.aimX; g.aimY = s.aimY; g.sway = { x: 0, y: 0 }; g._loose(); if (g.flight) g.flight.skip = true; }; });
+for (let i = 0; i < 12 && !(await G(() => KARGame.screen === 'over')); i++) { await waitFor(() => (KARGame.bp === 'ready' && !KARGame.drawing) || KARGame.screen === 'over', 12000); await G(() => KARGame._clear()); await page.waitForTimeout(100); }
+await waitFor(() => KARGame.screen === 'over', 12000);
+await page.waitForTimeout(700); await page.screenshot({ path: `${OUT}/tour-clear.png` });
+const cl = await G(() => ({ n: KARGame.match.arrows[0].length, tot: KARGame.match.total(0), over: KARGame.screen === 'over', st: KARGame.match.stars(), saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).tour.stars[0], next: KAR.UI.buttons.some(b => b.id === 'next' && !b.disabled), un: KARGame.unlocked }));
+rec('tour-clear', st1.m === 'stage' && st1.lv === 0 && /^LEVEL 1/.test(st1.hint) && cl.over && cl.st >= 1 && cl.saved === cl.st && cl.next && cl.un, `level 1 shot clean (${cl.n} arrows, ${cl.tot} points, ${cl.st} stars saved); the card offers NEXT LEVEL and says level 2 is unlocked`);
+await click('next');
+const st2 = await G(() => ({ lv: KARGame.match.lv, saved: KAR.Store.data.tourLv }));
+rec('tour-next', st2.lv === 1 && st2.saved === 1, `NEXT LEVEL starts level ${st2.lv + 1}`);
+// the venues: each paints its own scene, and moving levels draw their rail / swing frame
+const venues = await G(() => { const out = []; KAR.Store.data.tour.stars.fill(1); for (const lv of [2, 6, 10]) { KAR.Store.data.tourLv = lv; KARGame.startMatch(); KARGame._render(); out.push(KAR.Render.venue + ':' + (KARGame.match.move || '-')); } return out; });
+await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/tour-venue.png` });
+rec('tour-venues', venues.join() === '0:slide,1:swing,2:-' && errors.length === 0, `levels 3 / 7 / 11 render in venue:move ${venues.join(', ')} with no errors`);
+await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 
 // --- a phone: real touch input (CDP touch events, coarse pointer) ---
 {

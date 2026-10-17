@@ -96,6 +96,8 @@ KAR.Render = {
     const W = this.W, H = this.H, hy = Math.max(60, Math.min(H - 120, this.horizonY()));
     const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#4aa8ff'); sky.addColorStop(1, '#d6f1ff');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    if (this.venue === 1) return this._forest(ctx, t, hy);
+    if (this.venue === 2) return this._mountain(ctx, t, hy);
     const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
     if (ph) {
       const s = Math.max(W / ph.width, hy / ph.height);
@@ -115,9 +117,75 @@ KAR.Render = {
     for (let x = -10; x < W + 20; x += 11 + rnd() * 13) { const th = 10 + rnd() * 20; ctx.fillStyle = rnd() > 0.5 ? '#2f7a3c' : '#3a8a45'; ctx.beginPath(); ctx.arc(x, hy - 6 - th * 0.35, th * 0.55, 0, 7); ctx.fill(); }
     this._field(ctx, hy);
   },
-  _field(ctx, hy, photo) {
+  // ---- the TOUR venues: painted scenes keyed to the horizon, so they track the camera like the photos do ----
+  // pines: a ragged band of conifer silhouettes along y = base (h: typical height, seed: layout)
+  _pines(ctx, base, h, col, seed, step) {
+    const W = this.W, rnd = KAR.Util.rng(seed);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.rect(-20, base - 2, W + 40, 60);
+    for (let x = -20; x < W + 40; x += step * (0.55 + rnd() * 0.9)) {
+      const th = h * (0.55 + rnd() * 0.75), w = th * (0.2 + rnd() * 0.06), lean = (rnd() - 0.5) * th * 0.04;
+      for (let k = 0; k < 4; k++) {                       // four tiers of boughs, narrowing to the tip
+        const top = base - th * (0.3 + k * 0.24), bot = base - th * k * 0.2 + 2, ww = w * (1 - k * 0.22);
+        ctx.moveTo(x + lean * (k + 1), top - (k === 3 ? th * 0.1 : 0)); ctx.lineTo(x + ww, bot); ctx.lineTo(x + ww * 0.35, bot - th * 0.03); ctx.lineTo(x - ww * 0.35, bot - th * 0.03); ctx.lineTo(x - ww, bot); ctx.closePath();
+      }
+    }
+    ctx.fill();
+  },
+  _forest(ctx, t, hy) {
     const W = this.W, H = this.H;
-    const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, photo ? '#7aa83e' : '#79cc55'); gg.addColorStop(1, photo ? '#4a8a2e' : '#3f9a36');
+    const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#5f9ad8'); sky.addColorStop(0.6, '#bcd8e8'); sky.addColorStop(1, '#ffe2a8');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hy + 2);
+    const sx = 170, sy = hy - 170, sg = ctx.createRadialGradient(sx, sy, 8, sx, sy, 300); sg.addColorStop(0, 'rgba(255,246,210,1)'); sg.addColorStop(0.12, 'rgba(255,230,160,0.8)'); sg.addColorStop(1, 'rgba(255,220,150,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    for (let i = 0; i < 4; i++) { const cx = ((i * 290 + t * (4 + i)) % (W + 300)) - 150, cy = 40 + (i % 2) * 44; ctx.beginPath(); ctx.ellipse(cx, cy, 90, 16, 0, 0, 7); ctx.ellipse(cx + 50, cy + 6, 60, 12, 0, 0, 7); ctx.fill(); }
+    const hill = (base, amp, col, f, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hy + 2); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, hy - base - Math.sin(x * f + ph) * amp - Math.sin(x * f * 2.3 + ph * 2) * amp * 0.4); ctx.lineTo(W, hy + 2); ctx.closePath(); ctx.fill(); };
+    hill(70, 30, '#a9c3c9', 0.005, 2);
+    this._pines(ctx, hy - 34, 70, '#6f9a8a', 11, 26); this._pines(ctx, hy - 14, 90, '#3f6e52', 12, 30); this._pines(ctx, hy + 2, 120, '#24503a', 13, 38);
+    // shafts of late light through the trees
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 5; i++) { const a = 0.55 + i * 0.13 + Math.sin(t * 0.3 + i) * 0.02, g = ctx.createLinearGradient(sx, sy, sx + Math.cos(a) * 700, sy + Math.sin(a) * 700); g.addColorStop(0, 'rgba(255,220,150,0.16)'); g.addColorStop(1, 'rgba(255,220,150,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(a - 0.035) * 800, sy + Math.sin(a - 0.035) * 800); ctx.lineTo(sx + Math.cos(a + 0.035) * 800, sy + Math.sin(a + 0.035) * 800); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    this._field(ctx, hy, false, ['#86bb4c', '#3a7a2c']);
+    const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, H * 0.95); v.addColorStop(0, 'rgba(40,30,10,0)'); v.addColorStop(1, 'rgba(40,30,10,0.28)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  },
+  _mountain(ctx, t, hy) {
+    const W = this.W, H = this.H;
+    const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#2c3470'); sky.addColorStop(0.45, '#8a5a9a'); sky.addColorStop(0.8, '#f2876a'); sky.addColorStop(1, '#ffcf7a');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hy + 2);
+    const sx = 700, sy = hy - 64, sg = ctx.createRadialGradient(sx, sy, 10, sx, sy, 360); sg.addColorStop(0, 'rgba(255,240,190,0.95)'); sg.addColorStop(0.1, 'rgba(255,190,110,0.6)'); sg.addColorStop(1, 'rgba(255,150,90,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy + 2);
+    ctx.beginPath(); ctx.arc(sx, sy, 34, 0, 6.283); ctx.fillStyle = '#fff1c4'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,200,170,0.55)';
+    for (let i = 0; i < 4; i++) { const cx = ((i * 270 + t * (3 + i)) % (W + 300)) - 150, cy = 60 + (i % 2) * 50; ctx.beginPath(); ctx.ellipse(cx, cy, 110, 9, 0, 0, 7); ctx.ellipse(cx + 70, cy + 7, 70, 7, 0, 0, 7); ctx.fill(); }
+    // two ranges of peaks: the far one hazy violet with snow, the near one dark
+    const range = (base, hgt, col, snow, seed, n) => {
+      const rnd = KAR.Util.rng(seed), pts = [];
+      for (let i = 0; i <= n * 2; i++) pts.push([i * (W + 120) / (n * 2) - 60 + (rnd() - 0.5) * 30, base - hgt * (i % 2 ? 0.5 + rnd() * 0.5 : 0.08 + rnd() * 0.22)]);
+      ctx.beginPath(); ctx.moveTo(-60, hy + 2); pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(W + 60, hy + 2); ctx.closePath();
+      const g = ctx.createLinearGradient(0, base - hgt, 0, hy); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]); ctx.fillStyle = g; ctx.fill();
+      // the lit (sun-side, right) face of each peak, then a snow cap with a ragged lower edge
+      for (let i = 1; i < pts.length - 1; i += 2) {
+        const [px, py] = pts[i], [lx, ly] = pts[i - 1], [rx, ry] = pts[i + 1], L = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+        const foot = [px + (rx - px) * 0.15, Math.max(ly, ry)];
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(rx, ry); ctx.lineTo(foot[0], foot[1]); ctx.closePath(); ctx.fillStyle = 'rgba(255,170,140,0.16)'; ctx.fill();
+        if (!snow || base - py < hgt * 0.55) continue;
+        const f = 0.3, a = L([px, py], [lx, ly], f), b = L([px, py], [rx, ry], f * 0.85), m = L(a, b, 0.5);
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(b[0], b[1]); ctx.lineTo(L(b, m, 0.5)[0], m[1] - (b[1] - py) * 0.12); ctx.lineTo(m[0], m[1] + (b[1] - py) * 0.18); ctx.lineTo(L(a, m, 0.5)[0], m[1] - (a[1] - py) * 0.1); ctx.lineTo(a[0], a[1]); ctx.closePath();
+        ctx.fillStyle = snow; ctx.fill();
+      }
+    };
+    range(hy - 26, 190, ['#8c7ab8', '#c99aa8'], 'rgba(255,232,228,0.92)', 5, 5);
+    range(hy - 8, 100, ['#4e4a7a', '#6e5f86'], null, 9, 8);
+    this._pines(ctx, hy + 2, 60, '#2a2f4a', 21, 22);
+    this._field(ctx, hy, false, ['#a8b45a', '#466a2e']);
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,200,170,0.3)'; ctx.fillRect(0, hy, W, H - hy); ctx.restore();
+    const v = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(30,10,40,0)'); v.addColorStop(1, 'rgba(30,10,40,0.35)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  },
+  _field(ctx, hy, photo, pal) {
+    const W = this.W, H = this.H;
+    const gg = ctx.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, pal ? pal[0] : photo ? '#7aa83e' : '#79cc55'); gg.addColorStop(1, pal ? pal[1] : photo ? '#4a8a2e' : '#3f9a36');
     ctx.fillStyle = gg; ctx.fillRect(0, hy, W, H - hy);
     const D = this.dist;
     for (let i = 0; i < 40; i++) {
@@ -173,7 +241,8 @@ KAR.Render = {
     // legs + wooden frame
     const bw = F * 0.62 + 0.06;                       // half-width of the straw butt
     const legTop = Y - bw, bx = bw * 0.9;
-    if (swing) this._gantry(ctx, o, bw, Y, D, lw);
+    if (swing === 'slide') this._rail(ctx, o, bw, bx, Y, D, lw);
+    else if (swing) this._gantry(ctx, o, bw, Y, D, lw);
     else for (const s of [-1, 1]) { this.line3(ctx, [s * bx, legTop + 0.1, D + 0.15], [s * (bx + 0.35), 0, D + 0.5], OUT, lw * 4.2); this.line3(ctx, [s * bx, legTop + 0.1, D + 0.15], [s * (bx + 0.35), 0, D + 0.5], '#b9884e', lw * 2.6); }
     // straw butt: a rounded square boss 45 cm deep, built in 3D so it foreshortens when the camera swings round
     const rc = 0.12, T = 0.45, rim = (z) => {
@@ -214,7 +283,7 @@ KAR.Render = {
     if (ring(R * 0.05)) { ctx.strokeStyle = 'rgba(20,20,30,0.6)'; ctx.lineWidth = Math.max(0.8, lw * 0.5); ctx.stroke(); }
     if (ring(R)) { ctx.strokeStyle = OUT; ctx.lineWidth = lw * 1.4; ctx.stroke(); }
     // pennants either side, streaming with the wind
-    const fx = swing ? 2.9 : bw + 0.35;
+    const fx = swing === 'slide' ? (this.railA || 1) + bw + 0.8 : swing ? 2.9 : bw + 0.35;
     this._flag(ctx, -fx, D + 0.3, wind, t, '#ff5d5d'); this._flag(ctx, fx, D + 0.3, wind, t, '#ffd34d');
   },
   // SWINGER frame: two timber posts and a cross-beam, two ropes down to the top of the boss (parallel ropes keep it upright)
@@ -223,6 +292,17 @@ KAR.Render = {
     for (const s of [-1, 1]) { this.line3(ctx, [s * X, 0, zb], [s * X, top + 0.1, zb], OUT, lw * 5); this.line3(ctx, [s * X, 0, zb], [s * X, top + 0.1, zb], '#a87a44', lw * 3.2); }
     this.line3(ctx, [-X - 0.15, top, zb], [X + 0.15, top, zb], OUT, lw * 5.5); this.line3(ctx, [-X - 0.15, top, zb], [X + 0.15, top, zb], '#b9884e', lw * 3.6);
     for (const s of [-1, 1]) { const ax = s * bw * 0.7; this.line3(ctx, [ax, top, D + 0.1], [ax + o.x, Y + bw + o.y - 0.02, D + 0.1], OUT, lw * 2.2); this.line3(ctx, [ax, top, D + 0.1], [ax + o.x, Y + bw + o.y - 0.02, D + 0.1], '#e8d6a8', lw * 1.1); }
+  },
+  // ON THE RAIL: a timber beam on trestles across the range, the boss riding it on a two-wheel trolley
+  _rail(ctx, o, bw, bx, Y, D, lw) {
+    const OUT = this.OUT, A = (this.railA || 1) + bw + 0.4, ry = Y - bw - 0.16, z = D + 0.2;
+    for (const x of [-A, -A / 3, A / 3, A]) for (const s of [-1, 1]) { this.line3(ctx, [x, ry, z], [x + s * 0.22, 0, z + 0.15], OUT, lw * 3.6); this.line3(ctx, [x, ry, z], [x + s * 0.22, 0, z + 0.15], '#8a6236', lw * 2); }
+    this.line3(ctx, [-A - 0.1, ry, z], [A + 0.1, ry, z], OUT, lw * 5.5); this.line3(ctx, [-A - 0.1, ry, z], [A + 0.1, ry, z], '#b9884e', lw * 3.4);
+    this.line3(ctx, [-A, ry + 0.035, z], [A, ry + 0.035, z], '#c9d1d9', lw * 1.2);
+    for (const s of [-1, 1]) {
+      const x = o.x + s * bx * 0.8; this.line3(ctx, [x, Y - bw + 0.05, D + 0.1], [x, ry + 0.06, z], OUT, lw * 3.4); this.line3(ctx, [x, Y - bw + 0.05, D + 0.1], [x, ry + 0.06, z], '#6a4a2a', lw * 2);
+      const w = this.proj(x, ry + 0.06, z); if (w) { const r = Math.max(2.5, 0.06 * w.k); ctx.beginPath(); ctx.arc(w.x, w.y, r, 0, 6.283); ctx.fillStyle = '#3a414c'; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke(); ctx.beginPath(); ctx.arc(w.x, w.y, r * 0.35, 0, 6.283); ctx.fillStyle = '#c9d1d9'; ctx.fill(); }
+    }
   },
   _flag(ctx, x, z, wind, t, col) {
     const top = this.proj(x, 1.9, z), bot = this.proj(x, 0, z); if (!top || !bot) return;
@@ -378,11 +458,12 @@ KAR.Render = {
   bow(ctx, sx, sy, draw, team, t, rel, o) {
     o = o || {};
     const col = this.TEAM[team || 0], OUT = this.OUT, U = KAR.Util;
-    const F = 330, ZN = 0.07, GX = 0.045, GZ = 0.74, MID = -0.06, GRIP = -0.15;
+    const F = 330, ZN = 0.07, GX = 0.085, GZ = 0.74, MID = -0.06, GRIP = -0.15;
     let p = U.clamp(draw, 0, 1), roll = 0, ox = sx, oy = sy, vib = 0;
     if (rel > 0) {
-      const e = U.easeOut(rel); p = 0; roll = 0.9 * e; ox -= 30 * e; oy += 40 * e + 110 * rel * rel;
-      vib = Math.sin(rel * 70) * (1 - rel) * 0.014;
+      const e = U.easeOut(rel); roll = 0.9 * e; ox -= 30 * e; oy += 40 * e + 110 * rel * rel;
+      p = -0.16 * Math.sin(rel * 34) * (1 - rel) * (1 - rel);                // the limbs whip past brace and ring down
+      vib = Math.sin(rel * 90) * (1 - rel) * (1 - rel) * 0.022;
     } else {
       oy += (1 - U.easeOut(Math.min(1, p * 3.5))) * 170;                 // the bow comes up as the draw starts
       const c = o.creep || 0;
@@ -400,7 +481,7 @@ KAR.Render = {
     // limbs: they bend back toward the archer as the draw comes on, and the recurve curls unroll
     const k = 0.298 + 0.096 * p, curl = 1.2 - 0.7 * p;
     // the eye sits right of the bow's plane, so a limb bending back toward the archer swings left on screen
-    const YS = Math.sin(0.45), YC = Math.cos(0.45), yaw = (y, d) => ({ x: GX + d * YS, y, z: GZ + d * YC });
+    const YS = Math.sin(0.32), YC = Math.cos(0.32), yaw = (y, d) => ({ x: GX + d * YS, y, z: GZ + d * YC });
     const limb = sg => { const pts = []; for (let i = 0; i <= 16; i++) { const s = i / 16; pts.push({ s, v: yaw(MID + sg * (0.27 + 0.55 * s - 0.04 * p * s * s), 0.03 * s - k * s * s + curl * Math.max(0, s - 0.78) ** 2) }); } return pts; };
     const drawLimb = pts => {
       const L = [], Rr = [];
@@ -441,7 +522,7 @@ KAR.Render = {
       return { p, q, wa, wb, nx, ny, ux: dx / dl, uy: dy / dl };
     };
     // the bow hand sits on the grip; drawn after the arm (below) in its own 2D frame
-    const bh = PA({ x: GX, y: GRIP, z: GZ - 0.02 }), hs = 0.1 * bh.s;
+    const bh = PA({ x: GX, y: GRIP, z: GZ - 0.02 }), hs = 0.112 * bh.s;
 
     // riser: dark wood, cut away into a sight window above the grip, a team-colour stripe down the back
     const RT = MID + 0.27, RB = MID - 0.27, hw = 0.019;
@@ -501,7 +582,7 @@ KAR.Render = {
     // nock: on the braced string at rest, under the chin at full draw
     const brace = yaw(-0.075, -0.21), anchor = { x: 0.02, y: -0.11, z: 0.035 };
     const nock = lerp3(brace, anchor, U.easeOut(p) * 0.35 + p * 0.65);
-    const REST = { x: 0.027, y: -0.075, z: GZ - 0.01 }, CLICK_Z = GZ + 0.025;
+    const REST = { x: GX - 0.031, y: -0.075, z: GZ - 0.01 }, CLICK_Z = GZ + 0.025;
     let tip = null;
     if (rel <= 0) {
       // the arrow: shaft from the nock through the rest, three vanes at the back, a steel point
@@ -510,12 +591,17 @@ KAR.Render = {
       tip = at(0.74);
       const sh = seg(nock, tip);
       if (sh) {
-        const N = 12; let prev = Pr(sh[0]);
-        for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sh[0], sh[1], i / N)), w = Math.max(2.4, 0.008 * (q.s + prev.s) / 2);
-          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w + 3; ctx.strokeStyle = OUT; ctx.stroke(); prev = q; }
+        // close to the eye it is out of focus: wide segments are drawn soft, with no outline, and capped in width
+        const N = 14, W8 = s => Math.max(2.4, 0.008 * s), soft = w => w > 9;
+        let prev = Pr(sh[0]);
+        for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sh[0], sh[1], i / N)), w = W8((q.s + prev.s) / 2);
+          if (!soft(w)) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w + 3; ctx.strokeStyle = OUT; ctx.stroke(); } prev = q; }
         prev = Pr(sh[0]);
-        for (let i = 1; i <= N; i++) { const f = i / N, q = Pr(lerp3(sh[0], sh[1], f)), w = Math.max(2.4, 0.008 * (q.s + prev.s) / 2);
-          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y); ctx.lineWidth = w; ctx.strokeStyle = f > 0.96 ? '#c9d1d9' : '#f2e6c8'; ctx.stroke(); prev = q; }
+        for (let i = 1; i <= N; i++) { const f = i / N, q = Pr(lerp3(sh[0], sh[1], f)), w = W8((q.s + prev.s) / 2);
+          ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y);
+          if (soft(w)) { ctx.lineWidth = Math.min(16, w); ctx.strokeStyle = 'rgba(242,230,200,' + Math.max(0.25, Math.min(0.85, 9 / w)).toFixed(2) + ')'; }
+          else { ctx.lineWidth = w; ctx.strokeStyle = f > 0.96 ? '#c9d1d9' : '#f2e6c8'; }
+          ctx.stroke(); prev = q; }
         // vanes - big and soft while the nock is close to the eye
         const ux = d.z, uz = -d.x, ul = Math.hypot(ux, uz) || 1, u = { x: ux / ul, y: 0, z: uz / ul };
         const v = { x: u.y * d.z - u.z * d.y, y: u.z * d.x - u.x * d.z, z: u.x * d.y - u.y * d.x };
@@ -523,11 +609,19 @@ KAR.Render = {
           const ca = Math.cos(ang), sa = Math.sin(ang), dir = { x: u.x * ca + v.x * sa, y: u.y * ca + v.y * sa, z: u.z * ca + v.z * sa };
           const off = (s, h) => { const b = at(s); return { x: b.x + dir.x * h, y: b.y + dir.y * h, z: b.z + dir.z * h }; };
           const pts = [off(0.025, 0), off(0.035, 0.016), off(0.075, 0.013), off(0.115, 0)];
-          if (pts.some(q => rot(q).z < ZN + 0.02)) continue;
+          if (pts.some(q => rot(q).z < 0.16)) continue;           // right under the eye they are a blur, out of view
           ctx.beginPath(); pts.forEach((q, i) => { const r = P(q); i ? ctx.lineTo(r.x, r.y) : ctx.moveTo(r.x, r.y); }); ctx.closePath();
           ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
         }
       }
+    }
+    if (rel > 0 && rel < 0.16) {
+      const k = rel / 0.16, a = P(REST), tx = ox + (a.x - ox) * 0.05, ty = oy + (a.y - oy) * 0.05, hx = a.x + (tx - a.x) * Math.min(1, k * 2.2), hy = a.y + (ty - a.y) * Math.min(1, k * 2.2);
+      const g = ctx.createLinearGradient(a.x, a.y, hx, hy); g.addColorStop(0, 'rgba(255,248,225,0)'); g.addColorStop(1, 'rgba(255,248,225,' + (0.9 * (1 - k)).toFixed(3) + ')');
+      ctx.beginPath(); ctx.moveTo(a.x - 9, a.y + 4); ctx.lineTo(hx, hy); ctx.lineTo(a.x + 9, a.y + 4); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+      // and a puff of light where it leaves through the aperture
+      const fl = Math.max(0, 1 - Math.abs(k - 0.45) / 0.45), rg = ctx.createRadialGradient(tx, ty, 0, tx, ty, 26 + 30 * k);
+      rg.addColorStop(0, 'rgba(255,250,230,' + (0.75 * fl).toFixed(3) + ')'); rg.addColorStop(1, 'rgba(255,250,230,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(tx, ty, 26 + 30 * k, 0, 6.283); ctx.fill();
     }
     // clicker: a thin blade on the riser that rides on the arrow until the point is drawn past it
     { const passed = !tip || tip.z < CLICK_Z, top = P({ x: GX - hw - 0.002, y: -0.025, z: CLICK_Z }), bot = P({ x: passed ? GX - hw - 0.002 : GX - hw - 0.009, y: passed ? -0.07 : -0.069, z: CLICK_Z });
@@ -535,12 +629,16 @@ KAR.Render = {
 
     // string: tip to nock to tip - fine and sharp at the bow, a soft blur where it passes the eye
     const sn = rel > 0 ? { x: brace.x + vib, y: brace.y, z: brace.z } : nock;
+    if (rel > 0 && rel < 0.5) for (const g of [-1, 1]) {           // the shiver: a faint blur either side of the string
+      const gn = { x: brace.x - g * Math.abs(vib) * 1.4, y: brace.y, z: brace.z };
+      for (const end of [tipU, tipL]) { const a = P(end), b = P(gn); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,246,224,' + (0.45 * (1 - rel * 2)).toFixed(3) + ')'; ctx.stroke(); }
+    }
     for (const end of [tipU, tipL]) {
       const sg = seg(end, sn); if (!sg) continue;
       const N = 10; let prev = Pr(sg[0]);
       for (let i = 1; i <= N; i++) { const q = Pr(lerp3(sg[0], sg[1], i / N)), w = Math.max(1.6, Math.min(9, 0.0024 * q.s));
         ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(q.x, q.y);
-        if (w > 4) { ctx.lineWidth = w; ctx.strokeStyle = 'rgba(255,246,224,' + Math.min(0.7, 3 / w) + ')'; ctx.stroke(); }
+        if (w > 4) { ctx.lineWidth = w; ctx.strokeStyle = 'rgba(255,246,224,' + Math.min(0.5, 2.2 / w).toFixed(3) + ')'; ctx.stroke(); }
         else { ctx.lineWidth = w + 1.6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = w; ctx.strokeStyle = '#fff6e0'; ctx.stroke(); }
         prev = q; }
     }
@@ -552,7 +650,7 @@ KAR.Render = {
       const W = { x: nock.x + 0.055, y: nock.y - 0.018, z: nock.z - 0.035 }, E = { x: 0.34, y: -0.1, z: -0.25 }, M = along(W, E, 0.35);
       tube(W, M, 0.029, 0.04, SKIN, 0.1, P); tube(M, E, 0.046, 0.056, SLEEVE, 0.1, P);
       const n = P(nock), ns = 0.085 * n.s, wq = P(W);
-      this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns });
+      this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns }, 0.029 * wq.s / ns);
     }
     ctx.restore();
   },
@@ -561,51 +659,68 @@ KAR.Render = {
   // translate + scale, so the anatomy is drawn once, with care, at any size. Light comes from the upper left.
   SKIN3: ['#ffe0c4', '#f2bb8c', '#c4855a'],
   _skinFill(ctx, x0, y0, x1, y1) { const g = ctx.createLinearGradient(x0, y0, x1, y1), c = this.SKIN3; g.addColorStop(0, c[0]); g.addColorStop(0.45, c[1]); g.addColorStop(1, c[2]); return g; },
+  // Every piece of a hand is drawn in two passes: pass 0 lays a heavy outline under the whole hand, pass 1 fills
+  // the pieces in order with a fine inner line - so a hand reads as one clean silhouette, the fingers parted by
+  // thin skin-tone lines instead of black seams. INK: the fine line between overlapping pieces.
+  INK: 'rgba(128,60,30,0.55)',
+  _two(parts) { for (const pass of [0, 1]) for (const f of parts) f(pass); },
   // a finger or thumb: a quadratic bone path base -> joint -> tip, tapering r0 -> r1 to a round tip, shaded
   // across its width; a crease at the middle joint, and a nail near the tip on side `nail` (+1 / -1, 0 = none)
-  _finger(ctx, b, j, t, r0, r1, lw, nail) {
+  _finger(ctx, b, j, t, r0, r1, lw, nail, pass) {
     const N = 12, L = [], Rr = [];
     let mid = null;
     for (let i = 0; i <= N; i++) {
       const u = i / N, x = (1 - u) * (1 - u) * b.x + 2 * u * (1 - u) * j.x + u * u * t.x, y = (1 - u) * (1 - u) * b.y + 2 * u * (1 - u) * j.y + u * u * t.y;
       const dx = 2 * (1 - u) * (j.x - b.x) + 2 * u * (t.x - j.x), dy = 2 * (1 - u) * (j.y - b.y) + 2 * u * (t.y - j.y), dl = Math.hypot(dx, dy) || 1;
-      const r = r0 + (r1 - r0) * Math.pow(u, 0.8), nx = -dy / dl, ny = dx / dl;
+      const r = r0 + (r1 - r0) * Math.pow(u, 0.8) + 0.012 * Math.sin(u * Math.PI * 2) * (u > 0.4 ? 1 : 0), nx = -dy / dl, ny = dx / dl;   // a slight swell at the middle knuckle
       L.push([x + nx * r, y + ny * r]); Rr.push([x - nx * r, y - ny * r]);
       if (i === N / 2) mid = { x, y, nx, ny, r, dx: dx / dl, dy: dy / dl };
     }
     const an = Math.atan2(t.y - (L[N - 1][1] + Rr[N - 1][1]) / 2, t.x - (L[N - 1][0] + Rr[N - 1][0]) / 2);
     const path = () => { ctx.beginPath(); L.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.arc(t.x, t.y, r1, an + Math.PI / 2, an - Math.PI / 2, true); for (let i = N; i >= 0; i--) ctx.lineTo(Rr[i][0], Rr[i][1]); ctx.closePath(); };
+    if (pass === 0) { path(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
     const lit = mid.ny < 0 ? 1 : -1;
     path(); ctx.fillStyle = this._skinFill(ctx, mid.x + mid.nx * mid.r * lit, mid.y + mid.ny * mid.r * lit, mid.x - mid.nx * mid.r * lit, mid.y - mid.ny * mid.r * lit); ctx.fill();
-    ctx.lineWidth = lw * 1.7; ctx.strokeStyle = this.OUT; ctx.stroke();
-    // crease over the middle joint
-    ctx.beginPath(); ctx.moveTo(mid.x + mid.nx * mid.r * 0.55, mid.y + mid.ny * mid.r * 0.55);
-    ctx.quadraticCurveTo(mid.x + mid.dx * mid.r * 0.3, mid.y + mid.dy * mid.r * 0.3, mid.x - mid.nx * mid.r * 0.55, mid.y - mid.ny * mid.r * 0.55);
-    ctx.lineWidth = lw; ctx.strokeStyle = 'rgba(150,80,45,0.45)'; ctx.stroke();
+    ctx.lineWidth = lw; ctx.strokeStyle = this.INK; ctx.stroke();
+    // a soft highlight along the lit side
+    ctx.beginPath(); for (let i = 2; i <= N - 1; i++) { const P = lit > 0 ? L[i] : Rr[i], Q = lit > 0 ? Rr[i] : L[i], x = P[0] + (Q[0] - P[0]) * 0.22, y = P[1] + (Q[1] - P[1]) * 0.22; i > 2 ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.lineWidth = Math.max(lw, r1 * 0.35); ctx.strokeStyle = 'rgba(255,240,226,0.4)'; ctx.stroke();
+    // creases over the middle joint
+    for (const k of [-0.18, 0.18]) {
+      const cx = mid.x + mid.dx * mid.r * k, cy = mid.y + mid.dy * mid.r * k;
+      ctx.beginPath(); ctx.moveTo(cx + mid.nx * mid.r * 0.5, cy + mid.ny * mid.r * 0.5);
+      ctx.quadraticCurveTo(cx + mid.dx * mid.r * 0.25, cy + mid.dy * mid.r * 0.25, cx - mid.nx * mid.r * 0.5, cy - mid.ny * mid.r * 0.5);
+      ctx.lineWidth = lw * 0.8; ctx.strokeStyle = 'rgba(150,80,45,0.4)'; ctx.stroke();
+    }
     if (nail) {
-      const ca = Math.cos(an), sa = Math.sin(an), cx = t.x - ca * r1 * 0.75 - sa * r1 * 0.32 * nail, cy = t.y - sa * r1 * 0.75 + ca * r1 * 0.32 * nail;
-      ctx.beginPath(); ctx.ellipse(cx, cy, r1 * 0.62, r1 * 0.46, an, 0, 6.283); ctx.fillStyle = '#f9d6c0'; ctx.fill(); ctx.lineWidth = lw * 0.9; ctx.strokeStyle = 'rgba(150,80,45,0.55)'; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(cx - ca * r1 * 0.15, cy - sa * r1 * 0.15, r1 * 0.25, r1 * 0.12, an, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
+      const ca = Math.cos(an), sa = Math.sin(an), cx = t.x - ca * r1 * 0.72 - sa * r1 * 0.3 * nail, cy = t.y - sa * r1 * 0.72 + ca * r1 * 0.3 * nail;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r1 * 0.62, r1 * 0.46, an, 0, 6.283); ctx.fillStyle = '#fbdccb'; ctx.fill(); ctx.lineWidth = lw * 0.8; ctx.strokeStyle = 'rgba(150,80,45,0.5)'; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx - ca * r1 * 0.15, cy - sa * r1 * 0.15, r1 * 0.25, r1 * 0.11, an, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fill();
     }
   },
-  _knuckle(ctx, x, y, r) { const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r); g.addColorStop(0, 'rgba(255,240,225,0.32)'); g.addColorStop(1, 'rgba(255,240,225,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); },
-  // back-of-hand plate from the wrist (two corners) round to the knuckle line, softly shaded, with tendons
-  _handBack(ctx, w, hw, pts, lw) {
+  _knuckle(ctx, x, y, r) { const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r); g.addColorStop(0, 'rgba(255,240,225,0.4)'); g.addColorStop(1, 'rgba(255,240,225,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); },
+  // back-of-hand plate from the wrist (two corners) round to the knuckle line, softly shaded, with tendons. Its
+  // outline is open at the wrist - the fill runs on into the forearm, so there is no seam where they meet.
+  _handBack(ctx, w, hw, pts, lw, pass) {
     const k0 = pts[0], kn = pts[pts.length - 1], kc = { x: (k0.x + kn.x) / 2, y: (k0.y + kn.y) / 2 };
     let dx = kc.x - w.x, dy = kc.y - w.y; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
     const A = { x: w.x - dy * hw, y: w.y + dx * hw }, B = { x: w.x + dy * hw, y: w.y - dx * hw };
-    // the corner nearer the first knuckle starts the outline
     const [s0, s1] = Math.hypot(A.x - k0.x, A.y - k0.y) < Math.hypot(B.x - k0.x, B.y - k0.y) ? [A, B] : [B, A];
-    ctx.beginPath(); ctx.moveTo(s0.x, s0.y);
-    ctx.quadraticCurveTo((s0.x + k0.x) / 2 + (k0.x - kn.x) * 0.25, (s0.y + k0.y) / 2 + (k0.y - kn.y) * 0.25, k0.x, k0.y);
-    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 - dx * 0.07, (a.y + b.y) / 2 - dy * 0.07, b.x, b.y); }
-    ctx.quadraticCurveTo((s1.x + kn.x) / 2 + (kn.x - k0.x) * 0.2, (s1.y + kn.y) / 2 + (kn.y - k0.y) * 0.2, s1.x, s1.y);
-    ctx.lineTo(w.x - dx * 0.4 + (s1.x - w.x), w.y - dy * 0.4 + (s1.y - w.y)); ctx.lineTo(w.x - dx * 0.4 + (s0.x - w.x), w.y - dy * 0.4 + (s0.y - w.y)); ctx.closePath();
+    const edge = () => {
+      ctx.moveTo(s0.x, s0.y);
+      ctx.bezierCurveTo(s0.x + dx * 0.25, s0.y + dy * 0.25, k0.x - dx * 0.2 + (k0.x - kn.x) * 0.22, k0.y - dy * 0.2 + (k0.y - kn.y) * 0.22, k0.x, k0.y);
+      for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 - dx * 0.06, (a.y + b.y) / 2 - dy * 0.06, b.x, b.y); }
+      ctx.bezierCurveTo(kn.x - dx * 0.2 + (kn.x - k0.x) * 0.25, kn.y - dy * 0.2 + (kn.y - k0.y) * 0.25, s1.x + dx * 0.25, s1.y + dy * 0.25, s1.x, s1.y);
+    };
+    if (pass === 0) { ctx.beginPath(); edge(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
+    ctx.beginPath(); edge(); ctx.lineTo(s1.x - dx * 0.12, s1.y - dy * 0.12); ctx.lineTo(s0.x - dx * 0.12, s0.y - dy * 0.12); ctx.closePath();
     const lx = Math.min(s0.x, s1.x, k0.x), ly = Math.min(s0.y, s1.y, k0.y, kn.y);
-    ctx.fillStyle = this._skinFill(ctx, lx, ly, lx + 1.1, ly + 1.1); ctx.fill(); ctx.lineWidth = lw * 1.8; ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.fillStyle = this._skinFill(ctx, lx, ly, lx + 1.1, ly + 1.1); ctx.fill();
     ctx.save(); ctx.clip();
-    for (const k of pts) { ctx.beginPath(); ctx.moveTo(w.x + (k.x - w.x) * 0.25, w.y + (k.y - w.y) * 0.25); ctx.lineTo(k.x - dx * 0.08, k.y - dy * 0.08); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.14)'; ctx.stroke(); }
-    const sh = ctx.createLinearGradient(w.x, w.y, w.x - dy * hw * 2, w.y + dx * hw * 2); sh.addColorStop(0, 'rgba(120,60,30,0)'); sh.addColorStop(1, 'rgba(120,60,30,0.18)'); ctx.fillStyle = sh; ctx.fillRect(-3, -3, 6, 6);
+    for (const k of pts) { ctx.beginPath(); ctx.moveTo(w.x + (k.x - w.x) * 0.2, w.y + (k.y - w.y) * 0.2); ctx.quadraticCurveTo(w.x + (k.x - w.x) * 0.6 + dy * 0.03, w.y + (k.y - w.y) * 0.6 - dx * 0.03, k.x - dx * 0.08, k.y - dy * 0.08); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.16)'; ctx.stroke(); }
+    const sh = ctx.createLinearGradient(w.x, w.y, w.x - dy * hw * 2, w.y + dx * hw * 2); sh.addColorStop(0, 'rgba(120,60,30,0)'); sh.addColorStop(1, 'rgba(120,60,30,0.2)'); ctx.fillStyle = sh; ctx.fillRect(-3, -3, 6, 6);
+    const ao = ctx.createLinearGradient(w.x - dx * 0.4, w.y - dy * 0.4, w.x + dx * 0.2, w.y + dy * 0.2); ao.addColorStop(0, 'rgba(110,55,30,0.22)'); ao.addColorStop(1, 'rgba(110,55,30,0)'); ctx.fillStyle = ao; ctx.fillRect(-3, -3, 6, 6);
+    for (const k of pts) this._knuckle(ctx, k.x - dx * 0.02, k.y - dy * 0.02, 0.1);
     ctx.restore();
   },
   // the bow hand (left) round the grip, seen from behind: back of the hand toward the eye, knuckles along the
@@ -616,51 +731,57 @@ KAR.Render = {
     const lw = 1 / s, U = KAR.Util, L = (a, b) => ({ x: U.lerp(a.x, b.x, open), y: U.lerp(a.y, b.y, open) });
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     const tb = { x: -0.1, y: -0.08 }, tj = L({ x: -0.3, y: -0.38 }, { x: -0.48, y: -0.32 }), tt = L({ x: -0.2, y: -0.68 }, { x: -0.7, y: -0.5 });
-    this._finger(ctx, tb, tj, tt, 0.16, 0.1, lw, -1);                         // thumb, its pad running into the hand
     const ks = [{ x: 0.05, y: -0.33 }, { x: 0.1, y: -0.11 }, { x: 0.1, y: 0.1 }, { x: 0.06, y: 0.29 }], rs = [0.108, 0.112, 0.102, 0.086];
-    for (let i = 3; i >= 0; i--) {                                               // little finger first, index on top: a closed fist
-      const k = ks[i], j = L({ x: rw + 0.2, y: k.y + 0.01 }, { x: rw + 0.34, y: k.y - 0.05 }), t = L({ x: rw + 0.15, y: k.y + 0.2 }, { x: rw + 0.64 - 0.07 * i, y: k.y - 0.08 + 0.03 * i });
-      this._finger(ctx, { x: k.x - 0.14, y: k.y + 0.02 }, j, t, rs[i], rs[i] * 0.84, lw, open > 0.5 ? 1 : 0);   // base tucked under the hand
-    }
-    // the back of the fist: thumb web curving up the left, knuckles down the grip, narrowing to the wrist
     const w = wrist, ww = 0.3;
-    const fist = () => { ctx.beginPath(); ctx.moveTo(w.x - ww, w.y);
-    ctx.bezierCurveTo(-0.5, 0.25, -0.46, -0.2, -0.24, -0.34);                     // thumb side, the web bulging over the thumb
-    ctx.quadraticCurveTo(-0.1, -0.46, ks[0].x, ks[0].y - 0.08);
-    for (let i = 1; i < ks.length; i++) { const a = ks[i - 1], b = ks[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 + 0.02, (a.y + b.y) / 2, b.x + 0.02, b.y); }
-    ctx.quadraticCurveTo(ks[3].x + 0.04, ks[3].y + 0.16, w.x + ww, w.y); };     // little-finger side down to the wrist
-    // filled down into the forearm, but outlined only round the hand (no seam across the wrist)
-    fist(); ctx.lineTo(w.x + ww * 0.95, w.y + 0.05); ctx.lineTo(w.x - ww * 0.95, w.y + 0.05); ctx.closePath();
-    ctx.fillStyle = this._skinFill(ctx, -0.45, -0.4, 0.2, 0.6); ctx.fill();
-    ctx.save(); ctx.clip();
-    const sh = ctx.createRadialGradient(-0.1, -0.12, 0.05, -0.1, -0.05, 0.6); sh.addColorStop(0, 'rgba(255,240,225,0.28)'); sh.addColorStop(1, 'rgba(150,80,45,0.16)');
-    ctx.fillStyle = sh; ctx.fillRect(-1, -1, 2, 2);
-    for (const k of ks) { ctx.beginPath(); ctx.moveTo(w.x + (k.y + 0.05) * 0.3, w.y - 0.05); ctx.quadraticCurveTo(-0.12, k.y * 0.8, k.x - 0.06, k.y); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.13)'; ctx.stroke(); }
-    ctx.restore();
-    fist(); ctx.lineWidth = lw * 1.8; ctx.strokeStyle = this.OUT; ctx.stroke();
-    for (const k of ks) this._knuckle(ctx, k.x - 0.03, k.y - 0.02, 0.09);
+    // the back of the fist: thumb web curving up the left, knuckles down the grip, narrowing to the wrist
+    const fist = () => { ctx.moveTo(w.x - ww, w.y);
+      ctx.bezierCurveTo(-0.5, 0.25, -0.46, -0.2, -0.24, -0.34);
+      ctx.quadraticCurveTo(-0.1, -0.46, ks[0].x, ks[0].y - 0.08);
+      for (let i = 1; i < ks.length; i++) { const a = ks[i - 1], b = ks[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 + 0.02, (a.y + b.y) / 2, b.x + 0.02, b.y); }
+      ctx.quadraticCurveTo(ks[3].x + 0.04, ks[3].y + 0.16, w.x + ww, w.y); };
+    const parts = [pass => this._finger(ctx, tb, tj, tt, 0.16, 0.1, lw, -1, pass)];                // thumb, its pad running into the hand
+    for (let i = 3; i >= 0; i--) {                                                                  // little finger first, index on top
+      const k = ks[i], j = L({ x: rw + 0.2, y: k.y + 0.01 }, { x: rw + 0.34, y: k.y - 0.05 }), t = L({ x: rw + 0.15, y: k.y + 0.2 }, { x: rw + 0.64 - 0.07 * i, y: k.y - 0.08 + 0.03 * i });
+      parts.push(pass => this._finger(ctx, { x: k.x - 0.14, y: k.y + 0.02 }, j, t, rs[i], rs[i] * 0.84, lw, open > 0.5 ? 1 : 0, pass));
+    }
+    parts.push(pass => {
+      if (pass === 0) { ctx.beginPath(); fist(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
+      ctx.beginPath(); fist(); ctx.lineTo(w.x + ww * 0.95, w.y + 0.06); ctx.lineTo(w.x - ww * 0.95, w.y + 0.06); ctx.closePath();
+      ctx.fillStyle = this._skinFill(ctx, -0.45, -0.4, 0.2, 0.6); ctx.fill();
+      ctx.save(); ctx.clip();
+      const sh = ctx.createRadialGradient(-0.1, -0.12, 0.05, -0.1, -0.05, 0.6); sh.addColorStop(0, 'rgba(255,240,225,0.3)'); sh.addColorStop(1, 'rgba(150,80,45,0.18)');
+      ctx.fillStyle = sh; ctx.fillRect(-1, -1, 2, 2);
+      for (const k of ks) { ctx.beginPath(); ctx.moveTo(w.x + (k.y + 0.05) * 0.3, w.y - 0.05); ctx.quadraticCurveTo(-0.12, k.y * 0.8, k.x - 0.06, k.y); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.15)'; ctx.stroke(); }
+      ctx.restore();
+      // the web between thumb and hand, a fine crease
+      ctx.beginPath(); ctx.moveTo(-0.3, -0.12); ctx.quadraticCurveTo(-0.2, -0.24, -0.12, -0.3); ctx.lineWidth = lw; ctx.strokeStyle = this.INK; ctx.stroke();
+      for (const k of ks) this._knuckle(ctx, k.x - 0.03, k.y - 0.02, 0.1);
+    });
+    this._two(parts);
     ctx.restore();
     return { thumb: { x: x + tt.x * s, y: y + tt.y * s }, index: { x: x + (rw + 0.1) * s, y: y + (ks[0].y - 0.05) * s } };
   },
   // the draw hand (right) on the string, seen from behind and to the left: a leather tab on the string face,
   // three fingers curled round it (index above the nock, middle and ring below), little finger tucked, thumb
   // tucked under. Origin: the nock, string running down the y axis.
-  drawHand(ctx, x, y, s, wrist) {
+  drawHand(ctx, x, y, s, wrist, hw) {
     const lw = 1 / s, OUT = this.OUT;
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    // finger tab: cordovan leather with a stitched edge, notched for the arrow
-    ctx.beginPath(); ctx.moveTo(-0.09, -0.48); ctx.quadraticCurveTo(0.02, -0.56, 0.12, -0.46); ctx.lineTo(0.12, 0.62); ctx.quadraticCurveTo(0.02, 0.72, -0.09, 0.62); ctx.lineTo(-0.09, 0.05); ctx.lineTo(-0.04, 0); ctx.lineTo(-0.09, -0.05); ctx.closePath();
-    const tg = ctx.createLinearGradient(-0.1, 0, 0.12, 0); tg.addColorStop(0, '#6a3a1c'); tg.addColorStop(1, '#3a1d0c');
-    ctx.fillStyle = tg; ctx.fill(); ctx.lineWidth = lw * 1.7; ctx.strokeStyle = OUT; ctx.stroke();
-    ctx.save(); ctx.setLineDash([lw * 3, lw * 3]); ctx.lineWidth = lw; ctx.strokeStyle = 'rgba(255,220,170,0.5)'; ctx.beginPath(); ctx.moveTo(0.08, -0.42); ctx.lineTo(0.08, 0.58); ctx.stroke(); ctx.restore();
-    this._finger(ctx, { x: 0.56, y: 0.3 }, { x: 0.54, y: 0.6 }, { x: 0.4, y: 0.8 }, 0.14, 0.1, lw, 1);       // thumb, relaxed down
+    const tab = () => { ctx.beginPath(); ctx.moveTo(-0.09, -0.48); ctx.quadraticCurveTo(0.02, -0.56, 0.12, -0.46); ctx.lineTo(0.12, 0.62); ctx.quadraticCurveTo(0.02, 0.72, -0.09, 0.62); ctx.lineTo(-0.09, 0.05); ctx.lineTo(-0.04, 0); ctx.lineTo(-0.09, -0.05); ctx.closePath(); };
     const ks = [{ x: 0.34, y: -0.22 }, { x: 0.38, y: 0.06 }, { x: 0.36, y: 0.31 }, { x: 0.3, y: 0.52 }];
     const tuck = k => ({ x: k.x + 0.14, y: k.y });                             // finger bases start under the hand
-    this._finger(ctx, tuck(ks[2]), { x: 0.02, y: 0.31 }, { x: -0.06, y: 0.43 }, 0.1, 0.085, lw, 0);          // ring
-    this._finger(ctx, tuck(ks[1]), { x: 0.0, y: 0.07 }, { x: -0.08, y: 0.19 }, 0.108, 0.09, lw, 0);          // middle
-    this._finger(ctx, tuck(ks[0]), { x: 0.0, y: -0.24 }, { x: -0.07, y: -0.12 }, 0.102, 0.086, lw, 0);      // index, above the nock
-    this._handBack(ctx, wrist, 0.34, ks, lw);                                    // (the little finger is curled into the palm, out of sight)
-    for (const k of ks.slice(0, 3)) this._knuckle(ctx, k.x + 0.02, k.y - 0.02, 0.09);
+    this._two([
+      pass => {                                                                 // finger tab: cordovan leather, stitched, notched for the arrow
+        tab(); if (pass === 0) { ctx.lineWidth = lw * 3.6; ctx.strokeStyle = OUT; ctx.stroke(); return; }
+        const tg = ctx.createLinearGradient(-0.1, 0, 0.12, 0); tg.addColorStop(0, '#7a4524'); tg.addColorStop(1, '#3a1d0c'); ctx.fillStyle = tg; ctx.fill();
+        ctx.save(); ctx.setLineDash([lw * 3, lw * 3]); ctx.lineWidth = lw; ctx.strokeStyle = 'rgba(255,220,170,0.5)'; ctx.beginPath(); ctx.moveTo(0.08, -0.42); ctx.lineTo(0.08, 0.58); ctx.stroke(); ctx.restore();
+      },
+      pass => this._finger(ctx, { x: 0.5, y: 0.26 }, { x: 0.52, y: 0.56 }, { x: 0.42, y: 0.72 }, 0.13, 0.095, lw, 1, pass),   // thumb, relaxed down
+      pass => this._finger(ctx, tuck(ks[2]), { x: 0.02, y: 0.31 }, { x: -0.06, y: 0.43 }, 0.1, 0.085, lw, 0, pass),           // ring
+      pass => this._finger(ctx, tuck(ks[1]), { x: 0.0, y: 0.07 }, { x: -0.08, y: 0.19 }, 0.108, 0.09, lw, 0, pass),           // middle
+      pass => this._finger(ctx, tuck(ks[0]), { x: 0.0, y: -0.24 }, { x: -0.07, y: -0.12 }, 0.102, 0.086, lw, 0, pass),       // index, above the nock
+      pass => this._handBack(ctx, wrist, hw || 0.34, ks.slice(0, 3).concat([{ x: 0.32, y: 0.48 }]), lw, pass),                     // little finger curled into the palm
+    ]);
     ctx.restore();
   },
   sight(ctx, x, y, r, steady, t) {

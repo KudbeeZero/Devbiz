@@ -164,14 +164,31 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
   rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
 }
+// 12b. THE TOUR: fifteen levels in three venues, each one opens the next
+{
+  const T = K.TOUR, ok = T.length === 15 && K.VENUES.length === 3 && T.every((L, i) => L.v === Math.floor(i / 5) && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
+  const D = { tour: { stars: Array(15).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
+  rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}; star targets rise; one star opens the next level`);
+  // a perfect still-air run earns 3 stars; a smaller face scores tighter rings
+  const st = new K.Stage({ level: 0, seed: 3 }); st.wind = 0; while (!st.over) { st._gust = () => { st.wind = 0; }; st.wind = 0; st.shoot(0, C.FACE_Y, 0, 0, 1); }
+  const small = new K.Stage({ level: 5, seed: 1 }), sc = K.Score.ring(1, 0.2, C.FACE_Y, small.faceD).ring, std = K.Score.ring(1, 0.2, C.FACE_Y).ring;
+  rec('tour-stars-face', st.stars() === 3 && st.total(0) === st.max && new K.Stage({ level: 0 }).stars() === 0 && small.faceD < C.FACE[1] && sc < std,
+    `a perfect run scores ${st.total(0)}/${st.max} for 3 stars; the 48 cm face scores a 20 cm miss as ${sc} (standard face: ${std})`);
+  // ON THE RAIL: the boss slides; a shot led to where it will be scores, and the arrow rides in the boss
+  const rl = new K.Stage({ level: 2, seed: 9 }), xs = Array.from({ length: 40 }, (_, i) => rl.offAt(i * 0.1).x), moved = Math.max(...xs) - Math.min(...xs); rl.tick(0.8);
+  rl.wind = 0; const s0 = K.Flight.solve(rl.dist, 0, C.FACE_Y), tf = K.Flight.run(rl.dist, s0.yaw, s0.pitch, C.V0, 0).hit.t, o = rl.offAt(rl.T + tf);
+  const led = rl.shoot(o.x, C.FACE_Y + o.y, 0, 0, 1);
+  rl.wind = 0; const o2 = rl.offAt(rl.T), still = rl.shoot(o2.x - 0.45 * Math.sign(rl.offAt(rl.T + tf).x - o2.x || 1), C.FACE_Y, 0, 0, 1);
+  rec('tour-rail', moved > 0.2 && led.ring >= 9 && rl.arrows[0][0].hit && still.ring < led.ring, `the rail boss slides across ${(moved * 100) | 0} cm; leading it scores ${led.ring}, aiming behind it ${still.ring}`);
+}
 // 13. persistence
 {
   const store = {};
   const ls = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
   const K2 = loadKAR(['util.js'], ls);
-  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.save();
+  K2.Store.data.dist = 3; K2.Store.data.best[2] = 111; K2.Store.data.stars[2] = 2; K2.Store.data.mode = 2; K2.Store.data.trickBest = 4200; K2.Store.data.swingBest = 97; K2.Store.data.daily = { day: 4, best: 3100, plays: 2, first: 2500 }; K2.Store.data.tour.stars[4] = 2; K2.Store.data.tour.best[4] = 99; K2.Store.data.tourLv = 5; K2.Store.save();
   const K3 = loadKAR(['util.js'], ls); K3.Store.load();
-  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500, 'distance, best scores, stars, BALLOON POP mode and best survive a reload');
+  rec('store', K3.Store.data.dist === 3 && K3.Store.data.best[2] === 111 && K3.Store.data.stars[2] === 2 && K3.Store.data.mode === 2 && K3.Store.data.trickBest === 4200 && K3.Store.data.swingBest === 97 && K3.Store.data.daily.best === 3100 && K3.Store.data.daily.first === 2500 && K3.Store.data.tour.stars[4] === 2 && K3.Store.data.tour.best[4] === 99 && K3.Store.data.tourLv === 5, 'distance, best scores, stars, BALLOON POP mode and best, and level progress survive a reload');
 }
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);

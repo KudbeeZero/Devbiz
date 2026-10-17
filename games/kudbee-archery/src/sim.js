@@ -67,8 +67,8 @@ KAR.Flight = {
 // ---- scoring --------------------------------------------------------------------
 KAR.Score = {
   // hit: {x,y} on the target plane. Returns { ring: 0..10, x: bool, r }
-  ring(distIdx, hx, hy) {
-    const C = KAR.CFG, R = C.FACE[distIdx] / 2, r = Math.hypot(hx, hy - C.FACE_Y);
+  ring(distIdx, hx, hy, faceD) {
+    const C = KAR.CFG, R = (faceD || C.FACE[distIdx]) / 2, r = Math.hypot(hx, hy - C.FACE_Y);
     if (r > R) return { ring: 0, x: false, r };
     const w = R / 10;
     return { ring: 10 - Math.floor(r / w), x: r < w / 2, r };
@@ -108,6 +108,7 @@ KAR.Match = class {
   xs(s) { return this.arrows[s].filter(h => h.x).length; }
   endTotal(s, end) { return this.arrows[s].filter(h => h.end === end).reduce((a, h) => a + h.ring, 0); }
 
+  get max() { return this.ends * this.per * 10; }
   // Fire with the sight at (aimX, aimY) on the target plane, hand sway (sx, sy) in metres, draw power 0..1.
   shoot(aimX, aimY, sx, sy, power) {
     const C = KAR.CFG, sh = this.shooter, wind = this.wind;
@@ -118,7 +119,7 @@ KAR.Match = class {
     let hl = fl.hit;                     // the hit in the target's own frame (the same thing unless the target moves)
     if (fl.hit && this.offAt) { const o = this.offAt(this.T + fl.hit.t); hl = { x: fl.hit.x - o.x, y: fl.hit.y - o.y }; }
     if (fl.hit) {
-      const sc = KAR.Score.ring(this.distIdx, hl.x, hl.y); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
+      const sc = KAR.Score.ring(this.distIdx, hl.x, hl.y, this.faceD); res.ring = sc.ring; res.x = sc.x; res.miss = sc.ring === 0;
       // ROBIN HOOD: on the face, within a shaft's width of an arrow already in it this end (it would split that arrow)
       if (!res.miss) for (let s = 0; s < 2 && !res.robin; s++) for (const a of this.arrows[s]) if (a.end === this.endNo && a.hit && a.ring && Math.hypot(a.hit.x - hl.x, a.hit.y - hl.y) < C.ROBIN) { res.robin = true; a.split = true; break; }
     }
@@ -197,6 +198,72 @@ KAR.Swing = class extends KAR.Match {
   onBoss(h) { const bw = this.faceD * 0.62 + 0.06; return Math.abs(h.x) < bw && Math.abs(h.y - KAR.CFG.FACE_Y) < bw; }
 };
 KAR.Swing.L = 2.4; KAR.Swing.ENDS = 4; KAR.Swing.AMP = [0.16, 0.22, 0.28, 0.34];
+
+// ---- THE TOUR (levels) ------------------------------------------------------------------
+// Fifteen levels across three venues, each a short range with its own twist: the wind, a smaller face, a boss
+// that slides along a rail or swings on ropes, gusts that change arrow to arrow. Stars come from the level's
+// own thresholds; one star opens the next level. move: 'slide' (amp in metres, w rad/s) or 'swing' (amp in
+// radians on Swing.L ropes). face: the face size as a fraction of the standard one at that distance.
+KAR.VENUES = [
+  { name: 'VILLAGE GREEN', sub: 'a still morning on the club field' },
+  { name: 'FOREST GLADE', sub: 'late sun through the pines' },
+  { name: 'MOUNTAIN PASS', sub: 'sunset, and the wind off the peaks' },
+];
+KAR.TOUR = [
+  { v: 0, name: 'FIRST ARROWS',  dist: 0, ends: 2, wind: 0.25, stars: [36, 46, 54], tip: 'a calm day at 18 m · find the gold' },
+  { v: 0, name: 'BREEZE',        dist: 0, ends: 3, wind: 0.8,  stars: [58, 70, 80], tip: 'a light crosswind · aim off into it' },
+  { v: 0, name: 'ON THE RAIL',   dist: 0, ends: 3, wind: 0.3,  move: 'slide', amp: 0.7, w: 0.9, stars: [50, 64, 76], tip: 'the boss slides along a rail · lead it' },
+  { v: 0, name: 'THIRTY METRES', dist: 1, ends: 3, wind: 0.8,  stars: [60, 72, 82], tip: 'further out, and the wind has longer to work' },
+  { v: 0, name: 'VILLAGE CUP',   dist: 1, ends: 4, wind: 1.0,  stars: [80, 96, 108], tip: 'four ends for the cup' },
+  { v: 1, name: 'SMALL GOLD',    dist: 1, ends: 3, wind: 0.6,  face: 0.6, stars: [48, 62, 74], tip: 'a 48 cm face · every ring is narrower' },
+  { v: 1, name: 'ROPE SWING',    dist: 1, ends: 3, wind: 0.5,  move: 'swing', amp: 0.2, stars: [54, 68, 79], tip: 'the boss swings on ropes · loose as it comes to you' },
+  { v: 1, name: 'GUSTS',         dist: 1, ends: 3, wind: 0.9,  gust: 0.45, stars: [56, 70, 82], tip: 'the wind changes arrow to arrow · watch the flags' },
+  { v: 1, name: 'FAST RAIL',     dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.0, w: 1.5, stars: [50, 64, 77], tip: 'a quicker rail · lead it more' },
+  { v: 1, name: 'FOREST CROWN',  dist: 2, ends: 4, wind: 0.9,  stars: [76, 94, 106], tip: '50 m for the crown' },
+  { v: 2, name: 'HIGH WIND',     dist: 2, ends: 3, wind: 1.5,  stars: [54, 68, 79], tip: 'a strong crosswind · hold well off' },
+  { v: 2, name: 'PENDULUM',      dist: 2, ends: 3, wind: 0.7,  move: 'swing', amp: 0.16, stars: [52, 66, 79], tip: 'a long swing at 50 m · time it' },
+  { v: 2, name: 'EAGLE EYE',     dist: 3, ends: 3, wind: 0.7,  face: 0.75, stars: [40, 54, 66], tip: '70 m at a smaller face' },
+  { v: 2, name: 'STORM RAIL',    dist: 2, ends: 3, wind: 1.2,  gust: 0.3, move: 'slide', amp: 0.9, w: 1.1, stars: [52, 66, 79], tip: 'a moving boss in a gusty wind' },
+  { v: 2, name: 'THE SUMMIT',    dist: 3, ends: 5, wind: 1.3,  gust: 0.25, stars: [80, 104, 124], tip: 'five ends at 70 m · the final' },
+];
+KAR.tourOpen = (i, data) => i === 0 || (data.tour.stars[i - 1] || 0) > 0;
+KAR.Stage = class extends KAR.Match {
+  constructor(opts) {
+    opts = opts || {};
+    const lv = KAR.Util.clamp(opts.level | 0, 0, KAR.TOUR.length - 1), def = KAR.TOUR[lv], C = KAR.CFG;
+    super({ mode: 'range', dist: def.dist, seed: opts.seed });
+    this.mode = 'stage'; this.lv = lv; this.def = def; this.venue = def.v; this.ends = def.ends; this.T = 0;
+    this.faceD = C.FACE[def.dist] * (def.face || 1);
+    this.rng = KAR.Util.rng(opts.seed === undefined ? 1 : opts.seed); this.ph = this.rng() * 6.283;
+    this._newEnd();                                    // again, now the level is known
+    if (def.move) {
+      this.move = def.move; this.offAt = def.move === 'swing' ? this._swingAt : this._slideAt;
+      const span = def.move === 'swing' ? KAR.Swing.L * Math.sin(def.amp) : def.amp;
+      this.viewD = Math.max(this.faceD, span * 1.25 + this.faceD * 0.75);
+    }
+  }
+  get max() { return this.ends * this.per * 10; }
+  _newEnd() {
+    const def = this.def; if (!def) return;
+    this.baseWind = (this.rng() * 2 - 1) * KAR.CFG.WIND[this.distIdx] * def.wind;
+    this._gust();
+  }
+  _gust() { const def = this.def; if (!def) return; this.wind = this.baseWind + this.rng.gauss() * (def.gust || 0.12) * KAR.CFG.WIND[this.distIdx] * Math.max(0.5, def.wind); }
+  tick(dt) { this.T += dt; }
+  _slideAt(T) { const d = this.def; return { x: d.amp * Math.sin(d.w * T + this.ph), y: 0, th: 0 }; }
+  _swingAt(T) {
+    const L = KAR.Swing.L, w = Math.sqrt(KAR.CFG.G / L), th = this.def.amp * Math.sin(w * T + this.ph);
+    return { x: L * Math.sin(th), y: L * (1 - Math.cos(th)), th };
+  }
+  onBoss(h) { const bw = this.faceD * 0.62 + 0.06; return Math.abs(h.x) < bw && Math.abs(h.y - KAR.CFG.FACE_Y) < bw; }
+  stars() { if (!this.over) return 0; const s = this.total(0), T = this.def.stars; return s >= T[2] ? 3 : s >= T[1] ? 2 : s >= T[0] ? 1 : 0; }
+  // before the last arrow: points needed to clear the level / for 3 stars / for a new best
+  needs(best) {
+    if (this.over || this.arrowsLeft !== 1 || this.endNo !== this.ends - 1) return null;
+    const t = this.total(0), S = this.def.stars;
+    return { best: best ? best + 1 - t : null, clear: t < S[0] ? S[0] - t : null, star3: t < S[2] ? S[2] - t : null };
+  }
+};
 
 // ---- DAILY ----------------------------------------------------------------------------
 // One BALLOON POP a day, the same for everyone: the seed comes from the UTC date, so the wind and the order,
