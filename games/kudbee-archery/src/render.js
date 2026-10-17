@@ -647,141 +647,158 @@ KAR.Render = {
     // the forearm running back past the cheek to an elbow behind the eye. As the nock comes back to the anchor
     // under the chin the hand slides down out of frame on its own.
     if (rel <= 0 && nock.z > 0.09) {
-      const W = { x: nock.x + 0.055, y: nock.y - 0.018, z: nock.z - 0.035 }, E = { x: 0.34, y: -0.1, z: -0.25 }, M = along(W, E, 0.35);
-      tube(W, M, 0.029, 0.04, SKIN, 0.1, P); tube(M, E, 0.046, 0.056, SLEEVE, 0.1, P);
+      // the forearm is part of the hand's own silhouette (no seam at the wrist): it runs from the wrist back
+      // toward the elbow - its screen direction from where the wrist projects - into a rolled sleeve
+      const W = { x: nock.x + 0.055, y: nock.y - 0.018, z: nock.z - 0.035 };
       const n = P(nock), ns = 0.085 * n.s, wq = P(W);
-      this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns }, 0.029 * wq.s / ns);
+      this.drawHand(ctx, n.x, n.y, ns, { x: (wq.x - n.x) / ns, y: (wq.y - n.y) / ns }, col);
     }
     ctx.restore();
   },
   // ---- hands ---------------------------------------------------------------------------
-  // Both hands are illustrated in their own 2D frame (1 unit = a hand's width, y down) and placed with
-  // translate + scale, so the anatomy is drawn once, with care, at any size. Light comes from the upper left.
-  SKIN3: ['#ffe0c4', '#f2bb8c', '#c4855a'],
+  // Each hand is ONE illustrated silhouette in its own 2D frame (1 unit = a hand's width, y down), placed with
+  // translate + scale: a smooth outline through hand-placed points, the fingers parted by fine inner lines,
+  // shaded inside the outline. No overlapping primitives, so no seams. Light comes from the upper left.
+  SKIN3: ['#ffe0c4', '#f2bb8c', '#c4855a'], INK: 'rgba(128,60,30,0.6)',
   _skinFill(ctx, x0, y0, x1, y1) { const g = ctx.createLinearGradient(x0, y0, x1, y1), c = this.SKIN3; g.addColorStop(0, c[0]); g.addColorStop(0.45, c[1]); g.addColorStop(1, c[2]); return g; },
-  // Every piece of a hand is drawn in two passes: pass 0 lays a heavy outline under the whole hand, pass 1 fills
-  // the pieces in order with a fine inner line - so a hand reads as one clean silhouette, the fingers parted by
-  // thin skin-tone lines instead of black seams. INK: the fine line between overlapping pieces.
-  INK: 'rgba(128,60,30,0.55)',
-  _two(parts) { for (const pass of [0, 1]) for (const f of parts) f(pass); },
-  // a finger or thumb: a quadratic bone path base -> joint -> tip, tapering r0 -> r1 to a round tip, shaded
-  // across its width; a crease at the middle joint, and a nail near the tip on side `nail` (+1 / -1, 0 = none)
-  _finger(ctx, b, j, t, r0, r1, lw, nail, pass) {
-    const N = 12, L = [], Rr = [];
-    let mid = null;
-    for (let i = 0; i <= N; i++) {
-      const u = i / N, x = (1 - u) * (1 - u) * b.x + 2 * u * (1 - u) * j.x + u * u * t.x, y = (1 - u) * (1 - u) * b.y + 2 * u * (1 - u) * j.y + u * u * t.y;
-      const dx = 2 * (1 - u) * (j.x - b.x) + 2 * u * (t.x - j.x), dy = 2 * (1 - u) * (j.y - b.y) + 2 * u * (t.y - j.y), dl = Math.hypot(dx, dy) || 1;
-      const r = r0 + (r1 - r0) * Math.pow(u, 0.8) + 0.012 * Math.sin(u * Math.PI * 2) * (u > 0.4 ? 1 : 0), nx = -dy / dl, ny = dx / dl;   // a slight swell at the middle knuckle
-      L.push([x + nx * r, y + ny * r]); Rr.push([x - nx * r, y - ny * r]);
-      if (i === N / 2) mid = { x, y, nx, ny, r, dx: dx / dl, dy: dy / dl };
-    }
-    const an = Math.atan2(t.y - (L[N - 1][1] + Rr[N - 1][1]) / 2, t.x - (L[N - 1][0] + Rr[N - 1][0]) / 2);
-    const path = () => { ctx.beginPath(); L.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.arc(t.x, t.y, r1, an + Math.PI / 2, an - Math.PI / 2, true); for (let i = N; i >= 0; i--) ctx.lineTo(Rr[i][0], Rr[i][1]); ctx.closePath(); };
-    if (pass === 0) { path(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
-    const lit = mid.ny < 0 ? 1 : -1;
-    path(); ctx.fillStyle = this._skinFill(ctx, mid.x + mid.nx * mid.r * lit, mid.y + mid.ny * mid.r * lit, mid.x - mid.nx * mid.r * lit, mid.y - mid.ny * mid.r * lit); ctx.fill();
-    ctx.lineWidth = lw; ctx.strokeStyle = this.INK; ctx.stroke();
-    // a soft highlight along the lit side
-    ctx.beginPath(); for (let i = 2; i <= N - 1; i++) { const P = lit > 0 ? L[i] : Rr[i], Q = lit > 0 ? Rr[i] : L[i], x = P[0] + (Q[0] - P[0]) * 0.22, y = P[1] + (Q[1] - P[1]) * 0.22; i > 2 ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-    ctx.lineWidth = Math.max(lw, r1 * 0.35); ctx.strokeStyle = 'rgba(255,240,226,0.4)'; ctx.stroke();
-    // creases over the middle joint
-    for (const k of [-0.18, 0.18]) {
-      const cx = mid.x + mid.dx * mid.r * k, cy = mid.y + mid.dy * mid.r * k;
-      ctx.beginPath(); ctx.moveTo(cx + mid.nx * mid.r * 0.5, cy + mid.ny * mid.r * 0.5);
-      ctx.quadraticCurveTo(cx + mid.dx * mid.r * 0.25, cy + mid.dy * mid.r * 0.25, cx - mid.nx * mid.r * 0.5, cy - mid.ny * mid.r * 0.5);
-      ctx.lineWidth = lw * 0.8; ctx.strokeStyle = 'rgba(150,80,45,0.4)'; ctx.stroke();
-    }
-    if (nail) {
-      const ca = Math.cos(an), sa = Math.sin(an), cx = t.x - ca * r1 * 0.72 - sa * r1 * 0.3 * nail, cy = t.y - sa * r1 * 0.72 + ca * r1 * 0.3 * nail;
-      ctx.beginPath(); ctx.ellipse(cx, cy, r1 * 0.62, r1 * 0.46, an, 0, 6.283); ctx.fillStyle = '#fbdccb'; ctx.fill(); ctx.lineWidth = lw * 0.8; ctx.strokeStyle = 'rgba(150,80,45,0.5)'; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(cx - ca * r1 * 0.15, cy - sa * r1 * 0.15, r1 * 0.25, r1 * 0.11, an, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fill();
-    }
+  // a smooth (Catmull-Rom) closed outline through pts; with open, the last->first segment (where the hand runs on
+  // into the forearm) is left out, so it can be stroked without a seam across the wrist
+  _spline(ctx, pts, open) {
+    const n = pts.length, P = i => pts[(i + n) % n];
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < n - 1; i++) { const a = P(i - 1), b = P(i), c = P(i + 1), d = P(i + 2);
+      ctx.bezierCurveTo(b.x + (c.x - a.x) / 6, b.y + (c.y - a.y) / 6, c.x - (d.x - b.x) / 6, c.y - (d.y - b.y) / 6, c.x, c.y); }
+    if (!open) ctx.closePath();
   },
-  _knuckle(ctx, x, y, r) { const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r); g.addColorStop(0, 'rgba(255,240,225,0.4)'); g.addColorStop(1, 'rgba(255,240,225,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); },
-  // back-of-hand plate from the wrist (two corners) round to the knuckle line, softly shaded, with tendons. Its
-  // outline is open at the wrist - the fill runs on into the forearm, so there is no seam where they meet.
-  _handBack(ctx, w, hw, pts, lw, pass) {
-    const k0 = pts[0], kn = pts[pts.length - 1], kc = { x: (k0.x + kn.x) / 2, y: (k0.y + kn.y) / 2 };
-    let dx = kc.x - w.x, dy = kc.y - w.y; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-    const A = { x: w.x - dy * hw, y: w.y + dx * hw }, B = { x: w.x + dy * hw, y: w.y - dx * hw };
-    const [s0, s1] = Math.hypot(A.x - k0.x, A.y - k0.y) < Math.hypot(B.x - k0.x, B.y - k0.y) ? [A, B] : [B, A];
-    const edge = () => {
-      ctx.moveTo(s0.x, s0.y);
-      ctx.bezierCurveTo(s0.x + dx * 0.25, s0.y + dy * 0.25, k0.x - dx * 0.2 + (k0.x - kn.x) * 0.22, k0.y - dy * 0.2 + (k0.y - kn.y) * 0.22, k0.x, k0.y);
-      for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 - dx * 0.06, (a.y + b.y) / 2 - dy * 0.06, b.x, b.y); }
-      ctx.bezierCurveTo(kn.x - dx * 0.2 + (kn.x - k0.x) * 0.25, kn.y - dy * 0.2 + (kn.y - k0.y) * 0.25, s1.x + dx * 0.25, s1.y + dy * 0.25, s1.x, s1.y);
-    };
-    if (pass === 0) { ctx.beginPath(); edge(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
-    ctx.beginPath(); edge(); ctx.lineTo(s1.x - dx * 0.12, s1.y - dy * 0.12); ctx.lineTo(s0.x - dx * 0.12, s0.y - dy * 0.12); ctx.closePath();
-    const lx = Math.min(s0.x, s1.x, k0.x), ly = Math.min(s0.y, s1.y, k0.y, kn.y);
-    ctx.fillStyle = this._skinFill(ctx, lx, ly, lx + 1.1, ly + 1.1); ctx.fill();
+  // a soft inner line through 2-3 points
+  _crease(ctx, pts, w, col) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); if (pts.length === 3) ctx.quadraticCurveTo(pts[1].x, pts[1].y, pts[2].x, pts[2].y); else ctx.lineTo(pts[1].x, pts[1].y); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke(); },
+  _knuckle(ctx, x, y, r) { const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r); g.addColorStop(0, 'rgba(255,242,228,0.45)'); g.addColorStop(1, 'rgba(255,242,228,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); },
+  // shared painter: fill + inner shading (clipped), outline, inner lines. fingers: [{a, b, r}] centre lines for the
+  // round shading of each finger; lines: creases; knuckles: highlight spots; nails: [{x, y, a, r}]
+  _paintHand(ctx, pts, lw, o) {
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); this._spline(ctx, pts); ctx.fillStyle = this._skinFill(ctx, o.light.x, o.light.y, o.dark.x, o.dark.y); ctx.fill();
     ctx.save(); ctx.clip();
-    for (const k of pts) { ctx.beginPath(); ctx.moveTo(w.x + (k.x - w.x) * 0.2, w.y + (k.y - w.y) * 0.2); ctx.quadraticCurveTo(w.x + (k.x - w.x) * 0.6 + dy * 0.03, w.y + (k.y - w.y) * 0.6 - dx * 0.03, k.x - dx * 0.08, k.y - dy * 0.08); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.16)'; ctx.stroke(); }
-    const sh = ctx.createLinearGradient(w.x, w.y, w.x - dy * hw * 2, w.y + dx * hw * 2); sh.addColorStop(0, 'rgba(120,60,30,0)'); sh.addColorStop(1, 'rgba(120,60,30,0.2)'); ctx.fillStyle = sh; ctx.fillRect(-3, -3, 6, 6);
-    const ao = ctx.createLinearGradient(w.x - dx * 0.4, w.y - dy * 0.4, w.x + dx * 0.2, w.y + dy * 0.2); ao.addColorStop(0, 'rgba(110,55,30,0.22)'); ao.addColorStop(1, 'rgba(110,55,30,0)'); ctx.fillStyle = ao; ctx.fillRect(-3, -3, 6, 6);
-    for (const k of pts) this._knuckle(ctx, k.x - dx * 0.02, k.y - dy * 0.02, 0.1);
-    ctx.restore();
-  },
-  // the bow hand (left) round the grip, seen from behind: back of the hand toward the eye, knuckles along the
-  // grip, fingers wrapping round the riser's right edge, thumb up its left side toward the target.
-  // rw: the riser's half-width (local), wrist: where the forearm meets the hand (local), open 0..1 after release.
-  // Returns the screen points the finger sling ties to.
-  bowHand(ctx, x, y, s, rw, wrist, open) {
-    const lw = 1 / s, U = KAR.Util, L = (a, b) => ({ x: U.lerp(a.x, b.x, open), y: U.lerp(a.y, b.y, open) });
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const tb = { x: -0.1, y: -0.08 }, tj = L({ x: -0.3, y: -0.38 }, { x: -0.48, y: -0.32 }), tt = L({ x: -0.2, y: -0.68 }, { x: -0.7, y: -0.5 });
-    const ks = [{ x: 0.05, y: -0.33 }, { x: 0.1, y: -0.11 }, { x: 0.1, y: 0.1 }, { x: 0.06, y: 0.29 }], rs = [0.108, 0.112, 0.102, 0.086];
-    const w = wrist, ww = 0.3;
-    // the back of the fist: thumb web curving up the left, knuckles down the grip, narrowing to the wrist
-    const fist = () => { ctx.moveTo(w.x - ww, w.y);
-      ctx.bezierCurveTo(-0.5, 0.25, -0.46, -0.2, -0.24, -0.34);
-      ctx.quadraticCurveTo(-0.1, -0.46, ks[0].x, ks[0].y - 0.08);
-      for (let i = 1; i < ks.length; i++) { const a = ks[i - 1], b = ks[i]; ctx.quadraticCurveTo((a.x + b.x) / 2 + 0.02, (a.y + b.y) / 2, b.x + 0.02, b.y); }
-      ctx.quadraticCurveTo(ks[3].x + 0.04, ks[3].y + 0.16, w.x + ww, w.y); };
-    const parts = [pass => this._finger(ctx, tb, tj, tt, 0.16, 0.1, lw, -1, pass)];                // thumb, its pad running into the hand
-    for (let i = 3; i >= 0; i--) {                                                                  // little finger first, index on top
-      const k = ks[i], j = L({ x: rw + 0.2, y: k.y + 0.01 }, { x: rw + 0.34, y: k.y - 0.05 }), t = L({ x: rw + 0.15, y: k.y + 0.2 }, { x: rw + 0.64 - 0.07 * i, y: k.y - 0.08 + 0.03 * i });
-      parts.push(pass => this._finger(ctx, { x: k.x - 0.14, y: k.y + 0.02 }, j, t, rs[i], rs[i] * 0.84, lw, open > 0.5 ? 1 : 0, pass));
+    for (const f of o.fingers) {                       // each finger is a soft cylinder: shade under, light along the top
+      const dx = f.b.x - f.a.x, dy = f.b.y - f.a.y, dl = Math.hypot(dx, dy) || 1, nx = dy / dl, ny = -dx / dl, up = ny < 0 ? 1 : -1;
+      for (const [k, col, w] of [[-0.6, 'rgba(140,66,34,0.13)', 0.42], [0.42, 'rgba(255,244,232,0.26)', 0.26]]) {
+        const ox = nx * up * f.r * k, oy = ny * up * f.r * k;
+        ctx.beginPath(); ctx.moveTo(f.a.x + ox, f.a.y + oy); ctx.lineTo(f.b.x + ox, f.b.y + oy); ctx.lineWidth = f.r * w * 2; ctx.strokeStyle = col; ctx.stroke();
+      }
     }
-    parts.push(pass => {
-      if (pass === 0) { ctx.beginPath(); fist(); ctx.lineWidth = lw * 3.6; ctx.strokeStyle = this.OUT; ctx.stroke(); return; }
-      ctx.beginPath(); fist(); ctx.lineTo(w.x + ww * 0.95, w.y + 0.06); ctx.lineTo(w.x - ww * 0.95, w.y + 0.06); ctx.closePath();
-      ctx.fillStyle = this._skinFill(ctx, -0.45, -0.4, 0.2, 0.6); ctx.fill();
-      ctx.save(); ctx.clip();
-      const sh = ctx.createRadialGradient(-0.1, -0.12, 0.05, -0.1, -0.05, 0.6); sh.addColorStop(0, 'rgba(255,240,225,0.3)'); sh.addColorStop(1, 'rgba(150,80,45,0.18)');
-      ctx.fillStyle = sh; ctx.fillRect(-1, -1, 2, 2);
-      for (const k of ks) { ctx.beginPath(); ctx.moveTo(w.x + (k.y + 0.05) * 0.3, w.y - 0.05); ctx.quadraticCurveTo(-0.12, k.y * 0.8, k.x - 0.06, k.y); ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(255,235,215,0.15)'; ctx.stroke(); }
-      ctx.restore();
-      // the web between thumb and hand, a fine crease
-      ctx.beginPath(); ctx.moveTo(-0.3, -0.12); ctx.quadraticCurveTo(-0.2, -0.24, -0.12, -0.3); ctx.lineWidth = lw; ctx.strokeStyle = this.INK; ctx.stroke();
-      for (const k of ks) this._knuckle(ctx, k.x - 0.03, k.y - 0.02, 0.1);
-    });
-    this._two(parts);
+    for (const t of o.tendons || []) this._crease(ctx, t, lw * 3.5, 'rgba(255,238,222,0.2)');
+    if (o.shade) { const g = ctx.createLinearGradient(o.shade[0].x, o.shade[0].y, o.shade[1].x, o.shade[1].y); g.addColorStop(0, 'rgba(120,58,30,0)'); g.addColorStop(1, 'rgba(120,58,30,0.26)'); ctx.fillStyle = g; ctx.fillRect(-3, -3, 6, 6); }
+    for (const k of o.knuckles) this._knuckle(ctx, k.x, k.y, 0.11);
     ctx.restore();
-    return { thumb: { x: x + tt.x * s, y: y + tt.y * s }, index: { x: x + (rw + 0.1) * s, y: y + (ks[0].y - 0.05) * s } };
+    for (const l of o.lines) this._crease(ctx, l, lw * (l.w || 1.15), this.INK);
+    for (const n of o.nails || []) {
+      ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(n.a);
+      ctx.beginPath(); ctx.ellipse(0, 0, n.r, n.r * 0.7, 0, 0, 6.283); ctx.fillStyle = '#fbdccb'; ctx.fill(); ctx.lineWidth = lw * 0.9; ctx.strokeStyle = 'rgba(150,80,45,0.55)'; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(-n.r * 0.2, -n.r * 0.2, n.r * 0.4, n.r * 0.18, 0, 0, 6.283); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill(); ctx.restore();
+    }
+    ctx.beginPath(); this._spline(ctx, pts, true); ctx.lineWidth = lw * 2.4; ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.restore();
   },
-  // the draw hand (right) on the string, seen from behind and to the left: a leather tab on the string face,
-  // three fingers curled round it (index above the nock, middle and ring below), little finger tucked, thumb
-  // tucked under. Origin: the nock, string running down the y axis.
-  drawHand(ctx, x, y, s, wrist, hw) {
+  // move a canonical wrist (the first and last outline points, centred on c) onto where the forearm really ends:
+  // the wrist corners take the whole shift, their neighbours half, so the hand bends gently into the arm
+  _wristTo(pts, c, w, hw) {
+    let dx = w.x - c.x, dy = w.y - c.y; const m = Math.hypot(dx, dy), k = m > 0.35 ? 0.35 / m : 1; dx *= k; dy *= k;
+    const n = pts.length, out = pts.map(p => ({ x: p.x, y: p.y }));
+    for (const [i, f] of [[0, 1], [n - 1, 1], [1, 0.5], [n - 2, 0.5]]) { out[i].x += dx * f; out[i].y += dy * f; }
+    if (hw) {                                            // match the forearm's width at the wrist
+      const a = out[0], b = out[n - 1], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, half = Math.hypot(a.x - b.x, a.y - b.y) / 2 || 1, s = KAR.Util.clamp(hw, 0.24, 0.5) / half;
+      out[0] = { x: mx + (a.x - mx) * s, y: my + (a.y - my) * s }; out[n - 1] = { x: mx + (b.x - mx) * s, y: my + (b.y - my) * s };
+    }
+    return out;
+  },
+  // the bow hand (left) round the grip, seen from behind: the thumb up the left of the riser toward the target, the
+  // web of the hand on the grip, the knuckles running down it and four fingers wrapping round its right edge.
+  // rw: the riser's half-width (local), wrist: where the forearm meets the hand (local), open 0..1 after release
+  // (the fingers spring open and the thumb swings out). Returns the screen points the finger sling ties to.
+  bowHand(ctx, x, y, s, rw, wrist, open) {
+    const lw = 1 / s, U = KAR.Util, o = U.clamp(open || 0, 0, 1), L = (c, op) => ({ x: U.lerp(c[0], op[0], o), y: U.lerp(c[1], op[1], o) }), R = rw;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    // outline, clockwise from the wrist (thumb side) - closed fist / open hand
+    const pts = this._wristTo([
+      L([-0.33, 0.62], [-0.33, 0.62]), L([-0.43, 0.3], [-0.44, 0.3]), L([-0.44, 0.0], [-0.47, 0.02]),
+      L([-0.38, -0.3], [-0.58, -0.2]), L([-0.3, -0.56], [-0.72, -0.44]), L([-0.2, -0.65], [-0.69, -0.57]), L([-0.11, -0.57], [-0.57, -0.52]),   // thumb
+      L([-0.13, -0.35], [-0.33, -0.31]), L([-0.04, -0.36], [-0.12, -0.33]),                                                                // web
+      L([0.12, -0.42], [0.2, -0.4]), L([R + 0.1, -0.41], [R + 0.42, -0.38]), L([R + 0.24, -0.33], [R + 0.64, -0.33]), L([R + 0.23, -0.21], [R + 0.64, -0.22]),   // index
+      L([R + 0.12, -0.165], [R + 0.42, -0.19]),
+      L([R + 0.25, -0.12], [R + 0.62, -0.15]), L([R + 0.24, 0.02], [R + 0.62, -0.03]), L([R + 0.12, 0.055], [R + 0.4, 0.0]),               // middle
+      L([R + 0.22, 0.1], [R + 0.54, 0.04]), L([R + 0.2, 0.21], [R + 0.54, 0.14]), L([R + 0.1, 0.245], [R + 0.32, 0.17]),                  // ring
+      L([R + 0.16, 0.29], [R + 0.42, 0.21]), L([R + 0.1, 0.38], [R + 0.41, 0.3]), L([0.2, 0.42], [0.22, 0.38]),                          // little
+      L([0.24, 0.62], [0.24, 0.62]),
+    ], { x: -0.05, y: 0.62 }, wrist);
+    const kn = [{ x: 0.0, y: -0.28 }, { x: 0.07, y: -0.09 }, { x: 0.09, y: 0.09 }, { x: 0.07, y: 0.25 }];
+    const tips = [pts[11], pts[14], pts[17], pts[20]], notch = [pts[13], pts[16], pts[19]];
+    this._paintHand(ctx, pts, lw, {
+      light: { x: -0.4, y: -0.5 }, dark: { x: 0.35, y: 0.6 },
+      fingers: kn.map((k, i) => ({ a: k, b: tips[i], r: [0.11, 0.11, 0.1, 0.085][i] })).concat([{ a: { x: -0.32, y: 0.0 }, b: pts[5], r: 0.12 }]),
+      knuckles: kn.map(k => ({ x: k.x - 0.02, y: k.y - 0.02 })),
+      tendons: kn.map(k => [{ x: -0.05 + k.y * 0.15, y: 0.5 }, { x: (k.x - 0.1) * 0.6, y: k.y * 0.5 + 0.2 }, { x: k.x - 0.05, y: k.y + 0.02 }]),
+      shade: [{ x: -0.1, y: -0.1 }, { x: 0.3, y: 0.5 }],
+      lines: [
+        [{ x: -0.13, y: -0.33 }, { x: -0.22, y: -0.12 }, { x: -0.3, y: 0.08 }],                                              // the thumb's inner edge against the palm
+        ...notch.map((n, i) => [{ x: kn[i].x + 0.03, y: (kn[i].y + kn[i + 1].y) / 2 }, { x: (kn[i].x + n.x) / 2 + 0.02, y: (kn[i].y + kn[i + 1].y) / 2 + 0.01 }, n]),   // finger partings
+        ...kn.map((k, i) => { const t = tips[i], m = { x: k.x + (t.x - k.x) * 0.62, y: k.y + (t.y - k.y) * 0.62 }; return [{ x: m.x - 0.02, y: m.y - 0.07 }, { x: m.x + 0.02, y: m.y }, { x: m.x - 0.01, y: m.y + 0.06 }].map(p => ({ x: p.x, y: p.y })); }).map(l => Object.assign(l, { w: 0.8 })),   // middle-joint creases
+      ],
+      nails: o > 0.4 ? tips.map((t, i) => ({ x: t.x - 0.06, y: t.y - 0.02 + 0.01 * i, a: -0.08, r: 0.05 })).concat([{ x: pts[5].x + 0.05, y: pts[5].y + 0.06, a: -0.7, r: 0.055 }]) : [{ x: pts[5].x + 0.06, y: pts[5].y + 0.07, a: -0.9, r: 0.055 }],
+    });
+    ctx.restore();
+    return { thumb: { x: x + pts[5].x * s, y: y + pts[5].y * s }, index: { x: x + (R + 0.08) * s, y: y - 0.42 * s } };
+  },
+  // the draw hand (right) on the string, seen from behind and to the left: the back of the hand, the index finger
+  // above the nock and middle + ring below, curled round the string with their tips just past it; the little finger
+  // curled into the palm and the thumb tucked under, its tip showing. A leather tab between fingers and string.
+  // Origin: the nock, string running down the y axis. hw: the forearm's half-width at the wrist (local).
+  drawHand(ctx, x, y, s, wrist, col) {
     const lw = 1 / s, OUT = this.OUT;
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const tab = () => { ctx.beginPath(); ctx.moveTo(-0.09, -0.48); ctx.quadraticCurveTo(0.02, -0.56, 0.12, -0.46); ctx.lineTo(0.12, 0.62); ctx.quadraticCurveTo(0.02, 0.72, -0.09, 0.62); ctx.lineTo(-0.09, 0.05); ctx.lineTo(-0.04, 0); ctx.lineTo(-0.09, -0.05); ctx.closePath(); };
-    const ks = [{ x: 0.34, y: -0.22 }, { x: 0.38, y: 0.06 }, { x: 0.36, y: 0.31 }, { x: 0.3, y: 0.52 }];
-    const tuck = k => ({ x: k.x + 0.14, y: k.y });                             // finger bases start under the hand
-    this._two([
-      pass => {                                                                 // finger tab: cordovan leather, stitched, notched for the arrow
-        tab(); if (pass === 0) { ctx.lineWidth = lw * 3.6; ctx.strokeStyle = OUT; ctx.stroke(); return; }
-        const tg = ctx.createLinearGradient(-0.1, 0, 0.12, 0); tg.addColorStop(0, '#7a4524'); tg.addColorStop(1, '#3a1d0c'); ctx.fillStyle = tg; ctx.fill();
-        ctx.save(); ctx.setLineDash([lw * 3, lw * 3]); ctx.lineWidth = lw; ctx.strokeStyle = 'rgba(255,220,170,0.5)'; ctx.beginPath(); ctx.moveTo(0.08, -0.42); ctx.lineTo(0.08, 0.58); ctx.stroke(); ctx.restore();
-      },
-      pass => this._finger(ctx, { x: 0.5, y: 0.26 }, { x: 0.52, y: 0.56 }, { x: 0.42, y: 0.72 }, 0.13, 0.095, lw, 1, pass),   // thumb, relaxed down
-      pass => this._finger(ctx, tuck(ks[2]), { x: 0.02, y: 0.31 }, { x: -0.06, y: 0.43 }, 0.1, 0.085, lw, 0, pass),           // ring
-      pass => this._finger(ctx, tuck(ks[1]), { x: 0.0, y: 0.07 }, { x: -0.08, y: 0.19 }, 0.108, 0.09, lw, 0, pass),           // middle
-      pass => this._finger(ctx, tuck(ks[0]), { x: 0.0, y: -0.24 }, { x: -0.07, y: -0.12 }, 0.102, 0.086, lw, 0, pass),       // index, above the nock
-      pass => this._handBack(ctx, wrist, hw || 0.34, ks.slice(0, 3).concat([{ x: 0.32, y: 0.48 }]), lw, pass),                     // little finger curled into the palm
-    ]);
+    // finger tab: cordovan leather, stitched, notched for the arrow - mostly hidden behind the fingers
+    ctx.beginPath(); ctx.moveTo(-0.13, -0.5); ctx.quadraticCurveTo(-0.01, -0.58, 0.12, -0.5); ctx.lineTo(0.12, 0.62); ctx.quadraticCurveTo(-0.01, 0.7, -0.13, 0.62); ctx.lineTo(-0.13, 0.06); ctx.lineTo(-0.08, 0); ctx.lineTo(-0.13, -0.06); ctx.closePath();
+    const tg = ctx.createLinearGradient(-0.13, 0, 0.12, 0); tg.addColorStop(0, '#7a4524'); tg.addColorStop(1, '#3a1d0c'); ctx.fillStyle = tg; ctx.fill(); ctx.lineWidth = lw * 2.4; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.save(); ctx.setLineDash([lw * 3, lw * 3]); ctx.lineWidth = lw; ctx.strokeStyle = 'rgba(255,220,170,0.5)'; ctx.beginPath(); ctx.moveTo(-0.09, -0.46); ctx.lineTo(-0.09, 0.58); ctx.stroke(); ctx.restore();
+    const base = [
+      { x: 0.92, y: -0.24 }, { x: 0.66, y: -0.34 }, { x: 0.42, y: -0.4 },                                                   // back of the hand, top
+      { x: 0.2, y: -0.39 }, { x: 0.03, y: -0.35 }, { x: -0.08, y: -0.27 }, { x: -0.07, y: -0.16 }, { x: 0.05, y: -0.12 }, { x: 0.2, y: -0.12 },   // index
+      { x: 0.3, y: -0.07 },                                                                                                   // the gap for the nock
+      { x: 0.2, y: -0.02 }, { x: 0.03, y: 0.0 }, { x: -0.09, y: 0.07 }, { x: -0.09, y: 0.18 }, { x: -0.02, y: 0.225 },       // middle
+      { x: -0.08, y: 0.28 }, { x: -0.07, y: 0.39 }, { x: 0.05, y: 0.45 }, { x: 0.18, y: 0.47 },                               // ring
+      { x: 0.27, y: 0.55 }, { x: 0.4, y: 0.59 },                                                                              // little finger, curled in
+      { x: 0.48, y: 0.62 }, { x: 0.54, y: 0.68 }, { x: 0.64, y: 0.68 }, { x: 0.75, y: 0.58 },                                  // thumb tip, tucked under
+      { x: 0.92, y: 0.44 },
+    ];
+    // the forearm: away from the wrist along the arm's screen direction (kept between 8 and 55 degrees below the
+    // horizontal), widening a little over the muscle, out past the edge of the frame
+    let ang = Math.atan2(wrist.y - 0.1, wrist.x - 0.4); ang = KAR.Util.clamp(isFinite(ang) ? ang : 0.5, 0.14, 0.96);
+    const dx = Math.cos(ang), dy = Math.sin(ang), A = base[0], B = base[base.length - 1], cx = (A.x + B.x) / 2, cy = (A.y + B.y) / 2;
+    const at = (P, d, k) => ({ x: P.x + dx * d + (P.x - cx) * k, y: P.y + dy * d + (P.y - cy) * k });
+    const pts = [at(A, 7, 0.5), at(A, 1.3, 0.2), ...base, at(B, 1.3, 0.12), at(B, 7, 0.5)];
+    const kn = [{ x: 0.42, y: -0.27 }, { x: 0.43, y: 0.06 }, { x: 0.41, y: 0.31 }];
+    this._paintHand(ctx, pts, lw, {
+      light: { x: 0.5 + dy * 0.6, y: 0.1 - dx * 0.6 }, dark: { x: 0.5 - dy * 0.75, y: 0.1 + dx * 0.75 },
+      fingers: [{ a: kn[0], b: { x: -0.02, y: -0.24 }, r: 0.12 }, { a: kn[1], b: { x: -0.03, y: 0.1 }, r: 0.11 }, { a: kn[2], b: { x: -0.02, y: 0.33 }, r: 0.1 }],
+      knuckles: kn.map(k => ({ x: k.x + 0.02, y: k.y - 0.03 })),
+      tendons: kn.map(k => [{ x: 0.9, y: 0.1 + k.y * 0.4 }, { x: 0.68, y: k.y * 0.75 + 0.02 }, { x: k.x + 0.06, y: k.y }]),
+      shade: [{ x: 0.5, y: 0.1 }, { x: 0.55, y: 0.65 }],
+      lines: [
+        [{ x: 0.36, y: 0.2 }, { x: 0.16, y: 0.22 }, { x: -0.02, y: 0.225 }],                                                  // middle / ring
+        [{ x: 0.4, y: 0.47 }, { x: 0.28, y: 0.47 }, { x: 0.2, y: 0.5 }],                                                      // ring / little finger
+        [{ x: 0.46, y: 0.6 }, { x: 0.58, y: 0.56 }, { x: 0.74, y: 0.58 }],                                                    // the thumb under the palm
+        ...[[0.12, -0.25], [0.1, 0.1], [0.08, 0.33]].map(([cx, cy]) => Object.assign([{ x: cx + 0.02, y: cy - 0.09 }, { x: cx - 0.03, y: cy }, { x: cx + 0.01, y: cy + 0.08 }], { w: 0.8 })),   // middle joints
+        ...[[-0.04, -0.21], [-0.05, 0.12], [-0.04, 0.33]].map(([cx, cy]) => Object.assign([{ x: cx + 0.03, y: cy - 0.07 }, { x: cx - 0.01, y: cy }, { x: cx + 0.03, y: cy + 0.06 }], { w: 0.7 })),  // the last joint, curling round
+      ],
+    });
+    // the sleeve, rolled to mid-forearm: a cuff band, then the sleeve running off frame
+    if (col) {
+      const d0 = 2.3, side = (P, d, k) => at(P, d, k), q = [side(A, d0, 0.32), side(A, 8, 0.62), side(B, 8, 0.62), side(B, d0, 0.3)];
+      const band = (d1, d2, k1, k2) => [side(A, d1, k1), side(A, d2, k2), side(B, d2, k2), side(B, d1, k1)];
+      const fillQ = (Q, c0, c1) => { ctx.beginPath(); Q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); const m = { x: (Q[0].x + Q[3].x) / 2, y: (Q[0].y + Q[3].y) / 2 }, g = ctx.createLinearGradient(Q[0].x, Q[0].y, Q[3].x, Q[3].y); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = lw * 2.4; ctx.strokeStyle = OUT; ctx.stroke(); return m; };
+      fillQ(q, col.light, col.dark);
+      for (const k of [0.4, 0.75]) { const a = side(A, d0 + 0.6 + k, 0.4), b = side(B, d0 + 0.3 + k * 1.2, 0.38); this._crease(ctx, [a, { x: (a.x + b.x) / 2 + dx * 0.15, y: (a.y + b.y) / 2 + dy * 0.15 }, b], lw * 1.6, 'rgba(10,30,60,0.35)'); }
+      fillQ(band(d0 - 0.05, d0 + 0.32, 0.36, 0.4), col.base, '#122a44');
+    }
     ctx.restore();
   },
   sight(ctx, x, y, r, steady, t) {

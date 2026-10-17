@@ -171,7 +171,7 @@ KAR.UI = {
       U.text(ctx, duel ? col.name : 'SCORE', 28, y + 8, 20, col.light, 'left');
       U.text(ctx, String(m.total(s)), 142, y + 12, 36, '#ffffff', 'right');
       const arrows = m.arrows[s].filter(a => a.end === m.endNo);
-      for (let k = 0; k < m.per; k++) U.pip(ctx, 160 + k * 32, y - 1, s, arrows[k]);
+      for (let k = 0; k < m.per; k++) U.pip(ctx, 172 + k * 32, y - 1, s, arrows[k]);
       if (m.xs(s)) U.text(ctx, m.xs(s) + 'X', 276, y + 6, 15, '#ffd34d', 'right');
     });
     if (trick) { /* no ends */ }
