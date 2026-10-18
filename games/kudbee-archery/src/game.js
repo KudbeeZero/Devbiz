@@ -26,8 +26,10 @@ KAR.Game = class {
     this.bp = 'idle'; this.bpT = 0; this.zoom = 1; this.zoomTarget = 1; this.timeScale = 1;
     this.camB = 0; this.camTip = null; this.landT = -9; this.streak = 0; this.drama = '';
     this.ptr = { x: 480, y: 330 }; this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
+    this.agentLog = []; this.agentTip = null; this.agentSince = 0;      // THE AGENT: your last arrows (this session) + the tip on screen
     this._resetShot();
     this._bind();
+    try { if (/^#\/?agent$/.test(location.hash)) this.activate('agent'); } catch (e) { /* no location */ }      // /agent links straight to the coach
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
   }
@@ -162,6 +164,9 @@ KAR.Game = class {
     else if (id === 'gear') this.setScreen('gear');
     else if (id === 'trophies') { this.achPage = 0; this.setScreen('trophies'); }
     else if (id === 'quests') this.setScreen('quests');
+    else if (id === 'agent') { if (this.screen !== 'agent') this.agentBack = this.screen === 'paused' || this.screen === 'over' ? this.screen : 'menu'; this.setScreen('agent'); }
+    else if (id === 'agentBack') this.setScreen(this.agentBack || 'menu');
+    else if (id === 'agentTips') { D.agent = !D.agent; this.agentTip = null; KAR.Store.save(); }
     else if (id === 'shop') { this.shopBack = this.screen === 'gear' ? 'gear' : this.screen === 'quests' ? 'quests' : 'menu'; this.shopSel = null; this.setScreen('shop'); }
     else if (id === 'shopBack') this.setScreen(this.shopBack || 'menu');
     else if (/^qc\d$/.test(id)) { const d = KAR.questDef(KAR.questToday(D).q[+id[2]].id); if (KAR.questClaim(D, +id[2]) === 'claimed') { KAR.Store.save(); this.audio.gold(2); this.buzz(20); this.gemFx = { n: d.gems, t: this.time }; } }
@@ -279,6 +284,8 @@ KAR.Game = class {
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
     if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies' || this.screen === 'quests')) { this.activate('back'); return; }
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
+    if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
+    if (down && k === '/' && (this.screen === 'menu' || this.screen === 'paused' || this.screen === 'over')) { e.preventDefault(); this.activate('agent'); return; }
     if (down && (k === 'p' || k === 'P' || k === 'Escape')) { e.preventDefault(); if (this.screen === 'play' || this.screen === 'paused') this.togglePause(); return; }
     if (k === 'b' || k === 'B' || k === 'Shift') { this.holding = down; return; }
     if (this.screen !== 'play') {
@@ -307,6 +314,7 @@ KAR.Game = class {
     const power = this.cpu ? 1 : KAR.Util.clamp(this.draw, 0, 1);
     const sw = this.cpu ? { x: this.cpu.sx, y: this.cpu.sy } : { x: this.sway.x, y: this.sway.y };
     const shooter = m.shooter;
+    if (shooter === 0) this.shotInfo = { power, held: this.holdT, steady: !!this.steady };
     if (this.coach && shooter === 0) { const D = KAR.Store.data; D.tut |= this.coach.bit; KAR.Store.save(); this.coach = null; }
     const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power, this._kit(shooter));
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
@@ -362,6 +370,7 @@ KAR.Game = class {
     if (f.shooter === 0 && res.star) st.starBoxes++;
     if (f.shooter === 0 && !res.star) { if (res.ring >= 9) this._quest('gold', 1); if (res.ring === 10) this._quest('ten', 1); if (res.x) this._quest('x', 1); this._quest('streak', this.streak); }
     this._achCheck(); KAR.Store.save();
+    if (f.shooter === 0) this._agentNote(res);
     this.bp = 'result'; this.bpT = 0;
     if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
   }
@@ -385,6 +394,23 @@ KAR.Game = class {
     const two = res.pops.length > 1, gold = res.bonusArrows > 0;
     this._banner(two ? 'DOUBLE POP!' : 'POP!', '#ffffff', gold ? '#ffb82e' : '#ff5d8a', '+' + res.points + (res.mult > 1 ? '  \u00b7  COMBO \u00d7' + res.mult : '') + (gold ? '  \u00b7  +' + res.bonusArrows + ' ARROWS' : ''), two ? 76 : 88);
     this.audio.pop(res.pops.length, res.mult); this.buzz(res.pops.length > 1 ? [25, 40, 25] : 25); if (two || gold) this._burst(30);
+  }
+
+  // THE AGENT watches your arrow: where it landed against the gold, the wind, the draw. Every few arrows, when it
+  // sees something worth fixing (and the tutorial coach isn't talking), a tip slides in at the bottom left.
+  _agentNote(res) {
+    const m = this.match, A = KAR.Agent, D = KAR.Store.data, si = this.shotInfo || { power: 1, held: 0, steady: false };
+    if (res.star || res.blocked || m.mode === 'trick') return;
+    const last = m.arrows[0][m.arrows[0].length - 1], h = last && last.hit;
+    if (!h && !res.short) return;                                      // flew past a moving target: no mark to read
+    const w = (m.faceD || KAR.CFG.FACE[m.distIdx]) / 20;
+    A.note(this.agentLog, { dx: h ? h.x : 0, dy: h ? h.y - KAR.CFG.FACE_Y : 0, wind: res.wind * this._kit(0).wind, power: si.power, held: si.held, steady: si.steady, ring: res.ring, short: !!res.short, w, mv: !!m.offAt, tire: this._kit(0).tire });
+    this.agentSince++;
+    if (!D.agent || this.coach || this.agentLog.length < 3) return;
+    const tip = A.read(this.agentLog)[0];
+    if (tip.id === 'warm' || tip.id === 'ok') return;
+    if (this.agentTip && this.agentTip.id === tip.id && this.agentSince < 4) return;      // don't nag: the same tip at most every 4 arrows
+    this.agentTip = { id: tip.id, line: tip.line, t: this.time }; this.agentSince = 0;
   }
 
   // TROPHIES: announce anything newly reached (a card slides in at the top; one at a time)
@@ -576,7 +602,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || sel;
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel;
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -602,6 +628,7 @@ KAR.Game = class {
     else if (this.screen === 'trophies') U.trophies(ctx, this);
     else if (this.screen === 'quests') U.quests(ctx, this);
     else if (this.screen === 'shop') U.shop(ctx, this);
+    else if (this.screen === 'agent') U.agent(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
       U.hud(ctx, this);
@@ -621,7 +648,7 @@ KAR.Game = class {
 
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
-    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'levels') return;
+    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'levels') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
     // arrows in the face, then the THINK BOX crates in front of it, then the arrows stuck in the crates
     const stuck = inCrate => { for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !!(a.hit && a.hit.z !== undefined) === inCrate && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined); };

@@ -292,6 +292,28 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
     && poor === 'poor' && bought === 'bought' && left === 0 && eq === 1 && again === 'owned' && sane,
     `day 100 → ${p1} (same every time, different tomorrow, one per kind); events fill them, claims pay once (${sum} gems + ${K.QUEST_BONUS} bonus = ${total}), the bonus waits for all three; tomorrow rolls over; a 30-gem longbow is too dear at 20, bought and equipped at 30, then owned; a forged save can't hold fractional gems or kit it doesn't own`);
 }
+// THE AGENT: it reads real arrows. Shoot a 30 m range in a steady right wind three ways and it names the fault;
+// the plan points at a quest, a level and a trophy; the gear tip offers kit that answers the fault
+{
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js', 'agent.js']), A = K.Agent, C = K.CFG;
+  const run = (hold, power, held, seed) => {
+    const m = new K.Match({ mode: 'range', dist: 1, seed }), log = [], rng = K.Util.rng(seed), w = C.FACE[1] / 20;
+    for (let i = 0; i < 6; i++) {
+      m.wind = 2; const r = m.shoot(-hold * m.wind, C.FACE_Y, (rng() - 0.5) * 0.02, (rng() - 0.5) * 0.02, power), h = r.hit;
+      A.note(log, { dx: h ? h.x : 0, dy: h ? h.y - C.FACE_Y : 0, wind: r.wind, power, held, steady: false, ring: r.ring, short: !!r.short, w, mv: false, tire: 1 });
+    }
+    return A.read(log)[0].id;
+  };
+  // how far a centred arrow drifts at 30 m in this wind: hold that much off and the agent is happy
+  const s = K.Flight.solve(30, 0, C.FACE_Y), drift = K.Flight.run(30, s.yaw, s.pitch, C.V0, 2).hit.x / 2;
+  const under = run(0, 1, 1, 7), good = run(drift, 1, 1, 7), over = run(drift * 3, 1, 1, 7), short = run(drift, 0.6, 1, 7);
+  const warm = A.read([]).length === 1 && A.read([])[0].id === 'warm';
+  const D = K.Store.data, plan = A.plan(D, [{ id: 'under' }]).map(p => p.kind).join(',');
+  D.gems = 50; const buy = A.gear(D, 'under'); D.ownArrow |= 4; const equip = A.gear(D, 'under'); D.kit.arrow = 2; const none = A.gear(D, 'under');
+  const keep = A.note([], {}) && (() => { const l = []; for (let i = 0; i < 20; i++) A.note(l, { i }); return l.length === A.KEEP && l[0].i === 8; })();
+  rec('agent-reads', warm && under === 'under' && good !== 'under' && good !== 'over' && over === 'over' && short === 'draw' && plan === 'quest,level,trophy,gear' && /buy it now/.test(buy) && /equip/.test(equip) && none === null && keep,
+    `no hold-off → "${under}", the right hold-off → "${good}", 3x too much → "${over}", a 60% draw → "${short}"; plan = ${plan}; gear tip: buy → equip → nothing once it's on; keeps the last ${A.KEEP} arrows`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

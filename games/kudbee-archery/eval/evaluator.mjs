@@ -369,6 +369,31 @@ rec('quests-shop', qd.done && qd.card && qs0.scr === 'quests' && qs0.dot && qs1.
 await G(() => { const D = KAR.Store.data; D.gems = 0; D.kit = { bow: 0, arrow: 0 }; D.ownBow = 1; D.ownArrow = 1; D.quest = null; KARGame.achQ = []; });
 await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 
+// THE AGENT: three real arrows aimed dead centre in a strong right wind (no hold-off) → ROBIN's tip card says the wind is
+// winning; '/' opens the AGENT screen from pause, Escape goes back; the in-game tips switch saves; /#agent opens it directly
+{
+  await G(() => { KAR.Store.data.mode = 0; KAR.Store.data.dist = 1; KAR.Store.data.agent = true; KARGame.agentLog = []; KARGame.agentTip = null; KARGame.achQ = []; KARGame.startMatch(); });
+  for (let i = 0; i < 3; i++) {
+    await page.waitForFunction(() => KARGame.human(), null, { timeout: 9000 }).catch(() => {});
+    await G(() => { const g = KARGame, m = g.match; m.wind = 3; g.aimX = 0; g.aimY = KAR.CFG.FACE_Y; g.drawing = true; g.draw = 1; g.holdT = 0.5; g._loose(); g.sway = { x: 0, y: 0 }; });
+    await page.waitForFunction(() => KARGame.bp === 'result' || KARGame.screen !== 'play', null, { timeout: 9000 }).catch(() => {});
+  }
+  const ag0 = await G(() => ({ n: KARGame.agentLog.length, tip: KARGame.agentTip && KARGame.agentTip.id }));
+  await page.waitForTimeout(150); await page.screenshot({ path: `${OUT}/agent-tip.png` });
+  await page.keyboard.press('p'); await page.keyboard.press('/'); await page.waitForTimeout(100);
+  const ag1 = await G(() => ({ scr: KARGame.screen, see: KAR.Agent.read(KARGame.agentLog)[0].id }));
+  await page.screenshot({ path: `${OUT}/agent.png` });
+  await click('agentTips'); await page.waitForTimeout(50);
+  const off = await G(() => KAR.Store.data.agent === false && JSON.parse(localStorage.getItem('kudbee.archery.v1')).agent === false);
+  await click('agentTips'); await page.keyboard.press('Escape'); await page.waitForTimeout(50);
+  const back = await G(() => KARGame.screen);
+  const hp = await browser.newPage(); await hp.goto(URL + '#agent'); await hp.waitForFunction(() => window.KARGame);
+  const hash = await hp.evaluate(() => KARGame.screen); await hp.close();
+  rec('agent', ag0.n === 3 && ag0.tip === 'under' && ag1.scr === 'agent' && ag1.see === 'under' && off && back === 'paused' && hash === 'agent',
+    `3 un-held arrows in a 3-unit wind → ROBIN says "${ag0.tip}"; P then / opens the AGENT (${ag1.scr}), Escape back to ${back}; TIPS OFF saves; /#agent opens on ${hash}`);
+  await G(() => { KARGame.agentLog = []; KARGame.agentTip = null; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
+}
+
 // SHARING: the page carries a share card (Open Graph + Twitter large image, absolute https URLs) whose image is a real 1200x630
 // file in the repo, and the menu's share button shares the game's public (canonical) link
 {

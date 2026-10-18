@@ -259,6 +259,21 @@ KAR.UI = {
       U.button(ctx, g, 'breath', 772 + xr, 500, 172, 76, g.holding ? 'STEADY!' : 'BREATH', { small: true, color: g.holding ? 'green' : 'yellow' });
       if (g.drawing && !g.holding) U.text(ctx, 'or a 2nd finger', 858 + xr, 604, 17, '#ffffff', 'center');
     }
+    // THE AGENT's tip: a card at the bottom left for a few seconds after an arrow lands
+    if (g.agentTip && g.screen === 'play') {
+      const age = g.time - g.agentTip.t, k = Math.min(1, age / 0.3, (6 - age) / 0.4);
+      if (age > 6) g.agentTip = null;
+      else {
+        const x = 14 + xl, y = big ? 432 : 520, w = big ? 470 : 440, h = big ? 62 : 56;
+        ctx.save(); ctx.globalAlpha = Math.max(0, k) * (g.drawing ? 0.45 : 1); ctx.translate(-(1 - Math.max(0, k)) * 40, 0);
+        U.rr(ctx, x, y, w, h, 16); ctx.fillStyle = U.OUT; ctx.fill();
+        U.rr(ctx, x + 3, y + 3, w - 6, h - 6, 13); ctx.fillStyle = '#2c4f86'; ctx.fill();
+        this.robin(ctx, x + 32, y + h / 2, big ? 22 : 20, g.time);
+        U.text(ctx, KAR.Agent.NAME + ' SAYS', x + 62, y + (big ? 24 : 22), U.sz(g, 13), '#9be35a', 'left');
+        U.fit(ctx, g.agentTip.line, x + 62, y + h - (big ? 13 : 12), U.sz(g, 17), '#ffffff', w - 76, 'left');
+        ctx.restore();
+      }
+    }
     // hint / turn text
     if (g.hint && g.hintT > 0 && !g.drawing) { ctx.save(); ctx.globalAlpha = Math.min(1, g.hintT * 2); U.fit(ctx, g.hint, 480, 618, big ? 24 : 20, '#ffffff', big ? 560 + xr * 2 - 40 : 900); ctx.restore(); }
     // banner
@@ -285,6 +300,8 @@ KAR.UI = {
     const xl = KAR.Render.XL, xr = -xl;
     U.button(ctx, g, 'gear', 16 + xl, 14, C ? 190 : 170, C ? 60 : 48, 'GEAR \u2605' + KAR.starTotal(D), { small: true, color: 'yellow' });
     U.button(ctx, g, 'trophies', 16 + xl + (C ? 202 : 180), 14, C ? 230 : 200, C ? 60 : 48, 'TROPHIES ' + KAR.achCount(D) + '/' + KAR.ACH.length, { small: true, color: 'yellow' });
+    U.button(ctx, g, 'agent', 16 + xl, C ? 84 : 72, C ? 190 : 170, C ? 46 : 44, '    AGENT', { small: true, color: 'blue' });
+    this.robin(ctx, 16 + xl + 30, (C ? 84 : 72) + (C ? 23 : 22), C ? 17 : 16, g.time);
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 3) * 300 : 24 + k * 154, C ? 126 + Math.floor(k / 3) * 66 : 232, C ? 288 : 142, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
@@ -627,19 +644,21 @@ KAR.UI = {
     if (g.coarse && navigator.vibrate) extra.push(['buzz', KAR.Store.data.haptics ? 'VIBRATE: ON' : 'VIBRATE: OFF']);
     if (g.canFull()) extra.push(['full', g.isFull() ? 'EXIT FULL SCREEN' : 'FULL SCREEN']);
     if (extra.length) {                       // phones: two columns so every button stays big
-      U.panel(ctx, 170, 130, 620, 372, 'blue');
+      const rows = Math.ceil((4 + extra.length) / 2);
+      U.panel(ctx, 170, 130, 620, 190 + rows * 74, 'blue');
       U.ribbon(ctx, 480, 106, 300, 'PAUSED', 'yellow');
       U.button(ctx, g, 'resume', 220, 210, 520, 70, 'RESUME', { primary: true });
-      [['restart', 'RESTART', 'blue'], ['menu', 'MENU', 'yellow'], ['mute', g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', 'blue']].concat(extra.map(e => e.concat('blue')))
+      [['restart', 'RESTART', 'blue'], ['menu', 'MENU', 'yellow'], ['mute', g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', 'blue'], ['agent', 'ASK THE AGENT', 'green']].concat(extra.map(e => e.concat('blue')))
         .forEach(([id, label, col], k) => U.button(ctx, g, id, 220 + (k % 2) * 270, 304 + Math.floor(k / 2) * 74, 250, 60, label, { small: true, color: col }));
       return;
     }
-    U.panel(ctx, 290, 130, 380, 372, 'blue');
+    U.panel(ctx, 290, 130, 380, 430, 'blue');
     U.ribbon(ctx, 480, 106, 300, 'PAUSED', 'yellow');
     U.button(ctx, g, 'resume', 340, 214, 280, 62, 'RESUME', { primary: true });
     U.button(ctx, g, 'restart', 340, 294, 280, 50, 'RESTART', { small: true });
     U.button(ctx, g, 'menu', 340, 360, 280, 50, 'MENU', { small: true, color: 'yellow' });
     U.button(ctx, g, 'mute', 340, 426, 280, 50, g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', { small: true });
+    U.button(ctx, g, 'agent', 340, 492, 280, 50, 'ASK THE AGENT  (/)', { small: true, color: 'green' });
   },
 
   over(ctx, g) {
@@ -672,5 +691,70 @@ KAR.UI = {
     U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
     U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
     ctx.restore();
+  },
+
+  // ROBIN, the agent: a round little robin redbreast with a feathered cap (bobs as it talks)
+  robin(ctx, x, y, r, t) {
+    const U = this, b = Math.sin((t || 0) * 3) * r * 0.05;
+    ctx.save(); ctx.translate(x, y + b); ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-r * 0.9, r * 0.2); ctx.lineTo(-r * 1.35, r * 0.65); ctx.lineTo(-r * 0.7, r * 0.6); ctx.closePath(); ctx.fillStyle = '#7a4a24'; ctx.fill(); ctx.lineWidth = Math.max(2, r * 0.12); ctx.strokeStyle = U.OUT; ctx.stroke();   // tail
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fillStyle = '#8a5a2e'; ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(r * 0.25, r * 0.35, r * 0.72, r * 0.68, 0, 0, 6.283); ctx.fillStyle = '#ff7a2e'; ctx.fill();     // the red breast
+    ctx.beginPath(); ctx.ellipse(r * 0.3, r * 0.95, r * 0.6, r * 0.35, 0, 0, 6.283); ctx.fillStyle = '#fff1dc'; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r * 0.85, -r * 0.05); ctx.lineTo(r * 1.35, r * 0.08); ctx.lineTo(r * 0.82, r * 0.25); ctx.closePath(); ctx.fillStyle = '#ffc93a'; ctx.fill(); ctx.lineWidth = Math.max(1.5, r * 0.09); ctx.stroke();   // beak
+    ctx.beginPath(); ctx.arc(r * 0.42, -r * 0.25, r * 0.2, 0, 6.283); ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.48, -r * 0.24, r * 0.11, 0, 6.283); ctx.fillStyle = U.OUT; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-r * 0.75, -r * 0.6); ctx.quadraticCurveTo(0, -r * 1.25, r * 0.7, -r * 0.62); ctx.quadraticCurveTo(0, -r * 0.85, -r * 0.75, -r * 0.6); ctx.fillStyle = '#3f8a3c'; ctx.fill(); ctx.lineWidth = Math.max(1.5, r * 0.09); ctx.stroke();   // a Robin Hood cap
+    ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.95); ctx.quadraticCurveTo(-r * 0.6, -r * 1.6, -r * 1.05, -r * 1.55); ctx.lineWidth = Math.max(2, r * 0.14); ctx.strokeStyle = '#e8483a'; ctx.stroke();   // feather
+    ctx.restore();
+  },
+
+  // word-wrapped small print, left-aligned; returns the y under the last line
+  wrap(ctx, s, x, y, maxW, size, color, lh, maxLines) {
+    ctx.save(); ctx.font = '400 ' + size + 'px ' + this.FONT;
+    const words = s.split(' '), lines = []; let cur = '';
+    for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; }
+    if (cur) lines.push(cur);
+    ctx.restore();
+    lines.slice(0, maxLines || 9).forEach((l, i) => this.text(ctx, l, x, y + i * lh, size, color, 'left'));
+    return y + Math.min(lines.length, maxLines || 9) * lh;
+  },
+
+  // ---- THE AGENT: what ROBIN sees in your last arrows, and what to do next ----
+  agent(ctx, g) {
+    const U = this, D = KAR.Store.data, A = KAR.Agent, log = g.agentLog || [], tips = A.read(log), plan = A.plan(D, tips);
+    U.backdrop(ctx, 0.55);
+    U.panel(ctx, 60, 74, 840, 534, 'blue');
+    U.ribbon(ctx, 480, 46, 440, 'YOUR AGENT', 'green');
+    // left: ROBIN and your last arrows on a little target (dots = where each landed, newest brightest)
+    const cx = 196, cy = 268, rr = 104;
+    for (let i = 10; i >= 1; i--) { ctx.beginPath(); ctx.arc(cx, cy, rr * i / 10, 0, 6.283); ctx.fillStyle = ['#ffd34d', '#ffd34d', '#e8483a', '#e8483a', '#4aa3f0', '#4aa3f0', '#222b38', '#222b38', '#f4f1e8', '#f4f1e8'][i - 1]; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.283); ctx.lineWidth = 4; ctx.strokeStyle = U.OUT; ctx.stroke();
+    const shown = log.slice(-9);
+    shown.forEach((s, i) => {
+      if (s.short) return;
+      const f = rr / 10 / s.w, dx = KAR.Util.clamp(s.dx * f, -rr - 8, rr + 8), dy = KAR.Util.clamp(-s.dy * f, -rr - 8, rr + 8), last = i === shown.length - 1;
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, last ? 7 : 5.5, 0, 6.283); ctx.fillStyle = last ? '#9be35a' : 'rgba(255,255,255,' + (0.45 + 0.55 * i / shown.length) + ')'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke();
+    });
+    if (!shown.length) U.fit(ctx, 'NO ARROWS YET', cx, cy + 6, U.sz(g, 16), '#ffffff', 190);
+    const hits = shown.filter(s => !s.short), avg = hits.length ? shown.reduce((a, s) => a + s.ring, 0) / shown.length : 0;
+    U.fit(ctx, shown.length ? 'LAST ' + shown.length + ' ARROWS  ·  AVG ' + avg.toFixed(1) : 'PLAY A ROUND, THEN ASK ME', cx, cy + rr + 32, U.sz(g, 16), '#ffe9a8', 250);
+    this.robin(ctx, 128, 470, 40, g.time);
+    U.text(ctx, A.NAME, 182, 466, 28, '#ffffff', 'left');
+    U.fit(ctx, 'your archery coach', 182, 492, U.sz(g, 14), '#bfe3ff', 130, 'left');
+    // right: what I see + what's next
+    const X = 336, W = 532, fs = U.sz(g, 16), lh = g.coarse ? 24 : 21;
+    U.text(ctx, 'WHAT I SEE', X, 142, 22, '#fff27a', 'left');
+    let y = 172;
+    for (const t of tips.slice(0, 2)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = '#9be35a'; ctx.fill(); y = U.wrap(ctx, t.text, X + 22, y, W - 22, fs, '#ffffff', lh, 3) + 6; }
+    y = Math.max(y + 6, 282);
+    U.text(ctx, 'NEXT UP', X, y, 22, '#fff27a', 'left'); y += 30;
+    const ic = { quest: '#bff4ff', level: '#ffd34d', trophy: '#ffb82e', gear: '#9be35a' };
+    for (const p of plan.slice(0, 4)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = ic[p.kind] || '#ffffff'; ctx.fill(); U.fit(ctx, p.text, X + 22, y, fs, '#ffffff', W - 22, 'left'); y += lh + 8; }
+    U.button(ctx, g, 'agentTips', X, 530, 300, 56, D.agent ? 'TIPS IN GAME: ON' : 'TIPS IN GAME: OFF', { small: true, color: D.agent ? 'green' : 'grey' });
+    U.button(ctx, g, 'agentBack', X + 316, 530, 216, 56, 'BACK', { primary: true });
   },
 };
