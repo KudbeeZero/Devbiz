@@ -23,7 +23,7 @@ KAR.ACH = [
   { id: 'robin1',   name: 'ROBIN HOOD',      text: 'split an arrow',                      n: 1,    val: D => D.stats.robins },
   { id: 'robin3',   name: 'MERRY MEN',       text: 'split 3 arrows',                      n: 3,    val: D => D.stats.robins },
   { id: 'boss1',    name: 'BOSS DOWN',       text: 'beat a world boss',                   n: 1,    val: D => KAR.bossesBeaten(D) },
-  { id: 'boss5',    name: 'TOUR CHAMPION',   text: 'beat every world boss',               n: 5,    val: D => KAR.bossesBeaten(D) },
+  { id: 'boss5',    name: 'TOUR CHAMPION',   text: 'beat five world bosses',              n: 5,    val: D => KAR.bossesBeaten(D) },
   { id: 'stars45',  name: 'STAR COLLECTOR',  text: '45 stars on the tour',                n: 45,   val: D => KAR.tourStars(D) },
   { id: 'stars90',  name: 'PERFECT TOUR',    text: 'all 90 tour stars',                   n: 90,   val: D => KAR.tourStars(D) },
   { id: 'long70',   name: 'LONG SHOT',       text: '3 stars on the 70 m range',           n: 3,    val: D => D.stars[3] },
@@ -34,7 +34,7 @@ KAR.ACH = [
   { id: 'pop2k',    name: 'POP STAR',        text: 'score 2,000 in BALLOON POP',          n: 2000, val: D => D.trickBest || 0 },
   { id: 'swing90',  name: 'PENDULUM PRO',    text: 'score 90 on the SWINGER',             n: 90,   val: D => D.swingBest || 0 },
   { id: 'daily7',   name: 'REGULAR',         text: 'play 7 dailies',                      n: 7,    val: D => D.stats.dailies },
-  { id: 'starbox',  name: 'BOX BREAKER',     text: 'smash a STAR BOX',                    n: 1,    val: D => D.stats.starBoxes },
+  { id: 'starbox',  name: 'BOX BREAKER',     text: 'smash a STAR BOX or a COIN BLOCK',    n: 1,    val: D => D.stats.starBoxes },
 ];
 
 // Which trophies are unlocked (announced or not yet): progress has reached the goal.

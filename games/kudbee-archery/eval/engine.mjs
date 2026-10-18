@@ -164,9 +164,9 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
   rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
 }
-// 12b. THE TOUR: five worlds of six levels, a boss last in each; each level opens the next
+// 12b. THE TOUR: six worlds of six levels, a boss last in each; each level opens the next
 {
-  const T = K.TOUR, ok = T.length === 30 && K.VENUES.length === 5 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
+  const T = K.TOUR, ok = T.length === 36 && K.VENUES.length === 6 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
   const D = { tour: { stars: Array(30).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
   rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}, a boss ending each world; star targets rise; one star opens the next level`);
   // a perfect still-air run earns 3 stars; a smaller face scores tighter rings
@@ -202,6 +202,21 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rec('think-box', gold.ring >= 9 && !gold.blocked && wall.blocked && wall.ring === 0 && stuck && stuck.z === pe.dist - K.BOXZ && stuck.bi >= 0 && s1.star && s1.ring === 10 && !s2.star && s2.ring === 0 && s3.star && blockedC.blocked && !clearC.blocked && clearC.ring >= 9 && !closed && !not23 && K.tourOpen(24, D) && !K.tourOpen(25, D) && timing && gone && deep,
     `the window scores ${gold.ring}, the crates stop a shot dead (kept in the crate); the STAR BOX scores ${s1.ring} once an end (then ${s2.ring}, back next end); the cart blocks the gold, then clears for a ${clearC.ring}; THINK BOX opens off the Village Cup; the STAR BOX smashes when the arrow arrives (${timing}); over the wall flies on (${gone}); a window shot that clips the jamb is blocked (${deep})`);
 }
+// 12f. CRYPTO CITY: a side world that opens off the world 2 boss; its COIN BLOCK pays 10 once an end like a STAR BOX,
+// the boss rides behind a chain wall with two windows, and a save from the 30-level tour keeps every star
+{
+  const shot = (m, x, y) => { m.wind = 0; m._gust = () => { m.wind = 0; }; return m.shoot(x, y, 0, 0, 1); };
+  const D = { tour: { stars: Array(36).fill(0) } }, shut = !K.tourOpen(30, D); D.tour.stars[29] = 3; D.tour.stars[23] = 3; const notYet = !K.tourOpen(30, D); D.tour.stars[11] = 1;
+  const opens = K.tourOpen(30, D) && !K.tourOpen(31, D);
+  const gb = new K.Stage({ level: 30, seed: 2 }), gold = shot(gb, 0, C.FACE_Y), wall = shot(gb, 0.5, C.FACE_Y);
+  const cb = new K.Stage({ level: 30, seed: 2 }), b = cb.boxes.find(x => x.star), c1 = shot(cb, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2), c2 = shot(cb, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2);
+  const wh = K.TOUR[35], whale = new K.Stage({ level: 35, seed: 4 }), themed = K.TOUR.slice(30).every(L => L.v === 5) && wh.boss && wh.move === 'slide' && whale.boxes.some(x => x.star) && K.VENUES[5].name === 'CRYPTO CITY';
+  const s30 = { stars: Array(30).fill(1), best: Array(30).fill(60) }, ls = { s: JSON.stringify({ tour: s30, tourLv: 29 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K7 = loadKAR(['util.js', 'sim.js'], ls); K7.Store.load(); const T7 = K7.Store.data.tour;
+  const kept = T7.stars.length === 36 && T7.stars.slice(0, 30).every(v => v === 1) && T7.stars.slice(30).every(v => v === 0) && T7.best[29] === 60 && K7.Store.data.tourLv === 29 && K7.tourOpen(30, K7.Store.data);
+  rec('crypto-city', shut && notYet && opens && gold.ring >= 9 && !gold.blocked && wall.blocked && c1.star && c1.ring === 10 && !c2.star && themed && kept,
+    `CRYPTO CITY opens off the Forest Crown (not the other bosses): the window scores ${gold.ring}, the chain stops a shot; the COIN BLOCK pays ${c1.ring} once an end; THE WHALE rides the rail behind the chain; a 30-level save keeps its stars with the new world open`);
+}
 // 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
 {
   const D = { tour: { stars: Array(30).fill(0) }, stars: [0, 0, 0, 0] }, G = K.GEAR;
@@ -227,7 +242,7 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   // a save from the 24-level tour (before THINK BOX) loads as it was, with the new world's levels empty
   const s24 = { stars: Array(24).fill(2), best: Array(24).fill(70) }, ls3 = { s: JSON.stringify({ tour: s24, tourLv: 23 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K5 = loadKAR(['util.js', 'sim.js'], ls3); K5.Store.load(); const T5 = K5.Store.data.tour;
-  const kept = T5.stars.length === 30 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
+  const kept = T5.stars.length === 36 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
   // a corrupt save (stars out of 0..3, fractions) can't open levels or gear; the save arrays fit the Tour
   const ls4 = { s: JSON.stringify({ tour: { stars: [99, -4, 2.5, 3], best: [500, 70] } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K6 = loadKAR(['util.js', 'sim.js'], ls4); K6.Store.load(); const T6 = K6.Store.data.tour;

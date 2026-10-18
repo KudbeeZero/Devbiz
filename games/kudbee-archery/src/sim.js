@@ -217,7 +217,7 @@ KAR.Swing = class extends KAR.Match {
 KAR.Swing.L = 2.4; KAR.Swing.ENDS = 4; KAR.Swing.AMP = [0.16, 0.22, 0.28, 0.34];
 
 // ---- THE TOUR (levels) ------------------------------------------------------------------
-// Five worlds of six levels, each a short range with its own twist: the wind, a smaller face, a boss that slides
+// Six worlds of six levels, each a short range with its own twist: the wind, a smaller face, a boss that slides
 // along a rail or swings on ropes, gusts that change arrow to arrow, crates in the way. Stars come from the level's
 // own thresholds; one star opens the next level. move: 'slide' (amp in metres, w rad/s) or 'swing' (amp in
 // radians on Swing.L ropes). face: the face size as a fraction of the standard one at that distance. boxes: crates
@@ -229,6 +229,7 @@ KAR.VENUES = [
   { name: 'MOUNTAIN PASS', sub: 'sunset, and the wind off the peaks' },
   { name: 'LANTERN NIGHT', sub: 'floodlights, fireflies and a cold wind' },
   { name: 'THINK BOX', sub: 'crates, windows and carts · think before you shoot' },
+  { name: 'CRYPTO CITY', sub: 'neon towers and a market that never sleeps · gems only, no real coins' },
 ];
 // THINK BOX builders. Crates stand BOXZ metres in front of the boss (BOXD deep) and stop an arrow dead (0 points);
 // a STAR BOX (star: true) breaks and scores 10 (once an end); a CART (mv: { a: metres, w: rad/s, p: phase }) is a
@@ -246,7 +247,7 @@ KAR.wall = (half, top, wins) => {
   if (x < half) out.push({ x0: x, x1: half, y0: 0, y1: top });
   return out;
 };
-// Five worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
+// Six worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
 // Star targets are tuned with bots (casual / good / expert, leading the movers): see eval/calibrate.mjs.
 KAR.TOUR = [
   { v: 0, name: 'FIRST ARROWS',  dist: 0, ends: 2, wind: 0.25, stars: [36, 46, 54], tip: 'a calm day at 18 m · find the gold' },
@@ -280,6 +281,14 @@ KAR.TOUR = [
   { v: 4, name: 'TWO WINDOWS',   dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.0, w: 0.8, boxes: KAR.wall(2.2, 2.0, [[-1.15, -0.45, 0.8, 1.8], [0.45, 1.15, 0.8, 1.8]]), flags: [1.35, 2.15], stars: [50, 66, 79], tip: 'the boss rides behind the wall · hit it in a window' },
   { v: 4, name: 'CRISS-CROSS',   dist: 1, ends: 3, wind: 0.9,  gust: 0.35, boxes: [{ x0: -0.25, x1: 0.25, y0: 0, y1: 1.9, mv: { a: 1.0, w: 1.1 } }, { x0: -0.25, x1: 0.25, y0: 0, y1: 1.9, mv: { a: 1.0, w: 1.1, p: Math.PI } }], stars: [51, 67, 79], tip: 'two carts criss-cross · find the gap' },
   { v: 4, name: 'THE BIG BOX',   dist: 2, ends: 4, wind: 0.9,  gust: 0.25, move: 'swing', amp: 0.14, face: 0.6, view: 1.15, boss: true, boxes: KAR.wall(2.6, 2.05, [[-0.7, 0.7, 0.85, 1.75]]).concat([{ x0: 1.1, x1: 1.5, y0: 2.05, y1: 2.45, star: true }]), flags: [1.05, 2.2], stars: [56, 84, 102], tip: 'the boss swings behind a window · and a STAR BOX up top' },
+  // CRYPTO CITY: a neon side world that opens once the Forest Crown falls. Its crates are glowing BLOCKS (a chain of
+  // them) and its STAR BOX is a COIN BLOCK. Themed only: everything it pays is in-game gems - no coins, wallets or tokens.
+  { v: 5, name: 'GENESIS BLOCK', dist: 1, ends: 3, wind: 0.5,  after: 11, view: 1.0, boxes: KAR.wall(1.25, 1.9, [[-0.16, 0.16, 1.14, 1.46]]).concat([{ x0: -1.05, x1: -0.7, y0: 1.9, y1: 2.25, star: true }]), flags: [0.6, 1.55], stars: [56, 75, 83], tip: 'the first block · shoot through the window · the COIN BLOCK pays 10' },
+  { v: 5, name: 'HODL',          dist: 2, ends: 3, wind: 0.5,  face: 0.7, stars: [50, 62, 76], tip: 'a small face at 50 m · hold your breath, hold your nerve' },
+  { v: 5, name: 'PUMP & DUMP',   dist: 1, ends: 3, wind: 0.5,  move: 'swing', amp: 0.2, stars: [55, 68, 79], tip: 'the price swings up and down · loose as it comes to you' },
+  { v: 5, name: 'GAS FEES',      dist: 2, ends: 3, wind: 1.0,  gust: 0.45, stars: [55, 69, 80], tip: 'the wind changes every arrow, like the fees · watch the flags' },
+  { v: 5, name: 'BULL RUN',      dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.1, w: 1.7, stars: [54, 67, 78], tip: 'the bull charges along the rail · lead it' },
+  { v: 5, name: 'THE WHALE',     dist: 2, ends: 4, wind: 0.9,  gust: 0.25, move: 'slide', amp: 1.0, w: 0.9, boss: true, boxes: KAR.wall(2.4, 2.0, [[-1.25, -0.45, 0.8, 1.8], [0.45, 1.25, 0.8, 1.8]]).concat([{ x0: -0.2, x1: 0.2, y0: 2.0, y1: 2.4, star: true }]), flags: [1.5, 2.15], stars: [59, 89, 108], tip: 'the whale swims behind the chain · hit it in a window, take the COIN BLOCK' },
 ];
 // the 15-level tour (before the worlds) saved progress by these indices
 KAR.TOUR_V1 = [0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 17];

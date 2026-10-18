@@ -109,6 +109,7 @@ KAR.Render = {
     if (this.venue === 2) return this._mountain(ctx, t, hy);
     if (this.venue === 3) return this._night(ctx, t, hy);
     if (this.venue === 4) return this._yard(ctx, t, hy);
+    if (this.venue === 5) return this._crypto(ctx, t, hy);
     const ph = this._photo(KAR.CFG.DISTS.indexOf(this.dist) % 2 ? 'bg-range-2' : 'bg-range-1');
     if (ph) {
       const s = Math.max(XW / ph.width, hy / ph.height);
@@ -250,6 +251,93 @@ KAR.Render = {
     this._field(ctx, hy, false, ['#c7d77a', '#7ea544']);
     const v = ctx.createRadialGradient(480, H * 0.55, H * 0.4, 480, H * 0.55, H); v.addColorStop(0, 'rgba(60,40,10,0)'); v.addColorStop(1, 'rgba(60,40,10,0.22)'); ctx.fillStyle = v; ctx.fillRect(XL, 0, XW, H);
   },
+  // CRYPTO CITY: a neon skyline at dusk - a big moon with a rocket on its way, towers full of lit windows, a billboard
+  // whose candle chart only goes up, gold coins drifting over the range and a glowing grid on the grass
+  _crypto(ctx, t, hy) {
+    const XL = this.XL, XW = this.XW, H = this.H, rnd = KAR.Util.rng(57);
+    const sky = ctx.createLinearGradient(0, 0, 0, hy); sky.addColorStop(0, '#0b0624'); sky.addColorStop(0.55, '#2a1260'); sky.addColorStop(1, '#a03a8e');
+    ctx.fillStyle = sky; ctx.fillRect(XL, 0, XW, hy + 2);
+    for (let i = 0; i < 70; i++) { const x = XL + rnd() * XW, y = rnd() * (hy - 60), r = 0.6 + rnd() * 1.2; ctx.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(t * (0.7 + rnd()) + i)); ctx.fillStyle = '#f2e8ff'; ctx.fillRect(x, y, r, r); }
+    ctx.globalAlpha = 1;
+    // the moon, and a little rocket on its way there
+    const mx = 760, my = Math.max(70, hy - 230), mg = ctx.createRadialGradient(mx, my, 20, mx, my, 170); mg.addColorStop(0, 'rgba(255,220,255,0.35)'); mg.addColorStop(1, 'rgba(255,220,255,0)');
+    ctx.fillStyle = mg; ctx.fillRect(mx - 170, my - 170, 340, 340);
+    ctx.beginPath(); ctx.arc(mx, my, 40, 0, 6.283); ctx.fillStyle = '#f6eef8'; ctx.fill();
+    for (const [cx, cy, r] of [[-12, -8, 9], [13, 12, 7], [16, -15, 4]]) { ctx.beginPath(); ctx.arc(mx + cx, my + cy, r, 0, 6.283); ctx.fillStyle = 'rgba(190,160,200,0.45)'; ctx.fill(); }
+    const rp = (t * 0.03) % 1, rx = KAR.Util.lerp(560, mx - 54, rp), ry = KAR.Util.lerp(my + 150, my + 20, rp);
+    this._rocket(ctx, rx, ry, 0.5, -0.9, t);
+    // two rows of towers: the far ones a violet haze, the near ones dark with lit windows and red roof lights
+    const towers = (base, hmax, col, seed, win) => {
+      const r2 = KAR.Util.rng(seed);
+      for (let x = XL - 30; x < XL + XW + 30;) {
+        const w = 34 + r2() * 46, h = hmax * (0.35 + r2() * 0.65), top = base - h;
+        ctx.fillStyle = col; ctx.fillRect(x, top, w, h + 4);
+        if (win) {
+          for (let wy = top + 8; wy < base - 6; wy += 11) for (let wx = x + 5; wx < x + w - 6; wx += 9) if (r2() < 0.45) { ctx.fillStyle = ['#5ff0ff', '#ff5fd2', '#ffd34d', '#b48cff'][Math.floor(r2() * 4)]; ctx.globalAlpha = 0.55 + 0.4 * r2(); ctx.fillRect(wx, wy, 5, 6); }
+          ctx.globalAlpha = 1;
+          if (r2() < 0.5) { const on = Math.sin(t * 3 + x) > 0; ctx.fillStyle = on ? '#ff3b4e' : '#5a1020'; ctx.fillRect(x + w / 2 - 1.5, top - 9, 3, 9); ctx.beginPath(); ctx.arc(x + w / 2, top - 10, 2.6, 0, 6.283); ctx.fill(); }
+        }
+        x += w + 2 + r2() * 10;
+      }
+    };
+    towers(hy - 6, 150, '#3b2378', 3, false);
+    // the billboard: a candle chart that only goes up
+    const bx = XL + XW * 0.22, by = hy - 150, bw = 150, bh = 84;
+    ctx.fillStyle = '#120a2e'; ctx.fillRect(bx - 6, by - 6, bw + 12, bh + 12); ctx.fillRect(bx + bw / 2 - 4, by + bh, 8, 160);
+    ctx.save(); ctx.shadowColor = '#5ff0ff'; ctx.shadowBlur = 12; ctx.strokeStyle = '#5ff0ff'; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh); ctx.restore();
+    const cr = KAR.Util.rng(5); let lvl = by + bh - 16;
+    for (let i = 0; i < 9; i++) {
+      const up = i === 8 || cr() < 0.72, d = (6 + cr() * 10) * (up ? -1 : 0.6), o = lvl, c = Math.max(by + 10, lvl + d), x = bx + 10 + i * 15;
+      ctx.strokeStyle = up ? '#4dff9a' : '#ff5d6c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 4, Math.min(o, c) - 5); ctx.lineTo(x + 4, Math.max(o, c) + 4); ctx.stroke();
+      ctx.fillStyle = up ? '#4dff9a' : '#ff5d6c'; if (i === 8) ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 5); ctx.fillRect(x, Math.min(o, c), 8, Math.max(3, Math.abs(c - o))); ctx.globalAlpha = 1;
+      lvl = c;
+    }
+    towers(hy + 2, 110, '#1a1038', 8, true);
+    this._field(ctx, hy, false, ['#2f7a6a', '#173a3e']);
+    // a neon grid on the grass, in perspective
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22;
+    for (let x = -60; x <= 60; x += 4) this.line3(ctx, [x, 0.01, -2], [x, 0.01, this.dist + 60], x % 20 ? '#5ff0ff' : '#ff5fd2', 1.2);
+    for (let z = 0; z < this.dist + 60; z += 4 + z * 0.12) this.line3(ctx, [-60, 0.01, z], [60, 0.01, z], '#5ff0ff', 1.2);
+    ctx.restore();
+    // gold coins drifting across the sky
+    for (let i = 0; i < 7; i++) { const x = XL + ((i * 173 + t * (9 + i * 2)) % (XW + 120)) - 60, y = 40 + ((i * 67) % Math.max(60, hy - 120)) + Math.sin(t + i) * 8; this._coin(ctx, x, y, 9 + (i % 3) * 3, t * 2 + i); }
+    const v = ctx.createRadialGradient(480, H * 0.5, H * 0.32, 480, H * 0.5, H * 0.95); v.addColorStop(0, 'rgba(10,4,30,0)'); v.addColorStop(1, 'rgba(10,4,30,0.42)'); ctx.fillStyle = v; ctx.fillRect(XL, 0, XW, H);
+  },
+  // a gold Kudbee coin (in-game gems are what you win - it is just a picture), turning: spin is the angle round its axis
+  _coin(ctx, x, y, r, spin) {
+    const c = Math.cos(spin), w = Math.max(0.12, Math.abs(c)) * r;
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.ellipse(x, y, w + 2.4, r + 2.4, 0, 0, 6.283); ctx.fillStyle = this.OUT; ctx.fill();
+    const g = ctx.createLinearGradient(x - w, y - r, x + w, y + r); g.addColorStop(0, '#fff3a0'); g.addColorStop(0.5, '#ffc93a'); g.addColorStop(1, '#d88a10');
+    ctx.beginPath(); ctx.ellipse(x, y, w, r, 0, 0, 6.283); ctx.fillStyle = g; ctx.fill();
+    if (Math.abs(c) > 0.45) {
+      ctx.beginPath(); ctx.ellipse(x, y, w * 0.72, r * 0.72, 0, 0, 6.283); ctx.lineWidth = Math.max(1, r * 0.1); ctx.strokeStyle = 'rgba(160,90,0,0.6)'; ctx.stroke();
+      ctx.font = '400 ' + Math.round(r * 1.1) + 'px ' + KAR.UI.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#9a5a00';
+      ctx.save(); ctx.translate(x, y + r * 0.06); ctx.scale(Math.abs(c), 1); ctx.fillText('K', 0, 0); ctx.restore();
+    }
+    ctx.restore();
+  },
+  // a cartoon rocket at (x, y), pointing along angle a (radians, 0 = right), flame flickering
+  _rocket(ctx, x, y, s, a, t) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s); ctx.lineJoin = 'round';
+    const f = 14 + 6 * Math.sin(t * 30);
+    ctx.beginPath(); ctx.moveTo(-26, -7); ctx.lineTo(-26 - f, 0); ctx.lineTo(-26, 7); ctx.closePath(); ctx.fillStyle = '#ffb02e'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-26, -4); ctx.lineTo(-26 - f * 0.55, 0); ctx.lineTo(-26, 4); ctx.closePath(); ctx.fillStyle = '#fff3a0'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-26, -12); ctx.lineTo(-14, -12); ctx.lineTo(-20, -22); ctx.closePath(); ctx.moveTo(-26, 12); ctx.lineTo(-14, 12); ctx.lineTo(-20, 22); ctx.closePath(); ctx.fillStyle = '#ff4d6a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-26, -11); ctx.lineTo(10, -11); ctx.quadraticCurveTo(30, -8, 34, 0); ctx.quadraticCurveTo(30, 8, 10, 11); ctx.lineTo(-26, 11); ctx.closePath(); ctx.fillStyle = '#f4f1ff'; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(6, 0, 5.5, 0, 6.283); ctx.fillStyle = '#5ff0ff'; ctx.fill(); ctx.stroke();
+    ctx.restore();
+  },
+  // a glowing chain BLOCK for the map: a dark cube face with a neon edge, w x h, bottom-left at (x, y); coin: a COIN BLOCK
+  _block2(ctx, x, y, w, h, coin) {
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.fillStyle = coin ? '#ffc93a' : '#241a5a'; ctx.fillRect(x, y - h, w, h);
+    ctx.shadowColor = coin ? '#ffe27a' : '#5ff0ff'; ctx.shadowBlur = 10; ctx.lineWidth = 2.5; ctx.strokeStyle = coin ? '#fff3a0' : '#5ff0ff'; ctx.strokeRect(x + 4, y - h + 4, w - 8, h - 8);
+    ctx.shadowBlur = 0; ctx.lineWidth = 3; ctx.strokeStyle = this.OUT; ctx.strokeRect(x, y - h, w, h);
+    if (coin) this._coin(ctx, x + w / 2, y - h / 2, Math.min(w, h) * 0.3, 0);
+    else { ctx.fillStyle = 'rgba(95,240,255,0.5)'; ctx.fillRect(x + w * 0.3, y - h * 0.62, w * 0.4, 3); ctx.fillRect(x + w * 0.3, y - h * 0.42, w * 0.25, 3); }
+    ctx.restore();
+  },
 
   // ---- the cartoon kit (the level map and the THINK BOX yard), drawn in the Kudbee Birds style: flat colours,
   // one highlight, a bold dark outline ------------------------------------------------------------------
@@ -362,6 +450,7 @@ KAR.Render = {
     { sky: ['#3a3f86', '#9b5c9e', '#f5876a', '#ffd27a'], sun: [700, 300, '#ffc864'], cloud: '#ffd8cc', hills: [['#9a7ab8', '#6e5f96'], ['#5a6a8a', '#3d4a6c'], ['#6e9a4a', '#3f6a2e']], tuft: ['#7aa04a'] },
     { sky: ['#070b24', '#16245a', '#33457e'], moon: [230, 110], cloud: '#2c3a6a', hills: [['#24356a', '#18264f'], ['#1b2b55', '#121d3c'], ['#244a34', '#12301f']], tuft: ['#2f6a3e'] },
     { sky: ['#1fa2e4', '#7fd6ff', '#fff1c2'], sun: [800, 90, '#ffd84a'], cloud: '#ffffff', hills: [['#c9e58a', '#a2cc63'], ['#9ad35a', '#6db53e'], ['#d9c27a', '#b89a52']], tuft: ['#8ccf4e'] },
+    { sky: ['#0b0624', '#2e1468', '#a03a8e'], moon: [770, 104], cloud: '#3a2472', hills: [['#4b2f8e', '#2f1d66'], ['#2b2468', '#191446'], ['#2a5c5e', '#15343a']], tuft: ['#3fbf9a'] },
   ],
   mapScene(ctx, v, t) {
     const XL = this.XL, XW = this.XW, H = this.H, M = this.MAP[v] || this.MAP[0];
@@ -400,6 +489,10 @@ KAR.Render = {
       } catch (e) { /* no offscreen canvas: paint it live */ }
     }
     if (c[key]) ctx.drawImage(c[key], XL, 0, XW, H); else this._mapLayer(ctx, v);
+    if (v === 5) {                      // CRYPTO CITY: a rocket on its way to the moon, gold coins drifting up the sky
+      const rp = (t * 0.04) % 1; this._rocket(ctx, KAR.Util.lerp(XL + XW * 0.45, 712, rp), KAR.Util.lerp(300, 130, rp), 0.7, -0.75, t);
+      for (let i = 0; i < 9; i++) { const x = XL + ((i * 151 + 40) % XW), y = 330 - ((i * 61 + t * (14 + i * 3)) % 300); this._coin(ctx, x, y, 10 + (i % 3) * 4, t * 2.4 + i); }
+    }
     if (v === 3) for (let i = 0; i < 22; i++) {    // fireflies
       const x = XL + ((i * 97.3 + t * (8 + i % 5)) % XW), y = 360 + ((i * 53) % 100) * 2.4 + Math.sin(t * 1.3 + i) * 14, a = 0.35 + 0.65 * Math.max(0, Math.sin(t * 2.2 + i * 1.7));
       const fg = ctx.createRadialGradient(x, y, 0, x, y, 9); fg.addColorStop(0, 'rgba(230,255,140,' + a + ')'); fg.addColorStop(1, 'rgba(230,255,140,0)'); ctx.fillStyle = fg; ctx.fillRect(x - 9, y - 9, 18, 18);
@@ -434,10 +527,18 @@ KAR.Render = {
         for (let k = 0; k < 2; k++) { ctx.fillStyle = rnd() < 0.7 ? '#ffd27a' : '#2a3366'; ctx.fillRect(x - w / 2 + 4 + k * (w / 2 - 2), y - h + 6, w / 2 - 8, 8); } }
     }
     if (v === 4) gaps.forEach((x, i) => this._fort(ctx, x, h1(x) + 4, 0.6, [2, 3, 3, 2, 2][i], 3 + i));
+    if (v === 5) {                      // CRYPTO CITY: neon towers on the back hill, one with a chart that only goes up
+      for (let i = 0; i < 10; i++) { const x = X(0.03 + i * 0.1 + rnd() * 0.03), y = h1(x) + 6, w = 36 + rnd() * 26, h = 70 + rnd() * 90;
+        ctx.fillStyle = ['#2a1b62', '#33207a', '#221650'][i % 3]; ctx.fillRect(x - w / 2, y - h, w, h); ctx.lineWidth = 3.5; ctx.strokeStyle = this.OUT; ctx.strokeRect(x - w / 2, y - h, w, h);
+        for (let wy = y - h + 10; wy < y - 10; wy += 14) for (let wx = x - w / 2 + 6; wx < x + w / 2 - 8; wx += 11) if (rnd() < 0.55) { ctx.fillStyle = ['#5ff0ff', '#ff5fd2', '#ffd34d'][Math.floor(rnd() * 3)]; ctx.fillRect(wx, wy, 6, 7); }
+        if (i === 6) { const bx = x - 50, by = y - h - 70; ctx.fillStyle = '#120a2e'; ctx.fillRect(bx, by, 100, 58); ctx.lineWidth = 3; ctx.strokeStyle = '#5ff0ff'; ctx.strokeRect(bx, by, 100, 58); ctx.fillRect(x - 3, by + 58, 6, 12);
+          ctx.beginPath(); for (let k = 0; k < 7; k++) { const px = bx + 10 + k * 13.5, py = by + 46 - k * 5 - (k % 2) * 6; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.lineWidth = 3.5; ctx.strokeStyle = '#4dff9a'; ctx.stroke(); } }
+    }
     const h2 = this._hillBand(ctx, 432, 24, 0.0085, 2.2 + v * 0.6, M.hills[1]);
     // the world's straw targets out on the middle hill, arrows in them
     gaps.forEach((x, i) => {
       if (v === 4) { this._crate2(ctx, x - 24, h2(x) + 4, 48, 48, i === 2); this._crate2(ctx, x - 12, h2(x) - 44, 24, 24, false); return; }
+      if (v === 5) { this._block2(ctx, x - 46, h2(x) + 4, 44, 44, false); this._block2(ctx, x + 2, h2(x) + 4, 44, 44, false); this._block2(ctx, x - 22, h2(x) - 40, 44, 44, i % 2 === 0); return; }
       this._target2(ctx, x + (i % 2 ? 6 : -6), h2(x) + 6, 0.55 + (i % 3) * 0.08, 1 + i % 3);
     });
     if (v === 0) this._fence(ctx, h2(260) + 14, 210, 300, 0.8);
@@ -595,7 +696,7 @@ KAR.Render = {
   // with a star on it; a CART rides on wheels along a ground rail. this.boxes: [{x0,x1,y0,y1,star,mv,off,gone}].
   drawBoxes(ctx, t, wind, swing) {
     const B = this.boxes; if (!B || !B.length) return;
-    const zf = this.dist - KAR.BOXZ, zb = zf + KAR.BOXD, c = this.cam, OUT = this.OUT, P = (x, y, z) => this.proj(x, y, z);
+    const zf = this.dist - KAR.BOXZ, zb = zf + KAR.BOXD, c = this.cam, OUT = this.OUT, P = (x, y, z) => this.proj(x, y, z), neon = this.venue === 5;
     // tiles about a crate-width in the scope at that range (fixed per level, so they don't re-split as the camera zooms),
     // outlines bold but sane
     const k0 = (P(0, 1, zf) || { k: 100 }).k, lw = KAR.Util.clamp(0.006 * k0, 1.4, 3.2), tile = KAR.Util.clamp(this.dist * 0.012, 0.22, 0.6);
@@ -605,20 +706,21 @@ KAR.Render = {
     // sides and tops first (the depth of the window jambs), then the fronts over them
     for (const b of B) {
       if (b.gone) continue;
-      const x0 = b.x0 + b.off, x1 = b.x1 + b.off, side = b.star ? '#c9800e' : '#9c6a32', top = b.star ? '#ffe888' : '#e2b46a';
+      const x0 = b.x0 + b.off, x1 = b.x1 + b.off, side = b.star ? '#c9800e' : neon ? '#17103e' : '#9c6a32', top = b.star ? '#ffe888' : neon ? '#3a2a86' : '#e2b46a';
       if (c.x > x1) this.poly(ctx, [P(x1, b.y0, zf), P(x1, b.y1, zf), P(x1, b.y1, zb), P(x1, b.y0, zb)], side, OUT, lw);
       if (c.x < x0) this.poly(ctx, [P(x0, b.y0, zf), P(x0, b.y1, zf), P(x0, b.y1, zb), P(x0, b.y0, zb)], side, OUT, lw);
       if (c.y > b.y1) this.poly(ctx, [P(x0, b.y1, zf), P(x1, b.y1, zf), P(x1, b.y1, zb), P(x0, b.y1, zb)], top, OUT, lw);
-      if (c.y < b.y0) this.poly(ctx, [P(x0, b.y0, zf), P(x1, b.y0, zf), P(x1, b.y0, zb), P(x0, b.y0, zb)], '#7a4f22', OUT, lw);
+      if (c.y < b.y0) this.poly(ctx, [P(x0, b.y0, zf), P(x1, b.y0, zf), P(x1, b.y0, zb), P(x0, b.y0, zb)], neon ? '#120c30' : '#7a4f22', OUT, lw);
     }
     for (const b of B) {
       if (b.gone) continue;
       const x0 = b.x0 + b.off, x1 = b.x1 + b.off, nx = Math.max(1, Math.round((x1 - x0) / tile)), ny = Math.max(1, Math.round((b.y1 - b.y0) / tile));
-      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) this._crate3(ctx, x0 + (x1 - x0) * i / nx, x0 + (x1 - x0) * (i + 1) / nx, b.y0 + (b.y1 - b.y0) * j / ny, b.y0 + (b.y1 - b.y0) * (j + 1) / ny, zf, lw, b.star, (i * 7 + j * 3) % 5);
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) (neon ? this._block3 : this._crate3).call(this, ctx, x0 + (x1 - x0) * i / nx, x0 + (x1 - x0) * (i + 1) / nx, b.y0 + (b.y1 - b.y0) * j / ny, b.y0 + (b.y1 - b.y0) * (j + 1) / ny, zf, lw, b.star, (i * 7 + j * 3) % 5, t);
       // one outline round the whole stack, so a wall reads as one solid thing
       this.poly(ctx, [P(x0, b.y0, zf), P(x1, b.y0, zf), P(x1, b.y1, zf), P(x0, b.y1, zf)], null, OUT, lw * 2);
-      if (b.star) {                     // the star emblem, gently pulsing
-        const q = P((x0 + x1) / 2, (b.y0 + b.y1) / 2, zf); if (q) KAR.UI.star(ctx, q.x, q.y, (x1 - x0) * 0.3 * q.k * (1 + 0.06 * Math.sin(t * 5)), true, 1);
+      if (b.star) {                     // the star emblem (a turning coin in CRYPTO CITY), gently pulsing
+        const q = P((x0 + x1) / 2, (b.y0 + b.y1) / 2, zf), r = (x1 - x0) * 0.3 * (q ? q.k : 0) * (1 + 0.06 * Math.sin(t * 5));
+        if (q && neon) this._coin(ctx, q.x, q.y, r * 1.1, Math.sin(t * 1.6) * 0.9); else if (q) KAR.UI.star(ctx, q.x, q.y, r, true, 1);
       }
       if (b.mv) for (const wx of [x0 + 0.1, x1 - 0.1]) {           // the cart's wheels
         const q = P(wx, 0.07, zf - 0.02); if (!q) continue; const r = Math.max(3, 0.08 * q.k);
@@ -651,6 +753,17 @@ KAR.Render = {
     // a highlight along the top of the frame, nails in the corners
     const h0 = P(x0 + i * 0.5, y1 - i * 0.35), h1 = P(x1 - i * 0.5, y1 - i * 0.35); if (h0 && h1) { ctx.beginPath(); ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = Math.max(1, lw * 0.7); ctx.stroke(); }
     for (const [nx, ny] of [[x0 + i * 0.5, y0 + i * 0.5], [x1 - i * 0.5, y0 + i * 0.5], [x1 - i * 0.5, y1 - i * 0.5], [x0 + i * 0.5, y1 - i * 0.5]]) { const q = P(nx, ny); if (q) { ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, 0.012 * q.k), 0, 6.283); ctx.fillStyle = '#4a4f57'; ctx.fill(); } }
+  },
+
+  // one CRYPTO CITY chain block tile on the front plane z: a dark face, a neon inner edge (cyan; gold for a COIN BLOCK)
+  // that breathes, and a couple of data bars
+  _block3(ctx, x0, x1, y0, y1, z, lw, star, v, t) {
+    const P = (x, y) => this.proj(x, y, z), OUT = this.OUT, i = Math.min(x1 - x0, y1 - y0) * 0.14;
+    const a = P(x0, y0), b = P(x1, y0), c = P(x1, y1), d = P(x0, y1); if (!a || !b || !c || !d) return;
+    this.poly(ctx, [a, b, c, d], star ? '#f0b52e' : ['#271c66', '#2e2176', '#22185a'][v % 3], OUT, lw);
+    const glow = star ? '255,236,140' : v % 2 ? '95,240,255' : '255,95,210', al = 0.65 + 0.3 * Math.sin((t || 0) * 2.4 + v);
+    this.poly(ctx, [P(x0 + i, y0 + i), P(x1 - i, y0 + i), P(x1 - i, y1 - i), P(x0 + i, y1 - i)], star ? '#ffd34d' : null, 'rgba(' + glow + ',' + al + ')', Math.max(1.2, lw * 0.9));
+    if (!star) for (const [f, l] of [[0.62, 0.5], [0.42, 0.3]]) { const p = P(x0 + i * 1.8, y0 + (y1 - y0) * f), q = P(x0 + i * 1.8 + (x1 - x0 - 3.6 * i) * l, y0 + (y1 - y0) * f); if (p && q) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.strokeStyle = 'rgba(' + glow + ',0.45)'; ctx.lineWidth = Math.max(1, lw * 0.8); ctx.stroke(); } }
   },
 
   // hgt: the pole's height (the pennant keeps the standard 1.9 m pole's size, scaled with it)

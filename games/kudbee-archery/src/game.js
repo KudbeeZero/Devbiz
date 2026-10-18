@@ -380,7 +380,7 @@ KAR.Game = class {
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
     if (f.shooter === 0) this.buzz(res.robin ? [40, 60, 40, 60, 80] : res.ring >= 10 ? [30, 50, 45] : res.ring >= 9 ? 30 : res.miss ? 0 : 14);
     if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
-    else if (res.star) { this._banner('STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  smashed', 88); this.audio.gold(streak); this._burst(30); }
+    else if (res.star) { const coin = this.match.venue === 5; this._banner(coin ? 'COIN BLOCK!' : 'STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  ' + (coin ? 'cashed in' : 'smashed'), 88); this.audio.gold(streak); this._burst(30); }
     else if (res.blocked) { this.audio.miss(); this._banner('BLOCKED!', '#ffe0b0', '#b9783a', 'into the crates', 76); }
     else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {

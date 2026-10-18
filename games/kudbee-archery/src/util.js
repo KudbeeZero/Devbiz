@@ -1,5 +1,5 @@
 const KAR = {};
-// (the Tour's save arrays below are sized for its 30 levels; engine.mjs checks this against KAR.TOUR.length)
+// (the Tour's save arrays below are sized for its 36 levels; engine.mjs checks this against KAR.TOUR.length)
 
 KAR.Util = {
   clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; },
@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [], streak: { day: 0, n: 0, best: 0 }, aimSpeed: 1 },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(36).fill(0), best: Array(36).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [], streak: { day: 0, n: 0, best: 0 }, aimSpeed: 1 },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -48,12 +48,12 @@ KAR.Store = {
           // the day streak: whole numbers, a streak no longer than the days since day 1 (and a best at least as long)
           if (d.streak && typeof d.streak === 'object') { const s = d.streak; if (Number.isInteger(s.day) && s.day >= 0 && s.day < 1e5 && Number.isInteger(s.n) && s.n >= 0 && s.n <= s.day && Number.isInteger(s.best) && s.best >= s.n && s.best <= s.day) D.streak = { day: s.day, n: s.n, best: s.best }; }
           const v1 = d.tour && Array.isArray(d.tour.stars) && d.tour.stars.length === 15 && KAR.TOUR_V1;   // a save from the 15-level tour
-          if (pick(d.tourLv, v1 ? 15 : 30) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
+          if (pick(d.tourLv, v1 ? 15 : 36) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
           if (d.gear && typeof d.gear === 'object') for (const k in D.gear) if (pick(d.gear[k], KAR.GEAR ? KAR.GEAR[k].length : 5) !== null) D.gear[k] = d.gear[k];
           if (Number.isInteger(d.tut)) D.tut = d.tut;
           // stars are whole numbers 0..3 and bests 0..150 (a corrupt or hand-edited save can't open every level and all the gear)
           const ok = (k, v) => Number.isInteger(v) && v >= 0 && v <= (k === 'stars' ? 3 : 150);
-          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(v1 ? v1.length : 30, d.tour[k].length); i++) if (ok(k, d.tour[k][i])) D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
+          if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(v1 ? v1.length : 36, d.tour[k].length); i++) if (ok(k, d.tour[k][i])) D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
           if (typeof d.trickBest === 'number') D.trickBest = d.trickBest;
           if (typeof d.swingBest === 'number') D.swingBest = d.swingBest;
           if (d.daily && typeof d.daily === 'object') for (const k in D.daily) if (typeof d.daily[k] === 'number') D.daily[k] = d.daily[k];

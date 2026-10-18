@@ -312,11 +312,11 @@ KAR.UI = {
       const T = D.tour, tot = T.stars.reduce((a, b) => a + b, 0), L = KAR.TOUR[D.tourLv], W = KAR.VENUES[L.v];
       U.fit(ctx, KAR.VENUES.length + ' WORLDS  \u00b7  ' + KAR.TOUR.length + ' LEVELS  \u00b7  A BOSS AT THE END OF EACH WORLD', 480, C ? 300 : 300, U.sz(g, 18), '#ffffff', 900);
       for (let v = 0; v < KAR.VENUES.length; v++) {               // a medal per world: its stars, and a crown once its boss falls
-        const x = 480 + (v - (KAR.VENUES.length - 1) / 2) * 182, y = C ? 356 : 352, ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0), open = KAR.tourOpen(v * 6, D), done = T.stars[v * 6 + 5] > 0;
-        U.rr(ctx, x - 86, y - 30, 172, 72, 16); ctx.fillStyle = U.OUT; ctx.fill();
-        U.rr(ctx, x - 83, y - 27, 166, 66, 13); ctx.fillStyle = open ? ['#3e7fd0', '#3f8a3c', '#9a4e7a', '#26386e', '#c9802e'][v] : '#5b6470'; ctx.fill();
-        U.fit(ctx, W === KAR.VENUES[v] ? '\u25b8 ' + KAR.VENUES[v].name : KAR.VENUES[v].name, x, y - 4, U.sz(g, 15), '#ffffff', 156);
-        if (open) { U.star(ctx, x - 26, y + 22, 10, true, 1); U.text(ctx, ws + ' / 18', x - 10, y + 29, U.sz(g, 15), '#ffe9a8', 'left'); if (done) U.crown(ctx, x + 60, y + 22, 9); }
+        const nv = KAR.VENUES.length, sp = nv > 5 ? 152 : 182, hw = sp / 2 - 5, x = 480 + (v - (nv - 1) / 2) * sp, y = C ? 356 : 352, ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0), open = KAR.tourOpen(v * 6, D), done = T.stars[v * 6 + 5] > 0;
+        U.rr(ctx, x - hw - 3, y - 30, hw * 2 + 6, 72, 16); ctx.fillStyle = U.OUT; ctx.fill();
+        U.rr(ctx, x - hw, y - 27, hw * 2, 66, 13); ctx.fillStyle = open ? ['#3e7fd0', '#3f8a3c', '#9a4e7a', '#26386e', '#c9802e', '#6a3fc9'][v] : '#5b6470'; ctx.fill();
+        U.fit(ctx, W === KAR.VENUES[v] ? '\u25b8 ' + KAR.VENUES[v].name : KAR.VENUES[v].name, x, y - 4, U.sz(g, 15), '#ffffff', hw * 2 - 10);
+        if (open) { const sx = x - Math.round(hw * 0.42) - 6; U.star(ctx, sx, y + 22, 10, true, 1); U.text(ctx, ws + ' / 18', sx + 16, y + 29, U.sz(g, 15), '#ffe9a8', 'left'); if (done) U.crown(ctx, x + hw - 16, y - 30, 10); }
         else this.lock(ctx, x, y + 20);
       }
       U.fit(ctx, 'NEXT UP: LEVEL ' + (D.tourLv + 1) + '  \u00b7  ' + L.name + (L.boss ? '  \u00b7  BOSS' : '') + '   \u2605 ' + tot + ' / ' + KAR.TOUR.length * 3, 480, C ? 428 : 432, U.sz(g, 19), '#fff27a', 900);

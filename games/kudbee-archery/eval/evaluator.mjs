@@ -284,6 +284,26 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood[0] > wood[2] + 60 && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
     `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood}); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
 }
+// CRYPTO CITY: the world 6 page stays shut until the Forest Crown falls; its map is a night city (dark violet sky); the
+// level paints the neon city and glowing chain blocks; the COIN BLOCK cashes in for a 10
+{
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars[5] = 1; D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 5; }); await page.waitForTimeout(150);
+  const shut = await G(() => KAR.UI.buttons.filter(b => /^L3\d$/.test(b.id)).every(b => b.disabled));
+  await G(() => { KAR.Store.data.tour.stars[11] = 1; }); await page.waitForTimeout(150);
+  const open = await G(() => KAR.UI.buttons.filter(b => /^L3\d$/.test(b.id) && !b.disabled).map(b => b.id).join());
+  const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(20 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  await page.screenshot({ path: `${OUT}/crypto-map.png` });
+  await click('L30'); await page.waitForTimeout(200);
+  const lv = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length, hint: KARGame.hint }));
+  const block = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(0.75, 1.0, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  await waitFor(() => KARGame.bp === 'ready', 8000);
+  const cb = await G(() => { const g = KARGame, m = g.match, b = m.boxes.find(x => x.star); m.wind = 0; m._gust = () => { m.wind = 0; }; g.drawing = true; g.draw = 1; g.aimX = (b.x0 + b.x1) / 2; g.aimY = (b.y0 + b.y1) / 2; g.sway = { x: 0, y: 0 }; g._loose(); const r = g.flight.res; return { star: !!r.star, ring: r.ring }; });
+  await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(250);
+  const ban = await G(() => KARGame.banner && KARGame.banner.text);
+  await page.screenshot({ path: `${OUT}/crypto-coin.png` });
+  rec('crypto-city', shut && open === 'L30' && sky[2] > sky[1] + 10 && sky[0] < 90 && lv.lv === 30 && lv.venue === 5 && lv.boxes >= 4 && /GENESIS BLOCK/.test(lv.hint) && block[2] > block[0] && cb.star && cb.ring === 10 && ban === 'COIN BLOCK!' && errors.length === 0,
+    `CRYPTO CITY stays shut until the Forest Crown falls, then opens ${open}; the map sky is a night violet (rgb ${sky}); GENESIS BLOCK paints venue ${lv.venue} with ${lv.boxes} chain blocks (rgb ${block}); the COIN BLOCK reads ${ban} for ${cb.ring}`);
+}
 // the results card around the side world: clearing the Village Cup the first time opens world 2 AND THINK BOX; the
 // world 4 boss doesn't offer NEXT into THINK BOX; TOUR COMPLETE only for the win that beats the last boss standing
 {
@@ -453,7 +473,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await G(() => { KARGame.activate('menu'); }); await page.waitForTimeout(80);
   await click('shareGame'); await page.waitForTimeout(80);
   const st = await G(() => KARGame.shareText || '');
-  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /30 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
+  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /36 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
     `og/twitter image ${meta.img} (${dims.join('x')}), large-image card; SHARE copies "${st.slice(0, 60)}... ${meta.canon}"`);
 }
 
