@@ -17,7 +17,7 @@ test('corsHeaders: default "*" allows any origin', () => {
   const h = corsHeaders('https://example.com', '*');
   assert.equal(h['access-control-allow-origin'], '*');
   assert.equal(h['access-control-allow-methods'], 'GET, POST, OPTIONS');
-  assert.equal(h['access-control-allow-headers'], 'authorization, content-type, x-demo-user, x-demo-name');
+  assert.equal(h['access-control-allow-headers'], 'authorization, content-type, x-demo-user, x-demo-name, x-guest-code, x-guest-name');
   assert.equal(h['access-control-max-age'], '86400');
   assert.equal(h.vary, 'origin');
 });

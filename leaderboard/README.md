@@ -119,9 +119,43 @@ Until then the games degrade gracefully — local best only, posts fail quietly.
 | GET | `/api/leaderboard?game=darts&metric=rating&limit=50` | optional | standings (flags `you`) |
 | GET | `/api/me?game=darts` | required | your record + ranks |
 | POST | `/api/scores` `{game,name,metrics}` | required | upsert best-ever |
+| GET | `/api/save?game=archery` | required | this player's cloud save `{data, rev, updatedAt}` or null |
+| POST | `/api/save` `{game,rev,data}` | required | write the save on revision `rev` (0 = first); **409** + the newer save if another device wrote since |
+
+**Guest accounts (backup codes).** A game makes a random code on the device
+(`KDB-XXXX-XXXX-XXXX-XXXX`, 80 bits, Crockford base32) and sends it as
+`X-Guest-Code` (plus `X-Guest-Name`). The code *is* the account - type it on
+another phone and you are the same player. The server never stores it: the id
+is `guest:` + 24 hex of its SHA-256. Typing is forgiving (case, dashes, spaces,
+`I/L -> 1`, `O -> 0`); a malformed code is a clear 401. On by default; set
+`GUEST_AUTH = "0"` to refuse codes. Real sign-in (Clerk: Apple / Google) layers
+on top later. Cloud saves are capped at 64 KB per player per game.
 
 Auth is a `Authorization: Bearer <clerk-session-jwt>` header (real accounts) or
 `X-Demo-User: <id>` + `X-Demo-Name` (demo). The browser SDK handles this for you.
+
+## Go live: guest mode for Kudbee Archery (cloud save + league)
+
+The game already points at `https://kudbee-leaderboard.kudbee.workers.dev`
+(`games/kudbee-archery/src/cloud.js` `API`) and works without it (the save stays
+on the phone; CLOUD SAVE says it couldn't reach the cloud). To switch it on,
+from a machine logged in to the Kudbee Cloudflare account:
+
+```bash
+cd leaderboard/worker
+npx wrangler login                                   # once, in a browser
+npx wrangler d1 create kudbee-leaderboard            # prints a database_id
+#   -> paste it into wrangler.toml (database_id = "...")
+npx wrangler d1 execute kudbee-leaderboard --remote --file ./schema.sql
+npx wrangler deploy                                  # -> https://kudbee-leaderboard.kudbee.workers.dev
+curl https://kudbee-leaderboard.kudbee.workers.dev/api/health   # {"ok":true,...,"games":["archery",...]}
+```
+
+If the Worker lands on a different URL, set `API` in `cloud.js` to it. No keys
+or secrets are involved (guest mode is keyless). If a `kudbee-leaderboard` D1
+already exists, skip `create` and run the four `ALTER TABLE ... archery` lines
+at the bottom of `schema.sql` once, then the file itself (it is idempotent and
+adds the `saves` table).
 
 ## Deploy to Cloudflare (production)
 
@@ -227,6 +261,7 @@ The first valid auth method is used; others are ignored.
 
 - **ALGO:** `userId = 'algo:XXXXX...XXXXX'` (wallet address with checksum)
 - **Clerk:** `userId = 'clerk:<sub>'` (OpenID sub claim)
+- **Guest:** `userId = 'guest:<24 hex of sha256(code)>'` (the backup code never leaves the request)
 - **Demo:** `userId = 'demo:<id>'` (random ID, localStorage persisted)
 
 All user data is stored in the same `scores` table; the prefix allows mixing auth methods

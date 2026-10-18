@@ -33,6 +33,7 @@ KAR.Game = class {
     this._resetShot();
     this._bind();
     this._app();
+    KAR.Cloud.load(); if (KAR.Cloud.meta.code) setTimeout(() => KAR.Cloud.sync(), 1500);      // CLOUD SAVE: catch up with the other devices
     try { if (/^#\/?agent$/.test(location.hash)) this.activate('agent'); } catch (e) { /* no location */ }      // /agent links straight to the coach
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
@@ -192,6 +193,20 @@ KAR.Game = class {
     this.setScreen('install');
   }
 
+  // CLOUD SAVE screen: make / copy / type a code, rename, sync, back. A typed code (another phone's) is asked for
+  // with the browser's own text box; what happened shows on the screen for a few seconds.
+  _cloudAct(id) {
+    const C = KAR.Cloud, say = (t, good) => { this.clMsg = { t, good, at: this.time }; };
+    if (id === 'clBack') { this.setScreen('menu'); return; }
+    if (id === 'clMake' || id === 'clSync') { C.start().then(ok => say(ok ? 'SAVED TO THE CLOUD' : 'COULDN\'T REACH THE CLOUD - SAVED ON THIS PHONE', ok)); return; }
+    if (id === 'clCopy') { try { navigator.clipboard.writeText(C.pretty(C.meta.code)).then(() => say('CODE COPIED - KEEP IT SOMEWHERE SAFE', true), () => say('COPY IT BY HAND', false)); } catch (e) { say('COPY IT BY HAND', false); } return; }
+    let typed = null;
+    try { typed = window.prompt(id === 'clUse' ? 'Type the backup code from your other phone (KDB-XXXX-XXXX-XXXX-XXXX):' : 'Your name on the league (up to 16 letters):', id === 'clName' ? C.meta.name || '' : ''); } catch (e) { typed = null; }
+    if (typed === null) return;
+    if (id === 'clName') { say(C.rename(typed) ? 'NAME SAVED' : 'LETTERS AND NUMBERS ONLY', true); return; }
+    C.use(typed).then(r => say(r === 'ok' ? 'WELCOME BACK - YOUR PROGRESS IS HERE' : r === 'same' ? 'THAT\'S THIS PHONE\'S CODE' : r === 'bad' ? 'THAT CODE ISN\'T RIGHT - CHECK IT' : 'COULDN\'T REACH THE CLOUD - TRY AGAIN', r === 'ok'));
+  }
+
   // ---- phone comforts ------------------------------------------------------------
   // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
   buzz(p) { if (this.coarse && KAR.Store.data.haptics && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* ignore */ } }
@@ -251,6 +266,8 @@ KAR.Game = class {
     else if (id === 'full') { const on = !this.isFull(); this.fsLeft = !on; this.goFull(on); }
     else if (id === 'aim') { D.aimSpeed = (D.aimSpeed + 1) % KAR.CFG.TOUCH_GAINS.length; KAR.Store.save(); }
     else if (id === 'buzz') { D.haptics = !D.haptics; KAR.Store.save(); this.buzz(20); }
+    else if (id === 'cloud') { this.setScreen('cloud'); this.clMsg = null; if (KAR.Cloud.meta.code) KAR.Cloud.sync(); }
+    else if (/^cl[A-Z]/.test(id)) this._cloudAct(id);
     else if (id === 'install') this._install();
     else if (id === 'instOk') { D.install = 1; KAR.Store.save(); this.setScreen('menu'); }
     else if (id === 'instBack') this.setScreen('menu');
@@ -355,6 +372,7 @@ KAR.Game = class {
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
     if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies' || this.screen === 'quests')) { this.activate('back'); return; }
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
+    if (down && k === 'Escape' && this.screen === 'cloud') { this.activate('clBack'); return; }
     if (down && k === 'Escape' && this.screen === 'install') { this.activate('instBack'); return; }
     if (down && k === 'Escape' && this.screen === 'share') { this.activate('shBack'); return; }
     if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
@@ -709,7 +727,7 @@ KAR.Game = class {
       const hero = this.flight.hero;
       this.orbit = hero && !m.boxes ? KAR.Util.clamp((this.bpT - 0.15) / 0.7, 0, 1) : 0;       // (behind a crate wall it holds instead)
       if (this.camB > 0) this.camB = this.bpT < (hero ? 1.45 : 0.55) ? this.camB : Math.max(0, this.camB - dt / 0.4);
-      if (this.bpT > (trick ? 0.25 : (this.flight.res.endDone ? 2.1 : 1.3) + (this.flight.hero ? 0.7 : 0))) { if (m.over) this._finishMatch(); else this._nextShot(); }
+      if (this.bpT > (trick ? 0.25 : (this.flight.res.endDone ? 2.1 : 1.3) + (this.flight.hero ? 0.7 : 0))) { if (m.over) { this._finishMatch(); KAR.Cloud.soon(); } else this._nextShot(); }
     }
   }
 
@@ -737,7 +755,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'install' || sel || (this.screen === 'share' && this.shareBack !== 'over');
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'install' || this.screen === 'cloud' || sel || (this.screen === 'share' && this.shareBack !== 'over');
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.orbitA = m.move === 'orbit' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -766,6 +784,7 @@ KAR.Game = class {
     else if (this.screen === 'shop') U.shop(ctx, this);
     else if (this.screen === 'agent') U.agent(ctx, this);
     else if (this.screen === 'install') U.installScreen(ctx, this);
+    else if (this.screen === 'cloud') U.cloudScreen(ctx, this);
     else if (this.screen === 'share' && menuish) U.shareScreen(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {

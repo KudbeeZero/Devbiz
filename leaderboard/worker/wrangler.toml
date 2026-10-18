@@ -24,6 +24,8 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 # CLERK_PUBLISHABLE_KEY = "pk_test_xxx"
 # CLERK_AUTHORIZED_PARTIES = "https://your-studio-site.com"
 ALLOW_DEMO = "1"
+# Guest backup codes (Kudbee Archery's CLOUD SAVE): on unless set to "0".
+# GUEST_AUTH = "1"
 ALLOWED_ORIGINS = "*"
 
 # To also serve the studio site + games from this Worker, uncomment:

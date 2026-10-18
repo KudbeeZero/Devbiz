@@ -18,7 +18,7 @@ export function corsHeaders(origin, allowed) {
   return {
     'access-control-allow-origin': allow,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'authorization, content-type, x-demo-user, x-demo-name',
+    'access-control-allow-headers': 'authorization, content-type, x-demo-user, x-demo-name, x-guest-code, x-guest-name',
     'access-control-max-age': '86400',
     'vary': 'origin',
   };

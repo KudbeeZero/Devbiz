@@ -34,6 +34,22 @@ CREATE TABLE IF NOT EXISTS scores (
   boardsSolved  INTEGER NOT NULL DEFAULT 0,
   bestMoves     INTEGER NOT NULL DEFAULT 0,
   flawlessStreak INTEGER NOT NULL DEFAULT 0,
+  -- Kudbee Archery metrics (bestStreak reused)
+  stars         INTEGER NOT NULL DEFAULT 0,
+  golds         INTEGER NOT NULL DEFAULT 0,
+  xs            INTEGER NOT NULL DEFAULT 0,
+  cups          INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (game, user_id)
+);
+
+-- Cloud saves: a game's whole save per player (JSON text), so progress follows them to another device.
+-- `rev` goes up by one per write; a write must name the rev it was built on (see shared/core.js /api/save).
+CREATE TABLE IF NOT EXISTS saves (
+  game        TEXT    NOT NULL,
+  user_id     TEXT    NOT NULL,
+  data        TEXT    NOT NULL,
+  rev         INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
   PRIMARY KEY (game, user_id)
 );
 
@@ -59,6 +75,10 @@ CREATE INDEX IF NOT EXISTS idx_scores_wave          ON scores (game, wave       
 CREATE INDEX IF NOT EXISTS idx_scores_boardsSolved  ON scores (game, boardsSolved  DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_bestMoves     ON scores (game, bestMoves     ASC);  -- 'min' = lower is better
 CREATE INDEX IF NOT EXISTS idx_scores_flawlessStreak ON scores (game, flawlessStreak DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_stars         ON scores (game, stars         DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_golds         ON scores (game, golds         DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_xs            ON scores (game, xs            DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_cups          ON scores (game, cups          DESC);
 
 -- ── Migration for an ALREADY-DEPLOYED database (run ONCE; CREATE TABLE above
 --    only applies to a fresh DB). D1/SQLite has no "ADD COLUMN IF NOT EXISTS",
@@ -80,3 +100,8 @@ CREATE INDEX IF NOT EXISTS idx_scores_flawlessStreak ON scores (game, flawlessSt
 --      ALTER TABLE scores ADD COLUMN boardsSolved  INTEGER NOT NULL DEFAULT 0; -- puzzles
 --      ALTER TABLE scores ADD COLUMN bestMoves     INTEGER NOT NULL DEFAULT 0;  -- puzzles (min)
 --      ALTER TABLE scores ADD COLUMN flawlessStreak INTEGER NOT NULL DEFAULT 0; -- puzzles
+--      ALTER TABLE scores ADD COLUMN stars         INTEGER NOT NULL DEFAULT 0;  -- archery
+--      ALTER TABLE scores ADD COLUMN golds         INTEGER NOT NULL DEFAULT 0;  -- archery
+--      ALTER TABLE scores ADD COLUMN xs            INTEGER NOT NULL DEFAULT 0;  -- archery
+--      ALTER TABLE scores ADD COLUMN cups          INTEGER NOT NULL DEFAULT 0;  -- archery
+--    (the `saves` table above is CREATE TABLE IF NOT EXISTS, so it is safe to re-run this file for it)

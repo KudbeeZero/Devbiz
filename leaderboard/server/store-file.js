@@ -75,5 +75,20 @@ export function createFileStore(path) {
       await writing;
       return { ...rec };
     },
+    // cloud saves live beside the scores under data._saves[game][userId] = { data, rev, updatedAt }
+    async getSave(game, userId) {
+      await load();
+      const s = ((data._saves || {})[game] || {})[userId];
+      return s ? { ...s } : null;
+    },
+    async putSave(game, userId, json, rev) {
+      await load();
+      const all = data._saves || (data._saves = {}), g = all[game] || (all[game] = {}), cur = g[userId];
+      if ((cur ? cur.rev : 0) !== rev) return { ok: false };
+      g[userId] = { data: json, rev: rev + 1, updatedAt: Date.now() };
+      writing = writing.then(persist, persist);
+      await writing;
+      return { ok: true, rev: rev + 1 };
+    },
   };
 }

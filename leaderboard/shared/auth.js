@@ -21,7 +21,14 @@
  *      identity. This lets the whole thing run + be tested before any keys
  *      exist; turn it OFF in production by setting ALLOW_DEMO=0.
  *
- * Auth precedence: ALGO → Clerk → Demo (first valid method is used)
+ *   4. Guest (keyless, real): a game makes a random backup code on the device
+ *      (`KDB-XXXX-XXXX-XXXX`, 16 Crockford base32 chars = 80 bits) and sends
+ *      it as `X-Guest-Code`. The code IS the account: type it on another
+ *      phone and you are the same player. The server never stores it - the
+ *      identity is `guest:` + the first 24 hex of its SHA-256. On unless
+ *      GUEST_AUTH=0. (Real sign-in - Clerk / Apple / Google - layers on top.)
+ *
+ * Auth precedence: ALGO → Clerk → Guest → Demo (first valid method is used)
  *
  * Resolve config (env) — all optional:
  *   ALGO_AUTH_ENABLED       "1"/"true" (default: true) to enable ALGO wallet
@@ -31,6 +38,7 @@
  *   CLERK_JWKS_URL          override (defaults to <issuer>/.well-known/jwks.json)
  *   CLERK_AUTHORIZED_PARTIES  comma list of allowed `azp` origins (optional)
  *   ALLOW_DEMO              "1"/"true" to permit demo identities
+ *   GUEST_AUTH              "0"/"false" to refuse guest backup codes (default on)
  * ===================================================================== */
 
 import { verifyAlgoMessage, isAlgoAuthEnabled } from './algo-auth.js';
@@ -177,7 +185,17 @@ export async function resolveAuth(headers, env) {
     }
   }
 
-  // 3. Try demo mode (keyless)
+  // 3. Guest backup code (a present-but-malformed code is a clear 401, not a fall-through)
+  const gc = header(headers, 'x-guest-code') || header(headers, 'X-Guest-Code');
+  if (gc && guestAllowed(env)) {
+    const code = normalizeGuestCode(gc);
+    if (!code) throw authError(401, 'bad_guest_code');
+    let name = header(headers, 'x-guest-name');
+    if (name) { try { name = decodeURIComponent(name); } catch (e) { /* keep raw on bad encoding */ } }
+    return { userId: 'guest:' + (await guestId(code)), name: name || null, demo: false, guest: true };
+  }
+
+  // 4. Try demo mode (keyless)
   if (demoAllowed(env)) {
     const demo = header(headers, 'x-demo-user') || header(headers, 'X-Demo-User');
     if (demo) {
@@ -191,6 +209,25 @@ export async function resolveAuth(headers, env) {
   }
 
   return null;
+}
+
+// ---- guest backup codes ------------------------------------------------
+// Crockford base32 (no I L O U); typed codes are forgiving: any case, any dashes or spaces, the KDB prefix
+// optional, and the look-alikes I/L -> 1 and O -> 0 read the way Crockford intends.
+const CROCK = /^[0-9A-HJKMNP-TV-Z]{16}$/;
+export function normalizeGuestCode(raw) {
+  let s = String(raw || '').toUpperCase().replace(/[\s-]/g, '');
+  if (s.startsWith('KDB')) s = s.slice(3);
+  s = s.replace(/[IL]/g, '1').replace(/O/g, '0');
+  return CROCK.test(s) ? s : null;
+}
+export async function guestId(code) {
+  const h = new Uint8Array(await subtle.digest('SHA-256', new TextEncoder().encode('kudbee-guest:' + code)));
+  return [...h.slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export function guestAllowed(env) {
+  const v = String((env && env.GUEST_AUTH) == null ? '1' : env.GUEST_AUTH).toLowerCase();
+  return !(v === '0' || v === 'false' || v === 'no');
 }
 
 export function authError(status, code) {

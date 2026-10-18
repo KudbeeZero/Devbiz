@@ -7,9 +7,9 @@
  * Only GETs inside the game's own folder are touched. Bump V to drop old copies.
  * ===================================================================== */
 
-const V = 'kar-v1';
+const V = 'kar-v2';
 const SHELL = ['./', 'manifest.webmanifest',
-  'src/util.js', 'src/audio.js', 'src/sim.js', 'src/ach.js', 'src/quest.js', 'src/agent.js', 'src/render.js', 'src/ui.js', 'src/share.js', 'src/game.js',
+  'src/util.js', 'src/audio.js', 'src/sim.js', 'src/ach.js', 'src/quest.js', 'src/agent.js', 'src/render.js', 'src/ui.js', 'src/share.js', 'src/cloud.js', 'src/game.js',
   'assets/fonts/lilita-one.woff2', 'assets/bg-menu.jpg', 'assets/bg-range-1.jpg', 'assets/bg-range-2.jpg',
   'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png'];
 // (the store screenshots, share cards and landing pages are left to the network)

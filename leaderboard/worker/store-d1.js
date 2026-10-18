@@ -70,5 +70,17 @@ export function createD1Store(db) {
 
       return this.getUser(game, userId);
     },
+    // cloud saves (table `saves`): a conditional write on the revision, so two devices can't overwrite each other blind
+    async getSave(game, userId) {
+      const row = await db.prepare('SELECT data, rev, updated_at FROM saves WHERE game = ? AND user_id = ?').bind(game, userId).first();
+      return row ? { data: row.data, rev: row.rev, updatedAt: row.updated_at } : null;
+    },
+    async putSave(game, userId, data, rev) {
+      const now = Date.now();
+      const r = rev === 0
+        ? await db.prepare('INSERT INTO saves (game, user_id, data, rev, updated_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(game, user_id) DO NOTHING').bind(game, userId, data, now).run()
+        : await db.prepare('UPDATE saves SET data = ?, rev = rev + 1, updated_at = ? WHERE game = ? AND user_id = ? AND rev = ?').bind(data, now, game, userId, rev).run();
+      return r && r.meta && r.meta.changes === 1 ? { ok: true, rev: rev + 1 } : { ok: false };
+    },
   };
 }

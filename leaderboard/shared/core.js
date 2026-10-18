@@ -11,11 +11,24 @@
  *   getUser(game, userId)            -> record | null
  *   upsertScore(game, userId, name, metrics) -> record   (keeps best-ever)
  *   count(game)                      -> number
+ *   getSave(game, userId)            -> { data (JSON string), rev, updatedAt } | null
+ *   putSave(game, userId, data, rev) -> { ok: true, rev } | { ok: false } when `rev` isn't the stored one
  * ===================================================================== */
 
 // Per-game metric catalog. `dir:'max'` means a higher value is better and the
 // store keeps the best-ever; `rank` marks metrics that can order the board.
 export const GAMES = {
+  archery: {
+    label: 'Kudbee Archery',
+    primary: 'stars',
+    metrics: {
+      stars:      { label: 'Stars',       dir: 'max', min: 0, max: 144, rank: true },
+      golds:      { label: 'Tens',        dir: 'max', min: 0, max: 1e7, rank: true },
+      xs:         { label: 'X',           dir: 'max', min: 0, max: 1e7, rank: true },
+      bestStreak: { label: 'Best streak', dir: 'max', min: 0, max: 1e4, rank: true },
+      cups:       { label: 'Cups won',    dir: 'max', min: 0, max: 1e5, rank: true },
+    },
+  },
   darts: {
     label: 'Kudbee Darts',
     primary: 'rating',
@@ -235,7 +248,33 @@ export async function handle(store, req) {
     return ok({ ok: true, game, record: rec, ranks: await allRanks(store, game, req.auth.userId) });
   }
 
+  // CLOUD SAVE: a game's whole save, kept per player so progress follows them to another device. A write names the
+  // revision it was built on; if another device wrote since, it is refused (409) with the newer save, and the game
+  // merges the two and writes again. One JSON object per player per game, at most SAVE_MAX bytes.
+  if (path === '/api/save' || path === '/save') {
+    if (!req.auth) return err(401, 'auth_required');
+    if (!gameDef(game)) return err(400, 'unknown_game');
+    if (req.method === 'GET') return ok({ game, save: shapeSave(await store.getSave(game, req.auth.userId)) });
+    if (req.method === 'POST') {
+      const body = req.body || {}, rev = Number.isInteger(body.rev) && body.rev >= 0 ? body.rev : null;
+      if (rev === null) return err(400, 'bad_rev');
+      if (!body.data || typeof body.data !== 'object' || Array.isArray(body.data)) return err(400, 'bad_save');
+      const json = JSON.stringify(body.data);
+      if (json.length > SAVE_MAX) return err(413, 'save_too_big');
+      const r = await store.putSave(game, req.auth.userId, json, rev);
+      if (!r.ok) return { status: 409, body: { error: 'stale_rev', game, save: shapeSave(await store.getSave(game, req.auth.userId)) } };
+      return ok({ ok: true, game, rev: r.rev });
+    }
+  }
+
   return err(404, 'not_found');
+}
+
+export const SAVE_MAX = 64 * 1024;
+function shapeSave(s) {
+  if (!s) return null;
+  let data = null; try { data = JSON.parse(s.data); } catch (_) { data = null; }
+  return { data, rev: s.rev, updatedAt: s.updatedAt };
 }
 
 async function allRanks(store, game, userId) {

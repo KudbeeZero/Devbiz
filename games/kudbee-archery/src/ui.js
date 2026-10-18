@@ -308,6 +308,11 @@ KAR.UI = {
     U.button(ctx, g, 'trophies', 16 + xl + (C ? 202 : 180), 14, C ? 230 : 200, C ? 60 : 48, 'TROPHIES ' + KAR.achCount(D) + '/' + KAR.ACH.length, { small: true, color: 'yellow' });
     U.button(ctx, g, 'agent', 16 + xl, C ? 84 : 72, C ? 190 : 170, C ? 46 : 44, '    AGENT', { small: true, color: 'blue' });
     this.robin(ctx, 16 + xl + 30, (C ? 84 : 72) + (C ? 23 : 22), C ? 17 : 16, g.time);
+    if (KAR.Cloud.on()) {                  // CLOUD SAVE: a green dot once this phone is synced
+      const cx = 16 + xl, cw = C ? 200 : 180, cy = 504;          // bottom left (INSTALL goes under it on phones)
+      U.button(ctx, g, 'cloud', cx, cy, cw, C ? 56 : 48, 'CLOUD SAVE', { small: true, color: 'blue' });
+      if (KAR.Cloud.state === 'ok') { ctx.beginPath(); ctx.arc(cx + cw - 10, cy + 8, 7, 0, 6.283); ctx.fillStyle = '#5fe36a'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke(); }
+    }
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     const cup = D.mode === 6;
@@ -375,6 +380,49 @@ KAR.UI = {
     // iPhone Safari has no full-screen mode for pages; added to the home screen the game opens full screen
     if (g.canInstall()) U.button(ctx, g, 'install', 16 + xl, 640 - 14 - 56, 170, 56, 'INSTALL', { small: true, color: 'green' });      // (second visit on)
     else if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
+  },
+
+  // ---- CLOUD SAVE: your backup code (copy it, name yourself, use another phone's), how the sync went, and THE LEAGUE ----
+  cloudScreen(ctx, g) {
+    const U = this, Cl = KAR.Cloud, M = Cl.meta, lx = 290, rx = 690;
+    U.backdrop(ctx, 0.55);
+    U.panel(ctx, 70, 84, 820, 516, 'blue');
+    U.ribbon(ctx, 480, 58, 380, 'CLOUD SAVE', 'yellow');
+    U.fit(ctx, 'YOUR BACKUP CODE', lx, 146, U.sz(g, 18), '#ffe9a8', 360);
+    if (M.code) {
+      U.rr(ctx, 106, 160, 368, 62, 14); ctx.fillStyle = '#0b1b2e'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = U.OUT; ctx.stroke();
+      U.fit(ctx, Cl.pretty(M.code), lx, 202, 30, '#fff27a', 340);
+      U.fit(ctx, 'type it on another phone and your progress comes too', lx, 248, U.sz(g, 14), '#ffffff', 370);
+      U.fit(ctx, 'keep it secret: the code is your account', lx, 270, U.sz(g, 14), '#cfe9ff', 370);
+      U.button(ctx, g, 'clCopy', 106, 288, 170, 56, 'COPY CODE', { small: true, color: 'green' });
+      U.button(ctx, g, 'clName', 288, 288, 186, 56, M.name || 'NAME', { small: true, color: 'blue' });
+    } else {
+      U.fit(ctx, 'finish a round and the game makes one,', lx, 196, U.sz(g, 16), '#ffffff', 370);
+      U.fit(ctx, 'or make it now', lx, 220, U.sz(g, 16), '#ffffff', 370);
+      U.button(ctx, g, 'clMake', 150, 250, 280, 60, 'MAKE MY CODE', { small: true, color: 'green' });
+    }
+    const st = Cl.state, ago = M.at ? Math.round((Date.now() - M.at) / 60000) : -1;
+    const line = st === 'off' ? ['CLOUD SAVE IS OFF HERE', '#cfe9ff'] : st === 'syncing' ? ['SYNCING\u2026', '#ffffff'] : st === 'ok' ? ['\u2713 SAVED TO THE CLOUD  \u00b7  ' + (ago < 1 ? 'JUST NOW' : ago < 60 ? ago + ' MIN AGO' : Math.round(ago / 60) + ' H AGO'), '#9be35a']
+      : st === 'offline' ? ['COULDN\'T REACH THE CLOUD  \u00b7  SAVED ON THIS PHONE', '#ffd0a0'] : st === 'bad' ? ['THE CLOUD DIDN\'T TAKE THIS CODE', '#ffb0a0'] : [M.code ? 'NOT SYNCED YET' : '', '#cfe9ff'];
+    U.fit(ctx, line[0], lx, 376, U.sz(g, 15), line[1], 370);
+    U.button(ctx, g, 'clUse', 106, 392, 368, 56, 'USE A CODE FROM ANOTHER PHONE', { small: true, color: 'yellow' });
+    // THE LEAGUE: the top 8 by stars (you in green), then where you stand if you're further down
+    U.fit(ctx, 'THE LEAGUE  \u00b7  STARS', rx, 146, U.sz(g, 18), '#ffe9a8', 340);
+    const B = Cl.board;
+    if (!B || !B.entries.length) U.fit(ctx, M.code ? (st === 'syncing' ? 'loading\u2026' : 'the league shows once you\'re synced') : 'make a code to join the league', rx, 250, U.sz(g, 15), '#cfe9ff', 340);
+    else {
+      B.entries.slice(0, 8).forEach((e, i) => {
+        const y = 182 + i * 34;
+        if (e.you) { U.rr(ctx, 520, y - 24, 340, 32, 8); ctx.fillStyle = 'rgba(95,227,106,0.25)'; ctx.fill(); }
+        U.text(ctx, '#' + e.rank, 540, y, U.sz(g, 16), '#ffe9a8', 'left');
+        U.fit(ctx, e.name, 590, y, U.sz(g, 16), e.you ? '#9be35a' : '#ffffff', 190, 'left');
+        U.star(ctx, 820, y - 7, 9, true, 1); U.text(ctx, String(e.value), 806, y, U.sz(g, 16), '#fff27a', 'right');
+      });
+      if (B.you && B.you.rank && !B.entries.some(e => e.you)) U.fit(ctx, 'YOU  #' + B.you.rank + ' OF ' + B.total + '  \u00b7  \u2605 ' + B.you.value, rx, 470, U.sz(g, 16), '#9be35a', 340);
+      else U.fit(ctx, B.total + (B.total === 1 ? ' ARCHER' : ' ARCHERS') + ' IN THE LEAGUE', rx, 470, U.sz(g, 14), '#cfe9ff', 340);
+    }
+    if (g.clMsg && g.time - g.clMsg.at < 4) U.fit(ctx, g.clMsg.t, 480, 496, U.sz(g, 17), g.clMsg.good ? '#9be35a' : '#ffd0a0', 760);
+    U.button(ctx, g, 'clBack', 380, 516, 200, 58, 'BACK', { primary: true });
   },
 
   // ---- INSTALL (iPhone / iPad Safari, which has no install prompt): the three taps, drawn the way Safari shows them ----

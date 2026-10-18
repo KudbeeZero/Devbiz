@@ -400,6 +400,32 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
     && days === '1:0 2:0 3:15 - 4:0 5:0 6:0 7:40 1:0' && now18 === 1 && now19 === 1 && now20 === 0 && best === 7 && kept && bad && K.CFG.TOUCH_GAINS[1] === K.CFG.TOUCH_GAIN,
     `pace after 3 arrows (${mine}) vs a 120 best = ${pa}; 1→3 stars pays ${g1} gems, a worse round 0; days 10..16 then 18 → ${days}; streak shows 1 on the next day, 0 after a missed one; AIM SPEED + streak survive a reload, a forged 500-day streak and AIM 7 are dropped`);
 }
+// CLOUD SAVE: two phones' saves merge to the best of both (this phone keeps its settings); typed codes are forgiving;
+// a merged save still goes through the save's checks (a forged cloud save can't hand out 4-star levels)
+{
+  const st = new Map(), ls = { getItem(k) { return st.has(k) ? st.get(k) : null; }, setItem(k, v) { st.set(k, String(v)); } };
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js', 'agent.js', 'cloud.js'], ls), C = K.Cloud, D = K.Store.data;
+  D.tour.stars[0] = 3; D.tour.stars[1] = 1; D.tour.best[1] = 61; D.stats.tens = 40; D.gems = 30; D.ach.first = 1; D.ownBow = 3; D.muted = true; D.aimSpeed = 2; D.cupWon = [1, 0, 0];
+  D.daily = { day: 100, best: 50, plays: 2, first: 40 }; D.streak = { day: 100, n: 3, best: 3 };
+  const B = JSON.parse(JSON.stringify(D));
+  Object.assign(B, { muted: false, aimSpeed: 0, gems: 55, ownBow: 5, cupWon: [0, 2, 0] }); B.tour.stars = B.tour.stars.map((v, i) => i === 1 ? 2 : i === 2 ? 1 : v); B.tour.best[1] = 70; B.tour.best[2] = 59;
+  B.stats.tens = 25; B.stats.xs = 9; B.ach = { gold: 1 }; B.daily = { day: 101, best: 33, plays: 1, first: 33 }; B.streak = { day: 101, n: 4, best: 4 };
+  const M = C.merge(D, B);
+  const merged = M.tour.stars.slice(0, 4).join() === '3,2,1,0' && M.tour.best[1] === 70 && M.tour.best[2] === 59 && M.stats.tens === 40 && M.stats.xs === 9 && M.gems === 55
+    && M.ach.first === 1 && M.ach.gold === 1 && M.ownBow === 7 && M.cupWon.join() === '1,2,0' && M.daily.day === 101 && M.streak.n === 4 && M.streak.best === 4
+    && M.muted === true && M.aimSpeed === 2 && D.tour.stars[1] === 1;                                   // (the inputs are left alone)
+  const both = C.merge(B, D), sym = JSON.stringify(both.tour) === JSON.stringify(M.tour) && both.stats.tens === M.stats.tens && both.gems === M.gems;
+  // codes
+  const n1 = C.norm('kdb 7f3q-9xma 2prw-4hnt'), n2 = C.norm('KDB-7F3Q-9XMA-2PRW-4HNU'), n3 = C.norm('0O0O-IIII-LLLL-2222');
+  const pretty = C.pretty('7F3Q9XMA2PRW4HNT');
+  // a forged cloud save goes through Store.load's checks when applied
+  const evil = C.merge(D, { tour: { stars: Array(48).fill(9), best: Array(48).fill(999) }, gems: 5e9, stats: { tens: -4 } });
+  C._apply(evil);
+  const clean = K.Store.data.tour.stars[5] === 0 && K.Store.data.tour.best[5] === 0 && K.Store.data.gems === 1e6 && K.Store.data.stats.tens === 40;
+  const met = C.metrics(K.Store.data);
+  rec('cloud-merge', merged && sym && n1 === '7F3Q9XMA2PRW4HNT' && n2 === null && n3 === '0000111111112222' && pretty === 'KDB-7F3Q-9XMA-2PRW-4HNT' && clean && met.stars === 4 && met.golds === 40 && met.cups === 1,
+    `two phones merge to the best of both (stars ${M.tour.stars.slice(0, 3).join('/')}, tens ${M.stats.tens}, X ${M.stats.xs}, gems ${M.gems}, trophies ${Object.keys(M.ach).join('+')}, bows ${M.ownBow}, cups ${M.cupWon.join('/')}, the newer daily + streak), either way round (${sym}); this phone keeps its settings; typed codes forgive case/dashes/I-L-O (${n1}), a U is refused; a forged cloud save is checked (stars 9 -> ${K.Store.data.tour.stars[5]}, gems -> ${K.Store.data.gems}); league line ★${met.stars}`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

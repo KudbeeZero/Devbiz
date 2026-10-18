@@ -1,15 +1,26 @@
 // Kudbee Archery — browser rubric (Playwright + Chromium, real pointer/keyboard input).
 //   node evaluator.mjs     (serves the repo over local HTTP)
 import http from 'node:http';
-import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve, extname, dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { runApi } from '../../../leaderboard/shared/http.js';
+import { createFileStore } from '../../../leaderboard/server/store-file.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), 'out'); mkdirSync(OUT, { recursive: true });
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.png': 'image/png', '.css': 'text/css' };
-const server = http.createServer((q, s) => {
+// /api/* is the real leaderboard API (leaderboard/shared, the same code the Worker runs) on a throwaway file store
+const LBDIR = mkdtempSync(join(tmpdir(), 'kar-lb-')), lb = createFileStore(join(LBDIR, 'lb.json'));
+const server = http.createServer(async (q, s) => {
+  if (q.url.startsWith('/api/')) {
+    let raw = ''; for await (const c of q) raw += c;
+    let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
+    const u = new globalThis.URL(q.url, 'http://x'), r = await runApi(lb, {}, { method: q.method, path: u.pathname, query: u.searchParams, headers: q.headers, body });
+    s.writeHead(r.status, { 'content-type': 'application/json' }); return s.end(JSON.stringify(r.body));
+  }
   let p = join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html');   // a folder URL serves its index (as the host does)
   if (!p.startsWith(ROOT) || !existsSync(p)) { s.writeHead(404); return s.end(); }
   s.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream' }); s.end(readFileSync(p));
@@ -29,6 +40,7 @@ page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 // colour probes vote over a small patch (one readback): a drifting wind leaf or a particle can cross any single
 // pixel. __patch(x, y, test) reads a 3x3 grid around stage point (x, y), `step` px apart; ok = 6+ of 9 pass test.
+await page.addInitScript(() => { window.KAR_API = null; });      // (the cloud stays off here: the CLOUD checks run in their own phones)
 await page.addInitScript(() => {
   window.__patch = (x, y, test, step = 12) => {
     const g = KARGame, R = KAR.Render, r = g.res, cv = g.ctx.canvas;
@@ -705,7 +717,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const op = await oc.newPage(); op.on('pageerror', e => errors.push(e.message));
   await op.goto(URL); await op.waitForFunction(() => window.KARGame);
   const ctl = await op.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated', null, { timeout: 15000 }).then(() => true, () => false);
-  await op.evaluate(() => caches.open('kar-v1').then(c => c.keys()).then(k => k.length)).then(n => { op.__kept = n; });
+  await op.evaluate(() => caches.open('kar-v2').then(c => c.keys()).then(k => k.length)).then(n => { op.__kept = n; });
   await oc.setOffline(true);
   const res = await op.reload().catch(() => null);
   const up = await op.waitForFunction(() => window.KARGame && document.fonts.check('24px "Lilita One"'), null, { timeout: 8000 }).then(() => true, () => false);
@@ -774,7 +786,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
 {
   await G(() => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tourLv = 0; KARGame.__bz = []; KARGame.buzz = p => KARGame.__bz.push(p); KARGame.startMatch(); });
   await waitFor(() => KARGame.screen === 'play' && KARGame.bp === 'ready', 5000);
-  await G(() => KARGame._beginDraw());
+  await G(() => { KARGame.__bz = []; KARGame._beginDraw(); });      // (record from the draw on: a trophy card can buzz before it)
   await waitFor(() => KARGame.draw >= 1, 5000);
   const ticks = await G(() => KARGame.__bz.slice());
   await G(() => { const g = KARGame, h = KAR.Bot.hold(g.match, undefined, g._kit(0)); g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); });
@@ -798,10 +810,72 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
     `${tunes.n} world tunes (${tunes.distinct} different); the map plays the world on its page (${tunes.map}), a level its world's (${tunes.play[1]}), the menu the village green (${tunes.menu})`);
 }
 
+// CLOUD SAVE: progress follows the player. Phone A finishes a round -> a backup code is made and the save goes up;
+// phone B (its own progress) types A's code (any case, spaces) -> both progresses merge; A picks up B's level;
+// the league ranks them. Then a write that lost a race to another device merges and goes again, and with no
+// network the game carries on (saved on the phone) and says so.
+{
+  const phone = async api => {
+    const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message));
+    await p.addInitScript(a => { window.KAR_API = a; }, api);
+    await p.goto(URL); await p.waitForFunction(() => window.KARGame);
+    return { c, p, E: (fn, arg) => p.evaluate(fn, arg) };
+  };
+  // finish level `lv` with `st` stars (the round itself is the game's; the score is set)
+  const finish = (ph, lv, st) => ph.p.evaluate(([lv, st]) => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tour.stars[0] = Math.max(D.tour.stars[0], lv > 0 ? 1 : 0); D.tourLv = lv; KARGame.startMatch(); KARGame.match.stars = () => st; KARGame._finishMatch(); KAR.Cloud.soon(); }, [lv, st]);
+  const synced = ph => ph.p.waitForFunction(() => KAR.Cloud.state === 'ok' && !KAR.Cloud.busy, null, { timeout: 10000 }).then(() => true, () => false);
+  const A = await phone('');
+  const before = await A.E(() => ({ code: KAR.Cloud.meta.code, btn: KAR.UI.buttons.some(b => b.id === 'cloud') }));
+  await finish(A, 0, 3); const aUp = await synced(A);
+  const a1 = await A.E(() => ({ code: KAR.Cloud.meta.code, pretty: KAR.Cloud.pretty(KAR.Cloud.meta.code), rev: KAR.Cloud.meta.rev, name: KAR.Cloud.meta.name }));
+  const B = await phone('');
+  await finish(B, 0, 1); await synced(B); await finish(B, 1, 2); await synced(B);
+  const bOwn = await B.E(() => KAR.Cloud.meta.code);
+  // B types A's code into the box (lower case, spaces instead of dashes)
+  await B.E(c => { window.prompt = () => c; KARGame.activate('cloud'); }, a1.pretty.toLowerCase().replace(/-/g, ' '));
+  await B.p.waitForTimeout(300); await B.E(() => KARGame.activate('clUse'));
+  await B.p.waitForFunction(() => KARGame.clMsg && KAR.Cloud.state === 'ok' && !KAR.Cloud.busy, null, { timeout: 10000 }).catch(() => {});
+  const b1 = await B.E(() => ({ code: KAR.Cloud.meta.code, msg: KARGame.clMsg && KARGame.clMsg.t, s: KAR.Store.data.tour.stars.slice(0, 3) }));
+  await B.p.waitForTimeout(200); await B.p.screenshot({ path: `${OUT}/cloud-phone-b.png` });
+  // A opens CLOUD SAVE (a sync): B's level 2 arrives
+  await A.E(() => KARGame.activate('cloud')); await A.p.waitForTimeout(150); await synced(A);
+  const a2 = await A.E(() => ({ s: KAR.Store.data.tour.stars.slice(0, 3), board: KAR.Cloud.board, saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).tour.stars.slice(0, 2) }));
+  await A.p.waitForTimeout(200); await A.p.screenshot({ path: `${OUT}/cloud-phone-a.png` });
+  const top = a2.board && a2.board.entries[0];
+  rec('cloud-sync', !before.code && before.btn && aUp && /^KDB(-[0-9A-HJKMNP-TV-Z]{4}){4}$/.test(a1.pretty) && a1.rev >= 1 && /^ARCHER [0-9A-F]{4}$/.test(a1.name)
+    && bOwn && bOwn !== a1.code && b1.code === a1.code && /WELCOME BACK/.test(b1.msg) && b1.s.join() === '3,2,0' && a2.s.join() === '3,2,0' && a2.saved.join() === '3,2'
+    && !!top && top.you && top.value === 5 && a2.board.total === 2,
+    `no code until a round is finished, then ${a1.pretty.slice(0, 8)}… (${a1.name}) syncs; phone B types it in lower case with spaces -> "${b1.msg}", its own level 2 merged with A's level 1 (${b1.s.join('/')}); A picks up B's level (${a2.s.join('/')}, saved); the league: ${top && top.name} first with ★${top && top.value} of ${a2.board && a2.board.total}`);
+  // a write that lost a race: another device writes between this phone's read and its write -> refused, merged, written again
+  const race = await A.E(async () => {
+    const C = KAR.Cloud, orig = C._req.bind(C); let once = true;
+    C._req = async (m, p, b) => {
+      if (once && m === 'POST' && p === '/api/save') { once = false; const other = JSON.parse(JSON.stringify(b.data)); other.tour.stars[2] = 1; other.gems = 777; await orig('POST', '/api/save', { game: 'archery', rev: b.rev, data: other }); }
+      const r = await orig(m, p, b); log.push(m + ' ' + p.split('?')[0] + ' ' + r.status + ' ' + (b && b.rev !== undefined ? b.rev : '') + '>' + (r.body.rev !== undefined ? r.body.rev : r.body.save ? r.body.save.rev : '')); return r;
+    };
+    const log = [], rev0 = C.meta.rev, ok = await C.sync(); C._req = orig;
+    return { ok, rev0, rev: C.meta.rev, s: KAR.Store.data.tour.stars.slice(0, 3), gems: KAR.Store.data.gems, log };
+  });
+  const R0 = race.log[0] && +race.log[0].split('>')[1], want = [`GET /api/save 200 >${R0}`, `POST /api/save 409 ${R0}>${R0 + 1}`, `POST /api/save 200 ${R0 + 1}>${R0 + 2}`];
+  rec('cloud-conflict', race.ok && want.every((w, i) => race.log[i] === w) && race.rev === R0 + 2 && race.s.join() === '3,2,1' && race.gems === 777,
+    `read rev ${R0}; another phone wrote first (-> ${R0 + 1}): this phone's write is refused, merged with it (level 3 ★${race.s[2]}, gems ${race.gems}) and written as rev ${race.rev} [${race.log.slice(0, 3).join(' | ')}]`);
+  await A.c.close(); await B.c.close();
+  // no network / no Worker yet: nothing breaks, the save stays on the phone, the screen says so
+  const N = await phone('http://127.0.0.1:9');
+  await finish(N, 0, 2);
+  await N.p.waitForFunction(() => KAR.Cloud.state === 'offline', null, { timeout: 10000 }).catch(() => {});
+  await N.E(() => KARGame.activate('cloud')); await N.p.waitForTimeout(400);
+  const n1 = await N.E(() => ({ st: KAR.Cloud.state, code: !!KAR.Cloud.meta.code, saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).tour.stars[0], scr: KARGame.screen }));
+  await N.p.screenshot({ path: `${OUT}/cloud-offline.png` });
+  rec('cloud-offline', n1.st === 'offline' && n1.code && n1.saved === 2 && n1.scr === 'cloud', `no cloud to reach: the round is saved on the phone (★${n1.saved}), the code is still made, CLOUD SAVE says ${n1.st}`);
+  await N.c.close();
+}
+
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
 rec('no-errors', errors.length === 0, `${errors.length} page errors${errors.length ? ': ' + errors[0] : ''}`);
-await browser.close(); server.close();
+await browser.close(); server.close(); rmSync(LBDIR, { recursive: true, force: true });
 const fail = R.filter(x => !x).length;
 console.log(`\n=== ${R.length - fail}/${R.length} passed ===`);
 process.exit(fail ? 1 : 0);
