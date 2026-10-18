@@ -199,14 +199,14 @@ KAR.Audio = class {
   ooh() {
     if (!this._ok('ooh', 600)) return;
     if (this.has('ooh')) {
-      [[0.84, 0, 0.2], [0.93, 0.03, 0.19], [1.0, 0.05, 0.18], [1.1, 0.02, 0.14], [0.76, 0.07, 0.13]].forEach(([r, d, v]) => this.play('ooh', v, r, 0.12 + d, 0.03));
+      [[0.84, 0, 0.15], [0.93, 0.03, 0.14], [1.0, 0.05, 0.13], [1.1, 0.02, 0.1], [0.76, 0.07, 0.1]].forEach(([r, d, v]) => this.play('ooh', v, r, 0.12 + d, 0.03));
       this.play('clap2', 0.1, 1, 0.75, 0.05);
     } else { this.tone(392, 0.7, 'sawtooth', 0.04, 330, 0.12); this.tone(466, 0.7, 'sawtooth', 0.03, 392, 0.14); this.cheer(false); }
   }
   // a 10: a bright bell, a fifth above it, then the sparkle; climbs with the streak
   ten(streak) {
     const k = this._lift(streak);
-    this.bell(1046.5 * k, 0.12, 0.03, 1.1); this.bell(1568 * k, 0.07, 0.11, 0.9);
+    this.bell(1046.5 * k, 0.16, 0.03, 1.2); this.bell(1568 * k, 0.1, 0.11, 1.0);
     this.tone(2093 * k, 0.12, 'triangle', 0.06, null, 0.19);
     this.cheer(streak >= 2);
   }
