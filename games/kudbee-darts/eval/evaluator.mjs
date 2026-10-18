@@ -304,6 +304,49 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     && !!meta('property', 'og:title') && !!meta('property', 'og:description') && !!meta('property', 'og:url');
   rec('share-card', ok, `og:image=${og} twitter:image matches=${og === tw} card=${card} file=${dims ? dims.w + 'x' + dims.h : 'missing'} ${(bytes / 1024).toFixed(0)}KB`);
 }
+// ---------------------------------------------------------------- Darts Birds campaign
+{
+  const camp = await page.evaluate(() => {
+    const g = window.DARTS, C = window.KD.Campaign, out = {};
+    out.count = C.LEVELS.length;
+    out.bosses = C.LEVELS.map((l, i) => (l.boss ? i : -1)).filter((i) => i >= 0);
+    out.stars = [C.starsFor(C.LEVELS[0], C.LEVELS[0].par), C.starsFor(C.LEVELS[0], C.LEVELS[0].par + 6), C.starsFor(C.LEVELS[0], C.LEVELS[0].par + 7)];
+    // Fresh campaign save for the flow checks.
+    g.progression.data.campaign = { stars: [] };
+    g.progression.save();
+    g.state = 'menu'; g._openLevels(); out.mapState = g.state; out.mapWorld = g.mapWorld;
+    out.layoutTiles = g._levelsLayout().filter((b) => b.group === 'level').length;
+    out.lockedStart = g._playLevel(5) === undefined && g.levelIdx === null && g.state === 'levels';
+    g.state = 'menu';
+    g._playLevel(0); out.started = g.state === 'play' && g.levelIdx === 0 && g.mode.id === 'x01';
+    g.players[0].dartsThrown = 18; g._matchWin(g.players[0]);
+    out.won = { state: g.state, stars: g.matchResult.level.stars, next: g.matchResult.level.next, saved: g.progression.campaignStars(0), unlock1: g.progression.campaignUnlocked(1), unlock2: g.progression.campaignUnlocked(2) };
+    g.matchOverTimer = 0; g._onMatchButton('next');
+    out.nextStarted = g.state === 'play' && g.levelIdx === 1;
+    // A loss earns nothing and keeps the best earned before.
+    g.players[0].dartsThrown = 40; g._matchWin(g.players[1]);
+    out.lossKeeps = g.progression.campaignStars(0) === 3 && g.matchResult.level.stars === 0;
+    // Corrupt saves are cleaned on load and cut to the level count.
+    const key = 'kd.profile.v1', prev = localStorage.getItem(key);
+    localStorage.setItem(key, JSON.stringify({ version: 1, campaign: { stars: [9, 'x', 2, 1.5] } }));
+    const fresh = new window.KD.Progression();
+    out.clean = fresh.data.campaign.stars.length === C.LEVELS.length && fresh.data.campaign.stars.slice(0, 4).join() === '0,0,2,0';
+    if (prev === null) localStorage.removeItem(key); else localStorage.setItem(key, prev);
+    g.progression.data.campaign = { stars: [] }; g.progression.save(); g.levelIdx = null; g.state = 'menu';
+    return out;
+  });
+  const campOk = camp.count === 15 && JSON.stringify(camp.bosses) === '[4,9,14]' && JSON.stringify(camp.stars) === '[3,2,1]'
+    && camp.mapState === 'levels' && camp.mapWorld === 0 && camp.layoutTiles === 5 && camp.lockedStart && camp.started
+    && camp.won.state === 'matchOver' && camp.won.stars === 3 && camp.won.next === 1 && camp.won.saved === 3 && camp.won.unlock1 && !camp.won.unlock2
+    && camp.nextStarted && camp.lossKeeps && camp.clean;
+  rec('darts-birds-campaign', campOk, `levels=${camp.count} bosses=${camp.bosses} stars=${camp.stars} map=${camp.mapState}/w${camp.mapWorld} tiles=${camp.layoutTiles} locked=${camp.lockedStart} flow=${camp.won.state}/${camp.won.stars}★ next=${camp.nextStarted} loss=${camp.lossKeeps} clean=${camp.clean}`);
+  await page.evaluate(() => window.__step(2));
+  await page.evaluate(() => { const g = window.DARTS; g.state = 'levels'; g.mapWorld = 0; window.__step(3); });
+  const mapPx = await page.evaluate(() => { const c = document.getElementById('game'); const d = c.getContext('2d').getImageData(480, 20, 1, 1).data; return { r: d[0], g: d[1], b: d[2] }; });
+  await page.screenshot({ path: resolve(OUT, 'darts-birds-map.png') });
+  rec('darts-birds-map-render', mapPx.b > 20 && mapPx.r < 120, `top-centre pixel rgb(${mapPx.r},${mapPx.g},${mapPx.b}) (night sky, drawn not blank)`);
+  await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
+}
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
 
 await browser.close();

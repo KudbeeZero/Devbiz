@@ -35,12 +35,12 @@
     // Engine systems.
     this.input = new KD.Input(this.canvas);
     this.audio = new KD.Audio();
-    this.camera = new KD.Camera(VIEW_W, VIEW_H);
+    this.camera = new KD.Camera(this.viewW, VIEW_H);
     if (this.reduceMotion) this.camera.shakeScale = 0;
     this.particles = new KD.Particles();
     this.sprites = new KD.Sprites();
     this.board = new KD.Board();
-    this.board.layout(480, 296, 232);
+    this._fit();
     this.progression = new KD.Progression();
     this.board.setTheme(this.progression.data.settings.boardTheme);
     this.dart = new KD.Dart(this);
@@ -49,6 +49,11 @@
     // Menu selection.
     this.selMode = 'x01';
     this.selOpp = 'career';
+
+    // Darts Birds campaign: the level being played (null for a normal match)
+    // and the world page shown on the level map.
+    this.levelIdx = null;
+    this.mapWorld = 0;
 
     // Board "lunge": a quick scale-in + snap-back on each throw release, so the
     // board reads as reacting to the dart leaving the hand (Darts-of-Fury feel).
@@ -104,7 +109,23 @@
     return this.progression ? this.progression.flickIdeal() : 1500;
   };
 
+  // Phone-first: the logical width follows the real screen's aspect, so the
+  // canvas fills a wide phone or laptop with no letterbox bars. Height stays
+  // 720 and the width is clamped to 4:3 .. 2.4:1 so the board never distorts.
+  Game.prototype._fit = function () {
+    const r = this.canvas.parentNode.getBoundingClientRect();
+    const aspect = Math.min(2.4, Math.max(4 / 3, r.width / r.height || 4 / 3));
+    const w = Math.round(VIEW_H * aspect);
+    if (w === this.viewW) return;
+    this.viewW = w;
+    this.canvas.width = w; this.canvas.height = VIEW_H;
+    this.camera.viewW = w;
+    this.board.layout(w / 2, 296, 232);
+  };
+
   Game.prototype.start = function () {
+    window.addEventListener('resize', () => this._fit());
+    this._fit();
     this.audio.startMusic();
     this.loop.start();
     // Defer leaderboard init to avoid blocking game startup
@@ -142,6 +163,7 @@
     this.time += dt;
 
     if (this.state === 'menu') this._updateMenu(dt);
+    else if (this.state === 'levels') this._updateLevels(dt);
     else if (this.state === 'play') this._updatePlay(dt);
     else if (this.state === 'turnEnd') this._updateTurnEnd(dt);
     else if (this.state === 'matchOver') this._updateMatchOver(dt);
@@ -220,7 +242,7 @@
   // ---- Menu --------------------------------------------------------------
   Game.prototype._menuLayout = function () {
     const btns = [];
-    const cx = VIEW_W / 2;
+    const cx = this.viewW / 2;
     // Mode toggle
     btns.push({ id: 'mode:x301', label: '301', x: cx - 225, y: 196, w: 140, h: 52, sel: this.selMode === 'x301', group: 'mode' });
     btns.push({ id: 'mode:x01', label: '501', x: cx - 70, y: 196, w: 140, h: 52, sel: this.selMode === 'x01', group: 'mode' });
@@ -233,14 +255,105 @@
       btns.push({ id: 'opp:' + o[0], label: o[1], x: ox, y: 304, w: ow, h: 46, sel: this.selOpp === o[0], group: 'opp' });
       ox += ow + gap;
     });
-    // Play
-    btns.push({ id: 'play', label: '▶  PLAY', x: cx - 130, y: 372, w: 260, h: 64, sel: false, group: 'play' });
+    // Play: a quick match, or the Darts Birds campaign map.
+    btns.push({ id: 'play', label: '▶  PLAY', x: cx - 270, y: 372, w: 250, h: 64, sel: false, group: 'play' });
+    btns.push({ id: 'camp', label: '🌙  DARTS BIRDS', x: cx + 20, y: 372, w: 250, h: 64, sel: false, group: 'camp' });
     // Board look: neon (default) or a classic pub board.
-    btns.push({ id: 'theme', label: 'BOARD: ' + (this.board.themeName === 'pub' ? 'PUB' : 'NEON'), x: cx + 150, y: 382, w: 180, h: 44, sel: false, group: 'theme' });
+    btns.push({ id: 'theme', label: 'BOARD: ' + (this.board.themeName === 'pub' ? 'PUB' : 'NEON'), x: cx + 280, y: 382, w: 170, h: 44, sel: false, group: 'theme' });
     // Secondary nav: the Dart Workshop and the League Leaderboard.
     btns.push({ id: 'nav:workshop', label: '🎯  DART WORKSHOP', x: cx - 264, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
     btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: cx + 10, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
     return btns;
+  };
+
+  // ---- Darts Birds campaign: level map -----------------------------------
+  Game.prototype._openLevels = function () {
+    const prog = this.progression, L = KD.Campaign.LEVELS;
+    // Open on the first unlocked level still at zero stars, else the last world.
+    let w = KD.Campaign.WORLDS.length - 1;
+    for (let i = 0; i < L.length; i++) {
+      if (prog.campaignUnlocked(i) && prog.campaignStars(i) === 0) { w = L[i].world; break; }
+    }
+    this.mapWorld = w;
+    this.state = 'levels';
+  };
+
+  Game.prototype._pageWorld = function (d) {
+    const last = KD.Campaign.WORLDS.length - 1;
+    this.mapWorld = Math.max(0, Math.min(last, this.mapWorld + d));
+  };
+
+  Game.prototype._playLevel = function (i) {
+    if (!this.progression.campaignUnlocked(i)) {
+      this.toasts.push({ text: 'LOCKED', sub: 'Beat the level before it', life: 2.2 });
+      return;
+    }
+    this.levelIdx = i;
+    this._startMatch();
+  };
+
+  Game.prototype._levelsLayout = function () {
+    const cx = this.viewW / 2, btns = [];
+    const range = KD.Campaign.worldRange(this.mapWorld);
+    const TW = 150, GAP = 18;
+    const total = range.count * TW + (range.count - 1) * GAP;
+    let x = cx - total / 2;
+    for (let k = 0; k < range.count; k++) {
+      const i = range.first + k;
+      const boss = !!KD.Campaign.LEVELS[i].boss;
+      btns.push({ id: 'lvl:' + i, x: x, y: boss ? 236 : 254, w: TW, h: boss ? 196 : 172, group: 'level', idx: i });
+      x += TW + GAP;
+    }
+    btns.push({ id: 'back', x: 22, y: 20, w: 128, h: 46, group: 'nav' });
+    btns.push({ id: 'prev', x: 18, y: 296, w: 56, h: 116, group: 'page' });
+    btns.push({ id: 'next', x: this.viewW - 74, y: 296, w: 56, h: 116, group: 'page' });
+    return btns;
+  };
+
+  Game.prototype._updateLevels = function () {
+    if (this.input.justPressed('back')) { this.state = 'menu'; return; }
+    if (this.input.justPressed('left')) { this._pageWorld(-1); return; }
+    if (this.input.justPressed('right')) { this._pageWorld(1); return; }
+    const p = this.input.pointer;
+    if (!p.justUp) return;
+    // A horizontal swipe pages worlds; anything shorter is a tap.
+    const dx = p.x - p.startX, dy = p.y - p.startY;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) { this._pageWorld(dx < 0 ? 1 : -1); return; }
+    const btns = this._levelsLayout();
+    for (let i = 0; i < btns.length; i++) {
+      const b = btns[i];
+      if (p.x < b.x || p.x > b.x + b.w || p.y < b.y || p.y > b.y + b.h) continue;
+      this.audio.tick();
+      if (b.id === 'back') this.state = 'menu';
+      else if (b.id === 'prev') this._pageWorld(-1);
+      else if (b.id === 'next') this._pageWorld(1);
+      else if (b.group === 'level') this._playLevel(b.idx);
+      return;
+    }
+  };
+
+  // Results-card buttons for a campaign leg.
+  Game.prototype._matchButtons = function () {
+    const r = this.matchResult, lvl = r && r.level;
+    if (!lvl) return [];
+    const items = [];
+    if (lvl.won && lvl.next != null) items.push({ id: 'next', label: 'NEXT LEVEL  ›', group: 'primary' });
+    items.push({ id: 'retry', label: '↻  RETRY', group: 'btn' });
+    items.push({ id: 'levels', label: 'LEVELS', group: 'nav' });
+    const w = 210, gap = 16, cx = this.viewW / 2, y = VIEW_H / 2 + 112, h = 54;
+    let x = cx - (items.length * w + (items.length - 1) * gap) / 2;
+    items.forEach((it) => { it.x = x; it.y = y; it.w = w; it.h = h; x += w + gap; });
+    return items;
+  };
+
+  Game.prototype._onMatchButton = function (id) {
+    const lvl = this.matchResult.level;
+    if (id === 'next') { this.levelIdx = lvl.next; this._startMatch(); }
+    else if (id === 'retry') this._startMatch();
+    else if (id === 'levels') {
+      this.mapWorld = KD.Campaign.LEVELS[this.levelIdx].world;
+      this.state = 'levels';
+    }
   };
 
   Game.prototype._toggleBoardTheme = function () {
@@ -260,7 +373,8 @@
         this.audio.tick();
         if (b.group === 'mode') this.selMode = b.id.split(':')[1];
         else if (b.group === 'opp') this.selOpp = b.id.split(':')[1];
-        else if (b.group === 'play') this._startMatch();
+        else if (b.group === 'play') { this.levelIdx = null; this._startMatch(); }
+        else if (b.group === 'camp') this._openLevels();
         else if (b.group === 'theme') this._toggleBoardTheme();
         else if (b.group === 'nav') {
           const dest = b.id.split(':')[1];
@@ -279,8 +393,11 @@
     let opp;
     this.isLadder = false;
     this.ladderRank = prog.data.ladderRank;
+    const level = this.levelIdx != null ? KD.Campaign.LEVELS[this.levelIdx] : null;
 
-    if (this.selOpp === 'hotseat') {
+    if (level) {
+      opp = new KD.AIPlayer(level.name, level.tier, level.skin);
+    } else if (this.selOpp === 'hotseat') {
       opp = new KD.Player('Guest', 'ember');
     } else if (this.selOpp === 'career') {
       const rung = KD.Progression.LADDER[prog.data.ladderRank];
@@ -293,7 +410,8 @@
     if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark' };
     else opp.dartParts = { tip: 'steel', flight: 'standard' };
 
-    this.mode = this.selMode === 'cricket' ? new KD.Mode_Cricket() : new KD.Mode_X01(this.selMode === 'x301' ? 301 : 501);
+    const modeKey = level ? level.mode : this.selMode;
+    this.mode = modeKey === 'cricket' ? new KD.Mode_Cricket() : new KD.Mode_X01(modeKey === 'x301' ? 301 : 501);
     this.players = [human, opp];
     this.players.forEach((pl) => {
       this.mode.initPlayer(pl);
@@ -593,12 +711,21 @@
       let m = 0; KD.Mode_Cricket.NUMBERS.forEach((n) => { m += Math.min(3, human.scoreState.marks[n]); });
       result.marks = m;
     }
+    // Darts Birds: stars for the leg, kept as the level's best.
+    let lvl = null;
+    if (this.levelIdx != null) {
+      const L = KD.Campaign.LEVELS[this.levelIdx];
+      const stars = won ? KD.Campaign.starsFor(L, human.dartsThrown) : 0;
+      const rec = this.progression.recordLevel(this.levelIdx, stars);
+      const next = this.levelIdx + 1 < KD.Campaign.LEVELS.length ? this.levelIdx + 1 : null;
+      lvl = { idx: this.levelIdx, stars: stars, best: rec.best, won: won, par: L.par, boss: !!L.boss, next: won ? next : null };
+    }
     const xp = this.progression.recordMatch(result);
     this.matchResult = {
       winner: winner.name, won: won, xp: xp,
       darts: human.dartsThrown, t180: human.t180,
       checkout: result.checkout, mode: this.mode.id,
-      points: result.points,
+      points: result.points, level: lvl,
     };
     this.matchOverTimer = 0.8;
 
@@ -652,13 +779,27 @@
   Game.prototype._updateMatchOver = function (dt) {
     this.matchOverTimer -= dt;
     const p = this.input.pointer;
-    if (this.matchOverTimer <= 0 && (p.justDown || this.input.justPressed('confirm'))) {
-      this.state = 'menu';
+    if (this.matchOverTimer > 0) return;
+    if (this.matchResult.level) {
+      // Campaign leg: the card's buttons decide where to go next.
+      const btns = this._matchButtons();
+      if (this.input.justPressed('confirm')) { this._onMatchButton(btns[0].id); return; }
+      if (!p.justDown) return;
+      for (let i = 0; i < btns.length; i++) {
+        const b = btns[i];
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+          this.audio.tick();
+          this._onMatchButton(b.id);
+          return;
+        }
+      }
+      return;
     }
+    if (p.justDown || this.input.justPressed('confirm')) this.state = 'menu';
   };
 
   Game.prototype._pauseLayout = function () {
-    const cx = VIEW_W / 2;
+    const cx = this.viewW / 2;
     return [
       { id: 'resume', label: '▶  RESUME', x: cx - 130, y: VIEW_H / 2 - 4, w: 260, h: 58, group: 'play', sel: false },
       { id: 'quit', label: 'QUIT TO MENU', x: cx - 130, y: VIEW_H / 2 + 70, w: 260, h: 48, group: 'nav', sel: false },
@@ -688,19 +829,24 @@
   // ====================================================================
   Game.prototype._render = function () {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    // The page's own "← STUDIO" link only belongs on the menu; elsewhere it
+    // would sit on top of the score cards and the map's BACK button.
+    const backLink = document.querySelector('.back-link');
+    if (backLink) backLink.style.display = this.state === 'menu' ? '' : 'none';
+    ctx.clearRect(0, 0, this.viewW, VIEW_H);
 
     // Backdrop (Firefly image if provided, else procedural neon stage).
     if (this.sprites.has('bg.stage')) {
       const img = this.sprites.images['bg.stage'];
-      ctx.drawImage(img, 0, 0, VIEW_W, VIEW_H);
+      ctx.drawImage(img, 0, 0, this.viewW, VIEW_H);
       ctx.fillStyle = 'rgba(4,6,14,0.45)';
-      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.fillRect(0, 0, this.viewW, VIEW_H);
     } else {
-      this.sprites.drawBackdrop(ctx, VIEW_W, VIEW_H, this.time, this.board.themeName);
+      this.sprites.drawBackdrop(ctx, this.viewW, VIEW_H, this.time, this.board.themeName);
     }
 
     if (this.state === 'menu') { this._drawMenu(ctx); this._drawToasts(ctx); return; }
+    if (this.state === 'levels') { this._drawLevels(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'workshop') { this._drawWorkshop(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'leaderboard') { this._drawLeaderboard(ctx); this._drawToasts(ctx); return; }
 
@@ -756,7 +902,7 @@
   Game.prototype._neonButton = function (ctx, b) {
     const r = 12;
     ctx.save();
-    const accent = b.group === 'play' ? C.green : b.group === 'nav' ? C.violet : C.cyan;
+    const accent = b.group === 'play' ? C.green : b.group === 'camp' ? C.gold : b.group === 'nav' ? C.violet : C.cyan;
     const locked = b.group === 'skin' && !b.owned;
     let col = b.sel ? accent : (b.group === 'nav' ? C.violet : 'rgba(180,210,255,0.25)');
     if (b.group === 'skin') col = (KD.Sprites.SKINS[b.id.split(':')[1]] || {}).color || C.cyan;
@@ -787,7 +933,7 @@
       }
     } else {
       ctx.fillStyle = b.sel ? '#ffffff' : C.text;
-      ctx.font = (b.group === 'play' ? 'bold 24px' : 'bold 16px') + ' "Space Grotesk", sans-serif';
+      ctx.font = (b.group === 'play' || b.group === 'camp' ? 'bold 22px' : 'bold 16px') + ' "Space Grotesk", sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
     }
@@ -803,16 +949,16 @@
     ctx.shadowBlur = this.reduceMotion ? 24 : 22 + Math.sin(this.time * 1.8) * 9;
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 64px "Space Grotesk", sans-serif';
-    ctx.fillText('KUDBEE DARTS', VIEW_W / 2, 110);
+    ctx.fillText('KUDBEE DARTS', this.viewW / 2, 110);
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet;
     ctx.font = '15px "Space Grotesk", sans-serif';
-    ctx.fillText('PREDICTIVE FLICK · 301 · 501 · CRICKET · CLIMB THE LEAGUE', VIEW_W / 2, 140);
+    ctx.fillText('PREDICTIVE FLICK · 301 · 501 · CRICKET · CLIMB THE LEAGUE', this.viewW / 2, 140);
 
     // Section labels.
     ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText('GAME MODE', VIEW_W / 2, 182);
-    ctx.fillText('OPPONENT', VIEW_W / 2, 290);
+    ctx.fillText('GAME MODE', this.viewW / 2, 182);
+    ctx.fillText('OPPONENT', this.viewW / 2, 290);
     ctx.restore();
 
     const btns = this._menuLayout();
@@ -822,7 +968,7 @@
     const d = this.progression.data;
     const skin = KD.Sprites.SKINS[d.skins.equipped];
     ctx.save();
-    ctx.translate(VIEW_W / 2 + 48, 524);
+    ctx.translate(this.viewW / 2 + 48, 524);
     ctx.rotate(-Math.PI * 0.07);
     this.sprites.drawDart(ctx, 112, skin, 0.4, d.darts);
     ctx.restore();
@@ -831,7 +977,7 @@
     ctx.font = '11px "Space Grotesk", sans-serif';
     const tipN = (KD.Sprites.TIPS[d.darts.tip] || {}).name || d.darts.tip;
     const flN = (KD.Sprites.FLIGHTS[d.darts.flight] || {}).name || d.darts.flight;
-    ctx.fillText(skin.name + ' · ' + tipN + ' · ' + flN, VIEW_W / 2, 586);
+    ctx.fillText(skin.name + ' · ' + tipN + ' · ' + flN, this.viewW / 2, 586);
     ctx.restore();
 
     // Stats footer.
@@ -839,16 +985,16 @@
     ctx.textAlign = 'center';
     ctx.fillStyle = C.text; ctx.font = '14px "Space Grotesk", sans-serif';
     const rung = KD.Progression.LADDER[d.ladderRank];
-    ctx.fillText('LV ' + d.level + '   ·   Streak ' + d.streak + ' (best ' + d.bestStreak + ')   ·   Coins ' + d.coins + '   ·   Next rival: ' + rung.name + ' (' + rung.tier + ')', VIEW_W / 2, 612);
+    ctx.fillText('LV ' + d.level + '   ·   Streak ' + d.streak + ' (best ' + d.bestStreak + ')   ·   Coins ' + d.coins + '   ·   Next rival: ' + rung.name + ' (' + rung.tier + ')', this.viewW / 2, 612);
     // XP bar.
-    const bw = 320, bx = VIEW_W / 2 - bw / 2, by = 626;
+    const bw = 320, bx = this.viewW / 2 - bw / 2, by = 626;
     ctx.fillStyle = 'rgba(180,210,255,0.15)'; this._roundRect(ctx, bx, by, bw, 8, 4); ctx.fill();
     ctx.fillStyle = C.cyan; const f = Math.max(0, Math.min(1, d.xp / d.xpToNext));
     this._roundRect(ctx, bx, by, bw * f, 8, 4); ctx.fill();
     ctx.fillStyle = C.dim; ctx.font = '11px monospace';
-    ctx.fillText(d.xp + ' / ' + d.xpToNext + ' XP', VIEW_W / 2, 652);
+    ctx.fillText(d.xp + ' / ' + d.xpToNext + ' XP', this.viewW / 2, 652);
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText('Drag to aim, then SWIPE-RELEASE to throw — the power band auto-tunes to your flick. The checkout guide lights up your finish.', VIEW_W / 2, 686);
+    ctx.fillText('Drag to aim, then SWIPE-RELEASE to throw — the power band auto-tunes to your flick. The checkout guide lights up your finish.', this.viewW / 2, 686);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -864,10 +1010,10 @@
     for (let i = 0; i < this.mode.dartsPerTurn; i++) {
       const used = i < this.dartsThisTurn;
       ctx.fillStyle = used ? 'rgba(180,210,255,0.25)' : cur.skin().color;
-      ctx.beginPath(); ctx.arc(VIEW_W / 2 - 26 + i * 26, VIEW_H - 22, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(this.viewW / 2 - 26 + i * 26, VIEW_H - 22, 6, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText((cur.isAI ? cur.name + ' is throwing…' : 'DRAG TO AIM · FLICK TO THROW'), VIEW_W / 2, VIEW_H - 40);
+    ctx.fillText((cur.isAI ? cur.name + ' is throwing…' : 'DRAG TO AIM · FLICK TO THROW'), this.viewW / 2, VIEW_H - 40);
     ctx.restore();
     ctx.textAlign = 'left';
     if (this.flickFb) this._drawFlickFb(ctx);
@@ -882,7 +1028,7 @@
     ctx.textAlign = 'center';
     ctx.fillStyle = f.col; ctx.shadowColor = f.col; ctx.shadowBlur = 14;
     ctx.font = 'bold 22px "Space Grotesk", sans-serif';
-    ctx.fillText(f.text, VIEW_W / 2, VIEW_H - 66 - (1 - f.life) * 14);
+    ctx.fillText(f.text, this.viewW / 2, VIEW_H - 66 - (1 - f.life) * 14);
     ctx.restore();
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
@@ -892,7 +1038,7 @@
   // cards sit BELOW the Studio back-link so the score is never covered.
   Game.prototype._scoreCard = function (ctx, pl, side, active, big, sub) {
     const W = 256, H = 96, M = 16, TOP = 44;
-    const x = side === 'left' ? M : VIEW_W - M - W;
+    const x = side === 'left' ? M : this.viewW - M - W;
     const y = TOP;
     const col = pl.skin().color;
     ctx.save();
@@ -1016,7 +1162,7 @@
     const nums = KD.Mode_Cricket.NUMBERS;
     const PW = 200, M = 12, rowH = 30;
     const PH = 92 + nums.length * rowH + 14;
-    const x = side === 'left' ? M : VIEW_W - M - PW;
+    const x = side === 'left' ? M : this.viewW - M - PW;
     const y = 46;
     const col = pl.skin().color;
     ctx.save();
@@ -1170,7 +1316,7 @@
     const s = this.reduceMotion ? 1 : 1 + Math.max(0, 0.35 - born * 2.8);
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.translate(VIEW_W / 2, VIEW_H * 0.5);
+    ctx.translate(this.viewW / 2, VIEW_H * 0.5);
     ctx.scale(s, s);
     ctx.textAlign = 'center';
     ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 26;
@@ -1186,15 +1332,15 @@
     ctx.save();
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(5,6,15,0.78)';
-    this._roundRect(ctx, VIEW_W / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.fill();
+    this._roundRect(ctx, this.viewW / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = col;
     ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.globalAlpha = 0.9;
-    this._roundRect(ctx, VIEW_W / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.stroke();
+    this._roundRect(ctx, this.viewW / 2 - 220, VIEW_H - 150, 440, 56, 12); ctx.stroke();
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
-    ctx.fillText(this.banner, VIEW_W / 2, VIEW_H - 122);
+    ctx.fillText(this.banner, this.viewW / 2, VIEW_H - 122);
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText('tap to continue', VIEW_W / 2, VIEW_H - 104);
+    ctx.fillText('tap to continue', this.viewW / 2, VIEW_H - 104);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -1202,47 +1348,287 @@
   Game.prototype._drawMatchOver = function (ctx) {
     ctx.save();
     ctx.fillStyle = 'rgba(4,6,14,0.78)';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, this.viewW, VIEW_H);
     ctx.textAlign = 'center';
     const r = this.matchResult;
+    if (r.level) { this._drawLevelResult(ctx, r); ctx.restore(); return; }
     ctx.fillStyle = r.won ? C.green : C.ember;
     ctx.shadowColor = r.won ? C.green : C.ember; ctx.shadowBlur = 26;
     ctx.font = 'bold 72px "Space Grotesk", sans-serif';
-    ctx.fillText(r.won ? 'YOU WIN!' : 'DEFEAT', VIEW_W / 2, VIEW_H / 2 - 30);
+    ctx.fillText(r.won ? 'YOU WIN!' : 'DEFEAT', this.viewW / 2, VIEW_H / 2 - 30);
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff'; ctx.font = '22px "Space Grotesk", sans-serif';
-    ctx.fillText(r.winner + ' takes the leg', VIEW_W / 2, VIEW_H / 2 + 14);
+    ctx.fillText(r.winner + ' takes the leg', this.viewW / 2, VIEW_H / 2 + 14);
     ctx.fillStyle = C.gold; ctx.font = 'bold 20px "Space Grotesk", sans-serif';
-    ctx.fillText('+' + r.xp + ' XP', VIEW_W / 2, VIEW_H / 2 + 52);
+    ctx.fillText('+' + r.xp + ' XP', this.viewW / 2, VIEW_H / 2 + 52);
     // Your match line: darts thrown, plus the highlights that matter.
     const bits = [r.darts + ' darts'];
     if (r.t180 > 0) bits.push(r.t180 + '× 180');
     if (r.won && r.mode === 'x01' && r.checkout) bits.push(r.checkout + ' checkout');
     if (r.mode === 'cricket' && r.points) bits.push(r.points + ' pts');
     ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
-    ctx.fillText(bits.join('  ·  '), VIEW_W / 2, VIEW_H / 2 + 80);
+    ctx.fillText(bits.join('  ·  '), this.viewW / 2, VIEW_H / 2 + 80);
     if (this.matchOverTimer <= 0) {
       ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
-      ctx.fillText('tap to return to the menu', VIEW_W / 2, VIEW_H / 2 + 116);
+      ctx.fillText('tap to return to the menu', this.viewW / 2, VIEW_H / 2 + 116);
     }
     ctx.restore();
     ctx.textAlign = 'left';
   };
 
+  // ---- Darts Birds campaign: level map render ----------------------------
+  const OUTLINE = '#0a0618';
+  const SKY = {
+    dawn:  ['#120a33', '#3b1d6e', '#a2457e', '#ffb48a'],
+    noon:  ['#06203a', '#0f4f6e', '#2c8f9a', '#bff3e0'],
+    night: ['#030210', '#0d0a2e', '#2b1657', '#7d5bd0'],
+  };
+  const HILLS = {
+    dawn:  ['#2a1450', '#1d0d3a', '#120828'],
+    noon:  ['#0c3550', '#082638', '#051a28'],
+    night: ['#1a1044', '#110a33', '#08051f'],
+  };
+  const STARS_AT = [[70, 80], [190, 150], [330, 60], [520, 118], [640, 52], [880, 190], [260, 210], [600, 200], [930, 60], [430, 40]];
+
+  Game.prototype._drawLevels = function (ctx) {
+    const world = KD.Campaign.WORLDS[this.mapWorld], sky = SKY[world.sky], hills = HILLS[world.sky];
+    const t = this.time, cx = this.viewW / 2;
+    ctx.save();
+    // Night sky with a bold bottom-to-top gradient.
+    const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+    g.addColorStop(0, sky[0]); g.addColorStop(0.55, sky[1]); g.addColorStop(0.85, sky[2]); g.addColorStop(1, sky[3]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, this.viewW, VIEW_H);
+    // Twinkling stars.
+    STARS_AT.forEach((s, i) => {
+      const a = 0.45 + 0.35 * Math.sin(t * 2 + i * 1.7);
+      ctx.globalAlpha = a; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(s[0] * this.viewW / 960, s[1], 2 + (i % 3) * 0.6, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    // Sun / moon with slowly turning rays, outlined like a cartoon.
+    const sunX = this.viewW - 150, sunY = 118, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : '#fff2b3';
+    ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
+    ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
+    for (let k = 0; k < 12; k++) {
+      ctx.rotate(Math.PI / 6);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-22, 150); ctx.lineTo(22, 150); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(sunX, sunY, 54, 0, Math.PI * 2);
+    ctx.fillStyle = sunCol; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = OUTLINE; ctx.stroke();
+    // Puffy clouds drifting across.
+    const drift = (base, s, speed) => ((base + t * speed) % (this.viewW + 260)) - 130;
+    this._cloud(ctx, drift(0, 1, 14), 206, 0.7);
+    this._cloud(ctx, drift(420, 1, 9), 470, 0.8);
+    this._cloud(ctx, drift(700, 1, 18), 236, 0.5);
+    // Layered hills, outlined.
+    [[500, 0], [560, 1], [620, 2]].forEach(([base, li]) => {
+      ctx.beginPath(); ctx.moveTo(0, VIEW_H);
+      for (let x = 0; x <= this.viewW + 60; x += 60) {
+        const y = base - 26 * Math.sin(x * 0.011 + li * 2.1) - 14 * Math.sin(x * 0.027 + li);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(this.viewW, VIEW_H); ctx.closePath();
+      ctx.fillStyle = hills[li]; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
+    });
+    this._worldProp(ctx, world.sky, this.viewW - 118, 500);
+    // Header.
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#c46bff'; ctx.shadowBlur = 22;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 44px "Space Grotesk", sans-serif';
+    ctx.fillText('DARTS BIRDS', cx, 84);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = C.gold; ctx.font = 'bold 20px "Space Grotesk", sans-serif';
+    ctx.fillText('WORLD ' + (this.mapWorld + 1) + '  ·  ' + world.name, cx, 124);
+    ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
+    ctx.fillText(world.sub, cx, 146);
+    // Tiles.
+    const prog = this.progression;
+    const btns = this._levelsLayout();
+    let current = -1;
+    for (let i = 0; i < KD.Campaign.LEVELS.length; i++) {
+      if (prog.campaignUnlocked(i) && prog.campaignStars(i) === 0) { current = i; break; }
+    }
+    btns.forEach((b) => {
+      if (b.group !== 'level') return;
+      const L = KD.Campaign.LEVELS[b.idx];
+      const open = prog.campaignUnlocked(b.idx), stars = prog.campaignStars(b.idx);
+      const bob = b.idx === current ? Math.sin(t * 3.2) * 5 : 0;
+      this._tile(ctx, b, L, b.idx, open, stars, bob);
+    });
+    // Stars for this world and the page dots.
+    const range = KD.Campaign.worldRange(this.mapWorld);
+    let got = 0;
+    for (let k = 0; k < range.count; k++) got += prog.campaignStars(range.first + k);
+    ctx.fillStyle = 'rgba(10,6,24,0.7)';
+    this._roundRect(ctx, cx - 110, 462, 220, 34, 17); ctx.fill();
+    ctx.fillStyle = C.gold; ctx.font = 'bold 16px "Space Grotesk", sans-serif';
+    ctx.fillText('STARS  ' + got + ' / ' + range.count * 3, cx, 485);
+    KD.Campaign.WORLDS.forEach((_, w) => {
+      ctx.beginPath(); ctx.arc(cx - 24 + w * 24, 522, w === this.mapWorld ? 7 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = w === this.mapWorld ? C.gold : 'rgba(255,255,255,0.35)'; ctx.fill();
+    });
+    // Back and page arrows.
+    ctx.textAlign = 'left';
+    btns.forEach((b) => {
+      if (b.group === 'nav') {
+        ctx.fillStyle = 'rgba(10,6,24,0.75)'; this._roundRect(ctx, b.x, b.y, b.w, b.h, 12); ctx.fill();
+        ctx.strokeStyle = C.violet; ctx.lineWidth = 2; this._roundRect(ctx, b.x, b.y, b.w, b.h, 12); ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 17px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('‹  BACK', b.x + b.w / 2, b.y + 29); ctx.textAlign = 'left';
+      } else if (b.group === 'page') {
+        const dis = (b.id === 'prev' && this.mapWorld === 0) || (b.id === 'next' && this.mapWorld === KD.Campaign.WORLDS.length - 1);
+        ctx.globalAlpha = dis ? 0.25 : 1;
+        ctx.fillStyle = 'rgba(10,6,24,0.7)'; ctx.beginPath(); ctx.arc(b.x + b.w / 2, b.y + b.h / 2, 26, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = C.cyan; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 30px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(b.id === 'prev' ? '‹' : '›', b.x + b.w / 2, b.y + b.h / 2 + 10);
+        ctx.globalAlpha = 1; ctx.textAlign = 'left';
+      }
+    });
+    ctx.restore();
+  };
+
+  Game.prototype._cloud = function (ctx, x, y, s) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.beginPath();
+    ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.arc(34, -12, 40, 0, Math.PI * 2); ctx.arc(74, 0, 28, 0, Math.PI * 2);
+    ctx.arc(30, 14, 26, 0, Math.PI * 2); ctx.arc(-8, 14, 22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(236,230,255,0.92)'; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
+    ctx.restore();
+  };
+
+  // One outlined cartoon prop per world, standing on the hills.
+  Game.prototype._worldProp = function (ctx, sky, x, y) {
+    ctx.save(); ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE;
+    if (sky === 'dawn') {
+      // Dartboard on a post.
+      ctx.fillStyle = '#5a3d2b'; ctx.fillRect(x - 5, y - 10, 10, 90); ctx.strokeRect(x - 5, y - 10, 10, 90);
+      ctx.beginPath(); ctx.arc(x, y - 36, 44, 0, Math.PI * 2);
+      ctx.fillStyle = '#f4efe2'; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y - 36, 30, 0, Math.PI * 2); ctx.fillStyle = '#c0392b'; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y - 36, 12, 0, Math.PI * 2); ctx.fillStyle = '#2ecc71'; ctx.fill(); ctx.stroke();
+    } else if (sky === 'noon') {
+      // A stack of neon darts stuck in the ground.
+      [-22, 0, 22].forEach((dx, i) => {
+        ctx.save(); ctx.translate(x + dx, y + 30); ctx.rotate(-0.25 + i * 0.25);
+        ctx.fillStyle = [C.cyan, C.green, C.violet][i];
+        ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, -92); ctx.lineTo(10, -106); ctx.lineTo(0, -120); ctx.lineTo(-10, -106); ctx.lineTo(-10, -92); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      });
+    } else {
+      // A lantern on a pole.
+      ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 4, y - 70, 8, 110); ctx.strokeRect(x - 4, y - 70, 8, 110);
+      ctx.beginPath(); ctx.arc(x, y - 92, 26, 0, Math.PI * 2);
+      ctx.fillStyle = C.gold; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y - 92, 44, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,211,77,0.18)'; ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  Game.prototype._star = function (ctx, x, y, r, on) {
+    ctx.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const rr = k % 2 === 0 ? r : r * 0.45, a = -Math.PI / 2 + k * Math.PI / 5;
+      ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = on ? C.gold : 'rgba(10,6,24,0.7)'; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = on ? OUTLINE : '#4a4f72'; ctx.stroke();
+  };
+
+  Game.prototype._tile = function (ctx, b, L, idx, open, stars, bob) {
+    const x = b.x, y = b.y + bob, w = b.w, h = b.h, cx = x + w / 2;
+    ctx.save();
+    // Drop shadow, then the body.
+    ctx.fillStyle = OUTLINE; this._roundRect(ctx, x + 6, b.y + 8, w, h, 16); ctx.fill();
+    const body = ctx.createLinearGradient(0, y, 0, y + h);
+    if (open) {
+      const col = C[L.skin] || C.cyan;
+      body.addColorStop(0, col); body.addColorStop(1, '#1a1040');
+    } else { body.addColorStop(0, '#2a2e4a'); body.addColorStop(1, '#141628'); }
+    ctx.fillStyle = body; this._roundRect(ctx, x, y, w, h, 16); ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; this._roundRect(ctx, x, y, w, h, 16); ctx.stroke();
+    if (L.boss) {
+      // Crown over the boss tile.
+      ctx.fillStyle = C.gold; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 34, y - 6); ctx.lineTo(cx - 34, y - 34); ctx.lineTo(cx - 17, y - 20);
+      ctx.lineTo(cx, y - 40); ctx.lineTo(cx + 17, y - 20); ctx.lineTo(cx + 34, y - 34); ctx.lineTo(cx + 34, y - 6);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    if (open) {
+      ctx.fillStyle = 'rgba(10,6,24,0.55)';
+      ctx.beginPath(); ctx.arc(cx, y + 30, 19, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+      ctx.fillText(String(idx + 1), cx, y + 36);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (L.boss ? 15 : 17) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(L.name, cx, y + 84);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px "Space Grotesk", sans-serif';
+      ctx.fillText((L.mode === 'x301' ? '301' : '501') + '  ·  ' + (L.boss ? 'BOSS' : L.tier), cx, y + 104);
+      for (let s = 0; s < 3; s++) this._star(ctx, cx - 26 + s * 26, y + h - 26, 11, s < stars);
+    } else {
+      // Padlock.
+      ctx.fillStyle = '#5b6182';
+      ctx.beginPath(); ctx.arc(cx, y + 62, 16, Math.PI, 0); ctx.lineWidth = 6; ctx.strokeStyle = '#5b6182'; ctx.stroke();
+      ctx.fillRect(cx - 22, y + 62, 44, 34);
+      ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.arc(cx, y + 78, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
+      ctx.fillText('Beat level ' + idx + ' first', cx, y + h - 28);
+    }
+    ctx.restore();
+  };
+
+  // Results card for a campaign leg: stars, title and buttons.
+  Game.prototype._drawLevelResult = function (ctx, r) {
+    const lvl = r.level, cx = this.viewW / 2, cy = VIEW_H / 2;
+    const boss = lvl.boss && lvl.won;
+    ctx.textAlign = 'center';
+    for (let s = 0; s < 3; s++) this._star(ctx, cx - 74 + s * 74, cy - 150, 30, s < lvl.stars);
+    ctx.fillStyle = r.won ? C.green : C.ember;
+    ctx.shadowColor = r.won ? C.green : C.ember; ctx.shadowBlur = 24;
+    ctx.font = 'bold 60px "Space Grotesk", sans-serif';
+    let title = r.won ? 'LEVEL CLEARED!' : 'DEFEAT';
+    if (boss) title = 'WORLD ' + (KD.Campaign.LEVELS[lvl.idx].world + 1) + ' COMPLETE!';
+    ctx.fillText(title, cx, cy - 58);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff'; ctx.font = '20px "Space Grotesk", sans-serif';
+    ctx.fillText((r.won ? 'You take' : r.winner + ' takes') + ' the leg', cx, cy - 22);
+    ctx.fillStyle = C.gold; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+    ctx.fillText('+' + r.xp + ' XP', cx, cy + 8);
+    ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
+    const need = lvl.won ? (lvl.stars === 3 ? 'Best stars!' : '3 stars: win within ' + lvl.par + ' darts') : 'Win to earn stars';
+    ctx.fillText(r.darts + ' darts  ·  par ' + lvl.par + '  ·  ' + need, cx, cy + 38);
+    const btns = this._matchButtons();
+    btns.forEach((b) => {
+      const col = b.group === 'primary' ? C.green : b.group === 'btn' ? C.cyan : C.violet;
+      ctx.fillStyle = 'rgba(10,6,24,0.85)'; this._roundRect(ctx, b.x, b.y, b.w, b.h, 14); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = col; this._roundRect(ctx, b.x, b.y, b.w, b.h, 14); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + 34);
+    });
+    ctx.textAlign = 'left';
+  };
+
   Game.prototype._drawPause = function (ctx) {
     ctx.save();
-    ctx.fillStyle = 'rgba(4,6,14,0.8)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = 'rgba(4,6,14,0.8)'; ctx.fillRect(0, 0, this.viewW, VIEW_H);
     ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
     ctx.shadowColor = C.cyan; ctx.shadowBlur = 20;
     ctx.font = 'bold 48px "Space Grotesk", sans-serif';
-    ctx.fillText('PAUSED', VIEW_W / 2, VIEW_H / 2 - 60);
+    ctx.fillText('PAUSED', this.viewW / 2, VIEW_H / 2 - 60);
     ctx.shadowBlur = 0;
     ctx.restore();
     this._pauseLayout().forEach((b) => this._neonButton(ctx, b));
     ctx.save();
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim;
     ctx.font = '12px "Space Grotesk", sans-serif';
-    ctx.fillText('P resume · M mute · Esc quit', VIEW_W / 2, VIEW_H / 2 + 150);
+    ctx.fillText('P resume · M mute · Esc quit', this.viewW / 2, VIEW_H / 2 + 150);
     ctx.restore();
     ctx.textAlign = 'left';
   };
@@ -1256,12 +1642,12 @@
       const y = 70 + i * 56;
       ctx.globalAlpha = a;
       ctx.fillStyle = 'rgba(57,230,255,0.12)';
-      this._roundRect(ctx, VIEW_W / 2 - 130, y, 260, 46, 10); ctx.fill();
+      this._roundRect(ctx, this.viewW / 2 - 130, y, 260, 46, 10); ctx.fill();
       ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.5;
-      this._roundRect(ctx, VIEW_W / 2 - 130, y, 260, 46, 10); ctx.stroke();
+      this._roundRect(ctx, this.viewW / 2 - 130, y, 260, 46, 10); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Space Grotesk", sans-serif';
-      ctx.fillText(t.text, VIEW_W / 2, y + 20);
-      if (t.sub) { ctx.fillStyle = C.green; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.fillText(t.sub, VIEW_W / 2, y + 37); }
+      ctx.fillText(t.text, this.viewW / 2, y + 20);
+      if (t.sub) { ctx.fillStyle = C.green; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.fillText(t.sub, this.viewW / 2, y + 37); }
     }
     ctx.restore();
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
@@ -1370,7 +1756,7 @@
 
     const row = (ids, kind, y, cw, gap, sel, owned, cost) => {
       const total = ids.length * cw + (ids.length - 1) * gap;
-      let x = VIEW_W / 2 - total / 2;
+      let x = this.viewW / 2 - total / 2;
       ids.forEach((id) => {
         btns.push({
           id: kind + ':' + id, group: kind, key: id, x: x, y: y, w: cw, h: 70,
@@ -1497,21 +1883,21 @@
     ctx.textAlign = 'center';
     ctx.shadowColor = C.cyan; ctx.shadowBlur = 20; ctx.fillStyle = '#fff';
     ctx.font = 'bold 44px "Space Grotesk", sans-serif';
-    ctx.fillText('DART WORKSHOP', VIEW_W / 2, 80);
+    ctx.fillText('DART WORKSHOP', this.viewW / 2, 80);
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet; ctx.font = '13px "Space Grotesk", sans-serif';
-    ctx.fillText('CRAFT YOUR PERFECT DART · BARREL · TIP · FLIGHT', VIEW_W / 2, 104);
+    ctx.fillText('CRAFT YOUR PERFECT DART · BARREL · TIP · FLIGHT', this.viewW / 2, 104);
 
     // Coin balance (top-right).
     ctx.textAlign = 'right'; ctx.fillStyle = C.gold;
     ctx.font = 'bold 20px "Space Grotesk", sans-serif';
-    ctx.fillText('🪙 ' + d.coins, VIEW_W - 24, 52);
+    ctx.fillText('🪙 ' + d.coins, this.viewW - 24, 52);
 
     // Big live preview of the equipped loadout, gently bobbing + spinning.
     const skin = KD.Sprites.SKINS[d.skins.equipped];
     const bob = this.reduceMotion ? 0 : Math.sin(this.time * 1.6) * 6;
     ctx.save();
-    ctx.translate(VIEW_W / 2, 180 + bob);
+    ctx.translate(this.viewW / 2, 180 + bob);
     ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
@@ -1525,16 +1911,16 @@
     const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
     const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
     const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
-    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(VIEW_W / 2 + 160, 130, 140, 80); // stat panel bg
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(this.viewW / 2 + 160, 130, 140, 80); // stat panel bg
     ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
-    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', VIEW_W / 2 + 170, 145);
-    this._drawStatBars(ctx, VIEW_W / 2 + 170, 155, totalSpeed, totalStability, totalSlimness);
+    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', this.viewW / 2 + 170, 145);
+    this._drawStatBars(ctx, this.viewW / 2 + 170, 155, totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText('BARREL', VIEW_W / 2, 274);
-    ctx.fillText('TIP', VIEW_W / 2, 384);
-    ctx.fillText('FLIGHT', VIEW_W / 2, 494);
+    ctx.fillText('BARREL', this.viewW / 2, 274);
+    ctx.fillText('TIP', this.viewW / 2, 384);
+    ctx.fillText('FLIGHT', this.viewW / 2, 494);
     ctx.restore();
 
     const btns = this._workshopLayout();
@@ -1543,7 +1929,7 @@
       else this._workshopChip(ctx, b);
     });
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Cosmetic only — every dart flies the same. Earn coins by winning matches.', VIEW_W / 2, VIEW_H - 24);
+    ctx.fillText('Cosmetic only — every dart flies the same. Earn coins by winning matches.', this.viewW / 2, VIEW_H - 24);
     ctx.textAlign = 'left';
   };
 
@@ -1583,10 +1969,10 @@
     ctx.textAlign = 'center';
     ctx.shadowColor = C.gold; ctx.shadowBlur = 20; ctx.fillStyle = '#fff';
     ctx.font = 'bold 44px "Space Grotesk", sans-serif';
-    ctx.fillText('BULLSEYE LEAGUE', VIEW_W / 2, 80);
+    ctx.fillText('BULLSEYE LEAGUE', this.viewW / 2, 80);
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet; ctx.font = '13px "Space Grotesk", sans-serif';
-    ctx.fillText('SEASON STANDINGS · CLIMB THE RANKS', VIEW_W / 2, 104);
+    ctx.fillText('SEASON STANDINGS · CLIMB THE RANKS', this.viewW / 2, 104);
     ctx.restore();
 
     this._neonButton(ctx, { x: 24, y: 72, w: 110, h: 40, label: '← BACK', group: 'back', sel: false });
@@ -1633,7 +2019,7 @@
     ctx.restore();
 
     // Your stats card (right column).
-    const sx = 640, sw = VIEW_W - sx - 40, sy = 150;
+    const sx = 640, sw = this.viewW - sx - 40, sy = 150;
     ctx.save();
     ctx.fillStyle = 'rgba(8,12,26,0.66)';
     this._roundRect(ctx, sx, sy, sw, 360, 14); ctx.fill();
@@ -1664,7 +2050,7 @@
     ctx.restore();
 
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Beat the rival above you in Career to climb · tap anywhere or BACK to return', VIEW_W / 2, VIEW_H - 24);
+    ctx.fillText('Beat the rival above you in Career to climb · tap anywhere or BACK to return', this.viewW / 2, VIEW_H - 24);
     ctx.textAlign = 'left';
   };
 

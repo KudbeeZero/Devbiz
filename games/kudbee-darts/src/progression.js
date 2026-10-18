@@ -61,8 +61,23 @@
       // Learned flick model: ideal release speed this device's player tends to
       // throw at, the running sample count, and the most recent speeds.
       flick: { ideal: FLICK_DEFAULT, n: 0, recent: [] },
+      // Darts Birds campaign: best stars (0-3) per level, by level index.
+      campaign: { stars: [] },
       settings: { sound: true, boardTheme: 'neon' },
     };
+  }
+
+  // Best stars per campaign level. Anything that isn't a whole 0..3 number
+  // is dropped to 0, and the list is padded or cut to the level count.
+  function sanitizeCampaign(raw) {
+    const n = KD.Campaign.LEVELS.length;
+    const src = raw && Array.isArray(raw.stars) ? raw.stars : [];
+    const stars = [];
+    for (let i = 0; i < n; i++) {
+      const v = src[i];
+      stars.push(Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0);
+    }
+    return { stars: stars };
   }
 
   function Progression() {
@@ -90,9 +105,26 @@
           this.data.flick = Object.assign(d.flick, parsed.flick || {});
           if (!Array.isArray(this.data.flick.recent)) this.data.flick.recent = [];
           this.data.settings = Object.assign(d.settings, parsed.settings || {});
+          this.data.campaign = sanitizeCampaign(parsed.campaign);
         }
       }
     } catch (e) { /* corrupt save -> defaults */ }
+  };
+
+  // Keep the best star count for a level. A level unlocks once the one
+  // before it has at least one star.
+  Progression.prototype.campaignStars = function (i) {
+    return this.data.campaign.stars[i] || 0;
+  };
+  Progression.prototype.campaignUnlocked = function (i) {
+    return i === 0 || this.campaignStars(i - 1) > 0;
+  };
+  Progression.prototype.recordLevel = function (i, stars) {
+    const c = this.data.campaign.stars;
+    const before = this.campaignStars(i);
+    if (stars > before) c[i] = stars;
+    this.save();
+    return { best: Math.max(before, stars), improved: stars > before };
   };
 
   Progression.prototype.save = function () {

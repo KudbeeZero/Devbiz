@@ -16,6 +16,14 @@ up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, an
 - **Locally:** from the repo root run `python3 -m http.server 8000`, then open
   <http://localhost:8000/games/kudbee-darts/index.html>
 
+## Darts Birds (campaign)
+
+**DARTS BIRDS** on the menu opens a level map in the Angry Birds style: three worlds of
+five levels, each world ending in a boss. A level is a 301 or 501 leg against a named
+rival. Stars come from the darts you throw on the winning leg: 1 star for a win, 2 within
+par + 6, 3 within par. Levels unlock one at a time, and the best stars are saved per
+level (`campaign.js` holds the level list and the star rule).
+
 ## Controls
 
 | Action            | Mouse / Touch                              | Keyboard |
