@@ -321,6 +321,9 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     g._playLevel(0); out.started = g.state === 'play' && g.levelIdx === 0 && g.mode.id === 'x01';
     g.players[0].dartsThrown = 18; g._matchWin(g.players[0]);
     out.won = { state: g.state, stars: g.matchResult.level.stars, next: g.matchResult.level.next, saved: g.progression.campaignStars(0), unlock1: g.progression.campaignUnlocked(1), unlock2: g.progression.campaignUnlocked(2) };
+    out.btns = g._matchButtons().map((b) => b.id).join();
+    g._onMatchButton('share');
+    out.share = /Level 1 .* in 18 darts in Kudbee Darts/.test(g.shareText || '') && /https:\/\/devbiz\.kudbee\.workers\.dev\/games\/kudbee-darts\//.test(g.shareText || '');
     g.matchOverTimer = 0; g._onMatchButton('next');
     out.nextStarted = g.state === 'play' && g.levelIdx === 1;
     // A loss earns nothing and keeps the best earned before.
@@ -338,13 +341,22 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   const campOk = camp.count === 15 && JSON.stringify(camp.bosses) === '[4,9,14]' && JSON.stringify(camp.stars) === '[3,2,1]'
     && camp.mapState === 'levels' && camp.mapWorld === 0 && camp.layoutTiles === 5 && camp.lockedStart && camp.started
     && camp.won.state === 'matchOver' && camp.won.stars === 3 && camp.won.next === 1 && camp.won.saved === 3 && camp.won.unlock1 && !camp.won.unlock2
-    && camp.nextStarted && camp.lossKeeps && camp.clean;
-  rec('darts-birds-campaign', campOk, `levels=${camp.count} bosses=${camp.bosses} stars=${camp.stars} map=${camp.mapState}/w${camp.mapWorld} tiles=${camp.layoutTiles} locked=${camp.lockedStart} flow=${camp.won.state}/${camp.won.stars}★ next=${camp.nextStarted} loss=${camp.lossKeeps} clean=${camp.clean}`);
+    && camp.nextStarted && camp.lossKeeps && camp.clean && camp.btns === 'next,retry,levels,share' && camp.share;
+  rec('darts-birds-campaign', campOk, `levels=${camp.count} bosses=${camp.bosses} stars=${camp.stars} map=${camp.mapState}/w${camp.mapWorld} tiles=${camp.layoutTiles} locked=${camp.lockedStart} flow=${camp.won.state}/${camp.won.stars}★ next=${camp.nextStarted} loss=${camp.lossKeeps} clean=${camp.clean} buttons=${camp.btns} share=${camp.share}`);
   await page.evaluate(() => window.__step(2));
   await page.evaluate(() => { const g = window.DARTS; g.state = 'levels'; g.mapWorld = 0; window.__step(3); });
   const mapPx = await page.evaluate(() => { const c = document.getElementById('game'); const d = c.getContext('2d').getImageData(480, 20, 1, 1).data; return { r: d[0], g: d[1], b: d[2] }; });
   await page.screenshot({ path: resolve(OUT, 'darts-birds-map.png') });
   rec('darts-birds-map-render', mapPx.b > 20 && mapPx.r < 120, `top-centre pixel rgb(${mapPx.r},${mapPx.g},${mapPx.b}) (night sky, drawn not blank)`);
+  // A campaign match plays in its world's scenery (World 1: dawn sky), not the neon stage.
+  const playPx = await page.evaluate(() => {
+    const g = window.DARTS; g.levelIdx = 0; g._startMatch(); window.__step(3);
+    const d = document.getElementById('game').getContext('2d').getImageData(8, 700, 1, 1).data;
+    const out = { r: d[0], g: d[1], b: d[2], state: g.state };
+    g.levelIdx = null; g.state = 'menu'; window.__step(2);
+    return out;
+  });
+  rec('darts-birds-world-scene', playPx.state === 'play' && playPx.r > 12 && playPx.b > playPx.g, `campaign match bottom-left rgb(${playPx.r},${playPx.g},${playPx.b}) (dawn hills, not the neon floor)`);
   await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
 }
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
