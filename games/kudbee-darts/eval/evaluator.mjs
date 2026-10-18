@@ -761,6 +761,54 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('stingers', ok, `methods=${st.has} no-throw=${st.noThrow} finish=${st.finish} normal=${st.normal} 180=${st.t180} ton=${st.ton}`);
 }
 
+// ---------------------------------------------------------------- achievements + tutorial
+{
+  const ax = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    out.count = P.ACHIEVEMENTS.length;
+    // Achievements.
+    prog.data.ach = { have: { wins: -4, bull: 'x' }, got: { nope: 1 } };
+    const a = prog.ach();
+    out.repaired = a.have.wins === 0 && a.have.bull === 0 && !a.got.nope;
+    prog.data.coins = 0; prog.data.tokens = 0; prog.data.ach = { have: {}, got: {} };
+    const first = prog.achEvent('bull', 1);
+    out.first = first.map((d) => d.id).join(',') + '/' + prog.data.coins + '/' + prog.data.tokens;
+    out.again = prog.achEvent('bull', 1).length;                       // 2nd bull: nothing new
+    out.league = prog.achEvent('league', 4, true).map((d) => d.id).join(',');
+    out.leagueLow = prog.achEvent('league', 1, true).length + '/' + prog.achHave('league');   // max never drops
+    g.toasts.length = 0; g.levelIdx = null; g.selOpp = 'Rookie'; g.selMode = 'x01'; g._startMatch();
+    prog.data.ach = { have: {}, got: {} };
+    g._ach('dart', { ring: 'inbull', value: 50, score: 50 });
+    out.toast = g.toasts.some((t) => /ACHIEVEMENT/.test(t.sub || ''));
+    g.state = 'achievements'; g.achPage = 0; window.__step(2);
+    const nx = g._achLayout().find((b) => b.id === 'next');
+    g.input.pointer.x = nx.x + 4; g.input.pointer.y = nx.y + 4; g.input.pointer.justDown = true; g._updateAchievements(); g.input.pointer.justDown = false;
+    out.page = g.achPage;
+    // Tutorial.
+    prog.data = JSON.parse(snap);
+    delete prog.data.tut; prog.data.stats.x01.played = 0; prog.data.stats.cricket.played = 0;
+    out.newPlayer = prog.tutStep();
+    prog.data.stats.x01.played = 3; delete prog.data.tut;
+    out.veteran = prog.tutStep();
+    prog.tutSet(0); prog.data.coins = 0; prog.data.tokens = 0;
+    g.levelIdx = null; g.selOpp = 'Rookie'; g.selMode = 'x01'; g._startMatch();
+    out.on = g._tutorialOn();
+    g.current = 0; g.players[0].isAI = false;
+    g.dart.state = 'aiming'; g._tutorialTick(0.1); out.s1 = prog.tutStep();
+    g.dart.state = 'flying'; g._tutorialTick(0.1); out.s2 = prog.tutStep();
+    g._tutT = 4; g.dart.state = 'aiming'; g._tutorialTick(0.1); out.s3 = prog.tutStep();
+    g._tutT = 8; g._tutorialTick(0.1); out.done = prog.tutStep() + '/' + prog.data.coins + '/' + prog.data.tokens;
+    out.off = g._tutorialOn();
+    window.__step(2);                                                    // renders without throwing
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu'; g.toasts.length = 0;
+    return out;
+  });
+  const ok = ax.count >= 20 && ax.repaired && ax.first === 'bull1/25/1' && ax.again === 0 && ax.league === 'gold,diamond' && ax.leagueLow === '0/4'
+    && ax.toast && ax.page === 1 && ax.newPlayer === 0 && ax.veteran === 4 && ax.on && ax.s1 === 1 && ax.s2 === 2 && ax.s3 === 3 && ax.done === '4/50/2' && !ax.off;
+  rec('achievements-tutorial', ok, `n=${ax.count} repaired=${ax.repaired} first=${ax.first} again=${ax.again} league=${ax.league} max=${ax.leagueLow} toast=${ax.toast} page=${ax.page} tut new=${ax.newPlayer} vet=${ax.veteran} steps=${ax.s1}${ax.s2}${ax.s3} done=${ax.done} off=${!ax.off}`);
+}
+
 // ---------------------------------------------------------------- curl lead
 // The curl starts bending 30ms before release (already turning as it leaves
 // the hand) but is rescaled so the landing, and so the score, is unchanged.

@@ -209,7 +209,7 @@
     if (this.state === 'intro') this._updateIntro(dt);
     else if (this.state === 'menu') this._updateMenu(dt);
     else if (this.state === 'levels') this._updateLevels(dt);
-    else if (this.state === 'play') this._updatePlay(dt);
+    else if (this.state === 'play') { this._updatePlay(dt); if (this._tutorialTick) this._tutorialTick(dt); }
     else if (this.state === 'turnEnd') this._updateTurnEnd(dt);
     else if (this.state === 'matchOver') this._updateMatchOver(dt);
     else if (this.state === 'reward') this._updateReward(dt);
@@ -217,6 +217,7 @@
     else if (this.state === 'workshop') this._updateWorkshop(dt);
     else if (this.state === 'leaderboard') this._updateLeaderboard(dt);
     else if (this.state === 'missions') this._updateMissions(dt);
+    else if (this.state === 'achievements') this._updateAchievements(dt);
 
     // Board lunge spring (comes in fast, snaps back).
     if (this._lungeT > 0) {
@@ -309,9 +310,12 @@
     // Board look: neon (default) or a classic pub board.
     btns.push({ id: 'theme', label: 'BOARD: ' + (this.board.themeName === 'pub' ? 'PUB' : 'NEON'), x: cx + 280, y: 382, w: 170, h: 44, sel: false, group: 'theme' });
     // Secondary nav: the Dart Workshop and the League Leaderboard.
-    btns.push({ id: 'nav:workshop', label: '🎯  DART WORKSHOP', x: cx - 389, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
-    btns.push({ id: 'nav:missions', label: '📅  MISSIONS', x: cx - 125, y: 456, w: 250, h: 54, sel: false, group: 'nav' });
-    btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: cx + 135, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
+    const nw = 215, ng = 12, n0 = cx - (4 * nw + 3 * ng) / 2;
+    btns.push({ id: 'nav:workshop', label: '🎯  WORKSHOP', x: n0, y: 456, w: nw, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:missions', label: '📅  MISSIONS', x: n0 + (nw + ng), y: 456, w: nw, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: n0 + 2 * (nw + ng), y: 456, w: nw, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:achievements', label: '🏅  ACHIEVEMENTS', x: n0 + 3 * (nw + ng), y: 456, w: nw, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'howto', label: '❓  HOW TO PLAY', x: 24, y: 92, w: 210, h: 40, sel: false, group: 'howto' });
     return btns;
   };
 
@@ -454,6 +458,7 @@
         else if (b.group === 'play') { this.levelIdx = null; this._startMatch(); }
         else if (b.group === 'camp') this._openLevels();
         else if (b.group === 'theme') this._toggleBoardTheme();
+        else if (b.group === 'howto') { this.progression.tutSet(0); this._tutT = 0; if (this.selOpp === 'hotseat') this.selOpp = 'Rookie'; this.levelIdx = null; this._startMatch(); }
         else if (b.group === 'nav') {
           const dest = b.id.split(':')[1];
           this.state = dest;        // 'workshop' | 'missions' | 'leaderboard'
@@ -608,7 +613,7 @@
     }
     this.dartsThisTurn++;
     // Daily missions count your darts in matches against the AI.
-    if (this.current === 0 && this._missionsOn && this._missionsOn()) this._mission('dart', res);
+    if (this.current === 0 && this._missionsOn && this._missionsOn()) { this._mission('dart', res); this._ach('dart', res); }
 
     // Floating score pop + scoring explosion (density scales with the score).
     // A one-dart Cricket close (0 -> 3 marks on a fresh number, e.g. a clean
@@ -726,12 +731,14 @@
 
   Game.prototype._endTurn = function () {
     const cur = this.players[this.current];
+    if (this._tutorialTurnEnd) this._tutorialTurnEnd();
     // Announcer for the completed turn.
     if (this.mode.id === 'x01') {
       const ts = cur.scoreState.turnScore;
       if (ts === 180) {
         // The maximum — celebrate properly: gold rain + a double shockwave.
         cur.t180++;
+        if (this.current === 0 && this._missionsOn && this._missionsOn()) this._ach('t180', 1);
         this._say('180!', 1.9);
         this.audio.oneEighty();
         this.particles.confetti(this.board.cx, this.board.cy - 30,
@@ -748,7 +755,7 @@
           this._slowmoHoldT = 0.35;
         }
       } else if (ts >= 100) { this._say(ts + '!', 1.3); this.audio.ton(); }
-      if (ts >= 100 && this.current === 0 && this._missionsOn && this._missionsOn()) this._mission('ton', 1);
+      if (ts >= 100 && this.current === 0 && this._missionsOn && this._missionsOn()) { this._mission('ton', 1); this._ach('ton', 1); }
     } else {
       const ts = cur.scoreState.turnScore;
       if (ts >= 60) this._say('+' + ts, 1.2, C.green);
@@ -839,11 +846,12 @@
       const trophies = prog.awardTrophies(won, lvl ? lvl.stars : 0);
       const chest = prog.rollChest(won);
       prog.applyChest(chest);
+      if (this._ach) this._ach('league', prog.leagueIdx(), true);
       reward = { trophies: trophies, chest: chest, matchCoins: won ? 15 : 0 };
       if (won && this._mission) {
-        this._mission('win', 1);
-        if (this.mode.id === 'x01') this._mission('checkout', 1);
-        if (lvl && lvl.stars) this._mission('stars', lvl.stars);
+        this._mission('win', 1); this._ach('wins', 1);
+        if (this.mode.id === 'x01') { this._mission('checkout', 1); this._ach('checkout', 1); }
+        if (lvl && lvl.stars) { this._mission('stars', lvl.stars); this._ach('stars', prog.data.campaign.stars.reduce((s, v) => s + (v || 0), 0), true); }
       }
     }
     this.matchResult = {
@@ -983,6 +991,7 @@
     if (this.state === 'reward') { this._drawReward(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'leaderboard') { this._drawLeaderboard(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'missions') { this._drawMissions(ctx); this._drawToasts(ctx); return; }
+    if (this.state === 'achievements') { this._drawAchievements(ctx); this._drawToasts(ctx); return; }
 
     // World (board + darts + fx) under the camera transform. The board-lunge
     // scale is applied around the board centre so it "breathes" on each throw.
@@ -1030,6 +1039,7 @@
     ctx.restore();
 
     this._drawHUD(ctx);
+    if (this._drawTutorial) this._drawTutorial(ctx);
     if (this.callout) this._drawCallout(ctx);
     if (this.state === 'turnEnd') this._drawBanner(ctx);
     if (this.state === 'matchOver') this._drawMatchOver(ctx);
@@ -2390,7 +2400,7 @@
         const r = prog.upgradePart(b.part, b.key, true);
         const nm = (WS_CAT(b.part)[b.key] || {}).name || b.key;
         if (r === 'upgraded') {
-          this.audio.levelUp(); this.wsFlash = 0.9;
+          this.audio.levelUp(); this.wsFlash = 0.9; this._ach('upgrade', 1);
           this.toasts.push({ text: nm.toUpperCase() + ' → LV ' + prog.partLv(b.part, b.key), sub: 'Steadier hand: aim wobble and scatter down', life: 2.4 });
         } else if (r === 'cards') {
           const c = prog.upgradeCost(b.part, b.key);
