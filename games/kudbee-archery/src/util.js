@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [] },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -42,6 +42,7 @@ KAR.Store = {
           D.muted = !!d.muted;
           if (typeof d.haptics === 'boolean') D.haptics = d.haptics;
           if (typeof d.agent === 'boolean') D.agent = d.agent;
+          if (Array.isArray(d.agentLog) && KAR.Agent) D.agentLog = d.agentLog.slice(-KAR.Agent.KEEP).map(x => KAR.Agent.clean(x)).filter(x => x);      // ROBIN remembers your last arrows
           if (pick(d.mode, 6) !== null) D.mode = d.mode;
           const v1 = d.tour && Array.isArray(d.tour.stars) && d.tour.stars.length === 15 && KAR.TOUR_V1;   // a save from the 15-level tour
           if (pick(d.tourLv, v1 ? 15 : 30) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;

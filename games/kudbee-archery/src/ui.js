@@ -275,7 +275,7 @@ KAR.UI = {
       }
     }
     // hint / turn text
-    if (g.hint && g.hintT > 0 && !g.drawing) { ctx.save(); ctx.globalAlpha = Math.min(1, g.hintT * 2); U.fit(ctx, g.hint, 480, 618, big ? 24 : 20, '#ffffff', big ? 560 + xr * 2 - 40 : 900); ctx.restore(); }
+    if (g.hint && g.hintT > 0 && !g.drawing && g.screen !== 'over') { ctx.save(); ctx.globalAlpha = Math.min(1, g.hintT * 2); U.fit(ctx, g.hint, 480, 618, big ? 24 : 20, '#ffffff', big ? 560 + xr * 2 - 40 : 900); ctx.restore(); }
     // banner
     if (g.banner) {
       const b = g.banner, k = KAR.Util.easeOut(Math.min(1, b.age * 5)), fade = Math.min(1, b.life * 3);
@@ -745,16 +745,38 @@ KAR.UI = {
     this.robin(ctx, 128, 470, 40, g.time);
     U.text(ctx, A.NAME, 182, 466, 28, '#ffffff', 'left');
     U.fit(ctx, 'your archery coach', 182, 492, U.sz(g, 14), '#bfe3ff', 130, 'left');
-    // right: what I see + what's next
-    const X = 336, W = 532, fs = U.sz(g, 16), lh = g.coarse ? 24 : 21;
-    U.text(ctx, 'WHAT I SEE', X, 142, 22, '#fff27a', 'left');
-    let y = 172;
-    for (const t of tips.slice(0, 2)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = '#9be35a'; ctx.fill(); y = U.wrap(ctx, t.text, X + 22, y, W - 22, fs, '#ffffff', lh, 3) + 6; }
-    y = Math.max(y + 6, 282);
-    U.text(ctx, 'NEXT UP', X, y, 22, '#fff27a', 'left'); y += 30;
-    const ic = { quest: '#bff4ff', level: '#ffd34d', trophy: '#ffb82e', gear: '#9be35a' };
-    for (const p of plan.slice(0, 4)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = ic[p.kind] || '#ffffff'; ctx.fill(); U.fit(ctx, p.text, X + 22, y, fs, '#ffffff', W - 22, 'left'); y += lh + 8; }
+    U.fit(ctx, 'ask me below \u2192', 182, 516, U.sz(g, 14), '#9be35a', 130, 'left');
+    // right: what I see + what's next, or the answer to the question you tapped
+    const X = 336, W = 532, fs = U.sz(g, 16), lh = g.coarse ? 24 : 21, q = g.agentQ;
+    if (q !== null && q !== undefined && A.QS[q]) {
+      U.text(ctx, A.QS[q].q, X, 142, 22, '#fff27a', 'left');
+      U.wrap(ctx, A.answer(A.QS[q].id, D, log), X, 174, W, fs, '#ffffff', lh, g.coarse ? 9 : 10);
+    } else {
+      U.text(ctx, 'WHAT I SEE', X, 142, 22, '#fff27a', 'left');
+      let y = 172;
+      ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = '#9be35a'; ctx.fill(); y = U.wrap(ctx, tips[0].text, X + 22, y, W - 22, fs, '#ffffff', lh, 3) + 6;
+      y = Math.max(y + 8, 236);
+      U.text(ctx, 'NEXT UP', X, y, 22, '#fff27a', 'left'); y += 30;
+      const ic = { quest: '#bff4ff', level: '#ffd34d', trophy: '#ffb82e', gear: '#9be35a' };
+      for (const p of plan.slice(0, 3)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = ic[p.kind] || '#ffffff'; ctx.fill(); U.fit(ctx, p.text, X + 22, y, fs, '#ffffff', W - 22, 'left'); y += lh + 8; }
+    }
+    // ASK ROBIN: four questions (tap again to go back to the overview)
+    A.QS.forEach((x, i) => U.button(ctx, g, 'aq' + i, X + (i % 2) * 272, 400 + Math.floor(i / 2) * 62, 260, 52, x.q, { small: true, color: q === i ? 'green' : 'blue', selected: q === i }));
     U.button(ctx, g, 'agentTips', X, 530, 300, 56, D.agent ? 'TIPS IN GAME: ON' : 'TIPS IN GAME: OFF', { small: true, color: D.agent ? 'green' : 'grey' });
     U.button(ctx, g, 'agentBack', X + 316, 530, 216, 56, 'BACK', { primary: true });
+  },
+
+  // ROBIN's one-line read on the round, under the results card (tap it for the full AGENT screen)
+  debrief(ctx, g) {
+    const d = g.match.mode === 'trick' ? null : KAR.Agent.debrief(g.agentRound || []);
+    if (!d) return;
+    const U = this, k = KAR.Util.easeOut(Math.min(1, Math.max(0, g.overlayT - 0.5) * 2.5));
+    if (k <= 0) return;
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 30);
+    U.button(ctx, g, 'agent', 240, 552, 480, 62, '', { color: 'blue' });
+    this.robin(ctx, 278, 583, 21, g.time);
+    U.fit(ctx, KAR.Agent.NAME + ':  ' + d.head, 312, 576, U.sz(g, 15), '#bff4ff', 390, 'left');
+    U.fit(ctx, d.line, 312, 602, U.sz(g, 17), '#ffffff', 390, 'left');
+    ctx.restore();
   },
 };

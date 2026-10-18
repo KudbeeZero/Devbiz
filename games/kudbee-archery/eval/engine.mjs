@@ -314,6 +314,23 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rec('agent-reads', warm && under === 'under' && good !== 'under' && good !== 'over' && over === 'over' && short === 'draw' && plan === 'quest,level,trophy,gear' && /buy it now/.test(buy) && /equip/.test(equip) && none === null && keep,
     `no hold-off → "${under}", the right hold-off → "${good}", 3x too much → "${over}", a 60% draw → "${short}"; plan = ${plan}; gear tip: buy → equip → nothing once it's on; keeps the last ${A.KEEP} arrows`);
 }
+// ASK ROBIN: answers worked out from your own game; a round debrief; the remembered arrows survive a reload, and a bad save is dropped
+{
+  const ls = { s: null, getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js', 'agent.js'], ls), A = K.Agent, D = K.Store.data;
+  const shot = (dx, ring) => ({ dx, dy: 0, wind: 2, power: 1, held: 1, steady: false, ring, short: false, w: 0.04, mv: false, tire: 1 });
+  const log = []; for (let i = 0; i < 5; i++) A.note(log, shot(0.12, 7));
+  const wind = A.answer('wind', D, log), kit = A.answer('kit', D, log), stars = A.answer('stars', D, log), me0 = A.answer('me', D, []);
+  D.stats.arrows = 100; D.stats.tens = 25; const me = A.answer('me', D, log);
+  const d18 = A.drift(0), d50 = A.drift(2), deb = A.debrief(log), none = A.debrief(log.slice(0, 2));
+  D.agentLog = log; K.Store.save();
+  const raw = JSON.parse(ls.s); raw.agentLog.push({ dx: 'x' }, { dx: 9e9, dy: 0, wind: 0, power: 1, held: 0, w: 0.04, tire: 1, ring: 3 }, null);
+  ls.s = JSON.stringify(raw); const K2 = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js', 'agent.js'], ls); K2.Store.load();
+  const kept = K2.Store.data.agentLog;
+  rec('agent-asks', /downwind: aim off more/.test(wind) && d50 > d18 && d18 > 0 && /HEAVY CEDAR/.test(kit) && /LEVEL 1 FIRST ARROWS/.test(stars) && /54 points/.test(stars) && /haven.t shot/.test(me0) && /25 tens \(25%\)/.test(me)
+    && deb && /AVG 7.0/.test(deb.head) && /WIND/.test(deb.line) && none === null && kept.length === 5 && kept[0].dx === 0.12,
+    `wind answer reads your drift (wind 2: ${d18.toFixed(1)} rings at 18 m, ${d50.toFixed(1)} at 50 m) and says "aim off more"; kit points at HEAVY CEDAR; 3 stars = 54 on level 1; how-am-I-doing counts tens; debrief "${deb && deb.head} · ${deb && deb.line}"; 5 arrows survive a reload, 3 forged ones are dropped`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

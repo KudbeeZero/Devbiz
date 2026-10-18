@@ -26,7 +26,7 @@ KAR.Game = class {
     this.bp = 'idle'; this.bpT = 0; this.zoom = 1; this.zoomTarget = 1; this.timeScale = 1;
     this.camB = 0; this.camTip = null; this.landT = -9; this.streak = 0; this.drama = '';
     this.ptr = { x: 480, y: 330 }; this.aimX = 0; this.aimY = KAR.CFG.FACE_Y;
-    this.agentLog = []; this.agentTip = null; this.agentSince = 0;      // THE AGENT: your last arrows (this session) + the tip on screen
+    this.agentLog = KAR.Store.data.agentLog; this.agentTip = null; this.agentSince = 0; this.agentRound = []; this.agentQ = null;      // THE AGENT: your last arrows (saved) + this round's + the tip on screen
     this._resetShot();
     this._bind();
     try { if (/^#\/?agent$/.test(location.hash)) this.activate('agent'); } catch (e) { /* no location */ }      // /agent links straight to the coach
@@ -63,7 +63,7 @@ KAR.Game = class {
     this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
     this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false;
-    this.trickShown = 0; this.trickCombo = 0; this.relT = -9;
+    this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = [];
     if (this.canFull() && !this.fsLeft) this.goFull(true);
     this.wake(true);
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
@@ -166,6 +166,7 @@ KAR.Game = class {
     else if (id === 'quests') this.setScreen('quests');
     else if (id === 'agent') { if (this.screen !== 'agent') this.agentBack = this.screen === 'paused' || this.screen === 'over' ? this.screen : 'menu'; this.setScreen('agent'); }
     else if (id === 'agentBack') this.setScreen(this.agentBack || 'menu');
+    else if (/^aq\d$/.test(id)) { const i = +id[2]; this.agentQ = this.agentQ === i ? null : i; }
     else if (id === 'agentTips') { D.agent = !D.agent; this.agentTip = null; KAR.Store.save(); }
     else if (id === 'shop') { this.shopBack = this.screen === 'gear' ? 'gear' : this.screen === 'quests' ? 'quests' : 'menu'; this.shopSel = null; this.setScreen('shop'); }
     else if (id === 'shopBack') this.setScreen(this.shopBack || 'menu');
@@ -369,8 +370,8 @@ KAR.Game = class {
     if (f.shooter === 0 && !res.star) { if (res.ring === 10) st.tens++; if (res.x) st.xs++; }       // a STAR BOX is not a gold
     if (f.shooter === 0 && res.star) st.starBoxes++;
     if (f.shooter === 0 && !res.star) { if (res.ring >= 9) this._quest('gold', 1); if (res.ring === 10) this._quest('ten', 1); if (res.x) this._quest('x', 1); this._quest('streak', this.streak); }
-    this._achCheck(); KAR.Store.save();
     if (f.shooter === 0) this._agentNote(res);
+    this._achCheck(); KAR.Store.save();
     this.bp = 'result'; this.bpT = 0;
     if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
   }
@@ -404,13 +405,16 @@ KAR.Game = class {
     const last = m.arrows[0][m.arrows[0].length - 1], h = last && last.hit;
     if (!h && !res.short) return;                                      // flew past a moving target: no mark to read
     const w = (m.faceD || KAR.CFG.FACE[m.distIdx]) / 20;
-    A.note(this.agentLog, { dx: h ? h.x : 0, dy: h ? h.y - KAR.CFG.FACE_Y : 0, wind: res.wind * this._kit(0).wind, power: si.power, held: si.held, steady: si.steady, ring: res.ring, short: !!res.short, w, mv: !!m.offAt, tire: this._kit(0).tire });
+    const shot = A.clean({ dx: h ? h.x : 0, dy: h ? h.y - KAR.CFG.FACE_Y : 0, wind: res.wind * this._kit(0).wind, power: si.power, held: Math.min(60, si.held), steady: si.steady, ring: res.ring, short: !!res.short, w, mv: !!m.offAt, tire: this._kit(0).tire });
+    if (!shot) return;
+    A.note(this.agentLog, shot); D.agentLog = this.agentLog; this.agentRound.push(shot);      // remembered in the save, so ROBIN knows you next time
     this.agentSince++;
     if (!D.agent || this.coach || this.agentLog.length < 3) return;
     const tip = A.read(this.agentLog)[0];
     if (tip.id === 'warm' || tip.id === 'ok') return;
     if (this.agentTip && this.agentTip.id === tip.id && this.agentSince < 4) return;      // don't nag: the same tip at most every 4 arrows
     this.agentTip = { id: tip.id, line: tip.line, t: this.time }; this.agentSince = 0;
+    if (this.audio.chirp) this.audio.chirp();
   }
 
   // TROPHIES: announce anything newly reached (a card slides in at the top; one at a time)
@@ -633,7 +637,7 @@ KAR.Game = class {
     else {
       U.hud(ctx, this);
       if (this.screen === 'paused') U.pause(ctx, this);
-      else if (this.screen === 'over') U.over(ctx, this);
+      else if (this.screen === 'over') { U.over(ctx, this); U.debrief(ctx, this); }
     }
     U.achToast(ctx, this);
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }

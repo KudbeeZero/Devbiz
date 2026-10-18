@@ -81,4 +81,67 @@ KAR.Agent = {
     if (KAR.kitOwned(D, kind, i)) return 'GEAR: equip the ' + it.name + ' - ' + why;
     return 'GEAR: the ' + it.name + ' ' + why + '  ·  ' + (D.gems >= it.cost ? 'you can buy it now (' + it.cost + ' gems)' : (it.cost - D.gems) + ' more gems');
   },
+
+  // ---- ASK ROBIN: tap a question, get an answer worked out from your own game ----
+  QS: [
+    { id: 'wind',  q: 'HOW DO I READ THE WIND?' },
+    { id: 'kit',   q: 'WHICH BOW & ARROWS?' },
+    { id: 'stars', q: 'HOW DO I GET 3 STARS?' },
+    { id: 'me',    q: 'HOW AM I DOING?' },
+  ],
+  // how far a centred arrow drifts in a wind of 2 at each distance, in rings of that face (the physics, not a table)
+  drift(i) {
+    const C = KAR.CFG, d = C.DISTS[i], s = KAR.Flight.solve(d, 0, C.FACE_Y), h = KAR.Flight.run(d, s.yaw, s.pitch, C.V0, 2).hit;
+    return h ? h.x / (C.FACE[i] / 20) : 0;
+  },
+  // your average wind error over the arrows it remembers (rings; + = pushed downwind), or null
+  windErr(log) {
+    const L = log.filter(s => !s.short && !s.mv && Math.abs(s.wind) >= 0.6);
+    return L.length >= 2 ? L.reduce((a, s) => a + s.dx * Math.sign(s.wind) / s.w, 0) / L.length : null;
+  },
+  answer(id, D, log) {
+    const tips = this.read(log), top = tips[0] && tips[0].id;
+    if (id === 'wind') {
+      const e = this.windErr(log);
+      return 'the WIND box shows how hard it blows and the arrow shows where to; the flags lean the same way. aim off INTO it - toward where it comes from. in a wind of 2 a centred arrow drifts about ' + this.drift(0).toFixed(1) + ' rings at 18 m, ' + this.drift(1).toFixed(1) + ' at 30 m and ' + this.drift(2).toFixed(1) + ' at 50 m, so double the wind, double the aim-off. '
+        + (e === null ? 'shoot a few in the wind and I’ll tell you how you’re reading it.' : e > 1 ? 'you’re landing ' + e.toFixed(1) + ' rings downwind: aim off more.' : e < -1 ? 'you’re aiming off ' + (-e).toFixed(1) + ' rings too far: aim off less.' : 'your wind reads are spot on - keep it up.');
+    }
+    if (id === 'kit') {
+      const k = this.gear(D, top), b = KAR.KIT.bow[D.kit.bow | 0], a = KAR.KIT.arrow[D.kit.arrow | 0];
+      return 'you shoot the ' + b.name + ' with ' + a.name + ' arrows and have ' + D.gems + ' gems (from DAILY QUESTS). '
+        + (k ? k.replace(/^GEAR: /, '') + '. ' : 'nothing in your shooting asks for different kit right now. ')
+        + 'rough guide: wind beats you - CARBON or HEAVY CEDAR; a wobbly sight - HUNTER LONGBOW; you rush your draw - HEAVY CEDAR; you want speed - OLYMPIC or COMPOUND (loose quickly with the compound).';
+    }
+    if (id === 'stars') {
+      let i = -1;
+      for (let j = 0; j < KAR.TOUR.length; j++) if (KAR.tourOpen(j, D) && D.tour.stars[j] < 3) { i = j; break; }
+      if (i < 0) return 'you have 3 stars on every level you can play - try the DAILY, a duel against LEGEND, or 70 m on the RANGE.';
+      const L = KAR.TOUR[i], n = L.ends * 3, need = L.stars[2], per = need / n;
+      return 'LEVEL ' + (i + 1) + ' ' + L.name + ': ' + L.ends + ' ends of 3 arrows, ' + need + ' points for 3 stars - an average of ' + per.toFixed(1) + ' an arrow'
+        + (per >= 9 ? ', so nearly every arrow in the gold. ' : per >= 8 ? ', so mostly golds and reds. ' : '. ') + 'your best there is ' + D.tour.best[i] + '. tip: ' + L.tip + '.'
+        + (top && top !== 'ok' && top !== 'warm' && top !== 'hot' ? ' and fix this first: ' + tips[0].line.toLowerCase() + '.' : '');
+    }
+    const st = D.stats, gold = st.arrows ? Math.round(st.tens / st.arrows * 100) : 0, L = log.filter(s => !s.short), avg = L.length ? log.reduce((a, s) => a + s.ring, 0) / log.length : 0;
+    if (!st.arrows) return 'you haven’t shot yet! start with LEVELS: level 1 is a calm day at 18 m.';
+    return st.arrows + ' arrows so far: ' + st.tens + ' tens (' + gold + '%), ' + st.xs + ' X, a best streak of ' + st.bestStreak + ' golds' + (st.robins ? ', and ' + st.robins + ' ROBIN HOOD' + (st.robins > 1 ? 's' : '') : '') + '. '
+      + (log.length ? 'your last ' + log.length + ' average ' + avg.toFixed(1) + '. ' : '') + (tips[0] ? tips[0].text + '.' : '');
+  },
+
+  // one line for the results card: how this round went, and the thing to work on
+  debrief(round) {
+    const L = round.filter(s => s), n = L.length;
+    if (n < 3) return null;
+    const avg = L.reduce((a, s) => a + s.ring, 0) / n, golds = L.filter(s => s.ring >= 9).length, tip = this.read(L)[0];
+    const head = 'AVG ' + avg.toFixed(1) + '  ·  ' + golds + '/' + n + ' GOLD';
+    return { head, line: tip.id === 'ok' || tip.id === 'warm' ? (avg >= 8 ? 'SOLID ROUND - SAME AGAIN!' : 'NO PATTERN - KEEP A STEADY ROUTINE') : tip.line };
+  },
+
+  // a remembered shot from a save: every field present, finite and in range (a bad save is dropped, not trusted)
+  clean(s) {
+    if (!s || typeof s !== 'object') return null;
+    const n = (v, lo, hi) => typeof v === 'number' && isFinite(v) && v >= lo && v <= hi;
+    if (!n(s.dx, -5, 5) || !n(s.dy, -5, 5) || !n(s.wind, -20, 20) || !n(s.power, 0, 1) || !n(s.held, 0, 60) || !n(s.w, 0.005, 0.2) || !n(s.tire, 0.1, 5) || !Number.isInteger(s.ring) || s.ring < 0 || s.ring > 10) return null;
+    const r = v => Math.round(v * 1e4) / 1e4;
+    return { dx: r(s.dx), dy: r(s.dy), wind: r(s.wind), power: r(s.power), held: r(s.held), steady: !!s.steady, ring: s.ring, short: !!s.short, w: r(s.w), mv: !!s.mv, tire: s.tire };
+  },
 };

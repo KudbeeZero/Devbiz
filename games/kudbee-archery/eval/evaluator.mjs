@@ -383,14 +383,26 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await page.keyboard.press('p'); await page.keyboard.press('/'); await page.waitForTimeout(100);
   const ag1 = await G(() => ({ scr: KARGame.screen, see: KAR.Agent.read(KARGame.agentLog)[0].id }));
   await page.screenshot({ path: `${OUT}/agent.png` });
+  const saved = await G(() => (JSON.parse(localStorage.getItem('kudbee.archery.v1')).agentLog || []).length);
+  await click('aq0'); await page.waitForTimeout(60);
+  const asked = await G(() => KARGame.agentQ === 0);
+  await page.screenshot({ path: `${OUT}/agent-ask.png` });
+  await click('aq0'); await page.waitForTimeout(40);
   await click('agentTips'); await page.waitForTimeout(50);
   const off = await G(() => KAR.Store.data.agent === false && JSON.parse(localStorage.getItem('kudbee.archery.v1')).agent === false);
   await click('agentTips'); await page.keyboard.press('Escape'); await page.waitForTimeout(50);
   const back = await G(() => KARGame.screen);
+  // the results card carries ROBIN's debrief, and tapping it opens the AGENT
+  await G(() => { const g = KARGame; g.match.over = true; g.setScreen('over'); g.overlayT = 3; });
+  await page.waitForTimeout(120);
+  const deb = await G(() => KAR.UI.buttons.some(b => b.id === 'agent'));
+  await page.screenshot({ path: `${OUT}/agent-debrief.png` });
+  await click('agent'); await page.waitForTimeout(50);
+  const debOpen = await G(() => KARGame.screen === 'agent' && KARGame.agentBack === 'over');
   const hp = await browser.newPage(); await hp.goto(URL + '#agent'); await hp.waitForFunction(() => window.KARGame);
   const hash = await hp.evaluate(() => KARGame.screen); await hp.close();
-  rec('agent', ag0.n === 3 && ag0.tip === 'under' && ag1.scr === 'agent' && ag1.see === 'under' && off && back === 'paused' && hash === 'agent',
-    `3 un-held arrows in a 3-unit wind → ROBIN says "${ag0.tip}"; P then / opens the AGENT (${ag1.scr}), Escape back to ${back}; TIPS OFF saves; /#agent opens on ${hash}`);
+  rec('agent', ag0.n === 3 && ag0.tip === 'under' && ag1.scr === 'agent' && ag1.see === 'under' && off && back === 'paused' && hash === 'agent' && saved >= 3 && asked && deb && debOpen,
+    `3 un-held arrows in a 3-unit wind → ROBIN says "${ag0.tip}"; P then / opens the AGENT (${ag1.scr}), Escape back to ${back}; TIPS OFF saves; /#agent opens on ${hash}; ${saved} arrows remembered in the save; ASK ROBIN answers; the results card's debrief opens the AGENT`);
   await G(() => { KARGame.agentLog = []; KARGame.agentTip = null; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 }
 
