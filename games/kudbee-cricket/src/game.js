@@ -10,9 +10,10 @@ KCK.Game = class {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = KCK.Render.W * this.dpr; canvas.height = KCK.Render.H * this.dpr;
     this.coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    this.screen = 'menu'; this._fit();
+    // prefers-reduced-motion: no screen shake, fewer confetti (followed live)
+    try { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); this.calm = mq.matches; if (mq.addEventListener) mq.addEventListener('change', e => { this.calm = e.matches; }); } catch (e) { this.calm = false; }
     KCK.Store.load();
     this.audio = new KCK.Audio();
     this.screen = 'menu';              // menu | play | paused | over
@@ -28,13 +29,48 @@ KCK.Game = class {
     requestAnimationFrame(this._frame);
   }
 
+  // Size the canvas to the screen. The game is laid out on a 960 x 640 stage; a wider screen (a landscape phone is
+  // about 2.2 : 1) sees more of the ground either side instead of black bars, and the HUD rides out to the real edges.
+  _fit() {
+    const c = this.canvas, R = KCK.Render, vw = window.innerWidth || 960, vh = window.innerHeight || 640;
+    const LW = Math.round(KCK.Util.clamp(640 * vw / vh, 960, 1480));
+    R.XW = LW; R.XL = -(LW - 960) / 2;
+    const cssW = Math.min(vw, vh * LW / 640), cssH = cssW * 640 / LW;
+    c.style.width = cssW + 'px'; c.style.height = cssH + 'px';
+    this.res = KCK.Util.clamp(cssH * (window.devicePixelRatio || 1) / 640, 0.6, 2);
+    c.width = Math.round(LW * this.res); c.height = Math.round(640 * this.res);
+    if (this.coarse && vh > vw && this.screen === 'play') this.togglePause();      // turned upright mid-match: pause under the 'turn sideways' card
+  }
+
+  // ---- phone comforts ------------------------------------------------------------
+  // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
+  buzz(p) { if (this.coarse && KCK.Store.data.haptics && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* ignore */ } }
+  canFull() { const d = document.documentElement; return this.coarse && !!(d.requestFullscreen || d.webkitRequestFullscreen); }
+  isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  // full screen + landscape lock where the browser allows it (Android Chrome, iPad); must run inside a tap
+  goFull() {
+    try {
+      const d = document.documentElement;
+      if (!this.isFull()) { const p = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); const lock = () => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }; if (p && p.then) p.then(lock, () => {}); else lock(); }
+    } catch (e) { /* not allowed here */ }
+  }
+  // keep the screen awake through a chase (it would dim between balls)
+  wake(on) {
+    try {
+      if (on && !this.wakeLock && navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').then(l => { this.wakeLock = l; l.addEventListener('release', () => { if (this.wakeLock === l) this.wakeLock = null; }); }, () => {});
+      else if (!on && this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+    } catch (e) { /* ignore */ }
+  }
+
   // ---- flow ---------------------------------------------------------------------
   startMatch() {
     const D = KCK.Store.data;
+    if (this.canFull() && !this.fsLeft) this.goFull();
+    this.wake(true);
     this.match = new KCK.Match({ level: D.difficulty, overs: D.overs, seed: (this.rng() * 4294967296) >>> 0 });
     this.screen = 'play'; this.particles.length = 0; this.banner = null; this.feedback = null;
-    this.camB = 0; this.camTarget = 0; this.focusIdx = -1; this.focusPending = true; this.loft = false; this.counted = false;
-    this.hint = 'TAP TO SWING  ·  WHERE YOU TAP AIMS THE SHOT'; this.hintT = 4;
+    this.camB = 0; this.camTarget = 0; this.focusIdx = -1; this.focusPending = true; this.loft = false; this.counted = false; this.comm = null;
+    this.hint = this.coarse ? 'TAP TO SWING  ·  WHERE YOU TAP AIMS THE SHOT' : 'CLICK TO SWING  ·  WHERE YOU CLICK AIMS THE SHOT'; this.hintT = 4;
     this._nextBall();
   }
 
@@ -44,6 +80,7 @@ KCK.Game = class {
     this.fieldNow = this.cur.field;
     this.bp = 'ready'; this.bpT = 0; this.bt = 0; this.tap = null; this.out = null; this.hit = null;
     this.deliveryLabel = ''; this.stumpsHit = false; this.ballHidden = false; this.camTarget = 0; this.events = [];
+    this.replay = null; this.overCard = null;
     if (m.freeHit) { this.hint = 'FREE HIT  ·  YOU CANNOT BE OUT'; this.hintT = 2.5; }
   }
 
@@ -61,8 +98,9 @@ KCK.Game = class {
     else if (id === 'resume') this.screen = 'play';
     else if (id === 'restart' || id === 'rematch') this.startMatch();
     else if (id === 'retry') this.startMatch();
-    else if (id === 'menu') { this.setScreen('menu'); this.camB = 0; this.camTarget = 0; this.fieldNow = []; }
+    else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.camB = 0; this.camTarget = 0; this.fieldNow = []; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
+    else if (id === 'buzz') { D.haptics = !D.haptics; KCK.Store.save(); this.buzz(20); }
   }
 
   togglePause() {
@@ -72,19 +110,30 @@ KCK.Game = class {
 
   // ---- input --------------------------------------------------------------------
   _pt(e) {
-    const r = this.canvas.getBoundingClientRect();
-    return { x: (e.clientX - r.left) * KCK.Render.W / r.width, y: (e.clientY - r.top) * KCK.Render.H / r.height };
+    const r = this.canvas.getBoundingClientRect(), R = KCK.Render;
+    return { x: R.XL + (e.clientX - r.left) * R.XW / r.width, y: (e.clientY - r.top) * R.H / r.height };
   }
-  _aimFromX(x) { this.aimDeg = KCK.Util.clamp((x - 480) / 480 * 95, -90, 90); }
+  // the whole screen width spans the aim: the left edge pulls it to leg, the right edge to the off side
+  _aimFromX(x) { this.aimDeg = KCK.Util.clamp((x - 480) / (KCK.Render.XW / 2) * 95, -90, 90); }
 
   _bind() {
     const c = this.canvas;
+    const refit = () => { this._fit(); this.focusPending = this.screen !== 'play'; };
+    window.addEventListener('resize', refit); window.addEventListener('orientationchange', () => setTimeout(refit, 120));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+    const fsc = () => { if (!this.isFull() && this.screen === 'play') this.fsLeft = true; setTimeout(refit, 60); };
+    document.addEventListener('fullscreenchange', fsc); document.addEventListener('webkitfullscreenchange', fsc);
     c.addEventListener('pointerdown', e => this._onDown(e));
     c.addEventListener('pointermove', e => this._onMove(e));
     c.addEventListener('contextmenu', e => e.preventDefault());
+    // phones: no long-press callout / magnifier / double-tap zoom while batting
+    const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
+    c.addEventListener('touchstart', block, { passive: false });
+    c.addEventListener('touchmove', block, { passive: false });
+    window.addEventListener('click', () => this._firstGesture());          // iOS unlocks audio on touchend / click
     window.addEventListener('keydown', e => this._onKey(e));
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
-    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else { this.audio.resume(); if (this.screen === 'play' || this.screen === 'paused') this.wake(true); } });
+    // blur also fires for benign focus moves (iframes, preview toolbars), so only a hidden tab pauses
   }
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
 
@@ -92,7 +141,11 @@ KCK.Game = class {
     this._firstGesture();
     const p = this._pt(e), i = KCK.UI.hit(p.x, p.y);
     if (i >= 0) { e.preventDefault(); this.activate(KCK.UI.buttons[i].id); return; }
-    if (this.screen === 'play') { this._aimFromX(p.x); this.swing(); }
+    if (this.screen === 'play') {
+      if (this.replay) { this._skipReplay(); return; }
+      if (this.overCard && this.bp === 'between') { this.bpT = 99; return; }
+      this._aimFromX(p.x); this.swing();
+    }
   }
   _onMove(e) {
     const p = this._pt(e), i = KCK.UI.hit(p.x, p.y);
@@ -117,12 +170,12 @@ KCK.Game = class {
     if (k === 'r' || k === 'R') { this.startMatch(); return; }
     if (k === 'ArrowLeft') { e.preventDefault(); this.aimDeg = KCK.Util.clamp(this.aimDeg - 6, -90, 90); }
     else if (k === 'ArrowRight') { e.preventDefault(); this.aimDeg = KCK.Util.clamp(this.aimDeg + 6, -90, 90); }
-    else if (k === ' ' || k === 'Enter' || k === 'ArrowUp') { e.preventDefault(); this.swing(); }
+    else if (k === ' ' || k === 'Enter' || k === 'ArrowUp') { e.preventDefault(); if (this.replay) this._skipReplay(); else if (this.overCard && this.bp === 'between') this.bpT = 99; else this.swing(); }
   }
 
   // Record the swing; the outcome is resolved when the ball reaches the bat.
   swing() {
-    if (this.screen !== 'play' || this.bp !== 'flight' || this.tap) return;
+    if (this.screen !== 'play' || this.bp !== 'flight' || this.tap || this.replay) return;
     this.tap = { t: this.bt, aim: this.aimDeg, loft: this.loft };
     this.audio.whoosh();
   }
@@ -153,6 +206,8 @@ KCK.Game = class {
 
   _updateBall(dt) {
     const m = this.match, cur = this.cur, del = cur.del;
+    // the action replay runs the end of the delivery and the shot again in slow motion, easing back to full speed
+    if (this.replay) { const r = this.replay; r.k = this.bp === 'hit' ? KCK.Util.clamp(0.35 + (this.hit.t - 0.3) * 0.5, 0.35, 1) : 0.35; dt *= r.k; }
     this.bpT += dt;
     if (this.bp === 'ready') {
       if (this.bpT > 1.0) { this.bp = 'runup'; this.bpT = 0; this.audio.bowl(); }
@@ -161,7 +216,7 @@ KCK.Game = class {
     } else if (this.bp === 'flight') {
       this.bt += dt;
       if (!this.bounced && this.bt >= del.bounceT) { this.bounced = true; this.audio.bounce(); }
-      if (this.bt >= del.tArr) this._resolve();
+      if (this.bt >= del.tArr) { if (this.replay) this._playOut(this.out, true); else this._resolve(); }
     } else if (this.bp === 'hit') {
       this.hit.t += dt;
       while (this.events.length && this.events[0].t <= this.hit.t) this.events.shift().fn();
@@ -171,22 +226,43 @@ KCK.Game = class {
       while (this.events.length && this.events[0].t <= this.hit.t) this.events.shift().fn();
       if (this.hit.t >= this.hit.dur) this._endBall();
     } else if (this.bp === 'between') {
-      if (this.bpT > 0.7) { if (m.over) this._finishMatch(); else this._nextBall(); }
+      if (this.bpT > (this.overCard ? 2.6 : 0.7)) { if (m.over) this._finishMatch(); else this._nextBall(); }
     }
   }
 
   _fb(text, color, life) { this.feedback = { text, color, life: life || 1.1 }; }
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.7 }; }
   _burst(n) {
-    const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'];
-    for (let i = 0; i < n; i++) this.particles.push({ x: 120 + this.rng() * 720, y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
+    const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'], R = KCK.Render;
+    if (this.calm) n = Math.ceil(n / 4);
+    for (let i = 0; i < n; i++) this.particles.push({ x: R.XL + 120 + this.rng() * (R.XW - 240), y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
   }
 
   _resolve() {
     const m = this.match, cur = this.cur, del = cur.del, tap = this.tap;
     const o = m.resolve(tap ? tap.t : null, tap ? tap.aim : 0, tap ? tap.loft : false);
-    this.out = o; this.events = [];
-    const s = o.shot;
+    this.out = o;
+    this.comm = KCK.Commentary.line(o, del);
+    this._playOut(o, false);
+  }
+
+  // Stage an outcome: the live ball (feedback, banners, sound) or its slow-motion replay (pictures only).
+  _playOut(o, replay) {
+    const del = this.cur.del, tap = this.tap, s = o.shot;
+    this.events = [];
+    const E = (t, fn) => this.events.push({ t, fn });
+    if (replay) {
+      if (o.contact) {
+        const fd = o.fielded;
+        this.hit = { t: 0, dur: Math.min(fd.t + (fd.kind === 'six' ? 0.2 : 0.9), 3.6), path: o.path, fd };
+        this.bp = 'hit'; this.audio.crack(s.speed * 0.8);
+        E(0.3, () => { this.camTarget = 1; });
+      } else {
+        this.bp = 'miss'; this.hit = { t: 0, dur: 1.3, path: null, fd: null };
+        if (o.kind === 'wicket') E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); });
+      }
+      return;
+    }
     // timing feedback
     if (tap) {
       if (s && s.contact) {
@@ -200,10 +276,10 @@ KCK.Game = class {
       this.bp = 'hit'; this.camTarget = 1;
       if (s.edge) this.audio.edge(); else this.audio.crack(s.speed);
       this.shake = Math.max(this.shake, s.perfect ? 7 : 3);
-      const E = (t, fn) => this.events.push({ t, fn });
-      if (o.kind === 'six') { E(Math.min(fd.t, 3) * 0.7, () => { this._banner('SIX!', '#e6c0ff', '#9a45e6'); this.audio.cheer(true); this._burst(60); this.shake = 8; }); }
+      this.buzz(s.perfect ? [20, 30, 25] : 16);
+      if (o.kind === 'six') { E(Math.min(fd.t, 3) * 0.7, () => { this._banner('SIX!', '#e6c0ff', '#9a45e6'); this.audio.cheer(true); this._burst(60); this.shake = 8; this.buzz([30, 50, 30, 50, 60]); }); }
       else if (o.kind === 'four') { E(Math.min(fd.t, 4) * 0.75, () => { this._banner('FOUR!', '#c4ecff', '#2f86d8'); this.audio.cheer(false); this._burst(24); }); }
-      else if (o.kind === 'wicket') { E(fd.t, () => { this.audio.catchSnap(); this._banner(o.wicket === 'caught behind' ? 'CAUGHT BEHIND!' : 'CAUGHT!', '#ffd0c8', '#e8483a', o.fielder ? o.fielder.role : '', 64); this.audio.groan(); this.shake = 7; }); }
+      else if (o.kind === 'wicket') { E(fd.t, () => { this.audio.catchSnap(); this._banner(o.wicket === 'caught behind' ? 'CAUGHT BEHIND!' : 'CAUGHT!', '#ffd0c8', '#e8483a', o.fielder ? o.fielder.role : '', 64); this.audio.groan(); this.shake = 7; this.buzz([70, 50, 90]); }); }
       else if (o.dropped) { E(fd.t - 0.6, () => { this._banner('DROPPED!', '#fff6a8', '#ffb82e', 'a life!', 66); }); }
       else if (o.safe) { E(fd.t, () => this._banner('SAFE!', '#fff6a8', '#ffb82e', 'free hit', 66)); }
       else if (o.runs) { E(Math.min(fd.t + 0.4, 3.5), () => { this._banner(o.runs + (o.runs > 1 ? ' RUNS' : ' RUN'), '#d6ffb0', '#53bd3c', '', 58); this.audio.cheer(false); }); }
@@ -211,17 +287,30 @@ KCK.Game = class {
       if (o.noBall) E(0.2, () => { this.hint = 'NO BALL  ·  FREE HIT NEXT'; this.hintT = 2; });
     } else {
       this.bp = 'miss'; this.camTarget = 0; this.hit = { t: 0, dur: 1.5, path: null, fd: null };
-      const E = (t, fn) => this.events.push({ t, fn });
-      if (o.kind === 'wicket') { E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); this._banner('BOWLED!', '#ffd0c8', '#e8483a', '', 76); this.audio.groan(); this.shake = 9; }); this.hit.dur = 2.0; }
+      if (o.kind === 'wicket') { E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); this._banner('BOWLED!', '#ffd0c8', '#e8483a', '', 76); this.audio.groan(); this.shake = 9; this.buzz([70, 50, 90]); }); this.hit.dur = 2.0; }
       else if (o.kind === 'wide') E(0.3, () => this._banner('WIDE', '#fff6a8', '#ffb82e', '+1 run', 70));
       else if (o.noBall) E(0.2, () => { this._banner('NO BALL!', '#fff6a8', '#ffb82e', 'free hit next', 60); });
       else { E(0.4, () => this._banner(o.safe ? 'MISSED THE STUMPS' : 'DOT BALL', '#ffffff', '#9aa3ad', '', 48)); }
     }
   }
 
+  // the big moments get a slow-motion action replay: sixes, wickets and perfectly timed fours
+  _replayWorthy(o) { return !!o && (o.kind === 'six' || o.kind === 'wicket' || (o.kind === 'four' && o.shot && o.shot.perfect)); }
+  _startReplay() {
+    const del = this.cur.del;
+    this.replay = { k: 0.35 }; this.banner = null; this.feedback = null; this.events = []; this.stumpsHit = false;
+    this.camB = 0; this.camTarget = 0;
+    this.bp = 'flight'; this.bpT = 0; this.bt = Math.max(0, del.tArr - 0.6); this.bounced = this.bt >= del.bounceT;
+  }
+  _skipReplay() { if (this.replay) this._endBall(); }
+
   _endBall() {
+    if (!this.replay && this._replayWorthy(this.out)) { this._startReplay(); return; }
+    this.replay = null;
     this.camTarget = 0; this.bp = 'between'; this.bpT = 0; this.banner = null;
-    if (this.match.over) this.camTarget = 0;
+    // end of an over: a TV card with the over's runs, the chase and who bowls next
+    const m = this.match;
+    if (this.out && this.out.overDone && !m.over) this.overCard = { n: m.overNo, ...m.overRuns(m.overNo - 1) };
   }
 
   _finishMatch() {
@@ -229,6 +318,7 @@ KCK.Game = class {
     st.played++; if (m.result === 'win') st.won++;
     st.runs += m.runs; st.fours += m.stats.fours; st.sixes += m.stats.sixes; st.wickets += m.wk; st.best = Math.max(st.best, m.runs);
     KCK.Store.save();
+    this.wake(false);
     this.setScreen('over');
     if (m.result === 'win') { this.audio.win(); this._burst(80); } else this.audio.lose();
   }
@@ -236,9 +326,10 @@ KCK.Game = class {
   // ---- drawing ------------------------------------------------------------------
   _render() {
     const ctx = this.ctx, R = KCK.Render, U = KCK.UI;
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.setTransform(this.res, 0, 0, this.res, -R.XL * this.res, 0);
+    if (document.body.dataset.screen !== this.screen) document.body.dataset.screen = this.screen;
     ctx.save();
-    if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
+    if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.camB);
     R.drawWorld(ctx, this.time);
     this._drawScene(ctx);
@@ -287,14 +378,14 @@ KCK.Game = class {
       const lv = m.level.marker, f = this.bt / del.bounceT;
       if (lv === 'early' || (lv === 'late' && f > 0.35)) { if (this.bt < del.bounceT + 0.15) R.marker(ctx, del.bounceX, del.bounceY, 0.5 + 0.3 * Math.sin(this.time * 10)); }
     }
-    if (this.screen === 'play' && batView && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight') && !(this.tap)) R.aim(ctx, this.aimDeg, this.loft, this.time);
+    if (this.screen === 'play' && batView && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight') && !this.tap && !this.replay) R.aim(ctx, this.aimDeg, this.loft, this.time);
     // people, far to near
     const people = [];
     const teamF = R.TEAM.field, teamB = R.TEAM.bat;
     if (cur) for (const f of this.fieldNow) {
       if (batView && (f.y < 2 || f.role === 'KEEPER')) { if (!(R.blend > 0.05)) continue; }
       const p = this._fielderPos(f);
-      people.push({ x: p.x, y: p.y, o: { shirt: teamF.base, shirtDark: teamF.dark, pants: '#f4f4f4', face: 'front', run: p.run, boost: f.role === 'BOWLER' ? 1 : boost, arms: 0 } });
+      people.push({ x: p.x, y: p.y, o: { shirt: teamF.base, shirtDark: teamF.dark, pants: '#f4f4f4', face: 'front', run: p.run, boost: f.role === 'BOWLER' ? 1 : boost, arms: 0, pads: f.role === 'KEEPER' } });
     }
     // bowler run-up (bat view) replaces the idle bowler figure
     if (cur && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight')) {
@@ -306,12 +397,13 @@ KCK.Game = class {
       people.push({ x: bx, y: by, o: { shirt: teamF.light, shirtDark: teamF.base, face: 'front', run, arms, boost: boost * 0.95 } });
     }
     // non-striker
-    people.push({ x: 1.0, y: C.PITCH - 0.4, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, boost } });
+    people.push({ x: 1.0, y: C.PITCH - 0.4, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: 0, boost } });
     // batter
-    const swingU = this.tap && this.bp !== 'idle' ? KCK.Util.clamp((this.bt - this.tap.t) / 0.14, 0, 1) : (this.bp === 'hit' || this.bp === 'miss' ? 1 : 0);
-    const bu = this.bp === 'hit' || this.bp === 'miss' ? KCK.Util.clamp(1 - (this.hit ? this.hit.t : 0) * 1.5, 0.35, 1) * (this.tap ? 1 : 0.1) : swingU;
+    // the bat: a little tap in the backlift while waiting, the swing (0.12 -> 1 in 0.14 s) once you tap, and the
+    // follow-through held while the shot plays out; a ball left alone keeps the bat up out of the way
     const bwait = this.bp === 'ready' || this.bp === 'runup' || (this.bp === 'flight' && !this.tap);
-    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: bwait ? 0.12 + 0.04 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost, arms: 0.2 } });
+    const bu = this.tap ? KCK.Util.clamp(0.12 + 0.88 * (this.bp === 'flight' ? (this.bt - this.tap.t) / 0.14 : 1), 0.12, 1) : 0.12;
+    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'side', helmet: true, bat: bwait ? 0.1 + 0.02 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost } });
     people.sort((a, b) => b.y - a.y);
     for (const q of people) R.person(ctx, q.x, q.y, q.o);
     // stumps shatter

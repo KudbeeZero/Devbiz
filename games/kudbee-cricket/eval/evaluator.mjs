@@ -19,16 +19,21 @@ const URL = `http://localhost:${server.address().port}/games/kudbee-cricket/inde
 
 const R = [];
 const rec = (id, pass, note) => { R.push(pass); console.log(pass ? 'PASS' : 'FAIL', id, '—', note); };
-const browser = await chromium.launch();
+// Cloud containers: use the pre-installed Chromium when present (avoids `playwright install`).
+const launchOpts = existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {};
+const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(URL); await page.waitForFunction(() => window.KCKGame);
 
-const box = await page.locator('#gameCanvas').boundingBox();
+// stage coords -> page px (the stage is XW wide starting at XL; a wide screen shows past 0..960)
+const toPxOn = async (pg, x, y) => { const box = await pg.locator('#gameCanvas').boundingBox(), s = await pg.evaluate(() => ({ XL: KCK.Render.XL, XW: KCK.Render.XW })); return [box.x + (x - s.XL) * box.width / s.XW, box.y + y * box.height / 640]; };
+const btnOn = (pg, id) => pg.evaluate(i => { const x = KCK.UI.buttons.find(b => b.id === i); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; }, id);
+let box = await page.locator('#gameCanvas').boundingBox();
 const toPx = (x, y) => [box.x + x * box.width / 960, box.y + y * box.height / 640];
-const click = async id => { const b = await page.evaluate(i => { const x = KCK.UI.buttons.find(b => b.id === i); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; }, id); if (!b) return false; await page.mouse.click(...toPx(b.x, b.y)); return true; };
+const click = async id => { const b = await btnOn(page, id); if (!b) return false; await page.mouse.click(...await toPxOn(page, b.x, b.y)); return true; };
 const G = fn => page.evaluate(fn);
 const waitFor = (fn, ms = 20000) => page.waitForFunction(fn, null, { timeout: ms }).then(() => true, () => false);
 
@@ -105,6 +110,53 @@ rec('rematch', await G(() => KCKGame.screen === 'play' && KCKGame.match.balls ==
 
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
+
+// ---- phone (landscape 844 x 390, touch): fills the screen, thumb-sized controls, tap to swing, upright card ----
+const phone = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+const pp = await phone.newPage();
+pp.on('pageerror', e => errors.push('phone: ' + e.message));
+await pp.goto(URL); await pp.waitForFunction(() => window.KCKGame);
+const P = fn => pp.evaluate(fn);
+const tapId = async id => { const b = await btnOn(pp, id); if (!b) return false; await pp.touchscreen.tap(...await toPxOn(pp, b.x, b.y)); return true; };
+const pbox = await pp.locator('#gameCanvas').boundingBox();
+rec('phone-fill', pbox.width >= 843 && pbox.height >= 389, `canvas ${Math.round(pbox.width)}x${Math.round(pbox.height)} on an 844x390 screen (no letterbox bars)`);
+// every button on a screen is at least ~32 CSS px each way
+const smallest = () => P(() => { const k = document.getElementById('gameCanvas').getBoundingClientRect().height / 640; return Math.min(...KCK.UI.buttons.map(b => Math.min(b.w, b.h) * k)); });
+const tapMenu = await smallest();
+await pp.screenshot({ path: `${OUT}/phone-menu.png` });
+const linkMenu = await P(() => getComputedStyle(document.querySelector('.back-link')).display !== 'none');
+await tapId('play');
+await pp.waitForFunction(() => KCKGame.bp === 'flight', null, { timeout: 12000 });
+const tapPlay = await smallest();
+const linkPlay = await P(() => getComputedStyle(document.querySelector('.back-link')).display === 'none');
+rec('phone-studio-link', linkMenu && linkPlay, 'the STUDIO link shows on the menu and hides during play');
+await pp.screenshot({ path: `${OUT}/phone-flight.png` });
+// the HUD sits on the real screen edges, inside the canvas
+const edges = await P(() => { const R = KCK.Render, xs = KCK.UI.buttons.map(b => [b.x, b.x + b.w]).flat(); return { lo: Math.min(...xs) - R.XL, hi: R.XL + R.XW - Math.max(...xs), wide: R.XW > 1200 }; });
+rec('phone-hud-edges', edges.wide && edges.hi >= 0 && edges.hi < 40, `the stage is wide and the HUD buttons ride the right edge (${Math.round(edges.hi)} px in)`);
+// tap on the off side, on the beat: the touch aims and swings
+await pp.waitForFunction(() => KCKGame.bp === 'ready' || KCKGame.bp === 'runup', null, { timeout: 12000 });
+await pp.waitForFunction(() => KCKGame.bp === 'flight', null, { timeout: 12000 });
+await pp.waitForFunction(() => KCKGame.bt >= 0.1, null, { timeout: 4000 });      // timing is checked on desktop; here: the tap lands, swings, aims
+await pp.touchscreen.tap(...await toPxOn(pp, 700, 330));
+await pp.waitForFunction(() => KCKGame.bp === 'hit' || KCKGame.bp === 'miss', null, { timeout: 4000 }).catch(() => {});
+const tp = await P(() => KCKGame.tap && { aim: KCKGame.tap.aim });
+rec('phone-tap-swing', !!tp && tp.aim > 20, `a tap swings and aims to the off side (${tp ? Math.round(tp.aim) + '°' : 'no swing'})`);
+await pp.waitForFunction(() => KCKGame.bp === 'ready' || KCKGame.screen === 'over', null, { timeout: 15000 });
+await tapId('pause');
+const tapPause = await smallest();
+const hasBuzz = await P(() => KCK.UI.buttons.some(b => b.id === 'buzz'));
+await pp.screenshot({ path: `${OUT}/phone-pause.png` });
+const minTap = Math.min(tapMenu, tapPlay, tapPause);
+rec('phone-tap-targets', minTap >= 32 && hasBuzz, `smallest button ${minTap.toFixed(1)} CSS px (menu ${tapMenu.toFixed(0)}, play ${tapPlay.toFixed(0)}, pause ${tapPause.toFixed(0)}); vibration toggle in pause`);
+await tapId('resume');
+await pp.setViewportSize({ width: 390, height: 844 });
+await pp.waitForTimeout(250);
+const up = await P(() => ({ card: getComputedStyle(document.querySelector('.rotate-tip')).display !== 'none', screen: KCKGame.screen }));
+await pp.screenshot({ path: `${OUT}/phone-portrait.png` });
+rec('phone-portrait', up.card && up.screen === 'paused', `held upright: the turn-sideways card shows and the match pauses (${up.screen})`);
+await phone.close();
+
 rec('no-errors', errors.length === 0, `${errors.length} page errors${errors.length ? ': ' + errors[0] : ''}`);
 await browser.close(); server.close();
 const fail = R.filter(x => !x).length;

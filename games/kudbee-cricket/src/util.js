@@ -30,7 +30,7 @@ KCK.Util = {
 // blocked storage and quota errors must never break the game.
 KCK.Store = {
   KEY: 'kudbee.cricket.v2',
-  data: { muted: false, difficulty: 1, overs: 1, stats: { played: 0, won: 0, runs: 0, fours: 0, sixes: 0, wickets: 0, best: 0 } },
+  data: { muted: false, haptics: true, difficulty: 1, overs: 1, stats:{ played: 0, won: 0, runs: 0, fours: 0, sixes: 0, wickets: 0, best: 0 } },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -38,6 +38,7 @@ KCK.Store = {
         const d = JSON.parse(raw);
         if (d && typeof d === 'object') {
           this.data.muted = !!d.muted;
+          if (typeof d.haptics === 'boolean') this.data.haptics = d.haptics;
           this.data.difficulty = d.difficulty === 0 || d.difficulty === 2 ? d.difficulty : 1;
           this.data.overs = d.overs === 0 || d.overs === 2 ? d.overs : 1;
           if (d.stats && typeof d.stats === 'object') for (const k in this.data.stats) if (typeof d.stats[k] === 'number') this.data.stats[k] = d.stats[k];
