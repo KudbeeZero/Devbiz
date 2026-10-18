@@ -10,9 +10,10 @@ KCK.Game = class {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = KCK.Render.W * this.dpr; canvas.height = KCK.Render.H * this.dpr;
     this.coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    this.screen = 'menu'; this._fit();
+    // prefers-reduced-motion: no screen shake, fewer confetti (followed live)
+    try { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); this.calm = mq.matches; if (mq.addEventListener) mq.addEventListener('change', e => { this.calm = e.matches; }); } catch (e) { this.calm = false; }
     KCK.Store.load();
     this.audio = new KCK.Audio();
     this.screen = 'menu';              // menu | play | paused | over
@@ -28,13 +29,48 @@ KCK.Game = class {
     requestAnimationFrame(this._frame);
   }
 
+  // Size the canvas to the screen. The game is laid out on a 960 x 640 stage; a wider screen (a landscape phone is
+  // about 2.2 : 1) sees more of the ground either side instead of black bars, and the HUD rides out to the real edges.
+  _fit() {
+    const c = this.canvas, R = KCK.Render, vw = window.innerWidth || 960, vh = window.innerHeight || 640;
+    const LW = Math.round(KCK.Util.clamp(640 * vw / vh, 960, 1480));
+    R.XW = LW; R.XL = -(LW - 960) / 2;
+    const cssW = Math.min(vw, vh * LW / 640), cssH = cssW * 640 / LW;
+    c.style.width = cssW + 'px'; c.style.height = cssH + 'px';
+    this.res = KCK.Util.clamp(cssH * (window.devicePixelRatio || 1) / 640, 0.6, 2);
+    c.width = Math.round(LW * this.res); c.height = Math.round(640 * this.res);
+    if (this.coarse && vh > vw && this.screen === 'play') this.togglePause();      // turned upright mid-match: pause under the 'turn sideways' card
+  }
+
+  // ---- phone comforts ------------------------------------------------------------
+  // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
+  buzz(p) { if (this.coarse && KCK.Store.data.haptics && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* ignore */ } }
+  canFull() { const d = document.documentElement; return this.coarse && !!(d.requestFullscreen || d.webkitRequestFullscreen); }
+  isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  // full screen + landscape lock where the browser allows it (Android Chrome, iPad); must run inside a tap
+  goFull() {
+    try {
+      const d = document.documentElement;
+      if (!this.isFull()) { const p = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); const lock = () => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }; if (p && p.then) p.then(lock, () => {}); else lock(); }
+    } catch (e) { /* not allowed here */ }
+  }
+  // keep the screen awake through a chase (it would dim between balls)
+  wake(on) {
+    try {
+      if (on && !this.wakeLock && navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').then(l => { this.wakeLock = l; l.addEventListener('release', () => { if (this.wakeLock === l) this.wakeLock = null; }); }, () => {});
+      else if (!on && this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+    } catch (e) { /* ignore */ }
+  }
+
   // ---- flow ---------------------------------------------------------------------
   startMatch() {
     const D = KCK.Store.data;
+    if (this.canFull() && !this.fsLeft) this.goFull();
+    this.wake(true);
     this.match = new KCK.Match({ level: D.difficulty, overs: D.overs, seed: (this.rng() * 4294967296) >>> 0 });
     this.screen = 'play'; this.particles.length = 0; this.banner = null; this.feedback = null;
     this.camB = 0; this.camTarget = 0; this.focusIdx = -1; this.focusPending = true; this.loft = false; this.counted = false;
-    this.hint = 'TAP TO SWING  ·  WHERE YOU TAP AIMS THE SHOT'; this.hintT = 4;
+    this.hint = this.coarse ? 'TAP TO SWING  ·  WHERE YOU TAP AIMS THE SHOT' : 'CLICK TO SWING  ·  WHERE YOU CLICK AIMS THE SHOT'; this.hintT = 4;
     this._nextBall();
   }
 
@@ -61,8 +97,9 @@ KCK.Game = class {
     else if (id === 'resume') this.screen = 'play';
     else if (id === 'restart' || id === 'rematch') this.startMatch();
     else if (id === 'retry') this.startMatch();
-    else if (id === 'menu') { this.setScreen('menu'); this.camB = 0; this.camTarget = 0; this.fieldNow = []; }
+    else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.camB = 0; this.camTarget = 0; this.fieldNow = []; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
+    else if (id === 'buzz') { D.haptics = !D.haptics; KCK.Store.save(); this.buzz(20); }
   }
 
   togglePause() {
@@ -72,19 +109,30 @@ KCK.Game = class {
 
   // ---- input --------------------------------------------------------------------
   _pt(e) {
-    const r = this.canvas.getBoundingClientRect();
-    return { x: (e.clientX - r.left) * KCK.Render.W / r.width, y: (e.clientY - r.top) * KCK.Render.H / r.height };
+    const r = this.canvas.getBoundingClientRect(), R = KCK.Render;
+    return { x: R.XL + (e.clientX - r.left) * R.XW / r.width, y: (e.clientY - r.top) * R.H / r.height };
   }
-  _aimFromX(x) { this.aimDeg = KCK.Util.clamp((x - 480) / 480 * 95, -90, 90); }
+  // the whole screen width spans the aim: the left edge pulls it to leg, the right edge to the off side
+  _aimFromX(x) { this.aimDeg = KCK.Util.clamp((x - 480) / (KCK.Render.XW / 2) * 95, -90, 90); }
 
   _bind() {
     const c = this.canvas;
+    const refit = () => { this._fit(); this.focusPending = this.screen !== 'play'; };
+    window.addEventListener('resize', refit); window.addEventListener('orientationchange', () => setTimeout(refit, 120));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+    const fsc = () => { if (!this.isFull() && this.screen === 'play') this.fsLeft = true; setTimeout(refit, 60); };
+    document.addEventListener('fullscreenchange', fsc); document.addEventListener('webkitfullscreenchange', fsc);
     c.addEventListener('pointerdown', e => this._onDown(e));
     c.addEventListener('pointermove', e => this._onMove(e));
     c.addEventListener('contextmenu', e => e.preventDefault());
+    // phones: no long-press callout / magnifier / double-tap zoom while batting
+    const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
+    c.addEventListener('touchstart', block, { passive: false });
+    c.addEventListener('touchmove', block, { passive: false });
+    window.addEventListener('click', () => this._firstGesture());          // iOS unlocks audio on touchend / click
     window.addEventListener('keydown', e => this._onKey(e));
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else this.audio.resume(); });
-    window.addEventListener('blur', () => { if (this.screen === 'play') this.togglePause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.screen === 'play') this.togglePause(); this.audio.suspend(); } else { this.audio.resume(); if (this.screen === 'play' || this.screen === 'paused') this.wake(true); } });
+    // blur also fires for benign focus moves (iframes, preview toolbars), so only a hidden tab pauses
   }
   _firstGesture() { if (this.audio.ensure()) this.audio.startMusic(); }
 
@@ -178,8 +226,9 @@ KCK.Game = class {
   _fb(text, color, life) { this.feedback = { text, color, life: life || 1.1 }; }
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.7 }; }
   _burst(n) {
-    const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'];
-    for (let i = 0; i < n; i++) this.particles.push({ x: 120 + this.rng() * 720, y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
+    const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'], R = KCK.Render;
+    if (this.calm) n = Math.ceil(n / 4);
+    for (let i = 0; i < n; i++) this.particles.push({ x: R.XL + 120 + this.rng() * (R.XW - 240), y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
   }
 
   _resolve() {
@@ -200,10 +249,11 @@ KCK.Game = class {
       this.bp = 'hit'; this.camTarget = 1;
       if (s.edge) this.audio.edge(); else this.audio.crack(s.speed);
       this.shake = Math.max(this.shake, s.perfect ? 7 : 3);
+      this.buzz(s.perfect ? [20, 30, 25] : 16);
       const E = (t, fn) => this.events.push({ t, fn });
-      if (o.kind === 'six') { E(Math.min(fd.t, 3) * 0.7, () => { this._banner('SIX!', '#e6c0ff', '#9a45e6'); this.audio.cheer(true); this._burst(60); this.shake = 8; }); }
+      if (o.kind === 'six') { E(Math.min(fd.t, 3) * 0.7, () => { this._banner('SIX!', '#e6c0ff', '#9a45e6'); this.audio.cheer(true); this._burst(60); this.shake = 8; this.buzz([30, 50, 30, 50, 60]); }); }
       else if (o.kind === 'four') { E(Math.min(fd.t, 4) * 0.75, () => { this._banner('FOUR!', '#c4ecff', '#2f86d8'); this.audio.cheer(false); this._burst(24); }); }
-      else if (o.kind === 'wicket') { E(fd.t, () => { this.audio.catchSnap(); this._banner(o.wicket === 'caught behind' ? 'CAUGHT BEHIND!' : 'CAUGHT!', '#ffd0c8', '#e8483a', o.fielder ? o.fielder.role : '', 64); this.audio.groan(); this.shake = 7; }); }
+      else if (o.kind === 'wicket') { E(fd.t, () => { this.audio.catchSnap(); this._banner(o.wicket === 'caught behind' ? 'CAUGHT BEHIND!' : 'CAUGHT!', '#ffd0c8', '#e8483a', o.fielder ? o.fielder.role : '', 64); this.audio.groan(); this.shake = 7; this.buzz([70, 50, 90]); }); }
       else if (o.dropped) { E(fd.t - 0.6, () => { this._banner('DROPPED!', '#fff6a8', '#ffb82e', 'a life!', 66); }); }
       else if (o.safe) { E(fd.t, () => this._banner('SAFE!', '#fff6a8', '#ffb82e', 'free hit', 66)); }
       else if (o.runs) { E(Math.min(fd.t + 0.4, 3.5), () => { this._banner(o.runs + (o.runs > 1 ? ' RUNS' : ' RUN'), '#d6ffb0', '#53bd3c', '', 58); this.audio.cheer(false); }); }
@@ -212,7 +262,7 @@ KCK.Game = class {
     } else {
       this.bp = 'miss'; this.camTarget = 0; this.hit = { t: 0, dur: 1.5, path: null, fd: null };
       const E = (t, fn) => this.events.push({ t, fn });
-      if (o.kind === 'wicket') { E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); this._banner('BOWLED!', '#ffd0c8', '#e8483a', '', 76); this.audio.groan(); this.shake = 9; }); this.hit.dur = 2.0; }
+      if (o.kind === 'wicket') { E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); this._banner('BOWLED!', '#ffd0c8', '#e8483a', '', 76); this.audio.groan(); this.shake = 9; this.buzz([70, 50, 90]); }); this.hit.dur = 2.0; }
       else if (o.kind === 'wide') E(0.3, () => this._banner('WIDE', '#fff6a8', '#ffb82e', '+1 run', 70));
       else if (o.noBall) E(0.2, () => { this._banner('NO BALL!', '#fff6a8', '#ffb82e', 'free hit next', 60); });
       else { E(0.4, () => this._banner(o.safe ? 'MISSED THE STUMPS' : 'DOT BALL', '#ffffff', '#9aa3ad', '', 48)); }
@@ -229,6 +279,7 @@ KCK.Game = class {
     st.played++; if (m.result === 'win') st.won++;
     st.runs += m.runs; st.fours += m.stats.fours; st.sixes += m.stats.sixes; st.wickets += m.wk; st.best = Math.max(st.best, m.runs);
     KCK.Store.save();
+    this.wake(false);
     this.setScreen('over');
     if (m.result === 'win') { this.audio.win(); this._burst(80); } else this.audio.lose();
   }
@@ -236,9 +287,10 @@ KCK.Game = class {
   // ---- drawing ------------------------------------------------------------------
   _render() {
     const ctx = this.ctx, R = KCK.Render, U = KCK.UI;
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.setTransform(this.res, 0, 0, this.res, -R.XL * this.res, 0);
+    if (document.body.dataset.screen !== this.screen) document.body.dataset.screen = this.screen;
     ctx.save();
-    if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
+    if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.camB);
     R.drawWorld(ctx, this.time);
     this._drawScene(ctx);

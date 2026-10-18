@@ -9,6 +9,7 @@
 
 KCK.Render = {
   W: 960, H: 640, OUT: '#1d2a3a',
+  XL: 0, XW: 960,             // the visible stage: wider screens see x from XL to XL + XW (set by Game._fit)
   cam: { x: 0, y: -4, z: 2.7, pitch: 0.1, F: 1150, CX: 480, CY: 330 },
   TEAM: {
     bat:   { base: '#2f86d8', light: '#7ac7ff', dark: '#1a4f8a' },
@@ -63,15 +64,16 @@ KCK.Render = {
 
   // ---- environment ---------------------------------------------------------------
   drawWorld(ctx, t) {
-    const W = this.W, H = this.H, hy = this.horizonY(), b = this.blend;
+    const H = this.H, hy = this.horizonY(), b = this.blend, X0 = this.XL - 20, W = this.XW + 40;
     // sky
     const sky = ctx.createLinearGradient(0, Math.min(0, hy - 260), 0, Math.max(60, hy));
     sky.addColorStop(0, '#4fb0ff'); sky.addColorStop(1, '#d4f0ff');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = sky; ctx.fillRect(X0, -20, W, H + 40);
     // clouds
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    for (let i = 0; i < 5; i++) {
-      const cx = ((i * 233 + t * 6) % (W + 260)) - 130, cy = Math.max(30, hy - 150 + (i % 3) * 38) * (1 - b) + 20 * b;
+    const nc = Math.round(W / 190);
+    for (let i = 0; i < nc; i++) {
+      const cx = X0 + ((i * 233 + t * 6) % (W + 260)) - 130, cy = Math.max(30, hy - 150 + (i % 3) * 38) * (1 - b) + 20 * b;
       if (b > 0.9) continue;
       ctx.globalAlpha = 1 - b;
       ctx.beginPath(); ctx.ellipse(cx, cy, 70, 20, 0, 0, 7); ctx.ellipse(cx - 34, cy + 6, 44, 15, 0, 0, 7); ctx.ellipse(cx + 40, cy + 7, 48, 15, 0, 0, 7); ctx.fill();
@@ -79,15 +81,16 @@ KCK.Render = {
     }
     // far tree line
     if (hy > 0 && hy < H) {
-      ctx.fillStyle = '#3e8a47'; ctx.beginPath(); ctx.moveTo(0, hy);
-      for (let x = 0; x <= W; x += 24) ctx.lineTo(x, hy - 18 - Math.abs(Math.sin(x * 0.09)) * 22);
-      ctx.lineTo(W, hy + 4); ctx.lineTo(0, hy + 4); ctx.closePath(); ctx.fill();
+      const x0 = Math.floor(X0 / 24) * 24;
+      ctx.fillStyle = '#3e8a47'; ctx.beginPath(); ctx.moveTo(x0, hy);
+      for (let x = x0; x <= X0 + W + 24; x += 24) ctx.lineTo(x, hy - 18 - Math.abs(Math.sin(x * 0.09)) * 22);
+      ctx.lineTo(X0 + W + 24, hy + 4); ctx.lineTo(x0, hy + 4); ctx.closePath(); ctx.fill();
     }
     // ground base
     const g0 = Math.max(0, Math.min(H, hy));
     const gg = ctx.createLinearGradient(0, g0, 0, H);
     if (b > 0.5) { gg.addColorStop(0, '#2a6a3a'); gg.addColorStop(1, '#1d4e2c'); } else { gg.addColorStop(0, '#6ac84c'); gg.addColorStop(1, '#3f9a36'); }
-    ctx.fillStyle = gg; ctx.fillRect(0, g0, W, H - g0);
+    ctx.fillStyle = gg; ctx.fillRect(X0, g0, W, H - g0 + 20);
 
     if (b > 0.35) this._fieldOval(ctx); else this._bandGround(ctx);
     this._pitch(ctx);
