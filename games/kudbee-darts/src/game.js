@@ -958,8 +958,8 @@
     if (this.state === 'play') this._drawCheckoutGuide(ctx);
     // Darts in the board, then any THINK BOX crates in front of it, then the
     // darts stuck in those crates (riding along as a crate slides).
-    const drawStuck = (d, ox) => {
-      const x = d.x + ox;
+    const drawStuck = (d, ox, oy) => {
+      const x = d.x + ox, y = d.y + oy;
       // A brief settle wobble right after impact — a quick decaying jiggle
       // so a fresh stick reads as landing WITH force, not teleporting in.
       let ang = d.ang;
@@ -970,17 +970,17 @@
       // Thunk: a fresh dart arrives slightly oversized and settles into the board.
       let thunk = 1;
       if (!this.reduceMotion && d.landT != null) thunk += 0.16 * Math.max(0, 1 - (this.time - d.landT) / 0.11);
-      if (thunk !== 1) { ctx.save(); ctx.translate(x, d.y); ctx.scale(thunk, thunk); ctx.translate(-x, -d.y); }
-      this.sprites.drawStuckDart(ctx, x, d.y, d.skin, ang, d.parts);
+      if (thunk !== 1) { ctx.save(); ctx.translate(x, y); ctx.scale(thunk, thunk); ctx.translate(-x, -y); }
+      this.sprites.drawStuckDart(ctx, x, y, d.skin, ang, d.parts);
       if (thunk !== 1) ctx.restore();
     };
     for (let i = 0; i < this.stuckDarts.length; i++) {
-      if (this.stuckDarts[i].crate == null) drawStuck(this.stuckDarts[i], 0);
+      if (this.stuckDarts[i].crate == null) drawStuck(this.stuckDarts[i], 0, 0);
     }
     this._drawCrates(ctx);
     for (let i = 0; i < this.stuckDarts.length; i++) {
       const d = this.stuckDarts[i];
-      if (d.crate != null) drawStuck(d, this._crateShiftPx(d));
+      if (d.crate != null) { const sh = this._crateShiftPx(d); drawStuck(d, sh.x, sh.y); }
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
@@ -1487,12 +1487,16 @@
     noon:  ['#06203a', '#0f4f6e', '#2c8f9a', '#bff3e0'],
     night: ['#030210', '#0d0a2e', '#2b1657', '#7d5bd0'],
     box:   ['#1b0d22', '#5a2340', '#c2553f', '#ffc078'],
+    halloween: ['#0d0618', '#2e1245', '#7a2a3a', '#ff8a2b'],
+    nightmare: ['#030104', '#14040c', '#3a0814', '#7a0f1e'],
   };
   const HILLS = {
     dawn:  ['#2a1450', '#1d0d3a', '#120828'],
     noon:  ['#0c3550', '#082638', '#051a28'],
     night: ['#1a1044', '#110a33', '#08051f'],
     box:   ['#3a1d2a', '#2a1420', '#1a0c16'],
+    halloween: ['#24123a', '#170b28', '#0c0616'],
+    nightmare: ['#1a0a12', '#10050b', '#070205'],
   };
   const STARS_AT = [[70, 80], [190, 150], [330, 60], [520, 118], [640, 52], [880, 190], [260, 210], [600, 200], [930, 60], [430, 40]];
 
@@ -1514,22 +1518,47 @@
     });
     ctx.globalAlpha = 1;
     // Sun / moon with slowly turning rays, outlined like a cartoon.
-    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : world.sky === 'box' ? '#ffb347' : '#fff2b3';
-    ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
-    ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
-    for (let k = 0; k < 12; k++) {
-      ctx.rotate(Math.PI / 6);
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-22, 150); ctx.lineTo(22, 150); ctx.closePath(); ctx.fill();
+    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : world.sky === 'box' ? '#ffb347' : world.sky === 'halloween' ? '#ff9a3c' : world.sky === 'nightmare' ? '#d4233a' : '#fff2b3';
+    const eerie = world.sky === 'halloween' || world.sky === 'nightmare';
+    if (eerie) {
+      // A haunted moon: a soft pulsing halo instead of rays.
+      const halo = ctx.createRadialGradient(sunX, sunY, 40, sunX, sunY, 150);
+      halo.addColorStop(0, sunCol); halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.35 + 0.1 * Math.sin(t * 1.5);
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(sunX, sunY, 150, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
+      ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
+      for (let k = 0; k < 12; k++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-22, 150); ctx.lineTo(22, 150); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
     }
-    ctx.restore();
     ctx.globalAlpha = 1;
     ctx.beginPath(); ctx.arc(sunX, sunY, 54, 0, Math.PI * 2);
-    ctx.fillStyle = sunCol; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = OUTLINE; ctx.stroke();
+    ctx.fillStyle = sunCol; ctx.fill();
+    if (eerie) {            // craters
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      [[-18, -14, 11], [16, 8, 14], [-6, 22, 7], [22, -22, 6]].forEach((c) => { ctx.beginPath(); ctx.arc(sunX + c[0], sunY + c[1], c[2], 0, Math.PI * 2); ctx.fill(); });
+    }
+    ctx.lineWidth = 6; ctx.strokeStyle = OUTLINE;
+    ctx.beginPath(); ctx.arc(sunX, sunY, 54, 0, Math.PI * 2); ctx.stroke();
     // Puffy clouds drifting across.
     const drift = (base, s, speed) => ((base + t * speed) % (this.viewW + 260)) - 130;
-    this._cloud(ctx, drift(0, 1, 14), 206, 0.7);
-    this._cloud(ctx, drift(420, 1, 9), 470, 0.8);
-    this._cloud(ctx, drift(700, 1, 18), 236, 0.5);
+    const spooky = world.sky === 'halloween' || world.sky === 'nightmare';
+    const cloudCol = spooky ? 'rgba(52,36,70,0.9)' : null;
+    this._cloud(ctx, drift(0, 1, 14), 206, 0.7, cloudCol);
+    this._cloud(ctx, drift(420, 1, 9), 470, 0.8, cloudCol);
+    this._cloud(ctx, drift(700, 1, 18), 236, 0.5, cloudCol);
+    if (spooky) {
+      // Bats flitting across the sky (the moon backlights them).
+      for (let i = 0; i < 4; i++) {
+        const bx = ((i * 330 + t * (40 + i * 12)) % (this.viewW + 120)) - 60;
+        const by = 90 + i * 45 + Math.sin(t * 2 + i * 2) * 18;
+        this._bat(ctx, bx, by, 46 - i * 5, 22 - i * 2);
+      }
+    }
     // Layered hills, outlined.
     [[500, 0], [560, 1], [620, 2]].forEach(([base, li]) => {
       ctx.beginPath(); ctx.moveTo(0, VIEW_H);
@@ -1541,6 +1570,20 @@
       ctx.fillStyle = hills[li]; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
     });
     this._worldProp(ctx, world.sky, this.viewW - 118, 500);
+    if (world.sky === 'nightmare') {
+      // Low drifting fog, and eyes blinking in the dark hills.
+      for (let i = 0; i < 5; i++) {
+        const fx = ((i * 260 + t * 22) % (this.viewW + 400)) - 200;
+        ctx.fillStyle = 'rgba(190,170,200,0.10)';
+        ctx.beginPath(); ctx.ellipse(fx, 640 + (i % 2) * 30, 220, 36, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      for (let i = 0; i < 4; i++) {
+        if (Math.sin(t * 1.3 + i * 2.7) > 0.85) continue;          // a blink
+        const ex = this.viewW * (0.12 + i * 0.24), ey = 600 + (i % 2) * 34;
+        ctx.fillStyle = '#ff2a3a';
+        ctx.beginPath(); ctx.ellipse(ex, ey, 6, 3, 0, 0, Math.PI * 2); ctx.ellipse(ex + 18, ey, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     ctx.restore();
   };
 
@@ -1619,17 +1662,23 @@
     if (!L || !L.boxes) return null;
     const M = KD.Dart.BOARD_M, t = this.crateT + (tAhead || 0);
     return L.boxes.map((b, i) => {
-      const o = this._crateSlide(b, t);
-      return { x0: (b.x + o) * M, x1: (b.x + o + b.w) * M, y0: b.y * M, y1: (b.y + b.h) * M, crate: i };
+      const o = this._crateOffset(b, t);
+      return { x0: (b.x + o.x) * M, x1: (b.x + o.x + b.w) * M, y0: (b.y + o.y) * M, y1: (b.y + o.y + b.h) * M, crate: i };
     });
   };
 
-  // How far (px) a dart stuck in a sliding crate has moved since it landed.
+  // The slide as an {x, y} offset (board radii): along x unless slide.axis is 'y'.
+  Game.prototype._crateOffset = function (b, t) {
+    const o = this._crateSlide(b, t);
+    return b.slide && b.slide.axis === 'y' ? { x: 0, y: o } : { x: o, y: 0 };
+  };
+
+  // How far (px, {x, y}) a dart stuck in a sliding box has moved since it landed.
   Game.prototype._crateShiftPx = function (d) {
     const L = KD.Campaign.LEVELS[this.levelIdx], b = L && L.boxes && L.boxes[d.crate];
-    if (!b) return 0;
-    const s = KD.Dart.depthScale(KD.Dart.CRATE_Z);
-    return (this._crateSlide(b, this.crateT) - d.slide0) * this.board.Rpx * s;
+    if (!b) return { x: 0, y: 0 };
+    const k = (this._crateSlide(b, this.crateT) - d.slide0) * this.board.Rpx * KD.Dart.depthScale(KD.Dart.CRATE_Z);
+    return b.slide && b.slide.axis === 'y' ? { x: 0, y: k } : { x: k, y: 0 };
   };
 
   // Is the board point (px) behind a crate tAhead seconds from now?
@@ -1658,9 +1707,117 @@
     if (!L || !L.boxes) return;
     const B = this.board, R = B.Rpx * KD.Dart.depthScale(KD.Dart.CRATE_Z);
     L.boxes.forEach((b) => {
-      const o = this._crateSlide(b, this.crateT);
-      this._crate(ctx, B.cx + (b.x + o) * R, B.cy + b.y * R, b.w * R, b.h * R);
+      const o = this._crateOffset(b, this.crateT);
+      this._obstacle(ctx, b.kind || 'crate', B.cx + (b.x + o.x) * R, B.cy + (b.y + o.y) * R, b.w * R, b.h * R);
     });
+  };
+
+  // ---- Obstacles: how a box is drawn (it blocks the same either way) ----
+  Game.prototype._obstacle = function (ctx, kind, x, y, w, h) {
+    if (kind === 'pumpkin') this._pumpkin(ctx, x, y, w, h);
+    else if (kind === 'bat') this._bat(ctx, x, y, w, h);
+    else if (kind === 'ghost') this._ghost(ctx, x, y, w, h);
+    else if (kind === 'tomb') this._tomb(ctx, x, y, w, h);
+    else this._crate(ctx, x, y, w, h);
+  };
+
+  // A jack-o'-lantern filling the box: ribbed, with a glowing carved face.
+  Game.prototype._pumpkin = function (ctx, x, y, w, h) {
+    const cx = x + w / 2, cy = y + h * 0.58, rx = w / 2, ry = h * 0.42;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx + 8, cy + 10, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3f6b2a'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - w * 0.05, cy - ry + 4); ctx.lineTo(cx - w * 0.02, y); ctx.lineTo(cx + w * 0.08, y + 2); ctx.lineTo(cx + w * 0.05, cy - ry + 4); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    const g = ctx.createRadialGradient(cx - rx * 0.3, cy - ry * 0.4, 2, cx, cy, Math.max(rx, ry));
+    g.addColorStop(0, '#ffb24d'); g.addColorStop(1, '#d4581a');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,35,0,0.55)'; ctx.lineWidth = 2;
+    [0.35, 0.7].forEach((k) => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * k, ry * 0.98, 0, 0, Math.PI * 2); ctx.stroke(); });
+    // Carved face, lit from inside.
+    ctx.fillStyle = '#ffe36b';
+    const tri = (ax, ay, bx2, by2, cx2, cy2) => { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx2, by2); ctx.lineTo(cx2, cy2); ctx.closePath(); ctx.fill(); };
+    tri(cx - rx * 0.55, cy - ry * 0.05, cx - rx * 0.15, cy - ry * 0.05, cx - rx * 0.35, cy - ry * 0.45);
+    tri(cx + rx * 0.15, cy - ry * 0.05, cx + rx * 0.55, cy - ry * 0.05, cx + rx * 0.35, cy - ry * 0.45);
+    ctx.beginPath();
+    ctx.moveTo(cx - rx * 0.6, cy + ry * 0.2);
+    for (let i = 0; i <= 6; i++) ctx.lineTo(cx - rx * 0.6 + rx * 0.2 * i, cy + ry * (i % 2 ? 0.32 : 0.2));
+    ctx.lineTo(cx + rx * 0.5, cy + ry * 0.5); ctx.lineTo(cx - rx * 0.5, cy + ry * 0.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  };
+
+  // A bat with flapping wings across the box, red eyes.
+  Game.prototype._bat = function (ctx, x, y, w, h) {
+    const cx = x + w / 2, cy = y + h / 2, flap = Math.sin(this.time * 12) * h * 0.25;
+    ctx.save();
+    ctx.fillStyle = '#1c0f2a'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - h * 0.15);
+    ctx.quadraticCurveTo(cx - w * 0.25, cy - h * 0.5 - flap, x, cy - h * 0.2 - flap);
+    ctx.quadraticCurveTo(x + w * 0.1, cy + h * 0.1, x + w * 0.16, cy + h * 0.3);
+    ctx.quadraticCurveTo(x + w * 0.25, cy + h * 0.1, x + w * 0.33, cy + h * 0.32);
+    ctx.quadraticCurveTo(cx - w * 0.1, cy + h * 0.2, cx, cy + h * 0.45);
+    ctx.quadraticCurveTo(cx + w * 0.1, cy + h * 0.2, x + w * 0.67, cy + h * 0.32);
+    ctx.quadraticCurveTo(x + w * 0.75, cy + h * 0.1, x + w * 0.84, cy + h * 0.3);
+    ctx.quadraticCurveTo(x + w * 0.9, cy + h * 0.1, x + w, cy - h * 0.2 - flap);
+    ctx.quadraticCurveTo(cx + w * 0.25, cy - h * 0.5 - flap, cx, cy - h * 0.15);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy, w * 0.09, h * 0.32, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath(); ctx.arc(cx - w * 0.03, cy - h * 0.08, Math.max(1.5, w * 0.018), 0, Math.PI * 2); ctx.arc(cx + w * 0.03, cy - h * 0.08, Math.max(1.5, w * 0.018), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  // A sheet ghost: round head, wavy hem, hollow eyes.
+  Game.prototype._ghost = function (ctx, x, y, w, h) {
+    const r = Math.min(w / 2, h * 0.5), t = this.time;
+    ctx.save();
+    ctx.globalAlpha = 0.93;
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x, y + r);
+    ctx.arc(x + w / 2, y + r, w / 2, Math.PI, 0);
+    ctx.lineTo(x + w, y + h);
+    const n = 4;
+    for (let i = n; i > 0; i--) {
+      const xm = x + w * (i - 0.5) / n, x0 = x + w * (i - 1) / n;
+      ctx.quadraticCurveTo(xm, y + h - h * 0.16 * (1 + Math.sin(t * 5 + i) * 0.4), x0, y + h);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#f2eeff'; ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = '#1a1030';
+    ctx.beginPath(); ctx.ellipse(x + w * 0.36, y + r * 0.95, w * 0.07, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.64, y + r * 0.95, w * 0.07, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.5, y + r * 1.35, w * 0.06, h * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  // A rounded tombstone with RIP, a crack and grass at its foot.
+  Game.prototype._tomb = function (ctx, x, y, w, h) {
+    const r = w / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 8, y + r + 10, w, h - r);
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, '#a7b0bb'); g.addColorStop(1, '#5d6672');
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(30,30,40,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + w * 0.7, y + r * 0.6); ctx.lineTo(x + w * 0.6, y + r * 1.1); ctx.lineTo(x + w * 0.72, y + r * 1.4); ctx.stroke();
+    ctx.fillStyle = '#3c434d'; ctx.textAlign = 'center';
+    ctx.font = 'bold ' + Math.round(w * 0.24) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('RIP', x + w / 2, y + r + w * 0.12);
+    ctx.fillStyle = '#3d7a34';
+    ctx.beginPath(); ctx.moveTo(x - 4, y + h);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(x - 4 + (w + 8) * i / 8, y + h - (i % 2 ? h * 0.12 : 2));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.stroke();
+    ctx.restore();
   };
 
   // A cartoon wooden crate: planks, a frame with a diagonal brace, nails, and
@@ -1692,12 +1849,12 @@
     ctx.restore();
   };
 
-  Game.prototype._cloud = function (ctx, x, y, s) {
+  Game.prototype._cloud = function (ctx, x, y, s, fill) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ctx.beginPath();
     ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.arc(34, -12, 40, 0, Math.PI * 2); ctx.arc(74, 0, 28, 0, Math.PI * 2);
     ctx.arc(30, 14, 26, 0, Math.PI * 2); ctx.arc(-8, 14, 22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(236,230,255,0.92)'; ctx.fill();
+    ctx.fillStyle = fill || 'rgba(236,230,255,0.92)'; ctx.fill();
     ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
     ctx.restore();
   };
@@ -1721,6 +1878,26 @@
         ctx.fill(); ctx.stroke();
         ctx.restore();
       });
+    } else if (sky === 'halloween') {
+      // A crooked bare tree and a jack-o'-lantern at its foot.
+      ctx.strokeStyle = '#1a0f20'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 20, y + 80); ctx.quadraticCurveTo(x + 6, y + 10, x + 26, y - 70);
+      ctx.moveTo(x + 18, y - 10); ctx.quadraticCurveTo(x - 20, y - 30, x - 44, y - 64);
+      ctx.moveTo(x + 22, y - 40); ctx.quadraticCurveTo(x + 50, y - 60, x + 70, y - 96);
+      ctx.moveTo(x - 20, y - 36); ctx.lineTo(x - 30, y - 78);
+      ctx.stroke();
+      this._pumpkin(ctx, x - 58, y + 24, 70, 56);
+    } else if (sky === 'nightmare') {
+      // A dead tree with something watching from it, and a leaning tombstone.
+      ctx.strokeStyle = '#08030a'; ctx.lineWidth = 10; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y + 80); ctx.lineTo(x + 4, y - 60);
+      ctx.moveTo(x + 2, y - 10); ctx.lineTo(x - 46, y - 70);
+      ctx.moveTo(x + 3, y - 34); ctx.lineTo(x + 52, y - 92);
+      ctx.moveTo(x - 30, y - 50); ctx.lineTo(x - 58, y - 52);
+      ctx.stroke();
+      ctx.fillStyle = '#ffd400';
+      ctx.beginPath(); ctx.ellipse(x - 6, y - 30, 5, 3, 0, 0, Math.PI * 2); ctx.ellipse(x + 10, y - 30, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(x - 70, y + 10); ctx.rotate(-0.12); this._tomb(ctx, 0, 0, 48, 66); ctx.restore();
     } else if (sky === 'box') {
       // A stack of crates.
       this._crate(ctx, x - 52, y - 4, 60, 56);
@@ -1774,7 +1951,10 @@
       ctx.beginPath(); ctx.arc(cx, y + 30, 19, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
       ctx.fillText(String(idx + 1), cx, y + 36);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (L.boss ? 15 : 17) + 'px "Space Grotesk", sans-serif';
+      // Long names shrink to fit the tile.
+      let fs = L.boss ? 15 : 17;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + fs + 'px "Space Grotesk", sans-serif';
+      while (fs > 9 && ctx.measureText(L.name).width > w - 14) { fs--; ctx.font = 'bold ' + fs + 'px "Space Grotesk", sans-serif'; }
       ctx.fillText(L.name, cx, y + 84);
       ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px "Space Grotesk", sans-serif';
       ctx.fillText((L.mode === 'x301' ? '301' : '501') + '  ·  ' + (L.boss ? 'BOSS' : L.tier), cx, y + 84 + 20 * this._textBump());
@@ -1803,7 +1983,8 @@
     let title = r.won ? 'LEVEL CLEARED!' : 'DEFEAT';
     if (boss) {
       const w = KD.Campaign.LEVELS[lvl.idx].world, W = KD.Campaign.WORLDS[w];
-      title = (W.sky === 'box' ? W.name : 'WORLD ' + (w + 1)) + ' COMPLETE!';
+      const side = KD.Campaign.LEVELS.some((l) => l.world === w && l.after != null);
+      title = (side ? W.name : 'WORLD ' + (w + 1)) + ' COMPLETE!';
     }
     ctx.fillText(title, cx, cy - 58);
     ctx.shadowBlur = 0;

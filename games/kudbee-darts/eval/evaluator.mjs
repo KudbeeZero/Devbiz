@@ -338,7 +338,7 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     g.progression.data.campaign = { stars: [] }; g.progression.save(); g.levelIdx = null; g.state = 'menu';
     return out;
   });
-  const campOk = camp.count === 20 && JSON.stringify(camp.bosses) === '[4,9,14,19]' && JSON.stringify(camp.stars) === '[3,2,1]'
+  const campOk = camp.count === 30 && JSON.stringify(camp.bosses) === '[4,9,14,19,24,29]' && JSON.stringify(camp.stars) === '[3,2,1]'
     && camp.mapState === 'levels' && camp.mapWorld === 0 && camp.layoutTiles === 5 && camp.lockedStart && camp.started
     && camp.won.state === 'matchOver' && camp.won.stars === 3 && camp.won.next === 1 && camp.won.saved === 3 && camp.won.unlock1 && !camp.won.unlock2
     && camp.nextStarted && camp.lossKeeps && camp.clean && camp.btns === 'next,retry,levels,share' && camp.share;
@@ -398,6 +398,51 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   const ok = tb.world === 'THINK BOX' && tb.shutBefore && tb.openAfterBoss1 && tb.nextSkipsSide
     && tb.t20blocked && tb.t19 === 'T19' && tb.stuckInCrate && tb.aiDodges && tb.slides;
   rec('think-box', ok, `world=${tb.world} first=${tb.first} opens-after-boss1=${tb.shutBefore && tb.openAfterBoss1} next-skips-side=${tb.nextSkipsSide} T20=${tb.t20} T19=${tb.t19} stuck-in-crate=${tb.stuckInCrate} ai-dodges=${tb.aiDodges} slides=${tb.slides}`);
+}
+
+// ---------------------------------------------------------------- HALLOWEEN + NIGHTMARE
+// Two spooky side worlds: HALLOWEEN opens after the World 2 boss, NIGHTMARE after
+// the World 3 boss; their pumpkins, bats, ghosts and tombstones block like crates,
+// each draws, a slide.axis 'y' box moves up and down, and their matches use the
+// spooky scenery.
+{
+  const sp = await page.evaluate(() => {
+    const g = window.DARTS, C = window.KD.Campaign, prog = g.progression, out = {};
+    const firstOf = (name) => C.LEVELS.findIndex((l) => C.WORLDS[l.world].name === name);
+    const hw = firstOf('HALLOWEEN'), nm = firstOf('NIGHTMARE');
+    out.hw = hw; out.nm = nm; out.afterHw = C.LEVELS[hw].after; out.afterNm = C.LEVELS[nm].after;
+    prog.data.campaign = { stars: [] };
+    out.shut = !prog.campaignUnlocked(hw) && !prog.campaignUnlocked(nm);
+    prog.data.campaign.stars[9] = 1; out.hwOpen = prog.campaignUnlocked(hw) && !prog.campaignUnlocked(nm);
+    prog.data.campaign.stars[14] = 1; out.nmOpen = prog.campaignUnlocked(nm);
+    out.kinds = [...new Set(C.LEVELS.flatMap((l) => (l.boxes || []).map((b) => b.kind || 'crate')))].sort().join();
+    // Each obstacle kind draws something (pixels change on a blank canvas).
+    const c = document.createElement('canvas'); c.width = 120; c.height = 120; const x = c.getContext('2d');
+    out.drawn = ['crate', 'pumpkin', 'bat', 'ghost', 'tomb'].every((k) => {
+      x.clearRect(0, 0, 120, 120); g._obstacle(x, k, 10, 10, 100, 100);
+      const d = x.getImageData(0, 0, 120, 120).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n > 1500;
+    });
+    // A pumpkin blocks a dart like a crate (PUMPKIN PATCH covers the lower board).
+    g.levelIdx = hw; g._startMatch(); g._groupCenter = null; g._groupStrength = 0;
+    const d = g.dart, B = g.board, P = { powf: 1, curlX: 0, curlY: 0, sink: 0 };
+    const lb = C.LEVELS[hw].boxes[0], tx = B.cx + (lb.x + lb.w / 2) * B.Rpx, ty = B.cy + (lb.y + lb.h / 2) * B.Rpx;
+    d.isAI = false; d.reset(); d._releaseAt(tx, ty, 0, P);
+    out.pumpkinBlocks = !!d.result.blocked;
+    // SLEEP PARALYSIS slides up and down.
+    const sl = C.LEVELS.findIndex((l) => l.name === 'SLEEP PARALYSIS');
+    g.levelIdx = sl; g._startMatch();
+    const a = g.crateRects(0)[0], b2 = g.crateRects(1.5)[0];
+    out.ySlide = Math.abs(a.y0 - b2.y0) > 0.01 && Math.abs(a.x0 - b2.x0) < 1e-9;
+    // The match is painted in the world's scenery (bottom-left is the dark spooky hills).
+    window.__step(2);
+    const px = document.getElementById('game').getContext('2d').getImageData(8, 700, 1, 1).data;
+    out.scene = [px[0], px[1], px[2]];
+    prog.data.campaign = { stars: [] }; prog.save(); d.reset(); g.levelIdx = null; g.state = 'menu';
+    return out;
+  });
+  const ok = sp.afterHw === 9 && sp.afterNm === 14 && sp.shut && sp.hwOpen && sp.nmOpen
+    && sp.kinds === 'bat,crate,ghost,pumpkin,tomb' && sp.drawn && sp.pumpkinBlocks && sp.ySlide && sp.scene[0] < 40 && sp.scene[0] > sp.scene[1] && sp.scene[0] >= sp.scene[2];   // red-black, not the blue neon floor
+  rec('spooky-worlds', ok, `halloween@${sp.hw} after ${sp.afterHw}, nightmare@${sp.nm} after ${sp.afterNm}, opens=${sp.shut && sp.hwOpen && sp.nmOpen} kinds=${sp.kinds} drawn=${sp.drawn} pumpkin-blocks=${sp.pumpkinBlocks} y-slide=${sp.ySlide} scene=rgb(${sp.scene})`);
 }
 
 // ---------------------------------------------------------------- dart workshop: barrels

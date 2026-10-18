@@ -31,6 +31,11 @@ crates stand just in front of the board (some slide side to side), and a dart th
 one sticks in the wood and scores nothing, so you plan around them. The AI aims around
 the crates too.
 
+Two spooky side worlds play the same way with their own obstacles and scenery:
+**HALLOWEEN** (opens after the World 2 boss: pumpkins, flapping bats and sliding ghosts
+under an orange moon) and **NIGHTMARE** (opens after the World 3 boss: tombstones, night
+terrors and a ghost that rises and falls, with a blood moon, fog and eyes in the hills).
+
 Each level sets its rival's accuracy, so difficulty ramps level by level. The
 rivals and the star targets (`par`) are tuned with bots, not guesses:
 
