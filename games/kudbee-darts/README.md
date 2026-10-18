@@ -52,8 +52,13 @@ on roughly half to two-thirds of the wins.
 release **speed** sets the power (too soft drops low and short; too hard sails high and
 out), the sideways flick adds **curl**, and harder **pressure** (pen / 3D-touch) sinks the
 dart with extra weight. A live **power gauge** beside the reticle shows the committed-flick
-sweet spot. Where the dart lands (plus a little scatter) is what scores, so the read is
-honest. A wild, rushed flick scatters more than a smooth, committed one.
+sweet spot. A wild, rushed flick scatters more than a smooth, committed one.
+
+**The flight is simulated**, like the arrow in Kudbee Archery. The release becomes a 3D
+projectile from your hand to the board face (gravity, curl, weight), drawn in
+perspective: a soft flick is slower, so it drops lower; a hard one is faster and flatter,
+so it rides high; curl bends it sideways. Where that path meets the board is what scores
+(`src/entities/dart.js` → `_launch`).
 
 **The power band auto-calibrates to you.** Everyone flicks at their own pace — a short
 trackpad drag, a fast phone swipe. Over your first few throws the game learns your natural
