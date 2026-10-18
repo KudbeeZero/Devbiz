@@ -14,6 +14,7 @@ KAR.CFG = {
   DISTS: [18, 30, 50, 70], FACE: [0.40, 0.80, 1.22, 1.22], WIND: [1.2, 2.2, 3.5, 5.0],
   ENDS: 5, PER: 3,
   TOUCH_GAIN: 0.7,                                      // touch aims like a trackpad: sight px per finger px
+  TOUCH_GAINS: [0.5, 0.7, 0.95], AIM_NAMES: ['SLOW', 'NORMAL', 'FAST'],     // the AIM SPEED setting (pause, on touch screens)
   DRAW_T: 0.9, STEADY_T: 3.0, BASE_SWAY: 0.0016,       // radians of sight wobble at rest
   ROBIN: 0.009,                                          // metres: closer than this to an arrow in the face splits it
 };
@@ -170,6 +171,12 @@ KAR.Match = class {
     }
     const a = this.endTotal(0, this.endNo), b = this.endTotal(1, this.endNo);
     return { win: a - b + 1, tie: a - b };
+  }
+  // PACE: your points so far against your best scaled to the arrows shot (+ ahead, - behind); null with no best yet
+  pace(best) {
+    const n = this.arrows[0].length;
+    if (!(best > 0) || !n) return null;
+    return Math.round(this.total(0) - best * n / (this.ends * this.per));
   }
   // stars for a finished range (0..3)
   stars() {
