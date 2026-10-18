@@ -81,9 +81,12 @@
     const tap = p.justDown || this.input.justPressed('confirm');
     rw.t += dt;
     if (rw.phase === 'trophies') {
+      const k = Math.min(1, Math.max(0, (rw.t - 0.35) / (COUNT_T - 0.35)));
+      const step = Math.floor(k * 12);
+      if (rw.t > 0.35 && step > (rw.tick || 0) && k < 1) { rw.tick = step; this.audio.count(k); }
       if (rw.t > COUNT_T + 0.5 || (tap && rw.t > 0.2)) {
         rw.phase = r.trophies.promoted ? 'promo' : 'chest'; rw.t = 0;
-        if (r.trophies.promoted) { this.audio.cheer(); this._rewardBurst(this.viewW / 2, 330, KD.Progression.LEAGUES[r.trophies.leagueTo].col, true); }
+        if (r.trophies.promoted) { this.audio.leagueUp(); this._rewardBurst(this.viewW / 2, 330, KD.Progression.LEAGUES[r.trophies.leagueTo].col, true); }
       }
       return;
     }
@@ -94,7 +97,7 @@
     if (rw.phase === 'chest') {
       if (tap && rw.t > 0.35) {
         rw.phase = 'open'; rw.t = 0; rw.dealT = 0; rw.dealt = 0;
-        this.audio.thud(); this.audio.chime(2);
+        this.audio.thud(); this.audio.chestOpen();
         this._rewardBurst(this.viewW / 2, 450, KD.Progression.LEAGUES[r.chest.league].col, false);
       }
       return;
@@ -103,7 +106,7 @@
     const cards = this._rewardCards();
     rw.dealT += dt;
     const shown = Math.min(cards.length, Math.floor(rw.dealT / DEAL_GAP) + 1);
-    if (shown > (rw.dealt || 0)) { rw.dealt = shown; this.audio.chime(cards[shown - 1].isNew ? 2 : 0); }
+    if (shown > (rw.dealt || 0)) { rw.dealt = shown; this.audio.card(!!cards[shown - 1].isNew); }
     if (!tap) return;
     const btns = this._rewardButtons();
     if (!btns.length) { rw.dealT = cards.length * DEAL_GAP + 0.35; rw.dealt = cards.length; return; }   // tap = deal the rest now

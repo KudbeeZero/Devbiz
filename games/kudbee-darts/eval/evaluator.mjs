@@ -697,6 +697,70 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('daily-missions', ok, `same-day=${ms.sameDay} hotseat-off=${ms.hotseatOff} treble=${ms.treble} early=${ms.early} win=${ms.win} claim=${ms.claim} chest=${ms.chestShut}->${ms.chestOpen}->${ms.back} once=${ms.once} rollover=${ms.rollover}`);
 }
 
+// ---------------------------------------------------------------- reward juice
+// Reward screens play their own sounds + haptics, all silent when muted and
+// safe with no AudioContext.
+{
+  const jc = await page.evaluate(() => {
+    const g = window.DARTS, a = g.audio, prog = g.progression, out = {};
+    const snap = JSON.stringify(prog.data), was = a.enabled;
+    const names = ['buzz', 'count', 'chestOpen', 'leagueUp', 'card', 'levelUp', 'coins'];
+    out.has = names.every((n) => typeof a[n] === 'function');
+    const calls = [], orig = {};
+    names.forEach((n) => { orig[n] = a[n]; a[n] = function () { calls.push(n); return orig[n].apply(a, arguments); }; });
+    const vib = []; const ov = navigator.vibrate; navigator.vibrate = (p) => { vib.push(p); return true; };
+    try { names.forEach((n) => a[n](true)); out.noThrow = true; } catch (e) { out.noThrow = false; }
+    // Muted: no haptics.
+    a.enabled = false; vib.length = 0; a.buzz(10); out.mutedBuzz = vib.length; a.enabled = true; a.buzz(10); out.buzz = vib.length;
+    // A promoting bonus-less match reward: count ticks, league-up, chest, cards.
+    calls.length = 0;
+    prog.data.league = { trophies: 95, best: 0 };
+    const win = prog.awardTrophies(true, 3), chest = prog.rollChest(true); prog.applyChest(chest);
+    g._enterReward({ won: true, title: 'T', xp: 0, reward: { trophies: win, chest } });
+    for (let i = 0; i < 90; i++) g._updateReward(1 / 30);
+    out.count = calls.filter((c) => c === 'count').length;
+    out.leagueUp = calls.includes('leagueUp');
+    for (let i = 0; i < 300 && g.rw.phase !== 'chest'; i++) g._updateReward(1 / 30);
+    g._updateReward(0.5);
+    g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false;
+    for (let i = 0; i < 90; i++) g._updateReward(1 / 30);
+    out.chestOpen = calls.includes('chestOpen'); out.card = calls.includes('card');
+    names.forEach((n) => { a[n] = orig[n]; }); navigator.vibrate = ov; a.enabled = was;
+    prog.data = JSON.parse(snap); prog.save(); g.rw = null; g.state = 'menu';
+    return out;
+  });
+  const ok = jc.has && jc.noThrow && jc.mutedBuzz === 0 && jc.buzz === 1 && jc.count >= 4 && jc.leagueUp && jc.chestOpen && jc.card;
+  rec('reward-juice', ok, `methods=${jc.has} no-throw=${jc.noThrow} muted-buzz=${jc.mutedBuzz} buzz=${jc.buzz} count-ticks=${jc.count} league-up=${jc.leagueUp} chest-open=${jc.chestOpen} card=${jc.card}`);
+}
+
+// ---------------------------------------------------------------- stingers
+// Bullseye / treble / ton / 180 each trigger their own stinger; a bust groans;
+// the music bed tightens only on a human's finish and resets after.
+{
+  const st = await page.evaluate(() => {
+    const g = window.DARTS, a = g.audio, out = {};
+    const names = ['bull', 'treble', 'ton', 'oneEighty', 'aww', 'setIntensity', '_applause'];
+    out.has = names.every((n) => typeof a[n] === 'function');
+    const calls = [], orig = {};
+    ['bull', 'treble', 'ton', 'oneEighty', 'aww', 'setIntensity'].forEach((n) => { orig[n] = a[n]; a[n] = function () { calls.push(n + ':' + Array.prototype.join.call(arguments, ',')); }; });
+    try { orig.bull.call(a, true); orig.oneEighty.call(a); orig.ton.call(a); orig.aww.call(a); out.noThrow = true; } catch (e) { out.noThrow = false; }
+    g.levelIdx = null; g.selOpp = 'hotseat'; g.selMode = 'x01'; g._startMatch();
+    g.players[0].scoreState.remaining = 120; g.current = 1; g._nextTurn();
+    out.finish = calls.filter((c) => c.indexOf('setIntensity:') === 0).pop();
+    g.players[0].scoreState.remaining = 301; g.current = 1; g._nextTurn();
+    out.normal = calls.filter((c) => c.indexOf('setIntensity:') === 0).pop();
+    g.players[g.current].scoreState.turnScore = 180; g._endTurn();
+    out.t180 = calls.includes('oneEighty:');
+    g.state = 'play'; g.players[g.current].scoreState.turnScore = 140; g._endTurn();
+    out.ton = calls.includes('ton:');
+    ['bull', 'treble', 'ton', 'oneEighty', 'aww', 'setIntensity'].forEach((n) => { a[n] = orig[n]; });
+    g.state = 'menu';
+    return out;
+  });
+  const ok = st.has && st.noThrow && st.finish === 'setIntensity:1' && st.normal === 'setIntensity:0' && st.t180 && st.ton;
+  rec('stingers', ok, `methods=${st.has} no-throw=${st.noThrow} finish=${st.finish} normal=${st.normal} 180=${st.t180} ton=${st.ton}`);
+}
+
 // ---------------------------------------------------------------- curl lead
 // The curl starts bending 30ms before release (already turning as it leaves
 // the hand) but is rescaled so the landing, and so the score, is unchanged.

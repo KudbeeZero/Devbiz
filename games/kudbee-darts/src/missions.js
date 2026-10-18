@@ -151,7 +151,7 @@
         const r = prog.claimMission(b.i);
         if (r === 'claimed') {
           const def = BY_ID[prog.daily().missions[b.i].id];
-          this.audio.chime(2);
+          this.audio.coins();
           this.toasts.push({ text: '+' + def.coins + ' 🪙  +' + def.tokens + ' 💎', sub: def.text, life: 2.2 });
           if (this.particles && !this.reduceMotion) this.particles.burst(b.bx + b.bw / 2, b.by + b.bh / 2, C.gold, 22, 320, { glow: true, life: 0.7, size: 2.5, drag: 2 });
         }
