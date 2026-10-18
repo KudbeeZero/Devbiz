@@ -120,7 +120,7 @@
     if (!this.game.reduceMotion) {
       this._swayPhase += dt;
       const hold = Math.min(1, this._swayPhase / 2.2);
-      const amp = (0.6 + hold * 0.7) * (this.game.board.Rpx / 232);
+      const amp = (0.6 + hold * 0.7) * (this.game.board.Rpx / 232) * (this.steady || 1);   // upgrades steady the hand
       const a = this._swayPhase;
       this._swayX = (Math.sin(a * 7.3) * 0.7 + Math.sin(a * 4.1 + 1.3) * 0.3) * amp;
       this._swayY = (Math.sin(a * 6.1 + 0.7) * 0.7 + Math.sin(a * 3.7 + 2.1) * 0.3) * amp;

@@ -212,6 +212,7 @@
     else if (this.state === 'play') this._updatePlay(dt);
     else if (this.state === 'turnEnd') this._updateTurnEnd(dt);
     else if (this.state === 'matchOver') this._updateMatchOver(dt);
+    else if (this.state === 'reward') this._updateReward(dt);
     else if (this.state === 'pause') this._updatePause(dt);
     else if (this.state === 'workshop') this._updateWorkshop(dt);
     else if (this.state === 'leaderboard') this._updateLeaderboard(dt);
@@ -486,6 +487,11 @@
     // AIs throw themed darts too; the barrel follows their tier.
     if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark', shape: { Rookie: 'straight', Pro: 'sharkcut', Legend: 'hex' }[opp.tierName] || 'bomb' };
     else opp.dartParts = { tip: 'steel', flight: 'standard' };
+    // Upgraded parts steady your hand. League rivals (quick AI and the career
+    // ladder) carry upgrades for your league; campaign rivals keep their tuned
+    // accuracy. Pass-and-play earns no trophies, so nobody's darts are boosted.
+    this.humanSteady = this.selOpp === 'hotseat' && !level ? 1 : prog.steadiness();
+    if (opp.isAI && !level) opp.sigma *= KD.Progression.aiSteadiness(prog.leagueIdx());
 
     const modeKey = level ? level.mode : this.selMode;
     this.mode = modeKey === 'cricket' ? new KD.Mode_Cricket() : new KD.Mode_X01(modeKey === 'x301' ? 301 : 501);
@@ -540,7 +546,7 @@
 
     // Human — drag to aim, then SWIPE-RELEASE to throw (a tap won't throw).
     if (this.dart.state === 'ready') {
-      if (p.justDown) { this.dart.skin = cur.skin(); this.dart.parts = cur.dartParts || null; this.dart.beginAim(p.x, p.y); this.dart.sigma = this.humanSigma; }
+      if (p.justDown) { this.dart.skin = cur.skin(); this.dart.parts = cur.dartParts || null; this.dart.steady = this.current === 0 ? (this.humanSteady || 1) : 1; this.dart.beginAim(p.x, p.y); this.dart.sigma = this.humanSigma * this.dart.steady; }
     } else if (this.dart.state === 'aiming') {
       if (p.down) this.dart.updateAim(p.x, p.y, dt);
       if (p.justUp) {
@@ -814,11 +820,21 @@
       lvl = { idx: this.levelIdx, stars: stars, best: rec.best, won: won, par: L.par, boss: !!L.boss, next: won ? next : null };
     }
     const xp = this.progression.recordMatch(result);
+    // League reward: trophies and a chest for any match against the AI. It is
+    // banked now, so leaving early never loses it; the reward screen plays it back.
+    let reward = null;
+    if (this.levelIdx != null || this.selOpp !== 'hotseat') {
+      const prog = this.progression;
+      const trophies = prog.awardTrophies(won, lvl ? lvl.stars : 0);
+      const chest = prog.rollChest(won);
+      prog.applyChest(chest);
+      reward = { trophies: trophies, chest: chest, matchCoins: won ? 15 : 0 };
+    }
     this.matchResult = {
       winner: winner.name, won: won, xp: xp,
       darts: human.dartsThrown, t180: human.t180,
       checkout: result.checkout, mode: this.mode.id,
-      points: result.points, level: lvl,
+      points: result.points, level: lvl, reward: reward, rewardSeen: !reward,
     };
     this.matchOverTimer = 0.8;
 
@@ -873,6 +889,7 @@
     this.matchOverTimer -= dt;
     const p = this.input.pointer;
     if (this.matchOverTimer > 0) return;
+    if (!this.matchResult.rewardSeen) { this._enterReward(); return; }
     if (this.matchResult.level) {
       // Campaign leg: the card's buttons decide where to go next.
       const btns = this._matchButtons();
@@ -946,6 +963,7 @@
     if (this.state === 'menu') { this._drawMenu(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'levels') { this._drawLevels(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'workshop') { this._drawWorkshop(ctx); this._drawToasts(ctx); return; }
+    if (this.state === 'reward') { this._drawReward(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'leaderboard') { this._drawLeaderboard(ctx); this._drawToasts(ctx); return; }
 
     // World (board + darts + fx) under the camera transform. The board-lunge
@@ -1172,6 +1190,7 @@
 
     const btns = this._menuLayout();
     btns.forEach((b) => this._neonButton(ctx, b));
+    if (this._drawMenuLeague) this._drawMenuLeague(ctx);
 
     // Equipped-loadout mini preview beside the PLAY button.
     const d = this.progression.data;
@@ -2312,6 +2331,15 @@
       const I = G.info, m = I.m;
       btns.push({ id: 'buy', group: 'buy', x: I.x + m, y: I.y + I.h - G.buyH - m, w: I.w - m * 2, h: G.buyH, offer: off });
     }
+    // Nothing on trial: the card lists your equipped barrel, tip and flight,
+    // each with an UPGRADE button.
+    if (!pv) {
+      const I = G.info, k = this._textBump(), rowH = G.wide ? 62 : 37, top = I.y + I.top + (G.wide ? 12 : 6) * k;
+      const bw = G.wide ? 160 : 124;
+      [['shape', prog.data.darts.shape], ['tip', prog.data.darts.tip], ['flight', prog.data.darts.flight]].forEach(([g, id], i) => {
+        btns.push({ id: 'up:' + g, group: 'up', part: g, key: id, x: I.x + I.w - I.m - bw, y: top + i * rowH + 4, w: bw, h: rowH - 10 });
+      });
+    }
     return btns;
   };
 
@@ -2331,6 +2359,18 @@
       if (p.x < b.x || p.x > b.x + b.w || p.y < b.y || p.y > b.y + b.h) continue;
       this.audio.tick();
       if (b.group === 'back') { leave(); return; }
+      if (b.group === 'up') {
+        const r = prog.upgradePart(b.part, b.key);
+        const nm = (WS_CAT(b.part)[b.key] || {}).name || b.key;
+        if (r === 'upgraded') {
+          this.audio.chime(2); this.wsFlash = 0.9;
+          this.toasts.push({ text: nm.toUpperCase() + ' → LV ' + prog.partLv(b.part, b.key), sub: 'Steadier hand: aim wobble and scatter down', life: 2.4 });
+        } else if (r === 'cards') {
+          const c = prog.upgradeCost(b.part, b.key);
+          this.toasts.push({ text: 'NEED ' + (c.cards - prog.partCards(b.part, b.key)) + ' MORE CARDS', sub: 'Win matches to open chests', life: 2.2 });
+        } else if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
+        return;
+      }
       if (b.group === 'buy') {
         const pv = this.wsPreview;
         if (b.offer.kind === 'poor') {
@@ -2424,11 +2464,10 @@
       ctx.fillStyle = '#fff'; ctx.font = 'bold 20px "Space Grotesk", sans-serif';
       ctx.fillText(shown.name, tx, ty + I.nameGap * k);
     } else {
-      ctx.fillStyle = C.dim; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
-      ctx.fillText('YOUR DART', tx, ty);
-      const S = KD.Sprites;
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Space Grotesk", sans-serif';
-      ctx.fillText((S.SKINS[d.skins.equipped] || {}).name + ' · ' + (S.BARRELS[d.darts.shape] || {}).name, tx, ty + I.nameGap * k);
+      this._drawWsUpgrades(ctx, G);
+      ctx.restore();
+      ctx.textAlign = 'left';
+      return;
     }
     ty += (I.nameGap + I.gap + 4) * k;
     const cur = this._wsRatings(this._wsLoadout.call({ progression: this.progression, wsPreview: null }));
@@ -2437,11 +2476,47 @@
     if (pv && pv.group === 'skin') {
       ctx.fillStyle = C.gold; ctx.font = 'bold 12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('🔒 Level up or climb the ladder to unlock', I.x + I.w / 2, I.y + I.h - 16);
-    } else if (!pv) {
-      ctx.fillStyle = C.dim; ctx.font = '11px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('Tap a part to try it on before you buy', I.x + I.w / 2, I.y + I.h - 16);
     }
     ctx.restore();
+    ctx.textAlign = 'left';
+  };
+
+  // YOUR DART: the steadiness your upgrades give, then a row per equipped
+  // part with its level, cards toward the next level, and an UPGRADE button.
+  Game.prototype._drawWsUpgrades = function (ctx, G) {
+    const I = G.info, prog = this.progression, k = this._textBump(), m = I.m + 2;
+    const steady = Math.round((1 - prog.steadiness()) * 1000) / 10;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.dim; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+    ctx.fillText('YOUR DART', I.x + m, I.y + I.top);
+    ctx.textAlign = 'right'; ctx.fillStyle = steady > 0 ? C.green : C.dim;
+    ctx.fillText('STEADY HAND +' + steady + '%', I.x + I.w - m, I.y + I.top);
+    this._workshopLayout().filter((b) => b.group === 'up').forEach((b) => {
+      const part = WS_CAT(b.part)[b.key] || {}, lv = prog.partLv(b.part, b.key);
+      const cost = prog.upgradeCost(b.part, b.key), have = prog.partCards(b.part, b.key);
+      const ready = prog.canUpgrade(b.part, b.key);
+      const lx = I.x + m, barW = b.x - lx - 12;
+      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (G.wide ? 14 : 12) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(part.name + '  ', lx, b.y + (G.wide ? 16 : 12));
+      const nw = ctx.measureText(part.name + '  ').width;
+      ctx.fillStyle = this._tierColor(part.tier); ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+      ctx.fillText('LV ' + lv, lx + nw, b.y + (G.wide ? 16 : 12));
+      const by = b.y + b.h - (G.wide ? 14 : 9), bh = G.wide ? 10 : 7;
+      ctx.fillStyle = 'rgba(180,210,255,0.14)'; ctx.fillRect(lx, by, barW, bh);
+      ctx.fillStyle = ready ? C.green : cost ? C.cyan : C.gold;
+      ctx.fillRect(lx, by, barW * (cost ? Math.min(1, have / cost.cards) : 1), bh);
+      // Button.
+      const pulse = ready && !this.reduceMotion ? 0.5 + 0.5 * Math.sin(this.time * 5) : 0;
+      ctx.fillStyle = ready ? 'rgba(124,255,178,' + (0.16 + 0.1 * pulse) + ')' : 'rgba(10,16,32,0.6)';
+      this._roundRect(ctx, b.x, b.y, b.w, b.h, 9); ctx.fill();
+      ctx.lineWidth = ready ? 2 : 1.2; ctx.strokeStyle = ready ? C.green : 'rgba(180,210,255,0.25)';
+      this._roundRect(ctx, b.x, b.y, b.w, b.h, 9); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = ready ? '#fff' : cost ? C.text : C.gold;
+      ctx.font = 'bold ' + (G.wide ? 14 : 11) + 'px "Space Grotesk", sans-serif';
+      ctx.fillText(!cost ? 'MAX LEVEL' : ready ? '⬆ LV ' + cost.to + ' · 🪙' + cost.coins : have + '/' + cost.cards + ' cards', b.x + b.w / 2, b.y + b.h / 2 + 1);
+      ctx.textBaseline = 'alphabetic';
+    });
     ctx.textAlign = 'left';
   };
 
@@ -2487,6 +2562,16 @@
       ctx.setLineDash([]);
     }
 
+    // Level badge on owned parts that have been upgraded; a green dot when an upgrade is ready.
+    if (b.group !== 'skin' && b.owned) {
+      const lv = this.progression.partLv(b.group, b.key);
+      const ready = this.progression.canUpgrade(b.group, b.key);
+      if (ready) { ctx.fillStyle = C.green; ctx.beginPath(); ctx.arc(b.x + 10, b.y + 10, 5, 0, Math.PI * 2); ctx.fill(); }
+      if (lv > 1) {
+        ctx.fillStyle = C.gold; ctx.font = 'bold 11px "Space Grotesk", sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText('LV' + lv, b.x + (ready ? 18 : 7), b.y + 15);
+      }
+    }
     // Rarity badge
     if (tier !== 'common') {
       ctx.fillStyle = tierCol;
@@ -2594,10 +2679,11 @@
     btns.forEach((b) => {
       if (b.group === 'back') this._neonButton(ctx, { x: b.x, y: b.y, w: b.w, h: b.h, label: b.label, group: 'back', sel: false });
       else if (b.group === 'buy') this._drawBuyButton(ctx, b);
+      else if (b.group === 'up') { /* drawn inside the info card */ }
       else this._workshopChip(ctx, b);
     });
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Cosmetic only — every dart flies the same. Earn coins by winning matches.', this.viewW / 2, VIEW_H - 24);
+    ctx.fillText('Looks are cosmetic · upgrade levels steady your hand. Win matches for coins and chest cards.', this.viewW / 2, VIEW_H - 24);
     ctx.textAlign = 'left';
   };
 

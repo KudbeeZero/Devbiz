@@ -52,6 +52,32 @@ and the share of 3★ / 2★ wins. At the current tuning a casual player wins ab
 75% of World 1 down to about 30% of the last boss, and a strong player earns 3★
 on roughly half to two-thirds of the wins.
 
+## Leagues, chests & dart upgrades
+
+Every match against the AI (quick play, the career ladder or a Darts Birds level) ends on
+the **reward screen**: your **trophies** count into your league bar (+30 for a win, +5 per
+campaign star, −12 for a loss), a **LEAGUE UP!** moment plays when you cross into a new
+league, then your league's **chest** drops in. Tap it and it bursts open, dealing out
+**part cards** with each part's progress to its next level, and sometimes a **NEW PART!**
+you didn't own. Pass-and-play earns no trophies.
+
+| League | Trophies | Chest |
+|---|---|---|
+| Bronze | 0 | 2 cards · 15 coins |
+| Silver | 100 | 3 cards · 20 coins |
+| Gold | 250 | 3 cards · 30 coins |
+| Platinum | 450 | 4 cards · 40 coins |
+| Diamond | 700 | 5 cards · 55 coins |
+| Kudbee Champion | 1000 | 6 cards · 75 coins |
+
+You are never relegated below the best league you've reached. In the **Dart Workshop**,
+cards + coins level a barrel, tip or flight up to **LV 5** (3/6/12/24 cards and 40/100/220/450
+coins). Each level on the parts you have equipped steadies your hand by 1.5% (less aim
+wobble and landing scatter, up to 18% with all three maxed). League rivals carry matching
+upgrades (2 levels per league), so the climb stays fair; campaign rivals keep their
+bot-tuned accuracy. Rules and numbers live in `src/progression.js`; the reward screen is
+`src/reward.js`.
+
 ## Controls
 
 | Action            | Mouse / Touch                              | Keyboard |
@@ -124,8 +150,8 @@ freely. **Try before you buy:** tapping a part you don't own puts it on the big 
 dart (tap it again to take it off) and the info card shows its rarity and how it changes
 the loadout's style ratings; **BUY & EQUIP** spends the coins (or says how many more you
 need). Tapping a part you own equips it.
-Everything in the Workshop is **purely cosmetic** — every dart flies through the exact same
-physics, so the game stays fair.
+Finishes, shapes and prints are **cosmetic**; only **upgrade levels** (see Leagues above)
+change how steady your throw is.
 
 ## Leaderboard
 

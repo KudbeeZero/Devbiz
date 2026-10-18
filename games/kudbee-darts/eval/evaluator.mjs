@@ -521,6 +521,75 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('workshop-try-on', ok, `try=${wt.tryOn} coins=${wt.coinsAfterTry} shown=${wt.shownTip} poor=${wt.poorBtn}/${wt.poorKept} buy=${wt.buyBtn}->${wt.bought} toggle=${wt.toggledOff} equip=${wt.equipOwned} leave=${wt.leave} ratings=${wt.ratings}`);
 }
 
+// ---------------------------------------------------------------- leagues, chests, upgrades
+// Trophies move you through the leagues (never relegated below your best),
+// every AI match ends on the reward screen (trophies -> chest -> cards ->
+// CONTINUE), chest cards only go to parts you own, cards + coins level a part
+// up, levels steady your hand, league rivals get matching upgrades, and
+// pass-and-play earns nothing.
+{
+  const lg = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    prog.data.league = { trophies: 90, best: 0 };
+    const w = prog.awardTrophies(true, 0);
+    out.promo = w.delta + '/' + w.promoted + '/' + P.LEAGUES[w.leagueTo].name;            // 30/true/SILVER
+    prog.data.league.trophies = 105;
+    out.floor = prog.awardTrophies(false, 0).to;                                           // 100: Silver floor
+    out.star = prog.awardTrophies(true, 3).delta;                                          // 45
+    // Chests: only owned, non-maxed parts get cards; a won chest has the league's count.
+    prog.data.ownedShapes = ['torpedo']; prog.data.ownedTips = ['steel']; prog.data.ownedFlights = ['standard'];
+    prog.data.parts = { cards: {}, lv: { 'flight:standard': 5 } };
+    let bad = 0, total = 0;
+    for (let i = 0; i < 40; i++) {
+      const ch = prog.rollChest(true);
+      ch.cards.forEach((c) => { total += c.n; if (!prog.ownsPart(c.group, c.id) || c.id === 'standard') bad++; });
+    }
+    out.chestCardsOk = bad === 0 && total >= 40 * 3;
+    // Upgrade: needs cards then coins; a level steadies the hand.
+    prog.data.coins = 30; prog.data.parts.cards['shape:torpedo'] = 2;
+    out.upCards = prog.upgradePart('shape', 'torpedo');
+    prog.data.parts.cards['shape:torpedo'] = 3;
+    out.upPoor = prog.upgradePart('shape', 'torpedo');
+    prog.data.coins = 100;
+    out.up = prog.upgradePart('shape', 'torpedo') + '/' + prog.partLv('shape', 'torpedo') + '/' + prog.data.coins;  // upgraded/2/60
+    out.steady = prog.steadiness();
+    // A bad save is cleaned up.
+    localStorage.setItem('kd.profile.v1', JSON.stringify({ version: 1, league: { trophies: -5, best: 99 }, parts: { cards: { 'shape:torpedo': 'x', 'evil:x': 3 }, lv: { 'tip:steel': 77 } } }));
+    const q = new window.KD.Progression().data;
+    out.clean = q.league.trophies + '/' + q.league.best + '/' + JSON.stringify(q.parts);
+    // A real AI match: steadier you, upgraded rival, reward screen flow.
+    prog.data.league = { trophies: 260, best: 2 }; prog.save();
+    g.levelIdx = null; g.selOpp = 'Pro'; g.selMode = 'x01'; g._startMatch();
+    out.humanSteady = g.humanSteady;
+    out.aiSigma = +(g.players[1].sigma / new window.KD.AIPlayer('x', 'Pro', 'violet').sigma).toFixed(3);   // 0.94 in Gold
+    g._matchWin(g.players[0]);
+    out.reward = !!g.matchResult.reward;
+    for (let i = 0; i < 90; i++) { g._update(1 / 60); }
+    out.flow = [g.state];
+    const tap = () => { g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false; };
+    for (let i = 0; i < 200 && g.rw.phase !== 'chest'; i++) g._update(1 / 60);
+    for (let i = 0; i < 40; i++) g._update(1 / 60);
+    out.flow.push(g.rw.phase); tap(); out.flow.push(g.rw.phase);
+    tap();                                               // deal everything now
+    const btn = g._rewardButtons().find((b) => b.id === 'continue');
+    g.input.pointer.x = btn.x + 5; g.input.pointer.y = btn.y + 5; tap();
+    out.flow.push(g.state + ':' + g.matchResult.rewardSeen);
+    // Pass-and-play: no trophies, no chest, no boost.
+    const t0 = prog.data.league.trophies;
+    g.selOpp = 'hotseat'; g._startMatch(); out.hotSteady = g.humanSteady; g._matchWin(g.players[0]);
+    out.hotNone = !g.matchResult.reward && prog.data.league.trophies === t0;
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = lg.promo === '30/true/SILVER' && lg.floor === 100 && lg.star === 45 && lg.chestCardsOk
+    && lg.upCards === 'cards' && lg.upPoor === 'poor' && lg.up === 'upgraded/2/60' && Math.abs(lg.steady - 0.925) < 1e-9          // 5 levels: flight maxed (+4), barrel LV 2 (+1)
+    && lg.clean === '1000/5/{"cards":{},"lv":{"tip:steel":5}}'   // best clamped to Champion lifts trophies to its floor
+    && Math.abs(lg.humanSteady - 0.925) < 1e-9 && lg.aiSigma === 0.94 && lg.reward
+    && lg.flow.join() === 'reward,chest,open,matchOver:true' && lg.hotSteady === 1 && lg.hotNone;
+  rec('leagues-upgrades', ok, `promo=${lg.promo} floor=${lg.floor} star=${lg.star} chest-cards=${lg.chestCardsOk} up=${lg.upCards}/${lg.upPoor}/${lg.up} steady=${lg.steady} clean=${lg.clean} you=${lg.humanSteady} ai×${lg.aiSigma} flow=${lg.flow} hotseat=${lg.hotSteady}/${lg.hotNone}`);
+}
+
 // ---------------------------------------------------------------- curl lead
 // The curl starts bending 30ms before release (already turning as it leaves
 // the hand) but is rescaled so the landing, and so the score, is unchanged.
