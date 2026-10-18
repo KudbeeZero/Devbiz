@@ -18,6 +18,9 @@ and a printed flight (stripe, racing, chevron, flame, star, ghost). All cosmetic
 - **Locally:** from the repo root run `python3 -m http.server 8000`, then open
   <http://localhost:8000/games/kudbee-darts/index.html>
 
+Every launch opens on a short **KUDBEE STUDIOS** card ("presents KUDBEE DARTS",
+about 3 seconds; tap, click or any key skips it), then the menu.
+
 ## Darts Birds (campaign)
 
 **DARTS BIRDS** on the menu opens a level map in the Angry Birds style: three worlds of

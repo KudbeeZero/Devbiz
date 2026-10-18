@@ -47,6 +47,18 @@ await page.evaluate(() => {
 });
 const step = (n) => page.evaluate((k) => window.__step(k), n);
 
+// ---------------------------------------------------------------- studio intro
+const intro = await page.evaluate(() => {
+  const g = window.DARTS, out = { first: g.state };
+  window.__step(90); out.mid = g.state;                      // 1.5s in: still on the card
+  window.__step(150); out.after = g.state;                   // 4s in: on to the menu
+  g.state = 'intro'; g.introT = 1; g.input.pointer.justDown = true; g._updateIntro(0); out.skip = g.state;
+  g.state = 'menu'; window.__step(2);
+  return out;
+});
+rec('studio-intro', intro.first === 'intro' && intro.mid === 'intro' && intro.after === 'menu' && intro.skip === 'menu',
+  `opens on KUDBEE STUDIOS (${intro.first}), still there at 1.5s (${intro.mid}), menu by 4s (${intro.after}), tap skips (${intro.skip})`);
+
 // ---------------------------------------------------------------- board
 const board = await page.evaluate(() => {
   const g = window.DARTS, b = g.board;

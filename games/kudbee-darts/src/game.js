@@ -100,7 +100,9 @@
       this.toasts.push({ text: text, sub: sub, life: 2.4 });
     };
 
-    this.state = 'menu';
+    // Every launch opens on the KUDBEE STUDIOS card, then the menu.
+    this.state = 'intro';
+    this.introT = 0;
     this.loop = new KD.Loop(this._update.bind(this), this._render.bind(this));
     this._bindMeta();
   }
@@ -204,7 +206,8 @@
     this.input.poll();
     this.time += dt;
 
-    if (this.state === 'menu') this._updateMenu(dt);
+    if (this.state === 'intro') this._updateIntro(dt);
+    else if (this.state === 'menu') this._updateMenu(dt);
     else if (this.state === 'levels') this._updateLevels(dt);
     else if (this.state === 'play') this._updatePlay(dt);
     else if (this.state === 'turnEnd') this._updateTurnEnd(dt);
@@ -924,6 +927,7 @@
     const backLink = document.querySelector('.back-link');
     if (backLink) backLink.style.display = this.state === 'menu' ? '' : 'none';
     ctx.clearRect(0, 0, this.viewW, VIEW_H);
+    if (this.state === 'intro') { this._drawIntro(ctx); return; }
 
     // Backdrop: a campaign match plays in its world's scenery; otherwise the
     // Firefly image if provided, else the procedural neon stage.
@@ -1000,6 +1004,107 @@
       ctx.fillStyle = '#45586a'; ctx.font = '12px monospace'; ctx.textAlign = 'left';
       ctx.fillText('fps ' + this.loop.fps, 8, VIEW_H - 8);
     }
+  };
+
+  // ---- KUDBEE STUDIOS intro ---------------------------------------------
+  // A short studio card before the menu: the hex mark, KUDBEE, STUDIOS
+  // spelled out, then "presents KUDBEE DARTS". A tap, click or key skips it.
+  const INTRO_DUR = 3.4;
+
+  Game.prototype._updateIntro = function (dt) {
+    this.introT += dt;
+    const skip = this.input.pointer.justDown || this.input.justPressed('confirm') || this.input.justPressed('back');
+    if (this.introT >= INTRO_DUR || (skip && this.introT > 0.25)) this.state = 'menu';
+  };
+
+  Game.prototype._drawIntro = function (ctx) {
+    const t = this.introT, W = this.viewW, H = VIEW_H, cx = W / 2;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const ease = (v) => 1 - Math.pow(1 - clamp01(v), 3);
+    const still = this.reduceMotion;
+
+    // Deep night backdrop with a soft spotlight behind the mark.
+    ctx.fillStyle = '#05070f';
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(cx, 300, 10, cx, 300, 420);
+    glow.addColorStop(0, 'rgba(255,196,64,' + (0.22 * ease(t / 0.8)).toFixed(3) + ')');
+    glow.addColorStop(1, 'rgba(5,7,15,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // The whole card fades out over the last half second.
+    const out = clamp01((INTRO_DUR - t) / 0.5);
+    ctx.save();
+    ctx.globalAlpha = out;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // Hex mark with a dart in its centre, popping in.
+    const a1 = ease(t / 0.6);
+    const sc = still ? 1 : 0.6 + 0.4 * a1 + Math.sin(clamp01(t / 0.6) * Math.PI) * 0.08;
+    ctx.save();
+    ctx.globalAlpha = out * a1;
+    ctx.translate(cx, 200); ctx.scale(sc, sc);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = Math.PI / 6 + i * Math.PI / 3;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(ang) * 62, Math.sin(ang) * 62);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,196,64,0.12)'; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = C.gold;
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 22; ctx.stroke(); ctx.shadowBlur = 0;
+    // Bullseye rings and a dart stuck in the middle.
+    ctx.lineWidth = 3;
+    [34, 20].forEach((r, i) => { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = i ? C.cyan : 'rgba(255,255,255,0.8)'; ctx.stroke(); });
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fillStyle = '#ff4d6d'; ctx.fill();
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = '#e8eef8'; ctx.fillRect(4, -2.5, 42, 5);
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(40, 0); ctx.lineTo(60, -13); ctx.lineTo(56, 0); ctx.lineTo(60, 13); ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // KUDBEE, sliding up into place.
+    const a2 = ease((t - 0.3) / 0.6);
+    ctx.globalAlpha = out * a2;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 26;
+    ctx.font = 'bold 92px "Space Grotesk", sans-serif';
+    ctx.fillText('KUDBEE', cx, 340 + (still ? 0 : (1 - a2) * 24));
+    ctx.shadowBlur = 0;
+
+    // S T U D I O S, one letter at a time.
+    const word = 'STUDIOS', gap = 34;
+    ctx.font = 'bold 30px "Space Grotesk", sans-serif';
+    ctx.fillStyle = C.cyan;
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 12;
+    for (let i = 0; i < word.length; i++) {
+      ctx.globalAlpha = out * ease((t - 0.75 - i * 0.07) / 0.3);
+      ctx.fillText(word[i], cx + (i - (word.length - 1) / 2) * gap, 412);
+    }
+    ctx.shadowBlur = 0;
+
+    // A gold rule, then "presents KUDBEE DARTS".
+    const a3 = ease((t - 1.35) / 0.5);
+    ctx.globalAlpha = out * a3;
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(cx - 150 * a3, 448, 300 * a3, 2);
+    ctx.fillStyle = C.dim;
+    ctx.font = 'italic 18px "Space Grotesk", sans-serif';
+    ctx.fillText('presents', cx, 482);
+    const a4 = ease((t - 1.75) / 0.5);
+    ctx.globalAlpha = out * a4;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 18;
+    ctx.font = 'bold 44px "Space Grotesk", sans-serif';
+    ctx.fillText('KUDBEE DARTS', cx, 530);
+    ctx.shadowBlur = 0;
+
+    // Skip hint.
+    ctx.globalAlpha = out * 0.55 * clamp01((t - 0.6) / 0.4);
+    ctx.fillStyle = C.dim;
+    ctx.font = '13px "Space Grotesk", sans-serif';
+    ctx.fillText('TAP TO SKIP', cx, H - 64);
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   };
 
   // ---- Menu render -------------------------------------------------------
