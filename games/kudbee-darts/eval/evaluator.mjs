@@ -400,6 +400,36 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('think-box', ok, `world=${tb.world} first=${tb.first} opens-after-boss1=${tb.shutBefore && tb.openAfterBoss1} next-skips-side=${tb.nextSkipsSide} T20=${tb.t20} T19=${tb.t19} stuck-in-crate=${tb.stuckInCrate} ai-dodges=${tb.aiDodges} slides=${tb.slides}`);
 }
 
+// ---------------------------------------------------------------- dart workshop: barrels
+// Five barrel shapes (torpedo free, the rest bought with coins), worn in matches,
+// thrown by the AI by tier, cleaned up from a bad save, and each draws a distinct dart.
+{
+  const ws = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, B = window.KD.Sprites.BARRELS, out = {};
+    const snap = JSON.stringify(prog.data);
+    out.shapes = Object.keys(B).join();
+    prog.data.coins = 60; prog.data.ownedShapes = ['torpedo']; prog.data.darts.shape = 'torpedo';
+    out.poor = prog.chooseShape('hex');                    // 180 > 60
+    out.buy = prog.chooseShape('straight'); out.coins = prog.data.coins;   // 60 - 50
+    out.equipFree = prog.chooseShape('torpedo');
+    prog.chooseShape('straight');
+    g.levelIdx = null; g.selOpp = 'Pro'; g._startMatch();
+    out.youWear = g.players[0].dartParts.shape; out.aiWears = g.players[1].dartParts.shape;
+    // A save naming an unknown or unowned barrel falls back to the torpedo.
+    localStorage.setItem('kd.profile.v1', JSON.stringify({ version: 1, darts: { tip: 'steel', flight: 'standard', shape: 'hex' }, ownedShapes: ['torpedo'] }));
+    out.cleaned = new window.KD.Progression().data.darts.shape;
+    // Each barrel draws a different dart.
+    const c = document.createElement('canvas'); c.width = 260; c.height = 60; const x = c.getContext('2d');
+    const sig = Object.keys(B).map((k) => { x.clearRect(0, 0, 260, 60); x.save(); x.translate(250, 30); g.sprites.drawDart(x, 240, window.KD.Sprites.SKINS.cyan, 0, { shape: k }); x.restore(); const d = x.getImageData(0, 0, 260, 60).data; let h = 0; for (let i = 0; i < d.length; i += 97) h = (h * 31 + d[i]) >>> 0; return h; });
+    out.distinct = new Set(sig).size === sig.length;
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = ws.shapes === 'torpedo,straight,bomb,sharkcut,hex' && ws.poor === 'poor' && ws.buy === 'bought' && ws.coins === 10
+    && ws.equipFree === 'equipped' && ws.youWear === 'straight' && ws.aiWears === 'sharkcut' && ws.cleaned === 'torpedo' && ws.distinct;
+  rec('workshop-barrels', ok, `shapes=${ws.shapes} poor=${ws.poor} buy=${ws.buy} coins=${ws.coins} you=${ws.youWear} ai(Pro)=${ws.aiWears} bad-save->${ws.cleaned} distinct=${ws.distinct}`);
+}
+
 // ---------------------------------------------------------------- flight simulator
 // The dart flies a simulated projectile (like the archery arrow): an ideal
 // flick lands where the hand error put it, a soft flick drops lower, a hard one

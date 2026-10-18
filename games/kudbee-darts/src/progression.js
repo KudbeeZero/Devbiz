@@ -41,6 +41,7 @@
   // earned from matches. (Cosmetic only — they never change the physics.)
   const TIP_COST    = { steel: 0, needle: 40, neon: 80, goldp: 120, plasma: 200 };
   const FLIGHT_COST = { standard: 0, slim: 30, kite: 60, shark: 100, star: 140, ghost: 160 };
+  const SHAPE_COST  = { torpedo: 0, straight: 50, bomb: 70, sharkcut: 110, hex: 180 };
 
   function defaults() {
     return {
@@ -55,9 +56,10 @@
       },
       skins: { owned: ['cyan'], equipped: 'cyan' },
       // Dart Workshop loadout: equipped + owned tips/flights.
-      darts: { tip: 'steel', flight: 'standard' },
+      darts: { tip: 'steel', flight: 'standard', shape: 'torpedo' },
       ownedTips: ['steel'],
       ownedFlights: ['standard'],
+      ownedShapes: ['torpedo'],
       // Learned flick model: ideal release speed this device's player tends to
       // throw at, the running sample count, and the most recent speeds.
       flick: { ideal: FLICK_DEFAULT, n: 0, recent: [] },
@@ -102,6 +104,8 @@
           this.data.darts = Object.assign(d.darts, parsed.darts || {});
           this.data.ownedTips = parsed.ownedTips || d.ownedTips;
           this.data.ownedFlights = parsed.ownedFlights || d.ownedFlights;
+          this.data.ownedShapes = Array.isArray(parsed.ownedShapes) ? parsed.ownedShapes : d.ownedShapes;
+          if (!KD.Sprites.BARRELS[this.data.darts.shape] || this.data.ownedShapes.indexOf(this.data.darts.shape) < 0) this.data.darts.shape = 'torpedo';
           this.data.flick = Object.assign(d.flick, parsed.flick || {});
           if (!Array.isArray(this.data.flick.recent)) this.data.flick.recent = [];
           this.data.settings = Object.assign(d.settings, parsed.settings || {});
@@ -184,6 +188,21 @@
   Progression.prototype.flightCost = function (id) { return FLIGHT_COST[id] || 0; };
   Progression.prototype.ownsTip = function (id) { return this.data.ownedTips.indexOf(id) !== -1; };
   Progression.prototype.ownsFlight = function (id) { return this.data.ownedFlights.indexOf(id) !== -1; };
+  Progression.prototype.shapeCost = function (id) { return SHAPE_COST[id] || 0; };
+  Progression.prototype.ownsShape = function (id) { return this.data.ownedShapes.indexOf(id) !== -1; };
+  Progression.prototype.chooseShape = function (id) {
+    if (!this.ownsShape(id)) {
+      const cost = this.shapeCost(id);
+      if (this.data.coins < cost) return 'poor';
+      this.data.coins -= cost;
+      this.data.ownedShapes.push(id);
+      this.data.darts.shape = id; this.save();
+      if (this.onToast) this.onToast('BARREL UNLOCKED', (KD.Sprites.BARRELS[id] || {}).name || id);
+      return 'bought';
+    }
+    this.data.darts.shape = id; this.save();
+    return 'equipped';
+  };
 
   // Buy-if-needed-then-equip. Returns 'equipped' | 'bought' | 'poor'.
   Progression.prototype.chooseTip = function (id) {

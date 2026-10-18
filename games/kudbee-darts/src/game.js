@@ -461,7 +461,7 @@
   Game.prototype._startMatch = function () {
     const prog = this.progression;
     const human = new KD.Player('You', prog.data.skins.equipped);
-    human.dartParts = { tip: prog.data.darts.tip, flight: prog.data.darts.flight };
+    human.dartParts = { tip: prog.data.darts.tip, flight: prog.data.darts.flight, shape: prog.data.darts.shape };
     let opp;
     this.isLadder = false;
     this.ladderRank = prog.data.ladderRank;
@@ -480,7 +480,8 @@
       opp = new KD.AIPlayer(this.selOpp + ' Bot', this.selOpp, 'violet');
     }
     // AIs throw themed darts too (neon tip + a flight chosen from their name).
-    if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark' };
+    // AIs throw themed darts too; the barrel follows their tier.
+    if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark', shape: { Rookie: 'straight', Pro: 'sharkcut', Legend: 'hex' }[opp.tierName] || 'bomb' };
     else opp.dartParts = { tip: 'steel', flight: 'standard' };
 
     const modeKey = level ? level.mode : this.selMode;
@@ -1958,28 +1959,44 @@
   // ====================================================================
   // DART WORKSHOP  — pick a barrel (skin), a tip and a flight.
   // ====================================================================
+  // Workshop geometry. 4:3 screens stack the preview above four rows of
+  // chips (finish, barrel, tip, flight); wide screens (phones in landscape)
+  // put the preview and stats on the left and taller chips on the right,
+  // since they have width to spare but little height.
+  Game.prototype._wsGeom = function () {
+    const wide = this.viewW >= 1300;
+    return wide
+      ? { wide: true, cx: this.viewW * 0.63, rows: [164, 298, 432, 566], chipH: 100,
+          dartX: this.viewW * 0.2 + 150, dartY: 330, dartLen: 340, statX: this.viewW * 0.2 - 130, statY: 430 }
+      : { wide: false, cx: this.viewW / 2, rows: [256, 344, 432, 520], chipH: 66,
+          dartX: this.viewW / 2 + 130, dartY: 150, dartLen: 260, statX: this.viewW / 2 + 160, statY: 130 };
+  };
+
   Game.prototype._workshopLayout = function () {
     const prog = this.progression;
     const btns = [];
     btns.push({ id: 'back', label: '← BACK', x: 24, y: 72, w: 110, h: 40, group: 'back' });
 
+    const G = this._wsGeom(), WS_ROWS = G.rows, WS_CHIP_H = G.chipH;
     const row = (ids, kind, y, cw, gap, sel, owned, cost) => {
       const total = ids.length * cw + (ids.length - 1) * gap;
-      let x = this.viewW / 2 - total / 2;
+      let x = G.cx - total / 2;
       ids.forEach((id) => {
         btns.push({
-          id: kind + ':' + id, group: kind, key: id, x: x, y: y, w: cw, h: 70,
+          id: kind + ':' + id, group: kind, key: id, x: x, y: y, w: cw, h: WS_CHIP_H,
           sel: sel(id), owned: owned(id), cost: cost(id),
         });
         x += cw + gap;
       });
     };
 
-    row(['cyan', 'violet', 'green', 'gold', 'ember'], 'skin', 286, 132, 10,
+    row(['cyan', 'violet', 'green', 'gold', 'ember'], 'skin', WS_ROWS[0], 132, 10,
       (id) => prog.data.skins.equipped === id, (id) => prog.owns(id), () => 0);
-    row(Object.keys(KD.Sprites.TIPS), 'tip', 396, 132, 10,
+    row(Object.keys(KD.Sprites.BARRELS), 'shape', WS_ROWS[1], 132, 10,
+      (id) => prog.data.darts.shape === id, (id) => prog.ownsShape(id), (id) => prog.shapeCost(id));
+    row(Object.keys(KD.Sprites.TIPS), 'tip', WS_ROWS[2], 132, 10,
       (id) => prog.data.darts.tip === id, (id) => prog.ownsTip(id), (id) => prog.tipCost(id));
-    row(Object.keys(KD.Sprites.FLIGHTS), 'flight', 506, 108, 9,
+    row(Object.keys(KD.Sprites.FLIGHTS), 'flight', WS_ROWS[3], 108, 9,
       (id) => prog.data.darts.flight === id, (id) => prog.ownsFlight(id), (id) => prog.flightCost(id));
     return btns;
   };
@@ -1999,6 +2016,10 @@
         else this.toasts.push({ text: 'LOCKED', sub: 'Level up or climb the ladder', life: 2.2 });
       } else if (b.group === 'tip') {
         const r = this.progression.chooseTip(b.key);
+        if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
+        else this.audio.chime(r === 'bought' ? 1 : 0);
+      } else if (b.group === 'shape') {
+        const r = this.progression.chooseShape(b.key);
         if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
         else this.audio.chime(r === 'bought' ? 1 : 0);
       } else if (b.group === 'flight') {
@@ -2038,7 +2059,7 @@
   Game.prototype._workshopChip = function (ctx, b) {
     const r = 12;
     const skinCol = (KD.Sprites.SKINS[b.key] || {}).color || C.cyan;
-    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
+    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'shape' ? KD.Sprites.BARRELS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
     const cosmetic = cat[b.key];
     const tier = cosmetic ? cosmetic.tier : 'common';
     const tierCol = this._tierColor(tier);
@@ -2060,19 +2081,33 @@
     ctx.shadowBlur = 0;
 
     const cx = b.x + b.w / 2;
+    // Preview centre: middle of the room above the name and status lines.
+    const py = b.y + Math.max(16, (b.h - 5 - 25 * this._textBump()) / 2);
     // Mini preview, clipped to the chip so it never spills onto its neighbours.
     ctx.save();
     this._roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, r); ctx.clip();
     if (b.group === 'skin') {
-      ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
+      ctx.save(); ctx.translate(cx, py); ctx.rotate(-Math.PI * 0.12);
       this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
+      ctx.restore();
+    } else if (b.group === 'shape') {
+      // Side-on, with the barrel centred in the chip so its shape and grip read.
+      const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
+      const d = this.progression.data.darts;
+      ctx.save(); ctx.translate(cx + 44, py);
+      this.sprites.drawDart(ctx, 116, skin, 0.2, { tip: d.tip, flight: d.flight, shape: b.key });
       ctx.restore();
     } else {
       const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
-      const parts = b.group === 'tip' ? { tip: b.key, flight: this.progression.data.darts.flight }
-                                       : { tip: this.progression.data.darts.tip, flight: b.key };
-      ctx.save(); ctx.translate(cx + 22, b.y + 28); ctx.rotate(Math.PI);
-      this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
+      const dd = this.progression.data.darts;
+      const parts = b.group === 'tip' ? { tip: b.key, flight: dd.flight, shape: dd.shape }
+                                       : { tip: dd.tip, flight: b.key, shape: dd.shape };
+      // Pointing left, slid so the part being chosen sits mid-chip: the tip
+      // and barrel for tips, the flight (about 0.9 of the length back) for flights.
+      // Flights are tall, so short chips get a smaller dart.
+      const L = b.group === 'flight' && b.h < 80 ? 80 : 102;
+      ctx.save(); ctx.translate(b.group === 'tip' ? cx - L / 3 : cx - L * 0.9, py); ctx.rotate(Math.PI);
+      this.sprites.drawDart(ctx, L, skin, 0.2, parts);
       ctx.restore();
     }
     ctx.restore();
@@ -2112,31 +2147,31 @@
     ctx.save();
     // The dart is drawn back from its tip, so the tip sits right of centre and
     // the whole dart fits between the subtitle and the BARREL row.
-    ctx.translate(this.viewW / 2 + 150, 178 + bob);
-    ctx.rotate(-Math.PI * 0.06 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.04));
+    const G = this._wsGeom();
+    ctx.translate(G.dartX, G.dartY + bob);
+    ctx.rotate(-Math.PI * 0.03 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.03));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, G.dartLen, skin, 0.6, d.darts);
     ctx.restore();
 
     // Combined stats panel (bottom-right of preview).
     const skinObj = KD.Sprites.SKINS[d.skins.equipped];
     const tipObj = KD.Sprites.TIPS[d.darts.tip] || KD.Sprites.TIPS.steel;
     const flightObj = KD.Sprites.FLIGHTS[d.darts.flight] || KD.Sprites.FLIGHTS.standard;
-    const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
-    const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
-    const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
+    const barObj = KD.Sprites.BARRELS[d.darts.shape] || KD.Sprites.BARRELS.torpedo;
+    const parts4 = [skinObj, barObj, tipObj, flightObj];
+    const sum = (k) => parts4.reduce((a, o) => a + (o[k] || 0), 0);
+    const totalSpeed = sum('speed'), totalStability = sum('stability'), totalSlimness = sum('slimness');
     const sk = this._textBump();
-    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(this.viewW / 2 + 160, 130, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(G.statX, G.statY, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
     ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
-    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', this.viewW / 2 + 170, 145);
-    this._drawStatBars(ctx, this.viewW / 2 + 170, 145 + 12 * this._textBump(), totalSpeed, totalStability, totalSlimness);
+    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', G.statX + 10, G.statY + 15);
+    this._drawStatBars(ctx, G.statX + 10, G.statY + 15 + 12 * sk, totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText('BARREL', this.viewW / 2, 274);
-    ctx.fillText('TIP', this.viewW / 2, 384);
-    ctx.fillText('FLIGHT', this.viewW / 2, 494);
+    ['FINISH', 'BARREL', 'TIP', 'FLIGHT'].forEach((t, i) => ctx.fillText(t, G.cx, G.rows[i] - 7));
     ctx.restore();
 
     const btns = this._workshopLayout();

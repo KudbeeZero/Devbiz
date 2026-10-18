@@ -7,8 +7,10 @@ Play **301**, **501** and **Cricket** against a friend (pass-and-play) or a leag
 rivals. **Drag to aim, then swipe-release to throw** — a true flick whose speed sets the
 power and curl (a tap won't throw). Watch the score land on a **digital seven-segment
 scoreboard** that pops and sheds bricks, follow the **on-board checkout guide** that lights
-up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, and unlock
-**neon dart skins**.
+up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, and build
+your own dart in the **Dart Workshop**: a finish (colour), a barrel (Torpedo, Straight
+tungsten with anodised bands, Front Bomb with a knurled grip, Shark Cut, Kudbee Hex), a tip
+and a printed flight (stripe, racing, chevron, flame, star, ghost). All cosmetic.
 
 ## Play
 
