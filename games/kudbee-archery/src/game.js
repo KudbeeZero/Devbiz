@@ -15,6 +15,8 @@ KAR.Game = class {
     this.standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches));
     this.quality = 1; this.slow = 0; this.slowN = 0; this._fit();
     KAR.Store.load();
+    // a save from before TROPHIES already earned some: count them as announced, quietly (no flood of cards on the first arrow)
+    if (!Object.keys(KAR.Store.data.ach).length && KAR.achNew(KAR.Store.data).length) KAR.Store.save();
     this.audio = new KAR.Audio();
     this.screen = 'menu';              // menu | play | paused | over
     this.time = 0; this.last = 0; this.focusIdx = -1; this.focusPending = true; this.overlayT = 0; this.shake = 0;
@@ -158,6 +160,8 @@ KAR.Game = class {
     else if (id === 'levels') { this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
     else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
+    else if (id === 'trophies') { this.achPage = 0; this.setScreen('trophies'); }
+    else if (id === 'tprev' || id === 'tnext') this.achPage = KAR.Util.clamp((this.achPage | 0) + (id === 'tnext' ? 1 : -1), 0, Math.ceil(KAR.ACH.length / 9) - 1);
     else if (id === 'back') this.setScreen('menu');
     else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
     else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; D.mode = 5; KAR.Store.save(); if (this.screen === 'levels') this.startMatch(); } }
@@ -266,7 +270,7 @@ KAR.Game = class {
     const k = e.key;
     if (down) this._firstGesture();
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
-    if (down && k === 'Escape' && this.screen === 'levels') { this.activate('back'); return; }
+    if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies')) { this.activate('back'); return; }
     if (down && (k === 'p' || k === 'P' || k === 'Escape')) { e.preventDefault(); if (this.screen === 'play' || this.screen === 'paused') this.togglePause(); return; }
     if (k === 'b' || k === 'B' || k === 'Shift') { this.holding = down; return; }
     if (this.screen !== 'play') {
@@ -339,6 +343,8 @@ KAR.Game = class {
       else this._banner(nm[res.ring], res.ring >= 7 ? '#ffd0c8' : '#c4ecff', res.ring >= 7 ? '#e8483a' : '#2f86d8', '', 70);
     }
     if (f.shooter === 0 && !res.star) { if (res.ring === 10) st.tens++; if (res.x) st.xs++; }       // a STAR BOX is not a gold
+    if (f.shooter === 0 && res.star) st.starBoxes++;
+    this._achCheck();
     this.bp = 'result'; this.bpT = 0;
     if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
   }
@@ -358,9 +364,19 @@ KAR.Game = class {
       this.pops.push({ x: p.x, y: p.y, age: 0, ring: 10, team: 0 });
     }
     this.trickShown = m.score; this.trickCombo = res.mult; this.shake = Math.max(this.shake, 5);
+    KAR.Store.data.stats.pops += res.pops.length; this._achCheck();
     const two = res.pops.length > 1, gold = res.bonusArrows > 0;
     this._banner(two ? 'DOUBLE POP!' : 'POP!', '#ffffff', gold ? '#ffb82e' : '#ff5d8a', '+' + res.points + (res.mult > 1 ? '  \u00b7  COMBO \u00d7' + res.mult : '') + (gold ? '  \u00b7  +' + res.bonusArrows + ' ARROWS' : ''), two ? 76 : 88);
     this.audio.pop(res.pops.length, res.mult); this.buzz(res.pops.length > 1 ? [25, 40, 25] : 25); if (two || gold) this._burst(30);
+  }
+
+  // TROPHIES: announce anything newly reached (a card slides in at the top; one at a time)
+  _achCheck() {
+    const got = KAR.achNew(KAR.Store.data);
+    if (!got.length) return;
+    KAR.Store.save();
+    if (!this.achQ) this.achQ = [];
+    for (const a of got) this.achQ.push({ a, t: 0 });
   }
 
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.5 }; }
@@ -392,8 +408,8 @@ KAR.Game = class {
     if (m.daily) {
       const dd = D.daily;
       if (dd.day !== m.daily) { dd.day = m.daily; dd.best = 0; dd.plays = 0; dd.first = m.score; }
-      dd.plays++; this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
-      KAR.Store.save(); this.setScreen('over');
+      dd.plays++; D.stats.dailies++; this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
+      this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
     }
@@ -404,19 +420,19 @@ KAR.Game = class {
       this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D) && KAR.TOUR[i + 1].after === undefined;
       this.sideOpen = st >= 1 && sides.length ? sides[0] : undefined;
       this.tourDone = !before && bosses();
-      gearUp(); KAR.Store.save(); this.setScreen('over');
+      gearUp(); this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (st >= 1) { this.audio.win(); this._burst(60 + st * 20); } else this.audio.lose();
       return;
     }
     if (m.mode === 'swing') {
       const sc = m.total(0); this.newBest = sc > (D.swingBest || 0); D.swingBest = Math.max(D.swingBest || 0, sc);
-      KAR.Store.save(); this.setScreen('over');
+      this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && sc > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
     }
     if (m.mode === 'trick') {
       this.newBest = m.score > (D.trickBest || 0); D.trickBest = Math.max(D.trickBest || 0, m.score);
-      KAR.Store.save(); this.setScreen('over');
+      this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
     }
@@ -424,8 +440,8 @@ KAR.Game = class {
       const sc = m.total(0), stars = m.stars(), was = KAR.locked(3, D);
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
       this.unlocked = was && !KAR.locked(3, D); gearUp();
-    } else { D.stats.duels++; if (m.winner === 0) D.stats.wins++; }
-    KAR.Store.save();
+    } else { D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2) D.stats.legendWins++; } }
+    this._achCheck(); KAR.Store.save();
     this.setScreen('over');
     if ((m.mode === 'duel' && m.winner === 0) || (m.mode === 'range' && m.stars() >= 1)) { this.audio.win(); this._burst(80); } else this.audio.lose();
   }
@@ -539,7 +555,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || sel;
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || sel;
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -562,12 +578,14 @@ KAR.Game = class {
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }
     if (this.screen === 'menu') U.menu(ctx, this);
     else if (this.screen === 'gear') U.gearScreen(ctx, this);
+    else if (this.screen === 'trophies') U.trophies(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
       U.hud(ctx, this);
       if (this.screen === 'paused') U.pause(ctx, this);
       else if (this.screen === 'over') U.over(ctx, this);
     }
+    U.achToast(ctx, this);
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }
   }
 
@@ -580,7 +598,7 @@ KAR.Game = class {
 
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
-    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'levels') return;
+    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'levels') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
     // arrows in the face, then the THINK BOX crates in front of it, then the arrows stuck in the crates
     const stuck = inCrate => { for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !!(a.hit && a.hit.z !== undefined) === inCrate && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined); };

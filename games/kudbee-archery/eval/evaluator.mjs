@@ -326,6 +326,23 @@ await click('back');
 rec('gear-locker', g0.scr === 'gear' && g0.lockedBow && stay0 && g1.saved.bow === 2 && g1.saved.fletch === 2 && g1.saved.sight === 1 && g1.mine && g1.cpu && await G(() => KARGame.screen === 'menu'),
   `locked kit won't equip at 0 stars; at 12 stars the Royal Blue bow, Lime fletching and Ice sight equip, save, and draw on your bow (the CPU keeps club kit)`);
 await G(() => { KAR.Store.data.gear = { bow: 0, fletch: 0, sight: 0 }; });
+// TROPHIES: the menu button opens the screen, it pages, and a real first arrow announces FIRST ARROW (saved)
+await G(() => { const D = KAR.Store.data; D.ach = {}; for (const k in D.stats) D.stats[k] = 0; KARGame.activate('menu'); }); await page.waitForTimeout(80);
+await click('trophies'); await page.waitForTimeout(80);
+const tr0 = await G(() => ({ scr: KARGame.screen, cards: KAR.ACH.length }));
+await click('tnext'); await page.waitForTimeout(60);
+const tr1 = await G(() => KARGame.achPage);
+await page.screenshot({ path: `${OUT}/trophies.png` });
+await click('back'); await page.waitForTimeout(60);
+await G(() => { KAR.Store.data.mode = 0; KARGame.startMatch(); });
+await page.waitForFunction(() => KARGame.human(), null, { timeout: 5000 }).catch(() => {});
+await G(() => { const g = KARGame; g.drawing = true; g.draw = 1; g._loose(); });
+await page.waitForFunction(() => KARGame.achQ && KARGame.achQ.some(q => q.a.id === 'arrow1'), null, { timeout: 8000 }).catch(() => {});
+const tr2 = await G(() => ({ toast: !!(KARGame.achQ && KARGame.achQ.some(q => q.a.id === 'arrow1')), saved: (JSON.parse(localStorage.getItem('kudbee.archery.v1')).ach || {}).arrow1 === 1, count: KAR.achCount(KAR.Store.data) }));
+await page.screenshot({ path: `${OUT}/trophy-toast.png` });
+rec('trophies', tr0.scr === 'trophies' && tr0.cards >= 20 && tr1 === 1 && tr2.toast && tr2.saved && tr2.count >= 1,
+  `TROPHIES opens from the menu (${tr0.cards} trophies), pages to ${tr1 + 1}; a real first arrow announces FIRST ARROW and saves it (${tr2.count} won)`);
+await G(() => { KARGame.achQ = []; KARGame.activate('menu'); });
 await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 
 // SHARING: the page carries a share card (Open Graph + Twitter large image, absolute https URLs) whose image is a real 1200x630

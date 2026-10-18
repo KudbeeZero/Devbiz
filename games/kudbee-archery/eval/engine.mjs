@@ -234,6 +234,23 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const sane = T6.stars.slice(0, 4).join() === '0,0,0,3' && T6.best[0] === 0 && T6.best[1] === 70 && T6.stars.length === K6.TOUR.length && T6.best.length === K6.TOUR.length;
   rec('store-tour-upgrade', moved && kept && sane, 'an old 15-level save maps onto the worlds (VILLAGE CUP keeps its 2 stars as the world 1 boss, the player stays on ROPE SWING); a 24-level save keeps every star and THINK BOX is open; corrupt star/best values are dropped; the save arrays fit the Tour');
 }
+// TROPHIES: progress comes off the saved stats, each is announced once, and a save can't forge them
+{
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js']), D = K.Store.data;
+  const ids = new Set(K.ACH.map(a => a.id));
+  const fresh = K.achNew(D).length;                                  // a new save has none
+  D.stats.arrows = 1; D.stats.xs = 1; const first = K.achNew(D).map(a => a.id).join();
+  const again = K.achNew(D).length;                                  // already announced
+  K.TOUR.forEach((L, i) => { if (L.boss) D.tour.stars[i] = 1; });
+  const boss = K.achNew(D).map(a => a.id).join();
+  D.ach.bogus = 1; K.achNew(D); const dropped = !('bogus' in D.ach);
+  // a hand-edited save can't hand out trophies: announced flags stay flags, stats must be whole and >= 0
+  const ls = { s: JSON.stringify({ ach: { x25: 1, 'bad key!': 1, arrow1: 'yes' }, stats: { xs: 3.5, tens: -2, pops: 40 } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K2 = loadKAR(['util.js', 'sim.js', 'ach.js'], ls); K2.Store.load(); const D2 = K2.Store.data;
+  const sane = D2.ach.x25 === 1 && !('arrow1' in D2.ach) && !('bad key!' in D2.ach) && D2.stats.xs === 0 && D2.stats.tens === 0 && D2.stats.pops === 40 && K2.achCount(D2) === 0;
+  rec('trophies', ids.size === K.ACH.length && K.ACH.length >= 20 && fresh === 0 && first === 'arrow1,x1' && again === 0 && boss === 'boss1,boss5' && dropped && sane,
+    `${K.ACH.length} trophies (unique ids); a new save has none; the first arrow + an X unlock FIRST ARROW and DEAD CENTRE once; all bosses unlock BOSS DOWN + TOUR CHAMPION; unknown ids are dropped; a forged save can't count (fractional/negative stats are ignored, a flag without the stat isn't a win)`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);
