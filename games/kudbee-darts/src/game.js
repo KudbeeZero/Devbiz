@@ -2378,14 +2378,14 @@
       if (b.group === 'bonus') {
         if (!this._openBonusChest()) {
           this.toasts.push({ text: 'NEED ' + (KD.Progression.BONUS_CHEST_TOKENS - prog.data.tokens) + ' MORE 💎', sub: 'Tokens come from chests and league-ups', life: 2.2 });
-        } else this.audio.chime(1);
+        } else { this.audio.chime(1); this.audio.coins(); }
         return;
       }
       if (b.group === 'up') {
         const r = prog.upgradePart(b.part, b.key, true);
         const nm = (WS_CAT(b.part)[b.key] || {}).name || b.key;
         if (r === 'upgraded') {
-          this.audio.chime(2); this.wsFlash = 0.9;
+          this.audio.levelUp(); this.wsFlash = 0.9;
           this.toasts.push({ text: nm.toUpperCase() + ' → LV ' + prog.partLv(b.part, b.key), sub: 'Steadier hand: aim wobble and scatter down', life: 2.4 });
         } else if (r === 'cards') {
           const c = prog.upgradeCost(b.part, b.key);
@@ -2400,7 +2400,7 @@
           return;
         }
         const r = pv.group === 'shape' ? prog.chooseShape(pv.key) : pv.group === 'tip' ? prog.chooseTip(pv.key) : prog.chooseFlight(pv.key);
-        if (r === 'bought') { this.audio.chime(1); this.wsPreview = null; this.wsFlash = 0.9; }
+        if (r === 'bought') { this.audio.chime(1); this.audio.buzz(18); this.wsPreview = null; this.wsFlash = 0.9; }
         return;
       }
       if (b.owned) {

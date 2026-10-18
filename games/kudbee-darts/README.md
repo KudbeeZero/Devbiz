@@ -220,3 +220,6 @@ SOFT / TOO HARD / DIALED IN) coaches the swipe against your own auto-calibrated 
 and supported phones get a **haptic thump**. Darts stick
 with their **tip exactly on the scoring pixel**. No external assets required — the dartboard
 and darts are drawn procedurally so hit detection is pixel-exact. All original IP.
+
+## Reward sound & haptics
+Reward moments have their own synthesized sounds (no audio files) and phone haptics, both silenced by the mute toggle: a rising tick while trophies count up, a bigger fanfare on league promotion, a rumble + latch click when the chest opens, a pop per dealt card (sparkle for a NEW part), a level-up zip on upgrades, and a coin cascade on mission/bonus claims.

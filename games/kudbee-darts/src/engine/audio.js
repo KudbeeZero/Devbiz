@@ -106,6 +106,44 @@
     setTimeout(() => this._noise(0.7, 0.14, 1200, 2200), 220);
   };
 
+  // ---- Reward-screen sounds + haptics -----------------------------------
+  // Phone haptics, gated by the same mute toggle as sound.
+  Audio.prototype.buzz = function (pattern) {
+    if (!this.enabled || typeof navigator === 'undefined' || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (_) {}
+  };
+  // Trophy count-up tick: pitch climbs with progress (0..1).
+  Audio.prototype.count = function (k) { this._tone(500 + 500 * (k || 0), 0.03, 'square', 0.05); };
+  // Chest tapped: a low rumble + latch click, then the lid pops.
+  Audio.prototype.chestOpen = function () {
+    this._tone(70, 0.35, 'sawtooth', 0.16, 150); this._noise(0.3, 0.14, 500, 1800);
+    setTimeout(() => { this._tone(880, 0.1, 'triangle', 0.2); this._noise(0.12, 0.12, 3000, 800); }, 180);
+    this.buzz([30, 40, 60]);
+  };
+  // League promotion: a bigger, rising fanfare than a match win.
+  Audio.prototype.leagueUp = function () {
+    [392, 523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => this._tone(f, 0.22, i > 3 ? 'square' : 'triangle', 0.2), i * 110));
+    this._noise(1.2, 0.16, 1200, 3000);
+    this.buzz([40, 50, 40, 50, 120]);
+  };
+  // Card revealed: a soft pop; a NEW part gets a sparkle run on top.
+  Audio.prototype.card = function (isNew) {
+    this._tone(isNew ? 784 : 587, 0.08, 'triangle', 0.18, isNew ? 1175 : 700);
+    if (isNew) [1047, 1319, 1568].forEach((f, i) => setTimeout(() => this._tone(f, 0.1, 'sine', 0.14), 60 + i * 55));
+    this.buzz(isNew ? [12, 20, 24] : 10);
+  };
+  // Upgrade bought: a rising "level up" zip and coin-ish ping.
+  Audio.prototype.levelUp = function () {
+    this._tone(330, 0.25, 'square', 0.14, 990);
+    setTimeout(() => { this._tone(1319, 0.14, 'triangle', 0.2); this._tone(1760, 0.2, 'sine', 0.12); }, 200);
+    this.buzz([20, 30, 40]);
+  };
+  // Mission / bonus claim: a quick coin cascade.
+  Audio.prototype.coins = function () {
+    [1568, 1976, 2349].forEach((f, i) => setTimeout(() => this._tone(f, 0.09, 'triangle', 0.16), i * 60));
+    this.buzz(16);
+  };
+
   // ---- Procedural ambient music bed -------------------------------------
   // A slow, mellow minor pad loop — lounge atmosphere, not action.
   Audio.prototype.startMusic = function () {
