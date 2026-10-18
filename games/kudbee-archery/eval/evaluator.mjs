@@ -756,7 +756,8 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   // TENSION + PAYOFF, the same round played out (4 arrows are in: 2 to go). Arrow 5: hold your breath and hear
   // your heart, quickening as the air runs out; let go and it stops.
   await sp.waitForFunction(() => KARGame.bp === 'ready' && KARGame.screen === 'play', null, { timeout: 15000 });
-  await sp.evaluate(() => { const a = KARGame.audio, t = a.tone.bind(a); window.__beats = []; a.tone = (...x) => { if (x[0] === 82) window.__beats.push(a.actx.currentTime + (x[5] || 0)); return t(...x); };
+  // (the music back on, as in play: a bus with nothing flowing through it isn't processed, so its level wouldn't move)
+  await sp.evaluate(() => { const a = KARGame.audio, t = a.tone.bind(a); a.startMusic(); window.__beats = []; a.tone = (...x) => { if (x[0] === 82) window.__beats.push(a.actx.currentTime + (x[5] || 0)); return t(...x); };
     window.__calls = []; for (const k of ['count', 'gems', 'fanfare']) { const f = a[k].bind(a); a[k] = (...x) => { window.__calls.push(k + ':' + x.join(',')); return f(...x); }; }
     const g = KARGame; g._beginDraw(); g.draw = 1; g.holding = true; });
   await sp.waitForTimeout(1500);
