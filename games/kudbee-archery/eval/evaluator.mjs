@@ -717,7 +717,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const op = await oc.newPage(); op.on('pageerror', e => errors.push(e.message));
   await op.goto(URL); await op.waitForFunction(() => window.KARGame);
   const ctl = await op.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated', null, { timeout: 15000 }).then(() => true, () => false);
-  await op.evaluate(() => caches.open('kar-v2').then(c => c.keys()).then(k => k.length)).then(n => { op.__kept = n; });
+  await op.evaluate(() => caches.keys().then(ks => caches.open(ks.find(k => k.startsWith('kar-')))).then(c => c.keys()).then(k => k.length)).then(n => { op.__kept = n; });      // (whichever kar-vN sw.js keeps now)
   await oc.setOffline(true);
   const res = await op.reload().catch(() => null);
   const up = await op.waitForFunction(() => window.KARGame && document.fonts.check('24px "Lilita One"'), null, { timeout: 8000 }).then(() => true, () => false);
@@ -870,6 +870,90 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await N.p.screenshot({ path: `${OUT}/cloud-offline.png` });
   rec('cloud-offline', n1.st === 'offline' && n1.code && n1.saved === 2 && n1.scr === 'cloud', `no cloud to reach: the round is saved on the phone (★${n1.saved}), the code is still made, CLOUD SAVE says ${n1.st}`);
   await N.c.close();
+}
+
+// GHOST CHALLENGES: the challenger clears a level and taps CHALLENGE -> a link. A friend on a phone (fresh: the level
+// isn't open for them) opens it -> the invite card -> ACCEPT -> the same level on the same seed, so the same wind for
+// every arrow; the challenger's arrows land beside theirs and the HUD keeps both scores. The results say who won, a
+// practice round saves nothing to the map, CHALLENGE BACK makes their own link, REMATCH plays the ghost again, and a
+// doctored link is just ignored.
+{
+  const made = await G(() => {
+    const g = KARGame, D = KAR.Store.data, lv = KAR.TOUR.findIndex((L, i) => i > 2 && !L.move && !L.boxes);
+    D.tut = 15; D.mode = 5; D.tourLv = lv; D.tour.stars[lv - 1] = Math.max(1, D.tour.stars[lv - 1]); g.chal = null;
+    g.startMatch(); const m = g.match, winds = [], k = g._kit(0);
+    while (!m.over) { winds.push(m.wind); const h = KAR.Bot.hold(m, undefined, k); m.shoot(h.x, h.y, 0, 0, 1, k); }
+    g._finishMatch();
+    return { lv, seed: m.seed, total: m.total(0), rings: m.arrows[0].map(a => a.ring), winds };
+  });
+  const tapped = await clickWhen('shareChallenge');
+  const link = await G(() => { const sh = KARGame.shareCv; return sh && { url: sh.url, kind: sh.kind, text: KARGame.shareText, w: sh.cv.width, h: sh.cv.height }; });
+  const code = link && new globalThis.URL(link.url).searchParams.get('c');
+  rec('ghost-made', tapped && !!code && link.url.startsWith('https://devbiz.kudbee.workers.dev/games/kudbee-archery/?c=') && /^Beat my \d+ on Level \d+/.test(link.text) && link.w === 1200 && link.h === 630,
+    `CHALLENGE on the results card (level ${made.lv + 1}, ${made.total} pts) -> a ${code ? code.length : 0}-char link to the game with the ghost in ?c=, a 1200x630 card and "${link && link.text.slice(0, 48)}…"`);
+  await G(() => KARGame.activate('shBack'));
+
+  const fc = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await fc.addInitScript(() => { window.KAR_API = null; });
+  const fp = await fc.newPage(); fp.on('pageerror', e => errors.push(e.message)); fp.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  const F = fn => fp.evaluate(fn);
+  const fbox = async () => fp.locator('#gameCanvas').boundingBox();
+  const ftap = async id => {
+    await fp.waitForFunction(i => KAR.UI.buttons.some(b => b.id === i), id, { timeout: 5000 }).catch(() => {});
+    const b = await fp.evaluate(i => { const x = KAR.UI.buttons.find(b => b.id === i), R = KAR.Render; return x && { x: x.x + x.w / 2 - R.XL, y: x.y + x.h / 2, XW: R.XW }; }, id), bx = await fbox();
+    if (!b) return false; await fp.touchscreen.tap(bx.x + b.x * bx.width / b.XW, bx.y + b.y * bx.height / 640); return true;
+  };
+  await fp.goto(URL + '?c=' + code); await fp.waitForFunction(() => window.KARGame);
+  await fp.waitForTimeout(300);
+  const inv = await F(() => ({ scr: KARGame.screen, lv: KARGame.invite && KARGame.invite.lv, total: KARGame.invite && KARGame.invite.total, name: KARGame.invite && KARGame.invite.name, q: location.search, open: KAR.tourOpen(KARGame.invite ? KARGame.invite.lv : 0, KAR.Store.data) }));
+  await fp.screenshot({ path: `${OUT}/ghost-invite.png` });
+  rec('ghost-invite', inv.scr === 'challenge' && inv.lv === made.lv && inv.total === made.total && inv.q === '' && inv.open === false,
+    `the friend's phone opens the link on the invite: ${inv.name} scored ${inv.total} on level ${inv.lv + 1} (not open for them: practice); the code is gone from the address bar (${JSON.stringify(inv.q)})`);
+
+  await ftap('chGo');
+  await fp.waitForFunction(() => KARGame.screen === 'play' && KARGame.bp === 'ready', null, { timeout: 5000 }).catch(() => {});
+  const start = await F(() => { const m = KARGame.match; return { lv: m.lv, seed: m.seed, gh: !!m.ghost, counts: m.counts, hint: KARGame.hint }; });
+  // real arrows through the game (a little off the hold point, so the friend's shots differ), ghosts landing; the
+  // reading is taken after two, while the first end is still up (the third closes it and the face is cleared for end 2)
+  const fw = [], loose = async i => {
+    fw.push(await F(() => { const g = KARGame, m = g.match, h = KAR.Bot.hold(m, undefined, g._kit(0)); g.aimX = h.x + 0.06; g.aimY = h.y; g.drawing = true; g.draw = 1; g.holdT = 0; g.sway = { x: 0, y: 0 }; const w = m.wind; g._loose(); return w; }));
+    await fp.waitForFunction(n => KARGame.bp === 'ready' && KARGame.match.arrows[0].length === n, i + 1, { timeout: 15000 }).catch(() => {});
+  };
+  await loose(0); await loose(1);
+  const mid = await F(() => { const g = KARGame, gh = g.match.ghost; return { n: g.ghostN(), so: KAR.Ghost.soFar(gh, g.ghostN()), mine: g.match.total(0), shown: gh.arrows.filter((a, i) => i < g.ghostN() && a.end === g.showEnd && a.hit).length }; });
+  await fp.screenshot({ path: `${OUT}/ghost-play.png` });
+  await loose(2);
+  const want2 = made.rings.slice(0, 2).reduce((s, r) => s + r, 0);
+  rec('ghost-play', start.lv === made.lv && start.seed === made.seed && start.gh && start.counts === false && /^CHALLENGE/.test(start.hint) && mid.n === 2 && mid.so === want2 && mid.shown === 2,
+    `ACCEPT -> level ${start.lv + 1} on the challenger's seed (${start.seed === made.seed}); after 2 arrows the HUD has the ghost on ${mid.so} (theirs: ${want2}) against your ${mid.mine}, with ${mid.shown} ghost arrows in the face beside yours`);
+  // the rest straight through the sim, then the results
+  const fin = await F(() => {
+    const g = KARGame, m = g.match, k = g._kit(0), winds = [];
+    while (!m.over) { winds.push(m.wind); const h = KAR.Bot.hold(m, undefined, k); m.shoot(h.x + 0.06, h.y, 0, 0, 1, k); }
+    g._finishMatch(); const D = KAR.Store.data;
+    return { winds, total: m.total(0), scr: g.screen, stars: D.tour.stars[m.lv], best: D.tour.best[m.lv], gh: m.ghost.total };
+  });
+  const sameWind = fw.concat(fin.winds).every((w, i) => w === made.winds[i]) && fw.length + fin.winds.length === made.winds.length;
+  rec('ghost-wind-phone', sameWind, `every one of the friend's ${fw.length + fin.winds.length} arrows had the wind the challenger had (${made.winds.slice(0, 3).map(w => w.toFixed(2)).join(', ')}…), though they shot differently (${fin.total} vs ${made.total})`);
+  await fp.waitForTimeout(700);
+  const over = await F(() => ({ ids: KAR.UI.buttons.map(b => b.id) }));
+  await fp.screenshot({ path: `${OUT}/ghost-over.png` });
+  rec('ghost-result', fin.scr === 'over' && fin.stars === 0 && fin.best === 0 && ['shareChallenge', 'rematch', 'levels', 'menu'].every(i => over.ids.includes(i)) && !over.ids.includes('next') && !over.ids.includes('shareLevel'),
+    `results: you ${fin.total} vs ${fin.gh}; practice on an unopened level saves nothing (★${fin.stars}, best ${fin.best}); CHALLENGE BACK, REMATCH, LEVELS, MENU (no NEXT, no SHARE)`);
+  await ftap('shareChallenge');
+  const back = await F(() => { const sh = KARGame.shareCv, c = sh && new URL(sh.url).searchParams.get('c'), gh = c && KAR.Ghost.decode(c); return { ok: !!gh, total: gh && gh.total, lv: gh && gh.lv, seed: gh && gh.seed, text: KARGame.shareText }; });
+  await F(() => KARGame.activate('shBack'));
+  await ftap('rematch');
+  await fp.waitForFunction(() => KARGame.screen === 'play', null, { timeout: 5000 }).catch(() => {});
+  const re = await F(() => ({ scr: KARGame.screen, gh: !!KARGame.match.ghost, seed: KARGame.match.seed, n: KARGame.match.arrows[0].length }));
+  rec('ghost-back', back.ok && back.total === fin.total && back.lv === made.lv && back.seed === made.seed && re.scr === 'play' && re.gh && re.seed === made.seed && re.n === 0,
+    `CHALLENGE BACK makes the friend's own link (${back.total} on the same level + seed: "${(back.text || '').slice(0, 40)}…"); REMATCH plays the same ghost again (${re.gh})`);
+  // a doctored or broken link: no invite, no errors, just the game
+  const e0 = errors.length;
+  await fp.goto(URL + '?c=eyJ2IjoxLCJsIjo5OTl9'); await fp.waitForFunction(() => window.KARGame); await fp.waitForTimeout(300);
+  const junk = await F(() => ({ scr: KARGame.screen, inv: !!KARGame.invite }));
+  rec('ghost-bad-link', junk.scr === 'menu' && !junk.inv && errors.length === e0, `a link naming level 1000 opens the plain menu (${junk.scr}), no invite, no errors`);
+  await fc.close();
 }
 
 await page.setViewportSize({ width: 390, height: 780 });

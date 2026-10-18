@@ -35,6 +35,7 @@ KAR.Game = class {
     this._app();
     KAR.Cloud.load(); if (KAR.Cloud.meta.code) setTimeout(() => KAR.Cloud.sync(), 1500);      // CLOUD SAVE: catch up with the other devices
     try { if (/^#\/?agent$/.test(location.hash)) this.activate('agent'); } catch (e) { /* no location */ }      // /agent links straight to the coach
+    this._readChallenge();
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
   }
@@ -64,6 +65,12 @@ KAR.Game = class {
     const D = KAR.Store.data;
     const seed = (this.rng() * 4294967296) >>> 0;
     const day = KAR.Daily.day();
+    if (this.chal) {                    // GHOST CHALLENGE: their level and their seed (so their wind), with their arrows as ghosts
+      const gh = this.chal;
+      this.match = new KAR.Stage({ level: gh.lv, seed: gh.seed }); this.match.ghost = gh;
+      this.match.counts = KAR.tourOpen(gh.lv, D);       // a level you haven't opened yet is practice: it can't open the map early
+      this._begin(); return;
+    }
     if (D.mode === 5 && !KAR.tourOpen(D.tourLv, D)) D.tourLv = 0;
     if (D.mode === 6) return this._cupMatch(seed);
     this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
@@ -97,8 +104,23 @@ KAR.Game = class {
     if (this.match.cup) { const k = this.match.cup; this.hint = KAR.CUPS[k.tier].name + '  ·  ' + KAR.CUP_ROUNDS[k.round] + '  ·  VS ' + k.name + '  ·  FIRST TO 6 SET POINTS'; this.hintT = 6; }
     if (this.match.mode === 'stage') { const L = this.match.def; this.hint = (L.boss ? 'BOSS!  ·  ' : '') + 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
     if (this.aidOn()) { this.hint = 'AIM HELP IS ON  ·  THE FIRST ARROW OF EACH END SHOWS WHERE TO AIM'; this.hintT = 6; }
+    if (this.match.ghost) { const gh = this.match.ghost; this.hint = 'CHALLENGE  ·  BEAT ' + gh.name + '\'S ' + gh.total + '  ·  THE SAME WIND THEY HAD' + (this.match.counts ? '' : '  ·  PRACTICE'); this.hintT = 6; }
     this._nextShot();
   }
+
+  // ---- GHOST CHALLENGES ------------------------------------------------------------
+  // A link with ?c= is a friend's ghost: show the invite (the link is checked by KAR.Ghost.decode; a bad one is
+  // ignored) and take it out of the address bar, so a reload doesn't ask again.
+  _readChallenge() {
+    let c = null;
+    try { c = new URLSearchParams(location.search).get('c'); } catch (e) { return; }
+    if (!c) return;
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* ignore */ }
+    const gh = KAR.Ghost.decode(c);
+    if (gh) { this.invite = gh; this.setScreen('challenge'); }
+  }
+  // your arrows that have landed (the one in the air doesn't count yet): the ghost keeps pace with these
+  ghostN() { const m = this.match, f = this.flight; return m.arrows[0].length - (this.bp === 'flight' && f && f.shooter === 0 ? 1 : 0); }
 
   human() { return this.screen === 'play' && this.match.shooter === 0 && !this.cpu && this.bp === 'ready'; }
 
@@ -128,7 +150,7 @@ KAR.Game = class {
   // aim at the gold; hold your breath; the wind pushes the arrow - aim at the marker; then read it yourself.
   _coach() {
     const m = this.match, D = KAR.Store.data;
-    if (m.mode !== 'stage' || m.shooter !== 0 || m.lv > 1) return null;
+    if (m.mode !== 'stage' || m.shooter !== 0 || m.lv > 1 || m.ghost) return null;      // (not in a challenge: the level-2 card changes the wind)
     const touch = this.coarse, done = b => (D.tut & b) !== 0, fired = m.arrows[0].length;
     if (m.lv === 0 && !done(1)) return { bit: 1, text: 'AIM AT THE GOLD', sub: touch ? 'touch & hold to draw  \u00b7  drag to aim  \u00b7  lift to shoot' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to shoot', marker: { x: 0, y: KAR.CFG.FACE_Y, label: 'GOLD' } };
     if (m.lv === 0 && !done(2) && fired >= 1) return { bit: 2, text: 'STEADY YOUR AIM', sub: touch ? 'at full draw, hold HOLD BREATH to calm the sight for a moment' : 'at full draw, hold B (or right-click) to hold your breath' };
@@ -235,10 +257,12 @@ KAR.Game = class {
     if (id === 'play' || id === 'restart' || id === 'rematch' || id === 'retry') this.startMatch();
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
-    else if (id === 'share' || id === 'shareGame' || id === 'shareLevel' || id === 'shareCup') this._share(id);
+    else if (id === 'share' || id === 'shareGame' || id === 'shareLevel' || id === 'shareCup' || id === 'shareChallenge') this._share(id);
+    else if (id === 'chGo') { if (this.invite) { this.chal = this.invite; this.invite = null; this.startMatch(); } }
+    else if (id === 'chNo') { this.invite = null; this.setScreen('menu'); }
     else if (/^tsh\d+$/.test(id)) this._share('shareTrophy', KAR.ACH[+id.slice(3)]);
     else if (/^sh[A-Z]/.test(id)) this._shareAct(id);
-    else if (id === 'levels') { this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
+    else if (id === 'levels') { this.chal = null; this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
     else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
     else if (id === 'trophies') { this.achPage = 0; this.setScreen('trophies'); }
@@ -258,7 +282,7 @@ KAR.Game = class {
     else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
     else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; D.mode = 5; KAR.Store.save(); if (this.screen === 'levels') this.startMatch(); } }
     else if (id === 'next' && D.mode === 6) this.startMatch();
-    else if (id === 'next') { if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
+    else if (id === 'next') { this.chal = null; if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
     else if (/^cup\d$/.test(id)) { const t = +id[3]; if (KAR.Cup.open(t, D)) { D.cupTier = t; D.mode = 6; KAR.Store.save(); } }
     else if (id === 'pause') this.togglePause();
@@ -271,7 +295,7 @@ KAR.Game = class {
     else if (id === 'install') this._install();
     else if (id === 'instOk') { D.install = 1; KAR.Store.save(); this.setScreen('menu'); }
     else if (id === 'instBack') this.setScreen('menu');
-    else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
+    else if (id === 'menu') { this.chal = null; this.wake(false); this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
     else if (id === 'breath') this.holding = !this.holding;
   }
@@ -374,6 +398,7 @@ KAR.Game = class {
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
     if (down && k === 'Escape' && this.screen === 'cloud') { this.activate('clBack'); return; }
     if (down && k === 'Escape' && this.screen === 'install') { this.activate('instBack'); return; }
+    if (down && k === 'Escape' && this.screen === 'challenge') { this.activate('chNo'); return; }
     if (down && k === 'Escape' && this.screen === 'share') { this.activate('shBack'); return; }
     if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
     if (down && k === '/' && (this.screen === 'menu' || this.screen === 'paused' || this.screen === 'over')) { e.preventDefault(); this.activate('agent'); return; }
@@ -424,7 +449,7 @@ KAR.Game = class {
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
     if (shooter === 0) this.buzz(22);
-    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL|AIM HELP)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
+    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL|AIM HELP|CHALLENGE)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
@@ -554,7 +579,7 @@ KAR.Game = class {
   // with a link to its landing page; the SHARE screen previews the picture with where to send it
   _share(kind, a) {
     const mo = KAR.Share.moment(kind, this.match, this, a); if (!mo) return;
-    const url = mo.slug ? KAR.Share.url(mo.slug) : this.link(), cv = KAR.Share.card(mo.info);
+    const url = mo.url || (mo.slug ? KAR.Share.url(mo.slug) : this.link()), cv = KAR.Share.card(mo.info);
     const sh = this.shareCv = { kind, mo, url, cv, file: null, slug: mo.slug || 'game' };
     this.shareText = mo.text + ' \u00b7 ' + url; this.shared = -9; this.sharedKind = null;
     KAR.Share.file(cv).then(f => { sh.file = f; });
@@ -592,6 +617,12 @@ KAR.Game = class {
       dd.plays++; D.stats.dailies++; this._quest('daily', 1); this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
       this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
+      return;
+    }
+    if (m.mode === 'stage' && m.ghost && !m.counts) {     // a challenge on a level you haven't opened: practice, nothing saved to the tour
+      this.newBest = false; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false; this.aidNext = false;
+      this._achCheck(); KAR.Store.save(); this.setScreen('over');
+      if (m.total(0) > m.ghost.total) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
     }
     if (m.mode === 'stage') {
@@ -755,7 +786,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'install' || this.screen === 'cloud' || sel || (this.screen === 'share' && this.shareBack !== 'over');
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'install' || this.screen === 'cloud' || this.screen === 'challenge' || sel || (this.screen === 'share' && this.shareBack !== 'over');
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.orbitA = m.move === 'orbit' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -785,6 +816,7 @@ KAR.Game = class {
     else if (this.screen === 'agent') U.agent(ctx, this);
     else if (this.screen === 'install') U.installScreen(ctx, this);
     else if (this.screen === 'cloud') U.cloudScreen(ctx, this);
+    else if (this.screen === 'challenge') U.challengeScreen(ctx, this);
     else if (this.screen === 'share' && menuish) U.shareScreen(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
@@ -813,6 +845,12 @@ KAR.Game = class {
     // impact rings (one in a crate is drawn with the crates)
     const rings = inCrate => { for (const p of this.pops) { if ((p.z !== undefined) !== inCrate) continue; const q = R.proj(p.x, p.y, p.z || m.dist); if (!q) continue; ctx.beginPath(); ctx.arc(q.x, q.y, (0.05 + p.age * 0.25) * q.k, 0, 6.283); ctx.strokeStyle = 'rgba(255,255,255,' + (1 - p.age / 1.2) + ')'; ctx.lineWidth = 3; ctx.stroke(); } };
     stuck(false); rings(false);
+    // GHOST CHALLENGE: the challenger's arrow lands (see-through, in their colour) as each of yours does
+    if (m.ghost) {
+      const n = this.ghostN(); ctx.save(); ctx.globalAlpha = 0.5;
+      m.ghost.arrows.forEach((a, i) => { if (i < n && a.end === this.showEnd) R.stuck(ctx, a, 1); });
+      ctx.restore();
+    }
     if (R.boxes) { R.drawBoxes(ctx, this.time, m.wind, m.offAt ? m.move : null); stuck(true); rings(true); }
     if (this.bp === 'flight' && this.flight) {
       const f = this.flight, S = f.res.samples, tip = this._tip(f), i = tip.i, b = S[Math.min(S.length - 1, i + 1)];

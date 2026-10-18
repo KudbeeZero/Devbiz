@@ -137,6 +137,9 @@ KAR.UI = {
       const out = kind === 'full', d = out ? 9 : 3, o = out ? -1 : 1;
       for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const x = cx + sx * d, y = cy + sy * d; ctx.beginPath(); ctx.moveTo(x, y - o * -sy * 6); ctx.lineTo(x, y); ctx.lineTo(x - o * -sx * 6, y); ctx.stroke(); }
     }
+    else if (kind === 'vs') {                                  // VS: you against a friend's ghost
+      ctx.font = '400 17px ' + this.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('VS', cx, cy + 1);
+    }
     else if (kind === 'sound' || kind === 'mute') {
       ctx.beginPath(); ctx.moveTo(cx - 9, cy - 4); ctx.lineTo(cx - 4, cy - 4); ctx.lineTo(cx + 2, cy - 9); ctx.lineTo(cx + 2, cy + 9); ctx.lineTo(cx - 4, cy + 4); ctx.lineTo(cx - 9, cy + 4); ctx.closePath(); ctx.fill();
       if (kind === 'sound') { ctx.beginPath(); ctx.arc(cx + 2, cy, 7, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + 2, cy, 12, -0.9, 0.9); ctx.stroke(); }
@@ -170,8 +173,8 @@ KAR.UI = {
   },
 
   hud(ctx, g) {
-    const U = this, m = g.match, duel = m.mode === 'duel', trick = m.mode === 'trick', R = KAR.Render;
-    const h = duel ? 138 : 104, xl = R.XL, xr = -R.XL;          // on a wide screen the panels ride out to the edges
+    const U = this, m = g.match, duel = m.mode === 'duel', trick = m.mode === 'trick', R = KAR.Render, gh = m.ghost;
+    const h = duel || gh ? 138 : 104, xl = R.XL, xr = -R.XL;          // on a wide screen the panels ride out to the edges
     ctx.save(); ctx.translate(xl, 0);
     U.rr(ctx, 14, 16, 300, h, 18); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     U.rr(ctx, 12, 12, 300, h, 18); ctx.fillStyle = U.OUT; ctx.fill();
@@ -198,8 +201,16 @@ KAR.UI = {
       for (let k = 0; k < m.per; k++) U.pip(ctx, 172 + k * 32, y - 1, s, arrows[k]);
       if (m.xs(s)) U.text(ctx, m.xs(s) + 'X', 276, y + 6, 15, '#ffd34d', 'right');
     });
+    // GHOST CHALLENGE: the challenger's score after as many arrows as you've landed, and their arrows this end
+    if (gh) {
+      const y = 88, n = g.ghostN(), shown = gh.arrows.filter((a, i) => i < n), end = shown.filter(a => a.end === m.endNo), gx = shown.filter(a => a.x).length;
+      U.fit(ctx, gh.name, 28, y + 8, 18, R.TEAM[1].light, 64, 'left');          // (narrower than a cup rival's: clear of the score)
+      U.fit(ctx, String(KAR.Ghost.soFar(gh, n)), 142, y + 12, 36, '#ffffff', 46, 'right');
+      for (let k = 0; k < m.per; k++) U.pip(ctx, 172 + k * 32, y - 1, 1, end[k]);
+      if (gx) U.text(ctx, gx + 'X', 276, y + 6, 15, '#ffd34d', 'right');
+    }
     if (trick) { /* no ends */ }
-    else if (m.mode === 'stage') U.fit(ctx, 'LEVEL ' + (m.lv + 1) + '  \u00b7  END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  ' + m.dist + ' M', 28, 98, U.sz(g, 17), '#ffe9a8', 272, 'left');
+    else if (m.mode === 'stage') U.fit(ctx, 'LEVEL ' + (m.lv + 1) + '  \u00b7  END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  ' + m.dist + ' M', 28, gh ? 128 : 98, U.sz(g, gh ? 16 : 17), '#ffe9a8', 272, 'left');
     else if (!duel) U.fit(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  ' + m.dist + ' M' + (m.mode === 'swing' ? '  \u00b7  SWINGER' : ''), 28, 98, U.sz(g, 17), '#ffe9a8', 272, 'left');
     else U.fit(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, U.sz(g, 16), '#ffe9a8', 272, 'left');
     ctx.restore();
@@ -423,6 +434,24 @@ KAR.UI = {
     }
     if (g.clMsg && g.time - g.clMsg.at < 4) U.fit(ctx, g.clMsg.t, 480, 496, U.sz(g, 17), g.clMsg.good ? '#9be35a' : '#ffd0a0', 760);
     U.button(ctx, g, 'clBack', 380, 516, 200, 58, 'BACK', { primary: true });
+  },
+
+  // ---- GHOST CHALLENGE invite: a friend's link opened. Who, their score and stars, which level, and what it means ----
+  challengeScreen(ctx, g) {
+    const U = this, gh = g.invite; if (!gh) return;
+    const L = KAR.TOUR[gh.lv], open = KAR.tourOpen(gh.lv, KAR.Store.data);
+    U.backdrop(ctx, 0.55);
+    U.panel(ctx, 150, 92, 660, 480, 'blue');
+    U.ribbon(ctx, 480, 66, 440, 'CHALLENGE!', 'yellow');
+    U.fit(ctx, gh.name + ' CHALLENGES YOU', 480, 150, U.sz(g, 22), '#ffe9a8', 600);
+    U.text(ctx, String(gh.total), 480, 240, 86, '#ffffff', 'center');
+    for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 70, 292 - (i === 1 ? 10 : 0), i === 1 ? 32 : 26, i < gh.stars, 1);
+    U.fit(ctx, (L.boss ? 'BOSS  ·  ' : '') + 'LEVEL ' + (gh.lv + 1) + '  ·  ' + L.name, 480, 360, U.sz(g, 24), '#ffffff', 600);
+    U.fit(ctx, 'WORLD ' + (L.v + 1) + '  ·  ' + KAR.VENUES[L.v].name + '  ·  ' + KAR.CFG.DISTS[L.dist] + ' M', 480, 390, U.sz(g, 16), '#cfe9ff', 600);
+    U.fit(ctx, 'THE SAME WIND THEY HAD  ·  THEIR ARROWS LAND BESIDE YOURS', 480, 428, U.sz(g, 16), '#ffe9a8', 600);
+    if (!open) U.fit(ctx, 'PRACTICE: THIS LEVEL ISN\'T OPEN FOR YOU YET, SO IT WON\'T COUNT ON YOUR MAP', 480, 458, U.sz(g, 14), '#cfe9ff', 600);
+    U.button(ctx, g, 'chGo', 230, 490, 290, 62, 'ACCEPT', { primary: true });
+    U.button(ctx, g, 'chNo', 540, 490, 190, 62, 'NOT NOW', { small: true, color: 'yellow' });
   },
 
   // ---- INSTALL (iPhone / iPad Safari, which has no install prompt): the three taps, drawn the way Safari shows them ----
@@ -785,9 +814,12 @@ KAR.UI = {
     U.backdrop(ctx, Math.min(0.55, T * 1.4));
     const k = KAR.Util.easeOut(Math.min(1, T * 2.2));
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
-    U.panel(ctx, 240, 104, 480, 430, won ? 'blue' : 'red');
+    // a GHOST CHALLENGE leads with who won it; on a level you haven't opened it was practice (nothing saved)
+    const gh = m.ghost, d = gh ? m.total(0) - gh.total : 0, practice = !!gh && !m.counts;
+    U.panel(ctx, 240, 104, 480, 430, (gh ? d >= 0 : won) ? 'blue' : 'red');
     const boss = !!m.def.boss;
-    U.ribbon(ctx, 480, 76, 440, won ? (g.tourDone ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
+    if (gh) U.ribbon(ctx, 480, 76, 440, d > 0 ? 'CHALLENGE WON!' : d === 0 ? 'ALL SQUARE!' : 'CHALLENGE LOST', d > 0 ? 'green' : d === 0 ? 'yellow' : 'red');
+    else U.ribbon(ctx, 480, 76, 440, won ? (g.tourDone ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
     U.text(ctx, String(m.total(0)), 480, 236, 80, '#ffffff', 'center');
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
@@ -796,14 +828,22 @@ KAR.UI = {
       : g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28])
       : !won && g.aidNext ? ['AIM HELP IS ON FOR YOUR NEXT TRY', '#9be35a', 24] : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
       : !won ? [(S[0] - m.total(0)) + ' MORE TO CLEAR IT', '#ffffff', 22] : st < 3 ? [(S[st] - m.total(0)) + ' MORE FOR ' + (st + 1) + ' STARS', '#ffffff', 20] : ['PERFECT', '#fff27a', 28];
-    U.fit(ctx, msg[0], 480, 394, msg[2], msg[1], 450);
-    if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
+    const say = gh ? (d > 0 ? ['YOU BEAT ' + gh.name + ' BY ' + d + '!', '#9be35a', 26] : d === 0 ? ['A DEAD HEAT WITH ' + gh.name, '#fff27a', 26] : [gh.name + ' WINS BY ' + (-d), '#ffffff', 24]) : msg;
+    U.fit(ctx, say[0], 480, 394, say[2], say[1], 450);
+    if (gh) U.fit(ctx, 'YOU ' + m.total(0) + '   ·   ' + gh.name + ' ' + gh.total + (practice ? '   ·   PRACTICE: LEVEL ' + (m.lv + 1) + ' ISN\'T OPEN FOR YOU YET' : ''), 480, 426, U.sz(g, 15), practice ? '#cfe9ff' : '#ffe9a8', 450);
+    else if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
     this.group(ctx, g, 318, 246, 50); this.starGems(ctx, g, 640, 330);
-    if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); U.text(ctx, 'SHARE', 690, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
+    if (won && !practice) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); U.text(ctx, 'SHARE', 690, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
+    // CHALLENGE: send this round as a ghost for a friend to beat (any score on the board)
+    if (m.total(0) > 0) { U.roundIcon(ctx, g, 'shareChallenge', 270, 140, 'vs', g.coarse); U.text(ctx, 'CHALLENGE', 270, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
     // NEXT never walks into a side world (THINK BOX after the world 4 boss): that one is picked on the map
     const next = !last && KAR.tourOpen(m.lv + 1, D) && KAR.TOUR[m.lv + 1].after === undefined;
-    if (next && won) {
+    if (gh) {
+      U.button(ctx, g, 'rematch', 256, 450, 210, 56, 'REMATCH', { primary: true });
+      U.button(ctx, g, 'levels', 480, 450, 116, 56, 'LEVELS', { small: true, color: 'yellow' });
+      U.button(ctx, g, 'menu', 610, 450, 104, 56, 'MENU', { small: true, color: 'yellow' });
+    } else if (next && won) {
       U.button(ctx, g, 'next', 256, 450, 210, 56, 'NEXT LEVEL', { primary: true });
       U.button(ctx, g, 'rematch', 480, 450, 116, 56, 'RETRY', { small: true });
       U.button(ctx, g, 'levels', 610, 450, 104, 56, 'LEVELS', { small: true, color: 'yellow' });

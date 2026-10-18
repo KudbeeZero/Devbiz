@@ -426,6 +426,38 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rec('cloud-merge', merged && sym && n1 === '7F3Q9XMA2PRW4HNT' && n2 === null && n3 === '0000111111112222' && pretty === 'KDB-7F3Q-9XMA-2PRW-4HNT' && clean && met.stars === 4 && met.golds === 40 && met.cups === 1,
     `two phones merge to the best of both (stars ${M.tour.stars.slice(0, 3).join('/')}, tens ${M.stats.tens}, X ${M.stats.xs}, gems ${M.gems}, trophies ${Object.keys(M.ach).join('+')}, bows ${M.ownBow}, cups ${M.cupWon.join('/')}, the newer daily + streak), either way round (${sym}); this phone keeps its settings; typed codes forgive case/dashes/I-L-O (${n1}), a U is refused; a forged cloud save is checked (stars 9 -> ${K.Store.data.tour.stars[5]}, gems -> ${K.Store.data.gems}); league line ★${met.stars}`);
 }
+// GHOST CHALLENGES: a friend replays your level on your seed. The wind (a roll per end, a gust per arrow) must be the
+// same whatever either of you shoots; a ghost survives the link both ways; a doctored link is refused, never trusted.
+{
+  const K = loadKAR(['util.js', 'sim.js', 'ghost.js']), Gh = K.Ghost;
+  const play = (lv, seed, off) => {             // off: how far off the hold point every arrow is aimed (m)
+    const m = new K.Stage({ level: lv, seed }), winds = [];
+    while (!m.over) { winds.push(m.wind); const h = K.Bot.hold(m); m.shoot(h.x + off, h.y - off * 0.5, 0, 0, 1); }
+    return { m, winds };
+  };
+  const lvs = [0, 9, 23, 41, 47], seed = 0xC0FFEE;
+  const same = lvs.map(lv => { const a = play(lv, seed, 0), b = play(lv, seed, 0.35); return a.winds.length === b.winds.length && a.winds.every((w, i) => w === b.winds[i]); });
+  const gold = play(0, seed, 0).m.total(0), wide = play(0, seed, 0.35).m.total(0);      // (the two really did shoot differently)
+  const other = play(9, seed + 1, 0).winds, mine = play(9, seed, 0).winds, differs = other.some((w, i) => w !== mine[i]);
+  rec('ghost-same-wind', same.every(Boolean) && gold !== wide && differs, `on levels ${lvs.map(l => l + 1).join('/')} the wind for every arrow is identical on the same seed whether you shoot gold or 35 cm off (${same.filter(Boolean).length}/${lvs.length}; level 1 scores ${gold} vs ${wide}); another seed blows differently (${differs})`);
+
+  const A = play(11, 123456789, 0.02).m, gh = Gh.of(A, 'robin hood!'), code = Gh.encode(gh), back = Gh.decode(code);
+  const hitsOk = back && A.arrows[0].every((a, i) => { const b = back.arrows[i]; return a.ring === b.ring && a.x === b.x && (!a.hit || a.hit.z !== undefined ? b.hit === null : Math.abs(a.hit.x - b.hit.x) < 0.006 && Math.abs(a.hit.y - b.hit.y) < 0.006); });
+  const soFar = back && Gh.soFar(back, 4) === A.arrows[0].slice(0, 4).reduce((s, a) => s + a.ring, 0);
+  rec('ghost-link', !!back && back.lv === 11 && back.seed === 123456789 && back.name === 'ROBIN HOOD' && back.total === A.total(0) && back.stars === A.stars() && hitsOk && soFar && /^[A-Za-z0-9_-]+$/.test(code) && code.length < Gh.MAX
+    && Gh.of(new K.Stage({ level: 3, seed: 5 })) === null && Gh.of(new K.Match({ mode: 'range', dist: 1, seed: 5 })) === null,
+    `level 12 on seed 123456789 (${A.total(0)} pts, ★${A.stars()}) -> a ${code.length}-char link -> back: same level, seed, name (${back && back.name}), every ring and X, marks within 6 mm; an unfinished round or a range isn't a ghost`);
+
+  const raw = JSON.parse(Gh._unb64(code)), bad = f => { const o = JSON.parse(JSON.stringify(raw)); f(o); return Gh.decode(Gh._b64(JSON.stringify(o))); };
+  const refusals = {
+    ring11: bad(o => { o.a[0][0] = 11; }), fakeX: bad(o => { o.a[0] = [9, 1, 0, 130]; }), short: bad(o => { o.a.pop(); }), level: bad(o => { o.l = 999; }),
+    seed: bad(o => { o.s = -1; }), seedf: bad(o => { o.s = 1.5; }), far: bad(o => { o.a[0] = [0, 0, 9999, 130]; }), half: bad(o => { o.a[0] = [5, 0, 10, null]; }), ver: bad(o => { o.v = 2; }),
+    junk: Gh.decode('!!not-a-link'), empty: Gh.decode(''), huge: Gh.decode('A'.repeat(Gh.MAX + 1)), json: Gh.decode(Gh._b64('{"v":1')),
+  };
+  const liar = bad(o => { o.total = 999; o.sc = 999; });          // a claimed score is ignored: it is added up from the rings
+  const refused = Object.entries(refusals).filter(([, v]) => v !== null).map(([k]) => k);
+  rec('ghost-tamper', !refused.length && liar && liar.total === A.total(0), `doctored links are refused (${Object.keys(refusals).length - refused.length}/${Object.keys(refusals).length}${refused.length ? ', let through: ' + refused.join(' ') : ''}); a link claiming 999 still scores ${liar && liar.total} from its rings`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

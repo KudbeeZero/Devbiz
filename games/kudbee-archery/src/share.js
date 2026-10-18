@@ -136,6 +136,15 @@ KAR.Share = {
         info: { v: m.venue, ribbon: done ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL ' + (m.lv + 1) + ' CLEARED!', col: 'green', big: m.total(0), bigSize: 110, stars: st,
           line1: V.name + '  ·  ' + m.def.name, line2: 'OUT OF ' + m.max + '  ·  ' + m.xs(0) + ' X  ·  ' + m.dist + ' M', icon: done || boss ? 'crown' : m.venue >= 5 ? 'coin' : 'target' } };
     }
+    // a GHOST CHALLENGE: this round as a link a friend plays against (same level, same wind, your arrows as ghosts)
+    if (kind === 'shareChallenge' && m && m.mode === 'stage' && m.over && m.total(0) > 0) {
+      const gh = KAR.Ghost.of(m, KAR.Cloud && KAR.Cloud.meta.name); if (!gh) return null;
+      const L = m.def, beat = m.ghost && m.total(0) > m.ghost.total;
+      return { slug: 'challenge', url: KAR.Ghost.link(gh),
+        text: (beat ? 'I just beat ' + m.ghost.name + '\'s ' + m.ghost.total + ' with ' + m.total(0) : 'Beat my ' + m.total(0)) + ' on Level ' + (m.lv + 1) + ' · ' + L.name + ' in Kudbee Archery. Same wind I had, and my arrows land beside yours as ghosts:',
+        info: { v: m.venue, ribbon: 'CAN YOU BEAT ME?', col: 'yellow', big: m.total(0), bigSize: 110, stars: gh.stars,
+          line1: 'LEVEL ' + (m.lv + 1) + '  ·  ' + L.name, line2: 'SAME WIND  ·  BEAT MY GHOST', icon: L.boss ? 'crown' : m.venue >= 5 ? 'coin' : 'target' } };
+    }
     if (kind === 'share' && m && m.daily) {
       const dd = D.daily;
       return { slug: 'daily', text: 'Kudbee Archery · Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') · ' + m.score + ' pts · ' + m.popped + ' popped · best combo ×' + Math.max(1, Math.min(5, m.bestCombo)) + '. Same balloons for everyone today — beat me:',

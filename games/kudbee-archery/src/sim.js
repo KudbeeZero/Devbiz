@@ -89,7 +89,8 @@ KAR.Match = class {
     this.distIdx = opts.dist === undefined ? 1 : opts.dist;
     this.dist = C.DISTS[this.distIdx]; this.faceD = C.FACE[this.distIdx];
     this.levelIdx = opts.level === undefined ? 1 : opts.level; this.level = opts.cpu || KAR.LEVELS[this.levelIdx];     // cpu: a CUP rival's own skill
-    this.rng = KAR.Util.rng(opts.seed === undefined ? 1 : opts.seed);
+    this.seed = opts.seed === undefined ? 1 : opts.seed >>> 0;       // (a GHOST CHALLENGE replays the same wind from it)
+    this.rng = KAR.Util.rng(this.seed);
     this.shooters = this.mode === 'duel' ? 2 : 1;
     this.ends = C.ENDS; this.per = C.PER;
     this.endNo = 0; this.arrowNo = 0;               // arrowNo counts arrows fired this end (all shooters)
