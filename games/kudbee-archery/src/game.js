@@ -724,7 +724,7 @@ KAR.Game = class {
       else if (this.screen === 'over') { U.over(ctx, this); U.debrief(ctx, this); }
       else if (this.screen === 'share') U.shareScreen(ctx, this);
     }
-    U.achToast(ctx, this);
+    if (this.screen !== 'share') U.achToast(ctx, this);     // (held while the SHARE screen previews its card; it shows after)
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }
   }
 

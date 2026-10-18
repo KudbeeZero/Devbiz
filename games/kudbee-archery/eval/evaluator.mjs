@@ -309,19 +309,21 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
 // SOLANA BEACH + ALGORAND PEAKS: world 7 opens off the BITCOIN CITY boss and world 8 off the SOLANA boss; the map pages
 // to 8/8; ORBIT paints the synthwave beach (a violet sky) with the boss going round its hub; FINALITY paints the ice wall
 {
-  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars.fill(1, 0, 35); D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 6; }); await page.waitForTimeout(150);
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars.fill(1, 0, 35); D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 6; }); await page.waitForFunction(() => KAR.UI.buttons.some(b => b.id === 'L36'), null, { timeout: 5000 }).catch(() => {});
   const shut7 = await G(() => KAR.UI.buttons.filter(b => /^L(3[6-9]|4[01])$/.test(b.id)).every(b => b.disabled));
-  await G(() => { KAR.Store.data.tour.stars[35] = 1; }); await page.waitForTimeout(150);
+  await G(() => { KAR.Store.data.tour.stars[35] = 1; }); await page.waitForFunction(() => KAR.UI.buttons.some(b => b.id === 'L36' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
   const open7 = await G(() => KAR.UI.buttons.filter(b => /^L(3[6-9]|4[01])$/.test(b.id) && !b.disabled).map(b => b.id).join());
-  await click('wnext'); await page.waitForTimeout(150);
+  await clickWhen('wnext'); await page.waitForFunction(() => KARGame.worldView === 7 && KAR.UI.buttons.some(b => b.id === 'L42'), null, { timeout: 5000 }).catch(() => {});
   const page8 = await G(() => KARGame.worldView === 7 && KAR.UI.buttons.find(b => b.id === 'wnext').disabled && KAR.UI.buttons.filter(b => /^L4[2-7]$/.test(b.id)).every(b => b.disabled));
   await G(() => { KAR.Store.data.tour.stars.fill(1, 36, 46); }); await page.waitForTimeout(150);
   await page.screenshot({ path: `${OUT}/algorand-map.png` });
-  await click('wprev'); await page.waitForTimeout(150); await click('L39'); await page.waitForTimeout(400);
+  await clickWhen('wprev'); await page.waitForFunction(() => KARGame.worldView === 6 && KAR.UI.buttons.some(b => b.id === 'L39' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
+  await click('L39'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 39, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
   const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, x0: KARGame.match.offAt(0).x, x1: KARGame.match.offAt(1.4).x }));
   const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(12 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
   await page.screenshot({ path: `${OUT}/solana-orbit.png` });
-  await G(() => { KARGame.activate('levels'); KARGame.worldView = 7; }); await page.waitForTimeout(150); await click('L43'); await page.waitForTimeout(400);
+  await G(() => { KARGame.activate('levels'); KARGame.worldView = 7; }); await page.waitForFunction(() => KARGame.screen === 'levels' && KAR.UI.buttons.some(b => b.id === 'L43' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
+  await click('L43'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 43, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
   const fin = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length }));
   const ice = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
   await page.screenshot({ path: `${OUT}/algorand-finality.png` });
@@ -550,9 +552,9 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   });
   const bad = lp.filter(x => !x.ok).map(x => x.slug);
   rec('share-pages', lp.length === 14 && !bad.length, `${lp.length} landing pages (worlds, cups, daily, champion, trophy) each with its own 1200x630 card + matching og/twitter tags${bad.length ? '; BAD: ' + bad.join(',') : ''}`);
-  const lv = await G(() => {
-    const D = KAR.Store.data, g = KARGame; D.tut = 15; D.tour.stars.fill(3); D.tourLv = 41; D.mode = 5; g.startMatch(); const m = g.match, r = KAR.Util.rng(5);
-    while (!m.over) { const s = KAR.Bot.shot(m, r, 0.0003, 0.01); m.shoot(s.aimX, s.aimY, s.sx, s.sy, 1); }
+  const lv = await G(() => {        // PURE STAKE (level 43, world 8): calm and still, so the perfect hold clears it every time
+    const D = KAR.Store.data, g = KARGame; D.tut = 15; D.tour.stars.fill(3); D.tourLv = 42; D.mode = 5; g.startMatch(); const m = g.match;
+    while (!m.over) { const h = KAR.Bot.hold(m); m.shoot(h.x, h.y, 0, 0, 1); }
     g._finishMatch(); return m.stars();
   });
   await page.waitForTimeout(300); await clickWhen('shareLevel'); await page.waitForTimeout(300);
@@ -561,8 +563,8 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await click('shBack'); await page.waitForTimeout(150);
   const back = await G(() => KARGame.screen);
   const nets = ['shX', 'shFB', 'shWA', 'shCopy', 'shSave', 'shBack'].every(i => sc.ids.includes(i)) && !sc.ids.includes('retry') && !sc.ids.includes('pause');
-  rec('share-level', lv >= 1 && sc.s === 'share' && /World 7 boss.*\/s\/w7\/$/.test(sc.t) && sc.cv.join('x') === '1200x630' && nets && sc.x.startsWith('https://twitter.com/intent/tweet?text=I%20beat') && back === 'over',
-    `world-7 boss cleared (${lv} stars) -> SHARE screen with a ${sc.cv.join('x')} card, X/FB/WA/copy/save, no game buttons under it; "${sc.t.slice(0, 70)}..."; BACK -> ${back}`);
+  rec('share-level', lv >= 1 && sc.s === 'share' && /^I scored \d+ on Level 43 · PURE STAKE ★+ in Kudbee Archery.*\/s\/w8\/$/.test(sc.t) && sc.cv.join('x') === '1200x630' && nets && sc.x.startsWith('https://twitter.com/intent/tweet?text=I%20scored') && back === 'over',
+    `level 43 cleared (${lv} stars) -> SHARE screen with a ${sc.cv.join('x')} card, X/FB/WA/copy/save, no game buttons under it; "${sc.t.slice(0, 70)}..."; BACK -> ${back}`);
   await G(() => { KARGame.activate('menu'); KARGame.activate('trophies'); KARGame.activate('tnext'); }); await page.waitForTimeout(200);
   const tid = await G(() => (KAR.UI.buttons.find(b => /^tsh\d+$/.test(b.id)) || {}).id);
   if (tid) { await click(tid); await page.waitForTimeout(200); }
