@@ -786,7 +786,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
 {
   await G(() => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tourLv = 0; KARGame.__bz = []; KARGame.buzz = p => KARGame.__bz.push(p); KARGame.startMatch(); });
   await waitFor(() => KARGame.screen === 'play' && KARGame.bp === 'ready', 5000);
-  await G(() => { KARGame.__bz = []; KARGame._beginDraw(); });      // (record from the draw on: a trophy card can buzz before it)
+  await G(() => { KARGame.achQ = []; KARGame.__bz = []; KARGame._beginDraw(); });      // (record from the draw on, with no trophy card queued: its drop-in buzzes too)
   await waitFor(() => KARGame.draw >= 1, 5000);
   const ticks = await G(() => KARGame.__bz.slice());
   await G(() => { const g = KARGame, h = KAR.Bot.hold(g.match, undefined, g._kit(0)); g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); });
