@@ -343,7 +343,68 @@ await page.screenshot({ path: `${OUT}/trophy-toast.png` });
 rec('trophies', tr0.scr === 'trophies' && tr0.cards >= 20 && tr1 === 1 && tr2.toast && tr2.saved && tr2.count >= 1,
   `TROPHIES opens from the menu (${tr0.cards} trophies), pages to ${tr1 + 1}; a real first arrow announces FIRST ARROW and saves it (${tr2.count} won)`);
 await G(() => { KARGame.achQ = []; KARGame.activate('menu'); });
+// QUESTS + BOWS & ARROWS: a real arrow finishes a quest, CLAIM pays gems, the shop sells + equips kit,
+// and only your arrows use it (the CPU and the Daily keep club kit)
+await G(() => { const D = KAR.Store.data, day = KAR.Daily.day(); D.gems = 15; D.ownBow = 1; D.ownArrow = 1; D.kit = { bow: 0, arrow: 0 };
+  D.quest = { day, q: [{ id: 'arrows', have: 19, claimed: false }, { id: 'tens', have: 0, claimed: false }, { id: 'duel', have: 0, claimed: false }], bonus: false }; KARGame.achQ = []; KAR.Store.data.mode = 0; KARGame.startMatch(); });
+await page.waitForFunction(() => KARGame.human(), null, { timeout: 5000 }).catch(() => {});
+await G(() => { const g = KARGame; g.drawing = true; g.draw = 1; g._loose(); });
+const qd = await G(() => ({ done: KAR.Store.data.quest.q[0].have === 20, card: !!(KARGame.achQ && KARGame.achQ.some(q => q.title === 'QUEST DONE!')) }));
+await G(() => KARGame.activate('menu')); await page.waitForTimeout(80);
+await click('quests'); await page.waitForTimeout(80);
+const qs0 = await G(() => ({ scr: KARGame.screen, dot: KAR.questClaimable(KAR.Store.data) }));
+await click('qc0'); await page.waitForTimeout(60);
+await page.screenshot({ path: `${OUT}/quests.png` });
+const qs1 = await G(() => ({ gems: KAR.Store.data.gems, claimed: KAR.Store.data.quest.q[0].claimed, saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).gems }));
+await click('shop'); await page.waitForTimeout(60);
+await click('ka1'); await page.waitForTimeout(60);                // CARBON: 25 gems - shown, not bought yet
+const sh0 = await G(() => ({ sel: KARGame.shopSel && KARGame.shopSel.i, gems: KAR.Store.data.gems, own: KAR.kitOwned(KAR.Store.data, 'arrow', 1) }));
+await click('kbuy'); await page.waitForTimeout(60);
+await page.screenshot({ path: `${OUT}/shop.png` });
+const sh1 = await G(() => { const D = KAR.Store.data; KAR.Store.data.mode = 1; KARGame.startMatch(); const g = KARGame, mine = g._kit(0).wind, cpu = g._kit(1).wind; KAR.Store.data.mode = 4; g.startMatch(); const daily = g._kit(0).wind; KAR.Store.data.mode = 0; g.activate('menu');
+  return { gems: D.gems, arrow: D.kit.arrow, own: KAR.kitOwned(D, 'arrow', 1), mine, cpu, daily, saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).kit.arrow }; });
+rec('quests-shop', qd.done && qd.card && qs0.scr === 'quests' && qs0.dot && qs1.gems === 25 && qs1.claimed && qs1.saved === 25 && sh0.sel === 1 && sh0.gems === 25 && !sh0.own
+  && sh1.gems === 0 && sh1.arrow === 1 && sh1.own && sh1.saved === 1 && sh1.mine === 0.82 && sh1.cpu === 1 && sh1.daily === 1,
+  `a real 20th arrow finishes "shoot 20 arrows" (card shown); QUESTS → CLAIM pays 10 gems (15 → ${qs1.gems}, saved); tapping CARBON shows it without buying, BUY spends 25 and equips it (saved); your arrows fly carbon (wind x${sh1.mine}), the CPU and the Daily keep club kit (x${sh1.cpu}, x${sh1.daily})`);
+await G(() => { const D = KAR.Store.data; D.gems = 0; D.kit = { bow: 0, arrow: 0 }; D.ownBow = 1; D.ownArrow = 1; D.quest = null; KARGame.achQ = []; });
 await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
+
+// THE AGENT: three real arrows aimed dead centre in a strong right wind (no hold-off) → ROBIN's tip card says the wind is
+// winning; '/' opens the AGENT screen from pause, Escape goes back; the in-game tips switch saves; /#agent opens it directly
+{
+  await G(() => { KAR.Store.data.mode = 0; KAR.Store.data.dist = 1; KAR.Store.data.agent = true; KARGame.agentLog = []; KARGame.agentTip = null; KARGame.achQ = []; KARGame.startMatch(); });
+  for (let i = 0; i < 3; i++) {
+    await page.waitForFunction(() => KARGame.human(), null, { timeout: 9000 }).catch(() => {});
+    await G(() => { const g = KARGame, m = g.match; m.wind = 3; g.aimX = 0; g.aimY = KAR.CFG.FACE_Y; g.drawing = true; g.draw = 1; g.holdT = 0.5; g._loose(); g.sway = { x: 0, y: 0 }; });
+    await page.waitForFunction(() => KARGame.bp === 'result' || KARGame.screen !== 'play', null, { timeout: 9000 }).catch(() => {});
+  }
+  const ag0 = await G(() => ({ n: KARGame.agentLog.length, tip: KARGame.agentTip && KARGame.agentTip.id }));
+  await page.waitForTimeout(150); await page.screenshot({ path: `${OUT}/agent-tip.png` });
+  await page.keyboard.press('p'); await page.keyboard.press('/'); await page.waitForTimeout(100);
+  const ag1 = await G(() => ({ scr: KARGame.screen, see: KAR.Agent.read(KARGame.agentLog)[0].id }));
+  await page.screenshot({ path: `${OUT}/agent.png` });
+  const saved = await G(() => (JSON.parse(localStorage.getItem('kudbee.archery.v1')).agentLog || []).length);
+  await click('aq0'); await page.waitForTimeout(60);
+  const asked = await G(() => KARGame.agentQ === 0);
+  await page.screenshot({ path: `${OUT}/agent-ask.png` });
+  await click('aq0'); await page.waitForTimeout(40);
+  await click('agentTips'); await page.waitForTimeout(50);
+  const off = await G(() => KAR.Store.data.agent === false && JSON.parse(localStorage.getItem('kudbee.archery.v1')).agent === false);
+  await click('agentTips'); await page.keyboard.press('Escape'); await page.waitForTimeout(50);
+  const back = await G(() => KARGame.screen);
+  // the results card carries ROBIN's debrief, and tapping it opens the AGENT
+  await G(() => { const g = KARGame; g.match.over = true; g.setScreen('over'); g.overlayT = 3; });
+  await page.waitForTimeout(120);
+  const deb = await G(() => KAR.UI.buttons.some(b => b.id === 'agent'));
+  await page.screenshot({ path: `${OUT}/agent-debrief.png` });
+  await click('agent'); await page.waitForTimeout(50);
+  const debOpen = await G(() => KARGame.screen === 'agent' && KARGame.agentBack === 'over');
+  const hp = await browser.newPage(); await hp.goto(URL + '#agent'); await hp.waitForFunction(() => window.KARGame);
+  const hash = await hp.evaluate(() => KARGame.screen); await hp.close();
+  rec('agent', ag0.n === 3 && ag0.tip === 'under' && ag1.scr === 'agent' && ag1.see === 'under' && off && back === 'paused' && hash === 'agent' && saved >= 3 && asked && deb && debOpen,
+    `3 un-held arrows in a 3-unit wind → ROBIN says "${ag0.tip}"; P then / opens the AGENT (${ag1.scr}), Escape back to ${back}; TIPS OFF saves; /#agent opens on ${hash}; ${saved} arrows remembered in the save; ASK ROBIN answers; the results card's debrief opens the AGENT`);
+  await G(() => { KARGame.agentLog = []; KARGame.agentTip = null; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
+}
 
 // SHARING: the page carries a share card (Open Graph + Twitter large image, absolute https URLs) whose image is a real 1200x630
 // file in the repo, and the menu's share button shares the game's public (canonical) link

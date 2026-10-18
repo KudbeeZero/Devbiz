@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {} },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [] },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -41,6 +41,8 @@ KAR.Store = {
           const D = this.data, pick = (v, n) => (Number.isInteger(v) && v >= 0 && v < n ? v : null);
           D.muted = !!d.muted;
           if (typeof d.haptics === 'boolean') D.haptics = d.haptics;
+          if (typeof d.agent === 'boolean') D.agent = d.agent;
+          if (Array.isArray(d.agentLog) && KAR.Agent) D.agentLog = d.agentLog.slice(-KAR.Agent.KEEP).map(x => KAR.Agent.clean(x)).filter(x => x);      // ROBIN remembers your last arrows
           if (pick(d.mode, 6) !== null) D.mode = d.mode;
           const v1 = d.tour && Array.isArray(d.tour.stars) && d.tour.stars.length === 15 && KAR.TOUR_V1;   // a save from the 15-level tour
           if (pick(d.tourLv, v1 ? 15 : 30) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
@@ -56,6 +58,11 @@ KAR.Store = {
           if (pick(d.level, 3) !== null) D.level = d.level;
           for (const k of ['best', 'stars']) if (Array.isArray(d[k])) for (let i = 0; i < 4; i++) if (typeof d[k][i] === 'number') D[k][i] = d[k][i];
           if (d.stats && typeof d.stats === 'object') for (const k in D.stats) if (Number.isInteger(d.stats[k]) && d.stats[k] >= 0) D.stats[k] = d.stats[k];
+          // gems + kit: whole numbers in range; you can only have kit you own (the club kit is always yours)
+          if (Number.isInteger(d.gems) && d.gems >= 0) D.gems = Math.min(d.gems, 1e6);
+          for (const k of ['ownBow', 'ownArrow']) if (Number.isInteger(d[k]) && d[k] >= 0 && d[k] < 16) D[k] = d[k] | 1;
+          if (d.kit && typeof d.kit === 'object') { if (pick(d.kit.bow, 4) !== null && (D.ownBow >> d.kit.bow & 1)) D.kit.bow = d.kit.bow; if (pick(d.kit.arrow, 4) !== null && (D.ownArrow >> d.kit.arrow & 1)) D.kit.arrow = d.kit.arrow; }
+          if (d.quest && typeof d.quest === 'object') D.quest = d.quest;        // checked (and rolled over) by KAR.questToday
           if (d.ach && typeof d.ach === 'object' && !Array.isArray(d.ach)) for (const k in d.ach) if (d.ach[k] === 1 && /^[a-z0-9]{2,12}$/.test(k)) D.ach[k] = 1;
         }
       }

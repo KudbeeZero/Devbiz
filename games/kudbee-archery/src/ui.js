@@ -259,8 +259,23 @@ KAR.UI = {
       U.button(ctx, g, 'breath', 772 + xr, 500, 172, 76, g.holding ? 'STEADY!' : 'BREATH', { small: true, color: g.holding ? 'green' : 'yellow' });
       if (g.drawing && !g.holding) U.text(ctx, 'or a 2nd finger', 858 + xr, 604, 17, '#ffffff', 'center');
     }
+    // THE AGENT's tip: a card at the bottom left for a few seconds after an arrow lands
+    if (g.agentTip && g.screen === 'play') {
+      const age = g.time - g.agentTip.t, k = Math.min(1, age / 0.3, (6 - age) / 0.4);
+      if (age > 6) g.agentTip = null;
+      else {
+        const x = 14 + xl, y = big ? 432 : 520, w = big ? 470 : 440, h = big ? 62 : 56;
+        ctx.save(); ctx.globalAlpha = Math.max(0, k) * (g.drawing ? 0.45 : 1); ctx.translate(-(1 - Math.max(0, k)) * 40, 0);
+        U.rr(ctx, x, y, w, h, 16); ctx.fillStyle = U.OUT; ctx.fill();
+        U.rr(ctx, x + 3, y + 3, w - 6, h - 6, 13); ctx.fillStyle = '#2c4f86'; ctx.fill();
+        this.robin(ctx, x + 32, y + h / 2, big ? 22 : 20, g.time);
+        U.text(ctx, KAR.Agent.NAME + ' SAYS', x + 62, y + (big ? 24 : 22), U.sz(g, 13), '#9be35a', 'left');
+        U.fit(ctx, g.agentTip.line, x + 62, y + h - (big ? 13 : 12), U.sz(g, 17), '#ffffff', w - 76, 'left');
+        ctx.restore();
+      }
+    }
     // hint / turn text
-    if (g.hint && g.hintT > 0 && !g.drawing) { ctx.save(); ctx.globalAlpha = Math.min(1, g.hintT * 2); U.fit(ctx, g.hint, 480, 618, big ? 24 : 20, '#ffffff', big ? 560 + xr * 2 - 40 : 900); ctx.restore(); }
+    if (g.hint && g.hintT > 0 && !g.drawing && g.screen !== 'over') { ctx.save(); ctx.globalAlpha = Math.min(1, g.hintT * 2); U.fit(ctx, g.hint, 480, 618, big ? 24 : 20, '#ffffff', big ? 560 + xr * 2 - 40 : 900); ctx.restore(); }
     // banner
     if (g.banner) {
       const b = g.banner, k = KAR.Util.easeOut(Math.min(1, b.age * 5)), fade = Math.min(1, b.life * 3);
@@ -285,6 +300,8 @@ KAR.UI = {
     const xl = KAR.Render.XL, xr = -xl;
     U.button(ctx, g, 'gear', 16 + xl, 14, C ? 190 : 170, C ? 60 : 48, 'GEAR \u2605' + KAR.starTotal(D), { small: true, color: 'yellow' });
     U.button(ctx, g, 'trophies', 16 + xl + (C ? 202 : 180), 14, C ? 230 : 200, C ? 60 : 48, 'TROPHIES ' + KAR.achCount(D) + '/' + KAR.ACH.length, { small: true, color: 'yellow' });
+    U.button(ctx, g, 'agent', 16 + xl, C ? 84 : 72, C ? 190 : 170, C ? 46 : 44, '    AGENT', { small: true, color: 'blue' });
+    this.robin(ctx, 16 + xl + 30, (C ? 84 : 72) + (C ? 23 : 22), C ? 17 : 16, g.time);
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 3) * 300 : 24 + k * 154, C ? 126 + Math.floor(k / 3) * 66 : 232, C ? 288 : 142, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
@@ -338,6 +355,10 @@ KAR.UI = {
     if (!tour) U.fit(ctx, (C ? 'touch & hold to draw  \u00b7  drag anywhere to aim  \u00b7  lift to loose' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose'), 480, 568, U.sz(g, 16), '#ffffff', 900);
     if (!C) U.fit(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, U.sz(g, 15), '#ffe9a8', 900);
     U.roundIcon(ctx, g, 'mute', 926 + xr - (C ? 4 : 0), C ? 40 : 36, g.audio.muted ? 'mute' : 'sound', C);
+    { const qw = C ? 214 : 180, qx = 926 + xr - (C ? 66 : 50) * (g.canFull() ? 3 : 2) - qw / 2 - (C ? 30 : 22), qh = C ? 60 : 48;
+      U.button(ctx, g, 'quests', qx - qw / 2, 14, qw, qh, 'QUESTS', { small: true, color: 'blue' });
+      this.gem(ctx, qx + qw / 2 - 22, 14 + qh / 2, C ? 11 : 9);
+      if (KAR.questClaimable(D)) { ctx.beginPath(); ctx.arc(qx + qw / 2 - 6, 20, 9, 0, 6.283); ctx.fillStyle = '#ff3b4f'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke(); } }
     const ri = C ? 66 : 50;
     if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
     U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
@@ -364,7 +385,8 @@ KAR.UI = {
         U.text(ctx, open ? it.name : '\u2605 ' + it.need, x + 65, y + 104 + (g.coarse ? 2 : 0), U.sz(g, 12), open ? '#ffffff' : '#ffe9a8', 'center');
       });
     });
-    U.button(ctx, g, 'back', 380, 520, 200, 56, 'BACK', { primary: true });
+    U.button(ctx, g, 'shop', 250, 520, 250, 56, 'BOWS & ARROWS', { small: true, color: 'yellow' });
+    U.button(ctx, g, 'back', 520, 520, 200, 56, 'BACK', { primary: true });
   },
   // ---- TROPHIES: every lifetime goal with its progress, nine to a page ----
   trophies(ctx, g) {
@@ -389,6 +411,83 @@ KAR.UI = {
     U.button(ctx, g, 'tnext', 354, 494, 130, 56, 'NEXT \u203a', { small: true, color: 'blue', disabled: pg >= pages - 1 });
     U.button(ctx, g, 'back', 630, 494, 230, 56, 'BACK', { primary: true });
   },
+  // a cut gem (the quest currency), centred on (x, y)
+  gem(ctx, x, y, r) {
+    ctx.save(); ctx.lineJoin = 'round';
+    const P = [[-1, -0.35], [-0.55, -0.85], [0.55, -0.85], [1, -0.35], [0, 1]];
+    ctx.beginPath(); P.forEach(([a, b], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x + a * r, y + b * r)); ctx.closePath();
+    ctx.fillStyle = '#3fd2ff'; ctx.fill(); ctx.lineWidth = Math.max(2, r * 0.22); ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r, y - 0.35 * r); ctx.lineTo(x + r, y - 0.35 * r); ctx.moveTo(x - 0.3 * r, y - 0.35 * r); ctx.lineTo(x, y + r); ctx.lineTo(x + 0.3 * r, y - 0.35 * r);
+    ctx.lineWidth = Math.max(1, r * 0.1); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 0.55 * r, y - 0.85 * r); ctx.lineTo(x - 0.3 * r, y - 0.35 * r); ctx.lineTo(x + 0.3 * r, y - 0.35 * r); ctx.lineTo(x + 0.55 * r, y - 0.85 * r); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
+    ctx.restore();
+  },
+  // the gem balance, right-aligned at (x, y), with a +n float after a claim
+  gems(ctx, g, x, y) {
+    const D = KAR.Store.data, s = '' + D.gems, sz = this.sz(g, 24);
+    ctx.save(); ctx.font = '400 ' + sz + 'px ' + this.FONT; const w = ctx.measureText(s).width; ctx.restore();
+    this.text(ctx, s, x, y, sz, '#bff4ff', 'right'); this.gem(ctx, x - w - 18, y - 9, 12);
+    if (g.gemFx && g.time - g.gemFx.t < 1.2) { const a = (g.time - g.gemFx.t) / 1.2; ctx.save(); ctx.globalAlpha = 1 - a; this.text(ctx, '+' + g.gemFx.n, x, y - 26 - a * 24, this.sz(g, 20), '#9be35a', 'right'); ctx.restore(); }
+  },
+
+  // ---- DAILY QUESTS: three a day, each pays gems, all three pays a bonus ----
+  quests(ctx, g) {
+    const U = this, D = KAR.Store.data, Q = KAR.questToday(D);
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 100, 74, 760, 530, 'blue');
+    U.ribbon(ctx, 480, 46, 380, 'DAILY QUESTS', 'yellow');
+    const left = 86400000 - Date.now() % 86400000, h = Math.floor(left / 3600000), mn = Math.floor(left % 3600000 / 60000);
+    U.fit(ctx, 'NEW QUESTS IN ' + h + 'H ' + mn + 'M  ·  gems buy new bows & arrows', 450, 132, U.sz(g, 16), '#ffe9a8', 560);
+    U.gems(ctx, g, 832, 134);
+    Q.q.forEach((x, i) => {
+      const d = KAR.questDef(x.id), y = 148 + i * 96, done = x.have >= d.n;
+      U.rr(ctx, 128, y, 704, 84, 14); ctx.fillStyle = U.OUT; ctx.fill();
+      U.rr(ctx, 131, y + 3, 698, 78, 12); ctx.fillStyle = x.claimed ? '#3a5170' : done ? '#3f8a3c' : '#2c4f86'; ctx.fill();
+      U.fit(ctx, d.text.toUpperCase(), 152, y + 34, U.sz(g, 19), '#ffffff', 390, 'left');
+      U.rr(ctx, 152, y + 50, 300, 14, 7); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      if (x.have > 0) { U.rr(ctx, 152, y + 50, Math.max(14, 300 * x.have / d.n), 14, 7); ctx.fillStyle = done ? '#9be35a' : '#7ac7ff'; ctx.fill(); }
+      U.text(ctx, x.have + ' / ' + d.n, 466, y + 63, U.sz(g, 15), '#ffffff', 'left');
+      this.gem(ctx, 566, y + 40, 12); U.text(ctx, '' + d.gems, 584, y + 49, U.sz(g, 22), '#bff4ff', 'left');
+      if (x.claimed) U.text(ctx, '✓ CLAIMED', 728, y + 50, U.sz(g, 20), '#9be35a', 'center');
+      else U.button(ctx, g, 'qc' + i, 640, y + 14, 176, 56, done ? 'CLAIM' : 'IN PROGRESS', { small: true, color: done ? 'green' : 'blue', disabled: !done });
+    });
+    const ready = KAR.questBonusReady(D);
+    U.fit(ctx, Q.bonus ? 'ALL THREE DONE  ·  BONUS CLAIMED' : 'CLAIM ALL THREE FOR A BONUS', 152, 474, U.sz(g, 17), '#fff27a', 390, 'left');
+    this.gem(ctx, 566, 466, 12); U.text(ctx, '' + KAR.QUEST_BONUS, 584, 475, U.sz(g, 22), '#bff4ff', 'left');
+    if (!Q.bonus) U.button(ctx, g, 'qb', 640, 440, 176, 56, 'BONUS', { small: true, color: ready ? 'yellow' : 'blue', disabled: !ready });
+    U.button(ctx, g, 'shop', 150, 522, 300, 60, 'BOWS & ARROWS', { small: true, color: 'yellow' });
+    U.button(ctx, g, 'back', 610, 522, 220, 60, 'BACK', { primary: true });
+  },
+
+  // ---- BOWS & ARROWS: bought with gems; each handles differently (KAR.KIT) ----
+  shop(ctx, g) {
+    const U = this, D = KAR.Store.data, sel = g.shopSel;
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 60, 74, 840, 546, 'blue');
+    U.ribbon(ctx, 480, 46, 420, 'BOWS & ARROWS', 'yellow');
+    U.fit(ctx, 'every bow and arrow handles differently  ·  none is simply better', 440, 132, U.sz(g, 16), '#ffe9a8', 600);
+    U.gems(ctx, g, 872, 134);
+    [['bow', 'BOW', 'kb'], ['arrow', 'ARROWS', 'ka']].forEach(([kind, label, pre], r) => {
+      const y = 144 + r * 184;
+      U.text(ctx, label, 84, y + 16, U.sz(g, 17), '#ffffff', 'left');
+      KAR.KIT[kind].forEach((it, i) => {
+        const x = 84 + i * 200, own = KAR.kitOwned(D, kind, i), on = D.kit[kind] === i, picked = sel && sel.kind === kind && sel.i === i;
+        U.button(ctx, g, pre + i, x, y + 26, 188, 148, '', { small: true, color: on ? 'green' : picked ? 'yellow' : 'blue', selected: on || picked });
+        U.fit(ctx, it.name, x + 94, y + 58, U.sz(g, 16), '#ffffff', 172);
+        U.fit(ctx, '+ ' + it.plus, x + 94, y + 88, U.sz(g, 13), '#d6ffb8', 174);
+        if (it.minus) U.fit(ctx, '− ' + it.minus, x + 94, y + 112, U.sz(g, 13), '#ffd0c8', 174);
+        if (on) U.text(ctx, 'EQUIPPED', x + 94, y + 158, U.sz(g, 15), '#fff27a', 'center');
+        else if (own) U.fit(ctx, 'OWNED · TAP TO USE', x + 94, y + 158, U.sz(g, 13), '#ffffff', 172);
+        else { this.gem(ctx, x + 78, y + 151, 10); U.text(ctx, '' + it.cost, x + 94, y + 159, U.sz(g, 18), '#bff4ff', 'left'); }
+      });
+    });
+    if (sel) {
+      const it = KAR.KIT[sel.kind][sel.i], can = D.gems >= it.cost;
+      U.button(ctx, g, 'kbuy', 84, 540, 380, 62, can ? 'BUY ' + it.name : 'NEED ' + (it.cost - D.gems) + ' MORE GEMS', { small: true, color: can ? 'green' : 'blue', disabled: !can, primary: can });
+    } else U.fit(ctx, 'tap kit you own to use it  ·  tap new kit, then BUY', 274, 578, U.sz(g, 15), '#ffe9a8', 380);
+    U.button(ctx, g, 'shopBack', 650, 540, 226, 62, 'BACK', { primary: !sel || D.gems < KAR.KIT[sel.kind][sel.i].cost });
+  },
+
   // a round gold (won) or grey (not yet) medal with a star
   medal(ctx, x, y, done) {
     ctx.save();
@@ -401,14 +500,14 @@ KAR.UI = {
   // a newly won trophy: a card that drops in at the top for ~3 s (queued, one at a time)
   achToast(ctx, g) {
     const q = g.achQ; if (!q || !q.length) return;
-    const it = q[0]; if (it.t0 === undefined) { it.t0 = g.time; g.audio.gold(3); g.buzz([20, 40, 30]); }
+    const it = q[0]; if (it.t0 === undefined) { it.t0 = g.time; g.audio.gold(it.gem ? 2 : 3); g.buzz([20, 40, 30]); }
     const age = g.time - it.t0; if (age > 3.2) { q.shift(); return; }
     const k = Math.min(1, age / 0.25, (3.2 - age) / 0.3), y = -70 + 84 * k, U = this;
     ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, k));
     U.rr(ctx, 320, y, 320, 64, 16); ctx.fillStyle = U.OUT; ctx.fill();      // clear of the score panel and the round buttons
     U.rr(ctx, 323, y + 3, 314, 58, 13); ctx.fillStyle = '#c9802e'; ctx.fill();
-    this.medal(ctx, 356, y + 32, true);
-    U.fit(ctx, 'TROPHY!  ' + it.a.name, 392, y + 28, U.sz(g, 18), '#fff6a8', 236, 'left');
+    if (it.gem) this.gem(ctx, 356, y + 32, 18); else this.medal(ctx, 356, y + 32, true);
+    U.fit(ctx, (it.title || 'TROPHY!') + '  ' + it.a.name, 392, y + 28, U.sz(g, 18), '#fff6a8', 236, 'left');
     U.fit(ctx, it.a.text, 392, y + 50, U.sz(g, 14), '#ffffff', 236, 'left');
     ctx.restore();
   },
@@ -545,19 +644,21 @@ KAR.UI = {
     if (g.coarse && navigator.vibrate) extra.push(['buzz', KAR.Store.data.haptics ? 'VIBRATE: ON' : 'VIBRATE: OFF']);
     if (g.canFull()) extra.push(['full', g.isFull() ? 'EXIT FULL SCREEN' : 'FULL SCREEN']);
     if (extra.length) {                       // phones: two columns so every button stays big
-      U.panel(ctx, 170, 130, 620, 372, 'blue');
+      const rows = Math.ceil((4 + extra.length) / 2);
+      U.panel(ctx, 170, 130, 620, 190 + rows * 74, 'blue');
       U.ribbon(ctx, 480, 106, 300, 'PAUSED', 'yellow');
       U.button(ctx, g, 'resume', 220, 210, 520, 70, 'RESUME', { primary: true });
-      [['restart', 'RESTART', 'blue'], ['menu', 'MENU', 'yellow'], ['mute', g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', 'blue']].concat(extra.map(e => e.concat('blue')))
+      [['restart', 'RESTART', 'blue'], ['menu', 'MENU', 'yellow'], ['mute', g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', 'blue'], ['agent', 'ASK THE AGENT', 'green']].concat(extra.map(e => e.concat('blue')))
         .forEach(([id, label, col], k) => U.button(ctx, g, id, 220 + (k % 2) * 270, 304 + Math.floor(k / 2) * 74, 250, 60, label, { small: true, color: col }));
       return;
     }
-    U.panel(ctx, 290, 130, 380, 372, 'blue');
+    U.panel(ctx, 290, 130, 380, 430, 'blue');
     U.ribbon(ctx, 480, 106, 300, 'PAUSED', 'yellow');
     U.button(ctx, g, 'resume', 340, 214, 280, 62, 'RESUME', { primary: true });
     U.button(ctx, g, 'restart', 340, 294, 280, 50, 'RESTART', { small: true });
     U.button(ctx, g, 'menu', 340, 360, 280, 50, 'MENU', { small: true, color: 'yellow' });
     U.button(ctx, g, 'mute', 340, 426, 280, 50, g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', { small: true });
+    U.button(ctx, g, 'agent', 340, 492, 280, 50, 'ASK THE AGENT  (/)', { small: true, color: 'green' });
   },
 
   over(ctx, g) {
@@ -589,6 +690,93 @@ KAR.UI = {
     U.fit(ctx, 'ENDS  ' + ends, 480, 420, U.sz(g, 17), '#ffffff', 450);
     U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
     U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
+    ctx.restore();
+  },
+
+  // ROBIN, the agent: a round little robin redbreast with a feathered cap (bobs as it talks)
+  robin(ctx, x, y, r, t) {
+    const U = this, b = Math.sin((t || 0) * 3) * r * 0.05;
+    ctx.save(); ctx.translate(x, y + b); ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-r * 0.9, r * 0.2); ctx.lineTo(-r * 1.35, r * 0.65); ctx.lineTo(-r * 0.7, r * 0.6); ctx.closePath(); ctx.fillStyle = '#7a4a24'; ctx.fill(); ctx.lineWidth = Math.max(2, r * 0.12); ctx.strokeStyle = U.OUT; ctx.stroke();   // tail
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fillStyle = '#8a5a2e'; ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(r * 0.25, r * 0.35, r * 0.72, r * 0.68, 0, 0, 6.283); ctx.fillStyle = '#ff7a2e'; ctx.fill();     // the red breast
+    ctx.beginPath(); ctx.ellipse(r * 0.3, r * 0.95, r * 0.6, r * 0.35, 0, 0, 6.283); ctx.fillStyle = '#fff1dc'; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r * 0.85, -r * 0.05); ctx.lineTo(r * 1.35, r * 0.08); ctx.lineTo(r * 0.82, r * 0.25); ctx.closePath(); ctx.fillStyle = '#ffc93a'; ctx.fill(); ctx.lineWidth = Math.max(1.5, r * 0.09); ctx.stroke();   // beak
+    ctx.beginPath(); ctx.arc(r * 0.42, -r * 0.25, r * 0.2, 0, 6.283); ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.48, -r * 0.24, r * 0.11, 0, 6.283); ctx.fillStyle = U.OUT; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-r * 0.75, -r * 0.6); ctx.quadraticCurveTo(0, -r * 1.25, r * 0.7, -r * 0.62); ctx.quadraticCurveTo(0, -r * 0.85, -r * 0.75, -r * 0.6); ctx.fillStyle = '#3f8a3c'; ctx.fill(); ctx.lineWidth = Math.max(1.5, r * 0.09); ctx.stroke();   // a Robin Hood cap
+    ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.95); ctx.quadraticCurveTo(-r * 0.6, -r * 1.6, -r * 1.05, -r * 1.55); ctx.lineWidth = Math.max(2, r * 0.14); ctx.strokeStyle = '#e8483a'; ctx.stroke();   // feather
+    ctx.restore();
+  },
+
+  // word-wrapped small print, left-aligned; returns the y under the last line
+  wrap(ctx, s, x, y, maxW, size, color, lh, maxLines) {
+    ctx.save(); ctx.font = '400 ' + size + 'px ' + this.FONT;
+    const words = s.split(' '), lines = []; let cur = '';
+    for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; }
+    if (cur) lines.push(cur);
+    ctx.restore();
+    lines.slice(0, maxLines || 9).forEach((l, i) => this.text(ctx, l, x, y + i * lh, size, color, 'left'));
+    return y + Math.min(lines.length, maxLines || 9) * lh;
+  },
+
+  // ---- THE AGENT: what ROBIN sees in your last arrows, and what to do next ----
+  agent(ctx, g) {
+    const U = this, D = KAR.Store.data, A = KAR.Agent, log = g.agentLog || [], tips = A.read(log), plan = A.plan(D, tips);
+    U.backdrop(ctx, 0.55);
+    U.panel(ctx, 60, 74, 840, 534, 'blue');
+    U.ribbon(ctx, 480, 46, 440, 'YOUR AGENT', 'green');
+    // left: ROBIN and your last arrows on a little target (dots = where each landed, newest brightest)
+    const cx = 196, cy = 268, rr = 104;
+    for (let i = 10; i >= 1; i--) { ctx.beginPath(); ctx.arc(cx, cy, rr * i / 10, 0, 6.283); ctx.fillStyle = ['#ffd34d', '#ffd34d', '#e8483a', '#e8483a', '#4aa3f0', '#4aa3f0', '#222b38', '#222b38', '#f4f1e8', '#f4f1e8'][i - 1]; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.283); ctx.lineWidth = 4; ctx.strokeStyle = U.OUT; ctx.stroke();
+    const shown = log.slice(-9);
+    shown.forEach((s, i) => {
+      if (s.short) return;
+      const f = rr / 10 / s.w, dx = KAR.Util.clamp(s.dx * f, -rr - 8, rr + 8), dy = KAR.Util.clamp(-s.dy * f, -rr - 8, rr + 8), last = i === shown.length - 1;
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, last ? 7 : 5.5, 0, 6.283); ctx.fillStyle = last ? '#9be35a' : 'rgba(255,255,255,' + (0.45 + 0.55 * i / shown.length) + ')'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke();
+    });
+    if (!shown.length) U.fit(ctx, 'NO ARROWS YET', cx, cy + 6, U.sz(g, 16), '#ffffff', 190);
+    const hits = shown.filter(s => !s.short), avg = hits.length ? shown.reduce((a, s) => a + s.ring, 0) / shown.length : 0;
+    U.fit(ctx, shown.length ? 'LAST ' + shown.length + ' ARROWS  ·  AVG ' + avg.toFixed(1) : 'PLAY A ROUND, THEN ASK ME', cx, cy + rr + 32, U.sz(g, 16), '#ffe9a8', 250);
+    this.robin(ctx, 128, 470, 40, g.time);
+    U.text(ctx, A.NAME, 182, 466, 28, '#ffffff', 'left');
+    U.fit(ctx, 'your archery coach', 182, 492, U.sz(g, 14), '#bfe3ff', 130, 'left');
+    U.fit(ctx, 'ask me below \u2192', 182, 516, U.sz(g, 14), '#9be35a', 130, 'left');
+    // right: what I see + what's next, or the answer to the question you tapped
+    const X = 336, W = 532, fs = U.sz(g, 16), lh = g.coarse ? 24 : 21, q = g.agentQ;
+    if (q !== null && q !== undefined && A.QS[q]) {
+      U.text(ctx, A.QS[q].q, X, 142, 22, '#fff27a', 'left');
+      U.wrap(ctx, A.answer(A.QS[q].id, D, log), X, 174, W, fs, '#ffffff', lh, g.coarse ? 9 : 10);
+    } else {
+      U.text(ctx, 'WHAT I SEE', X, 142, 22, '#fff27a', 'left');
+      let y = 172;
+      ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = '#9be35a'; ctx.fill(); y = U.wrap(ctx, tips[0].text, X + 22, y, W - 22, fs, '#ffffff', lh, 3) + 6;
+      y = Math.max(y + 8, 236);
+      U.text(ctx, 'NEXT UP', X, y, 22, '#fff27a', 'left'); y += 30;
+      const ic = { quest: '#bff4ff', level: '#ffd34d', trophy: '#ffb82e', gear: '#9be35a' };
+      for (const p of plan.slice(0, 3)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = ic[p.kind] || '#ffffff'; ctx.fill(); U.fit(ctx, p.text, X + 22, y, fs, '#ffffff', W - 22, 'left'); y += lh + 8; }
+    }
+    // ASK ROBIN: four questions (tap again to go back to the overview)
+    A.QS.forEach((x, i) => U.button(ctx, g, 'aq' + i, X + (i % 2) * 272, 400 + Math.floor(i / 2) * 62, 260, 52, x.q, { small: true, color: q === i ? 'green' : 'blue', selected: q === i }));
+    U.button(ctx, g, 'agentTips', X, 530, 300, 56, D.agent ? 'TIPS IN GAME: ON' : 'TIPS IN GAME: OFF', { small: true, color: D.agent ? 'green' : 'grey' });
+    U.button(ctx, g, 'agentBack', X + 316, 530, 216, 56, 'BACK', { primary: true });
+  },
+
+  // ROBIN's one-line read on the round, under the results card (tap it for the full AGENT screen)
+  debrief(ctx, g) {
+    const d = g.match.mode === 'trick' ? null : KAR.Agent.debrief(g.agentRound || []);
+    if (!d) return;
+    const U = this, k = KAR.Util.easeOut(Math.min(1, Math.max(0, g.overlayT - 0.5) * 2.5));
+    if (k <= 0) return;
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 30);
+    U.button(ctx, g, 'agent', 240, 552, 480, 62, '', { color: 'blue' });
+    this.robin(ctx, 278, 583, 21, g.time);
+    U.fit(ctx, KAR.Agent.NAME + ':  ' + d.head, 312, 576, U.sz(g, 15), '#bff4ff', 390, 'left');
+    U.fit(ctx, d.line, 312, 602, U.sz(g, 17), '#ffffff', 390, 'left');
     ctx.restore();
   },
 };

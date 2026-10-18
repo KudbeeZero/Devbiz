@@ -155,6 +155,8 @@ KAR.Audio = class {
   gold(streak) { const k = Math.pow(2, Math.min(6, Math.max(0, (streak || 1) - 1)) * 2 / 12); [784, 988, 1175].forEach((f, i) => this.tone(f * k, 0.2, 'triangle', 0.16, null, i * 0.07)); if (streak >= 3) this.tone(1568 * k, 0.3, 'sine', 0.1, null, 0.22); }
   heroIn() { this.tone(70, 0.9, 'sine', 0.35, 45); this.noise(0.9, 0.12, 900, 'bandpass', 0, 2); }
   pop(n, mult) { for (let i = 0; i < (n || 1); i++) { this.noise(0.09, 0.7, 3800, 'highpass', i * 0.07); this.tone(900 + (mult || 1) * 120, 0.08, 'square', 0.08, 300, i * 0.07); } if (mult > 1) [659, 784, 988].slice(0, Math.min(3, mult - 1)).forEach((f, i) => this.tone(f * (1 + mult * 0.06), 0.14, 'triangle', 0.12, null, 0.1 + i * 0.06)); }
+  // ROBIN the agent pipes up: two quick bird chirps
+  chirp() { this.tone(2400, 0.07, 'sine', 0.05, 3400, 0); this.tone(2600, 0.09, 'sine', 0.05, 3800, 0.1); }
   robin() { this.noise(0.08, 0.5, 3200, 'highpass'); [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => this.tone(f, 0.22, 'square', 0.07, null, 0.06 + i * 0.08)); this.cheer(true); }
   cheer(big) { this.noise(big ? 1.4 : 0.8, big ? 0.3 : 0.18, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.18, 1200, 'bandpass', 0.1, 0.6); }
   groan() { this.noise(0.7, 0.12, 500, 'bandpass', 0, 0.7); this.tone(150, 0.6, 'sawtooth', 0.05, 95); }
