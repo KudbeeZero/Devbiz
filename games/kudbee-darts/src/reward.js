@@ -29,14 +29,27 @@
     ctx.fillText(txt, x, y);
   }
 
-  Game.prototype._enterReward = function () {
+  // src: { reward, won, xp, bonus }. A match passes its matchResult; a bonus
+  // chest (bought with 💎) skips straight to the chest and returns to the Workshop.
+  Game.prototype._enterReward = function (src) {
+    src = src || this.matchResult;
     this.state = 'reward';
-    this.rw = { phase: 'trophies', t: 0, dealT: 0 };
+    this.rw = { phase: src.bonus ? 'chest' : 'trophies', t: 0, dealT: 0, src: src };
+  };
+
+  Game.prototype._openBonusChest = function () {
+    const prog = this.progression, chest = prog.buyBonusChest();
+    if (!chest) return false;
+    const t = prog.data.league.trophies, li = prog.leagueIdx();
+    this._enterReward({ bonus: true, won: true, xp: 0, reward: {
+      trophies: { from: t, to: t, delta: 0, leagueFrom: li, leagueTo: li, promoted: false, bonusTokens: 0 },
+      chest: chest, matchCoins: 0 } });
+    return true;
   };
 
   // Every card the chest deals, in order: the new part first (the big one), then cards.
   Game.prototype._rewardCards = function () {
-    const ch = this.matchResult.reward.chest, out = [];
+    const ch = this.rw.src.reward.chest, out = [];
     if (ch.newPart) out.push({ group: ch.newPart.group, id: ch.newPart.id, n: 0, isNew: true });
     ch.cards.forEach((c) => out.push(c));
     return out;
@@ -54,14 +67,14 @@
   };
 
   Game.prototype._leaveReward = function (to) {
-    this.matchResult.rewardSeen = true;
-    this.matchOverTimer = 0;
+    const bonus = this.rw.src.bonus;
+    if (!bonus) { this.matchResult.rewardSeen = true; this.matchOverTimer = 0; }
     this.rw = null;
-    if (to === 'upgrade') { this.wsPreview = null; this.state = 'workshop'; } else this.state = 'matchOver';
+    if (to === 'upgrade' || bonus) { this.wsPreview = null; this.state = 'workshop'; } else this.state = 'matchOver';
   };
 
   Game.prototype._updateReward = function (dt) {
-    const rw = this.rw, r = this.matchResult.reward, p = this.input.pointer;
+    const rw = this.rw, r = rw.src.reward, p = this.input.pointer;
     const tap = p.justDown || this.input.justPressed('confirm');
     rw.t += dt;
     if (rw.phase === 'trophies') {
@@ -107,7 +120,7 @@
 
   // ---- Drawing -------------------------------------------------------------
   Game.prototype._drawReward = function (ctx) {
-    const rw = this.rw, r = this.matchResult.reward, W = this.viewW, cx = W / 2;
+    const rw = this.rw, r = rw.src.reward, W = this.viewW, cx = W / 2;
     const LG = KD.Progression.LEAGUES;
     const league = LG[rw.phase === 'trophies' ? r.trophies.leagueFrom : r.trophies.leagueTo];
 
@@ -121,13 +134,13 @@
     ctx.restore();
 
     // Header.
-    const won = this.matchResult.won;
+    const won = rw.src.won;
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 50px ' + FONT;
     ctx.shadowColor = won ? C.gold : C.red; ctx.shadowBlur = 22;
     ctx.fillStyle = won ? '#fff' : '#ffd6da';
-    ctx.fillText(won ? 'VICTORY!' : 'DEFEAT', cx, 72);
+    ctx.fillText(rw.src.bonus ? 'BONUS CHEST' : won ? 'VICTORY!' : 'DEFEAT', cx, 72);
     ctx.restore();
 
     this._drawLeagueStrip(ctx, rw, r);
@@ -192,11 +205,16 @@
       ctx.beginPath(); ctx.moveTo(-26, -62); ctx.lineTo(-26, -84); ctx.lineTo(-13, -72); ctx.lineTo(0, -92);
       ctx.lineTo(13, -72); ctx.lineTo(26, -84); ctx.lineTo(26, -62); ctx.closePath(); ctx.stroke(); ctx.fill();
     } else {
-      for (let i = 0; i <= idx; i++) {
-        const px = (i - idx / 2) * 14;
-        ctx.beginPath(); ctx.arc(px, 46, 4.5, 0, Math.PI * 2); ctx.fillStyle = L.hi; ctx.fill();
-        ctx.lineWidth = 1.5; ctx.strokeStyle = '#0a0618'; ctx.stroke();
-      }
+      // One pip per league step: up to five in a row, a second row above
+      // for the higher leagues (Master and up).
+      const rows = idx < 5 ? [idx + 1] : [5, idx - 4];
+      rows.forEach((n, row) => {
+        for (let i = 0; i < n; i++) {
+          const px = (i - (n - 1) / 2) * 13, py = 47 - row * 12;
+          ctx.beginPath(); ctx.arc(px, py, 4.2, 0, Math.PI * 2); ctx.fillStyle = row ? C.gold : L.hi; ctx.fill();
+          ctx.lineWidth = 1.5; ctx.strokeStyle = '#0a0618'; ctx.stroke();
+        }
+      });
     }
     ctx.restore();
   };
@@ -235,7 +253,7 @@
     }
     ctx.fillStyle = C.dim; ctx.font = '13px ' + FONT;
     ctx.fillText(next ? 'Next: ' + next.name + ' at 🏆 ' + next.min : 'Top league reached', bx, barY + 36);
-    if (d === 0 && !this.matchResult.won) { ctx.fillStyle = C.dim; ctx.fillText('League floor: no trophies lost', bx + 210, barY + 36); }
+    if (d === 0 && !rw.src.won) { ctx.fillStyle = C.dim; ctx.fillText('League floor: no trophies lost', bx + 210, barY + 36); }
     ctx.restore();
   };
 
@@ -255,8 +273,12 @@
     ctx.fillStyle = L.col; ctx.font = 'bold 40px ' + FONT; ctx.fillText(L.name, cx, 520);
     ctx.fillStyle = C.text; ctx.font = '16px ' + FONT;
     ctx.fillText('Bigger chests · tougher rivals with upgraded darts', cx, 556);
+    if (r.trophies.bonusTokens) {
+      ctx.fillStyle = C.cyan; ctx.font = 'bold 22px ' + FONT;
+      ctx.fillText('+' + r.trophies.bonusTokens + ' 💎 league bonus', cx, 590);
+    }
     ctx.fillStyle = C.dim; ctx.font = '13px ' + FONT;
-    if (rw.t > 0.6) ctx.fillText('tap to continue', cx, 600);
+    if (rw.t > 0.6) ctx.fillText('tap to continue', cx, 622);
     ctx.restore();
   };
 
@@ -340,8 +362,11 @@
       ctx.save(); ctx.textAlign = 'center';
       ctx.fillStyle = C.gold; ctx.font = 'bold 26px ' + FONT;
       ctx.fillText('+' + coins + ' 🪙', cx + 170, 584);
-      ctx.fillStyle = C.text; ctx.font = 'bold 22px ' + FONT;
-      ctx.fillText('+' + this.matchResult.xp + ' XP', cx - 170, 584);
+      if (r.chest.tokens) { ctx.fillStyle = C.cyan; ctx.fillText('+' + r.chest.tokens + ' 💎', cx + 290, 584); }
+      if (rw.src.xp) {
+        ctx.fillStyle = C.text; ctx.font = 'bold 22px ' + FONT;
+        ctx.fillText('+' + rw.src.xp + ' XP', cx - 170, 584);
+      }
       ctx.restore();
     }
     if (!n) {

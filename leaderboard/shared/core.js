@@ -25,6 +25,7 @@ export const GAMES = {
       total180s:    { label: '180s',          dir: 'max', min: 0, max: 1e6,  rank: true },
       wins:         { label: 'Wins',          dir: 'max', min: 0, max: 1e6,  rank: true },
       bestStreak:   { label: 'Best streak',   dir: 'max', min: 0, max: 1e6,  rank: true },
+      trophies:     { label: 'Trophies (best)', dir: 'max', min: 0, max: 1e6, rank: true },
     },
   },
   riff: {

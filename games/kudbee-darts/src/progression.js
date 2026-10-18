@@ -50,14 +50,23 @@
   // bigger chest. Chests hold cards for the parts you own (barrels, tips,
   // flights) and sometimes a brand-new part. Cards + coins level a part up,
   // and every level steadies your hand a little (see steadiness()).
+  // Ten leagues. tokens = 💎 in a won chest; reaching a league for the first
+  // time also pays a one-off bonus of 10 💎 per league step.
   const LEAGUES = [
-    { name: 'BRONZE',   min: 0,    col: '#d08a4e', hi: '#ffd2a1', cards: 2, coins: 15 },
-    { name: 'SILVER',   min: 100,  col: '#b9c7d8', hi: '#ffffff', cards: 3, coins: 20 },
-    { name: 'GOLD',     min: 250,  col: '#ffc63d', hi: '#fff3b8', cards: 3, coins: 30 },
-    { name: 'PLATINUM', min: 450,  col: '#5fe6d6', hi: '#d8fff9', cards: 4, coins: 40 },
-    { name: 'DIAMOND',  min: 700,  col: '#7fb3ff', hi: '#e2edff', cards: 5, coins: 55 },
-    { name: 'KUDBEE CHAMPION', min: 1000, col: '#ff4fd8', hi: '#ffd6f6', cards: 6, coins: 75 },
+    { name: 'BRONZE',      min: 0,    col: '#d08a4e', hi: '#ffd2a1', cards: 2, coins: 15,  tokens: 0 },
+    { name: 'SILVER',      min: 100,  col: '#b9c7d8', hi: '#ffffff', cards: 3, coins: 20,  tokens: 1 },
+    { name: 'GOLD',        min: 250,  col: '#ffc63d', hi: '#fff3b8', cards: 3, coins: 30,  tokens: 2 },
+    { name: 'PLATINUM',    min: 450,  col: '#5fe6d6', hi: '#d8fff9', cards: 4, coins: 40,  tokens: 3 },
+    { name: 'DIAMOND',     min: 700,  col: '#7fb3ff', hi: '#e2edff', cards: 4, coins: 50,  tokens: 4 },
+    { name: 'MASTER',      min: 1000, col: '#b36bff', hi: '#ecd6ff', cards: 5, coins: 60,  tokens: 5 },
+    { name: 'GRANDMASTER', min: 1350, col: '#ff5d6c', hi: '#ffd6da', cards: 5, coins: 75,  tokens: 6 },
+    { name: 'ELITE',       min: 1750, col: '#3dffa0', hi: '#d6ffe9', cards: 6, coins: 90,  tokens: 8 },
+    { name: 'LEGEND',      min: 2200, col: '#ff8a2b', hi: '#ffe0c4', cards: 7, coins: 105, tokens: 10 },
+    { name: 'KUDBEE CHAMPION', min: 2700, col: '#ff4fd8', hi: '#ffd6f6', cards: 8, coins: 120, tokens: 12 },
   ];
+  const PROMO_TOKENS = 10;                      // × league index, the first time you reach it
+  const TOKENS_PER_CARD = 2;                    // 💎 can stand in for missing upgrade cards
+  const BONUS_CHEST_TOKENS = 30;                // 💎 for a bonus chest from the Workshop
   const TROPHY_WIN = 30, TROPHY_LOSS = 12, TROPHY_STAR = 5;   // +5 per campaign star
   const MAX_PART_LV = 5;
   const UP_CARDS = [0, 3, 6, 12, 24];          // cards to go from level i to i+1
@@ -90,6 +99,7 @@
       // Leagues + upgrades: trophies, best league reached, and per-part cards
       // and levels keyed 'shape:hex' / 'tip:needle' / 'flight:star'.
       league: { trophies: 0, best: 0 },
+      tokens: 0,
       parts: { cards: {}, lv: {} },
       settings: { sound: true, boardTheme: 'neon' },
     };
@@ -135,6 +145,8 @@
   Progression.LADDER = LADDER;
   Progression.LEAGUES = LEAGUES;
   Progression.MAX_PART_LV = MAX_PART_LV;
+  Progression.TOKENS_PER_CARD = TOKENS_PER_CARD;
+  Progression.BONUS_CHEST_TOKENS = BONUS_CHEST_TOKENS;
   Progression.leagueOf = leagueOf;
 
   Progression.prototype.load = function () {
@@ -159,6 +171,7 @@
           this.data.campaign = sanitizeCampaign(parsed.campaign);
           this.data.league = sanitizeLeague(parsed.league);
           this.data.parts = sanitizeParts(parsed.parts);
+          this.data.tokens = Number.isInteger(parsed.tokens) && parsed.tokens > 0 ? Math.min(parsed.tokens, 1e6) : 0;
         }
       }
     } catch (e) { /* corrupt save -> defaults */ }
@@ -355,19 +368,29 @@
     const lv = this.partLv(group, id);
     return lv >= MAX_PART_LV ? null : { cards: UP_CARDS[lv], coins: UP_COINS[lv], to: lv + 1 };
   };
-  Progression.prototype.canUpgrade = function (group, id) {
+  // 💎 needed to cover the cards you're short of for the next level (0 if none).
+  Progression.prototype.tokenFill = function (group, id) {
     const c = this.upgradeCost(group, id);
-    return !!c && this.ownsPart(group, id) && this.partCards(group, id) >= c.cards && this.data.coins >= c.coins;
+    return c ? Math.max(0, c.cards - this.partCards(group, id)) * TOKENS_PER_CARD : 0;
+  };
+  // withTokens: let 💎 stand in for missing cards.
+  Progression.prototype.canUpgrade = function (group, id, withTokens) {
+    const c = this.upgradeCost(group, id);
+    if (!c || !this.ownsPart(group, id) || this.data.coins < c.coins) return false;
+    const fill = this.tokenFill(group, id);
+    return fill === 0 || (!!withTokens && this.data.tokens >= fill);
   };
   // Returns 'upgraded' | 'max' | 'cards' | 'poor' | 'unowned'.
-  Progression.prototype.upgradePart = function (group, id) {
+  Progression.prototype.upgradePart = function (group, id, withTokens) {
     if (!this.ownsPart(group, id)) return 'unowned';
     const c = this.upgradeCost(group, id);
     if (!c) return 'max';
-    if (this.partCards(group, id) < c.cards) return 'cards';
+    const fill = this.tokenFill(group, id);
+    if (fill > 0 && !(withTokens && this.data.tokens >= fill)) return 'cards';
     if (this.data.coins < c.coins) return 'poor';
     const k = group + ':' + id;
-    this.data.parts.cards[k] -= c.cards;
+    this.data.tokens -= fill;
+    this.data.parts.cards[k] = Math.max(0, (this.data.parts.cards[k] || 0) - c.cards);
     if (!this.data.parts.cards[k]) delete this.data.parts.cards[k];
     this.data.coins -= c.coins;
     this.data.parts.lv[k] = c.to;
@@ -382,7 +405,7 @@
   };
   Progression.prototype.steadiness = function () { return 1 - STEADY_PER_LV * this.upgradeLevels(); };
   // League rivals carry upgraded darts too, so the climb stays a fair fight.
-  Progression.aiSteadiness = function (leagueIdx) { return 1 - STEADY_PER_LV * Math.min(12, leagueIdx * 2); };
+  Progression.aiSteadiness = function (leagueIdx) { return 1 - STEADY_PER_LV * Math.min(12, Math.round(leagueIdx * 1.35)); };
 
   // Roll a chest for the current league. Cards go to parts you own (a part
   // that's maxed gets none); sometimes the chest holds a part you don't own,
@@ -390,7 +413,7 @@
   Progression.prototype.rollChest = function (won, rnd) {
     rnd = rnd || Math.random;
     const L = this.league(), S = KD.Sprites;
-    const chest = { league: this.leagueIdx(), coins: won ? L.coins : Math.round(L.coins / 3), cards: [], newPart: null };
+    const chest = { league: this.leagueIdx(), coins: won ? L.coins : Math.round(L.coins / 3), tokens: won ? L.tokens : 0, cards: [], newPart: null };
     const owned = [], unowned = [];
     Object.keys(PART_CATS).forEach((g) => {
       Object.keys(S[PART_CATS[g]]).forEach((id) => {
@@ -402,7 +425,7 @@
       const [g, id] = unowned[Math.floor(rnd() * unowned.length)];
       chest.newPart = { group: g, id: id };
     }
-    let n = won ? L.cards : 1;
+    let n = won ? L.cards : Math.ceil(L.cards / 2);       // a loss still opens a half chest
     const tally = {};
     while (n-- > 0 && owned.length) {
       // Favour what you have equipped: half the cards go to your current dart.
@@ -420,6 +443,7 @@
   Progression.prototype.applyChest = function (chest) {
     const d = this.data;
     d.coins += chest.coins;
+    d.tokens += chest.tokens || 0;
     chest.cards.forEach((c) => { const k = c.group + ':' + c.id; d.parts.cards[k] = (d.parts.cards[k] || 0) + c.n; });
     if (chest.newPart) {
       const { group: g, id } = chest.newPart;
@@ -437,9 +461,24 @@
     lg.trophies = to;
     const leagueTo = leagueOf(to);
     const promoted = leagueTo > lg.best;
-    if (leagueTo > lg.best) lg.best = leagueTo;
+    let bonusTokens = 0;
+    if (promoted) {
+      for (let i = lg.best + 1; i <= leagueTo; i++) bonusTokens += PROMO_TOKENS * i;
+      lg.best = leagueTo;
+      this.data.tokens += bonusTokens;
+    }
     this.save();
-    return { delta: to - from, from: from, to: to, leagueFrom: leagueFrom, leagueTo: leagueTo, promoted: promoted };
+    return { delta: to - from, from: from, to: to, leagueFrom: leagueFrom, leagueTo: leagueTo, promoted: promoted, bonusTokens: bonusTokens };
+  };
+
+  // Spend 💎 on a bonus chest (a won chest for your league). Returns the chest, or null if short.
+  Progression.prototype.buyBonusChest = function (rnd) {
+    if (this.data.tokens < BONUS_CHEST_TOKENS) return null;
+    this.data.tokens -= BONUS_CHEST_TOKENS;
+    const chest = this.rollChest(true, rnd);
+    chest.tokens = 0;                               // a bought chest never pays 💎 back
+    this.applyChest(chest);
+    return chest;
   };
 
   KD.Progression = Progression;

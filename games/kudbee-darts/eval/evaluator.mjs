@@ -562,7 +562,7 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     prog.data.league = { trophies: 260, best: 2 }; prog.save();
     g.levelIdx = null; g.selOpp = 'Pro'; g.selMode = 'x01'; g._startMatch();
     out.humanSteady = g.humanSteady;
-    out.aiSigma = +(g.players[1].sigma / new window.KD.AIPlayer('x', 'Pro', 'violet').sigma).toFixed(3);   // 0.94 in Gold
+    out.aiSigma = +(g.players[1].sigma / new window.KD.AIPlayer('x', 'Pro', 'violet').sigma).toFixed(3);   // 0.955 in Gold
     g._matchWin(g.players[0]);
     out.reward = !!g.matchResult.reward;
     for (let i = 0; i < 90; i++) { g._update(1 / 60); }
@@ -584,10 +584,64 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   });
   const ok = lg.promo === '30/true/SILVER' && lg.floor === 100 && lg.star === 45 && lg.chestCardsOk
     && lg.upCards === 'cards' && lg.upPoor === 'poor' && lg.up === 'upgraded/2/60' && Math.abs(lg.steady - 0.925) < 1e-9          // 5 levels: flight maxed (+4), barrel LV 2 (+1)
-    && lg.clean === '1000/5/{"cards":{},"lv":{"tip:steel":5}}'   // best clamped to Champion lifts trophies to its floor
-    && Math.abs(lg.humanSteady - 0.925) < 1e-9 && lg.aiSigma === 0.94 && lg.reward
+    && lg.clean === '2700/9/{"cards":{},"lv":{"tip:steel":5}}'   // best clamped to Champion lifts trophies to its floor
+    && Math.abs(lg.humanSteady - 0.925) < 1e-9 && lg.aiSigma === 0.955 && lg.reward
     && lg.flow.join() === 'reward,chest,open,matchOver:true' && lg.hotSteady === 1 && lg.hotNone;
   rec('leagues-upgrades', ok, `promo=${lg.promo} floor=${lg.floor} star=${lg.star} chest-cards=${lg.chestCardsOk} up=${lg.upCards}/${lg.upPoor}/${lg.up} steady=${lg.steady} clean=${lg.clean} you=${lg.humanSteady} ai×${lg.aiSigma} flow=${lg.flow} hotseat=${lg.hotSteady}/${lg.hotNone}`);
+}
+
+// ---------------------------------------------------------------- tokens + league leaderboard
+// Ten leagues; reaching one pays 💎 once; won chests pay 💎 by league; 💎 fill
+// missing upgrade cards (2 each) and buy a bonus chest that plays the chest
+// screen and returns to the Workshop. The leaderboard ranks everyone by
+// trophies, labels AI rivals, and finds you in MY LEAGUE and TOP 100.
+{
+  const tk = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    out.leagues = P.LEAGUES.length + ':' + P.LEAGUES.map((l) => l.min).join(',');
+    prog.data.tokens = 0; prog.data.league = { trophies: 230, best: 1 };
+    const pr = prog.awardTrophies(true, 0);                       // into GOLD (idx 2): +20 💎
+    out.promoTokens = pr.bonusTokens + '/' + prog.data.tokens;
+    prog.data.league = { trophies: 230, best: 2 }; prog.awardTrophies(false, 0); prog.awardTrophies(true, 0);
+    out.noRepeat = prog.data.tokens;                                // still 20: Gold was already reached
+    const ch = prog.rollChest(true); out.chestTokens = ch.tokens;   // Gold chest: 2 💎
+    // Tokens fill missing cards.
+    prog.data.ownedShapes = ['torpedo']; prog.data.parts = { cards: { 'shape:torpedo': 1 }, lv: {} };
+    prog.data.coins = 100; prog.data.tokens = 3;
+    out.short = prog.upgradePart('shape', 'torpedo', true);        // needs 4 💎, has 3
+    prog.data.tokens = 4;
+    out.filled = prog.upgradePart('shape', 'torpedo', true) + '/' + prog.partLv('shape', 'torpedo') + '/' + prog.data.tokens + '/' + prog.partCards('shape', 'torpedo');
+    // Bonus chest: costs 30 💎, plays the chest, returns to the Workshop.
+    prog.data.tokens = 29; out.bonusPoor = g._openBonusChest();
+    prog.data.tokens = 40; g.state = 'workshop';
+    out.bonus = g._openBonusChest() + '/' + g.state + '/' + g.rw.phase + '/' + prog.data.tokens;
+    g._updateReward(0.5);                                           // the chest takes taps after its drop-in
+    g.input.pointer.justDown = true; g._updateReward(0); g._updateReward(0); g.input.pointer.justDown = false;
+    const cont = g._rewardButtons().find((b) => b.id === 'continue');
+    g.input.pointer.x = cont.x + 4; g.input.pointer.y = cont.y + 4; g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false;
+    out.bonusBack = g.state;
+    // Leaderboard.
+    prog.data.league = { trophies: 1420, best: 6 };
+    g.state = 'leaderboard'; g.lbTab = 'league'; g._openLeaderboard();
+    const rows = g._boardRows();
+    out.sorted = rows.every((r, i) => i === 0 || rows[i - 1].trophies >= r.trophies);
+    out.aiLabelled = rows.filter((r) => !r.you).every((r) => r.ai);
+    const v = g._boardView();
+    out.myLeague = v.rows.some((r) => r.you) && v.rows.every((r) => r.league === 6);
+    g.lbTab = 'top'; g.lbPage = 0;
+    const me = rows.find((r) => r.you);
+    const fm = g._boardButtons().find((b) => b.id === 'findme');
+    g.input.pointer.x = fm.x + 4; g.input.pointer.y = fm.y + 4; g.input.pointer.justDown = true; g._updateLeaderboard(); g.input.pointer.justDown = false;
+    out.findMe = g._boardView().rows.some((r) => r.you) && g.lbPage === Math.floor((me.rank - 1) / 10);
+    window.__step(2);
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu'; g._lbBoard = null;
+    return out;
+  });
+  const ok = tk.leagues === '10:0,100,250,450,700,1000,1350,1750,2200,2700' && tk.promoTokens === '20/20' && tk.noRepeat === 20
+    && tk.chestTokens === 2 && tk.short === 'cards' && tk.filled === 'upgraded/2/0/0' && tk.bonusPoor === false
+    && tk.bonus === 'true/reward/chest/10' && tk.bonusBack === 'workshop' && tk.sorted && tk.aiLabelled && tk.myLeague && tk.findMe;
+  rec('tokens-leaderboard', ok, `leagues=${tk.leagues} promo💎=${tk.promoTokens} once=${tk.noRepeat} chest💎=${tk.chestTokens} fill=${tk.short}->${tk.filled} bonus=${tk.bonusPoor}/${tk.bonus}->${tk.bonusBack} board sorted=${tk.sorted} ai-labelled=${tk.aiLabelled} my-league=${tk.myLeague} find-me=${tk.findMe}`);
 }
 
 // ---------------------------------------------------------------- curl lead

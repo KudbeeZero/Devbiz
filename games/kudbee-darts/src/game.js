@@ -455,6 +455,7 @@
         else if (b.group === 'nav') {
           const dest = b.id.split(':')[1];
           this.state = dest;        // 'workshop' | 'leaderboard'
+          if (dest === 'leaderboard' && this._openLeaderboard) this._openLeaderboard();
         }
         return;
       }
@@ -876,6 +877,7 @@
         total180s: x01.total180s || 0,
         wins: wins,
         bestStreak: d.bestStreak || 0,
+        trophies: (d.league && d.league.trophies) || 0,
       }).catch(function () { /* cloud offline — local profile already saved */ });
     };
     if (!lb.isSignedIn()) {
@@ -2276,7 +2278,7 @@
           info: { x: this.viewW * 0.2 - 175, y: 400, w: 410, h: 250, top: 24, nameGap: 22, gap: 16, m: 12 }, buyH: 50 }
       : { wide: false, cx: this.viewW / 2, rows: [256, 344, 432, 520], chipH: 66,
           dartX: this.viewW / 2 + 90, dartY: 160, dartLen: 250,
-          info: { x: this.viewW / 2 + 128, y: 106, w: 330, h: 140, top: 18, nameGap: 20, gap: 12, m: 10 }, buyH: 28 };
+          info: { x: this.viewW / 2 + 128, y: 116, w: 330, h: 132, top: 18, nameGap: 20, gap: 10, m: 10 }, buyH: 28 };
   };
 
   // The part on show in the big preview: what you tapped (try before you buy)
@@ -2301,6 +2303,9 @@
     const prog = this.progression;
     const btns = [];
     btns.push({ id: 'back', label: '← BACK', x: 24, y: 72, w: 110, h: 40, group: 'back' });
+    // Bonus chest for 💎, under the coin and token balance (top-right).
+    const bw = this.viewW >= 1300 ? 250 : 190;
+    btns.push({ id: 'bonus', group: 'bonus', x: this.viewW - 24 - bw, y: 66, w: bw, h: 42 });
 
     const G = this._wsGeom(), WS_ROWS = G.rows, WS_CHIP_H = G.chipH;
     const row = (ids, kind, y, cw, gap, sel, owned, cost) => {
@@ -2334,7 +2339,7 @@
     // Nothing on trial: the card lists your equipped barrel, tip and flight,
     // each with an UPGRADE button.
     if (!pv) {
-      const I = G.info, k = this._textBump(), rowH = G.wide ? 62 : 37, top = I.y + I.top + (G.wide ? 12 : 6) * k;
+      const I = G.info, k = this._textBump(), rowH = G.wide ? 62 : 35, top = I.y + I.top + (G.wide ? 12 : 6) * k;
       const bw = G.wide ? 160 : 124;
       [['shape', prog.data.darts.shape], ['tip', prog.data.darts.tip], ['flight', prog.data.darts.flight]].forEach(([g, id], i) => {
         btns.push({ id: 'up:' + g, group: 'up', part: g, key: id, x: I.x + I.w - I.m - bw, y: top + i * rowH + 4, w: bw, h: rowH - 10 });
@@ -2359,15 +2364,21 @@
       if (p.x < b.x || p.x > b.x + b.w || p.y < b.y || p.y > b.y + b.h) continue;
       this.audio.tick();
       if (b.group === 'back') { leave(); return; }
+      if (b.group === 'bonus') {
+        if (!this._openBonusChest()) {
+          this.toasts.push({ text: 'NEED ' + (KD.Progression.BONUS_CHEST_TOKENS - prog.data.tokens) + ' MORE 💎', sub: 'Tokens come from chests and league-ups', life: 2.2 });
+        } else this.audio.chime(1);
+        return;
+      }
       if (b.group === 'up') {
-        const r = prog.upgradePart(b.part, b.key);
+        const r = prog.upgradePart(b.part, b.key, true);
         const nm = (WS_CAT(b.part)[b.key] || {}).name || b.key;
         if (r === 'upgraded') {
           this.audio.chime(2); this.wsFlash = 0.9;
           this.toasts.push({ text: nm.toUpperCase() + ' → LV ' + prog.partLv(b.part, b.key), sub: 'Steadier hand: aim wobble and scatter down', life: 2.4 });
         } else if (r === 'cards') {
           const c = prog.upgradeCost(b.part, b.key);
-          this.toasts.push({ text: 'NEED ' + (c.cards - prog.partCards(b.part, b.key)) + ' MORE CARDS', sub: 'Win matches to open chests', life: 2.2 });
+          this.toasts.push({ text: 'NEED ' + (c.cards - prog.partCards(b.part, b.key)) + ' MORE CARDS', sub: 'Or ' + prog.tokenFill(b.part, b.key) + ' 💎 to fill them', life: 2.4 });
         } else if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
         return;
       }
@@ -2494,7 +2505,7 @@
     this._workshopLayout().filter((b) => b.group === 'up').forEach((b) => {
       const part = WS_CAT(b.part)[b.key] || {}, lv = prog.partLv(b.part, b.key);
       const cost = prog.upgradeCost(b.part, b.key), have = prog.partCards(b.part, b.key);
-      const ready = prog.canUpgrade(b.part, b.key);
+      const ready = prog.canUpgrade(b.part, b.key, true), fill = prog.tokenFill(b.part, b.key);
       const lx = I.x + m, barW = b.x - lx - 12;
       ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (G.wide ? 14 : 12) + 'px "Space Grotesk", sans-serif';
       ctx.fillText(part.name + '  ', lx, b.y + (G.wide ? 16 : 12));
@@ -2513,11 +2524,35 @@
       this._roundRect(ctx, b.x, b.y, b.w, b.h, 9); ctx.stroke();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = ready ? '#fff' : cost ? C.text : C.gold;
-      ctx.font = 'bold ' + (G.wide ? 14 : 11) + 'px "Space Grotesk", sans-serif';
-      ctx.fillText(!cost ? 'MAX LEVEL' : ready ? '⬆ LV ' + cost.to + ' · 🪙' + cost.coins : have + '/' + cost.cards + ' cards', b.x + b.w / 2, b.y + b.h / 2 + 1);
+      this._fitText(ctx, !cost ? 'MAX LEVEL' : ready ? '⬆ LV ' + cost.to + ' · 🪙' + cost.coins + (fill ? ' 💎' + fill : '') : have + '/' + cost.cards + ' cards',
+        b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 12, G.wide ? 14 : 11);
       ctx.textBaseline = 'alphabetic';
     });
     ctx.textAlign = 'left';
+  };
+
+  // fillText, shrinking the font until the text fits maxW.
+  Game.prototype._fitText = function (ctx, txt, x, y, maxW, px) {
+    let size = px;
+    ctx.font = 'bold ' + size + 'px "Space Grotesk", sans-serif';
+    while (size > 8 && ctx.measureText(txt).width > maxW) { size -= 1; ctx.font = 'bold ' + size + 'px "Space Grotesk", sans-serif'; }
+    ctx.fillText(txt, x, y);
+  };
+
+  Game.prototype._drawBonusButton = function (ctx, b) {
+    const ok = this.progression.data.tokens >= KD.Progression.BONUS_CHEST_TOKENS;
+    ctx.save();
+    ctx.fillStyle = ok ? 'rgba(57,230,255,0.16)' : 'rgba(10,16,32,0.6)';
+    this._roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.fill();
+    ctx.lineWidth = ok ? 2 : 1.2; ctx.strokeStyle = ok ? C.cyan : 'rgba(180,210,255,0.25)';
+    if (ok) { ctx.shadowColor = C.cyan; ctx.shadowBlur = 10; }
+    this._roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = ok ? '#fff' : C.dim;
+    this._fitText(ctx, '🎁 BONUS CHEST · 💎' + KD.Progression.BONUS_CHEST_TOKENS, b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 14, 14);
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   };
 
   Game.prototype._drawBuyButton = function (ctx, b) {
@@ -2636,10 +2671,12 @@
     ctx.fillStyle = C.violet; ctx.font = '13px "Space Grotesk", sans-serif';
     ctx.fillText('TRY ON ANY PART · BUY WHAT YOU LOVE', this.viewW / 2, 104);
 
-    // Coin balance (top-right).
+    // Coin + token balance (top-right).
     ctx.textAlign = 'right'; ctx.fillStyle = C.gold;
     ctx.font = 'bold 20px "Space Grotesk", sans-serif';
     ctx.fillText('🪙 ' + d.coins, this.viewW - 24, 52);
+    const cw = ctx.measureText('🪙 ' + d.coins).width;
+    ctx.fillStyle = C.cyan; ctx.fillText('💎 ' + d.tokens, this.viewW - 44 - cw, 52);
 
     // Big turntable preview: the equipped dart, or the part you're trying on
     // swapped in, slowly rolling on its long axis over a glowing pedestal.
@@ -2680,6 +2717,7 @@
       if (b.group === 'back') this._neonButton(ctx, { x: b.x, y: b.y, w: b.w, h: b.h, label: b.label, group: 'back', sel: false });
       else if (b.group === 'buy') this._drawBuyButton(ctx, b);
       else if (b.group === 'up') { /* drawn inside the info card */ }
+      else if (b.group === 'bonus') this._drawBonusButton(ctx, b);
       else this._workshopChip(ctx, b);
     });
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
@@ -2687,126 +2725,7 @@
     ctx.textAlign = 'left';
   };
 
-  // ====================================================================
-  // LEADERBOARD — the Bullseye League standings (you vs. the AI ladder).
-  // ====================================================================
-  Game.prototype._leaderboardData = function () {
-    const d = this.progression.data;
-    const L = KD.Progression.LADDER;
-    const rows = L.map((r, i) => ({
-      name: r.name, tier: r.tier,
-      rating: 1240 + i * 165,
-      beaten: i < d.ladderRank,
-      you: false,
-    }));
-    // Your rating reflects level, ladder progress, and streaks.
-    const x01 = d.stats.x01, cri = d.stats.cricket;
-    const wins = x01.won + cri.won;
-    const youRating = 1180 + d.level * 38 + d.ladderRank * 150 + d.bestStreak * 22 + wins * 6;
-    rows.push({ name: 'You', tier: 'Player', rating: youRating, you: true, beaten: false });
-    rows.sort((a, b) => b.rating - a.rating);
-    return rows;
-  };
-
-  Game.prototype._updateLeaderboard = function () {
-    if (this.input.justPressed('back') || this.input.justPressed('pause')) { this.state = 'menu'; return; }
-    const p = this.input.pointer;
-    if (p.justDown) {
-      if (p.y < 80 && p.x < 150) { this.state = 'menu'; return; }   // back hit-zone
-      this.state = 'menu';
-    }
-  };
-
-  Game.prototype._drawLeaderboard = function (ctx) {
-    const d = this.progression.data;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.shadowColor = C.gold; ctx.shadowBlur = 20; ctx.fillStyle = '#fff';
-    ctx.font = 'bold 44px "Space Grotesk", sans-serif';
-    ctx.fillText('BULLSEYE LEAGUE', this.viewW / 2, 80);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = C.violet; ctx.font = '13px "Space Grotesk", sans-serif';
-    ctx.fillText('SEASON STANDINGS · CLIMB THE RANKS', this.viewW / 2, 104);
-    ctx.restore();
-
-    this._neonButton(ctx, { x: 24, y: 72, w: 110, h: 40, label: '← BACK', group: 'back', sel: false });
-
-    // Standings table.
-    const rows = this._leaderboardData();
-    const tx = 70, tw = 520, rh = 44, top = 150;
-    ctx.save();
-    ctx.textAlign = 'left'; ctx.fillStyle = C.dim; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
-    ctx.fillText('#', tx + 6, top - 10);
-    ctx.fillText('PLAYER', tx + 44, top - 10);
-    ctx.fillText('TIER', tx + 300, top - 10);
-    ctx.textAlign = 'right'; ctx.fillText('RATING', tx + tw - 14, top - 10);
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const y = top + i * rh;
-      ctx.fillStyle = r.you ? 'rgba(124,255,178,0.12)' : (i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(10,16,32,0.5)');
-      this._roundRect(ctx, tx, y, tw, rh - 6, 8); ctx.fill();
-      if (r.you) {
-        ctx.lineWidth = 2; ctx.strokeStyle = C.green; ctx.shadowColor = C.green; ctx.shadowBlur = 12;
-        this._roundRect(ctx, tx, y, tw, rh - 6, 8); ctx.stroke(); ctx.shadowBlur = 0;
-      }
-      const cy = y + (rh - 6) / 2 + 1;
-      ctx.textBaseline = 'middle';
-      // Rank with medal tint for the top 3.
-      ctx.textAlign = 'center';
-      ctx.fillStyle = i === 0 ? C.gold : i === 1 ? '#cdd9e6' : i === 2 ? '#d59a5a' : C.dim;
-      ctx.font = 'bold 16px "Space Grotesk", sans-serif';
-      ctx.fillText('' + (i + 1), tx + 22, cy);
-      // Name.
-      ctx.textAlign = 'left';
-      ctx.fillStyle = r.you ? C.green : '#fff';
-      ctx.font = 'bold 16px "Space Grotesk", sans-serif';
-      ctx.fillText(r.name + (r.beaten ? '  ✓' : ''), tx + 44, cy);
-      // Tier.
-      ctx.fillStyle = C.dim; ctx.font = '13px "Space Grotesk", sans-serif';
-      ctx.fillText(r.tier, tx + 300, cy);
-      // Rating.
-      ctx.textAlign = 'right'; ctx.fillStyle = r.you ? C.green : C.cyan;
-      ctx.font = 'bold 16px "Space Grotesk", monospace';
-      ctx.fillText('' + r.rating, tx + tw - 14, cy);
-      ctx.textBaseline = 'alphabetic';
-    }
-    ctx.restore();
-
-    // Your stats card (right column).
-    const sx = 640, sw = this.viewW - sx - 40, sy = 150;
-    ctx.save();
-    ctx.fillStyle = 'rgba(8,12,26,0.66)';
-    this._roundRect(ctx, sx, sy, sw, 360, 14); ctx.fill();
-    ctx.strokeStyle = 'rgba(180,210,255,0.18)'; ctx.lineWidth = 1.2;
-    this._roundRect(ctx, sx, sy, sw, 360, 14); ctx.stroke();
-    ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
-    ctx.fillText('YOUR CAREER', sx + 20, sy + 32);
-    const x01 = d.stats.x01, cri = d.stats.cricket;
-    const pct = (w, p) => p ? (w / p * 100).toFixed(1) + '%' : '—';
-    const lines = [
-      ['Level', 'LV ' + d.level],
-      ['Win streak', d.streak + '  (best ' + d.bestStreak + ')'],
-      ['301 / 501 record', x01.won + 'W / ' + (x01.played - x01.won) + 'L  · ' + pct(x01.won, x01.played)],
-      ['Cricket record', cri.won + 'W / ' + (cri.played - cri.won) + 'L  · ' + pct(cri.won, cri.played)],
-      ['180s thrown', '' + x01.total180s],
-      ['Best checkout', x01.bestCheckout ? '' + x01.bestCheckout : '—'],
-      ['Ladder rank', (d.ladderRank + 1) + ' / ' + KD.Progression.LADDER.length],
-      ['Coins', '🪙 ' + d.coins],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-      const y = sy + 70 + i * 36;
-      ctx.fillStyle = C.dim; ctx.font = '13px "Space Grotesk", sans-serif';
-      ctx.fillText(lines[i][0], sx + 20, y);
-      ctx.textAlign = 'right'; ctx.fillStyle = C.text; ctx.font = 'bold 14px "Space Grotesk", sans-serif';
-      ctx.fillText(lines[i][1], sx + sw - 20, y);
-      ctx.textAlign = 'left';
-    }
-    ctx.restore();
-
-    ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Beat the rival above you in Career to climb · tap anywhere or BACK to return', this.viewW / 2, VIEW_H - 24);
-    ctx.textAlign = 'left';
-  };
+  // LEADERBOARD: see league-board.js.
 
   KD.Game = Game;
 })(window.KD = window.KD || {});

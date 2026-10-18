@@ -52,31 +52,46 @@ and the share of 3★ / 2★ wins. At the current tuning a casual player wins ab
 75% of World 1 down to about 30% of the last boss, and a strong player earns 3★
 on roughly half to two-thirds of the wins.
 
-## Leagues, chests & dart upgrades
+## Leagues, chests, tokens & dart upgrades
 
 Every match against the AI (quick play, the career ladder or a Darts Birds level) ends on
 the **reward screen**: your **trophies** count into your league bar (+30 for a win, +5 per
 campaign star, −12 for a loss), a **LEAGUE UP!** moment plays when you cross into a new
 league, then your league's **chest** drops in. Tap it and it bursts open, dealing out
 **part cards** with each part's progress to its next level, and sometimes a **NEW PART!**
-you didn't own. Pass-and-play earns no trophies.
+you didn't own. A loss still opens a half chest. Pass-and-play earns nothing.
 
-| League | Trophies | Chest |
+| League | Trophies | Won chest |
 |---|---|---|
-| Bronze | 0 | 2 cards · 15 coins |
-| Silver | 100 | 3 cards · 20 coins |
-| Gold | 250 | 3 cards · 30 coins |
-| Platinum | 450 | 4 cards · 40 coins |
-| Diamond | 700 | 5 cards · 55 coins |
-| Kudbee Champion | 1000 | 6 cards · 75 coins |
+| Bronze | 0 | 2 cards · 15 🪙 |
+| Silver | 100 | 3 cards · 20 🪙 · 1 💎 |
+| Gold | 250 | 3 cards · 30 🪙 · 2 💎 |
+| Platinum | 450 | 4 cards · 40 🪙 · 3 💎 |
+| Diamond | 700 | 4 cards · 50 🪙 · 4 💎 |
+| Master | 1000 | 5 cards · 60 🪙 · 5 💎 |
+| Grandmaster | 1350 | 5 cards · 75 🪙 · 6 💎 |
+| Elite | 1750 | 6 cards · 90 🪙 · 8 💎 |
+| Legend | 2200 | 7 cards · 105 🪙 · 10 💎 |
+| Kudbee Champion | 2700 | 8 cards · 120 🪙 · 12 💎 |
 
-You are never relegated below the best league you've reached. In the **Dart Workshop**,
-cards + coins level a barrel, tip or flight up to **LV 5** (3/6/12/24 cards and 40/100/220/450
-coins). Each level on the parts you have equipped steadies your hand by 1.5% (less aim
-wobble and landing scatter, up to 18% with all three maxed). League rivals carry matching
-upgrades (2 levels per league), so the climb stays fair; campaign rivals keep their
-bot-tuned accuracy. Rules and numbers live in `src/progression.js`; the reward screen is
-`src/reward.js`.
+You are never relegated below the best league you've reached. **Tokens (💎)** are an
+in-game currency (no real money): chests pay them by league, and reaching a league for the
+first time pays a one-off bonus of 10 💎 per league step. Spend them in the Workshop on a
+**BONUS CHEST** (30 💎, opened on the same chest screen) or to fill missing upgrade cards
+(2 💎 per card).
+
+In the **Dart Workshop**, cards + coins level a barrel, tip or flight up to **LV 5**
+(3/6/12/24 cards and 40/100/220/450 coins). Each level on the parts you have equipped
+steadies your hand by 1.5% (less aim wobble and landing scatter, up to 18% with all three
+maxed). League rivals carry matching upgrades, so the climb stays fair; campaign rivals
+keep their bot-tuned accuracy. Rules and numbers live in `src/progression.js`; the reward
+screen is `src/reward.js`.
+
+**🏆 LEADERBOARD** ranks everyone by trophies: **MY LEAGUE** shows the players in your
+league around you, **TOP 100** pages through the board (FIND ME jumps to your page). Until
+the online leaderboard server is configured (`KD_LB_CONFIG.API_BASE`) the board is a fixed
+field of **AI rivals, labelled AI**; once it is live, matches post `trophies` and the board
+shows real players (`src/league-board.js`).
 
 ## Controls
 
@@ -155,9 +170,8 @@ change how steady your throw is.
 
 ## Leaderboard
 
-**🏆 Leaderboard** shows the **Bullseye League** standings — you ranked against the AI
-ladder by a rating derived from your level, ladder progress and streaks — alongside a
-career card (501/Cricket records, 180s, best checkout, streaks, coins).
+**🏆 Leaderboard** is the League Leaderboard described above, with your league card
+(rank in league and overall, progress to the next league, coins, tokens and record).
 
 Match results are also posted to the **Kudbee online leaderboard** via the SDK
 (`leaderboard/client/kd-leaderboard.js`). In demo mode (no auth) you'll be prompted
