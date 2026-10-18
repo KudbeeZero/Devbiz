@@ -27,6 +27,24 @@ const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+// colour probes vote over a small patch (one readback): a drifting wind leaf or a particle can cross any single
+// pixel. __patch(x, y, test) reads a 3x3 grid around stage point (x, y), `step` px apart; ok = 6+ of 9 pass test.
+await page.addInitScript(() => {
+  window.__patch = (x, y, test, step = 12) => {
+    const g = KARGame, R = KAR.Render, r = g.res, cv = g.ctx.canvas;
+    const x0 = Math.max(0, Math.round((x - step - R.XL) * r)), y0 = Math.max(0, Math.round((y - step) * r));
+    const w = Math.min(cv.width - x0, Math.round(2 * step * r) + 1), h = Math.min(cv.height - y0, Math.round(2 * step * r) + 1);
+    if (!(w > 0 && h > 0)) return { ok: false, rgb: 'off-canvas', n: 0 };
+    const d = g.ctx.getImageData(x0, y0, w, h).data;
+    const px = [];
+    for (const dy of [-step, 0, step]) for (const dx of [-step, 0, step]) {
+      const ix = Math.min(w - 1, Math.max(0, Math.round((x + dx - R.XL) * r) - x0)), iy = Math.min(h - 1, Math.max(0, Math.round((y + dy) * r) - y0)), i = (iy * w + ix) * 4;
+      px.push([d[i], d[i + 1], d[i + 2]]);
+    }
+    const good = px.filter(test);
+    return { ok: good.length >= 6, rgb: good.length >= 6 ? good[0] : px.find(p => !test(p)), n: good.length };
+  };
+});
 await page.goto(URL); await page.waitForFunction(() => window.KARGame);
 
 const box = await page.locator('#gameCanvas').boundingBox();
@@ -269,9 +287,9 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await G(() => { KAR.Store.data.tour.stars[5] = 1; }); await page.waitForTimeout(120);
   const open = await G(() => KAR.UI.buttons.filter(b => /^L2\d$/.test(b.id) && !b.disabled).map(b => b.id).join());
   await page.screenshot({ path: `${OUT}/think-map.png` });
-  await click('L24'); await page.waitForTimeout(150);
+  await click('L24'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 24 && KARGame.bp === 'ready', null, { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(150);
   const lv = await G(() => ({ lv: KARGame.match.lv, boxes: KAR.Render.boxes && KAR.Render.boxes.length, hint: KARGame.hint }));
-  const wood = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(0.6, 1.0, g.match.dist - KAR.BOXZ), px = []; for (const dx of [-24, 0, 24]) for (const dy of [-16, 0, 16]) { const d = g.ctx.getImageData(Math.round((q.x + dx - R.XL) * g.res), Math.round((q.y + dy) * g.res), 1, 1).data; px.push([d[0], d[1], d[2]]); } const ok = px.filter(p => p[0] > p[2] + 60); return ok.length >= 6 ? ok[0] : px.find(p => !(p[0] > p[2] + 60)); });   // 3x3 vote: a wind leaf can cross one pixel
+  const wood = await G(() => { const g = KARGame, q = KAR.Render.proj(0.4, 1.0, g.match.dist - KAR.BOXZ); return __patch(q.x, q.y, p => p[0] > p[2] + 60); });   // a crate between the window column (0.12) and the pennant pole (0.55), at eye height (the aim zoom crops the lower crates)
 
   await waitFor(() => KARGame.bp === 'ready', 8000);
   const b1 = await page.evaluate(([x, y]) => { const g = KARGame; g.match.wind = 0; g.match._gust = () => { g.match.wind = 0; }; g.drawing = true; g.draw = 1; g.aimX = x; g.aimY = y; g.sway = { x: 0, y: 0 }; g._loose(); const r = g.flight.res; return { blocked: r.blocked, ring: r.ring }; }, [0.5, 1.0]);
@@ -283,8 +301,8 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await waitFor(() => KARGame.bp === 'ready', 12000);
   const kept = await G(() => { const a = KARGame.match.arrows[0]; return a.length === 2 && a[0].hit && a[0].hit.z === KARGame.match.dist - KAR.BOXZ && a[1].ring >= 9; });
 
-  rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood[0] > wood[2] + 60 && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
-    `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood}); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
+  rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood.ok && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
+    `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood.rgb}, ${wood.n}/9); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
 }
 // BITCOIN CITY: the world 6 page stays shut until the Forest Crown falls; its map is a night city (dark violet sky); the
 // level paints the neon city and glowing orange chain blocks; the COIN BLOCK cashes in for a 10
@@ -293,7 +311,7 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   const shut = await G(() => KAR.UI.buttons.filter(b => /^L3\d$/.test(b.id)).every(b => b.disabled));
   await G(() => { KAR.Store.data.tour.stars[11] = 1; }); await page.waitForTimeout(150);
   const open = await G(() => KAR.UI.buttons.filter(b => /^L3\d$/.test(b.id) && !b.disabled).map(b => b.id).join());
-  const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(20 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  const sky = await G(() => __patch(30, 20, p => p[2] > p[1] + 10 && p[0] < 90));
   await page.screenshot({ path: `${OUT}/crypto-map.png` });
   await click('L30'); await page.waitForTimeout(200);
   const lv = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length, hint: KARGame.hint }));
@@ -303,8 +321,8 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(250);
   const ban = await G(() => KARGame.banner && KARGame.banner.text);
   await page.screenshot({ path: `${OUT}/crypto-coin.png` });
-  rec('crypto-city', shut && open === 'L30' && sky[2] > sky[1] + 10 && sky[0] < 90 && lv.lv === 30 && lv.venue === 5 && lv.boxes >= 4 && /GENESIS BLOCK/.test(lv.hint) && block[0] > block[2] && cb.star && cb.ring === 10 && ban === 'COIN BLOCK!' && errors.length === 0,
-    `BITCOIN CITY stays shut until the Forest Crown falls, then opens ${open}; the map sky is a night violet (rgb ${sky}); GENESIS BLOCK paints venue ${lv.venue} with ${lv.boxes} orange chain blocks (rgb ${block}); the COIN BLOCK reads ${ban} for ${cb.ring}`);
+  rec('crypto-city', shut && open === 'L30' && sky.ok && lv.lv === 30 && lv.venue === 5 && lv.boxes >= 4 && /GENESIS BLOCK/.test(lv.hint) && block[0] > block[2] && cb.star && cb.ring === 10 && ban === 'COIN BLOCK!' && errors.length === 0,
+    `BITCOIN CITY stays shut until the Forest Crown falls, then opens ${open}; the map sky is a night violet (rgb ${sky.rgb}, ${sky.n}/9); GENESIS BLOCK paints venue ${lv.venue} with ${lv.boxes} orange chain blocks (rgb ${block}); the COIN BLOCK reads ${ban} for ${cb.ring}`);
 }
 // SOLANA BEACH + ALGORAND PEAKS: world 7 opens off the BITCOIN CITY boss and world 8 off the SOLANA boss; the map pages
 // to 8/8; ORBIT paints the synthwave beach (a violet sky) with the boss going round its hub; FINALITY paints the ice wall
@@ -319,17 +337,17 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await page.screenshot({ path: `${OUT}/algorand-map.png` });
   await clickWhen('wprev'); await page.waitForFunction(() => KARGame.worldView === 6 && KAR.UI.buttons.some(b => b.id === 'L39' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
   await click('L39'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 39, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
-  const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, xs: Array.from({ length: 12 }, (_, i) => KARGame.match.offAt(i * 0.5).x) }));   // a whole orbit (~5.7 s): two samples can straddle the end of the loop (random phase)
-  const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(12 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, xs: Array.from({ length: 24 }, (_, i) => KARGame.match.offAt(i / 24 * 2 * Math.PI / KARGame.match.def.w).x) }));   // one whole loop (2π/w): two samples can straddle its end (random phase)
+  const sky = await G(() => __patch(30, 16, p => p[2] > p[1]));
   await page.screenshot({ path: `${OUT}/solana-orbit.png` });
   await G(() => { KARGame.activate('levels'); KARGame.worldView = 7; }); await page.waitForFunction(() => KARGame.screen === 'levels' && KAR.UI.buttons.some(b => b.id === 'L43' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
   await click('L43'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 43, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
   const fin = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length }));
-  // a 3x3 patch across the crate, majority vote: a drifting wind leaf can cross any single pixel
-  const ice = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), px = []; for (const dx of [-24, 0, 24]) for (const dy of [-16, 0, 16]) { const d = g.ctx.getImageData(Math.round((q.x + dx - R.XL) * g.res), Math.round((q.y + dy) * g.res), 1, 1).data; px.push([d[0], d[1], d[2]]); } const ok = px.filter(p => p[2] >= p[0]); return ok.length >= 6 ? ok[0] : px.find(p => p[2] < p[0]); });
+  // the ice crate's face (KAR.Render.BLOCKS[7]): within 20 of one of its three face colours
+  const ice = await G(() => { const g = KARGame, q = KAR.Render.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), F = KAR.Render.BLOCKS[7].face.map(h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16))); return __patch(q.x, q.y, p => F.some(f => f.every((c, k) => Math.abs(c - p[k]) <= 20))); });
   await page.screenshot({ path: `${OUT}/algorand-finality.png` });
-  rec('crypto-worlds', shut7 && open7 === 'L36' && page8 && ob.lv === 39 && ob.venue === 6 && ob.orbit > 0 && Math.max(...ob.xs) - Math.min(...ob.xs) > 0.2 && sky[2] > sky[1] && fin.lv === 43 && fin.venue === 7 && fin.boxes >= 4 && ice[2] >= ice[0] && errors.length === 0,
-    `SOLANA BEACH opens off the BITCOIN CITY boss (${open7}), the map pages to 8/8 with ALGORAND PEAKS shut; ORBIT paints venue ${ob.venue} (sky rgb ${sky}) with the boss circling its hub; FINALITY paints venue ${fin.venue} with ${fin.boxes} ice blocks (rgb ${ice}) [shut7 ${shut7} page8 ${page8} lv ${ob.lv} orbit ${ob.orbit} dx ${(Math.max(...ob.xs) - Math.min(...ob.xs)).toFixed(2)} fin ${fin.lv} errors ${errors.length}]`);
+  rec('crypto-worlds', shut7 && open7 === 'L36' && page8 && ob.lv === 39 && ob.venue === 6 && ob.orbit > 0 && Math.max(...ob.xs) - Math.min(...ob.xs) > 0.2 && sky.ok && fin.lv === 43 && fin.venue === 7 && fin.boxes >= 4 && ice.ok && errors.length === 0,
+    `SOLANA BEACH opens off the BITCOIN CITY boss (${open7}), the map pages to 8/8 with ALGORAND PEAKS shut; ORBIT paints venue ${ob.venue} (sky rgb ${sky.rgb}, ${sky.n}/9) with the boss circling its hub; FINALITY paints venue ${fin.venue} with ${fin.boxes} ice blocks (rgb ${ice.rgb}, ${ice.n}/9) [shut7 ${shut7} page8 ${page8} lv ${ob.lv} orbit ${ob.orbit} dx ${(Math.max(...ob.xs) - Math.min(...ob.xs)).toFixed(2)} fin ${fin.lv} errors ${errors.length}]`);
 }
 // THE CUP: pick it from the menu, START CUP by a real click; the HUD names your rival; the tie's results card shows the
 // bracket and NEXT ROUND (a real click goes on to the semi-final at the next distance); a cup in progress survives a
