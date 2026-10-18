@@ -293,9 +293,8 @@
     const btns = [];
     const cx = this.viewW / 2;
     // Mode toggle
-    btns.push({ id: 'mode:x301', label: '301', x: cx - 225, y: 196, w: 140, h: 52, sel: this.selMode === 'x301', group: 'mode' });
-    btns.push({ id: 'mode:x01', label: '501', x: cx - 70, y: 196, w: 140, h: 52, sel: this.selMode === 'x01', group: 'mode' });
-    btns.push({ id: 'mode:cricket', label: 'CRICKET', x: cx + 85, y: 196, w: 140, h: 52, sel: this.selMode === 'cricket', group: 'mode' });
+    const modes = [['x301', '301'], ['x01', '501'], ['cricket', 'CRICKET'], ['clock', 'CLOCK'], ['countup', 'COUNT-UP']];
+    modes.forEach((m, i) => btns.push({ id: 'mode:' + m[0], label: m[1], x: cx - 374 + i * 152, y: 196, w: 140, h: 52, sel: this.selMode === m[0], group: 'mode' }));
     // Opponent
     const opps = [['career', 'CAREER'], ['hotseat', '2P'], ['Rookie', 'ROOKIE'], ['Pro', 'PRO'], ['Legend', 'LEGEND']];
     const ow = 158, gap = 8, total = opps.length * ow + (opps.length - 1) * gap;
@@ -503,7 +502,10 @@
     if (opp.isAI && !level) opp.sigma *= KD.Progression.aiSteadiness(prog.leagueIdx());
 
     const modeKey = level ? level.mode : this.selMode;
-    this.mode = modeKey === 'cricket' ? new KD.Mode_Cricket() : new KD.Mode_X01(modeKey === 'x301' ? 301 : 501);
+    this.mode = modeKey === 'cricket' ? new KD.Mode_Cricket()
+      : modeKey === 'clock' ? new KD.Mode_Clock()
+      : modeKey === 'countup' ? new KD.Mode_CountUp()
+      : new KD.Mode_X01(modeKey === 'x301' ? 301 : 501);
     this.players = [human, opp];
     this.players.forEach((pl) => {
       this.mode.initPlayer(pl);
@@ -689,7 +691,7 @@
       else this.audio.chime(res.value === 25 ? 1 : 0);
     }
 
-    if (out.win) { this._matchWin(cur, lx, ly); return; }
+    if (out.win) { this._matchWin(out.winner || cur, lx, ly); return; }
     if (this.dartsThisTurn >= this.mode.dartsPerTurn) { this._endTurn(); return; }
     this.dart.reset();
   };
@@ -815,7 +817,7 @@
       darts: human.dartsThrown,
       t180: human.t180,
       checkout: (won && this.mode.id === 'x01') ? winner.scoreState.turnStart : 0,
-      marks: 0, points: this.mode.id === 'cricket' ? human.scoreState.points : 0,
+      marks: 0, points: this.mode.id === 'cricket' ? human.scoreState.points : this.mode.id === 'countup' ? human.scoreState.total : 0,
     };
     if (this.mode.id === 'cricket') {
       let m = 0; KD.Mode_Cricket.NUMBERS.forEach((n) => { m += Math.min(3, human.scoreState.marks[n]); });
@@ -1208,7 +1210,7 @@
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet;
     ctx.font = '15px "Space Grotesk", sans-serif';
-    ctx.fillText('PREDICTIVE FLICK · 301 · 501 · CRICKET · CLIMB THE LEAGUE', this.viewW / 2, 140);
+    ctx.fillText('PREDICTIVE FLICK · 301 · 501 · CRICKET · CLOCK · COUNT-UP · CLIMB THE LEAGUE', this.viewW / 2, 140);
 
     // Section labels.
     ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
@@ -1258,6 +1260,7 @@
   // ---- HUD ---------------------------------------------------------------
   Game.prototype._drawHUD = function (ctx) {
     if (this.mode.id === 'x01') this._drawHUDx01(ctx);
+    else if (this.mode.id === 'clock' || this.mode.id === 'countup') this._drawHUDparty(ctx);
     else this._drawHUDcricket(ctx);
     // Dart pips for the current thrower.
     const cur = this.players[this.current];
@@ -1489,6 +1492,20 @@
     ctx.textAlign = 'left';
   };
 
+  // Around the Clock / Count-Up: the two shared score cards plus a centre header.
+  Game.prototype._drawHUDparty = function (ctx) {
+    const p1 = this.players[0], p2 = this.players[1], clock = this.mode.id === 'clock';
+    const sub = (p) => clock ? 'TARGET' : 'RND ' + Math.min(p.scoreState.round, KD.Mode_CountUp.ROUNDS) + '/' + KD.Mode_CountUp.ROUNDS;
+    this._scoreCard(ctx, p1, 'left', this.current === 0, this.mode.summary(p1), sub(p1));
+    this._scoreCard(ctx, p2, 'right', this.current === 1, this.mode.summary(p2), sub(p2));
+    const cur = this.players[this.current];
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.fillStyle = C.violet; ctx.font = 'bold 13px "Space Grotesk", sans-serif';
+    ctx.fillText(clock ? 'AROUND THE CLOCK · HIT ' + KD.Mode_Clock.targetLabel(cur.scoreState.target) + (cur.scoreState.target < KD.Mode_Clock.BULL ? '  (DOUBLE +2 · TREBLE +3)' : '') : 'COUNT-UP · HIGHEST TOTAL AFTER ' + KD.Mode_CountUp.ROUNDS + ' ROUNDS', this.viewW / 2, 22);
+    ctx.restore();
+    ctx.textAlign = 'left';
+  };
+
   Game.prototype._drawHUDcricket = function (ctx) {
     const p1 = this.players[0], p2 = this.players[1];
     this._cricketColumn(ctx, p1, 'left', this.current === 0, p2.scoreState.marks);
@@ -1622,6 +1639,7 @@
     if (r.t180 > 0) bits.push(r.t180 + '× 180');
     if (r.won && r.mode === 'x01' && r.checkout) bits.push(r.checkout + ' checkout');
     if (r.mode === 'cricket' && r.points) bits.push(r.points + ' pts');
+    if (r.mode === 'countup' && r.points) bits.push(r.points + ' pts');
     ctx.fillStyle = C.dim; ctx.font = '14px "Space Grotesk", sans-serif';
     ctx.fillText(bits.join('  ·  '), this.viewW / 2, VIEW_H / 2 + 80);
     if (this.matchOverTimer <= 0) {

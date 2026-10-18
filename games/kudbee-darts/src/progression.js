@@ -84,6 +84,8 @@
       stats: {
         x01: { played: 0, won: 0, darts: 0, total180s: 0, bestCheckout: 0 },
         cricket: { played: 0, won: 0, marks: 0, points: 0 },
+        clock: { played: 0, won: 0 },
+        countup: { played: 0, won: 0, best: 0 },
       },
       skins: { owned: ['cyan'], equipped: 'cyan' },
       // Dart Workshop loadout: equipped + owned tips/flights.
@@ -324,10 +326,10 @@
         st.darts += result.darts || 0;
         st.total180s += result.t180 || 0;
         if ((result.checkout || 0) > st.bestCheckout) st.bestCheckout = result.checkout;
-      } else {
+      } else if (result.mode === 'cricket') {
         st.marks += result.marks || 0;
         st.points += result.points || 0;
-      }
+      } else if (result.mode === 'countup' && (result.points || 0) > st.best) st.best = result.points;
     }
 
     let xp = 30 + (result.t180 || 0) * 20 + (result.marks || 0) * 2;

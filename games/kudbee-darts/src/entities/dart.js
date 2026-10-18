@@ -590,6 +590,17 @@
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(q.x, q.y); ctx.stroke();
         px = q.x; py = q.y;
       }
+      // White-hot core down the middle of the trail, tapering with it.
+      ctx.strokeStyle = '#ffffff';
+      px = x; py = y;
+      for (let i = 1; i <= SEG; i++) {
+        const q = this._flightAt(Math.max(0, k - SPAN * i / SEG));
+        const u = 1 - i / (SEG + 1);
+        ctx.globalAlpha = 0.5 * u * (1 - e * 0.35);
+        ctx.lineWidth = (0.6 + 1.8 * u) * scale;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(q.x, q.y); ctx.stroke();
+        px = q.x; py = q.y;
+      }
       // Soft halo on the dart itself (cached sprite, mid-flight).
       const h = 54 * scale * Math.sin(Math.min(1, k) * Math.PI);
       if (h > 2) {
@@ -623,10 +634,28 @@
 
     // Tail flutter: a tiny shimmy that fades as it lands (flights "biting" air).
     const flutter = Math.sin(k * 26) * (1 - e) * 0.05;
+    // Release wobble: the dart snakes about its line for the first third of the
+    // flight and settles as it finds the air. Upgraded darts (this.steady < 1)
+    // wobble less, so a better dart visibly flies truer.
+    const wob = this.game.reduceMotion ? 0 : Math.sin(k * 46) * Math.pow(Math.max(0, 1 - k * 2.6), 2) * 0.16 * Math.max(0.3, 1 - (1 - (this.steady || 1)) * 6);
+
+    // Afterimages on a hard flick: two faint ghosts a few frames behind.
+    if (!this.game.reduceMotion && this._powf > 1.06 && k > 0.08) {
+      for (let gi = 1; gi <= 2; gi++) {
+        const q = this._flightAt(Math.max(0, k - 0.035 * gi));
+        ctx.save();
+        ctx.globalAlpha = 0.22 / gi;
+        ctx.translate(q.x, q.y);
+        ctx.rotate(Math.atan2(q.ty, q.tx));
+        ctx.scale(along, roll);
+        this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
+        ctx.restore();
+      }
+    }
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(ang + flutter);
+    ctx.rotate(ang + flutter + wob);
     ctx.scale(along, roll);
     this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
     ctx.restore();
