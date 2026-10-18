@@ -69,7 +69,7 @@ KCK.Game = class {
     this.wake(true);
     this.match = new KCK.Match({ level: D.difficulty, overs: D.overs, seed: (this.rng() * 4294967296) >>> 0 });
     this.screen = 'play'; this.particles.length = 0; this.banner = null; this.feedback = null;
-    this.camB = 0; this.camTarget = 0; this.focusIdx = -1; this.focusPending = true; this.loft = false; this.counted = false;
+    this.camB = 0; this.camTarget = 0; this.focusIdx = -1; this.focusPending = true; this.loft = false; this.counted = false; this.comm = null;
     this.hint = this.coarse ? 'TAP TO SWING  ·  WHERE YOU TAP AIMS THE SHOT' : 'CLICK TO SWING  ·  WHERE YOU CLICK AIMS THE SHOT'; this.hintT = 4;
     this._nextBall();
   }
@@ -80,6 +80,7 @@ KCK.Game = class {
     this.fieldNow = this.cur.field;
     this.bp = 'ready'; this.bpT = 0; this.bt = 0; this.tap = null; this.out = null; this.hit = null;
     this.deliveryLabel = ''; this.stumpsHit = false; this.ballHidden = false; this.camTarget = 0; this.events = [];
+    this.replay = null; this.overCard = null;
     if (m.freeHit) { this.hint = 'FREE HIT  ·  YOU CANNOT BE OUT'; this.hintT = 2.5; }
   }
 
@@ -140,7 +141,11 @@ KCK.Game = class {
     this._firstGesture();
     const p = this._pt(e), i = KCK.UI.hit(p.x, p.y);
     if (i >= 0) { e.preventDefault(); this.activate(KCK.UI.buttons[i].id); return; }
-    if (this.screen === 'play') { this._aimFromX(p.x); this.swing(); }
+    if (this.screen === 'play') {
+      if (this.replay) { this._skipReplay(); return; }
+      if (this.overCard && this.bp === 'between') { this.bpT = 99; return; }
+      this._aimFromX(p.x); this.swing();
+    }
   }
   _onMove(e) {
     const p = this._pt(e), i = KCK.UI.hit(p.x, p.y);
@@ -165,12 +170,12 @@ KCK.Game = class {
     if (k === 'r' || k === 'R') { this.startMatch(); return; }
     if (k === 'ArrowLeft') { e.preventDefault(); this.aimDeg = KCK.Util.clamp(this.aimDeg - 6, -90, 90); }
     else if (k === 'ArrowRight') { e.preventDefault(); this.aimDeg = KCK.Util.clamp(this.aimDeg + 6, -90, 90); }
-    else if (k === ' ' || k === 'Enter' || k === 'ArrowUp') { e.preventDefault(); this.swing(); }
+    else if (k === ' ' || k === 'Enter' || k === 'ArrowUp') { e.preventDefault(); if (this.replay) this._skipReplay(); else if (this.overCard && this.bp === 'between') this.bpT = 99; else this.swing(); }
   }
 
   // Record the swing; the outcome is resolved when the ball reaches the bat.
   swing() {
-    if (this.screen !== 'play' || this.bp !== 'flight' || this.tap) return;
+    if (this.screen !== 'play' || this.bp !== 'flight' || this.tap || this.replay) return;
     this.tap = { t: this.bt, aim: this.aimDeg, loft: this.loft };
     this.audio.whoosh();
   }
@@ -201,6 +206,8 @@ KCK.Game = class {
 
   _updateBall(dt) {
     const m = this.match, cur = this.cur, del = cur.del;
+    // the action replay runs the end of the delivery and the shot again in slow motion, easing back to full speed
+    if (this.replay) { const r = this.replay; r.k = this.bp === 'hit' ? KCK.Util.clamp(0.35 + (this.hit.t - 0.3) * 0.5, 0.35, 1) : 0.35; dt *= r.k; }
     this.bpT += dt;
     if (this.bp === 'ready') {
       if (this.bpT > 1.0) { this.bp = 'runup'; this.bpT = 0; this.audio.bowl(); }
@@ -209,7 +216,7 @@ KCK.Game = class {
     } else if (this.bp === 'flight') {
       this.bt += dt;
       if (!this.bounced && this.bt >= del.bounceT) { this.bounced = true; this.audio.bounce(); }
-      if (this.bt >= del.tArr) this._resolve();
+      if (this.bt >= del.tArr) { if (this.replay) this._playOut(this.out, true); else this._resolve(); }
     } else if (this.bp === 'hit') {
       this.hit.t += dt;
       while (this.events.length && this.events[0].t <= this.hit.t) this.events.shift().fn();
@@ -219,7 +226,7 @@ KCK.Game = class {
       while (this.events.length && this.events[0].t <= this.hit.t) this.events.shift().fn();
       if (this.hit.t >= this.hit.dur) this._endBall();
     } else if (this.bp === 'between') {
-      if (this.bpT > 0.7) { if (m.over) this._finishMatch(); else this._nextBall(); }
+      if (this.bpT > (this.overCard ? 2.6 : 0.7)) { if (m.over) this._finishMatch(); else this._nextBall(); }
     }
   }
 
@@ -234,8 +241,28 @@ KCK.Game = class {
   _resolve() {
     const m = this.match, cur = this.cur, del = cur.del, tap = this.tap;
     const o = m.resolve(tap ? tap.t : null, tap ? tap.aim : 0, tap ? tap.loft : false);
-    this.out = o; this.events = [];
-    const s = o.shot;
+    this.out = o;
+    this.comm = KCK.Commentary.line(o, del);
+    this._playOut(o, false);
+  }
+
+  // Stage an outcome: the live ball (feedback, banners, sound) or its slow-motion replay (pictures only).
+  _playOut(o, replay) {
+    const del = this.cur.del, tap = this.tap, s = o.shot;
+    this.events = [];
+    const E = (t, fn) => this.events.push({ t, fn });
+    if (replay) {
+      if (o.contact) {
+        const fd = o.fielded;
+        this.hit = { t: 0, dur: Math.min(fd.t + (fd.kind === 'six' ? 0.2 : 0.9), 3.6), path: o.path, fd };
+        this.bp = 'hit'; this.audio.crack(s.speed * 0.8);
+        E(0.3, () => { this.camTarget = 1; });
+      } else {
+        this.bp = 'miss'; this.hit = { t: 0, dur: 1.3, path: null, fd: null };
+        if (o.kind === 'wicket') E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); });
+      }
+      return;
+    }
     // timing feedback
     if (tap) {
       if (s && s.contact) {
@@ -250,7 +277,6 @@ KCK.Game = class {
       if (s.edge) this.audio.edge(); else this.audio.crack(s.speed);
       this.shake = Math.max(this.shake, s.perfect ? 7 : 3);
       this.buzz(s.perfect ? [20, 30, 25] : 16);
-      const E = (t, fn) => this.events.push({ t, fn });
       if (o.kind === 'six') { E(Math.min(fd.t, 3) * 0.7, () => { this._banner('SIX!', '#e6c0ff', '#9a45e6'); this.audio.cheer(true); this._burst(60); this.shake = 8; this.buzz([30, 50, 30, 50, 60]); }); }
       else if (o.kind === 'four') { E(Math.min(fd.t, 4) * 0.75, () => { this._banner('FOUR!', '#c4ecff', '#2f86d8'); this.audio.cheer(false); this._burst(24); }); }
       else if (o.kind === 'wicket') { E(fd.t, () => { this.audio.catchSnap(); this._banner(o.wicket === 'caught behind' ? 'CAUGHT BEHIND!' : 'CAUGHT!', '#ffd0c8', '#e8483a', o.fielder ? o.fielder.role : '', 64); this.audio.groan(); this.shake = 7; this.buzz([70, 50, 90]); }); }
@@ -261,7 +287,6 @@ KCK.Game = class {
       if (o.noBall) E(0.2, () => { this.hint = 'NO BALL  ·  FREE HIT NEXT'; this.hintT = 2; });
     } else {
       this.bp = 'miss'; this.camTarget = 0; this.hit = { t: 0, dur: 1.5, path: null, fd: null };
-      const E = (t, fn) => this.events.push({ t, fn });
       if (o.kind === 'wicket') { E(del.stump ? del.stump.t - del.tArr : 0.15, () => { this.stumpsHit = true; this.stumpsT = 0; this.audio.stumps(); this._banner('BOWLED!', '#ffd0c8', '#e8483a', '', 76); this.audio.groan(); this.shake = 9; this.buzz([70, 50, 90]); }); this.hit.dur = 2.0; }
       else if (o.kind === 'wide') E(0.3, () => this._banner('WIDE', '#fff6a8', '#ffb82e', '+1 run', 70));
       else if (o.noBall) E(0.2, () => { this._banner('NO BALL!', '#fff6a8', '#ffb82e', 'free hit next', 60); });
@@ -269,9 +294,23 @@ KCK.Game = class {
     }
   }
 
+  // the big moments get a slow-motion action replay: sixes, wickets and perfectly timed fours
+  _replayWorthy(o) { return !!o && (o.kind === 'six' || o.kind === 'wicket' || (o.kind === 'four' && o.shot && o.shot.perfect)); }
+  _startReplay() {
+    const del = this.cur.del;
+    this.replay = { k: 0.35 }; this.banner = null; this.feedback = null; this.events = []; this.stumpsHit = false;
+    this.camB = 0; this.camTarget = 0;
+    this.bp = 'flight'; this.bpT = 0; this.bt = Math.max(0, del.tArr - 0.6); this.bounced = this.bt >= del.bounceT;
+  }
+  _skipReplay() { if (this.replay) this._endBall(); }
+
   _endBall() {
+    if (!this.replay && this._replayWorthy(this.out)) { this._startReplay(); return; }
+    this.replay = null;
     this.camTarget = 0; this.bp = 'between'; this.bpT = 0; this.banner = null;
-    if (this.match.over) this.camTarget = 0;
+    // end of an over: a TV card with the over's runs, the chase and who bowls next
+    const m = this.match;
+    if (this.out && this.out.overDone && !m.over) this.overCard = { n: m.overNo, ...m.overRuns(m.overNo - 1) };
   }
 
   _finishMatch() {
@@ -339,7 +378,7 @@ KCK.Game = class {
       const lv = m.level.marker, f = this.bt / del.bounceT;
       if (lv === 'early' || (lv === 'late' && f > 0.35)) { if (this.bt < del.bounceT + 0.15) R.marker(ctx, del.bounceX, del.bounceY, 0.5 + 0.3 * Math.sin(this.time * 10)); }
     }
-    if (this.screen === 'play' && batView && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight') && !(this.tap)) R.aim(ctx, this.aimDeg, this.loft, this.time);
+    if (this.screen === 'play' && batView && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight') && !this.tap && !this.replay) R.aim(ctx, this.aimDeg, this.loft, this.time);
     // people, far to near
     const people = [];
     const teamF = R.TEAM.field, teamB = R.TEAM.bat;

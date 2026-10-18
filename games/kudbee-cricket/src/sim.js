@@ -324,6 +324,16 @@ KCK.Match = class {
   get bowler() { return KCK.BOWLERS[this.bowlerOrder[Math.min(this.overNo, this.bowlerOrder.length - 1)]]; }
   get phase() { const f = this.overNo / this.maxOvers; return f < 0.25 && this.maxOvers > 2 ? 'pp' : (f >= 0.7 || this.maxOvers === 2 && this.overNo >= 1 ? 'death' : 'mid'); }
   get reqRate() { return this.ballsLeft ? this.need / this.ballsLeft * 6 : 99; }
+  get runRate() { return this.balls ? this.runs / this.balls * 6 : 0; }
+  // a bowler's figures so far: wickets-runs (overs.balls)
+  figures(id) {
+    const f = { w: 0, r: 0, b: 0 };
+    for (const o of this.log) if (o.bowler === id) { f.r += o.runs + o.extras; if (o.legal) f.b++; if (o.kind === 'wicket') f.w++; }
+    f.text = f.w + '-' + f.r + ' (' + Math.floor(f.b / 6) + '.' + (f.b % 6) + ')';
+    return f;
+  }
+  // runs scored in a finished (or current) over
+  overRuns(n) { let r = 0, w = 0; for (const o of this.log) if (o.over === n) { r += o.runs + o.extras; if (o.kind === 'wicket') w++; } return { r, w }; }
 
   // Next delivery + the field set for it.
   nextBall() {
@@ -338,7 +348,7 @@ KCK.Match = class {
   // tapT === null  ->  no swing.  Returns the outcome record.
   resolve(tapT, aimDeg, loft) {
     const C = KCK.CFG, cur = this.cur, del = cur.del, fh = cur.freeHit;
-    const out = { over: this.overNo, ball: this.ballInOver + 1, label: del.label, runs: 0, extras: 0, wicket: null, legal: true, kind: 'dot', contact: false, freeHit: fh, path: null, shot: null, fielded: null };
+    const out = { over: this.overNo, ball: this.ballInOver + 1, label: del.label, kmh: del.speed * 3.6, bowler: cur.bowler.id, batter: this.batter.name, runs: 0, extras: 0, wicket: null, legal: true, kind: 'dot', contact: false, freeHit: fh, path: null, shot: null, fielded: null };
     let shot = tapT === null || tapT === undefined ? null : KCK.Bat.play(del, tapT, aimDeg, loft, this.rng, this.level, this.batter);
     out.shot = shot;
     const wide = Math.abs(del.arr.x) > C.WIDE_X + 0.0 || del.arr.z > 2.0;
@@ -346,6 +356,7 @@ KCK.Match = class {
       out.contact = true;
       const path = KCK.Hit.fly(shot), fd = KCK.Hit.field(path, cur.field, this.rng, this.level, fh);
       out.path = path; out.fielded = fd;
+      const end = fd.spot || path[Math.min(fd.i, path.length - 1)]; out.ww = { x: end.x, y: end.y };   // the wagon-wheel point
       if (fd.kind === 'six') { out.kind = 'six'; out.runs = 6; }
       else if (fd.kind === 'four') { out.kind = 'four'; out.runs = 4; }
       else if (fd.kind === 'caught') {
@@ -389,6 +400,57 @@ KCK.Match = class {
     if (this.over && !this.card.find(c => !c.out && c.name === this.batter.name)) this.card.push({ name: this.batter.name, runs: this.bat.runs, faced: this.bat.faced, how: 'not out', out: false });
     o.overDone = o.legal && this.ballInOver === 0;
   }
+};
+
+// ---- Commentary: one TV line per ball, from the outcome record (no rng: the match stays deterministic) ----
+KCK.Commentary = {
+  // shot direction (deg, + = off side for the right-hander, 0 = straight back past the bowler)
+  region(a) {
+    const s = a >= 0 ? 1 : -1, x = Math.abs(a);
+    if (x < 10) return 'straight down the ground';
+    if (s > 0) return x < 28 ? 'past mid-off' : x < 52 ? 'through the covers' : x < 80 ? 'through point' : x < 108 ? 'behind point' : 'down to third man';
+    return x < 28 ? 'past mid-on' : x < 55 ? 'through midwicket' : x < 85 ? 'out to square leg' : x < 112 ? 'behind square' : 'fine down the leg side';
+  },
+  over(a) {
+    const s = a >= 0 ? 1 : -1, x = Math.abs(a);
+    if (x < 10) return 'the sightscreen';
+    if (s > 0) return x < 28 ? 'long-off' : x < 52 ? 'extra cover' : x < 80 ? 'point' : 'third man';
+    return x < 28 ? 'long-on' : x < 55 ? 'deep midwicket' : x < 85 ? 'square leg' : 'fine leg';
+  },
+  verb(sh, kind) {
+    if (sh.edge) return 'Edged';
+    if (sh.loft) return 'Lofted';
+    const a = sh.angle, x = Math.abs(a);
+    if (a >= 0) return x < 52 ? 'Driven' : x < 80 ? 'Cut' : 'Steered';
+    if (kind === 'short' && x > 30) return 'Pulled';
+    return x < 28 ? 'Driven' : x < 55 ? 'Whipped' : x < 85 ? 'Pulled' : 'Glanced';
+  },
+  role(f) { return f ? f.role.toLowerCase().replace('sq ', 'square ').replace('midwkt', 'midwicket') : 'the fielder'; },
+  // -> { tag: '131 KM/H  ·  YORKER', text }
+  line(o, del) {
+    const sh = o.shot, n = o.runs, pick = arr => arr[(o.over * 7 + o.ball * 3 + (n || 0)) % arr.length];
+    const kind = del ? del.kind : '', lab = (o.label || '').toLowerCase();
+    let t;
+    if (o.contact) {
+      const v = this.verb(sh, kind), where = sh.edge ? (sh.angle > 0 ? 'past the slips' : 'down to fine leg') : this.region(sh.angle);
+      if (o.kind === 'six') t = pick(['BANG! ', 'MAXIMUM! ', 'HUGE! ']) + 'Launched over ' + this.over(sh.angle) + ' for SIX!';
+      else if (o.kind === 'four') t = sh.edge ? 'Thick edge, flies ' + where + ' for FOUR.' : v + ' ' + where + ', races away for FOUR!';
+      else if (o.kind === 'wicket') t = o.wicket === 'caught behind' ? 'OUT! A feather through to the keeper.' : o.fielder && o.fielder.role === 'BOWLER' ? 'OUT! Straight back, caught and bowled!' : 'OUT! ' + v + ' in the air... taken at ' + this.role(o.fielder) + '.';
+      else if (o.safe) t = 'Caught at ' + this.role(o.fielder) + ', but it is a FREE HIT!';
+      else if (o.dropped) t = 'DROPPED at ' + this.role(o.fielder) + '! ' + (n ? (n === 1 ? 'They scramble a single.' : 'They take ' + n + '.') : 'No run.');
+      else if (n) t = v + ' ' + where + ', ' + (n === 1 ? pick(['a quick single.', 'one run.', 'they cross for one.']) : n === 2 ? 'they come back for two.' : 'they run three!');
+      else t = v + ' ' + where + ', ' + pick(['picks out ', 'stopped by ', 'fielded by ']) + this.role(o.fielder) + '. No run.';
+    } else if (o.kind === 'wide') t = 'Too wide, the umpire stretches the arms. WIDE.';
+    else if (o.kind === 'wicket') t = 'BOWLED HIM! The ' + lab + (/^(full|good length|wide line|flighted)$/.test(lab) ? ' ball' : '') + ' crashes into the stumps.';
+    else if (o.safe) t = 'Hits the stumps, but it is a FREE HIT!';
+    else if (o.noBallSaved) t = 'Bowled... but the bowler overstepped! NO BALL.';
+    else if (o.missReason === 'left') t = pick(['Left alone.', 'Shoulders arms, lets it go.', 'Watchful leave.']);
+    else if (o.missReason === 'high') t = 'Too high to reach, dot ball.';
+    else if (o.missReason === 'wide') t = 'Reaches for it, beaten outside the line.';
+    else t = pick(['Swing and a miss!', 'Beaten all ends up!', 'Played and missed!']);
+    if (o.noBall && !o.noBallSaved) t = 'NO BALL! ' + t;
+    return { tag: Math.round(o.kmh || 0) + ' KM/H  \u00b7  ' + (o.label || ''), text: t };
+  },
 };
 
 // ---- A deterministic batting bot (tests, evaluator, balance) -----------------------

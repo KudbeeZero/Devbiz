@@ -132,6 +132,17 @@ const tapOn = d => d.tArr - C.BAT_DELAY;
   const m = K.Bot.playMatch({ level: 1, overs: 1, seed: 8 }, 0.05, 3), fours = m.stats.fours, sixes = m.stats.sixes;
   rec('match-stats', m.log.length >= m.balls && m.stats.fours + m.stats.sixes >= 1 || m.runs > 0, `a bot match has ${fours} fours, ${sixes} sixes, ${m.wk} wickets, ${m.balls} legal balls`);
 }
+// 9b. broadcast data: a commentary line for every ball, bowler figures that add up, a wagon-wheel point for every hit
+{
+  let lines = 0, bad = 0, ww = 0, hits = 0, figsOk = true;
+  for (let sd = 1; sd <= 12; sd++) {
+    const m = K.Bot.playMatch({ level: sd % 3, overs: 1, seed: sd }, 0.08, sd + 9);
+    for (const o of m.log) { const c = K.Commentary.line(o, null); lines++; if (!c.text || !/KM\/H/.test(c.tag) || /undefined|NaN/.test(c.text + c.tag)) bad++; if (o.contact) { hits++; if (o.ww && isFinite(o.ww.x) && isFinite(o.ww.y)) ww++; } }
+    let r = 0, w = 0, b = 0; for (const bw of K.BOWLERS) { const f = m.figures(bw.id); r += f.r; w += f.w; b += f.b; }
+    if (r !== m.runs || w !== m.wk || b !== m.balls) figsOk = false;
+  }
+  rec('broadcast-data', lines > 50 && bad === 0 && ww === hits && figsOk, `${lines} commentary lines (${bad} bad), ${ww}/${hits} hits on the wagon wheel, bowler figures sum to the score`);
+}
 // 10. persistence
 {
   const store = {};
