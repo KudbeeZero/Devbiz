@@ -39,6 +39,7 @@
   const POWER_GAIN = 0.15;      // how strongly flick power changes release speed
   const CURL_ACC = 0.18;        // m/s^2 sideways per unit of curl
   const SINK_ACC = 0.27;        // m/s^2 extra drop per unit of extra pressure
+  const CRATE_D = 0.12;         // m: THINK BOX crates stand this far in front of the board
   const BASE_LEN = 55;          // flight sprite length at scale 1
   const START_SCALE = 1.9;      // flight size at the hand (closest to the camera)
   const HAND_X = (g) => g.viewW / 2 + 120;   // throwing hand: right of the oche centre
@@ -243,7 +244,11 @@
     this._fromX = HAND_X(this.game); this._fromY = HAND_Y(this.game);
     if (!phys) { this._curl = 0; this._powf = 1; }
     this._launch(landX, landY, phys || null);
-    this.result = this.game.board.hitTest(this.landX, this.landY);
+    // A dart stopped by a THINK BOX crate scores nothing (ring 'miss', so every
+    // mode treats it as a miss) and is flagged so it sticks in the wood.
+    this.result = this.blocked
+      ? { score: 0, ring: 'miss', mult: 0, value: 0, label: 'BLOCKED', blocked: true, crate: this.blocked.crate }
+      : this.game.board.hitTest(this.landX, this.landY);
     this._roll = (Math.random() < 0.5 ? -1 : 1);
     this._embedAng = this.embedAngle(this.landX, this.landY);
     this._ft = 0;
@@ -305,8 +310,24 @@
     const ax = phys ? phys.curlX * CURL_ACC : 0;
     const ay = G + (phys ? phys.curlY * CURL_ACC + phys.sink * SINK_ACC : 0);
     this._sim = { x0: x0, y0: y0, vx: vx, vy: vy, vz: vz, ax: ax, ay: ay, T: OCHE / vz };
-    const end = this._simAt(this._sim.T);
-    this.landX = b.cx + end.x * k; this.landY = b.cy + end.y * k;
+    // THINK BOX: where the path crosses the crate plane, a crate in the way
+    // (at the moment the dart gets there) stops it.
+    this.blocked = null;
+    const tc = (OCHE - CRATE_D) / vz;
+    const crates = this.game.crateRects ? this.game.crateRects(tc) : null;
+    if (crates) {
+      const pc = this._simAt(tc);
+      for (let i = 0; i < crates.length; i++) {
+        const c = crates[i];
+        if (pc.x >= c.x0 && pc.x <= c.x1 && pc.y >= c.y0 && pc.y <= c.y1) {
+          this.blocked = { crate: c.crate };
+          this._sim.T = tc;
+          break;
+        }
+      }
+    }
+    const end = this._project(this._simAt(this._sim.T));
+    this.landX = end.x; this.landY = end.y;
   };
 
   Dart.prototype._simAt = function (t) {
@@ -601,6 +622,12 @@
     this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
     ctx.restore();
   };
+
+  // Shared with the game's THINK BOX crates (drawn and hit in the same space).
+  Dart.BOARD_M = BOARD_M;
+  Dart.CRATE_Z = OCHE - CRATE_D;
+  Dart.depthScale = function (z) { return (OCHE + CAM_BACK) / (z + CAM_BACK); };
+  Dart.FLIGHT_T = T_IDEAL;
 
   KD.Dart = Dart;
 })(window.KD = window.KD || {});

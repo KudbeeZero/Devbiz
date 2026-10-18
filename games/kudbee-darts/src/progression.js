@@ -111,13 +111,14 @@
     } catch (e) { /* corrupt save -> defaults */ }
   };
 
-  // Keep the best star count for a level. A level unlocks once the one
-  // before it has at least one star.
+  // Keep the best star count for a level. A level unlocks once the level
+  // that opens it (the one before, or a side world's `after`) has a star.
   Progression.prototype.campaignStars = function (i) {
     return this.data.campaign.stars[i] || 0;
   };
   Progression.prototype.campaignUnlocked = function (i) {
-    return i === 0 || this.campaignStars(i - 1) > 0;
+    const prev = KD.Campaign.opener(i);
+    return prev < 0 || this.campaignStars(prev) > 0;
   };
   Progression.prototype.recordLevel = function (i, stars) {
     const c = this.data.campaign.stars;

@@ -13,6 +13,7 @@
     { name: 'DART DAWN',      sub: 'Rookie rivals',   sky: 'dawn' },
     { name: 'NEON NOON',      sub: 'Pro rivals',      sky: 'noon' },
     { name: 'MIDNIGHT MARKS', sub: 'Legend rivals',   sky: 'night' },
+    { name: 'THINK BOX',      sub: 'Crates in the way · opens after World 1', sky: 'box' },
   ];
 
   // sigma = the rival's scatter in board-radius units (smaller is tighter;
@@ -36,6 +37,23 @@
     { world: 2, name: 'Zenith II',   mode: 'x301', tier: 'Legend', skin: 'gold',   sigma: 0.13,  par: 17 },
     { world: 2, name: 'Apex II',     mode: 'x301', tier: 'Legend', skin: 'ember',  sigma: 0.125, par: 17 },
     { world: 2, name: 'THE EMPEROR', mode: 'x01',  tier: 'Legend', skin: 'violet', sigma: 0.115, par: 27, boss: true },
+    // THINK BOX: a side world that opens once the World 1 boss has a star.
+    // Wooden crates stand just in front of the board; a dart that meets one
+    // sticks in the wood and scores nothing, so you plan around them. Boxes
+    // are in board radii from the bull (x right, y down); slide = side-to-side
+    // amplitude (radii) and speed (rad/s).
+    { world: 3, name: 'CRATE ROW',   mode: 'x301', tier: 'Rookie', skin: 'cyan',   sigma: 0.14,  par: 21, after: 4,
+      boxes: [{ x: -0.32, y: -1.12, w: 0.64, h: 0.52 }] },
+    { world: 3, name: 'SHUTTER',     mode: 'x301', tier: 'Rookie', skin: 'green',  sigma: 0.135, par: 22,
+      boxes: [{ x: -0.3, y: -0.3, w: 0.6, h: 0.6, slide: { amp: 0.75, w: 1.3 } }] },
+    { world: 3, name: 'TWO WINDOWS', mode: 'x01',  tier: 'Pro',    skin: 'violet', sigma: 0.14,  par: 30,
+      boxes: [{ x: -1.12, y: -0.55, w: 0.62, h: 1.1 }, { x: 0.5, y: -0.55, w: 0.62, h: 1.1 }] },
+    { world: 3, name: 'CRISS-CROSS', mode: 'x01',  tier: 'Pro',    skin: 'gold',   sigma: 0.135, par: 31,
+      boxes: [{ x: -0.3, y: -0.98, w: 0.6, h: 0.5, slide: { amp: 0.6, w: 1.2 } },
+              { x: -0.3, y: 0.48, w: 0.6, h: 0.5, slide: { amp: 0.6, w: 1.2, p: Math.PI } }] },
+    { world: 3, name: 'THE BIG BOX', mode: 'x01',  tier: 'Pro',    skin: 'ember',  sigma: 0.125, par: 31, boss: true,
+      boxes: [{ x: -1.12, y: -1.12, w: 0.86, h: 0.74 }, { x: 0.26, y: -1.12, w: 0.86, h: 0.74 },
+              { x: -0.26, y: 0.3, w: 0.52, h: 0.5, slide: { amp: 0.62, w: 1.6 } }] },
   ];
 
   // Stars for a WON leg thrown in `darts` darts. A loss is always 0.
@@ -52,5 +70,18 @@
     return { first: first, count: count };
   }
 
-  KD.Campaign = { WORLDS: WORLDS, LEVELS: LEVELS, starsFor: starsFor, worldRange: worldRange };
+  // The level whose star opens level i (-1 for the first level). A side
+  // world's first level names it with `after`; everything else follows on.
+  function opener(i) {
+    const L = LEVELS[i];
+    return L.after != null ? L.after : i - 1;
+  }
+
+  // The level NEXT LEVEL leads to from i: never into a side world.
+  function nextOf(i) {
+    const n = i + 1;
+    return n < LEVELS.length && LEVELS[n].after == null ? n : null;
+  }
+
+  KD.Campaign = { WORLDS: WORLDS, LEVELS: LEVELS, starsFor: starsFor, worldRange: worldRange, opener: opener, nextOf: nextOf };
 })(window.KD = window.KD || {});

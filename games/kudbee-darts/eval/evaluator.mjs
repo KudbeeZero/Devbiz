@@ -338,7 +338,7 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     g.progression.data.campaign = { stars: [] }; g.progression.save(); g.levelIdx = null; g.state = 'menu';
     return out;
   });
-  const campOk = camp.count === 15 && JSON.stringify(camp.bosses) === '[4,9,14]' && JSON.stringify(camp.stars) === '[3,2,1]'
+  const campOk = camp.count === 20 && JSON.stringify(camp.bosses) === '[4,9,14,19]' && JSON.stringify(camp.stars) === '[3,2,1]'
     && camp.mapState === 'levels' && camp.mapWorld === 0 && camp.layoutTiles === 5 && camp.lockedStart && camp.started
     && camp.won.state === 'matchOver' && camp.won.stars === 3 && camp.won.next === 1 && camp.won.saved === 3 && camp.won.unlock1 && !camp.won.unlock2
     && camp.nextStarted && camp.lossKeeps && camp.clean && camp.btns === 'next,retry,levels,share' && camp.share;
@@ -359,6 +359,47 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('darts-birds-world-scene', playPx.state === 'play' && playPx.r > 12 && playPx.b > playPx.g, `campaign match bottom-left rgb(${playPx.r},${playPx.g},${playPx.b}) (dawn hills, not the neon floor)`);
   await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
 }
+// ---------------------------------------------------------------- THINK BOX (crates)
+// A side world of crate levels: it opens from the World 1 boss, NEXT LEVEL never
+// leads into it, an ideal flick at a crate sticks in the wood and scores nothing,
+// a clear bed still scores, a sliding crate moves (and carries its darts), and
+// the AI aims around crates.
+{
+  const tb = await page.evaluate(() => {
+    const g = window.DARTS, C = window.KD.Campaign, prog = g.progression, out = {};
+    const first = C.LEVELS.findIndex((l) => l.after != null);
+    out.first = first; out.world = C.WORLDS[C.LEVELS[first].world].name;
+    prog.data.campaign = { stars: [] };
+    out.shutBefore = !prog.campaignUnlocked(first);
+    prog.data.campaign.stars[4] = 1;
+    out.openAfterBoss1 = prog.campaignUnlocked(first);
+    out.nextSkipsSide = C.nextOf(first - 1) === null && C.nextOf(first) === first + 1;
+    // CRATE ROW: the crate covers T20; T19 is clear.
+    g.levelIdx = first; g._startMatch(); g._groupCenter = null; g._groupStrength = 0;
+    const d = g.dart, B = g.board, P = { powf: 1, curlX: 0, curlY: 0, sink: 0 };
+    const at = (label) => { d.isAI = false; d.reset(); const p = B.targetPoint(label); d._releaseAt(p.x, p.y, 0, P); return d.result; };
+    const r20 = at('T20'); out.t20 = r20.label; out.t20blocked = !!r20.blocked && r20.score === 0;
+    out.t19 = at('T19').label;
+    // Land the blocked dart through the game so it sticks in the crate.
+    at('T20'); d._ft = d._sim.T; g._onDartLand();
+    const stuck = g.stuckDarts[g.stuckDarts.length - 1];
+    out.stuckInCrate = stuck && stuck.crate === 0;
+    // The AI aims around the crate.
+    const aim = g._aiClearShot(B.targetPoint('T20'), 0.5);
+    out.aiDodges = !g._behindCrate(aim.x, aim.y, 0.5);
+    // SHUTTER: the sliding crate moves over time.
+    g.levelIdx = first + 1; g._startMatch();
+    const a = g.crateRects(0)[0].x0, b2 = g.crateRects(0.6)[0].x0;
+    out.slides = Math.abs(a - b2) > 0.01;
+    prog.data.campaign = { stars: [] }; prog.save();
+    d.reset(); g.levelIdx = null; g.state = 'menu';
+    return out;
+  });
+  const ok = tb.world === 'THINK BOX' && tb.shutBefore && tb.openAfterBoss1 && tb.nextSkipsSide
+    && tb.t20blocked && tb.t19 === 'T19' && tb.stuckInCrate && tb.aiDodges && tb.slides;
+  rec('think-box', ok, `world=${tb.world} first=${tb.first} opens-after-boss1=${tb.shutBefore && tb.openAfterBoss1} next-skips-side=${tb.nextSkipsSide} T20=${tb.t20} T19=${tb.t19} stuck-in-crate=${tb.stuckInCrate} ai-dodges=${tb.aiDodges} slides=${tb.slides}`);
+}
+
 // ---------------------------------------------------------------- flight simulator
 // The dart flies a simulated projectile (like the archery arrow): an ideal
 // flick lands where the hand error put it, a soft flick drops lower, a hard one

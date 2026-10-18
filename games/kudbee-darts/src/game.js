@@ -55,6 +55,7 @@
     // and the world page shown on the level map.
     this.levelIdx = null;
     this.mapWorld = 0;
+    this.crateT = 0;      // THINK BOX crate clock (runs on slow-mo time, like the dart)
 
     // Board "lunge": a quick scale-in + snap-back on each throw release, so the
     // board reads as reacting to the dart leaving the hand (Darts-of-Fury feel).
@@ -227,6 +228,7 @@
     if (this._slowmoHoldT > 0) this._slowmoHoldT = Math.max(0, this._slowmoHoldT - dt);
     else this.timeScale = Util.approach(this.timeScale, 1, dt * 2.2);
     const adt = dt * this.timeScale;
+    this.crateT += adt;
     this.particles.update(adt);
     this.camera.update(adt);
     if (this.dart.state === 'flying') {
@@ -515,7 +517,7 @@
     if (cur.isAI) {
       if (this.dart.state === 'ready') {
         const label = cur.chooseTarget(this.mode, this.players[1 - this.current], this.mode.dartsPerTurn - this.dartsThisTurn);
-        const pt = this.board.targetPoint(label);
+        const pt = this._aiClearShot(this.board.targetPoint(label), cur.thinkTime + KD.Dart.FLIGHT_T);
         this.dart.skin = cur.skin();
         this.dart.parts = cur.dartParts || null;
         // Pressure: weaker AIs choke on checkouts — open their grouping the closer
@@ -553,6 +555,7 @@
 
     const isMiss = res.ring === 'miss';
     if (isMiss) this.audio.clunk(); else this.audio.thud();
+    if (res.blocked) this._say('BLOCKED!', 0.9, '#d79b5c');
     // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
     if (!isMiss) {
@@ -569,7 +572,12 @@
     // A genuine miss doesn't stick — it clips off and tumbles away instead of
     // freezing in a scoring pose (see _spawnBounceDart). Purely cosmetic: the
     // score is 0 either way, this only changes how the whiff *reads*.
-    if (isMiss) this._spawnBounceDart(lx, ly, cur, lean);
+    if (res.blocked) {
+      // Stuck in a THINK BOX crate: remember where the crate was, so the dart rides along with it.
+      const box = KD.Campaign.LEVELS[this.levelIdx].boxes[res.crate];
+      this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time,
+        crate: res.crate, slide0: this._crateSlide(box, this.crateT) });
+    } else if (isMiss) this._spawnBounceDart(lx, ly, cur, lean);
     else this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time });
     cur.dartsThrown++;
 
@@ -612,14 +620,17 @@
     } else {
       // A genuine miss: a duller gray puff instead of colorful splinters —
       // the board didn't register a score, so the fx shouldn't look like it did.
-      this.particles.dust(lx, ly);
+      // A crate hit knocks wood splinters off the crate instead.
+      if (res.blocked) this.particles.bricks(lx, ly, '#b9824a', 10, { speed: 220, size: 6 });
+      else this.particles.dust(lx, ly);
     }
     // Haptic thump on phones that support it (denser for the big hits).
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(big ? [0, 16, 30, 22] : res.score > 0 ? 14 : 8); } catch (_) {}
     }
     this.camera.shake(big ? 0.22 : 0.12);
-    this.particles.scorePop(lx, ly - 6, out.text, big,
+    // A crate hit already shouts BLOCKED!; no second "MISS" pop on top of it.
+    if (!res.blocked) this.particles.scorePop(lx, ly - 6, out.text, big,
       res.ring === 'treble' ? C.green : res.ring === 'double' ? C.gold : null);
 
     // Hot-streak badge: consecutive BIG hits (see above) by the same thrower,
@@ -787,8 +798,15 @@
     if (this.levelIdx != null) {
       const L = KD.Campaign.LEVELS[this.levelIdx];
       const stars = won ? KD.Campaign.starsFor(L, human.dartsThrown) : 0;
-      const rec = this.progression.recordLevel(this.levelIdx, stars);
-      const next = this.levelIdx + 1 < KD.Campaign.LEVELS.length ? this.levelIdx + 1 : null;
+      const prog = this.progression, LV = KD.Campaign.LEVELS;
+      const sideShut = LV.map((l, j) => l.after === this.levelIdx && !prog.campaignUnlocked(j));
+      const rec = prog.recordLevel(this.levelIdx, stars);
+      LV.forEach((l, j) => {
+        if (sideShut[j] && prog.campaignUnlocked(j)) {
+          this.toasts.push({ text: KD.Campaign.WORLDS[l.world].name + ' OPEN!', sub: 'A new world on the level map', life: 3.2 });
+        }
+      });
+      const next = KD.Campaign.nextOf(this.levelIdx);
       lvl = { idx: this.levelIdx, stars: stars, best: rec.best, won: won, par: L.par, boss: !!L.boss, next: won ? next : null };
     }
     const xp = this.progression.recordMatch(result);
@@ -937,8 +955,10 @@
     this.board.draw(ctx);
     if (this.hitFlash) this.board.drawHitFlash(ctx, this.hitFlash.res, this.hitFlash.life, this.hitFlash.col);
     if (this.state === 'play') this._drawCheckoutGuide(ctx);
-    for (let i = 0; i < this.stuckDarts.length; i++) {
-      const d = this.stuckDarts[i];
+    // Darts in the board, then any THINK BOX crates in front of it, then the
+    // darts stuck in those crates (riding along as a crate slides).
+    const drawStuck = (d, ox) => {
+      const x = d.x + ox;
       // A brief settle wobble right after impact — a quick decaying jiggle
       // so a fresh stick reads as landing WITH force, not teleporting in.
       let ang = d.ang;
@@ -949,9 +969,17 @@
       // Thunk: a fresh dart arrives slightly oversized and settles into the board.
       let thunk = 1;
       if (!this.reduceMotion && d.landT != null) thunk += 0.16 * Math.max(0, 1 - (this.time - d.landT) / 0.11);
-      if (thunk !== 1) { ctx.save(); ctx.translate(d.x, d.y); ctx.scale(thunk, thunk); ctx.translate(-d.x, -d.y); }
-      this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, ang, d.parts);
+      if (thunk !== 1) { ctx.save(); ctx.translate(x, d.y); ctx.scale(thunk, thunk); ctx.translate(-x, -d.y); }
+      this.sprites.drawStuckDart(ctx, x, d.y, d.skin, ang, d.parts);
       if (thunk !== 1) ctx.restore();
+    };
+    for (let i = 0; i < this.stuckDarts.length; i++) {
+      if (this.stuckDarts[i].crate == null) drawStuck(this.stuckDarts[i], 0);
+    }
+    this._drawCrates(ctx);
+    for (let i = 0; i < this.stuckDarts.length; i++) {
+      const d = this.stuckDarts[i];
+      if (d.crate != null) drawStuck(d, this._crateShiftPx(d));
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
@@ -1457,11 +1485,13 @@
     dawn:  ['#120a33', '#3b1d6e', '#a2457e', '#ffb48a'],
     noon:  ['#06203a', '#0f4f6e', '#2c8f9a', '#bff3e0'],
     night: ['#030210', '#0d0a2e', '#2b1657', '#7d5bd0'],
+    box:   ['#1b0d22', '#5a2340', '#c2553f', '#ffc078'],
   };
   const HILLS = {
     dawn:  ['#2a1450', '#1d0d3a', '#120828'],
     noon:  ['#0c3550', '#082638', '#051a28'],
     night: ['#1a1044', '#110a33', '#08051f'],
+    box:   ['#3a1d2a', '#2a1420', '#1a0c16'],
   };
   const STARS_AT = [[70, 80], [190, 150], [330, 60], [520, 118], [640, 52], [880, 190], [260, 210], [600, 200], [930, 60], [430, 40]];
 
@@ -1483,7 +1513,7 @@
     });
     ctx.globalAlpha = 1;
     // Sun / moon with slowly turning rays, outlined like a cartoon.
-    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : '#fff2b3';
+    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : world.sky === 'box' ? '#ffb347' : '#fff2b3';
     ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
     ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
     for (let k = 0; k < 12; k++) {
@@ -1575,6 +1605,92 @@
     ctx.restore();
   };
 
+  // ---- THINK BOX crates ---------------------------------------------------
+  // A crate's side-to-side offset (board radii) at crate-clock time t.
+  Game.prototype._crateSlide = function (b, t) {
+    return b.slide ? b.slide.amp * Math.sin(t * b.slide.w + (b.slide.p || 0)) : 0;
+  };
+
+  // The level's crates in board-face metres (x right, y down from the bull),
+  // where they will stand tAhead seconds from now; null when there are none.
+  Game.prototype.crateRects = function (tAhead) {
+    const L = this.levelIdx != null ? KD.Campaign.LEVELS[this.levelIdx] : null;
+    if (!L || !L.boxes) return null;
+    const M = KD.Dart.BOARD_M, t = this.crateT + (tAhead || 0);
+    return L.boxes.map((b, i) => {
+      const o = this._crateSlide(b, t);
+      return { x0: (b.x + o) * M, x1: (b.x + o + b.w) * M, y0: b.y * M, y1: (b.y + b.h) * M, crate: i };
+    });
+  };
+
+  // How far (px) a dart stuck in a sliding crate has moved since it landed.
+  Game.prototype._crateShiftPx = function (d) {
+    const L = KD.Campaign.LEVELS[this.levelIdx], b = L && L.boxes && L.boxes[d.crate];
+    if (!b) return 0;
+    const s = KD.Dart.depthScale(KD.Dart.CRATE_Z);
+    return (this._crateSlide(b, this.crateT) - d.slide0) * this.board.Rpx * s;
+  };
+
+  // Is the board point (px) behind a crate tAhead seconds from now?
+  Game.prototype._behindCrate = function (x, y, tAhead) {
+    const cr = this.crateRects(tAhead);
+    if (!cr) return false;
+    const M = KD.Dart.BOARD_M / this.board.Rpx, pad = 0.012;   // a little margin off the crate edges
+    const X = (x - this.board.cx) * M, Y = (y - this.board.cy) * M;
+    return cr.some((c) => X > c.x0 - pad && X < c.x1 + pad && Y > c.y0 - pad && Y < c.y1 + pad);
+  };
+
+  // An AI whose target sits behind a crate (when its dart would get there)
+  // takes the first clear bed from a list of good scoring spots instead.
+  const DODGE = ['T20', 'T19', 'T18', 'T17', 'T16', 'BULL', 'T15', 'T14', '20', '19', '18', '17', '16', '15', '14', '25', '13', '12', '11'];
+  Game.prototype._aiClearShot = function (pt, tAhead) {
+    if (!this._behindCrate(pt.x, pt.y, tAhead)) return pt;
+    for (let i = 0; i < DODGE.length; i++) {
+      const p = this.board.targetPoint(DODGE[i]);
+      if (!this._behindCrate(p.x, p.y, tAhead)) return p;
+    }
+    return pt;
+  };
+
+  Game.prototype._drawCrates = function (ctx) {
+    const L = this.levelIdx != null ? KD.Campaign.LEVELS[this.levelIdx] : null;
+    if (!L || !L.boxes) return;
+    const B = this.board, R = B.Rpx * KD.Dart.depthScale(KD.Dart.CRATE_Z);
+    L.boxes.forEach((b) => {
+      const o = this._crateSlide(b, this.crateT);
+      this._crate(ctx, B.cx + (b.x + o) * R, B.cy + b.y * R, b.w * R, b.h * R);
+    });
+  };
+
+  // A cartoon wooden crate: planks, a frame with a diagonal brace, nails, and
+  // a bold outline, with a soft shadow cast back onto whatever is behind it.
+  Game.prototype._crate = function (ctx, x, y, w, h) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 8, y + 10, w, h);
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, '#dca063'); g.addColorStop(1, '#a8693a');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    const n = Math.max(2, Math.round(h / 30));
+    ctx.strokeStyle = 'rgba(70,35,12,0.5)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 1; i < n; i++) { const py = y + h * i / n; ctx.moveTo(x, py); ctx.lineTo(x + w, py); }
+    ctx.stroke();
+    const f = Math.max(5, Math.min(w, h) * 0.13);
+    ctx.fillStyle = '#8a5229';
+    ctx.fillRect(x, y, w, f); ctx.fillRect(x, y + h - f, w, f); ctx.fillRect(x, y, f, h); ctx.fillRect(x + w - f, y, f, h);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x + f, y + f, w - 2 * f, h - 2 * f); ctx.clip();
+    ctx.strokeStyle = '#8a5229'; ctx.lineWidth = f * 0.9;
+    ctx.beginPath(); ctx.moveTo(x + f, y + h - f); ctx.lineTo(x + w - f, y + f); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#3b2412';
+    [[x + f / 2, y + f / 2], [x + w - f / 2, y + f / 2], [x + f / 2, y + h - f / 2], [x + w - f / 2, y + h - f / 2]].forEach((q) => {
+      ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.5, f * 0.18), 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  };
+
   Game.prototype._cloud = function (ctx, x, y, s) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ctx.beginPath();
@@ -1604,6 +1720,11 @@
         ctx.fill(); ctx.stroke();
         ctx.restore();
       });
+    } else if (sky === 'box') {
+      // A stack of crates.
+      this._crate(ctx, x - 52, y - 4, 60, 56);
+      this._crate(ctx, x + 6, y - 4, 60, 56);
+      this._crate(ctx, x - 24, y - 58, 60, 54);
     } else {
       // A lantern on a pole.
       ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 4, y - 70, 8, 110); ctx.strokeRect(x - 4, y - 70, 8, 110);
@@ -1664,7 +1785,7 @@
       ctx.fillRect(cx - 22, y + 62, 44, 34);
       ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.arc(cx, y + 78, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-      ctx.fillText('Beat level ' + idx, cx, y + h - 28);
+      ctx.fillText('Beat level ' + (KD.Campaign.opener(idx) + 1), cx, y + h - 28);
     }
     ctx.restore();
   };
@@ -1679,7 +1800,10 @@
     ctx.shadowColor = r.won ? C.green : C.ember; ctx.shadowBlur = 24;
     ctx.font = 'bold 60px "Space Grotesk", sans-serif';
     let title = r.won ? 'LEVEL CLEARED!' : 'DEFEAT';
-    if (boss) title = 'WORLD ' + (KD.Campaign.LEVELS[lvl.idx].world + 1) + ' COMPLETE!';
+    if (boss) {
+      const w = KD.Campaign.LEVELS[lvl.idx].world, W = KD.Campaign.WORLDS[w];
+      title = (W.sky === 'box' ? W.name : 'WORLD ' + (w + 1)) + ' COMPLETE!';
+    }
     ctx.fillText(title, cx, cy - 58);
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff'; ctx.font = '20px "Space Grotesk", sans-serif';

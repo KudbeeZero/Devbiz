@@ -24,6 +24,11 @@ rival. Stars come from the darts you throw on the winning leg: 1 star for a win,
 par + 6, 3 within par. Levels unlock one at a time, and the best stars are saved per
 level (`campaign.js` holds the level list and the star rule).
 
+**THINK BOX** is a side world that opens once the World 1 boss has a star: wooden
+crates stand just in front of the board (some slide side to side), and a dart that meets
+one sticks in the wood and scores nothing, so you plan around them. The AI aims around
+the crates too.
+
 Each level sets its rival's accuracy, so difficulty ramps level by level. The
 rivals and the star targets (`par`) are tuned with bots, not guesses:
 
