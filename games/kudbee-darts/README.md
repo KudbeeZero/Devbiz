@@ -226,3 +226,7 @@ Reward moments have their own synthesized sounds (no audio files) and phone hapt
 
 ### Stingers & crowd
 Bullseye rings a bell (the inner bull adds a low gong), trebles get a triple ping, a 100+ turn a brass stab with applause, and a 180 a snare-roll build into a brass fanfare and a roaring crowd. A bust draws a groan. When the human is on a finish (≤170 in x01) the music bed tightens with a hat and driving bass.
+
+## Achievements & tutorial
+- **Achievements** (menu → 🏅 ACHIEVEMENTS): 23 lifetime goals — wins, darts thrown, bullseyes, trebles/doubles, treble-20s, 100+ turns, 180s, 301/501 legs, Darts Birds stars, leagues (Gold → KUDBEE CHAMPION) and part upgrades. They count from matches against the AI and Darts Birds (not 2P), pay coins + 💎 the moment they unlock, and show progress bars, 8 per page. Saved in `kd.profile.v1` under `ach`.
+- **First-match tutorial**: four tips that advance as you act (aim → throw → read the score → finish on a double), shown beside the board on wide screens or as a top banner on narrow ones. It never blocks input, pays a one-time 50 🪙 + 2 💎, and is skipped by saves that already have matches played. **HOW TO PLAY** (top-left of the menu) replays it.
