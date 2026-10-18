@@ -359,6 +359,34 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('darts-birds-world-scene', playPx.state === 'play' && playPx.r > 12 && playPx.b > playPx.g, `campaign match bottom-left rgb(${playPx.r},${playPx.g},${playPx.b}) (dawn hills, not the neon floor)`);
   await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
 }
+// ---------------------------------------------------------------- flight simulator
+// The dart flies a simulated projectile (like the archery arrow): an ideal
+// flick lands where the hand error put it, a soft flick drops lower, a hard one
+// rides higher, curl bends it sideways, and the drawn flight is that path
+// (starts at the hand, ends on the landing spot, arcs above the target).
+{
+  const sim = await page.evaluate(() => {
+    const g = window.DARTS, d = g.dart, B = g.board, Rp = B.Rpx;
+    g.levelIdx = null; g.selOpp = 'hotseat'; g._startMatch();
+    const ax = B.cx, ay = B.cy - 0.6 * Rp, out = {};
+    // No grouping pull from earlier throws: this measures the flight alone.
+    const go = (phys) => { g._groupCenter = null; g._groupStrength = 0; d.isAI = !phys; d.reset(); d._releaseAt(ax, ay, 0, phys); return { dx: (d.landX - ax) / Rp, dy: (d.landY - ay) / Rp, label: d.result.label }; };
+    const P = (powf, curlX) => ({ powf, curlX: curlX || 0, curlY: 0, sink: 0 });
+    out.ideal = go(P(1)); out.soft = go(P(0.8)); out.hard = go(P(1.3)); out.curl = go(P(1, 1)); out.ai = go(null);
+    d.isAI = false; d.reset(); d._releaseAt(ax, ay, 0, P(1));
+    const h = d._flightAt(0), e = d._flightAt(1);
+    let apex = 1e9; for (let i = 0; i <= 60; i++) apex = Math.min(apex, d._flightAt(i / 60).y);
+    out.path = { fromHand: Math.hypot(h.x - d._fromX, h.y - d._fromY) < 1, toLand: Math.hypot(e.x - d.landX, e.y - d.landY) < 1, apexAbove: apex < ay - 20, apexOnScreen: apex > 0 };
+    d.isAI = false; d.reset(); g.state = 'menu';
+    return out;
+  });
+  const near = (v) => Math.abs(v) < 0.005;
+  const ok = near(sim.ideal.dx) && near(sim.ideal.dy) && sim.ideal.label === 'T20'
+    && sim.soft.dy > 0.08 && sim.hard.dy < -0.08 && near(sim.soft.dx) && sim.curl.dx > 0.05
+    && near(sim.ai.dx) && near(sim.ai.dy)
+    && sim.path.fromHand && sim.path.toLand && sim.path.apexAbove && sim.path.apexOnScreen;
+  rec('flight-simulator', ok, `ideal ${sim.ideal.label} soft dy=${sim.soft.dy.toFixed(2)}R hard dy=${sim.hard.dy.toFixed(2)}R curl dx=${sim.curl.dx.toFixed(2)}R ai on-target=${near(sim.ai.dx) && near(sim.ai.dy)} path=${JSON.stringify(sim.path)}`);
+}
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
 
 await browser.close();
