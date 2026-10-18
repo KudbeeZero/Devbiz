@@ -821,7 +821,7 @@ KAR.UI = {
     if (gh) U.ribbon(ctx, 480, 76, 440, d > 0 ? 'CHALLENGE WON!' : d === 0 ? 'ALL SQUARE!' : 'CHALLENGE LOST', d > 0 ? 'green' : d === 0 ? 'yellow' : 'red');
     else U.ribbon(ctx, 480, 76, 440, won ? (g.tourDone ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
-    U.text(ctx, String(m.total(0)), 480, 236, 80, '#ffffff', 'center');
+    U.text(ctx, String(g.scoreShown()), 480, 236, 80, '#ffffff', 'center');
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
     for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < st, T > 0.4 + i * 0.3 ? 1 : 0.01);
     const S = m.def.stars, msg = side !== undefined && g.unlocked ? ['WORLD ' + (m.venue + 2) + ' + ' + KAR.VENUES[side].name + ' OPEN!', '#9be35a', 26] : side !== undefined ? [KAR.VENUES[side].name + ' WORLD OPEN!', '#9be35a', 26]
@@ -900,11 +900,11 @@ KAR.UI = {
       U.text(ctx, m.total(0) + '  \u2013  ' + m.total(1), 480, 218, 70, '#ffffff', 'center');
       U.text(ctx, 'SETS ' + m.sets[0] + ' \u2013 ' + m.sets[1] + '   \u00b7   X ' + m.xs(0) + ' \u2013 ' + m.xs(1), 480, 256, 20, '#ffe9a8', 'center');
     } else if (swing) {
-      U.text(ctx, String(m.total(0)), 480, 222, 86, '#ffffff', 'center');
+      U.text(ctx, String(g.scoreShown()), 480, 222, 86, '#ffffff', 'center');
       U.text(ctx, 'OUT OF 120   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M ON THE SWING', 480, 258, 20, '#ffe9a8', 'center');
       U.text(ctx, g.newBest && m.total(0) > 0 ? 'NEW BEST!' : 'BEST ' + (KAR.Store.data.swingBest || 0), 480, 340, g.newBest ? 40 : 28, g.newBest ? '#fff27a' : '#ffffff', 'center');
     } else {
-      U.text(ctx, String(m.total(0)), 480, 222, 86, '#ffffff', 'center');
+      U.text(ctx, String(g.scoreShown()), 480, 222, 86, '#ffffff', 'center');
       U.text(ctx, 'OUT OF 150   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 258, 20, '#ffe9a8', 'center');
       for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < m.stars(), T > 0.4 + i * 0.3 ? 1 : 0.01);
       if (g.newGear && g.newGear.length) U.text(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name).join(' \u00b7 '), 480, 396, g.unlocked ? 18 : 22, '#9be35a', 'center');

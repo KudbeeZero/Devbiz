@@ -10,7 +10,7 @@ import { resolve, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url)), GAME = resolve(HERE, '..'), SRC = join(tmpdir(), 'kar-sfx-src');
-const RATE = 44100, GAP = 0.25, V = 1;
+const RATE = 44100, GAP = 0.25, V = 2;
 
 const PACKS = {
   impact: 'https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip',
@@ -37,6 +37,8 @@ const CLIPS = {
   body3: ['impact/Audio/impactSoft_heavy_002.ogg', 0, 0, 0, 0.1],
   creak1: ['rpg/Audio/creak1.ogg', 0, 0, 0, 0.1, -32],     // (it fades up: trim to where the creak is heard)
   creak2: ['rpg/Audio/creak3.ogg', 0, 0, 0, 0.08],
+  coins1: ['rpg/Audio/handleCoins.ogg', 0, 0.32, 0, 0.12],     // gems paid (a handful of coins, cut short)
+  coins2: ['rpg/Audio/handleCoins2.ogg', 0, 0, 0, 0.1],
   ooh1: ['ooh', 0, 1.7, 0.02, 0.6],
   clap1: ['applause', 0.15, 3.2, 0.05, 1.4],       // the swell as the crowd starts
   clap2: ['applause', 12, 1.8, 0.08, 1.0],         // a short patter in the middle

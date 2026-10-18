@@ -8,7 +8,7 @@
  * (and whenever assets/sfx.mp3 is rebuilt: kept files are matched without their ?v=).
  * ===================================================================== */
 
-const V = 'kar-v4';
+const V = 'kar-v5';
 const SHELL = ['./', 'manifest.webmanifest',
   'src/util.js', 'src/sfx.js', 'src/audio.js', 'src/sim.js', 'src/ghost.js', 'src/ach.js', 'src/quest.js', 'src/agent.js', 'src/render.js', 'src/ui.js', 'src/share.js', 'src/cloud.js', 'src/game.js',
   'assets/fonts/lilita-one.woff2', 'assets/sfx.mp3', 'assets/bg-menu.jpg', 'assets/bg-range-1.jpg', 'assets/bg-range-2.jpg',

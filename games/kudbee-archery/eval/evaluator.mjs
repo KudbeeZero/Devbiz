@@ -753,6 +753,38 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const fb = await sp.evaluate(async () => { const a = KARGame.audio, keep = a.sfx; a.sfx = null; a.last = {}; const r = []; for (const f of [() => a.loose(), () => a.thud(8), () => a.ooh(), () => a.xHit(1)]) { await new Promise(z => setTimeout(z, 500)); f(); let m = 0; for (let i = 0; i < 6; i++) { await new Promise(z => setTimeout(z, 30)); m = Math.max(m, window.__rms()); } r.push(m); } a.sfx = keep; return r; });
   rec('sound-recorded-loop', ['play:bow:true', 'play:swish:true', 'play:creak:true'].every(c => rel.includes(c)) && lift.every((k, i) => !i || k > lift[i - 1]) && fb.every(v => v > 0.01),
     `the release, the swish and the draw creak play recorded takes; a gold streak lifts the chime (${lift.map(k => k.toFixed(2)).join(' < ')}); with no sprite the synth stands in (rms ${fb.map(v => v.toFixed(3)).join(' / ')})`);
+  // TENSION + PAYOFF, the same round played out (4 arrows are in: 2 to go). Arrow 5: hold your breath and hear
+  // your heart, quickening as the air runs out; let go and it stops.
+  await sp.waitForFunction(() => KARGame.bp === 'ready' && KARGame.screen === 'play', null, { timeout: 15000 });
+  await sp.evaluate(() => { const a = KARGame.audio, t = a.tone.bind(a); window.__beats = []; a.tone = (...x) => { if (x[0] === 82) window.__beats.push(a.actx.currentTime + (x[5] || 0)); return t(...x); };
+    window.__calls = []; for (const k of ['count', 'gems', 'fanfare']) { const f = a[k].bind(a); a[k] = (...x) => { window.__calls.push(k + ':' + x.join(',')); return f(...x); }; }
+    const g = KARGame; g._beginDraw(); g.draw = 1; g.holding = true; });
+  await sp.waitForTimeout(1500);
+  const held = await sp.evaluate(() => { const b = window.__beats.slice(); KARGame.holding = false; return b; });
+  await sp.waitForTimeout(1000);
+  const after = await sp.evaluate(() => window.__beats.filter(t => t > KARGame.audio.actx.currentTime - 0.7).length);
+  await sp.evaluate(() => { const g = KARGame, h = KAR.Bot.hold(g.match, KAR.CFG.FACE_Y + 0.05, g._kit(0)); g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); });
+  const gaps = held.slice(1).map((t, i) => t - held[i]);
+  // arrow 6 is the last: the music and the outdoors hush while it's up
+  await sp.waitForFunction(() => KARGame.bp === 'ready' && KARGame.screen === 'play', null, { timeout: 15000 });
+  await sp.waitForTimeout(1300);
+  const hush = await sp.evaluate(() => { const g = KARGame, a = g.audio; return { drama: g.drama, mood: a.moodNow, music: a.musicBus.gain.value, amb: a.ambBus.gain.value }; });
+  // ...it goes in on the arrow cam: the last slow-motion stretch falls near silent, then the hit, and the music back
+  await sp.evaluate(() => { const g = KARGame, h = KAR.Bot.hold(g.match, KAR.CFG.FACE_Y + 0.003, g._kit(0)); g.drawing = true; g.draw = 1; g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); });
+  const hero = await sp.evaluate(() => KARGame.flight.hero);
+  const still = await sp.waitForFunction(() => KARGame.audio.moodNow === 'still', null, { timeout: 8000, polling: 10 }).then(async () => { await sp.waitForTimeout(150); return sp.evaluate(() => KARGame.audio.musicBus.gain.value); }, () => -1);
+  await sp.waitForFunction(() => KARGame.screen === 'over', null, { timeout: 15000 });
+  const mid = await sp.evaluate(() => { const g = KARGame; return { shown: g.overlayT < 0.3 ? g.scoreShown() : -1, total: g.match.total(0) }; });
+  const back = await sp.evaluate(() => KARGame.audio.moodNow);
+  rec('sound-tension', held.length >= 2 && gaps.length >= 1 && gaps.every(d => d > 0.4 && d < 0.95) && after === 0 && /^LAST ARROW/.test(hush.drama) && hush.mood === 'hush' && hush.music < 0.3 && hush.amb < 0.6 && hero && still >= 0 && still < 0.05 && back === 'normal',
+    `holding your breath, a heartbeat (${held.length} beats in 1.5 s, ${gaps.map(d => d.toFixed(2)).join(' / ')} s apart, quickening), gone when you breathe (${after}); "${hush.drama}" shot in a hush (music ${hush.music.toFixed(2)}, outdoors ${hush.amb.toFixed(2)}); the arrow cam's last stretch near silent (music ${still.toFixed(3)}), then ${back} again`);
+  // the results card: the score counts up tick by tick and lands with a thunk, then the gems drop in, then a fanfare for LEVEL 2
+  await sp.waitForTimeout(2200);
+  const pay = await sp.evaluate(() => { const g = KARGame, c = window.__calls; return { counts: c.filter(x => x.startsWith('count:')).map(x => +x.split(':')[1].split(',')[0]), done: c.includes('count:1,true'), gems: c.filter(x => x.startsWith('gems:')), fan: c.filter(x => x === 'fanfare:').length, won: g.starGemsWon, unlocked: g.unlocked, shown: g.scoreShown(), total: g.match.total(0) }; });
+  await sp.screenshot({ path: `${OUT}/phone-results-sound.png` });
+  const up = pay.counts.every((v, i) => !i || v >= pay.counts[i - 1]);
+  rec('sound-results', pay.counts.length >= 5 && up && pay.done && pay.gems.length === 1 && +pay.gems[0].split(':')[1] === pay.won && pay.fan === 1 && pay.unlocked && pay.shown === pay.total && (mid.shown === -1 || mid.shown < mid.total),
+    `the score counts up to ${pay.total} in ${pay.counts.length} rising ticks${mid.shown >= 0 ? ' (' + mid.shown + ' a moment in)' : ''} and lands with a thunk; ${pay.won} gems clink in once; LEVEL 2 UNLOCKED gets one fanfare`);
   await sc.close();
 }
 

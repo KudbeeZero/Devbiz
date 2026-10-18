@@ -21,7 +21,7 @@ KAR.Audio = class {
     this.muted = !!KAR.Store.data.muted;
     this.last = {}; this.lastVar = {};
     this.sfx = null; this.sfxLoading = false; this.sfxFailed = false;
-    this.musicOn = false; this.musicTimer = 0; this.step = 0; this.nextT = 0; this.theme = 0;
+    this.musicOn = false; this.musicTimer = 0; this.moodNow = 'normal'; this.heartNext = 0; this.step = 0; this.nextT = 0; this.theme = 0;
   }
 
   ensure() {
@@ -37,6 +37,10 @@ KAR.Audio = class {
         this.master = this.actx.createGain();
         this.master.gain.value = this.muted ? 0 : 1;
         this.master.connect(this.comp); this.comp.connect(this.actx.destination);
+        // THE MIX: the music and the outdoors each have a bus (its mood level: a hush on the last arrow, silence
+        // before the arrow cam lands) and the music a ducker under it (dips under a 10, an X, a win, a fanfare)
+        const bus = to => { const g = this.actx.createGain(); g.connect(to); return g; };
+        this.musicDuck = bus(this.master); this.musicBus = bus(this.musicDuck); this.ambBus = bus(this.master);
         const len = this.actx.sampleRate * 0.8;
         this.noiseBuf = this.actx.createBuffer(1, len, this.actx.sampleRate);
         const d = this.noiseBuf.getChannelData(0);
@@ -66,7 +70,7 @@ KAR.Audio = class {
     this.last[key] = now; return true;
   }
 
-  tone(freq, dur, type, vol, slideTo, delay) {
+  tone(freq, dur, type, vol, slideTo, delay, dest) {
     if (!this.actx) return;
     const t0 = this.actx.currentTime + (delay || 0);
     const o = this.actx.createOscillator(), g = this.actx.createGain();
@@ -76,7 +80,7 @@ KAR.Audio = class {
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(this.master);
+    o.connect(g); g.connect(dest || this.master);
     o.start(t0); o.stop(t0 + dur + 0.02);
   }
 
@@ -177,6 +181,7 @@ KAR.Audio = class {
     const f = a.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.2; f.frequency.setValueAtTime(2400, t0); f.frequency.exponentialRampToValueAtTime(420, t0 + d);
     const g = a.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(rec ? 0.22 : 0.45, t0 + 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
     s.connect(f); f.connect(g); g.connect(this.master); s.start(t0); s.stop(t0 + d + 0.05);
+    this.flyG = g;
   }
   // into the straw: the thwack, the boss's body, then the shaft quivering (a buzzing tone that dies away).
   // THE LADDER: the inner the ring, the tighter and brighter the hit and the higher the little woodblock
@@ -205,7 +210,7 @@ KAR.Audio = class {
   }
   // a 10: a bright bell, a fifth above it, then the sparkle; climbs with the streak
   ten(streak) {
-    const k = this._lift(streak);
+    const k = this._lift(streak); this.duck(0.35, 0.9);
     this.bell(1046.5 * k, 0.16, 0.03, 1.2); this.bell(1568 * k, 0.1, 0.11, 1.0);
     this.tone(2093 * k, 0.12, 'triangle', 0.06, null, 0.19);
     this.cheer(streak >= 2);
@@ -213,7 +218,7 @@ KAR.Audio = class {
   // the X: its own signature - a low boom, the two-note bell call (always the same shape, so you learn it), a
   // rising sparkle run, and the crowd going up
   xHit(streak) {
-    const k = this._lift(streak);
+    const k = this._lift(streak); this.duck(0.15, 1.6);
     this.tone(55, 0.6, 'sine', 0.5, 38); this.noise(0.5, 0.18, 300, 'lowpass', 0.02);
     this.bell(784 * k, 0.14, 0.03, 1.4); this.bell(1568 * k, 0.13, 0.17, 1.6);
     [2093, 2637, 3136, 4186].forEach((f, i) => this.tone(f * k, 0.16, 'triangle', 0.05, null, 0.3 + i * 0.05));
@@ -236,15 +241,72 @@ KAR.Audio = class {
   pop(n, mult) { for (let i = 0; i < (n || 1); i++) { this.noise(0.09, 0.7, 3800, 'highpass', i * 0.07); this.tone(900 + (mult || 1) * 120, 0.08, 'square', 0.08, 300, i * 0.07); } if (mult > 1) [659, 784, 988].slice(0, Math.min(3, mult - 1)).forEach((f, i) => this.tone(f * (1 + mult * 0.06), 0.14, 'triangle', 0.12, null, 0.1 + i * 0.06)); }
   // ROBIN the agent pipes up: two quick bird chirps
   chirp() { this.tone(2400, 0.07, 'sine', 0.05, 3400, 0); this.tone(2600, 0.09, 'sine', 0.05, 3800, 0.1); }
-  robin() { this.noise(0.08, 0.5, 3200, 'highpass'); [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => this.tone(f, 0.22, 'square', 0.07, null, 0.06 + i * 0.08)); this.cheer(true); }
+  robin() { this.duck(0.15, 1.6); this.noise(0.08, 0.5, 3200, 'highpass'); [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => this.tone(f, 0.22, 'square', 0.07, null, 0.06 + i * 0.08)); this.cheer(true); }
   cheer(big) {
     if (this.has('clap')) { if (big) { this.play('clap1', 0.5, 1, 0.08, 0.04); this.play('clap2', 0.3, 1.06, 0.2, 0.04); } else this.play('clap2', 0.3, 1, 0.1, 0.05); return; }
     this.noise(big ? 1.4 : 0.8, big ? 0.3 : 0.18, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.18, 1200, 'bandpass', 0.1, 0.6); }
   groan() { this.noise(0.7, 0.12, 500, 'bandpass', 0, 0.7); this.tone(150, 0.6, 'sawtooth', 0.05, 95); }
-  win() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { this.tone(f, 0.3, 'triangle', 0.15, null, i * 0.11); this.tone(f / 2, 0.3, 'sine', 0.08, null, i * 0.11); }); this.cheer(true); }
+  win() { this.duck(0.25, 1.6); [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { this.tone(f, 0.3, 'triangle', 0.15, null, i * 0.11); this.tone(f / 2, 0.3, 'sine', 0.08, null, i * 0.11); }); this.cheer(true); }
   // a results star landing: each one a step higher (1, 2, 3)
   star(n) { const k = Math.pow(2, ((n || 1) - 1) * 4 / 12); this.tone(1046.5 * k, 0.16, 'triangle', 0.14); this.tone(2093 * k, 0.12, 'sine', 0.06, null, 0.03); if (n >= 3) this.cheer(false); }
   lose() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.34, 'triangle', 0.13, f * 0.9, i * 0.17)); }
+
+  // ---- tension and payoff ----
+  // the mood of the moment, set every frame by the game: 'normal'; 'hush' (the last arrow is up: the music drops
+  // away and the outdoors goes quiet); 'still' (the arrow cam's last slow-motion stretch: near silence, and the
+  // arrow's whoosh cut, so the hit lands in a held breath). Only a change touches the buses.
+  mood(m) {
+    if (!this.actx || this.moodNow === m) return;
+    const was = this.moodNow; this.moodNow = m;
+    const t = this.actx.currentTime, L = { normal: [1, 1], hush: [0.12, 0.35], still: [0.0001, 0.06] }[m] || [1, 1];
+    const tc = m === 'still' ? 0.05 : m === 'hush' ? 0.35 : was === 'still' ? 0.6 : 0.4;   // into silence fast; back out slowly
+    this.musicBus.gain.setTargetAtTime(L[0], t, tc); this.ambBus.gain.setTargetAtTime(L[1], t, tc);
+    if (m === 'still' && this.flyG) { this.flyG.gain.cancelScheduledValues(t); this.flyG.gain.setTargetAtTime(0.0001, t, 0.04); }
+  }
+  // the music dips under a big moment and comes back
+  duck(level, hold) {
+    if (!this.actx) return;
+    const g = this.musicDuck.gain, t = this.actx.currentTime;
+    g.cancelScheduledValues(t); g.setTargetAtTime(level, t, 0.03); g.setTargetAtTime(1, t + (hold || 1.2), 0.5);
+  }
+  // your heart while you hold your breath: a lub-dub that quickens as the air runs out (p: 0 fresh .. 1 empty;
+  // below 0 it stops). Called every frame; beats are scheduled just ahead on the audio clock. A triangle and a
+  // band of noise, not a pure sine, so a phone speaker can carry it.
+  heart(p) {
+    if (!this.actx || this.muted || p < 0) { this.heartNext = 0; return; }
+    const now = this.actx.currentTime;
+    if (!this.heartNext || this.heartNext < now) this.heartNext = now + 0.06;
+    while (this.heartNext < now + 0.12) {
+      const d = this.heartNext - now, v = 0.32 + 0.22 * p;
+      this.tone(82, 0.13, 'triangle', v, 52, d); this.noise(0.07, v * 0.5, 260, 'lowpass', d);
+      this.tone(70, 0.11, 'triangle', v * 0.7, 46, d + 0.17); this.noise(0.05, v * 0.35, 220, 'lowpass', d + 0.17);
+      this.heartNext += 0.86 - 0.36 * p;
+    }
+  }
+  // the results score counting up: a tick per step, climbing with the count (frac 0..1), and a thunk as it lands
+  count(frac, done) {
+    if (done) { this.tone(196, 0.16, 'triangle', 0.22, 150); this.noise(0.08, 0.4, 900, 'lowpass'); return; }
+    if (!this._ok('count', 32)) return;
+    const f = 600 * Math.pow(2, frac * 1.25);
+    this.tone(f, 0.035, 'square', 0.045); this.tone(f * 2, 0.025, 'sine', 0.03);
+  }
+  // gems paid: recorded coins dropping in, a clink per gem (up to five), then a glint
+  gems(n) {
+    const k = Math.min(5, Math.max(1, n | 0));
+    for (let i = 0; i < k; i++) { if (!this.play('coins', 0.5, 1.05 + i * 0.04, i * 0.09, 0.05)) { this.tone(2637, 0.07, 'sine', 0.07, null, i * 0.09); this.tone(3520, 0.09, 'sine', 0.05, null, i * 0.09 + 0.02); } }
+    this.tone(3136, 0.25, 'triangle', 0.06, null, k * 0.09 + 0.05); this.tone(4186, 0.3, 'sine', 0.04, null, k * 0.09 + 0.1);
+  }
+  // something opened (a level, a world, new gear): a short brass-ish fanfare - rising fourths into a held chord -
+  // with the crowd under it and the music ducked out of its way
+  fanfare() {
+    if (!this._ok('fanfare', 1500)) return;
+    this.duck(0.15, 1.8);
+    const brass = (f, d, v, at) => { this.tone(f, d, 'sawtooth', v, null, at); this.tone(f * 1.003, d, 'sawtooth', v * 0.7, null, at); this.tone(f / 2, d, 'triangle', v * 0.8, null, at); };
+    [[392, 0.14, 0], [523.25, 0.14, 0.13], [659.25, 0.14, 0.26]].forEach(([f, d, at]) => brass(f, d, 0.05, at));
+    [523.25, 659.25, 783.99].forEach(f => brass(f, 0.8, 0.045, 0.42));
+    this.tone(1567.98, 0.6, 'triangle', 0.05, null, 0.46);
+    this.cheer(true);
+  }
 
   // ---- outdoors ----
   // A wind bed (looped noise, low-passed) whose level and brightness follow the wind gauge, plus a bird now and
@@ -254,7 +316,7 @@ KAR.Audio = class {
     if (!this.windBed) {
       const c = this.actx, s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;
       const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; f.Q.value = 0.6;
-      const g = c.createGain(); g.gain.value = 0.0001; s.connect(f); f.connect(g); g.connect(this.master); s.start();
+      const g = c.createGain(); g.gain.value = 0.0001; s.connect(f); f.connect(g); g.connect(this.ambBus); s.start();
       // gusts: a slow wobble on the level
       const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.17; lg.gain.value = 0.02; lfo.connect(lg); lg.connect(g.gain); lfo.start();
       this.windBed = { f, g, a: -1 };
@@ -263,9 +325,9 @@ KAR.Audio = class {
     const t = this.actx.currentTime;
     w.g.gain.setTargetAtTime(0.03 + 0.11 * a, t, 0.6); w.f.frequency.setTargetAtTime(280 + 700 * a, t, 0.6);
   }
-  bird(delay) {
+  bird(delay, dest) {
     const base = 2600 + Math.random() * 1400, n = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < n; i++) this.tone(base * (1 + 0.08 * (i % 2)), 0.07, 'sine', 0.05, base * 1.35, delay + i * 0.11);
+    for (let i = 0; i < n; i++) this.tone(base * (1 + 0.08 * (i % 2)), 0.07, 'sine', 0.05, base * 1.35, delay + i * 0.11, dest);
   }
 
   startMusic() {
@@ -281,10 +343,10 @@ KAR.Audio = class {
     while (this.nextT < this.actx.currentTime + 0.25) {
       const t = this.nextT - this.actx.currentTime;
       const bar = Math.floor(this.step / 8) % 4, e = this.step % 8, ch = th.chords[bar];
-      if (e === 0) this.tone(hz(ch[0]) / 2, spb * 3.6, 'triangle', 0.045, null, t);
-      if (e === 4) this.tone(hz(ch[2]) / 2, spb * 3.2, 'triangle', 0.035, null, t);
-      if (e % 2 === 1) this.tone(hz(ch[(th.up ? 3 - (e >> 1) : e >> 1) % 3]) * 2, spb * 1.3, th.lead, th.lv, null, t);
-      if (e === 3 && th.birds && Math.random() < 0.3) this.bird(t);
+      if (e === 0) this.tone(hz(ch[0]) / 2, spb * 3.6, 'triangle', 0.045, null, t, this.musicBus);
+      if (e === 4) this.tone(hz(ch[2]) / 2, spb * 3.2, 'triangle', 0.035, null, t, this.musicBus);
+      if (e % 2 === 1) this.tone(hz(ch[(th.up ? 3 - (e >> 1) : e >> 1) % 3]) * 2, spb * 1.3, th.lead, th.lv, null, t, this.musicBus);
+      if (e === 3 && th.birds && Math.random() < 0.3) this.bird(t, this.ambBus);
       this.nextT += spb; this.step++;
     }
   }

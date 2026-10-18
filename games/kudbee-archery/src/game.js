@@ -89,7 +89,7 @@ KAR.Game = class {
     this._begin();
   }
   _begin() {
-    this.starDing = 0; this.aidNext = false;
+    this.starDing = 0; this.aidNext = false; this.countN = 0; this.gemDing = false; this.fanDing = false;
     this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false; this.cupGems = 0;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = []; this.starGemsWon = 0;
     this.introT = this.time; this.windT = -9; this.lastBase = this.match.baseWind;      // the level card; the wind-shift call
@@ -509,6 +509,8 @@ KAR.Game = class {
     }
   }
 
+  // the results score as it counts up (0 to the total over a third of a second, before the first star lands)
+  scoreShown() { const n = this.match.total(0); return this.calm ? n : Math.round(n * KAR.Util.clamp((this.overlayT - 0.08) / 0.32, 0, 1)); }
   // your best for what you're shooting (a level, a range distance, the SWINGER); 0 when there's none
   _best() { const m = this.match, D = KAR.Store.data; return m.mode === 'stage' ? D.tour.best[m.lv] : m.mode === 'range' ? D.best[m.distIdx] : m.mode === 'swing' ? D.swingBest || 0 : 0; }
   // touch aim speed: sight px per finger px (AIM SPEED in pause)
@@ -697,6 +699,21 @@ KAR.Game = class {
     if (this.screen === 'play') this._updateShot(wt); else this.overlayT += dt;
     // the results card's stars land one by one, each with a rising chime (in step with UI.overStage)
     if (this.screen === 'over' && this.match.mode === 'stage') { const st = this.match.stars(); while (this.starDing < st && this.overlayT > 0.4 + this.starDing * 0.3) { this.starDing++; this.audio.star(this.starDing); this.buzz(10); } }
+    // ...after the score has counted up, tick by tick (in step with UI: scoreShown), then the gems paid drop in,
+    // then a fanfare if the round opened something (a level, a world, new gear, the tour)
+    if (this.screen === 'over' && /^(stage|range|swing)$/.test(this.match.mode)) {
+      const m = this.match, n = m.total(0), v = this.scoreShown();
+      if (v > this.countN) { this.countN = v; this.audio.count(v / n, v >= n); }
+      if (!this.gemDing && this.starGemsWon && this.overlayT > 1.2) { this.gemDing = true; this.audio.gems(this.starGemsWon); }
+      if (!this.fanDing && this.overlayT > 1.55 && (this.unlocked || this.sideOpen !== undefined || this.tourDone || (this.newGear && this.newGear.length))) { this.fanDing = true; this.audio.fanfare(); }
+    }
+    // THE MIX: the last arrow is shot in a hush; the arrow cam's last slow-motion stretch goes near silent so the hit
+    // lands in a held breath; holding your breath, you hear your heart
+    const pl = this.screen === 'play', fl = this.flight;
+    const still = pl && this.bp === 'flight' && fl && fl.hero && !fl.skip && fl.t / fl.tEnd > 0.72;
+    const hush = pl && this.bp === 'ready' && !!this.drama && this.match.shooter === 0 && !this.cpu;
+    this.audio.mood(still ? 'still' : hush ? 'hush' : 'normal');
+    this.audio.heart(pl && this.drawing && this.steady && !this.cpu ? 1 - this.breath : -1);
     // each world plays its own tune (the map plays the world on its page)
     this.audio.theme = this.screen === 'levels' ? this.worldView | 0 : /^(play|paused|over)$/.test(this.screen) || (this.screen === 'share' && this.shareBack === 'over') ? this.match.venue || 0 : 0;
     if (!this.drawing) this.audio.drawStop();
