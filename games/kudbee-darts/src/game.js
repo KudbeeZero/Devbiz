@@ -466,6 +466,7 @@
 
   // ---- Match setup -------------------------------------------------------
   Game.prototype._startMatch = function () {
+    this.audio.setIntensity(0);
     const prog = this.progression;
     const human = new KD.Player('You', prog.data.skins.equipped);
     human.dartParts = { tip: prog.data.darts.tip, flight: prog.data.darts.flight, shape: prog.data.darts.shape };
@@ -664,7 +665,7 @@
     }
 
     if (out.bust) {
-      this.audio.bust();
+      this.audio.bust(); this.audio.aww();
       this._say('BUST', 1.3, C.ember);
       this._endTurn();
       return;
@@ -677,9 +678,10 @@
       // target we set on this pass.
       if (!this.reduceMotion) this.camera.punchZoom(1.16, lx, ly);
       this.camera.shake(out.win ? 0.5 : 0.4);
-      this.audio.chime(2);
+      if (res.ring === 'inbull' || res.ring === 'outbull') this.audio.bull(res.ring === 'inbull'); else this.audio.chime(2);
     } else if (res.score > 0) {
-      this.audio.chime(res.ring === 'treble' || res.value === 25 ? 1 : 0);
+      if (res.ring === 'treble') this.audio.treble();
+      else this.audio.chime(res.value === 25 ? 1 : 0);
     }
 
     if (out.win) { this._matchWin(cur, lx, ly); return; }
@@ -731,7 +733,7 @@
         // The maximum — celebrate properly: gold rain + a double shockwave.
         cur.t180++;
         this._say('180!', 1.9);
-        this.audio.cheer();
+        this.audio.oneEighty();
         this.particles.confetti(this.board.cx, this.board.cy - 30,
           ['#ffd34d', '#fff0bf', '#7CFFb2', '#39e6ff'], this.reduceMotion ? 24 : 80);
         this.particles.shockwave(this.board.cx, this.board.cy, C.gold, 250, 0.8, 5);
@@ -745,7 +747,7 @@
           this.timeScale = 0.55;
           this._slowmoHoldT = 0.35;
         }
-      } else if (ts >= 100) this._say(ts + '!', 1.3);
+      } else if (ts >= 100) { this._say(ts + '!', 1.3); this.audio.ton(); }
       if (ts >= 100 && this.current === 0 && this._missionsOn && this._missionsOn()) this._mission('ton', 1);
     } else {
       const ts = cur.scoreState.turnScore;
@@ -767,6 +769,8 @@
     this._groupCenter = null; this._groupStrength = 0;   // fresh groove each turn
     this.current = 1 - this.current;
     this.mode.beginTurn(this.players[this.current]);
+    const ss = this.players[this.current].scoreState;
+    this.audio.setIntensity(this.mode.id === 'x01' && ss && ss.remaining <= 170 && !this.players[this.current].isAI ? 1 : 0);
     this.dartsThisTurn = 0;
     this.dart.reset();
     this.banner = '';
@@ -780,6 +784,7 @@
   // zoom easing in Camera.update carries the view back over the next beat.
   Game.prototype._matchWin = function (winner, wx, wy) {
     this.state = 'matchOver';
+    this.audio.setIntensity(0);
     this.timeScale = 0.5;
     if (!this.reduceMotion) {
       this.camera.punchZoom(1.16, wx != null ? wx : this.board.cx, wy != null ? wy : this.board.cy);

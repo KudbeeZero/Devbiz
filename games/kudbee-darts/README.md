@@ -223,3 +223,6 @@ and darts are drawn procedurally so hit detection is pixel-exact. All original I
 
 ## Reward sound & haptics
 Reward moments have their own synthesized sounds (no audio files) and phone haptics, both silenced by the mute toggle: a rising tick while trophies count up, a bigger fanfare on league promotion, a rumble + latch click when the chest opens, a pop per dealt card (sparkle for a NEW part), a level-up zip on upgrades, and a coin cascade on mission/bonus claims.
+
+### Stingers & crowd
+Bullseye rings a bell (the inner bull adds a low gong), trebles get a triple ping, a 100+ turn a brass stab with applause, and a 180 a snare-roll build into a brass fanfare and a roaring crowd. A bust draws a groan. When the human is on a finish (≤170 in x01) the music bed tightens with a hat and driving bass.
