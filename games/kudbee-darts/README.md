@@ -24,6 +24,19 @@ rival. Stars come from the darts you throw on the winning leg: 1 star for a win,
 par + 6, 3 within par. Levels unlock one at a time, and the best stars are saved per
 level (`campaign.js` holds the level list and the star rule).
 
+Each level sets its rival's accuracy, so difficulty ramps level by level. The
+rivals and the star targets (`par`) are tuned with bots, not guesses:
+
+```bash
+node games/kudbee-darts/eval/calibrate.mjs 150 0.10 0.13
+```
+
+plays every level 150 times with a bot in your seat at each accuracy (0.10 is a
+strong player, 0.13 a casual one) and prints win rates, darts-to-win percentiles
+and the share of 3★ / 2★ wins. At the current tuning a casual player wins about
+75% of World 1 down to about 30% of the last boss, and a strong player earns 3★
+on roughly half to two-thirds of the wins.
+
 ## Controls
 
 | Action            | Mouse / Touch                              | Keyboard |

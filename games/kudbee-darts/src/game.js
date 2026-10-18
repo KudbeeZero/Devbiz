@@ -22,6 +22,7 @@
   function Game(opts) {
     this.canvas = opts.canvas;
     this.ctx = this.canvas.getContext('2d');
+    this._readableText();
     this.viewW = VIEW_W; this.viewH = VIEW_H;
     this.canvas.width = VIEW_W; this.canvas.height = VIEW_H;
     this.debug = false;
@@ -116,11 +117,46 @@
     const r = this.canvas.parentNode.getBoundingClientRect();
     const aspect = Math.min(2.4, Math.max(4 / 3, r.width / r.height || 4 / 3));
     const w = Math.round(VIEW_H * aspect);
+    // Logical px that show as 11 CSS px at this screen height (0 = no bump).
+    const scale = r.height / VIEW_H;
+    this._minFont = scale > 0 && scale < 1 ? 11 / scale : 0;
     if (w === this.viewW) return;
     this.viewW = w;
     this.canvas.width = w; this.canvas.height = VIEW_H;
     this.camera.viewW = w;
     this.board.layout(w / 2, 296, 232);
+  };
+
+  // Small print stays readable on phones: the canvas is shown at about 0.54x
+  // on a 390px-tall landscape phone, so a 14px label would land near 7.5 CSS
+  // px. Every font size set on this context is raised toward the size that
+  // shows as 11 CSS px (at most 1.6x, so layouts keep their shape). _fit
+  // keeps _minFont current; big desktop screens are left untouched.
+  Game.prototype._readableText = function () {
+    const desc = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font');
+    if (!desc || !desc.set) return;
+    const game = this;
+    this._minFont = 0;
+    Object.defineProperty(this.ctx, 'font', {
+      configurable: true,
+      get() { return desc.get.call(this); },
+      set(v) {
+        const min = game._minFont;
+        if (min > 0) {
+          v = String(v).replace(/(\d+(?:\.\d+)?)px/, (m, n) => {
+            n = +n;
+            return (n >= min ? n : Math.min(min, n * 1.6)).toFixed(1) + 'px';
+          });
+        }
+        desc.set.call(this, v);
+      },
+    });
+  };
+
+  // How much _readableText is growing ~12px labels right now (1 = not at all),
+  // so tightly stacked lines can open their spacing to match.
+  Game.prototype._textBump = function () {
+    return this._minFont > 12 ? Math.min(1.6, this._minFont / 12) : 1;
   };
 
   Game.prototype.start = function () {
@@ -397,6 +433,7 @@
 
     if (level) {
       opp = new KD.AIPlayer(level.name, level.tier, level.skin);
+      if (level.sigma) opp.sigma = level.sigma;
     } else if (this.selOpp === 'hotseat') {
       opp = new KD.Player('Guest', 'ember');
     } else if (this.selOpp === 'career') {
@@ -1570,7 +1607,7 @@
       ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (L.boss ? 15 : 17) + 'px "Space Grotesk", sans-serif';
       ctx.fillText(L.name, cx, y + 84);
       ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px "Space Grotesk", sans-serif';
-      ctx.fillText((L.mode === 'x301' ? '301' : '501') + '  ·  ' + (L.boss ? 'BOSS' : L.tier), cx, y + 104);
+      ctx.fillText((L.mode === 'x301' ? '301' : '501') + '  ·  ' + (L.boss ? 'BOSS' : L.tier), cx, y + 84 + 20 * this._textBump());
       for (let s = 0; s < 3; s++) this._star(ctx, cx - 26 + s * 26, y + h - 26, 11, s < stars);
     } else {
       // Padlock.
@@ -1579,7 +1616,7 @@
       ctx.fillRect(cx - 22, y + 62, 44, 34);
       ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.arc(cx, y + 78, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-      ctx.fillText('Beat level ' + idx + ' first', cx, y + h - 28);
+      ctx.fillText('Beat level ' + idx, cx, y + h - 28);
     }
     ctx.restore();
   };
@@ -1812,15 +1849,16 @@
       { label: 'STABILITY', val: stability, color: '#7cffb2' },
       { label: 'SLIMNESS', val: slimness, color: '#39e6ff' }
     ];
+    const k = this._textBump();
     ctx.font = '10px "Space Grotesk", sans-serif';
     ctx.fillStyle = C.dim;
     stats.forEach((s, i) => {
-      const sy = y + i * 16;
+      const sy = y + i * 16 * k, bx = x + 65 * k;
       ctx.fillText(s.label, x, sy);
       ctx.fillStyle = 'rgba(180,210,255,0.15)';
-      ctx.fillRect(x + 65, sy - 6, 60, 8);
+      ctx.fillRect(bx, sy - 6, 60, 8);
       ctx.fillStyle = s.color;
-      ctx.fillRect(x + 65, sy - 6, 60 * Math.min(1, s.val * 10), 8);
+      ctx.fillRect(bx, sy - 6, 60 * Math.min(1, s.val * 10), 8);
       ctx.fillStyle = C.dim;
     });
   };
@@ -1866,7 +1904,7 @@
     // Name.
     ctx.textAlign = 'center'; ctx.fillStyle = b.sel ? '#fff' : C.text;
     ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText((cosmetic || {}).name || b.key, cx, b.y + b.h - 18);
+    ctx.fillText((cosmetic || {}).name || b.key, cx, b.y + b.h - 5 - 13 * this._textBump());
     // Status line: EQUIPPED / cost / OWNED / LOCKED.
     ctx.font = '11px "Space Grotesk", sans-serif';
     if (b.sel) { ctx.fillStyle = C.green; ctx.fillText('EQUIPPED', cx, b.y + b.h - 5); }
@@ -1911,10 +1949,11 @@
     const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
     const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
     const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
-    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(this.viewW / 2 + 160, 130, 140, 80); // stat panel bg
+    const sk = this._textBump();
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(this.viewW / 2 + 160, 130, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
     ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
     ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', this.viewW / 2 + 170, 145);
-    this._drawStatBars(ctx, this.viewW / 2 + 170, 155, totalSpeed, totalStability, totalSlimness);
+    this._drawStatBars(ctx, this.viewW / 2 + 170, 145 + 12 * this._textBump(), totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
