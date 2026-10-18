@@ -284,6 +284,7 @@ KAR.UI = {
     }
     const xl = KAR.Render.XL, xr = -xl;
     U.button(ctx, g, 'gear', 16 + xl, 14, C ? 190 : 170, C ? 60 : 48, 'GEAR \u2605' + KAR.starTotal(D), { small: true, color: 'yellow' });
+    U.button(ctx, g, 'trophies', 16 + xl + (C ? 202 : 180), 14, C ? 230 : 200, C ? 60 : 48, 'TROPHIES ' + KAR.achCount(D) + '/' + KAR.ACH.length, { small: true, color: 'yellow' });
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     [[5, 'LEVELS'], [0, 'RANGE'], [1, 'DUEL VS CPU'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 3) * 300 : 24 + k * 154, C ? 126 + Math.floor(k / 3) * 66 : 232, C ? 288 : 142, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i === 5 ? 'yellow' : i >= 2 ? (i === 4 ? 'yellow' : 'red') : 'blue'), selected: D.mode === i }));
@@ -365,6 +366,53 @@ KAR.UI = {
     });
     U.button(ctx, g, 'back', 380, 520, 200, 56, 'BACK', { primary: true });
   },
+  // ---- TROPHIES: every lifetime goal with its progress, nine to a page ----
+  trophies(ctx, g) {
+    const U = this, D = KAR.Store.data, per = 9, pages = Math.ceil(KAR.ACH.length / per), pg = KAR.Util.clamp(g.achPage | 0, 0, pages - 1);
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 70, 74, 820, 530, 'blue');
+    U.ribbon(ctx, 480, 46, 380, 'TROPHIES', 'yellow');
+    U.fit(ctx, KAR.achCount(D) + ' OF ' + KAR.ACH.length + ' WON  \u00b7  badges for the long haul  \u00b7  they come from every mode', 480, 132, U.sz(g, 16), '#ffe9a8', 760);
+    KAR.ACH.slice(pg * per, pg * per + per).forEach((a, k) => {
+      const x = 96 + (k % 3) * 260, y = 148 + Math.floor(k / 3) * 112, v = Math.min(a.n, a.val(D) || 0), done = v >= a.n;
+      U.rr(ctx, x, y, 248, 102, 14); ctx.fillStyle = U.OUT; ctx.fill();
+      U.rr(ctx, x + 3, y + 3, 242, 96, 12); ctx.fillStyle = done ? '#c9802e' : '#2c4f86'; ctx.fill();
+      this.medal(ctx, x + 40, y + 44, done);
+      U.fit(ctx, a.name, x + 76, y + 32, U.sz(g, 16), done ? '#fff6a8' : '#ffffff', 164, 'left');
+      U.fit(ctx, a.text, x + 76, y + 54, U.sz(g, 13), '#ffe9a8', 164, 'left');
+      U.rr(ctx, x + 76, y + 66, 100, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      if (v > 0) { U.rr(ctx, x + 76, y + 66, Math.max(12, 100 * v / a.n), 12, 6); ctx.fillStyle = done ? '#fff27a' : '#7ac7ff'; ctx.fill(); }
+      U.fit(ctx, done ? 'WON' : v + ' / ' + a.n, x + 236, y + 77, U.sz(g, 12), '#ffffff', 54, 'right');
+    });
+    U.button(ctx, g, 'tprev', 96, 494, 130, 56, '\u2039 PREV', { small: true, color: 'blue', disabled: pg === 0 });
+    U.text(ctx, (pg + 1) + ' / ' + pages, 290, 532, U.sz(g, 18), '#ffffff', 'center');
+    U.button(ctx, g, 'tnext', 354, 494, 130, 56, 'NEXT \u203a', { small: true, color: 'blue', disabled: pg >= pages - 1 });
+    U.button(ctx, g, 'back', 630, 494, 230, 56, 'BACK', { primary: true });
+  },
+  // a round gold (won) or grey (not yet) medal with a star
+  medal(ctx, x, y, done) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, 27, 0, 6.283); ctx.fillStyle = this.OUT; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 24, 0, 6.283); ctx.fillStyle = done ? '#ffcf3a' : '#77808c'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 18, 0, 6.283); ctx.strokeStyle = done ? '#fff1a6' : '#a6aeb8'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.restore();
+    this.star(ctx, x, y, 12, done, 1);
+  },
+  // a newly won trophy: a card that drops in at the top for ~3 s (queued, one at a time)
+  achToast(ctx, g) {
+    const q = g.achQ; if (!q || !q.length) return;
+    const it = q[0]; if (it.t0 === undefined) { it.t0 = g.time; g.audio.gold(3); g.buzz([20, 40, 30]); }
+    const age = g.time - it.t0; if (age > 3.2) { q.shift(); return; }
+    const k = Math.min(1, age / 0.25, (3.2 - age) / 0.3), y = -70 + 84 * k, U = this;
+    ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, k));
+    U.rr(ctx, 320, y, 320, 64, 16); ctx.fillStyle = U.OUT; ctx.fill();      // clear of the score panel and the round buttons
+    U.rr(ctx, 323, y + 3, 314, 58, 13); ctx.fillStyle = '#c9802e'; ctx.fill();
+    this.medal(ctx, 356, y + 32, true);
+    U.fit(ctx, 'TROPHY!  ' + it.a.name, 392, y + 28, U.sz(g, 18), '#fff6a8', 236, 'left');
+    U.fit(ctx, it.a.text, 392, y + 50, U.sz(g, 14), '#ffffff', 236, 'left');
+    ctx.restore();
+  },
+
   // a little picture of a gear item, centred on (x, y)
   swatch(ctx, kind, it, x, y) {
     const OUT = this.OUT, col = KAR.Render.TEAM[0];

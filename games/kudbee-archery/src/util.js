@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0 } },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {} },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -55,7 +55,8 @@ KAR.Store = {
           if (pick(d.dist, 4) !== null) D.dist = d.dist;
           if (pick(d.level, 3) !== null) D.level = d.level;
           for (const k of ['best', 'stars']) if (Array.isArray(d[k])) for (let i = 0; i < 4; i++) if (typeof d[k][i] === 'number') D[k][i] = d[k][i];
-          if (d.stats && typeof d.stats === 'object') for (const k in D.stats) if (typeof d.stats[k] === 'number') D.stats[k] = d.stats[k];
+          if (d.stats && typeof d.stats === 'object') for (const k in D.stats) if (Number.isInteger(d.stats[k]) && d.stats[k] >= 0) D.stats[k] = d.stats[k];
+          if (d.ach && typeof d.ach === 'object' && !Array.isArray(d.ach)) for (const k in d.ach) if (d.ach[k] === 1 && /^[a-z0-9]{2,12}$/.test(k)) D.ach[k] = 1;
         }
       }
     } catch (e) { /* storage unavailable */ }
