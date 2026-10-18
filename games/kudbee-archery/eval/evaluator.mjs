@@ -1,7 +1,7 @@
 // Kudbee Archery — browser rubric (Playwright + Chromium, real pointer/keyboard input).
 //   node evaluator.mjs     (serves the repo over local HTTP)
 import http from 'node:http';
-import { readFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -10,7 +10,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), 'out'); mkdirSync(OUT, { recursive: true });
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.png': 'image/png', '.css': 'text/css' };
 const server = http.createServer((q, s) => {
-  const p = join(ROOT, decodeURIComponent(q.url.split('?')[0]));
+  let p = join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html');   // a folder URL serves its index (as the host does)
   if (!p.startsWith(ROOT) || !existsSync(p)) { s.writeHead(404); return s.end(); }
   s.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream' }); s.end(readFileSync(p));
 });
@@ -696,6 +696,106 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const land = await T(() => getComputedStyle(document.querySelector('.rotate-tip')).display);
   rec('phone-portrait-card', port.card === 'flex' && port.scr === 'paused' && land === 'none', `upright: card ${port.card}, game ${port.scr}; sideways again: card ${land}`);
   await tctx.close();
+}
+
+// --- the app: plays offline, offers to install, helps when you're stuck, and feels like it ---
+// OFFLINE: the service worker keeps the game; with the network gone a reload still opens it and a level starts
+{
+  const oc = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const op = await oc.newPage(); op.on('pageerror', e => errors.push(e.message));
+  await op.goto(URL); await op.waitForFunction(() => window.KARGame);
+  const ctl = await op.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated', null, { timeout: 15000 }).then(() => true, () => false);
+  await op.evaluate(() => caches.open('kar-v1').then(c => c.keys()).then(k => k.length)).then(n => { op.__kept = n; });
+  await oc.setOffline(true);
+  const res = await op.reload().catch(() => null);
+  const up = await op.waitForFunction(() => window.KARGame && document.fonts.check('24px "Lilita One"'), null, { timeout: 8000 }).then(() => true, () => false);
+  const lv = up && await op.evaluate(async () => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tourLv = 0; KARGame.startMatch(); await new Promise(r => setTimeout(r, 300)); return { scr: KARGame.screen, lv: KARGame.match.lv, on: navigator.onLine, bg: [...document.images].length }; });
+  await op.screenshot({ path: `${OUT}/offline-play.png` });
+  rec('offline-play', ctl && op.__kept >= 20 && !!res && res.fromServiceWorker() && up && lv.scr === 'play' && lv.lv === 0 && lv.on === false,
+    `the service worker keeps ${op.__kept} files; offline (navigator.onLine ${lv && lv.on}) a reload is served by it (${res && res.fromServiceWorker()}), the font loads and LEVEL 1 starts (${lv && lv.scr})`);
+  await oc.close();
+}
+// INSTALL: phones, from the second visit. Android: the browser's own prompt, kept and fired from the menu's button.
+// iPhone: the button opens a card showing Share -> Add to Home Screen; GOT IT puts it away for good
+{
+  const ic = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ip = await ic.newPage(), cdp = await ic.newCDPSession(ip); ip.on('pageerror', e => errors.push(e.message));
+  const I = fn => ip.evaluate(fn);
+  const tapId = async id => { const b = await I(`(() => { const x = KAR.UI.buttons.find(b => b.id === ${JSON.stringify(id)}); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; })()`); if (!b) return false;
+    const tb = await ip.locator('#gameCanvas').boundingBox(), st = await I(() => ({ XL: KAR.Render.XL, XW: KAR.Render.XW })), p = { x: tb.x + (b.x - st.XL) * tb.width / st.XW, y: tb.y + b.y * tb.height / 640, id: 0 };
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); return true; };
+  const fakeBip = () => { const e = new Event('beforeinstallprompt', { cancelable: true }); e.prompt = () => { window.__prompted = (window.__prompted || 0) + 1; }; e.userChoice = Promise.resolve({ outcome: 'accepted' }); window.dispatchEvent(e); };
+  await ip.goto(URL); await ip.waitForFunction(() => window.KARGame);
+  await I(fakeBip); await ip.waitForTimeout(150);
+  const first = await I(() => ({ v: KAR.Store.data.visits, btn: KAR.UI.buttons.some(b => b.id === 'install') }));
+  await ip.reload(); await ip.waitForFunction(() => window.KARGame);
+  await I(fakeBip); await ip.waitForTimeout(150);
+  const second = await I(() => ({ v: KAR.Store.data.visits, btn: KAR.UI.buttons.some(b => b.id === 'install') }));
+  await ip.screenshot({ path: `${OUT}/install-button.png` });
+  await tapId('install'); await ip.waitForTimeout(150);
+  const after = await I(() => ({ prompted: window.__prompted, inst: KAR.Store.data.install, btn: KAR.UI.buttons.some(b => b.id === 'install') }));
+  rec('install-button', first.v === 1 && !first.btn && second.v === 2 && second.btn && after.prompted === 1 && after.inst === 1 && !after.btn,
+    `first visit: no button; second visit: INSTALL on the menu (${second.btn}); a tap fires the browser's install prompt (${after.prompted}) and the button goes once answered (${!after.btn})`);
+  // iPhone Safari: no prompt event, so the card
+  await I(() => { KAR.Store.data.install = 0; KARGame.ios = true; KARGame.bip = null; });
+  await ip.waitForTimeout(120); await tapId('install'); await ip.waitForTimeout(250);
+  const card = await I(() => ({ scr: KARGame.screen, ok: KAR.UI.buttons.some(b => b.id === 'instOk'), not: KAR.UI.buttons.some(b => b.id === 'instBack') }));
+  await ip.screenshot({ path: `${OUT}/install-ios-card.png` });
+  await tapId('instOk'); await ip.waitForTimeout(150);
+  const gone = await I(() => ({ scr: KARGame.screen, inst: KAR.Store.data.install, btn: KAR.UI.buttons.some(b => b.id === 'install'), saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).install }));
+  rec('install-ios-card', card.scr === 'install' && card.ok && card.not && gone.scr === 'menu' && gone.inst === 1 && gone.saved === 1 && !gone.btn,
+    `iPhone: INSTALL opens the Share -> Add to Home Screen card (${card.scr}); GOT IT goes back to the menu and the button stays gone (saved ${gone.saved})`);
+  await ic.close();
+}
+// AIM HELP: two failed tries at a still level (never cleared) and the first arrow of each end shows where to aim for
+// this wind and your kit; an arrow loosed on the marker scores gold; a clear puts it away; movers never get it
+{
+  await G(() => { const D = KAR.Store.data, T = D.tour; D.tut = 15; D.mode = 5; T.stars.fill(0); T.stars[0] = 1; T.fails.fill(0); D.tourLv = 1; KARGame.startMatch(); });
+  const off = await G(() => !KARGame.aid);
+  for (let i = 0; i < 2; i++) await G(() => { KARGame.startMatch(); KARGame._finishMatch(); });      // two tries that score nothing
+  const card = await G(() => ({ fails: KAR.Store.data.tour.fails[1], next: KARGame.aidNext, scr: KARGame.screen }));
+  await page.waitForTimeout(700); await page.screenshot({ path: `${OUT}/aim-help-card.png` });
+  await G(() => KARGame.startMatch());
+  await waitFor(() => KARGame.screen === 'play' && KARGame.bp === 'ready', 5000);
+  const on = await G(() => ({ aid: !!KARGame.aid, hint: KARGame.hint }));
+  await page.waitForTimeout(250); await page.screenshot({ path: `${OUT}/aim-help-marker.png` });
+  const shot = await G(() => { const g = KARGame, a = g._aidMark(), kit = g._kit(0), h = KAR.Bot.hold(g.match, undefined, kit); g.aimX = a.x; g.aimY = a.y; g.drawing = true; g.draw = 1; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); return { x: a.x, hx: h.x, ring: g.flight && g.flight.res.ring, aidAfter: !!g.aid }; });
+  await waitFor(() => KARGame.bp === 'ready' && KARGame.match.arrowNo === 1, 15000);
+  const second = await G(() => !KARGame.aid);
+  const won = await G(() => { const g = KARGame; g.match.stars = () => 1; g._finishMatch(); return KAR.Store.data.tour.fails[1]; });
+  const mover = await G(() => { const D = KAR.Store.data, T = D.tour; T.fails[2] = 5; T.stars[2] = 0; T.stars[1] = 1; D.tourLv = 2; KARGame.startMatch(); return { lv: KARGame.match.lv, mv: !!KARGame.match.offAt, aid: !!KARGame.aid }; });
+  rec('aim-help', off && card.fails === 2 && card.next && card.scr === 'over' && on.aid && /^AIM HELP IS ON/.test(on.hint) && shot.ring >= 9 && !shot.aidAfter && second && won === 0,
+    `off at first; 2 failed tries -> the results card says AIM HELP IS ON (${card.next}); the next try marks the hold-off (${shot.x.toFixed(3)} m) and an arrow loosed on it scores ${shot.ring}; arrow 2 of the end has no marker (${second}); a clear resets the count (${won})`);
+  rec('aim-help-still-only', mover.lv === 2 && mover.mv && !mover.aid, `a moving target (L${mover.lv + 1}) never gets the marker, even after ${5} fails`);
+  await G(() => { const T = KAR.Store.data.tour; T.fails.fill(0); T.stars.fill(0); KAR.Store.data.tourLv = 0; KARGame.activate('menu'); });
+}
+// FEEL: the limbs tick (a third, two thirds, full); a gold lands with a hit-stop under a white flash; the results stars
+// land one by one with rising chimes; every world plays its own tune
+{
+  await G(() => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tourLv = 0; KARGame.__bz = []; KARGame.buzz = p => KARGame.__bz.push(p); KARGame.startMatch(); });
+  await waitFor(() => KARGame.screen === 'play' && KARGame.bp === 'ready', 5000);
+  await G(() => KARGame._beginDraw());
+  await waitFor(() => KARGame.draw >= 1, 5000);
+  const ticks = await G(() => KARGame.__bz.slice());
+  await G(() => { const g = KARGame, h = KAR.Bot.hold(g.match, undefined, g._kit(0)); g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g._loose(); });
+  const hs = await page.waitForFunction(() => KARGame.flash && { a: KARGame.flash.a, f: KARGame.freeze, ring: KARGame.flight.res.ring }, null, { timeout: 15000 }).then(h => h.jsonValue(), () => null);
+  await page.screenshot({ path: `${OUT}/feel-hit-flash.png` });
+  rec('feel-draw-ticks', JSON.stringify(ticks) === '[5,5,12]', `vibration through the draw: ${JSON.stringify(ticks)} (a tick at a third and two thirds, a firmer one at full draw)`);
+  rec('feel-hit-stop', !!hs && hs.ring === 10 && hs.f > 0 && hs.a >= 0.32, `a gold (${hs && hs.ring}) holds the world for ${hs && Math.round(hs.f * 1000)} ms under a white flash (${hs && hs.a})`);
+  await waitFor(() => KARGame.bp === 'ready' || KARGame.screen === 'over', 15000);
+  await G(() => { const g = KARGame; delete g.buzz; g.__stars = []; g.audio.star = n => g.__stars.push(n); g.match.stars = () => 3; g._finishMatch(); });
+  await waitFor(() => KARGame.overlayT > 1.5, 5000);
+  const chimes = await G(() => { const s = KARGame.__stars.slice(); delete KARGame.audio.star; return s; });
+  rec('feel-star-chimes', JSON.stringify(chimes) === '[1,2,3]', `the 3 results stars land one at a time, each with a higher chime: ${JSON.stringify(chimes)}`);
+  const tunes = await G(async () => {
+    const g = KARGame, D = KAR.Store.data, T = KAR.Audio.THEMES, fr = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    g.activate('levels'); g.worldView = 5; await fr(); const map = g.audio.theme;
+    D.tour.stars.fill(1); D.tourLv = KAR.TOUR.findIndex(L => L.v === 6); g.startMatch(); await fr(); const play = [g.match.venue, g.audio.theme];
+    D.tour.stars.fill(0); D.tourLv = 0; g.activate('menu'); await fr();
+    return { n: T.length, distinct: new Set(T.map(t => t.bpm + ':' + JSON.stringify(t.chords))).size, map, play, menu: g.audio.theme };
+  });
+  rec('world-music', tunes.n === 8 && tunes.distinct === 8 && tunes.map === 5 && tunes.play[0] === 6 && tunes.play[1] === 6 && tunes.menu === 0,
+    `${tunes.n} world tunes (${tunes.distinct} different); the map plays the world on its page (${tunes.map}), a level its world's (${tunes.play[1]}), the menu the village green (${tunes.menu})`);
 }
 
 await page.setViewportSize({ width: 390, height: 780 });

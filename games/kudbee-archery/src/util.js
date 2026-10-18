@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(48).fill(0), best: Array(48).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [], streak: { day: 0, n: 0, best: 0 }, aimSpeed: 1, cup: null, cupTier: 0, cupWon: [0, 0, 0] },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(48).fill(0), best: Array(48).fill(0), fails: Array(48).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [], streak: { day: 0, n: 0, best: 0 }, aimSpeed: 1, cup: null, cupTier: 0, cupWon: [0, 0, 0], visits: 0, install: 0 },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -54,6 +54,11 @@ KAR.Store = {
           // stars are whole numbers 0..3 and bests 0..150 (a corrupt or hand-edited save can't open every level and all the gear)
           const ok = (k, v) => Number.isInteger(v) && v >= 0 && v <= (k === 'stars' ? 3 : 150);
           if (d.tour && typeof d.tour === 'object') for (const k of ['stars', 'best']) if (Array.isArray(d.tour[k])) for (let i = 0; i < Math.min(v1 ? v1.length : 48, d.tour[k].length); i++) if (ok(k, d.tour[k][i])) D.tour[k][v1 ? v1[i] : i] = d.tour[k][i];
+          // AIM HELP: failed tries per level since its last clear (0..99)
+          if (d.tour && Array.isArray(d.tour.fails) && !v1) for (let i = 0; i < Math.min(48, d.tour.fails.length); i++) if (Number.isInteger(d.tour.fails[i]) && d.tour.fails[i] >= 0) D.tour.fails[i] = Math.min(99, d.tour.fails[i]);
+          // the install card: visits counted, and 1 once it was dismissed or used
+          if (Number.isInteger(d.visits) && d.visits >= 0) D.visits = Math.min(d.visits, 1e6);
+          if (d.install === 1) D.install = 1;
           if (typeof d.trickBest === 'number') D.trickBest = d.trickBest;
           if (typeof d.swingBest === 'number') D.swingBest = d.swingBest;
           if (d.daily && typeof d.daily === 'object') for (const k in D.daily) if (typeof d.daily[k] === 'number') D.daily[k] = d.daily[k];

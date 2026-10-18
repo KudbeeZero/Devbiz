@@ -540,10 +540,10 @@ KAR.Bot = {
     return { aimX: ax, aimY: C.FACE_Y, sx, sy, power: 1 };
   },
   // the steady-hand, perfect-read aim for the current wind (the tutorial's AIM HERE marker)
-  hold(match, ty) {
-    const C = KAR.CFG, D = match.dist; ty = ty === undefined ? C.FACE_Y : ty;
+  hold(match, ty, kit) {      // (kit: the shooter's bow + arrows, so AIM HELP's marker is right for your gear; club kit when left out)
+    const C = KAR.CFG, D = match.dist, k = kit || KAR.KIT0, v = C.V0 * k.speed; ty = ty === undefined ? C.FACE_Y : ty;
     let ax = 0;
-    for (let i = 0; i < 4; i++) { const sol = KAR.Flight.solve(D, ax, ty), r = KAR.Flight.run(D, sol.yaw, sol.pitch, C.V0, match.wind); if (!r.hit) break; ax -= r.hit.x; }
+    for (let i = 0; i < 4; i++) { const sol = KAR.Flight.solve(D, ax, ty, v), r = KAR.Flight.run(D, sol.yaw, sol.pitch, v, match.wind * k.wind); if (!r.hit) break; ax -= r.hit.x; }
     return { x: ax, y: ty };
   },
   play(opts, sigma, readErr, seed) {

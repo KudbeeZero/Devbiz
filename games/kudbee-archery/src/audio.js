@@ -3,7 +3,7 @@
  * Fully synthesized, no files: a bow creak that tightens as you draw, the clicker,
  * the string's twang and slap, the arrow's whoosh, the straw thud and the shaft
  * quivering, crowd, UI ticks, an outdoor bed (wind that follows the gauge, birds)
- * and a calm loop. A compressor on the master keeps it loud enough for a phone
+ * and a calm loop with its own key, tempo and lead for each world. A compressor on the master keeps it loud enough for a phone
  * speaker. The AudioContext is created on the first gesture and unlocked the way
  * iOS needs (a silent buffer inside the gesture; playback session so the ringer
  * switch doesn't mute it). SFX are rate-limited; mute is persisted.
@@ -14,7 +14,7 @@ KAR.Audio = class {
     this.actx = null; this.master = null; this.noiseBuf = null;
     this.muted = !!KAR.Store.data.muted;
     this.last = {};
-    this.musicOn = false; this.musicTimer = 0; this.step = 0; this.nextT = 0;
+    this.musicOn = false; this.musicTimer = 0; this.step = 0; this.nextT = 0; this.theme = 0;
   }
 
   ensure() {
@@ -161,6 +161,8 @@ KAR.Audio = class {
   cheer(big) { this.noise(big ? 1.4 : 0.8, big ? 0.3 : 0.18, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.18, 1200, 'bandpass', 0.1, 0.6); }
   groan() { this.noise(0.7, 0.12, 500, 'bandpass', 0, 0.7); this.tone(150, 0.6, 'sawtooth', 0.05, 95); }
   win() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { this.tone(f, 0.3, 'triangle', 0.15, null, i * 0.11); this.tone(f / 2, 0.3, 'sine', 0.08, null, i * 0.11); }); this.cheer(true); }
+  // a results star landing: each one a step higher (1, 2, 3)
+  star(n) { const k = Math.pow(2, ((n || 1) - 1) * 4 / 12); this.tone(1046.5 * k, 0.16, 'triangle', 0.14); this.tone(2093 * k, 0.12, 'sine', 0.06, null, 0.03); if (n >= 3) this.cheer(false); }
   lose() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.34, 'triangle', 0.13, f * 0.9, i * 0.17)); }
 
   // ---- outdoors ----
@@ -193,16 +195,29 @@ KAR.Audio = class {
   stopMusic() { this.musicOn = false; clearInterval(this.musicTimer); }
   _musicTick() {
     if (!this.actx || this.actx.state !== 'running') { if (this.actx) this.nextT = this.actx.currentTime + 0.1; return; }
-    const spb = 60 / 104 / 2;                         // eighth notes at 104 bpm: a loose backyard strum
-    const chords = [[261.6, 329.6, 392], [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7]];
+    const th = KAR.Audio.THEMES[this.theme] || KAR.Audio.THEMES[0], spb = 60 / th.bpm / 2;      // eighth notes
+    const hz = n => 440 * Math.pow(2, (n - 69) / 12);
     while (this.nextT < this.actx.currentTime + 0.25) {
       const t = this.nextT - this.actx.currentTime;
-      const bar = Math.floor(this.step / 8) % 4, e = this.step % 8, ch = chords[bar];
-      if (e === 0) this.tone(ch[0] / 2, spb * 3.6, 'triangle', 0.045, null, t);
-      if (e === 4) this.tone(ch[2] / 2, spb * 3.2, 'triangle', 0.035, null, t);
-      if (e % 2 === 1) this.tone(ch[(e >> 1) % 3] * 2, spb * 1.3, 'sine', 0.018, null, t);
-      if (e === 3 && Math.random() < 0.3) this.bird(t);
+      const bar = Math.floor(this.step / 8) % 4, e = this.step % 8, ch = th.chords[bar];
+      if (e === 0) this.tone(hz(ch[0]) / 2, spb * 3.6, 'triangle', 0.045, null, t);
+      if (e === 4) this.tone(hz(ch[2]) / 2, spb * 3.2, 'triangle', 0.035, null, t);
+      if (e % 2 === 1) this.tone(hz(ch[(th.up ? 3 - (e >> 1) : e >> 1) % 3]) * 2, spb * 1.3, th.lead, th.lv, null, t);
+      if (e === 3 && th.birds && Math.random() < 0.3) this.bird(t);
       this.nextT += spb; this.step++;
     }
   }
 };
+
+// The tune of each world (KAR.VENUES order): four chords as MIDI notes (root first), tempo, the lead's voice and
+// level, the arpeggio's direction, and birds in the day worlds. The bass, the eighth-note feel and the mix are shared.
+KAR.Audio.THEMES = [
+  { bpm: 104, chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]], lead: 'sine', lv: 0.018, birds: true },              // VILLAGE GREEN: C Am F G, a backyard strum
+  { bpm: 96, chords: [[62, 65, 69], [58, 62, 65], [60, 64, 67], [57, 60, 64]], lead: 'triangle', lv: 0.02, birds: true, up: true },   // FOREST GLADE: Dm Bb C Am, folk
+  { bpm: 112, chords: [[55, 59, 62], [62, 66, 69], [64, 67, 71], [60, 64, 67]], lead: 'triangle', lv: 0.018 },                        // MOUNTAIN PASS: G D Em C, bright and high
+  { bpm: 84, chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]], lead: 'sine', lv: 0.016, up: true },                    // LANTERN NIGHT: Am F C G, slow, no birds
+  { bpm: 100, chords: [[64, 67, 71], [60, 64, 67], [55, 59, 62], [62, 66, 69]], lead: 'square', lv: 0.008 },                         // THINK BOX: Em C G D, a puzzle bleep
+  { bpm: 118, chords: [[65, 68, 72], [61, 65, 68], [68, 72, 75], [63, 67, 70]], lead: 'square', lv: 0.01, up: true },                  // BITCOIN CITY: Fm Db Ab Eb, night synth
+  { bpm: 108, chords: [[65, 69, 72], [62, 65, 69], [58, 62, 65], [60, 64, 67]], lead: 'sine', lv: 0.02, birds: true },                // SOLANA BEACH: F Dm Bb C, sunny
+  { bpm: 96, chords: [[59, 62, 66], [55, 59, 62], [62, 66, 69], [57, 61, 64]], lead: 'triangle', lv: 0.017 },                         // ALGORAND PEAKS: Bm G D A, wide open
+];

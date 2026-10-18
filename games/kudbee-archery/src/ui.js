@@ -373,7 +373,32 @@ KAR.UI = {
     if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
     U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
     // iPhone Safari has no full-screen mode for pages; added to the home screen the game opens full screen
-    if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
+    if (g.canInstall()) U.button(ctx, g, 'install', 16 + xl, 640 - 14 - 56, 170, 56, 'INSTALL', { small: true, color: 'green' });      // (second visit on)
+    else if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
+  },
+
+  // ---- INSTALL (iPhone / iPad Safari, which has no install prompt): the three taps, drawn the way Safari shows them ----
+  installScreen(ctx, g) {
+    const U = this;
+    U.backdrop(ctx, 0.55);
+    U.panel(ctx, 150, 92, 660, 480, 'blue');
+    U.ribbon(ctx, 480, 66, 440, 'PLAY IT LIKE AN APP', 'yellow');
+    U.fit(ctx, 'full screen  \u00b7  no browser bars  \u00b7  plays with no signal', 480, 150, U.sz(g, 18), '#ffe9a8', 600);
+    const rows = [['share', 'TAP  SHARE', 'the square with the arrow, in Safari\'s toolbar'], ['add', 'ADD TO HOME SCREEN', 'scroll the list down a little if you don\'t see it'], ['app', 'OPEN ARCHERY', 'from your home screen, like any app']];
+    rows.forEach(([k, head, sub], i) => {
+      const y = 214 + i * 92, x = 250;
+      U.rr(ctx, x - 34, y - 34, 68, 68, 16); ctx.fillStyle = k === 'app' ? '#0b1b2e' : '#ffffff'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = U.OUT; ctx.stroke();
+      ctx.save(); ctx.lineWidth = 3.5; ctx.strokeStyle = '#2f7cf6'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (k === 'share') { ctx.beginPath(); ctx.moveTo(x - 9, y - 6); ctx.lineTo(x - 14, y - 6); ctx.lineTo(x - 14, y + 18); ctx.lineTo(x + 14, y + 18); ctx.lineTo(x + 14, y - 6); ctx.lineTo(x + 9, y - 6); ctx.moveTo(x, y + 6); ctx.lineTo(x, y - 20); ctx.moveTo(x - 7, y - 13); ctx.lineTo(x, y - 20); ctx.lineTo(x + 7, y - 13); ctx.stroke(); }
+      else if (k === 'add') { U.rr(ctx, x - 16, y - 16, 32, 32, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.stroke(); }
+      else { const im = U._icon || (U._icon = Object.assign(new Image(), { src: 'assets/icon-192.png' })); if (im.complete && im.naturalWidth) { U.rr(ctx, x - 28, y - 28, 56, 56, 12); ctx.clip(); ctx.drawImage(im, x - 28, y - 28, 56, 56); } }
+      ctx.restore();
+      U.text(ctx, (i + 1) + '', x - 52, y + 9, U.sz(g, 26), '#fff27a', 'right');
+      U.fit(ctx, head, x + 54, y - 4, U.sz(g, 24), '#ffffff', 470, 'left');
+      U.fit(ctx, sub, x + 54, y + 24, U.sz(g, 15), '#cfe9ff', 470, 'left');
+    });
+    U.button(ctx, g, 'instOk', 230, 490, 290, 62, 'GOT IT', { primary: true });
+    U.button(ctx, g, 'instBack', 540, 490, 190, 62, 'NOT NOW', { small: true, color: 'yellow' });
   },
 
   // ---- the GEAR LOCKER: bow finishes, fletching and sight colours, opened by your star total ----
@@ -720,7 +745,8 @@ KAR.UI = {
     U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
     for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < st, T > 0.4 + i * 0.3 ? 1 : 0.01);
     const S = m.def.stars, msg = side !== undefined && g.unlocked ? ['WORLD ' + (m.venue + 2) + ' + ' + KAR.VENUES[side].name + ' OPEN!', '#9be35a', 26] : side !== undefined ? [KAR.VENUES[side].name + ' WORLD OPEN!', '#9be35a', 26]
-      : g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28]) : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
+      : g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28])
+      : !won && g.aidNext ? ['AIM HELP IS ON FOR YOUR NEXT TRY', '#9be35a', 24] : g.newBest && m.total(0) > 0 ? ['NEW BEST!', '#fff27a', 28]
       : !won ? [(S[0] - m.total(0)) + ' MORE TO CLEAR IT', '#ffffff', 22] : st < 3 ? [(S[st] - m.total(0)) + ' MORE FOR ' + (st + 1) + ' STARS', '#ffffff', 20] : ['PERFECT', '#fff27a', 28];
     U.fit(ctx, msg[0], 480, 394, msg[2], msg[1], 450);
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);

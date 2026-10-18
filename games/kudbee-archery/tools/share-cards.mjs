@@ -5,7 +5,7 @@
 //   node games/kudbee-archery/tools/share-cards.mjs   (writes assets/og/archery/<slug>.jpg + games/kudbee-archery/s/<slug>/index.html)
 // Bump VER when the cards change: X / iMessage / Facebook cache a card for days.
 import http from 'node:http';
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -13,7 +13,7 @@ const VER = 1;
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..', '..'), GAME = resolve(HERE, '..');
 const { chromium } = createRequire(resolve(HERE, '..', 'eval', 'x.js'))('playwright');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.png': 'image/png' };
-const server = http.createServer((q, s) => { const p = join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (!p.startsWith(ROOT) || !existsSync(p)) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream' }); s.end(readFileSync(p)); });
+const server = http.createServer((q, s) => { let p = join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html'); if (!p.startsWith(ROOT) || !existsSync(p)) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream' }); s.end(readFileSync(p)); });
 await new Promise(r => server.listen(0, r));
 const b = await chromium.launch(existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
 const page = await b.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });

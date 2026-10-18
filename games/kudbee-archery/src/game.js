@@ -17,6 +17,7 @@ KAR.Game = class {
     // prefers-reduced-motion: no screen shake, a few confetti instead of a storm, still chips (followed live)
     try { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); this.calm = mq.matches; if (mq.addEventListener) mq.addEventListener('change', e => { this.calm = e.matches; }); } catch (e) { this.calm = false; }
     KAR.Store.load();
+    KAR.Store.data.visits++; KAR.Store.save();                       // (the INSTALL button shows from the second visit)
     // a save from before TROPHIES already earned some: count them as announced, quietly (no flood of cards on the first arrow)
     if (!Object.keys(KAR.Store.data.ach).length && KAR.achNew(KAR.Store.data).length) KAR.Store.save();
     this.audio = new KAR.Audio();
@@ -31,6 +32,7 @@ KAR.Game = class {
     this.agentLog = KAR.Store.data.agentLog; this.agentTip = null; this.agentSince = 0; this.agentRound = []; this.agentQ = null;      // THE AGENT: your last arrows (saved) + this round's + the tip on screen
     this._resetShot();
     this._bind();
+    this._app();
     try { if (/^#\/?agent$/.test(location.hash)) this.activate('agent'); } catch (e) { /* no location */ }      // /agent links straight to the coach
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
@@ -79,6 +81,7 @@ KAR.Game = class {
     this._begin();
   }
   _begin() {
+    this.starDing = 0; this.aidNext = false;
     this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false; this.cupGems = 0;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = []; this.starGemsWon = 0;
     this.introT = this.time; this.windT = -9; this.lastBase = this.match.baseWind;      // the level card; the wind-shift call
@@ -92,6 +95,7 @@ KAR.Game = class {
     if (this.match.mode === 'swing') { this.hint = 'THE TARGET SWINGS  ·  LEAD IT  ·  LOOSE AS IT COMES TO YOU'; this.hintT = 6; }
     if (this.match.cup) { const k = this.match.cup; this.hint = KAR.CUPS[k.tier].name + '  ·  ' + KAR.CUP_ROUNDS[k.round] + '  ·  VS ' + k.name + '  ·  FIRST TO 6 SET POINTS'; this.hintT = 6; }
     if (this.match.mode === 'stage') { const L = this.match.def; this.hint = (L.boss ? 'BOSS!  ·  ' : '') + 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
+    if (this.aidOn()) { this.hint = 'AIM HELP IS ON  ·  THE FIRST ARROW OF EACH END SHOWS WHERE TO AIM'; this.hintT = 6; }
     this._nextShot();
   }
 
@@ -108,6 +112,7 @@ KAR.Game = class {
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
     this.drama = this._drama();
     this.coach = this._coach();
+    this.aid = !this.coach && m.arrowNo === 0 && m.shooter === 0 && this.aidOn() ? { label: 'AIM HELP', w: null } : null;
     // a new end re-rolls the wind: say so (louder when it has switched sides) and flash the gauge
     if (m.arrowNo === 0 && m.endNo > 0 && m.mode !== 'trick' && !m.over) {
       const W = KAR.CFG.WIND[m.distIdx] || 3, was = this.lastBase || 0, now = m.baseWind, flip = Math.sign(was) !== Math.sign(now) && Math.abs(now) > 0.25 * W && Math.abs(was) > 0.25 * W;
@@ -135,6 +140,19 @@ KAR.Game = class {
     return null;
   }
 
+  // AIM HELP: a level you've failed twice and never cleared shows where to aim (for your bow, arrows and this wind) on
+  // the first arrow of each end - still levels without crates only (a mover or the crate window needs reading yourself).
+  // A clear puts the count back to 0.
+  aidOn(m) {
+    m = m || this.match; const D = KAR.Store.data;
+    return m.mode === 'stage' && !m.offAt && !m.boxes && D.tour.fails[m.lv] >= 2 && D.tour.stars[m.lv] === 0;
+  }
+  _aidMark() {
+    const a = this.aid, m = this.match;
+    if (a.w !== m.wind) { const h = KAR.Bot.hold(m, undefined, this._kit(0)); a.x = h.x; a.y = h.y; a.w = m.wind; a.wind = Math.abs(h.x) > 0.02; }     // gusts move it
+    return a;
+  }
+
   // Last-arrow pressure, shown across the top while that arrow is up.
   _drama() {
     const m = this.match, D = KAR.Store.data, n = m.needs(m.mode === 'stage' ? D.tour.best[m.lv] : D.best[m.distIdx]);
@@ -157,6 +175,22 @@ KAR.Game = class {
   }
 
   setScreen(s) { this.screen = s; this.overlayT = 0; this.focusPending = true; }
+
+  // ---- the app: offline + install ---------------------------------------------------
+  // sw.js keeps a copy of the game so it opens with no signal. Android Chrome offers an install prompt (kept for the
+  // INSTALL button); iPhone Safari has none, so the button opens a card that shows Share -> Add to Home Screen.
+  _app() {
+    try { if (navigator.serviceWorker && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* no service worker */ }
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); this.bip = e; });
+    window.addEventListener('appinstalled', () => { this.bip = null; KAR.Store.data.install = 1; KAR.Store.save(); });
+  }
+  // the menu's INSTALL button: phones, second visit on, not already installed or waved off, and a way to install here
+  canInstall() { const D = KAR.Store.data; return this.coarse && !this.standalone && D.install !== 1 && D.visits >= 2 && (!!this.bip || this.ios); }
+  _install() {
+    const D = KAR.Store.data;
+    if (this.bip) { const e = this.bip; this.bip = null; try { e.prompt(); e.userChoice.then(() => { D.install = 1; KAR.Store.save(); }, () => {}); } catch (err) { /* already used */ } return; }
+    this.setScreen('install');
+  }
 
   // ---- phone comforts ------------------------------------------------------------
   // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
@@ -217,6 +251,9 @@ KAR.Game = class {
     else if (id === 'full') { const on = !this.isFull(); this.fsLeft = !on; this.goFull(on); }
     else if (id === 'aim') { D.aimSpeed = (D.aimSpeed + 1) % KAR.CFG.TOUCH_GAINS.length; KAR.Store.save(); }
     else if (id === 'buzz') { D.haptics = !D.haptics; KAR.Store.save(); this.buzz(20); }
+    else if (id === 'install') this._install();
+    else if (id === 'instOk') { D.install = 1; KAR.Store.save(); this.setScreen('menu'); }
+    else if (id === 'instBack') this.setScreen('menu');
     else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
     else if (id === 'breath') this.holding = !this.holding;
@@ -318,6 +355,7 @@ KAR.Game = class {
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
     if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies' || this.screen === 'quests')) { this.activate('back'); return; }
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
+    if (down && k === 'Escape' && this.screen === 'install') { this.activate('instBack'); return; }
     if (down && k === 'Escape' && this.screen === 'share') { this.activate('shBack'); return; }
     if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
     if (down && k === '/' && (this.screen === 'menu' || this.screen === 'paused' || this.screen === 'over')) { e.preventDefault(); this.activate('agent'); return; }
@@ -357,17 +395,18 @@ KAR.Game = class {
     const shooter = m.shooter;
     if (shooter === 0) this.shotInfo = { power, held: this.holdT, steady: !!this.steady };
     if (this.coach && shooter === 0) { const D = KAR.Store.data; D.tut |= this.coach.bit; KAR.Store.save(); this.coach = null; }
+    if (shooter === 0) this.aid = null;
     const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power, this._kit(shooter));
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
     // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
     // the last arrow of a range, and the CPU's X. The camera rides the arrow in, in slow motion.
     const last = m.over && (m.mode === 'range' || m.mode === 'stage');
     const hero = !res.trick && !res.star && !!res.hit && (shooter === 0 ? (res.ring >= 9 || last || (res.ring >= 7 && this.rng() < 0.3)) : (res.x || (res.ring === 10 && this.rng() < 0.5)));
-    this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false };
+    this.flight = { res, t: 0, tEnd, shooter, done: false, hero, real: 0, skip: false, last: shooter === 0 && (last || (m.mode === 'duel' && m.over)) };
     this.bp = 'flight'; this.bpT = 0; this.zoomTarget = hero ? 1 : 0; this.draw = 0; this.drama = '';
     this.audio.loose(); this.audio.fly(hero ? tEnd * 2 : tEnd * 0.9);
     if (shooter === 0) this.buzz(22);
-    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
+    if (/^(PRESS|TOUCH|POP|DAILY|THE TARGET|LEVEL|AIM HELP)/.test(this.hint)) this.hintT = 0;        // the how-to line has done its job
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
@@ -404,7 +443,7 @@ KAR.Game = class {
     if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
     else if (res.star) { const coin = this.match.venue >= 5; this._banner(coin ? 'COIN BLOCK!' : 'STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  ' + (coin ? 'cashed in' : 'smashed'), 88); this.audio.gold(streak); this._burst(30); }
     else if (res.blocked) { this.audio.miss(); this._banner('BLOCKED!', '#ffe0b0', '#b9783a', 'into the crates', 76); }
-    else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
+    else if (res.miss) { this.audio.miss(); if (f.last) this.audio.groan(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
       this.audio.thud(res.ring);
       const nm = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'];
@@ -413,6 +452,8 @@ KAR.Game = class {
       else if (res.ring === 9) { this._banner('NINE', '#fff6a8', '#ff9a1f', row || 'gold', 84); this.audio.cheer(false); if (streak >= 2) this.audio.gold(streak); }
       else this._banner(nm[res.ring], res.ring >= 7 ? '#ffd0c8' : '#c4ecff', res.ring >= 7 ? '#e8483a' : '#2f86d8', '', 70);
     }
+    // a gold lands with a hit-stop: the world holds for a beat under a white flash (none with reduced motion)
+    if (f.shooter === 0 && !res.star && res.ring === 10 && !this.calm) { this.freeze = res.x ? 0.09 : 0.06; this.flash = { t: this.time, a: res.x ? 0.5 : 0.32 }; }
     if (f.shooter === 0 && !res.star) { if (res.ring === 10) st.tens++; if (res.x) st.xs++; }       // a STAR BOX is not a gold
     if (f.shooter === 0 && res.star) st.starBoxes++;
     if (f.shooter === 0 && !res.star) { if (res.ring >= 9) this._quest('gold', 1); if (res.ring === 10) this._quest('ten', 1); if (res.x) this._quest('x', 1); this._quest('streak', this.streak); }
@@ -538,6 +579,7 @@ KAR.Game = class {
     if (m.mode === 'stage') {
       const T = D.tour, i = m.lv, sc = m.total(0), st = m.stars(), wasOpen = KAR.tourOpen(i + 1, D), bosses = () => KAR.TOUR.every((L, j) => !L.boss || T.stars[j] > 0), before = bosses();
       const sides = KAR.TOUR.map((L, j) => L.after === i && !KAR.tourOpen(j, D) ? L.v : -1).filter(v => v >= 0);   // side worlds this level opens
+      T.fails[i] = st >= 1 ? 0 : Math.min(99, T.fails[i] + 1); this.aidNext = st === 0 && this.aidOn(m);
       this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); this.starGemsWon = KAR.starGems(D, T.stars[i], st); T.stars[i] = Math.max(T.stars[i], st);
       this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D) && KAR.TOUR[i + 1].after === undefined;
       this.sideOpen = st >= 1 && sides.length ? sides[0] : undefined;
@@ -594,15 +636,20 @@ KAR.Game = class {
 
   _update(dt) {
     this.time += dt;
+    const wt = this.freeze > 0 ? 0 : dt; if (this.freeze > 0) this.freeze -= dt;      // the hit-stop holds the world (not the clock)
     if (this.banner) { this.banner.age += dt; this.banner.life -= dt; if (this.banner.life <= 0) this.banner = null; }
     if (this.hintT > 0) this.hintT -= dt;
-    for (const p of this.pops) p.age += dt;
+    for (const p of this.pops) p.age += wt;
     this.pops = this.pops.filter(p => p.age < 1.2);
     this.shake *= Math.exp(-dt * 9);
-    for (const p of this.particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.rot += p.vr * dt; }
+    for (const p of this.particles) { p.life -= wt; p.x += p.vx * wt; p.y += p.vy * wt; p.vy += p.g * wt; p.rot += p.vr * wt; }
     this.particles = this.particles.filter(p => p.life > 0);
     this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * (this.zoomTarget > this.zoom ? 4.2 : 6));
-    if (this.screen === 'play') this._updateShot(dt); else this.overlayT += dt;
+    if (this.screen === 'play') this._updateShot(wt); else this.overlayT += dt;
+    // the results card's stars land one by one, each with a rising chime (in step with UI.overStage)
+    if (this.screen === 'over' && this.match.mode === 'stage') { const st = this.match.stars(); while (this.starDing < st && this.overlayT > 0.4 + this.starDing * 0.3) { this.starDing++; this.audio.star(this.starDing); this.buzz(10); } }
+    // each world plays its own tune (the map plays the world on its page)
+    this.audio.theme = this.screen === 'levels' ? this.worldView | 0 : /^(play|paused|over)$/.test(this.screen) || (this.screen === 'share' && this.shareBack === 'over') ? this.match.venue || 0 : 0;
     if (!this.drawing) this.audio.drawStop();
     this.audio.setWind(this.screen === 'play' || this.screen === 'over' ? Math.min(1, Math.abs(this.match.wind) / 4) : 0.15);
   }
@@ -614,10 +661,11 @@ KAR.Game = class {
     if (this.bp === 'ready') {
       if (this.cpu) this._updateCpu(dt);
       if (this.drawing) {
-        const wasFull = this.draw >= 1;
+        const wasFull = this.draw >= 1, was3 = Math.floor(this.draw * 3);
         // a recurve gets heavier toward the anchor: quick off the brace, slow into the last few inches
         this.draw = Math.min(1, this.draw + dt / C.DRAW_T * 1.044 * (1.35 - 0.7 * this.draw));
         if (this.draw >= 1 && !wasFull) { this.audio.full(); if (!this.cpu) this.buzz(12); }
+        else if (!this.cpu && Math.floor(this.draw * 3) > was3) this.buzz(5);          // the limbs loading up: a tick at a third and two thirds
         this.audio.drawSet(this.draw);
         if (this.draw >= 1) this.holdT += dt;
         // breath: holding steadies the sight for a couple of seconds; empty lungs make it worse
@@ -689,7 +737,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel || (this.screen === 'share' && this.shareBack !== 'over');
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || this.screen === 'install' || sel || (this.screen === 'share' && this.shareBack !== 'over');
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.orbitA = m.move === 'orbit' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -707,6 +755,7 @@ KAR.Game = class {
       const rel = (this.time - this.relT) / 0.45;
       if (rel >= 0 && rel < 1 && this.screen === 'play') R.bow(ctx, this.relX || 480, this.relY || 300, 0, this.relTeam ? 1 : 0, this.time, Math.max(0.001, rel));
     }
+    if (this.flash) { const a = this.flash.a * (1 - (this.time - this.flash.t) / 0.22); if (a > 0) { ctx.fillStyle = 'rgba(255,250,224,' + a.toFixed(3) + ')'; ctx.fillRect(R.XL, 0, R.XW, 640); } else this.flash = null; }
     ctx.restore();
     U.begin();
     for (const p of this.particles) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const w = p.w || 8, h = p.h || 5; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.restore(); }
@@ -716,6 +765,7 @@ KAR.Game = class {
     else if (this.screen === 'quests') U.quests(ctx, this);
     else if (this.screen === 'shop') U.shop(ctx, this);
     else if (this.screen === 'agent') U.agent(ctx, this);
+    else if (this.screen === 'install') U.installScreen(ctx, this);
     else if (this.screen === 'share' && menuish) U.shareScreen(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
@@ -772,10 +822,12 @@ KAR.Game = class {
     if (this.bp !== 'ready' || this.zoom < 0.85 || this.screen === 'over') return;
     const cpu = !!this.cpu;
     if (this.coach && this.coach.marker && !cpu) R.marker(ctx, this.coach.marker, m, this.time);
-    if (!this.drawing && !cpu) return;
+    const aid = !cpu && !(this.coach && this.coach.marker) && this.aid ? this._aidMark() : null;      // AIM HELP rides over the bow (its label stays readable), under the sight
+    if (!this.drawing && !cpu) { if (aid) R.marker(ctx, aid, m, this.time); return; }
     const sx = this.aimX + this.sway.x, sy = this.aimY + this.sway.y, q = R.proj(sx, sy, m.dist);
     if (!q) return;
     R.bow(ctx, q.x, q.y, this.draw, cpu ? 1 : 0, this.time, 0, { creep: this.draw >= 1 && !cpu ? Math.max(0, this.holdT - KAR.CFG.STEADY_T) : 0 });
+    if (aid) R.marker(ctx, aid, m, this.time);
     this.relX = q.x; this.relY = q.y;
     const r = Math.max(14, 0.12 * q.k * Math.min(1, m.faceD / 0.6) + 8);
     R.sight(ctx, q.x, q.y, Math.min(26, r), this.steady, this.time, cpu ? 1 : 0);
