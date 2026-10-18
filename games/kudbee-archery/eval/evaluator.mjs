@@ -333,13 +333,13 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
 // reload; a loss knocks you out (NEW CUP); three wins take it, pay the prize once and open the next cup
 {
   await G(() => { const D = KAR.Store.data; D.cup = null; D.cupWon = [0, 0, 0]; D.cupTier = 0; D.gems = 0; KARGame.setScreen('menu'); });
-  await click('mode6'); await page.waitForTimeout(150);
+  await clickWhen('mode6'); await page.waitForFunction(() => KAR.Store.data.mode === 6 && KAR.UI.buttons.some(b => b.id === 'cup0'), null, { timeout: 5000 }).catch(() => {});
   const cards = await G(() => ['cup0', 'cup1', 'cup2'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'shut' : 'open') : 'none'; }).join());
-  await click('play'); await page.waitForTimeout(300);
-  const st = await G(() => { const m = KARGame.match; return { cup: !!m.cup, name: m.cup && m.cup.name, dist: m.dist, duel: m.mode, hint: KARGame.hint, round: KAR.Store.data.cup.round }; });
+  await clickWhen('play'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.cup && KAR.Store.data.cup, null, { timeout: 5000 }).catch(() => {});
+  const st = await G(() => { const m = KARGame.match; return { cup: !!m.cup, name: m.cup && m.cup.name, dist: m.dist, duel: m.mode, hint: KARGame.hint, round: (KAR.Store.data.cup || {}).round }; });
   const playOut = win => page.evaluate(w => { const g = KARGame, m = g.match, r = KAR.Util.rng(77); while (!m.over) { const s = KAR.Bot.shot(m, r, m.shooter ? m.level.sigma : (w ? 0.0004 : 0.02), m.shooter ? m.level.read : (w ? 0.02 : 2)); m.shoot(s.aimX, s.aimY, s.sx, s.sy, 1); } g._finishMatch(); return m.winner; }, win);
   const w1 = await playOut(true); await page.waitForTimeout(500);
-  const card = await G(() => ({ next: KAR.UI.buttons.some(b => b.id === 'next'), round: KAR.Store.data.cup.round, res: KAR.Store.data.cup.res[0].length }));
+  const card = await G(() => ({ next: KAR.UI.buttons.some(b => b.id === 'next'), round: (KAR.Store.data.cup || {}).round, res: KAR.Store.data.cup ? KAR.Store.data.cup.res[0].length : -1 }));
   await page.screenshot({ path: `${OUT}/cup-bracket.png` });
   await click('next'); await page.waitForTimeout(300);
   const semi = await G(() => ({ dist: KARGame.match.dist, round: KARGame.match.cup.round }));
@@ -529,6 +529,47 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const st = await G(() => KARGame.shareText || '');
   rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /48 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
     `og/twitter image ${meta.img} (${dims.join('x')}), large-image card; SHARE copies "${st.slice(0, 60)}... ${meta.canon}"`);
+}
+
+// SHARING MOMENTS: a cleared level / world boss, a won cup round or a trophy makes a 1200x630 brag card from the game's
+// own art and opens the SHARE screen (X / Facebook / WhatsApp / copy / save; no game buttons under it). Its link is a
+// landing page (s/<slug>/) whose og:image is that moment's card (tools/share-cards.mjs), a real 1200x630 file.
+{
+  const lp = await page.evaluate(async () => {
+    const out = [];
+    for (const slug of KAR.Share.SLUGS) {
+      const cv = KAR.Share.card(KAR.Share.generic(slug)), px = cv.getContext('2d').getImageData(0, 0, 1200, 630).data;
+      let lo = 255, hi = 0; for (let i = 0; i < px.length; i += 4 * 997) { const v = px[i] + px[i + 1] + px[i + 2]; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      const r = await fetch('s/' + slug + '/index.html'), doc = new DOMParser().parseFromString(r.ok ? await r.text() : '', 'text/html');
+      const q = n => (doc.querySelector(`meta[property="${n}"], meta[name="${n}"]`) || {}).content || '';
+      const img = q('og:image'), local = img.replace(/^https:\/\/[^/]+/, '').split('?')[0];
+      const dims = await new Promise(res => { const im = new Image(); im.onload = () => res([im.naturalWidth, im.naturalHeight]); im.onerror = () => res([0, 0]); im.src = local; });
+      out.push({ slug, ok: r.ok && cv.width === 1200 && cv.height === 630 && hi - lo > 200 && q('og:url') === KAR.Share.url(slug) && img === q('twitter:image') && local === '/assets/og/archery/' + slug + '.jpg' && q('twitter:card') === 'summary_large_image' && dims[0] === 1200 && dims[1] === 630 });
+    }
+    return out;
+  });
+  const bad = lp.filter(x => !x.ok).map(x => x.slug);
+  rec('share-pages', lp.length === 14 && !bad.length, `${lp.length} landing pages (worlds, cups, daily, champion, trophy) each with its own 1200x630 card + matching og/twitter tags${bad.length ? '; BAD: ' + bad.join(',') : ''}`);
+  const lv = await G(() => {
+    const D = KAR.Store.data, g = KARGame; D.tut = 15; D.tour.stars.fill(3); D.tourLv = 41; D.mode = 5; g.startMatch(); const m = g.match, r = KAR.Util.rng(5);
+    while (!m.over) { const s = KAR.Bot.shot(m, r, 0.0003, 0.01); m.shoot(s.aimX, s.aimY, s.sx, s.sy, 1); }
+    g._finishMatch(); return m.stars();
+  });
+  await page.waitForTimeout(300); await clickWhen('shareLevel'); await page.waitForTimeout(300);
+  const sc = await G(() => ({ s: KARGame.screen, t: KARGame.shareText, ids: KAR.UI.buttons.map(b => b.id), cv: KARGame.shareCv && [KARGame.shareCv.cv.width, KARGame.shareCv.cv.height], x: KAR.Share.intent('x', KARGame.shareCv.mo.text, KARGame.shareCv.url) }));
+  await page.screenshot({ path: `${OUT}/share.png` });
+  await click('shBack'); await page.waitForTimeout(150);
+  const back = await G(() => KARGame.screen);
+  const nets = ['shX', 'shFB', 'shWA', 'shCopy', 'shSave', 'shBack'].every(i => sc.ids.includes(i)) && !sc.ids.includes('retry') && !sc.ids.includes('pause');
+  rec('share-level', lv >= 1 && sc.s === 'share' && /World 7 boss.*\/s\/w7\/$/.test(sc.t) && sc.cv.join('x') === '1200x630' && nets && sc.x.startsWith('https://twitter.com/intent/tweet?text=I%20beat') && back === 'over',
+    `world-7 boss cleared (${lv} stars) -> SHARE screen with a ${sc.cv.join('x')} card, X/FB/WA/copy/save, no game buttons under it; "${sc.t.slice(0, 70)}..."; BACK -> ${back}`);
+  await G(() => { KARGame.activate('menu'); KARGame.activate('trophies'); KARGame.activate('tnext'); }); await page.waitForTimeout(200);
+  const tid = await G(() => (KAR.UI.buttons.find(b => /^tsh\d+$/.test(b.id)) || {}).id);
+  if (tid) { await click(tid); await page.waitForTimeout(200); }
+  const tr = await G(() => ({ s: KARGame.screen, t: KARGame.shareText || '' }));
+  await G(() => KARGame.activate('shBack')); await page.waitForTimeout(100);
+  rec('share-trophy', !!tid && tr.s === 'share' && /^I won the [A-Z ]+ trophy.*\/s\/trophy\/$/.test(tr.t) && await G(() => KARGame.screen) === 'trophies', `a won trophy is a tap target (${tid}) -> "${tr.t.slice(0, 60)}..."; BACK -> trophies`);
+  await G(() => KARGame.activate('menu'));
 }
 
 // --- a phone: real touch input (CDP touch events, coarse pointer) ---

@@ -186,7 +186,9 @@ KAR.Game = class {
     if (id === 'play' || id === 'restart' || id === 'rematch' || id === 'retry') this.startMatch();
     else if (/^mode\d$/.test(id)) { D.mode = +id[4]; KAR.Store.save(); }
     else if (/^d\d$/.test(id)) { if (!KAR.locked(+id[1], D)) { D.dist = +id[1]; KAR.Store.save(); } }
-    else if (id === 'share' || id === 'shareGame' || id === 'shareLevel') this._share(id);
+    else if (id === 'share' || id === 'shareGame' || id === 'shareLevel' || id === 'shareCup') this._share(id);
+    else if (/^tsh\d+$/.test(id)) this._share('shareTrophy', KAR.ACH[+id.slice(3)]);
+    else if (/^sh[A-Z]/.test(id)) this._shareAct(id);
     else if (id === 'levels') { this.wake(false); this.bp = 'idle'; this.cpu = null; this.zoomTarget = 1; this.worldView = KAR.TOUR[D.tourLv].v; this.setScreen('levels'); }
     else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
@@ -316,6 +318,7 @@ KAR.Game = class {
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
     if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies' || this.screen === 'quests')) { this.activate('back'); return; }
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
+    if (down && k === 'Escape' && this.screen === 'share') { this.activate('shBack'); return; }
     if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
     if (down && k === '/' && (this.screen === 'menu' || this.screen === 'paused' || this.screen === 'over')) { e.preventDefault(); this.activate('agent'); return; }
     // the results card: N next level, R retry / play again, L the level map, Esc the map (levels) or the menu
@@ -488,16 +491,36 @@ KAR.Game = class {
   // The game's public link: the page's canonical URL (so a share from a preview deploy still points at the live
   // game, and the link unfurls with the share card from the og: tags), else wherever we are.
   link() { const c = document.querySelector('link[rel=canonical]'); return (c && c.href) || location.origin + location.pathname; }
-  _shareText(kind) {
-    const m = this.match;
-    if (kind === 'shareGame') return 'Kudbee Archery \u2014 read the wind, hold your breath, hit the gold. ' + KAR.TOUR.length + ' levels, ' + KAR.VENUES.length + ' worlds, a boss at the end of each. Free in your browser:';
-    if (kind === 'shareLevel') return 'I scored ' + m.total(0) + ' on Level ' + (m.lv + 1) + ' \u00b7 ' + m.def.name + ' ' + '\u2605'.repeat(m.stars()) + ' in Kudbee Archery. Can you beat it?';
-    return 'Kudbee Archery \u00b7 Daily #' + m.daily + ' (' + KAR.Daily.date(m.daily) + ') \u00b7 ' + m.score + ' pts \u00b7 ' + m.popped + ' popped \u00b7 best combo \u00d7' + Math.max(1, Math.min(5, m.bestCombo));
+  // SHARE: the moment (a level, world, tour, cup round, daily or trophy) becomes a picture (KAR.Share.card) and a line
+  // with a link to its landing page; the SHARE screen previews the picture with where to send it
+  _share(kind, a) {
+    const mo = KAR.Share.moment(kind, this.match, this, a); if (!mo) return;
+    const url = mo.slug ? KAR.Share.url(mo.slug) : this.link(), cv = KAR.Share.card(mo.info);
+    const sh = this.shareCv = { kind, mo, url, cv, file: null, slug: mo.slug || 'game' };
+    this.shareText = mo.text + ' \u00b7 ' + url; this.shared = -9; this.sharedKind = null;
+    KAR.Share.file(cv).then(f => { sh.file = f; });
+    if (this.screen !== 'share') this.shareBack = this.screen;
+    this.setScreen('share');
   }
-  // phones (and browsers with a share sheet) open the share sheet; otherwise the line + link go to the clipboard
-  _share(kind) {
-    const url = this.link(), txt = this._shareText(kind); this.shared = this.time; this.sharedKind = kind; this.shareText = txt + ' \u00b7 ' + url;
-    try { if (navigator.share && this.coarse) navigator.share({ title: 'Kudbee Archery', text: txt, url }).catch(() => {}); else navigator.clipboard.writeText(this.shareText).catch(() => {}); } catch (e) { /* no clipboard: the line is shown on screen */ }
+  _shareAct(id) {
+    const sh = this.shareCv; if (!sh && id !== 'shBack') return;
+    const txt = sh && sh.mo.text, url = sh && sh.url;
+    try {
+      if (id === 'shBack') { this.shareCv = null; this.screen = this.shareBack || 'menu'; this.focusPending = true; if (this.screen === 'over') this.overlayT = 9; }
+      else if (id === 'shSheet') {                 // the phone's share sheet, with the picture when it can take files
+        if (KAR.Share.canFiles(sh.file)) navigator.share({ files: [sh.file], title: 'Kudbee Archery', text: txt + ' ' + url }).catch(() => {});
+        else if (navigator.share) navigator.share({ title: 'Kudbee Archery', text: txt, url }).catch(() => {});
+        this.shared = this.time; this.sharedKind = 'sheet';
+      }
+      else if (id === 'shX' || id === 'shFB' || id === 'shWA') { window.open(KAR.Share.intent({ shX: 'x', shFB: 'fb', shWA: 'wa' }[id], txt, url), '_blank', 'noopener'); this.shared = this.time; this.sharedKind = id; }
+      else if (id === 'shCopy') { this.shared = this.time; this.sharedKind = 'copy'; navigator.clipboard.writeText(this.shareText).catch(() => {}); }
+      else if (id === 'shSave') {                  // the picture as a file (a download on a computer, the photo prompt on a phone)
+        const a = document.createElement('a'); a.download = 'kudbee-archery-' + sh.slug + '.png';
+        a.href = sh.file ? URL.createObjectURL(sh.file) : sh.cv.toDataURL('image/png');
+        document.body.appendChild(a); a.click(); a.remove(); if (sh.file) setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        this.shared = this.time; this.sharedKind = 'save';
+      }
+    } catch (e) { /* no clipboard / pop-ups blocked: the line still shows on the SHARE screen */ }
   }
 
   _finishMatch() {
@@ -666,7 +689,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel;
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel || (this.screen === 'share' && this.shareBack !== 'over');
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.orbitA = m.move === 'orbit' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -693,11 +716,13 @@ KAR.Game = class {
     else if (this.screen === 'quests') U.quests(ctx, this);
     else if (this.screen === 'shop') U.shop(ctx, this);
     else if (this.screen === 'agent') U.agent(ctx, this);
+    else if (this.screen === 'share' && menuish) U.shareScreen(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
-      U.hud(ctx, this);
+      if (this.screen !== 'share') U.hud(ctx, this);        // (the SHARE screen covers the scoreboard: none of its buttons under it)
       if (this.screen === 'paused') U.pause(ctx, this);
       else if (this.screen === 'over') { U.over(ctx, this); U.debrief(ctx, this); }
+      else if (this.screen === 'share') U.shareScreen(ctx, this);
     }
     U.achToast(ctx, this);
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }

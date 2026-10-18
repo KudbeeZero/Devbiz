@@ -372,7 +372,6 @@ KAR.UI = {
     const ri = C ? 66 : 50;
     if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
     U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
-    if (g.sharedKind === 'shareGame' && g.time - g.shared < 2.5) U.text(ctx, g.coarse && navigator.share ? 'SHARING\u2026' : 'LINK COPIED!', 926 + xr - ri * 2, C ? 100 : 88, U.sz(g, 16), '#9be35a', 'center');
     // iPhone Safari has no full-screen mode for pages; added to the home screen the game opens full screen
     if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
   },
@@ -404,13 +403,15 @@ KAR.UI = {
     U.backdrop(ctx, 0.5);
     U.panel(ctx, 70, 74, 820, 530, 'blue');
     U.ribbon(ctx, 480, 46, 380, 'TROPHIES', 'yellow');
-    U.fit(ctx, KAR.achCount(D) + ' OF ' + KAR.ACH.length + ' WON  \u00b7  badges for the long haul  \u00b7  they come from every mode', 480, 132, U.sz(g, 16), '#ffe9a8', 760);
+    U.fit(ctx, KAR.achCount(D) + ' OF ' + KAR.ACH.length + ' WON  \u00b7  they come from every mode  \u00b7  tap a won one to share it', 480, 132, U.sz(g, 16), '#ffe9a8', 760);
     KAR.ACH.slice(pg * per, pg * per + per).forEach((a, k) => {
       const x = 96 + (k % 3) * 260, y = 148 + Math.floor(k / 3) * 112, v = Math.min(a.n, a.val(D) || 0), done = v >= a.n;
+      if (done) { const idx = U.buttons.length; U.buttons.push({ id: 'tsh' + (pg * per + k), x, y, w: 248, h: 102, disabled: false, primary: false }); if (g.focusIdx === idx) { U.rr(ctx, x - 4, y - 4, 256, 110, 16); ctx.lineWidth = 4; ctx.strokeStyle = '#fff6a8'; ctx.stroke(); } }
       U.rr(ctx, x, y, 248, 102, 14); ctx.fillStyle = U.OUT; ctx.fill();
       U.rr(ctx, x + 3, y + 3, 242, 96, 12); ctx.fillStyle = done ? '#c9802e' : '#2c4f86'; ctx.fill();
       this.medal(ctx, x + 40, y + 44, done);
-      U.fit(ctx, a.name, x + 76, y + 32, U.sz(g, 16), done ? '#fff6a8' : '#ffffff', 164, 'left');
+      U.fit(ctx, a.name, x + 76, y + 32, U.sz(g, 16), done ? '#fff6a8' : '#ffffff', done ? 134 : 164, 'left');
+      if (done) U.icon(ctx, 'share', x + 226, y + 24, '#fff6a8');
       U.fit(ctx, a.text, x + 76, y + 54, U.sz(g, 13), '#ffe9a8', 164, 'left');
       U.rr(ctx, x + 76, y + 66, 100, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
       if (v > 0) { U.rr(ctx, x + 76, y + 66, Math.max(12, 100 * v / a.n), 12, 6); ctx.fillStyle = done ? '#fff27a' : '#7ac7ff'; ctx.fill(); }
@@ -420,6 +421,25 @@ KAR.UI = {
     U.text(ctx, (pg + 1) + ' / ' + pages, 290, 532, U.sz(g, 18), '#ffffff', 'center');
     U.button(ctx, g, 'tnext', 354, 494, 130, 56, 'NEXT \u203a', { small: true, color: 'blue', disabled: pg >= pages - 1 });
     U.button(ctx, g, 'back', 630, 494, 230, 56, 'BACK', { primary: true });
+  },
+  // ---- SHARE: the brag card the moment made, and where to send it ----
+  // phones that can share pictures get one big SHARE PICTURE (the share sheet, with the card attached); everyone
+  // gets X / Facebook / WhatsApp (the link unfurls with the card's landing-page image), COPY and SAVE IMAGE
+  shareScreen(ctx, g) {
+    const U = this, sh = g.shareCv; if (!sh) return;
+    U.backdrop(ctx, 0.7);
+    const sheet = !!navigator.share && (g.coarse || KAR.Share.canFiles(sh.file)), w = 600, h = Math.round(w * sh.cv.height / sh.cv.width), x = 480 - w / 2, y = 22;
+    U.rr(ctx, x - 5, y - 5, w + 10, h + 10, 14); ctx.fillStyle = U.OUT; ctx.fill();
+    ctx.save(); U.rr(ctx, x, y, w, h, 10); ctx.clip(); ctx.drawImage(sh.cv, x, y, w, h); ctx.restore();
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; U.rr(ctx, x, y, w, h, 10); ctx.stroke();
+    const k = g.sharedKind, fresh = g.time - g.shared < 2.5, y0 = y + h + 22, bh = 58;
+    let row = y0;
+    if (sheet) { U.button(ctx, g, 'shSheet', 250, row, 460, bh, fresh && k === 'sheet' ? 'SHARING\u2026' : 'SHARE PICTURE', { primary: true }); row += bh + 18; }
+    [['shX', 'X'], ['shFB', 'FACEBOOK'], ['shWA', 'WHATSAPP']].forEach(([id, l], i) => U.button(ctx, g, id, 156 + i * 220, row, 208, bh, l, { small: true, color: 'blue', primary: !sheet && i === 0 }));
+    row += bh + 18;
+    U.button(ctx, g, 'shCopy', 156, row, 208, bh, fresh && k === 'copy' ? 'COPIED!' : 'COPY LINK', { small: true, color: fresh && k === 'copy' ? 'green' : 'yellow' });
+    U.button(ctx, g, 'shSave', 376, row, 208, bh, fresh && k === 'save' ? 'SAVED!' : 'SAVE IMAGE', { small: true, color: fresh && k === 'save' ? 'green' : 'yellow' });
+    U.button(ctx, g, 'shBack', 596, row, 208, bh, 'BACK', { small: true, color: 'red' });
   },
   // a cut gem (the quest currency), centred on (x, y)
   gem(ctx, x, y, r) {
@@ -607,7 +627,8 @@ KAR.UI = {
     ctx.save(); ctx.translate(480, 320); ctx.scale(0.86 + 0.14 * k, 0.86 + 0.14 * k); ctx.translate(-480, -320); ctx.globalAlpha = k;
     U.panel(ctx, 190, 104, 580, 430, won ? 'blue' : 'red');
     U.ribbon(ctx, 480, 76, 460, champ ? cp.name + ' WINNER!' : won ? KAR.CUP_ROUNDS[m.cup.round] + ' WON!' : 'KNOCKED OUT', won ? 'green' : 'red');
-    U.fit(ctx, 'YOU ' + m.total(0) + ' – ' + m.total(1) + ' ' + m.cup.name + '   ·   SETS ' + m.sets[0] + ' – ' + m.sets[1] + '   ·   ' + m.dist + ' M', 480, 160, U.sz(g, 19), '#ffe9a8', 540);
+    U.fit(ctx, 'YOU ' + m.total(0) + ' – ' + m.total(1) + ' ' + m.cup.name + '   ·   SETS ' + m.sets[0] + ' – ' + m.sets[1] + '   ·   ' + m.dist + ' M', 480, 160, U.sz(g, 19), '#ffe9a8', won ? 440 : 540);
+    if (won) { U.roundIcon(ctx, g, 'shareCup', 740, 140, 'share', g.coarse); U.text(ctx, 'SHARE', 740, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
     if (c) this.bracket(ctx, g, c, 214, 186, 532, 216);
     const line = champ ? (g.cupGems ? '+' + g.cupGems + ' GEMS  ·  ' : '') + (c.tier < 2 && D.cupWon[c.tier] === 1 ? KAR.CUPS[c.tier + 1].name + ' OPEN!' : 'CHAMPION!')
       : out ? KAR.RIVALS[c.res[2][0]] ? KAR.RIVALS[c.res[2][0]].name + ' WON THE CUP' : '' : 'NEXT: ' + KAR.CUP_ROUNDS[c.round] + ' VS ' + KAR.RIVALS[KAR.Cup.opponent(c)].name + ' AT ' + KAR.CFG.DISTS[KAR.Cup.dist(c)] + ' M';
@@ -677,8 +698,7 @@ KAR.UI = {
       const dd = KAR.Store.data.daily;
       U.text(ctx, g.newBest && dd.plays > 1 ? 'NEW BEST TODAY!' : 'TODAY\'S BEST ' + dd.best, 480, 322, 30, g.newBest && dd.plays > 1 ? '#fff27a' : '#ffffff', 'center');
       U.fit(ctx, 'same balloons for everyone today  \u00b7  first try ' + dd.first, 480, 352, U.sz(g, 17), '#ffe9a8', 450);
-      const copied = g.time - g.shared < 2.5;
-      U.button(ctx, g, 'share', 330, 376, 300, 52, copied ? 'COPIED!' : 'SHARE SCORE', { small: true, color: copied ? 'green' : 'yellow' });
+      U.button(ctx, g, 'share', 330, 376, 300, 52, 'SHARE SCORE', { small: true, color: 'yellow' });
     } else if (g.newBest && m.score > 0) U.text(ctx, 'NEW BEST!', 480, 340, 40, '#fff27a', 'center');
     else U.text(ctx, 'BEST ' + (KAR.Store.data.trickBest || 0), 480, 340, 28, '#ffffff', 'center');
     U.button(ctx, g, 'rematch', 270, 450, 270, 56, m.daily ? 'TRY AGAIN' : 'PLAY AGAIN', { primary: true });
@@ -706,7 +726,7 @@ KAR.UI = {
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
     this.group(ctx, g, 318, 246, 50); this.starGems(ctx, g, 640, 330);
-    if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); if (g.sharedKind === 'shareLevel' && g.time - g.shared < 2.5) U.text(ctx, 'COPIED!', 690, 186, 16, '#9be35a', 'center'); }
+    if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); U.text(ctx, 'SHARE', 690, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
     // NEXT never walks into a side world (THINK BOX after the world 4 boss): that one is picked on the map
     const next = !last && KAR.tourOpen(m.lv + 1, D) && KAR.TOUR[m.lv + 1].after === undefined;
     if (next && won) {
