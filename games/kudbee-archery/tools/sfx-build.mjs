@@ -22,7 +22,7 @@ const FILES = {
   applause: 'https://opengameart.org/sites/default/files/applause-clapping-church-crowd-immersive.wav',
   ooh: 'https://opengameart.org/sites/default/files/oooooooooo.ogg',
 };
-// name: [source, start s, length s (0 = to the end), fade-in s, fade-out s]
+// name: [source, start s, length s (0 = to the end), fade-in s, fade-out s, lead-in trim threshold dB (default -50)]
 const CLIPS = {
   bow1: ['battle/battle_sound_effects/Bow.wav', 0, 0, 0, 0.12],
   swish1: ['swishes/swishes/swish-7.wav', 0, 0, 0, 0.03],
@@ -35,7 +35,7 @@ const CLIPS = {
   body1: ['impact/Audio/impactSoft_heavy_000.ogg', 0, 0, 0, 0.1],
   body2: ['impact/Audio/impactSoft_heavy_001.ogg', 0, 0, 0, 0.1],
   body3: ['impact/Audio/impactSoft_heavy_002.ogg', 0, 0, 0, 0.1],
-  creak1: ['rpg/Audio/creak1.ogg', 0, 0, 0, 0.1],
+  creak1: ['rpg/Audio/creak1.ogg', 0, 0, 0, 0.1, -32],     // (it fades up: trim to where the creak is heard)
   creak2: ['rpg/Audio/creak3.ogg', 0, 0, 0, 0.08],
   ooh1: ['ooh', 0, 1.7, 0.02, 0.6],
   clap1: ['applause', 0.15, 3.2, 0.05, 1.4],       // the swell as the crowd starts
@@ -53,11 +53,11 @@ const path = s => { if (FILES[s]) return join(SRC, s + FILES[s].slice(FILES[s].l
 
 const work = join(SRC, 'out'); mkdirSync(work, { recursive: true });
 const map = {}, parts = []; let at = GAP;
-for (const [name, [src, ss, len, fi, fo]] of Object.entries(CLIPS)) {
+for (const [name, [src, ss, len, fi, fo, thr]] of Object.entries(CLIPS)) {
   const inp = path(src), raw = join(work, name + '.raw.wav'), out = join(work, name + '.wav');
   // cut, mono, trim leading silence (so the clip starts on its transient), fades
   const cut = ['-ss', String(ss)].concat(len ? ['-t', String(len)] : []);
-  sh('ffmpeg', ['-v', 'error', '-y', ...cut, '-i', inp, '-ac', '1', '-ar', String(RATE), '-af', 'silenceremove=start_periods=1:start_threshold=-50dB', raw]);
+  sh('ffmpeg', ['-v', 'error', '-y', ...cut, '-i', inp, '-ac', '1', '-ar', String(RATE), '-af', `silenceremove=start_periods=1:start_threshold=${thr || -50}dB`, raw]);
   const dur = +sh('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', raw]).trim();
   const peak = +(/max_volume: (-?[\d.]+) dB/.exec(execFileSync('ffmpeg', ['-v', 'info', '-i', raw, '-af', 'volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'pipe', 'pipe'] }).toString() || '') || [0, 0])[1];
   const af = [`volume=${(-1 - peak).toFixed(2)}dB`];

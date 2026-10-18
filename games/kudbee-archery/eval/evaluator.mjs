@@ -745,7 +745,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   }
   const L = Object.fromEntries(lad.map(x => [x.want, x])), has = (w, c) => L[w].calls.includes(c);
   const ladOk = lad.every(x => x.want === x.got && has(x.want, 'thud') && has(x.want, 'play:hit:true')) && has('9', 'ooh') && has('10', 'ten') && has('X', 'xHit') && !has('6', 'ooh') && !has('6', 'ten')
-    && L.X.e > L['10'].e && L['10'].e > L['6'].e && L['9'].e > L['6'].e;
+    && L.X.e > L['10'].e && L['10'].e > L['9'].e && L['9'].e > L['6'].e;
   rec('sound-ladder', ladOk, `real shots land ${lad.map(x => x.got).join(' / ')}: each a recorded thwack; the 9 draws the crowd's "ooh", the 10 its bell, the X its own call; heard louder up the ladder (energy over 1.2 s: 6 ${L['6'].e.toFixed(1)}, 9 ${L['9'].e.toFixed(1)}, 10 ${L['10'].e.toFixed(1)}, X ${L.X.e.toFixed(1)})`);
   // the release and the flight are recorded too, the gold streak climbs, and nothing is lost when the sprite can't load
   const rel = await sp.evaluate(() => { window.__calls = []; const a = KARGame.audio; a.loose(); a.fly(0.4); a.drawStart(); a.drawStop(); return window.__calls.slice(); });
