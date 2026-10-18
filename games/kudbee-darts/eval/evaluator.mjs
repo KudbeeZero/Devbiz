@@ -521,6 +521,182 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('workshop-try-on', ok, `try=${wt.tryOn} coins=${wt.coinsAfterTry} shown=${wt.shownTip} poor=${wt.poorBtn}/${wt.poorKept} buy=${wt.buyBtn}->${wt.bought} toggle=${wt.toggledOff} equip=${wt.equipOwned} leave=${wt.leave} ratings=${wt.ratings}`);
 }
 
+// ---------------------------------------------------------------- leagues, chests, upgrades
+// Trophies move you through the leagues (never relegated below your best),
+// every AI match ends on the reward screen (trophies -> chest -> cards ->
+// CONTINUE), chest cards only go to parts you own, cards + coins level a part
+// up, levels steady your hand, league rivals get matching upgrades, and
+// pass-and-play earns nothing.
+{
+  const lg = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    prog.data.league = { trophies: 90, best: 0 };
+    const w = prog.awardTrophies(true, 0);
+    out.promo = w.delta + '/' + w.promoted + '/' + P.LEAGUES[w.leagueTo].name;            // 30/true/SILVER
+    prog.data.league.trophies = 105;
+    out.floor = prog.awardTrophies(false, 0).to;                                           // 100: Silver floor
+    out.star = prog.awardTrophies(true, 3).delta;                                          // 45
+    // Chests: only owned, non-maxed parts get cards; a won chest has the league's count.
+    prog.data.ownedShapes = ['torpedo']; prog.data.ownedTips = ['steel']; prog.data.ownedFlights = ['standard'];
+    prog.data.parts = { cards: {}, lv: { 'flight:standard': 5 } };
+    let bad = 0, total = 0;
+    for (let i = 0; i < 40; i++) {
+      const ch = prog.rollChest(true);
+      ch.cards.forEach((c) => { total += c.n; if (!prog.ownsPart(c.group, c.id) || c.id === 'standard') bad++; });
+    }
+    out.chestCardsOk = bad === 0 && total >= 40 * 3;
+    // Upgrade: needs cards then coins; a level steadies the hand.
+    prog.data.coins = 30; prog.data.parts.cards['shape:torpedo'] = 2;
+    out.upCards = prog.upgradePart('shape', 'torpedo');
+    prog.data.parts.cards['shape:torpedo'] = 3;
+    out.upPoor = prog.upgradePart('shape', 'torpedo');
+    prog.data.coins = 100;
+    out.up = prog.upgradePart('shape', 'torpedo') + '/' + prog.partLv('shape', 'torpedo') + '/' + prog.data.coins;  // upgraded/2/60
+    out.steady = prog.steadiness();
+    // A bad save is cleaned up.
+    localStorage.setItem('kd.profile.v1', JSON.stringify({ version: 1, league: { trophies: -5, best: 99 }, parts: { cards: { 'shape:torpedo': 'x', 'evil:x': 3 }, lv: { 'tip:steel': 77 } } }));
+    const q = new window.KD.Progression().data;
+    out.clean = q.league.trophies + '/' + q.league.best + '/' + JSON.stringify(q.parts);
+    // A real AI match: steadier you, upgraded rival, reward screen flow.
+    prog.data.league = { trophies: 260, best: 2 }; prog.save();
+    g.levelIdx = null; g.selOpp = 'Pro'; g.selMode = 'x01'; g._startMatch();
+    out.humanSteady = g.humanSteady;
+    out.aiSigma = +(g.players[1].sigma / new window.KD.AIPlayer('x', 'Pro', 'violet').sigma).toFixed(3);   // 0.955 in Gold
+    g._matchWin(g.players[0]);
+    out.reward = !!g.matchResult.reward;
+    for (let i = 0; i < 90; i++) { g._update(1 / 60); }
+    out.flow = [g.state];
+    const tap = () => { g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false; };
+    for (let i = 0; i < 200 && g.rw.phase !== 'chest'; i++) g._update(1 / 60);
+    for (let i = 0; i < 40; i++) g._update(1 / 60);
+    out.flow.push(g.rw.phase); tap(); out.flow.push(g.rw.phase);
+    tap();                                               // deal everything now
+    const btn = g._rewardButtons().find((b) => b.id === 'continue');
+    g.input.pointer.x = btn.x + 5; g.input.pointer.y = btn.y + 5; tap();
+    out.flow.push(g.state + ':' + g.matchResult.rewardSeen);
+    // Pass-and-play: no trophies, no chest, no boost.
+    const t0 = prog.data.league.trophies;
+    g.selOpp = 'hotseat'; g._startMatch(); out.hotSteady = g.humanSteady; g._matchWin(g.players[0]);
+    out.hotNone = !g.matchResult.reward && prog.data.league.trophies === t0;
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = lg.promo === '30/true/SILVER' && lg.floor === 100 && lg.star === 45 && lg.chestCardsOk
+    && lg.upCards === 'cards' && lg.upPoor === 'poor' && lg.up === 'upgraded/2/60' && Math.abs(lg.steady - 0.925) < 1e-9          // 5 levels: flight maxed (+4), barrel LV 2 (+1)
+    && lg.clean === '2700/9/{"cards":{},"lv":{"tip:steel":5}}'   // best clamped to Champion lifts trophies to its floor
+    && Math.abs(lg.humanSteady - 0.925) < 1e-9 && lg.aiSigma === 0.955 && lg.reward
+    && lg.flow.join() === 'reward,chest,open,matchOver:true' && lg.hotSteady === 1 && lg.hotNone;
+  rec('leagues-upgrades', ok, `promo=${lg.promo} floor=${lg.floor} star=${lg.star} chest-cards=${lg.chestCardsOk} up=${lg.upCards}/${lg.upPoor}/${lg.up} steady=${lg.steady} clean=${lg.clean} you=${lg.humanSteady} ai×${lg.aiSigma} flow=${lg.flow} hotseat=${lg.hotSteady}/${lg.hotNone}`);
+}
+
+// ---------------------------------------------------------------- tokens + league leaderboard
+// Ten leagues; reaching one pays 💎 once; won chests pay 💎 by league; 💎 fill
+// missing upgrade cards (2 each) and buy a bonus chest that plays the chest
+// screen and returns to the Workshop. The leaderboard ranks everyone by
+// trophies, labels AI rivals, and finds you in MY LEAGUE and TOP 100.
+{
+  const tk = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    out.leagues = P.LEAGUES.length + ':' + P.LEAGUES.map((l) => l.min).join(',');
+    prog.data.tokens = 0; prog.data.league = { trophies: 230, best: 1 };
+    const pr = prog.awardTrophies(true, 0);                       // into GOLD (idx 2): +20 💎
+    out.promoTokens = pr.bonusTokens + '/' + prog.data.tokens;
+    prog.data.league = { trophies: 230, best: 2 }; prog.awardTrophies(false, 0); prog.awardTrophies(true, 0);
+    out.noRepeat = prog.data.tokens;                                // still 20: Gold was already reached
+    const ch = prog.rollChest(true); out.chestTokens = ch.tokens;   // Gold chest: 2 💎
+    // Tokens fill missing cards.
+    prog.data.ownedShapes = ['torpedo']; prog.data.parts = { cards: { 'shape:torpedo': 1 }, lv: {} };
+    prog.data.coins = 100; prog.data.tokens = 3;
+    out.short = prog.upgradePart('shape', 'torpedo', true);        // needs 4 💎, has 3
+    prog.data.tokens = 4;
+    out.filled = prog.upgradePart('shape', 'torpedo', true) + '/' + prog.partLv('shape', 'torpedo') + '/' + prog.data.tokens + '/' + prog.partCards('shape', 'torpedo');
+    // Bonus chest: costs 30 💎, plays the chest, returns to the Workshop.
+    prog.data.tokens = 29; out.bonusPoor = g._openBonusChest();
+    prog.data.tokens = 40; g.state = 'workshop';
+    out.bonus = g._openBonusChest() + '/' + g.state + '/' + g.rw.phase + '/' + prog.data.tokens;
+    g._updateReward(0.5);                                           // the chest takes taps after its drop-in
+    g.input.pointer.justDown = true; g._updateReward(0); g._updateReward(0); g.input.pointer.justDown = false;
+    const cont = g._rewardButtons().find((b) => b.id === 'continue');
+    g.input.pointer.x = cont.x + 4; g.input.pointer.y = cont.y + 4; g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false;
+    out.bonusBack = g.state;
+    // Leaderboard.
+    prog.data.league = { trophies: 1420, best: 6 };
+    g.state = 'leaderboard'; g.lbTab = 'league'; g._openLeaderboard();
+    const rows = g._boardRows();
+    out.sorted = rows.every((r, i) => i === 0 || rows[i - 1].trophies >= r.trophies);
+    out.aiLabelled = rows.filter((r) => !r.you).every((r) => r.ai);
+    const v = g._boardView();
+    out.myLeague = v.rows.some((r) => r.you) && v.rows.every((r) => r.league === 6);
+    g.lbTab = 'top'; g.lbPage = 0;
+    const me = rows.find((r) => r.you);
+    const fm = g._boardButtons().find((b) => b.id === 'findme');
+    g.input.pointer.x = fm.x + 4; g.input.pointer.y = fm.y + 4; g.input.pointer.justDown = true; g._updateLeaderboard(); g.input.pointer.justDown = false;
+    out.findMe = g._boardView().rows.some((r) => r.you) && g.lbPage === Math.floor((me.rank - 1) / 10);
+    window.__step(2);
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu'; g._lbBoard = null;
+    return out;
+  });
+  const ok = tk.leagues === '10:0,100,250,450,700,1000,1350,1750,2200,2700' && tk.promoTokens === '20/20' && tk.noRepeat === 20
+    && tk.chestTokens === 2 && tk.short === 'cards' && tk.filled === 'upgraded/2/0/0' && tk.bonusPoor === false
+    && tk.bonus === 'true/reward/chest/10' && tk.bonusBack === 'workshop' && tk.sorted && tk.aiLabelled && tk.myLeague && tk.findMe;
+  rec('tokens-leaderboard', ok, `leagues=${tk.leagues} promo💎=${tk.promoTokens} once=${tk.noRepeat} chest💎=${tk.chestTokens} fill=${tk.short}->${tk.filled} bonus=${tk.bonusPoor}/${tk.bonus}->${tk.bonusBack} board sorted=${tk.sorted} ai-labelled=${tk.aiLabelled} my-league=${tk.myLeague} find-me=${tk.findMe}`);
+}
+
+// ---------------------------------------------------------------- daily missions
+// Three missions a day (one per kind of event, same three for everyone on a
+// date), counted from your darts vs the AI (not pass-and-play); CLAIM pays
+// coins + 💎; all three claimed opens the Daily Chest once; a new day rolls over.
+{
+  const ms = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    const evOf = (id) => P.MISSIONS.find((m) => m.id === id).ev;
+    prog._dayOverride = 20261018; prog.data.daily = null;
+    const a = prog.daily().missions.map((m) => m.id);
+    prog.data.daily = null; const b = prog.daily().missions.map((m) => m.id);
+    out.sameDay = a.join() === b.join() && new Set(a.map(evOf)).size === 3;
+    prog.data.daily.missions = [{ id: 'treble6', have: 0, claimed: false }, { id: 'win1', have: 0, claimed: false }, { id: 'bull3', have: 0, claimed: false }];
+    prog.data.coins = 0; prog.data.tokens = 0;
+    // Pass-and-play doesn't count.
+    g.levelIdx = null; g.selOpp = 'hotseat'; g._startMatch(); out.hotseatOff = !g._missionsOn();
+    // Against the AI: six trebles complete the first mission (with a toast).
+    g.selOpp = 'Pro'; g._startMatch(); g.toasts.length = 0;
+    for (let i = 0; i < 6; i++) g._mission('dart', { ring: 'treble', value: 19 });
+    out.treble = prog.daily().missions[0].have + '/' + g.toasts.some((t) => t.text === 'MISSION COMPLETE!');
+    out.early = prog.claimMission(1);                                  // win1 not done yet
+    g._matchWin(g.players[0]);
+    out.win = prog.daily().missions[1].have;
+    out.claimable = prog.dailyClaimable();
+    const c0 = prog.data.coins, t0 = prog.data.tokens;                // the match itself paid coins + a chest
+    out.claim = prog.claimMission(0) + '/' + prog.claimMission(0) + '/' + (prog.data.coins - c0) + '/' + (prog.data.tokens - t0);   // claimed/already/40/3
+    prog.claimMission(1);
+    out.chestShut = prog.dailyChestReady();
+    for (let i = 0; i < 3; i++) g._mission('dart', { ring: 'inbull', value: 25 });
+    prog.claimMission(2);
+    // The chest from the missions screen plays the chest screen and comes back.
+    g.state = 'missions';
+    const cb = g._missionLayout().find((x) => x.id === 'chest');
+    g.input.pointer.x = cb.bx + 5; g.input.pointer.y = cb.by + 5; g.input.pointer.justDown = true; g._updateMissions(); g.input.pointer.justDown = false;
+    out.chestOpen = g.state + '/' + (g.rw && g.rw.src.title);
+    g._updateReward(0.5); g.input.pointer.justDown = true; g._updateReward(0); g._updateReward(0); g.input.pointer.justDown = false;
+    const cont = g._rewardButtons().find((x) => x.id === 'continue');
+    g.input.pointer.x = cont.x + 4; g.input.pointer.y = cont.y + 4; g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false;
+    out.back = g.state;
+    out.once = prog.claimDailyChest() === null;
+    prog._dayOverride = 20261019;
+    out.rollover = prog.daily().day + '/' + prog.daily().missions.every((m) => !m.claimed && m.have === 0) + '/' + prog.daily().chest;
+    window.__step(2);
+    delete prog._dayOverride; prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = ms.sameDay && ms.hotseatOff && ms.treble === '6/true' && ms.early === 'notyet' && ms.win === 1 && ms.claimable
+    && ms.claim === 'claimed/already/40/3' && ms.chestShut === false && ms.chestOpen === 'reward/DAILY CHEST' && ms.back === 'missions'
+    && ms.once && ms.rollover === '20261019/true/false';
+  rec('daily-missions', ok, `same-day=${ms.sameDay} hotseat-off=${ms.hotseatOff} treble=${ms.treble} early=${ms.early} win=${ms.win} claim=${ms.claim} chest=${ms.chestShut}->${ms.chestOpen}->${ms.back} once=${ms.once} rollover=${ms.rollover}`);
+}
+
 // ---------------------------------------------------------------- curl lead
 // The curl starts bending 30ms before release (already turning as it leaves
 // the hand) but is rescaled so the landing, and so the score, is unchanged.
