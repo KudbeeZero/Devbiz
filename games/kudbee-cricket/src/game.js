@@ -364,7 +364,7 @@ KCK.Game = class {
     // follow-through held while the shot plays out; a ball left alone keeps the bat up out of the way
     const bwait = this.bp === 'ready' || this.bp === 'runup' || (this.bp === 'flight' && !this.tap);
     const bu = this.tap ? KCK.Util.clamp(0.12 + 0.88 * (this.bp === 'flight' ? (this.bt - this.tap.t) / 0.14 : 1), 0.12, 1) : 0.12;
-    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: bwait ? 0.1 + 0.02 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost } });
+    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'side', helmet: true, bat: bwait ? 0.1 + 0.02 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost } });
     people.sort((a, b) => b.y - a.y);
     for (const q of people) R.person(ctx, q.x, q.y, q.o);
     // stumps shatter
