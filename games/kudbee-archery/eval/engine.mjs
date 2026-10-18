@@ -164,9 +164,9 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const a = K.locked(3, d); d.stars[2] = 1; const b = K.locked(3, d); const c = K.locked(3, { best: [0, 0, 0, 90], stars: [0, 0, 0, 0] });
   rec('unlock-70', a && !b && !c && !K.locked(2, { best: [0, 0, 0, 0], stars: [0, 0, 0, 0] }), '70 m stays locked on 5 stars, opens on 6; players who already shot 70 m keep it');
 }
-// 12b. THE TOUR: six worlds of six levels, a boss last in each; each level opens the next
+// 12b. THE TOUR: eight worlds of six levels, a boss last in each; each level opens the next
 {
-  const T = K.TOUR, ok = T.length === 36 && K.VENUES.length === 6 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
+  const T = K.TOUR, ok = T.length === 48 && K.VENUES.length === 8 && T.every((L, i) => L.v === Math.floor(i / 6) && !!L.boss === (i % 6 === 5) && L.stars[0] > 0 && L.stars[0] < L.stars[1] && L.stars[1] < L.stars[2] && L.stars[2] <= L.ends * 30);
   const D = { tour: { stars: Array(30).fill(0) } }, chain = [K.tourOpen(0, D), K.tourOpen(1, D)]; D.tour.stars[0] = 1; chain.push(K.tourOpen(1, D), K.tourOpen(2, D));
   rec('tour-levels', ok && chain.join() === 'true,false,true,false', `${T.length} levels over ${K.VENUES.map(v => v.name.toLowerCase()).join(' / ')}, a boss ending each world; star targets rise; one star opens the next level`);
   // a perfect still-air run earns 3 stars; a smaller face scores tighter rings
@@ -206,16 +206,52 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
 // the boss rides behind a chain wall with two windows, and a save from the 30-level tour keeps every star
 {
   const shot = (m, x, y) => { m.wind = 0; m._gust = () => { m.wind = 0; }; return m.shoot(x, y, 0, 0, 1); };
-  const D = { tour: { stars: Array(36).fill(0) } }, shut = !K.tourOpen(30, D); D.tour.stars[29] = 3; D.tour.stars[23] = 3; const notYet = !K.tourOpen(30, D); D.tour.stars[11] = 1;
+  const D = { tour: { stars: Array(48).fill(0) } }, shut = !K.tourOpen(30, D); D.tour.stars[29] = 3; D.tour.stars[23] = 3; const notYet = !K.tourOpen(30, D); D.tour.stars[11] = 1;
   const opens = K.tourOpen(30, D) && !K.tourOpen(31, D);
   const gb = new K.Stage({ level: 30, seed: 2 }), gold = shot(gb, 0, C.FACE_Y), wall = shot(gb, 0.5, C.FACE_Y);
   const cb = new K.Stage({ level: 30, seed: 2 }), b = cb.boxes.find(x => x.star), c1 = shot(cb, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2), c2 = shot(cb, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2);
-  const wh = K.TOUR[35], whale = new K.Stage({ level: 35, seed: 4 }), themed = K.TOUR.slice(30).every(L => L.v === 5) && wh.boss && wh.move === 'slide' && whale.boxes.some(x => x.star) && K.VENUES[5].name === 'CRYPTO CITY';
+  const wh = K.TOUR[35], whale = new K.Stage({ level: 35, seed: 4 }), themed = K.TOUR.slice(30, 36).every(L => L.v === 5) && wh.boss && wh.move === 'slide' && whale.boxes.some(x => x.star) && K.VENUES[5].name === 'BITCOIN CITY';
   const s30 = { stars: Array(30).fill(1), best: Array(30).fill(60) }, ls = { s: JSON.stringify({ tour: s30, tourLv: 29 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K7 = loadKAR(['util.js', 'sim.js'], ls); K7.Store.load(); const T7 = K7.Store.data.tour;
-  const kept = T7.stars.length === 36 && T7.stars.slice(0, 30).every(v => v === 1) && T7.stars.slice(30).every(v => v === 0) && T7.best[29] === 60 && K7.Store.data.tourLv === 29 && K7.tourOpen(30, K7.Store.data);
+  const kept = T7.stars.length === 48 && T7.stars.slice(0, 30).every(v => v === 1) && T7.stars.slice(30).every(v => v === 0) && T7.best[29] === 60 && K7.Store.data.tourLv === 29 && K7.tourOpen(30, K7.Store.data);
   rec('crypto-city', shut && notYet && opens && gold.ring >= 9 && !gold.blocked && wall.blocked && c1.star && c1.ring === 10 && !c2.star && themed && kept,
-    `CRYPTO CITY opens off the Forest Crown (not the other bosses): the window scores ${gold.ring}, the chain stops a shot; the COIN BLOCK pays ${c1.ring} once an end; THE WHALE rides the rail behind the chain; a 30-level save keeps its stars with the new world open`);
+    `BITCOIN CITY opens off the Forest Crown (not the other bosses): the window scores ${gold.ring}, the chain stops a shot; the COIN BLOCK pays ${c1.ring} once an end; THE WHALE rides the rail behind the chain; a 30-level save keeps its stars with the new world open`);
+}
+// 12g. SOLANA BEACH + ALGORAND PEAKS: two more worlds in a row after BITCOIN CITY (each opens off the boss before it,
+// NEXT walks straight in); the ORBIT boss circles a hub without dipping into the ground, leading it scores; and a save
+// from the 36-level tour keeps every star
+{
+  const D = { tour: { stars: Array(48).fill(0) } }, shut = !K.tourOpen(36, D) && !K.tourOpen(42, D); D.tour.stars[35] = 1; const sol = K.tourOpen(36, D) && !K.tourOpen(42, D); D.tour.stars[41] = 2; const algo = K.tourOpen(42, D);
+  const shape = K.TOUR.slice(36, 42).every(L => L.v === 6 && L.after === undefined) && K.TOUR.slice(42).every(L => L.v === 7 && L.after === undefined) && K.TOUR[41].boss && K.TOUR[47].boss && K.VENUES[6].name === 'SOLANA BEACH' && K.VENUES[7].name === 'ALGORAND PEAKS';
+  const ob = new K.Stage({ level: 39, seed: 5 }), path = Array.from({ length: 80 }, (_, i) => ob.offAt(i * 0.1)), xs = path.map(p => p.x), ys = path.map(p => p.y);
+  const across = Math.max(...xs) - Math.min(...xs), up = Math.max(...ys) - Math.min(...ys), floor = Math.min(...ys) >= -1e-9;
+  ob.tick(1.3); ob.wind = 0; ob._gust = () => { ob.wind = 0; };
+  const s0 = K.Flight.solve(ob.dist, 0, C.FACE_Y), tf = K.Flight.run(ob.dist, s0.yaw, s0.pitch, C.V0, 0).hit.t, o = ob.offAt(ob.T + tf), led = ob.shoot(o.x, C.FACE_Y + o.y, 0, 0, 1);
+  const s36 = { stars: Array(36).fill(3), best: Array(36).fill(80) }, ls = { s: JSON.stringify({ tour: s36, tourLv: 35 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K8 = loadKAR(['util.js', 'sim.js'], ls); K8.Store.load(); const T8 = K8.Store.data.tour;
+  const kept = T8.stars.length === 48 && T8.stars.slice(0, 36).every(v => v === 3) && T8.stars.slice(36).every(v => v === 0) && K8.Store.data.tourLv === 35 && K8.tourOpen(36, K8.Store.data) && !K8.tourOpen(37, K8.Store.data);
+  rec('crypto-worlds', shut && sol && algo && shape && across > 1.2 && up > 0.6 && floor && led.ring >= 9 && ob.arrows[0][0].hit && kept,
+    `SOLANA BEACH opens off the BITCOIN CITY boss, ALGORAND PEAKS off the SOLANA boss; the ORBIT boss loops ${(across * 100) | 0} cm across and ${(up * 100) | 0} cm up (never below its stand), leading it scores ${led.ring}; a 36-level save keeps its stars with SOLANA BEACH open`);
+}
+// 12h. THE CUP: eight archers, three rounds; you meet the weakest first and the top seed is on the far side; the other
+// ties are shot out by bots, the same every time for a seed; losing knocks you out (and the cup is still finished),
+// winning the final wins it; SILVER waits for BRONZE; a forged save is dropped; rivals get better up the pool
+{
+  const c = K.Cup.start(1, 777), same = JSON.stringify(K.Cup.start(1, 777)) === JSON.stringify(c), you = c.field[0] === -1 && c.field.filter(x => x === -1).length === 1;
+  const rs = c.field.slice(1).map(i => K.RIVALS[i].r), first = K.RIVALS[c.field[1]].r === Math.min(...rs) && K.RIVALS[c.field[7]].r === Math.max(...rs);
+  const inPool = c.field.slice(1).every(i => i >= K.CUPS[1].lo && i < K.CUPS[1].hi);
+  const op0 = K.Cup.opponent(c); K.Cup.result(c, true); const r1 = c.res[0].length === 4 && c.res[0][0] === -1 && c.round === 1 && !K.Cup.done(c);
+  const op1 = K.Cup.opponent(c), again = K.Cup.result(JSON.parse(JSON.stringify(K.Cup.start(1, 777))), true).res[0].join() === c.res[0].join();
+  const lost = K.Cup.result(JSON.parse(JSON.stringify(c)), false), out = lost.out && !lost.won && lost.round === 3 && lost.res[2].length === 1 && lost.res[2][0] !== -1 && lost.res[1].indexOf(-1) < 0;
+  K.Cup.result(c, true); K.Cup.result(c, true); const champ = c.won && !c.out && c.res[2][0] === -1 && K.Cup.done(c);
+  const gate = K.Cup.open(0, { cupWon: [0, 0, 0] }) && !K.Cup.open(1, { cupWon: [0, 0, 0] }) && K.Cup.open(1, { cupWon: [1, 0, 0] }) && !K.Cup.open(2, { cupWon: [1, 0, 0] });
+  const forged = K.Cup.clean({ tier: 0, seed: 5, round: 0, field: [-1, 14, 13, 12, 11, 10, 9, 8], res: [], out: false }) === null && K.Cup.clean({ tier: 7 }) === null && K.Cup.clean(JSON.parse(JSON.stringify(c))) !== null;
+  const sk = [0, 7, 14].map(i => K.Cup.skill(i)), better = sk[0].sigma > sk[1].sigma && sk[1].sigma > sk[2].sigma && sk[0].read > sk[2].read;
+  // the favourite really is favoured: the best rival beats the worst far more often than not over 40 ties
+  let fav = 0; for (let s = 1; s <= 40; s++) if (K.Cup.tie({ tier: 0, seed: s }, 14, 0, 2) === 14) fav++;
+  const m = new K.Match({ mode: 'duel', dist: 1, cpu: sk[2], seed: 3 }), uses = m.level === sk[2];
+  rec('cup', same && you && first && inPool && op0 === c.field[1] && op1 !== undefined && r1 && again && out && champ && gate && forged && better && fav >= 34 && uses,
+    `a ${K.CUPS[1].name} draw: you first vs ${K.RIVALS[op0].name}, top seed ${K.RIVALS[c.field[7]].name} on the far side; the other ties are the same for a seed; a loss knocks you out (the cup still gets a winner), three wins take it; SILVER waits for BRONZE; a forged bracket is dropped; the best rival beats the worst ${fav}/40`);
 }
 // 12c. GEAR: kit opens on your star total (levels + ranges) and is never spent; the tutorial's hold-off is exact
 {
@@ -242,7 +278,7 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   // a save from the 24-level tour (before THINK BOX) loads as it was, with the new world's levels empty
   const s24 = { stars: Array(24).fill(2), best: Array(24).fill(70) }, ls3 = { s: JSON.stringify({ tour: s24, tourLv: 23 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K5 = loadKAR(['util.js', 'sim.js'], ls3); K5.Store.load(); const T5 = K5.Store.data.tour;
-  const kept = T5.stars.length === 36 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
+  const kept = T5.stars.length === 48 && T5.stars.slice(0, 24).every(v => v === 2) && T5.stars.slice(24).every(v => v === 0) && T5.best[23] === 70 && K5.Store.data.tourLv === 23 && K5.tourOpen(24, K5.Store.data);
   // a corrupt save (stars out of 0..3, fractions) can't open levels or gear; the save arrays fit the Tour
   const ls4 = { s: JSON.stringify({ tour: { stars: [99, -4, 2.5, 3], best: [500, 70] } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K6 = loadKAR(['util.js', 'sim.js'], ls4); K6.Store.load(); const T6 = K6.Store.data.tour;
@@ -263,8 +299,8 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   const ls = { s: JSON.stringify({ ach: { x25: 1, 'bad key!': 1, arrow1: 'yes' }, stats: { xs: 3.5, tens: -2, pops: 40 } }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
   const K2 = loadKAR(['util.js', 'sim.js', 'ach.js'], ls); K2.Store.load(); const D2 = K2.Store.data;
   const sane = D2.ach.x25 === 1 && !('arrow1' in D2.ach) && !('bad key!' in D2.ach) && D2.stats.xs === 0 && D2.stats.tens === 0 && D2.stats.pops === 40 && K2.achCount(D2) === 0;
-  rec('trophies', ids.size === K.ACH.length && K.ACH.length >= 20 && fresh === 0 && first === 'arrow1,x1' && again === 0 && boss === 'boss1,boss5' && dropped && sane,
-    `${K.ACH.length} trophies (unique ids); a new save has none; the first arrow + an X unlock FIRST ARROW and DEAD CENTRE once; all bosses unlock BOSS DOWN + TOUR CHAMPION; unknown ids are dropped; a forged save can't count (fractional/negative stats are ignored, a flag without the stat isn't a win)`);
+  rec('trophies', ids.size === K.ACH.length && K.ACH.length >= 20 && fresh === 0 && first === 'arrow1,x1' && again === 0 && boss === 'boss1,boss5,moon,boss8' && dropped && sane,
+    `${K.ACH.length} trophies (unique ids); a new save has none; the first arrow + an X unlock FIRST ARROW and DEAD CENTRE once; all bosses unlock BOSS DOWN, TOUR CHAMPION, TO THE MOON + WORLD BEATER; unknown ids are dropped; a forged save can't count (fractional/negative stats are ignored, a flag without the stat isn't a win)`);
 }
 // BOWS & ARROWS: still-air shots land where you aim with every combination; the trade-offs are real
 {

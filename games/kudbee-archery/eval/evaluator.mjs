@@ -212,8 +212,10 @@ await G(() => { KAR.Store.data.stars = [0, 0, 0, 0]; KAR.Store.data.dist = 1; })
 // SWINGER: the boss swings on its ropes and a leading shot scores
 await click('mode3'); await click('play');
 rec('swing-starts', await G(() => KARGame.screen === 'play' && KARGame.match.mode === 'swing'), 'SWINGER starts from the menu');
-const sx0 = await G(() => KARGame.match.offAt(KARGame.match.T).x); await page.waitForTimeout(500);
-rec('swing-moves', Math.abs(await G(() => KAR.Render.tOff && KAR.Render.tOff.x) - sx0) > 0.05, 'the target swings while you aim');
+// sample the rendered swing over ~1 s: two samples can match when they straddle a peak (random phase)
+const sxs = [];
+for (let k = 0; k < 8; k++) { sxs.push(await G(() => KAR.Render.tOff ? KAR.Render.tOff.x : 0)); await page.waitForTimeout(130); }
+rec('swing-moves', Math.max(...sxs) - Math.min(...sxs) > 0.05, 'the target swings while you aim');
 const lead2 = await G(() => { const g = KARGame, m = g.match, C = KAR.CFG; m.wind = 0; const s = KAR.Flight.solve(m.dist, 0, C.FACE_Y), tf = KAR.Flight.run(m.dist, s.yaw, s.pitch, C.V0, 0).hit.t, o = m.offAt(m.T + tf); g.drawing = true; g.draw = 1; g.aimX = o.x; g.aimY = C.FACE_Y + o.y; g.sway = { x: 0, y: 0 }; g._loose(); return g.flight.res.ring; });
 await waitFor(() => KARGame.bp === 'ready', 9000); await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}/swing.png` });
 rec('swing-lead-scores', lead2 >= 9 && await G(() => KARGame.match.arrows[0][0].hit !== null), `leading the swing scores a ${lead2}, and the arrow rides in the boss`);
@@ -284,8 +286,8 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   rec('think-box', shut && open === 'L24' && lv.lv === 24 && lv.boxes >= 4 && /PEEPHOLE/.test(lv.hint) && wood[0] > wood[2] + 60 && b1.blocked && b1.ring === 0 && ban === 'BLOCKED!' && !b2.blocked && b2.ring >= 9 && kept && errors.length === 0,
     `THINK BOX stays shut on 2 stars at the world 4 boss and opens off the Village Cup (${open}); PEEPHOLE draws ${lv.boxes} crates (wood rgb ${wood}); a shot into the wall reads ${ban} for ${b1.ring} and stays in the crate; through the window it scores ${b2.ring}`);
 }
-// CRYPTO CITY: the world 6 page stays shut until the Forest Crown falls; its map is a night city (dark violet sky); the
-// level paints the neon city and glowing chain blocks; the COIN BLOCK cashes in for a 10
+// BITCOIN CITY: the world 6 page stays shut until the Forest Crown falls; its map is a night city (dark violet sky); the
+// level paints the neon city and glowing orange chain blocks; the COIN BLOCK cashes in for a 10
 {
   await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars[5] = 1; D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 5; }); await page.waitForTimeout(150);
   const shut = await G(() => KAR.UI.buttons.filter(b => /^L3\d$/.test(b.id)).every(b => b.disabled));
@@ -301,8 +303,60 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await waitFor(() => KARGame.bp === 'result', 8000); await page.waitForTimeout(250);
   const ban = await G(() => KARGame.banner && KARGame.banner.text);
   await page.screenshot({ path: `${OUT}/crypto-coin.png` });
-  rec('crypto-city', shut && open === 'L30' && sky[2] > sky[1] + 10 && sky[0] < 90 && lv.lv === 30 && lv.venue === 5 && lv.boxes >= 4 && /GENESIS BLOCK/.test(lv.hint) && block[2] > block[0] && cb.star && cb.ring === 10 && ban === 'COIN BLOCK!' && errors.length === 0,
-    `CRYPTO CITY stays shut until the Forest Crown falls, then opens ${open}; the map sky is a night violet (rgb ${sky}); GENESIS BLOCK paints venue ${lv.venue} with ${lv.boxes} chain blocks (rgb ${block}); the COIN BLOCK reads ${ban} for ${cb.ring}`);
+  rec('crypto-city', shut && open === 'L30' && sky[2] > sky[1] + 10 && sky[0] < 90 && lv.lv === 30 && lv.venue === 5 && lv.boxes >= 4 && /GENESIS BLOCK/.test(lv.hint) && block[0] > block[2] && cb.star && cb.ring === 10 && ban === 'COIN BLOCK!' && errors.length === 0,
+    `BITCOIN CITY stays shut until the Forest Crown falls, then opens ${open}; the map sky is a night violet (rgb ${sky}); GENESIS BLOCK paints venue ${lv.venue} with ${lv.boxes} orange chain blocks (rgb ${block}); the COIN BLOCK reads ${ban} for ${cb.ring}`);
+}
+// SOLANA BEACH + ALGORAND PEAKS: world 7 opens off the BITCOIN CITY boss and world 8 off the SOLANA boss; the map pages
+// to 8/8; ORBIT paints the synthwave beach (a violet sky) with the boss going round its hub; FINALITY paints the ice wall
+{
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars.fill(1, 0, 35); D.tourLv = 0; KARGame.activate('levels'); KARGame.worldView = 6; }); await page.waitForTimeout(150);
+  const shut7 = await G(() => KAR.UI.buttons.filter(b => /^L(3[6-9]|4[01])$/.test(b.id)).every(b => b.disabled));
+  await G(() => { KAR.Store.data.tour.stars[35] = 1; }); await page.waitForTimeout(150);
+  const open7 = await G(() => KAR.UI.buttons.filter(b => /^L(3[6-9]|4[01])$/.test(b.id) && !b.disabled).map(b => b.id).join());
+  await click('wnext'); await page.waitForTimeout(150);
+  const page8 = await G(() => KARGame.worldView === 7 && KAR.UI.buttons.find(b => b.id === 'wnext').disabled && KAR.UI.buttons.filter(b => /^L4[2-7]$/.test(b.id)).every(b => b.disabled));
+  await G(() => { KAR.Store.data.tour.stars.fill(1, 36, 46); }); await page.waitForTimeout(150);
+  await page.screenshot({ path: `${OUT}/algorand-map.png` });
+  await click('wprev'); await page.waitForTimeout(150); await click('L39'); await page.waitForTimeout(400);
+  const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, x0: KARGame.match.offAt(0).x, x1: KARGame.match.offAt(1.4).x }));
+  const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(12 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  await page.screenshot({ path: `${OUT}/solana-orbit.png` });
+  await G(() => { KARGame.activate('levels'); KARGame.worldView = 7; }); await page.waitForTimeout(150); await click('L43'); await page.waitForTimeout(400);
+  const fin = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length }));
+  const ice = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  await page.screenshot({ path: `${OUT}/algorand-finality.png` });
+  rec('crypto-worlds', shut7 && open7 === 'L36' && page8 && ob.lv === 39 && ob.venue === 6 && ob.orbit > 0 && Math.abs(ob.x1 - ob.x0) > 0.2 && sky[2] > sky[1] && fin.lv === 43 && fin.venue === 7 && fin.boxes >= 4 && ice[2] >= ice[0] && errors.length === 0,
+    `SOLANA BEACH opens off the BITCOIN CITY boss (${open7}), the map pages to 8/8 with ALGORAND PEAKS shut; ORBIT paints venue ${ob.venue} (sky rgb ${sky}) with the boss circling its hub; FINALITY paints venue ${fin.venue} with ${fin.boxes} ice blocks (rgb ${ice})`);
+}
+// THE CUP: pick it from the menu, START CUP by a real click; the HUD names your rival; the tie's results card shows the
+// bracket and NEXT ROUND (a real click goes on to the semi-final at the next distance); a cup in progress survives a
+// reload; a loss knocks you out (NEW CUP); three wins take it, pay the prize once and open the next cup
+{
+  await G(() => { const D = KAR.Store.data; D.cup = null; D.cupWon = [0, 0, 0]; D.cupTier = 0; D.gems = 0; KARGame.setScreen('menu'); });
+  await click('mode6'); await page.waitForTimeout(150);
+  const cards = await G(() => ['cup0', 'cup1', 'cup2'].map(id => { const b = KAR.UI.buttons.find(x => x.id === id); return b ? (b.disabled ? 'shut' : 'open') : 'none'; }).join());
+  await click('play'); await page.waitForTimeout(300);
+  const st = await G(() => { const m = KARGame.match; return { cup: !!m.cup, name: m.cup && m.cup.name, dist: m.dist, duel: m.mode, hint: KARGame.hint, round: KAR.Store.data.cup.round }; });
+  const playOut = win => page.evaluate(w => { const g = KARGame, m = g.match, r = KAR.Util.rng(77); while (!m.over) { const s = KAR.Bot.shot(m, r, m.shooter ? m.level.sigma : (w ? 0.0004 : 0.02), m.shooter ? m.level.read : (w ? 0.02 : 2)); m.shoot(s.aimX, s.aimY, s.sx, s.sy, 1); } g._finishMatch(); return m.winner; }, win);
+  const w1 = await playOut(true); await page.waitForTimeout(500);
+  const card = await G(() => ({ next: KAR.UI.buttons.some(b => b.id === 'next'), round: KAR.Store.data.cup.round, res: KAR.Store.data.cup.res[0].length }));
+  await page.screenshot({ path: `${OUT}/cup-bracket.png` });
+  await click('next'); await page.waitForTimeout(300);
+  const semi = await G(() => ({ dist: KARGame.match.dist, round: KARGame.match.cup.round }));
+  await page.reload(); await page.waitForFunction(() => window.KARGame); await page.waitForTimeout(200);
+  const kept = await G(() => { const c = KAR.Store.data.cup; return c && c.round === 1 && KAR.Store.data.mode === 6; });
+  await click('play'); await page.waitForTimeout(300);
+  const w2 = await playOut(false); await page.waitForTimeout(300);
+  const out = await G(() => ({ out: KAR.Store.data.cup.out, newCup: KAR.UI.buttons.some(b => b.id === 'rematch'), next: KAR.UI.buttons.some(b => b.id === 'next') }));
+  await click('rematch'); await page.waitForTimeout(300);
+  const fresh = await G(() => KAR.Store.data.cup.round === 0 && !KAR.Store.data.cup.out);
+  for (let k = 0; k < 3; k++) { if (k) { await click('next'); await page.waitForTimeout(200); } await playOut(true); await page.waitForTimeout(200); }
+  const champ = await G(() => ({ won: KAR.Store.data.cup.won, cupWon: KAR.Store.data.cupWon.join(), gems: KAR.Store.data.gems, gemsWon: KARGame.cupGems }));
+  await page.screenshot({ path: `${OUT}/cup-winner.png` });
+  await G(() => KARGame.setScreen('menu')); await page.waitForTimeout(100);
+  const silver = await G(() => !KAR.UI.buttons.find(b => b.id === 'cup1').disabled);
+  rec('cup-flow', cards === 'open,shut,shut' && st.cup && st.duel === 'duel' && st.dist === 18 && /QUARTER-FINAL/.test(st.hint) && w1 === 0 && card.next && card.round === 1 && card.res === 4 && semi.dist === 30 && semi.round === 1 && kept && w2 === 1 && out.out && out.newCup && !out.next && fresh && champ.won && champ.cupWon === '1,0,0' && champ.gems === 40 && silver && errors.length === 0,
+    `BRONZE open, SILVER + GOLD shut; START CUP: a ${st.dist} m quarter-final vs ${st.name}; won, the bracket card offers NEXT ROUND → the semi at ${semi.dist} m; the cup survives a reload; a loss knocks you out (NEW CUP); three wins take it: +${champ.gems} gems, SILVER opens`);
 }
 // the results card around the side world: clearing the Village Cup the first time opens world 2 AND THINK BOX; the
 // world 4 boss doesn't offer NEXT into THINK BOX; TOUR COMPLETE only for the win that beats the last boss standing
@@ -473,7 +527,7 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await G(() => { KARGame.activate('menu'); }); await page.waitForTimeout(80);
   await click('shareGame'); await page.waitForTimeout(80);
   const st = await G(() => KARGame.shareText || '');
-  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /36 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
+  rec('share-card', /^https:\/\//.test(meta.img) && meta.img === meta.tw && meta.card === 'summary_large_image' && meta.title && /48 levels/.test(meta.desc) && meta.url === meta.canon && dims[0] === 1200 && dims[1] === 630 && st.endsWith(meta.canon),
     `og/twitter image ${meta.img} (${dims.join('x')}), large-image card; SHARE copies "${st.slice(0, 60)}... ${meta.canon}"`);
 }
 

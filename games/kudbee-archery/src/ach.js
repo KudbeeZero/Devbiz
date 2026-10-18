@@ -25,7 +25,7 @@ KAR.ACH = [
   { id: 'boss1',    name: 'BOSS DOWN',       text: 'beat a world boss',                   n: 1,    val: D => KAR.bossesBeaten(D) },
   { id: 'boss5',    name: 'TOUR CHAMPION',   text: 'beat five world bosses',              n: 5,    val: D => KAR.bossesBeaten(D) },
   { id: 'stars45',  name: 'STAR COLLECTOR',  text: '45 stars on the tour',                n: 45,   val: D => KAR.tourStars(D) },
-  { id: 'stars90',  name: 'PERFECT TOUR',    text: 'all 90 tour stars',                   n: 90,   val: D => KAR.tourStars(D) },
+  { id: 'stars90',  name: 'STAR GAZER',      text: '90 tour stars',                   n: 90,   val: D => KAR.tourStars(D) },
   { id: 'long70',   name: 'LONG SHOT',       text: '3 stars on the 70 m range',           n: 3,    val: D => D.stars[3] },
   { id: 'duel1',    name: 'DUELLIST',        text: 'win a duel',                          n: 1,    val: D => D.stats.wins },
   { id: 'duel10',   name: 'DUEL MASTER',     text: 'win 10 duels',                        n: 10,   val: D => D.stats.wins },
@@ -35,6 +35,11 @@ KAR.ACH = [
   { id: 'swing90',  name: 'PENDULUM PRO',    text: 'score 90 on the SWINGER',             n: 90,   val: D => D.swingBest || 0 },
   { id: 'daily7',   name: 'REGULAR',         text: 'play 7 dailies',                      n: 7,    val: D => D.stats.dailies },
   { id: 'starbox',  name: 'BOX BREAKER',     text: 'smash a STAR BOX or a COIN BLOCK',    n: 1,    val: D => D.stats.starBoxes },
+  { id: 'moon',     name: 'TO THE MOON',     text: 'beat all three crypto world bosses',  n: 3,    val: D => [35, 41, 47].filter(i => D.tour.stars[i] > 0).length },
+  { id: 'boss8',    name: 'WORLD BEATER',    text: 'beat all eight world bosses',         n: 8,    val: D => KAR.bossesBeaten(D) },
+  { id: 'stars144', name: 'ALL THE STARS',   text: 'all 144 tour stars',                  n: 144,  val: D => KAR.tourStars(D) },
+  { id: 'cup1',     name: 'CUP WINNER',      text: 'win a cup',                           n: 1,    val: D => (D.cupWon || []).reduce((a, b) => a + b, 0) },
+  { id: 'cupgold',  name: 'GOLDEN ARROW',    text: 'win the GOLD CUP',                    n: 1,    val: D => (D.cupWon || [])[2] || 0 },
 ];
 
 // Which trophies are unlocked (announced or not yet): progress has reached the goal.

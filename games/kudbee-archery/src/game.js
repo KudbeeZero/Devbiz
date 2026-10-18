@@ -62,9 +62,24 @@ KAR.Game = class {
     const seed = (this.rng() * 4294967296) >>> 0;
     const day = KAR.Daily.day();
     if (D.mode === 5 && !KAR.tourOpen(D.tourLv, D)) D.tourLv = 0;
+    if (D.mode === 6) return this._cupMatch(seed);
     this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
-    this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false;
+    this._begin();
+  }
+  // THE CUP: carry on the cup in progress (or draw a new one when there is none, it is over, or another cup is picked)
+  // and shoot your tie of this round: a duel at the round's distance against the rival's own skill
+  _cupMatch(seed) {
+    const D = KAR.Store.data;
+    if (!KAR.Cup.open(D.cupTier, D)) D.cupTier = 0;
+    if (KAR.Cup.done(D.cup) || D.cup.tier !== D.cupTier) { D.cup = KAR.Cup.start(D.cupTier, seed); KAR.Store.save(); }
+    const c = D.cup, opp = KAR.Cup.opponent(c), sk = KAR.Cup.skill(opp);
+    this.match = new KAR.Match({ mode: 'duel', dist: KAR.Cup.dist(c), cpu: sk, seed });
+    this.match.cup = { tier: c.tier, round: c.round, opp, name: sk.name };
+    this._begin();
+  }
+  _begin() {
+    this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false; this.cupGems = 0;
     this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = []; this.starGemsWon = 0;
     this.introT = this.time; this.windT = -9; this.lastBase = this.match.baseWind;      // the level card; the wind-shift call
     if (this.canFull() && !this.fsLeft) this.goFull(true);
@@ -75,6 +90,7 @@ KAR.Game = class {
     this.hint = this.coarse ? 'TOUCH & HOLD TO DRAW  ·  DRAG TO AIM  ·  LIFT TO LOOSE' : 'PRESS & HOLD TO DRAW  ·  MOVE TO AIM  ·  RELEASE TO LOOSE'; this.hintT = 6;
     if (this.match.mode === 'trick') { this.hint = (this.match.daily ? 'DAILY #' + this.match.daily + '  ·  ' : '') + 'POP THE BALLOONS  ·  LEAD THE MOVERS  ·  GOLD = +2 ARROWS'; this.hintT = 6; }
     if (this.match.mode === 'swing') { this.hint = 'THE TARGET SWINGS  ·  LEAD IT  ·  LOOSE AS IT COMES TO YOU'; this.hintT = 6; }
+    if (this.match.cup) { const k = this.match.cup; this.hint = KAR.CUPS[k.tier].name + '  ·  ' + KAR.CUP_ROUNDS[k.round] + '  ·  VS ' + k.name + '  ·  FIRST TO 6 SET POINTS'; this.hintT = 6; }
     if (this.match.mode === 'stage') { const L = this.match.def; this.hint = (L.boss ? 'BOSS!  ·  ' : '') + 'LEVEL ' + (this.match.lv + 1) + '  ·  ' + L.name + '  ·  ' + L.tip.toUpperCase(); this.hintT = 6; }
     this._nextShot();
   }
@@ -134,8 +150,9 @@ KAR.Game = class {
       if (n.star3 !== null && n.star3 <= 10) parts.push(n.star3 + ' FOR 3 STARS');
       return parts.length ? 'LAST ARROW \u00b7 ' + parts.join(' \u00b7 ') : 'LAST ARROW';
     }
-    if (n.win > 10) return n.tie === 10 ? 'CPU NEEDS A 10 TO TIE THE END' : 'THE END IS YOURS';
-    if (n.win > 0) return 'CPU NEEDS ' + n.win + ' TO TAKE THE END';
+    const who = m.cup ? m.cup.name : 'CPU';
+    if (n.win > 10) return n.tie === 10 ? who + ' NEEDS A 10 TO TIE THE END' : 'THE END IS YOURS';
+    if (n.win > 0) return who + ' NEEDS ' + n.win + ' TO TAKE THE END';
     return '';
   }
 
@@ -189,8 +206,10 @@ KAR.Game = class {
     else if (id === 'back') this.setScreen('menu');
     else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
     else if (/^L\d\d$/.test(id)) { const i = +id.slice(1); if (KAR.tourOpen(i, D)) { D.tourLv = i; D.mode = 5; KAR.Store.save(); if (this.screen === 'levels') this.startMatch(); } }
+    else if (id === 'next' && D.mode === 6) this.startMatch();
     else if (id === 'next') { if (D.tourLv < KAR.TOUR.length - 1 && KAR.tourOpen(D.tourLv + 1, D)) D.tourLv++; KAR.Store.save(); this.startMatch(); }
     else if (/^lv\d$/.test(id)) { D.level = +id[2]; KAR.Store.save(); }
+    else if (/^cup\d$/.test(id)) { const t = +id[3]; if (KAR.Cup.open(t, D)) { D.cupTier = t; D.mode = 6; KAR.Store.save(); } }
     else if (id === 'pause') this.togglePause();
     else if (id === 'resume') this.screen = 'play';
     else if (id === 'full') { const on = !this.isFull(); this.fsLeft = !on; this.goFull(on); }
@@ -380,7 +399,7 @@ KAR.Game = class {
     this.shake = Math.max(this.shake, res.ring >= 9 ? 6 : 3);
     if (f.shooter === 0) this.buzz(res.robin ? [40, 60, 40, 60, 80] : res.ring >= 10 ? [30, 50, 45] : res.ring >= 9 ? 30 : res.miss ? 0 : 14);
     if (res.robin) { this._banner('ROBIN HOOD!', '#fff6a8', '#3fbf5a', 'arrow split clean in two', 72); this.audio.robin(); this._burst(60); this.shake = 10; }
-    else if (res.star) { const coin = this.match.venue === 5; this._banner(coin ? 'COIN BLOCK!' : 'STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  ' + (coin ? 'cashed in' : 'smashed'), 88); this.audio.gold(streak); this._burst(30); }
+    else if (res.star) { const coin = this.match.venue >= 5; this._banner(coin ? 'COIN BLOCK!' : 'STAR BOX!', '#fff6a8', '#ffb82e', '+10  \u00b7  ' + (coin ? 'cashed in' : 'smashed'), 88); this.audio.gold(streak); this._burst(30); }
     else if (res.blocked) { this.audio.miss(); this._banner('BLOCKED!', '#ffe0b0', '#b9783a', 'into the crates', 76); }
     else if (res.miss) { this.audio.miss(); this._banner(res.short ? 'SHORT!' : 'MISS', '#ffffff', '#9aa3ad', res.short ? 'fell before the butt' : 'off the face', 70); }
     else {
@@ -399,7 +418,7 @@ KAR.Game = class {
     this.bp = 'result'; this.bpT = 0;
     if (res.endDone && !m.over) {
       const p = m.mode === 'duel' ? null : m.pace(this._best()), pc = p === null ? '' : p > 0 ? '  ·  ' + p + ' AHEAD OF YOUR BEST' : p < 0 ? '  ·  ' + (-p) + ' BEHIND YOUR BEST' : '  ·  LEVEL WITH YOUR BEST';
-      this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS' + pc); this.hintT = 2.4;
+      this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – ' + (m.cup ? m.cup.name : 'CPU') + ' ' + res.endScores[1] : res.endScores[0] + ' POINTS' + pc); this.hintT = 2.4;
     }
   }
 
@@ -523,10 +542,18 @@ KAR.Game = class {
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); this.starGemsWon = KAR.starGems(D, D.stars[m.distIdx], stars); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
       this.unlocked = was && !KAR.locked(3, D); gearUp();
       if (sc >= 100) this._quest('range', 1);
-    } else { D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2) D.stats.legendWins++; this._quest('duel', 1); } }
+    } else {
+      D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2 && !m.cup) D.stats.legendWins++; this._quest('duel', 1); }
+      // THE CUP: the tie is in; the rest of the round is shot out. Winning a cup pays gems (the full prize the first time)
+      if (m.cup && D.cup && !KAR.Cup.done(D.cup) && D.cup.round === m.cup.round) {
+        KAR.Cup.result(D.cup, m.winner === 0);
+        if (D.cup.won) { const t = D.cup.tier; this.cupGems = D.cupWon[t] ? KAR.CUP_REPEAT : KAR.CUPS[t].gems; D.cupWon[t]++; D.gems += this.cupGems; }
+      }
+    }
     this._achCheck(); KAR.Store.save();
     this.setScreen('over');
-    if ((m.mode === 'duel' && m.winner === 0) || (m.mode === 'range' && m.stars() >= 1)) { this.audio.win(); this._burst(80); } else this.audio.lose();
+    if (m.cup && D.cup && D.cup.won) { this.audio.win(); this._burst(140); }
+    else if ((m.mode === 'duel' && m.winner === 0) || (m.mode === 'range' && m.stars() >= 1)) { this.audio.win(); this._burst(80); } else this.audio.lose();
   }
 
   // ---- loop ---------------------------------------------------------------------
@@ -640,7 +667,7 @@ KAR.Game = class {
     if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
     const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel;
-    R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
+    R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.orbitA = m.move === 'orbit' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
     if (this.camB > 0 && this.camTip) R.chase(this.camTip, this.camB, this.bp === 'result' ? this.orbit : 0);

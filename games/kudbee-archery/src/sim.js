@@ -88,7 +88,7 @@ KAR.Match = class {
     this.mode = opts.mode === 'duel' ? 'duel' : 'range';
     this.distIdx = opts.dist === undefined ? 1 : opts.dist;
     this.dist = C.DISTS[this.distIdx]; this.faceD = C.FACE[this.distIdx];
-    this.levelIdx = opts.level === undefined ? 1 : opts.level; this.level = KAR.LEVELS[this.levelIdx];
+    this.levelIdx = opts.level === undefined ? 1 : opts.level; this.level = opts.cpu || KAR.LEVELS[this.levelIdx];     // cpu: a CUP rival's own skill
     this.rng = KAR.Util.rng(opts.seed === undefined ? 1 : opts.seed);
     this.shooters = this.mode === 'duel' ? 2 : 1;
     this.ends = C.ENDS; this.per = C.PER;
@@ -217,10 +217,10 @@ KAR.Swing = class extends KAR.Match {
 KAR.Swing.L = 2.4; KAR.Swing.ENDS = 4; KAR.Swing.AMP = [0.16, 0.22, 0.28, 0.34];
 
 // ---- THE TOUR (levels) ------------------------------------------------------------------
-// Six worlds of six levels, each a short range with its own twist: the wind, a smaller face, a boss that slides
-// along a rail or swings on ropes, gusts that change arrow to arrow, crates in the way. Stars come from the level's
-// own thresholds; one star opens the next level. move: 'slide' (amp in metres, w rad/s) or 'swing' (amp in
-// radians on Swing.L ropes). face: the face size as a fraction of the standard one at that distance. boxes: crates
+// Eight worlds of six levels, each a short range with its own twist: the wind, a smaller face, a boss that slides
+// along a rail, swings on ropes or orbits a hub, gusts that change arrow to arrow, crates in the way. Stars come from the level's
+// own thresholds; one star opens the next level. move: 'slide' (amp in metres, w rad/s), 'swing' (amp in
+// radians on Swing.L ropes) or 'orbit' (amp in metres across, w rad/s). face: the face size as a fraction of the standard one at that distance. boxes: crates
 // (THINK BOX, below); flags: [x, height] of the wind pennants planted in front of a crate wall. view: how much the
 // scope frames, in metres, when it should take in more than the face.
 KAR.VENUES = [
@@ -229,7 +229,9 @@ KAR.VENUES = [
   { name: 'MOUNTAIN PASS', sub: 'sunset, and the wind off the peaks' },
   { name: 'LANTERN NIGHT', sub: 'floodlights, fireflies and a cold wind' },
   { name: 'THINK BOX', sub: 'crates, windows and carts · think before you shoot' },
-  { name: 'CRYPTO CITY', sub: 'neon towers and a market that never sleeps · gems only, no real coins' },
+  { name: 'BITCOIN CITY', sub: 'orange neon and a market that never sleeps · gems only, no real coins' },
+  { name: 'SOLANA BEACH', sub: 'a synthwave sunset where everything moves fast · gems only' },
+  { name: 'ALGORAND PEAKS', sub: 'crystal peaks under the aurora · pure precision · gems only' },
 ];
 // THINK BOX builders. Crates stand BOXZ metres in front of the boss (BOXD deep) and stop an arrow dead (0 points);
 // a STAR BOX (star: true) breaks and scores 10 (once an end); a CART (mv: { a: metres, w: rad/s, p: phase }) is a
@@ -247,7 +249,7 @@ KAR.wall = (half, top, wins) => {
   if (x < half) out.push({ x0: x, x1: half, y0: 0, y1: top });
   return out;
 };
-// Six worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
+// Eight worlds of six levels, like the Kudbee Birds worlds: each world ends in a BOSS level (crowned on the map).
 // Star targets are tuned with bots (casual / good / expert, leading the movers): see eval/calibrate.mjs.
 KAR.TOUR = [
   { v: 0, name: 'FIRST ARROWS',  dist: 0, ends: 2, wind: 0.25, stars: [36, 46, 54], tip: 'a calm day at 18 m · find the gold' },
@@ -289,6 +291,21 @@ KAR.TOUR = [
   { v: 5, name: 'GAS FEES',      dist: 2, ends: 3, wind: 1.0,  gust: 0.45, stars: [55, 69, 80], tip: 'the wind changes every arrow, like the fees · watch the flags' },
   { v: 5, name: 'BULL RUN',      dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.1, w: 1.7, stars: [54, 67, 78], tip: 'the bull charges along the rail · lead it' },
   { v: 5, name: 'THE WHALE',     dist: 2, ends: 4, wind: 0.9,  gust: 0.25, move: 'slide', amp: 1.0, w: 0.9, boss: true, boxes: KAR.wall(2.4, 2.0, [[-1.25, -0.45, 0.8, 1.8], [0.45, 1.25, 0.8, 1.8]]).concat([{ x0: -0.2, x1: 0.2, y0: 2.0, y1: 2.4, star: true }]), flags: [1.5, 2.15], stars: [59, 89, 108], tip: 'the whale swims behind the chain · hit it in a window, take the COIN BLOCK' },
+  // SOLANA BEACH (world 7): a synthwave sunset where everything is quick - fast rails, a ticking shutter, a boss on an
+  // ORBIT (it circles a hub, so it rises and falls as it goes round). Opens off the BITCOIN CITY boss.
+  { v: 6, name: 'FAST LANE',     dist: 1, ends: 3, wind: 0.5,  move: 'slide', amp: 1.0, w: 2.0, stars: [53, 67, 78], tip: 'the fastest rail yet · lead it a long way' },
+  { v: 6, name: 'PROOF OF HISTORY', dist: 1, ends: 3, wind: 0.4, boxes: [{ x0: -0.3, x1: 0.3, y0: 0, y1: 1.7, mv: { a: 0.66, w: 2.3 } }], stars: [51, 67, 79], tip: 'a shutter that ticks like a clock · count the beat, then loose' },
+  { v: 6, name: 'HIGH THROUGHPUT', dist: 2, ends: 3, wind: 1.1, gust: 0.5, stars: [54, 69, 80], tip: 'a new gust every arrow at 50 m · read each one' },
+  { v: 6, name: 'ORBIT',         dist: 1, ends: 3, wind: 0.5,  move: 'orbit', amp: 0.7, w: 1.1, stars: [55, 68, 79], tip: 'the boss circles a hub · loose at the top or the bottom of the loop' },
+  { v: 6, name: 'PARALLEL',      dist: 1, ends: 3, wind: 0.6,  move: 'slide', amp: 1.0, w: 1.3, boxes: KAR.wall(2.3, 2.0, [[-1.2, -0.45, 0.8, 1.8], [0.45, 1.2, 0.8, 1.8]]).concat([{ x0: -0.2, x1: 0.2, y0: 2.0, y1: 2.4, star: true }]), flags: [1.45, 2.15], view: 1.1, stars: [58, 72, 81], tip: 'two windows, a quick boss · and a COIN BLOCK on top' },
+  { v: 6, name: 'SUNSET VALIDATOR', dist: 2, ends: 4, wind: 0.8, gust: 0.3, move: 'orbit', amp: 0.8, w: 0.9, boss: true, stars: [73, 92, 106], tip: 'the boss orbits at 50 m in a gusty sea breeze · four ends' },
+  // ALGORAND PEAKS (world 8): crystal peaks under the aurora - long range, small faces, no luck: pure precision.
+  { v: 7, name: 'PURE STAKE',    dist: 2, ends: 3, wind: 0.4,  face: 0.6, stars: [45, 58, 73], tip: 'a 73 cm face at 50 m in a light wind · just be precise' },
+  { v: 7, name: 'FINALITY',      dist: 2, ends: 3, wind: 0.6,  view: 1.1, boxes: KAR.wall(1.5, 2.0, [[-0.14, 0.14, 1.16, 1.44]]).concat([{ x0: 0.85, x1: 1.25, y0: 2.0, y1: 2.4, star: true }]), flags: [0.7, 1.6], stars: [40, 57, 79], tip: 'a tiny window in the ice wall at 50 m · and a COIN BLOCK' },
+  { v: 7, name: 'AURORA RAIL',   dist: 3, ends: 3, wind: 0.7,  move: 'slide', amp: 0.8, w: 1.0, stars: [42, 58, 74], tip: 'a rail at 70 m · lead it under the lights' },
+  { v: 7, name: 'FROST GALE',    dist: 3, ends: 3, wind: 1.7,  gust: 0.4, stars: [38, 52, 70], tip: 'a gale off the glacier, a new gust every arrow' },
+  { v: 7, name: 'CRYSTAL ORBIT', dist: 2, ends: 3, wind: 0.7,  move: 'orbit', amp: 0.7, w: 1.2, face: 0.8, stars: [46, 62, 75], tip: 'a smaller boss on a quick orbit at 50 m' },
+  { v: 7, name: 'THE PEAK',      dist: 3, ends: 5, wind: 1.2,  gust: 0.3, move: 'orbit', amp: 0.7, w: 0.8, face: 0.85, boss: true, stars: [56, 89, 118], tip: 'the last boss · five ends at 70 m, orbiting in the cold' },
 ];
 // the 15-level tour (before the worlds) saved progress by these indices
 KAR.TOUR_V1 = [0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 17];
@@ -305,7 +322,7 @@ KAR.Stage = class extends KAR.Match {
     this.rng = KAR.Util.rng(opts.seed === undefined ? 1 : opts.seed); this.ph = this.rng() * 6.283;
     this._newEnd();                                    // again, now the level is known
     if (def.move) {
-      this.move = def.move; this.offAt = def.move === 'swing' ? this._swingAt : this._slideAt;
+      this.move = def.move; this.offAt = def.move === 'swing' ? this._swingAt : def.move === 'orbit' ? this._orbitAt : this._slideAt;
       const span = def.move === 'swing' ? KAR.Swing.L * Math.sin(def.amp) : def.amp;
       this.viewD = Math.max(this.faceD, span * 1.25 + this.faceD * 0.75);
     }
@@ -348,6 +365,8 @@ KAR.Stage = class extends KAR.Match {
     const L = KAR.Swing.L, w = Math.sqrt(KAR.CFG.G / L), th = this.def.amp * Math.sin(w * T + this.ph);
     return { x: L * Math.sin(th), y: L * (1 - Math.cos(th)), th };
   }
+  // ORBIT: the boss goes round a hub on a flat loop - amp across, half that up and down - and never dips below its stand
+  _orbitAt(T) { const d = this.def, a = d.w * T + this.ph; return { x: d.amp * Math.cos(a), y: d.amp * 0.5 * (1 + Math.sin(a)), th: 0 }; }
   onBoss(h) { const bw = this.faceD * 0.62 + 0.06; return Math.abs(h.x) < bw && Math.abs(h.y - KAR.CFG.FACE_Y) < bw; }
   stars() { if (!this.over) return 0; const s = this.total(0), T = this.def.stars; return s >= T[2] ? 3 : s >= T[1] ? 2 : s >= T[0] ? 1 : 0; }
   // before the last arrow: points needed to clear the level / for 3 stars / for a new best
@@ -536,5 +555,80 @@ KAR.Bot = {
       m.shoot(s.aimX, s.aimY, s.sx, s.sy, s.power);
     }
     return m;
+  },
+};
+
+// ---- THE CUP (knockout) -------------------------------------------------------------------
+// Eight archers, three rounds of duels (quarter-final, semi-final, final), one cup. You are one of the eight; the
+// other seven are named CPU rivals drawn for the cup from the pool by its seed. Each rival has a rating (0 = club
+// novice, 1 = world class) that sets their sight wobble and how well they read the wind. The other ties of a round are
+// shot out by bots (deterministic per seed), so the favourites usually - not always - come through to meet you.
+// BRONZE is open from the start; SILVER opens when you win BRONZE, GOLD when you win SILVER. Gems are in-game only.
+KAR.RIVALS = [
+  { name: 'ROOKIE RAY',    r: 0.05, col: '#7ac7ff' }, { name: 'MOSSY MEG',    r: 0.12, col: '#7fe03a' },
+  { name: 'BARNEY BOLT',   r: 0.2,  col: '#ffb02e' }, { name: 'PIPPA PINE',   r: 0.28, col: '#5fae4a' },
+  { name: 'NED NOCK',      r: 0.35, col: '#c46bff' }, { name: 'GOLDIE GRACE', r: 0.42, col: '#ffd34d' },
+  { name: 'WILLOW WREN',   r: 0.5,  col: '#9be35a' }, { name: 'SIR FLETCHER', r: 0.57, col: '#ff6b5a' },
+  { name: 'ARROW ANYA',    r: 0.64, col: '#ff5fd2' }, { name: 'CAPTAIN QUIVER', r: 0.7, col: '#3fa0ff' },
+  { name: 'MAID MARIGOLD', r: 0.76, col: '#ff9a3c' }, { name: 'HAWKEYE HAL',  r: 0.82, col: '#e8483a' },
+  { name: 'THE BARON',     r: 0.88, col: '#b48cff' }, { name: 'SILENT SUKI',  r: 0.93, col: '#5ff0ff' },
+  { name: 'LADY LONGBOW',  r: 0.98, col: '#fff27a' },
+];
+KAR.CUPS = [
+  { name: 'BRONZE CUP', dists: [0, 1, 1], lo: 0,  hi: 9,  gems: 40,  col: '#d9894a' },
+  { name: 'SILVER CUP', dists: [1, 2, 2], lo: 4,  hi: 13, gems: 80,  col: '#c9d1d9' },
+  { name: 'GOLD CUP',   dists: [2, 3, 3], lo: 8,  hi: 15, gems: 150, col: '#ffd34d' },
+];
+KAR.CUP_ROUNDS = ['QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'];
+KAR.CUP_REPEAT = 10;                 // gems for winning a cup you have already won
+KAR.Cup = {
+  // a rival's duel skill (the shape KAR.Match takes as opts.cpu): wobble and wind read eased from novice to world class
+  skill(i) { const r = KAR.RIVALS[i].r; return { name: KAR.RIVALS[i].name, sigma: KAR.Util.lerp(0.0036, 0.0009, r), read: KAR.Util.lerp(0.45, 0.07, r), wind: KAR.Util.lerp(0.55, 1.0, r) }; },
+  open(tier, D) { return tier === 0 || (D.cupWon[tier - 1] | 0) > 0; },
+  // a new cup: seven rivals from the tier's slice of the pool, seeded into a bracket (you are -1). Slots pair up
+  // 0-1, 2-3, 4-5, 6-7; the favourites start on opposite sides so they meet late
+  start(tier, seed) {
+    const C = KAR.CUPS[tier], rng = KAR.Util.rng(seed), pool = [];
+    for (let i = C.lo; i < C.hi; i++) pool.push(i);
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    const seven = pool.slice(0, 7).sort((a, b) => KAR.RIVALS[b].r - KAR.RIVALS[a].r);     // strongest first
+    // you sit in slot 0 against the weakest of the seven; the top seed is drawn on the far side (slot 7)
+    const field = [-1, seven[6], seven[3], seven[4], seven[2], seven[5], seven[1], seven[0]];
+    return { tier, seed: seed >>> 0, round: 0, field, res: [], out: false, won: false };
+  },
+  // who is still in at the start of round n (n = 0: the whole field)
+  alive(c, n) { return n === 0 ? c.field.slice() : c.res[n - 1].slice(); },
+  opponent(c) { const a = this.alive(c, c.round), i = a.indexOf(-1); return i < 0 ? null : a[i ^ 1]; },
+  dist(c) { return KAR.CUPS[c.tier].dists[Math.min(2, c.round)]; },
+  // one bot-vs-bot tie at that distance, deterministic in (cup seed, round, pair)
+  tie(c, a, b, n) {
+    const sa = this.skill(a), sb = this.skill(b), seed = (c.seed ^ Math.imul(n * 8 + a * 31 + b + 1, 2654435761)) >>> 0;
+    const m = KAR.Bot.play({ mode: 'duel', dist: KAR.CUPS[c.tier].dists[n], cpu: sb, seed }, sa.sigma, sa.read, seed ^ 0x9e3779b9);
+    return m.winner === 1 ? b : m.winner === 0 ? a : (KAR.RIVALS[a].r >= KAR.RIVALS[b].r ? a : b);
+  },
+  // your tie in this round is over: record it, shoot out the other ties, move on (or out)
+  result(c, won) {
+    const a = this.alive(c, c.round), next = [];
+    for (let i = 0; i < a.length; i += 2) {
+      if (a[i] === -1 || a[i + 1] === -1) next.push(won ? -1 : (a[i] === -1 ? a[i + 1] : a[i]));
+      else next.push(this.tie(c, a[i], a[i + 1], c.round));
+    }
+    c.res.push(next); c.round++;
+    if (!won) c.out = true;
+    if (won && c.round >= 3) c.won = true;
+    // knocked out: the rest of the cup is still shot out, so the bracket shows who won it
+    if (c.out) while (c.round < 3) { const b = this.alive(c, c.round), nx = []; for (let i = 0; i < b.length; i += 2) nx.push(this.tie(c, b[i], b[i + 1], c.round)); c.res.push(nx); c.round++; }
+    return c;
+  },
+  done(c) { return !c || c.out || c.won; },
+  // a saved cup is only kept when its shape is right (a hand-edited one is dropped and a new cup starts)
+  clean(c) {
+    if (!c || typeof c !== 'object' || !Number.isInteger(c.tier) || !KAR.CUPS[c.tier] || !Number.isInteger(c.seed) || !Number.isInteger(c.round) || c.round < 0 || c.round > 3) return null;
+    const ok = x => x === -1 || (Number.isInteger(x) && x >= 0 && x < KAR.RIVALS.length);
+    if (!Array.isArray(c.field) || c.field.length !== 8 || !c.field.every(ok) || c.field.filter(x => x === -1).length !== 1) return null;
+    if (!Array.isArray(c.res) || c.res.length !== c.round || !c.res.every((r, n) => Array.isArray(r) && r.length === 4 >> n && r.every(ok))) return null;
+    const fresh = this.start(c.tier, c.seed);
+    if (fresh.field.join() !== c.field.join()) return null;
+    return { tier: c.tier, seed: c.seed, round: c.round, field: c.field.slice(), res: c.res.map(r => r.slice()), out: !!c.out, won: !!c.won };
   },
 };
