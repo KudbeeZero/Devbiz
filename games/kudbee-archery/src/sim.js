@@ -52,12 +52,13 @@ KAR.Flight = {
   },
 
   // The (yaw, pitch) that puts a still-air, full-power arrow through the point (tx, ty) on the target plane.
-  solve(dist, tx, ty) {
-    const C = KAR.CFG;
+  // v: the launch speed the sight is zeroed for (a faster bow gets its own sight marks); V0 by default.
+  solve(dist, tx, ty, v) {
+    const C = KAR.CFG, V = v || C.V0;
     const yaw = Math.atan2(tx - C.SHOOT.x, dist);
     let lo = -0.2, hi = 0.45;
     for (let i = 0; i < 26; i++) {
-      const mid = (lo + hi) / 2, r = this.run(dist, yaw, mid, C.V0, 0);
+      const mid = (lo + hi) / 2, r = this.run(dist, yaw, mid, V, 0);
       const yy = r.hit ? r.hit.y : -1;
       if (yy < ty) lo = mid; else hi = mid;
     }
@@ -111,13 +112,14 @@ KAR.Match = class {
 
   get max() { return this.ends * this.per * 10; }
   // Fire with the sight at (aimX, aimY) on the target plane, hand sway (sx, sy) in metres, draw power 0..1.
-  shoot(aimX, aimY, sx, sy, power) {
-    const C = KAR.CFG, sh = this.shooter, wind = this.wind;
-    const sol = KAR.Flight.solve(this.dist, aimX + sx, aimY + sy);
-    const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
-    const fl = KAR.Flight.run(this.dist, sol.yaw, sol.pitch, speed, wind);
+  // kit: the shooter's bow + arrows (KAR.kitOf); club kit when left out.
+  shoot(aimX, aimY, sx, sy, power, kit) {
+    const C = KAR.CFG, sh = this.shooter, wind = this.wind, k = kit || KAR.KIT0, ew = wind * k.wind;
+    const sol = KAR.Flight.solve(this.dist, aimX + sx, aimY + sy, C.V0 * k.speed);
+    const speed = KAR.kitSpeed(power, k);
+    const fl = KAR.Flight.run(this.dist, sol.yaw, sol.pitch, speed, ew);
     const res = { shooter: sh, end: this.endNo, wind, samples: fl.samples, hit: fl.hit, ground: fl.ground, ring: 0, x: false, short: false };
-    const bk = this.boxes ? this._crate(sol, speed, wind) : null;          // THINK BOX: crates in front of the boss stop it first
+    const bk = this.boxes ? this._crate(sol, speed, ew) : null;          // THINK BOX: crates in front of the boss stop it first
     if (bk) {
       res.samples = bk.samples; res.hit = bk.hit; res.ring = bk.star ? 10 : 0; res.miss = !bk.star; res.blocked = !bk.star; res.star = bk.star; res.bi = bk.bi;
       this.arrows[sh].push({ ring: res.ring, x: false, robin: false, end: this.endNo, hit: bk.star ? null : bk.local });
@@ -370,6 +372,37 @@ KAR.gearOpen = (kind, i, data) => KAR.starTotal(data) >= KAR.GEAR[kind][i].need;
 // gear that opened between two star totals (for the results card)
 KAR.gearBetween = (s0, s1) => { const out = []; for (const k of ['bow', 'fletch', 'sight']) for (const g of KAR.GEAR[k]) if (g.need > s0 && g.need <= s1) out.push({ kind: k, name: g.name }); return out; };
 
+// ---- BOWS & ARROWS -------------------------------------------------------------------
+// Bought with gems (from the daily quests). Each plays differently, none is simply better. The sight is
+// zeroed for each bow, so a still-air shot always lands where you aim; kit changes how the arrow handles:
+//   speed  launch speed (a faster arrow is in the air less, so the wind has less time to push it)
+//   wind   how hard the wind shoves this arrow in flight
+//   weak   what a short draw costs (x the club's speed loss)
+//   sway   how much the sight wobbles
+//   tire   how soon a held full draw starts to shake (x the club's)
+KAR.KIT = {
+  bow: [
+    { name: 'CLUB RECURVE',   cost: 0,   speed: 1.00, sway: 1.00, tire: 1.0, plus: 'the all-rounder', minus: '' },
+    { name: 'HUNTER LONGBOW', cost: 30,  speed: 0.92, sway: 0.72, tire: 0.8, plus: 'steady, forgiving sight', minus: 'slow arrow: more drift' },
+    { name: 'OLYMPIC RECURVE', cost: 60, speed: 1.09, sway: 1.25, tire: 1.0, plus: 'fast, flat arrow', minus: 'twitchy sight' },
+    { name: 'COMPOUND',       cost: 100, speed: 1.12, sway: 0.85, tire: 2.2, plus: 'fast and calm', minus: 'tires fast at full draw' },
+  ],
+  arrow: [
+    { name: 'ALUMINIUM',      cost: 0,   speed: 1.00, wind: 1.00, weak: 1.0, plus: 'the all-rounder', minus: '' },
+    { name: 'CARBON',         cost: 25,  speed: 1.03, wind: 0.82, weak: 1.8, plus: 'cuts the wind', minus: 'short draws drop hard' },
+    { name: 'HEAVY CEDAR',    cost: 40,  speed: 0.90, wind: 0.70, weak: 0.7, plus: 'shrugs off wind & short draws', minus: 'slow: lead movers more' },
+    { name: 'X10 PRO',        cost: 80,  speed: 1.06, wind: 0.72, weak: 2.6, plus: 'fast, barely drifts', minus: 'needs a full draw' },
+  ],
+};
+KAR.KIT0 = { speed: 1, wind: 1, weak: 1, sway: 1, tire: 1 };
+// the combined handling of a loadout (data.kit = { bow, arrow } indexes)
+KAR.kitOf = data => {
+  const k = (data && data.kit) || {}, b = KAR.KIT.bow[k.bow | 0] || KAR.KIT.bow[0], a = KAR.KIT.arrow[k.arrow | 0] || KAR.KIT.arrow[0];
+  return { speed: b.speed * a.speed, wind: a.wind, weak: a.weak, sway: b.sway, tire: b.tire };
+};
+// launch speed for a draw of `power` (0..1): the club loses 28% of its speed at no draw; `weak` scales that
+KAR.kitSpeed = (power, k) => KAR.CFG.V0 * k.speed * Math.max(0.4, 1 - 0.28 * k.weak * (1 - KAR.Util.clamp(power, 0, 1)));
+
 // ---- DAILY ----------------------------------------------------------------------------
 // One BALLOON POP a day, the same for everyone: the seed comes from the UTC date, so the wind and the order,
 // colours, heights and speeds of the balloons match on every device that day. #1 is 2026-10-17.
@@ -424,12 +457,12 @@ KAR.Trick = class {
     this.spawnT -= dt;
     if (this.spawnT <= 0 && this.balloons.length < 7) { this._spawn(0); this.spawnT = 0.7 + this.rng() * 0.9; }
   }
-  shoot(aimX, aimY, sx, sy, power) {
-    const C = KAR.CFG, D = this.dist, T0 = this.T, R = KAR.Trick.R;
-    const sol = KAR.Flight.solve(D, aimX + sx, aimY + sy);
-    const speed = C.V0 * (0.72 + 0.28 * KAR.Util.clamp(power, 0, 1));
-    const plane = KAR.Flight.run(D, sol.yaw, sol.pitch, speed, this.wind);              // where it crosses the balloons
-    const fl = KAR.Flight.run(D + 45, sol.yaw, sol.pitch, speed, this.wind);            // ...and where it goes after
+  shoot(aimX, aimY, sx, sy, power, kit) {
+    const C = KAR.CFG, D = this.dist, T0 = this.T, R = KAR.Trick.R, k = kit || KAR.KIT0, ew = this.wind * k.wind;
+    const sol = KAR.Flight.solve(D, aimX + sx, aimY + sy, C.V0 * k.speed);
+    const speed = KAR.kitSpeed(power, k);
+    const plane = KAR.Flight.run(D, sol.yaw, sol.pitch, speed, ew);              // where it crosses the balloons
+    const fl = KAR.Flight.run(D + 45, sol.yaw, sol.pitch, speed, ew);            // ...and where it goes after
     const res = { shooter: 0, end: 0, wind: this.wind, samples: fl.samples, hit: null, ground: true, ring: 0, x: false, miss: true, short: !plane.hit, pops: [], points: 0, trick: true };
     if (plane.hit) {
       const h = plane.hit, tc = h.t;

@@ -251,6 +251,47 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
   rec('trophies', ids.size === K.ACH.length && K.ACH.length >= 20 && fresh === 0 && first === 'arrow1,x1' && again === 0 && boss === 'boss1,boss5' && dropped && sane,
     `${K.ACH.length} trophies (unique ids); a new save has none; the first arrow + an X unlock FIRST ARROW and DEAD CENTRE once; all bosses unlock BOSS DOWN + TOUR CHAMPION; unknown ids are dropped; a forged save can't count (fractional/negative stats are ignored, a flag without the stat isn't a win)`);
 }
+// BOWS & ARROWS: still-air shots land where you aim with every combination; the trade-offs are real
+{
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js']), C = K.CFG;
+  const shot = (kit, wind, power, dist = 3) => { const m = new K.Match({ mode: 'range', dist, seed: 3 }); m.wind = wind; return m.shoot(0, C.FACE_Y, 0, 0, power, kit); };
+  const kit = (b, a) => K.kitOf({ kit: { bow: b, arrow: a } });
+  let worst = 0;
+  for (let b = 0; b < 4; b++) for (let a = 0; a < 4; a++) for (let d = 0; d < 4; d++) { const r = shot(kit(b, a), 0, 1, d); worst = Math.max(worst, Math.hypot(r.hit.x, r.hit.y - C.FACE_Y)); }
+  const drift = k => Math.abs(shot(k, 3, 1).hit.x) * 100;
+  const club = drift(kit(0, 0)), carbon = drift(kit(0, 1)), cedar = drift(kit(0, 2)), longbow = drift(kit(1, 0)), olympic = drift(kit(2, 0));
+  const drop = k => (C.FACE_Y - shot(k, 0, 0.8, 1).hit.y) * 100;
+  const dClub = drop(kit(0, 0)), dX10 = drop(kit(0, 3)), dCedar = drop(kit(0, 2));
+  const same = shot(null, 2, 0.9).hit.x === shot(K.KIT0, 2, 0.9).hit.x && Math.abs(K.kitSpeed(0.5, K.KIT0) - C.V0 * (0.72 + 0.28 * 0.5)) < 1e-9;
+  const bowFx = K.KIT.bow[1].sway < 1 && K.KIT.bow[2].sway > 1 && K.KIT.bow[3].tire > 1;
+  rec('kit-handling', worst < 0.01 && carbon < club && cedar < carbon && longbow > club && olympic < club && dX10 > dClub && dCedar < dClub && same && bowFx,
+    `every bow x arrow lands within ${(worst * 100).toFixed(2)} cm of the aim in still air (each bow is sighted in); 70 m drift in a 3-unit wind: club ${club.toFixed(0)} cm, carbon ${carbon.toFixed(0)}, cedar ${cedar.toFixed(0)}, longbow ${longbow.toFixed(0)}, olympic ${olympic.toFixed(0)}; an 80% draw at 30 m drops club ${dClub.toFixed(0)} cm, X10 ${dX10.toFixed(0)}, cedar ${dCedar.toFixed(0)}; club kit = the old shot exactly; the longbow steadies the sight, the olympic twitches, the compound tires`);
+}
+// DAILY QUESTS + gems: three a day (same for everyone), counted, claimed once, a bonus for all three; kit costs gems
+{
+  const K = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js']), D = K.Store.data;
+  const p1 = K.questPick(100).join(), p2 = K.questPick(100).join(), p3 = K.questPick(101).join();
+  const evs = new Set(K.questPick(100).map(id => K.questDef(id).ev));
+  const Q = K.questToday(D, 100);
+  // drive each of today's quests to done through its event
+  for (const x of Q.q) { const d = K.questDef(x.id); if (d.max) { K.questEvent(D, d.ev, d.n - 1, 100); K.questEvent(D, d.ev, 1, 100); } K.questEvent(D, d.ev, d.n, 100); }
+  const maxKept = Q.q.every(x => x.have === K.questDef(x.id).n);
+  const pre = K.questClaim(D, 0, 100), gems0 = D.gems;
+  const twice = K.questClaim(D, 0, 100), early = K.questBonus(D, 100);
+  K.questClaim(D, 1, 100); K.questClaim(D, 2, 100);
+  const sum = Q.q.reduce((a, x) => a + K.questDef(x.id).gems, 0);
+  const bonus = K.questBonus(D, 100), bonusTwice = K.questBonus(D, 100), total = D.gems;
+  const rolled = K.questToday(D, 101).q.every(x => x.have === 0 && !x.claimed) && K.questToday(D, 101).day === 101;
+  // buying: too poor, bought (and equipped), owned
+  D.gems = 20; const poor = K.kitBuy(D, 'bow', 1); D.gems = 30; const bought = K.kitBuy(D, 'bow', 1), left = D.gems, eq = D.kit.bow, again = K.kitBuy(D, 'bow', 1);
+  // a save can't equip kit it doesn't own, or own kit outside the list
+  const ls = { s: JSON.stringify({ gems: 12.5, kit: { bow: 3, arrow: 2 }, ownBow: 1, ownArrow: 5 + 64 }), getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const K2 = loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js'], ls); K2.Store.load(); const D2 = K2.Store.data;
+  const sane = D2.gems === 0 && D2.kit.bow === 0 && D2.kit.arrow === 0 && D2.ownArrow === 1;
+  rec('daily-quests', p1 === p2 && p1 !== p3 && evs.size === 3 && maxKept && pre === 'claimed' && gems0 === K.questDef(Q.q[0].id).gems && twice === 'already' && !early && bonus && !bonusTwice && total === sum + K.QUEST_BONUS && rolled
+    && poor === 'poor' && bought === 'bought' && left === 0 && eq === 1 && again === 'owned' && sane,
+    `day 100 → ${p1} (same every time, different tomorrow, one per kind); events fill them, claims pay once (${sum} gems + ${K.QUEST_BONUS} bonus = ${total}), the bonus waits for all three; tomorrow rolls over; a 30-gem longbow is too dear at 20, bought and equipped at 30, then owned; a forged save can't hold fractional gems or kit it doesn't own`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

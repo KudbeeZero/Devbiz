@@ -161,6 +161,13 @@ KAR.Game = class {
     else if (id === 'wprev' || id === 'wnext') this.worldView = KAR.Util.clamp((this.worldView | 0) + (id === 'wnext' ? 1 : -1), 0, KAR.VENUES.length - 1);
     else if (id === 'gear') this.setScreen('gear');
     else if (id === 'trophies') { this.achPage = 0; this.setScreen('trophies'); }
+    else if (id === 'quests') this.setScreen('quests');
+    else if (id === 'shop') { this.shopBack = this.screen === 'gear' ? 'gear' : this.screen === 'quests' ? 'quests' : 'menu'; this.shopSel = null; this.setScreen('shop'); }
+    else if (id === 'shopBack') this.setScreen(this.shopBack || 'menu');
+    else if (/^qc\d$/.test(id)) { const d = KAR.questDef(KAR.questToday(D).q[+id[2]].id); if (KAR.questClaim(D, +id[2]) === 'claimed') { KAR.Store.save(); this.audio.gold(2); this.buzz(20); this.gemFx = { n: d.gems, t: this.time }; } }
+    else if (id === 'qb') { if (KAR.questBonus(D)) { KAR.Store.save(); this.audio.win(); this._burst(40); this.gemFx = { n: KAR.QUEST_BONUS, t: this.time }; } }
+    else if (/^k[ba]\d$/.test(id)) { const kind = id[1] === 'b' ? 'bow' : 'arrow', i = +id[2]; if (KAR.kitOwned(D, kind, i)) { D.kit[kind] = i; this.shopSel = null; KAR.Store.save(); } else this.shopSel = { kind, i }; }
+    else if (id === 'kbuy') { const s = this.shopSel; if (s && KAR.kitBuy(D, s.kind, s.i) === 'bought') { KAR.Store.save(); this.audio.win(); this._burst(40); this.shopSel = null; } }
     else if (id === 'tprev' || id === 'tnext') this.achPage = KAR.Util.clamp((this.achPage | 0) + (id === 'tnext' ? 1 : -1), 0, Math.ceil(KAR.ACH.length / 9) - 1);
     else if (id === 'back') this.setScreen('menu');
     else if (/^g[bfs]\d$/.test(id)) { const k = { b: 'bow', f: 'fletch', s: 'sight' }[id[1]], i = +id[2]; if (KAR.GEAR[k][i] && KAR.gearOpen(k, i, D)) { D.gear[k] = i; KAR.Store.save(); } }
@@ -270,7 +277,8 @@ KAR.Game = class {
     const k = e.key;
     if (down) this._firstGesture();
     if (down && (k === 'm' || k === 'M')) { this.audio.setMuted(!this.audio.muted); return; }
-    if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies')) { this.activate('back'); return; }
+    if (down && k === 'Escape' && (this.screen === 'levels' || this.screen === 'trophies' || this.screen === 'quests')) { this.activate('back'); return; }
+    if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
     if (down && (k === 'p' || k === 'P' || k === 'Escape')) { e.preventDefault(); if (this.screen === 'play' || this.screen === 'paused') this.togglePause(); return; }
     if (k === 'b' || k === 'B' || k === 'Shift') { this.holding = down; return; }
     if (this.screen !== 'play') {
@@ -300,7 +308,7 @@ KAR.Game = class {
     const sw = this.cpu ? { x: this.cpu.sx, y: this.cpu.sy } : { x: this.sway.x, y: this.sway.y };
     const shooter = m.shooter;
     if (this.coach && shooter === 0) { const D = KAR.Store.data; D.tut |= this.coach.bit; KAR.Store.save(); this.coach = null; }
-    const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power);
+    const res = m.shoot(this.aimX, this.aimY, sw.x, sw.y, power, this._kit(shooter));
     const tEnd = res.hit ? res.hit.t : res.samples[res.samples.length - 1].t;
     // ARROW CAM for the shots worth watching: golds, the odd 7/8 (so the cam alone doesn't give it away),
     // the last arrow of a range, and the CPU's X. The camera rides the arrow in, in slow motion.
@@ -314,7 +322,15 @@ KAR.Game = class {
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
-    if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; }
+    if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; this._quest('arrow', 1); }
+  }
+
+  // your bow + arrows; the CPU and the Daily (same for everyone) shoot club kit
+  _kit(shooter) { return shooter === 0 && !this.match.daily ? KAR.kitOf(KAR.Store.data) : KAR.KIT0; }
+  // count a quest event; a finished quest drops in a card (claim it on the QUESTS screen)
+  _quest(ev, n) {
+    if (!this.achQ) this.achQ = [];
+    for (const d of KAR.questEvent(KAR.Store.data, ev, n)) this.achQ.push({ a: { name: d.text.toUpperCase(), text: 'claim +' + d.gems + ' gems in QUESTS' }, title: 'QUEST DONE!', gem: true });
   }
 
   _land() {
@@ -344,7 +360,8 @@ KAR.Game = class {
     }
     if (f.shooter === 0 && !res.star) { if (res.ring === 10) st.tens++; if (res.x) st.xs++; }       // a STAR BOX is not a gold
     if (f.shooter === 0 && res.star) st.starBoxes++;
-    this._achCheck();
+    if (f.shooter === 0 && !res.star) { if (res.ring >= 9) this._quest('gold', 1); if (res.ring === 10) this._quest('ten', 1); if (res.x) this._quest('x', 1); this._quest('streak', this.streak); }
+    this._achCheck(); KAR.Store.save();
     this.bp = 'result'; this.bpT = 0;
     if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
   }
@@ -364,7 +381,7 @@ KAR.Game = class {
       this.pops.push({ x: p.x, y: p.y, age: 0, ring: 10, team: 0 });
     }
     this.trickShown = m.score; this.trickCombo = res.mult; this.shake = Math.max(this.shake, 5);
-    KAR.Store.data.stats.pops += res.pops.length; this._achCheck();
+    KAR.Store.data.stats.pops += res.pops.length; this._quest('pop', res.pops.length); this._quest('combo', res.mult); this._achCheck();
     const two = res.pops.length > 1, gold = res.bonusArrows > 0;
     this._banner(two ? 'DOUBLE POP!' : 'POP!', '#ffffff', gold ? '#ffb82e' : '#ff5d8a', '+' + res.points + (res.mult > 1 ? '  \u00b7  COMBO \u00d7' + res.mult : '') + (gold ? '  \u00b7  +' + res.bonusArrows + ' ARROWS' : ''), two ? 76 : 88);
     this.audio.pop(res.pops.length, res.mult); this.buzz(res.pops.length > 1 ? [25, 40, 25] : 25); if (two || gold) this._burst(30);
@@ -408,7 +425,7 @@ KAR.Game = class {
     if (m.daily) {
       const dd = D.daily;
       if (dd.day !== m.daily) { dd.day = m.daily; dd.best = 0; dd.plays = 0; dd.first = m.score; }
-      dd.plays++; D.stats.dailies++; this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
+      dd.plays++; D.stats.dailies++; this._quest('daily', 1); this.newBest = m.score > dd.best; dd.best = Math.max(dd.best, m.score);
       this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && m.score > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
@@ -420,12 +437,14 @@ KAR.Game = class {
       this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D) && KAR.TOUR[i + 1].after === undefined;
       this.sideOpen = st >= 1 && sides.length ? sides[0] : undefined;
       this.tourDone = !before && bosses();
+      if (st >= 2) this._quest('level2', 1);
       gearUp(); this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (st >= 1) { this.audio.win(); this._burst(60 + st * 20); } else this.audio.lose();
       return;
     }
     if (m.mode === 'swing') {
       const sc = m.total(0); this.newBest = sc > (D.swingBest || 0); D.swingBest = Math.max(D.swingBest || 0, sc);
+      if (sc >= 60) this._quest('swing', 1);
       this._achCheck(); KAR.Store.save(); this.setScreen('over');
       if (this.newBest && sc > 0) { this.audio.win(); this._burst(80); } else this.audio.lose();
       return;
@@ -440,7 +459,8 @@ KAR.Game = class {
       const sc = m.total(0), stars = m.stars(), was = KAR.locked(3, D);
       this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
       this.unlocked = was && !KAR.locked(3, D); gearUp();
-    } else { D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2) D.stats.legendWins++; } }
+      if (sc >= 100) this._quest('range', 1);
+    } else { D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2) D.stats.legendWins++; this._quest('duel', 1); } }
     this._achCheck(); KAR.Store.save();
     this.setScreen('over');
     if ((m.mode === 'duel' && m.winner === 0) || (m.mode === 'range' && m.stars() >= 1)) { this.audio.win(); this._burst(80); } else this.audio.lose();
@@ -493,8 +513,9 @@ KAR.Game = class {
         if (this.breath <= 0 && this.holding && this.gasp <= 0) { this.gasp = 0.9; this.holding = this.coarse ? false : this.holding; }
         if (this.gasp > 0) this.gasp -= dt;
         const steady = this.holding && this.breath > 0 && this.gasp <= 0;
-        const fatigue = Math.max(0, this.holdT - C.STEADY_T) * 0.9 + (this.gasp > 0 ? 0.9 : 0);
-        const amp = C.BASE_SWAY * m.dist * (1 + fatigue) * (steady ? 0.25 : 1) * (0.55 + 0.45 * this.draw);
+        const kit = this._kit(m.shooter);
+        const fatigue = Math.max(0, this.holdT - C.STEADY_T / kit.tire) * 0.9 * kit.tire + (this.gasp > 0 ? 0.9 : 0);
+        const amp = C.BASE_SWAY * kit.sway * m.dist * (1 + fatigue) * (steady ? 0.25 : 1) * (0.55 + 0.45 * this.draw);
         const t = this.time;
         this.sway.x = amp * (Math.sin(1.3 * t + this.ph[0]) * 0.7 + Math.sin(2.9 * t + this.ph[1]) * 0.3);
         this.sway.y = amp * 1.1 * (Math.sin(1.7 * t + this.ph[2]) * 0.7 + Math.sin(3.3 * t + this.ph[3]) * 0.3) + amp * 0.4 * Math.sin(0.9 * t);
@@ -555,7 +576,7 @@ KAR.Game = class {
     ctx.save();
     if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
-    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || sel;
+    const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || sel;
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);
     R.flags = !menuish && m.def && m.def.flags || null;
     R.boxes = !menuish && m.boxes ? m.boxes.map((b, i) => ({ x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, star: b.star, mv: b.mv, off: m.boxOff(i, m.T), gone: m.boxGone(i, this.showEnd, m.T) })) : null;
@@ -579,6 +600,8 @@ KAR.Game = class {
     if (this.screen === 'menu') U.menu(ctx, this);
     else if (this.screen === 'gear') U.gearScreen(ctx, this);
     else if (this.screen === 'trophies') U.trophies(ctx, this);
+    else if (this.screen === 'quests') U.quests(ctx, this);
+    else if (this.screen === 'shop') U.shop(ctx, this);
     else if (sel) U.levels(ctx, this);
     else {
       U.hud(ctx, this);
@@ -598,7 +621,7 @@ KAR.Game = class {
 
   _drawArrows(ctx) {
     const R = KAR.Render, m = this.match;
-    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'levels') return;
+    if (this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'levels') return;
     const f0 = this.flight, newest = f0 ? m.arrows[f0.shooter][m.arrows[f0.shooter].length - 1] : null;
     // arrows in the face, then the THINK BOX crates in front of it, then the arrows stuck in the crates
     const stuck = inCrate => { for (let s = 0; s < m.shooters; s++) for (const a of m.arrows[s]) if (a.end === this.showEnd && !!(a.hit && a.hit.z !== undefined) === inCrate && !(this.bp === 'flight' && a === newest)) R.stuck(ctx, a, s, a === newest ? this.time - this.landT : undefined); };

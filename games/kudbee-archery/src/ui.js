@@ -338,6 +338,10 @@ KAR.UI = {
     if (!tour) U.fit(ctx, (C ? 'touch & hold to draw  \u00b7  drag anywhere to aim  \u00b7  lift to loose' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose'), 480, 568, U.sz(g, 16), '#ffffff', 900);
     if (!C) U.fit(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, U.sz(g, 15), '#ffe9a8', 900);
     U.roundIcon(ctx, g, 'mute', 926 + xr - (C ? 4 : 0), C ? 40 : 36, g.audio.muted ? 'mute' : 'sound', C);
+    { const qw = C ? 214 : 180, qx = 926 + xr - (C ? 66 : 50) * (g.canFull() ? 3 : 2) - qw / 2 - (C ? 30 : 22), qh = C ? 60 : 48;
+      U.button(ctx, g, 'quests', qx - qw / 2, 14, qw, qh, 'QUESTS', { small: true, color: 'blue' });
+      this.gem(ctx, qx + qw / 2 - 22, 14 + qh / 2, C ? 11 : 9);
+      if (KAR.questClaimable(D)) { ctx.beginPath(); ctx.arc(qx + qw / 2 - 6, 20, 9, 0, 6.283); ctx.fillStyle = '#ff3b4f'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke(); } }
     const ri = C ? 66 : 50;
     if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
     U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
@@ -364,7 +368,8 @@ KAR.UI = {
         U.text(ctx, open ? it.name : '\u2605 ' + it.need, x + 65, y + 104 + (g.coarse ? 2 : 0), U.sz(g, 12), open ? '#ffffff' : '#ffe9a8', 'center');
       });
     });
-    U.button(ctx, g, 'back', 380, 520, 200, 56, 'BACK', { primary: true });
+    U.button(ctx, g, 'shop', 250, 520, 250, 56, 'BOWS & ARROWS', { small: true, color: 'yellow' });
+    U.button(ctx, g, 'back', 520, 520, 200, 56, 'BACK', { primary: true });
   },
   // ---- TROPHIES: every lifetime goal with its progress, nine to a page ----
   trophies(ctx, g) {
@@ -389,6 +394,83 @@ KAR.UI = {
     U.button(ctx, g, 'tnext', 354, 494, 130, 56, 'NEXT \u203a', { small: true, color: 'blue', disabled: pg >= pages - 1 });
     U.button(ctx, g, 'back', 630, 494, 230, 56, 'BACK', { primary: true });
   },
+  // a cut gem (the quest currency), centred on (x, y)
+  gem(ctx, x, y, r) {
+    ctx.save(); ctx.lineJoin = 'round';
+    const P = [[-1, -0.35], [-0.55, -0.85], [0.55, -0.85], [1, -0.35], [0, 1]];
+    ctx.beginPath(); P.forEach(([a, b], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x + a * r, y + b * r)); ctx.closePath();
+    ctx.fillStyle = '#3fd2ff'; ctx.fill(); ctx.lineWidth = Math.max(2, r * 0.22); ctx.strokeStyle = this.OUT; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r, y - 0.35 * r); ctx.lineTo(x + r, y - 0.35 * r); ctx.moveTo(x - 0.3 * r, y - 0.35 * r); ctx.lineTo(x, y + r); ctx.lineTo(x + 0.3 * r, y - 0.35 * r);
+    ctx.lineWidth = Math.max(1, r * 0.1); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 0.55 * r, y - 0.85 * r); ctx.lineTo(x - 0.3 * r, y - 0.35 * r); ctx.lineTo(x + 0.3 * r, y - 0.35 * r); ctx.lineTo(x + 0.55 * r, y - 0.85 * r); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
+    ctx.restore();
+  },
+  // the gem balance, right-aligned at (x, y), with a +n float after a claim
+  gems(ctx, g, x, y) {
+    const D = KAR.Store.data, s = '' + D.gems, sz = this.sz(g, 24);
+    ctx.save(); ctx.font = '400 ' + sz + 'px ' + this.FONT; const w = ctx.measureText(s).width; ctx.restore();
+    this.text(ctx, s, x, y, sz, '#bff4ff', 'right'); this.gem(ctx, x - w - 18, y - 9, 12);
+    if (g.gemFx && g.time - g.gemFx.t < 1.2) { const a = (g.time - g.gemFx.t) / 1.2; ctx.save(); ctx.globalAlpha = 1 - a; this.text(ctx, '+' + g.gemFx.n, x, y - 26 - a * 24, this.sz(g, 20), '#9be35a', 'right'); ctx.restore(); }
+  },
+
+  // ---- DAILY QUESTS: three a day, each pays gems, all three pays a bonus ----
+  quests(ctx, g) {
+    const U = this, D = KAR.Store.data, Q = KAR.questToday(D);
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 100, 74, 760, 530, 'blue');
+    U.ribbon(ctx, 480, 46, 380, 'DAILY QUESTS', 'yellow');
+    const left = 86400000 - Date.now() % 86400000, h = Math.floor(left / 3600000), mn = Math.floor(left % 3600000 / 60000);
+    U.fit(ctx, 'NEW QUESTS IN ' + h + 'H ' + mn + 'M  ·  gems buy new bows & arrows', 450, 132, U.sz(g, 16), '#ffe9a8', 560);
+    U.gems(ctx, g, 832, 134);
+    Q.q.forEach((x, i) => {
+      const d = KAR.questDef(x.id), y = 148 + i * 96, done = x.have >= d.n;
+      U.rr(ctx, 128, y, 704, 84, 14); ctx.fillStyle = U.OUT; ctx.fill();
+      U.rr(ctx, 131, y + 3, 698, 78, 12); ctx.fillStyle = x.claimed ? '#3a5170' : done ? '#3f8a3c' : '#2c4f86'; ctx.fill();
+      U.fit(ctx, d.text.toUpperCase(), 152, y + 34, U.sz(g, 19), '#ffffff', 390, 'left');
+      U.rr(ctx, 152, y + 50, 300, 14, 7); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      if (x.have > 0) { U.rr(ctx, 152, y + 50, Math.max(14, 300 * x.have / d.n), 14, 7); ctx.fillStyle = done ? '#9be35a' : '#7ac7ff'; ctx.fill(); }
+      U.text(ctx, x.have + ' / ' + d.n, 466, y + 63, U.sz(g, 15), '#ffffff', 'left');
+      this.gem(ctx, 566, y + 40, 12); U.text(ctx, '' + d.gems, 584, y + 49, U.sz(g, 22), '#bff4ff', 'left');
+      if (x.claimed) U.text(ctx, '✓ CLAIMED', 728, y + 50, U.sz(g, 20), '#9be35a', 'center');
+      else U.button(ctx, g, 'qc' + i, 640, y + 14, 176, 56, done ? 'CLAIM' : 'IN PROGRESS', { small: true, color: done ? 'green' : 'blue', disabled: !done });
+    });
+    const ready = KAR.questBonusReady(D);
+    U.fit(ctx, Q.bonus ? 'ALL THREE DONE  ·  BONUS CLAIMED' : 'CLAIM ALL THREE FOR A BONUS', 152, 474, U.sz(g, 17), '#fff27a', 390, 'left');
+    this.gem(ctx, 566, 466, 12); U.text(ctx, '' + KAR.QUEST_BONUS, 584, 475, U.sz(g, 22), '#bff4ff', 'left');
+    if (!Q.bonus) U.button(ctx, g, 'qb', 640, 440, 176, 56, 'BONUS', { small: true, color: ready ? 'yellow' : 'blue', disabled: !ready });
+    U.button(ctx, g, 'shop', 150, 522, 300, 60, 'BOWS & ARROWS', { small: true, color: 'yellow' });
+    U.button(ctx, g, 'back', 610, 522, 220, 60, 'BACK', { primary: true });
+  },
+
+  // ---- BOWS & ARROWS: bought with gems; each handles differently (KAR.KIT) ----
+  shop(ctx, g) {
+    const U = this, D = KAR.Store.data, sel = g.shopSel;
+    U.backdrop(ctx, 0.5);
+    U.panel(ctx, 60, 74, 840, 546, 'blue');
+    U.ribbon(ctx, 480, 46, 420, 'BOWS & ARROWS', 'yellow');
+    U.fit(ctx, 'every bow and arrow handles differently  ·  none is simply better', 440, 132, U.sz(g, 16), '#ffe9a8', 600);
+    U.gems(ctx, g, 872, 134);
+    [['bow', 'BOW', 'kb'], ['arrow', 'ARROWS', 'ka']].forEach(([kind, label, pre], r) => {
+      const y = 144 + r * 184;
+      U.text(ctx, label, 84, y + 16, U.sz(g, 17), '#ffffff', 'left');
+      KAR.KIT[kind].forEach((it, i) => {
+        const x = 84 + i * 200, own = KAR.kitOwned(D, kind, i), on = D.kit[kind] === i, picked = sel && sel.kind === kind && sel.i === i;
+        U.button(ctx, g, pre + i, x, y + 26, 188, 148, '', { small: true, color: on ? 'green' : picked ? 'yellow' : 'blue', selected: on || picked });
+        U.fit(ctx, it.name, x + 94, y + 58, U.sz(g, 16), '#ffffff', 172);
+        U.fit(ctx, '+ ' + it.plus, x + 94, y + 88, U.sz(g, 13), '#d6ffb8', 174);
+        if (it.minus) U.fit(ctx, '− ' + it.minus, x + 94, y + 112, U.sz(g, 13), '#ffd0c8', 174);
+        if (on) U.text(ctx, 'EQUIPPED', x + 94, y + 158, U.sz(g, 15), '#fff27a', 'center');
+        else if (own) U.fit(ctx, 'OWNED · TAP TO USE', x + 94, y + 158, U.sz(g, 13), '#ffffff', 172);
+        else { this.gem(ctx, x + 78, y + 151, 10); U.text(ctx, '' + it.cost, x + 94, y + 159, U.sz(g, 18), '#bff4ff', 'left'); }
+      });
+    });
+    if (sel) {
+      const it = KAR.KIT[sel.kind][sel.i], can = D.gems >= it.cost;
+      U.button(ctx, g, 'kbuy', 84, 540, 380, 62, can ? 'BUY ' + it.name : 'NEED ' + (it.cost - D.gems) + ' MORE GEMS', { small: true, color: can ? 'green' : 'blue', disabled: !can, primary: can });
+    } else U.fit(ctx, 'tap kit you own to use it  ·  tap new kit, then BUY', 274, 578, U.sz(g, 15), '#ffe9a8', 380);
+    U.button(ctx, g, 'shopBack', 650, 540, 226, 62, 'BACK', { primary: !sel || D.gems < KAR.KIT[sel.kind][sel.i].cost });
+  },
+
   // a round gold (won) or grey (not yet) medal with a star
   medal(ctx, x, y, done) {
     ctx.save();
@@ -401,14 +483,14 @@ KAR.UI = {
   // a newly won trophy: a card that drops in at the top for ~3 s (queued, one at a time)
   achToast(ctx, g) {
     const q = g.achQ; if (!q || !q.length) return;
-    const it = q[0]; if (it.t0 === undefined) { it.t0 = g.time; g.audio.gold(3); g.buzz([20, 40, 30]); }
+    const it = q[0]; if (it.t0 === undefined) { it.t0 = g.time; g.audio.gold(it.gem ? 2 : 3); g.buzz([20, 40, 30]); }
     const age = g.time - it.t0; if (age > 3.2) { q.shift(); return; }
     const k = Math.min(1, age / 0.25, (3.2 - age) / 0.3), y = -70 + 84 * k, U = this;
     ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, k));
     U.rr(ctx, 320, y, 320, 64, 16); ctx.fillStyle = U.OUT; ctx.fill();      // clear of the score panel and the round buttons
     U.rr(ctx, 323, y + 3, 314, 58, 13); ctx.fillStyle = '#c9802e'; ctx.fill();
-    this.medal(ctx, 356, y + 32, true);
-    U.fit(ctx, 'TROPHY!  ' + it.a.name, 392, y + 28, U.sz(g, 18), '#fff6a8', 236, 'left');
+    if (it.gem) this.gem(ctx, 356, y + 32, 18); else this.medal(ctx, 356, y + 32, true);
+    U.fit(ctx, (it.title || 'TROPHY!') + '  ' + it.a.name, 392, y + 28, U.sz(g, 18), '#fff6a8', 236, 'left');
     U.fit(ctx, it.a.text, 392, y + 50, U.sz(g, 14), '#ffffff', 236, 'left');
     ctx.restore();
   },
