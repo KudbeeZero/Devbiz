@@ -41,10 +41,11 @@
       radial-gradient(circle at 50% 0%, rgba(57,230,255,0.10), transparent 60%),
       #05050f;
   }
-  /* Near-square frame so the dartboard reads large (logical 960x720 -> 1.333). */
+  /* Fills the screen: the canvas width follows the screen aspect (see _fit),
+     so wide phones get no side bars. Clamped to 4:3 .. 2.4:1. */
   #frame {
     position: relative;
-    width: min(100vw, calc(100vh * 1.3333));
+    width: min(100vw, calc(100vh * 2.4));
     height: min(100vh, calc(100vw / 1.3333));
     box-shadow: 0 0 60px rgba(57,230,255,0.18), inset 0 0 0 1px rgba(57,230,255,0.12);
     border-radius: 8px;
@@ -100,6 +101,7 @@
 <script src="src/entities/players.js"></script>
 <script src="src/modes/x01.js"></script>
 <script src="src/modes/cricket.js"></script>
+<script src="src/campaign.js"></script>
 <script src="src/progression.js"></script>
 <script src="src/game.js"></script>
 <script>
