@@ -1,19 +1,26 @@
 /* =====================================================================
  * Kudbee Archery — audio.js
- * Fully synthesized, no files: a bow creak that tightens as you draw, the clicker,
- * the string's twang and slap, the arrow's whoosh, the straw thud and the shaft
- * quivering, crowd, UI ticks, an outdoor bed (wind that follows the gauge, birds)
- * and a calm loop with its own key, tempo and lead for each world. A compressor on the master keeps it loud enough for a phone
- * speaker. The AudioContext is created on the first gesture and unlocked the way
- * iOS needs (a silent buffer inside the gesture; playback session so the ringer
- * switch doesn't mute it). SFX are rate-limited; mute is persisted.
+ * The core loop is recorded (CC0, one small sprite: assets/sfx.mp3, mapped in src/sfx.js):
+ * the bow's creak and release, the arrow's swish, the thwack into the straw, a crowd's
+ * "ooh" and applause - each a few variants, played at a slightly random pitch so no
+ * two shots sound the same. Layered on top, and standing in until the sprite has
+ * loaded (or if it never does), the synthesized set: a creak that tightens as you draw,
+ * the clicker, the string's twang, the whoosh, the thud and the shaft quivering.
+ * The score is heard: each ring lands a little brighter than the one below, a 9 draws
+ * an "ooh", a 10 rings a bell, an X has its own signature, and a gold streak climbs.
+ * Plus UI ticks, an outdoor bed (wind that follows the gauge, birds) and a calm loop
+ * with its own key, tempo and lead for each world. A compressor on the master keeps
+ * it loud enough for a phone speaker. The AudioContext is created on the first gesture
+ * and unlocked the way iOS needs (a silent buffer inside the gesture; playback session
+ * so the ringer switch doesn't mute it). SFX are rate-limited; mute is persisted.
  * ===================================================================== */
 
 KAR.Audio = class {
   constructor() {
     this.actx = null; this.master = null; this.noiseBuf = null;
     this.muted = !!KAR.Store.data.muted;
-    this.last = {};
+    this.last = {}; this.lastVar = {};
+    this.sfx = null; this.sfxLoading = false; this.sfxFailed = false;
     this.musicOn = false; this.musicTimer = 0; this.step = 0; this.nextT = 0; this.theme = 0;
   }
 
@@ -35,6 +42,7 @@ KAR.Audio = class {
         const d = this.noiseBuf.getChannelData(0);
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       } catch (e) { this.actx = null; return false; }
+      this.load();
     }
     if (this.actx.state !== 'running') {
       this.actx.resume().catch(() => {});
@@ -86,6 +94,33 @@ KAR.Audio = class {
     s.start(t0); s.stop(t0 + dur + 0.02);
   }
 
+  // ---- the recordings ----
+  // One fetch + decode of the sprite; until it lands (or if it fails) every sound falls back to the synth.
+  load() {
+    if (this.sfx || this.sfxLoading || !KAR.SFX || typeof fetch !== 'function') return;
+    this.sfxLoading = true;
+    const a = this.actx, done = b => { this.sfx = b; this.sfxLoading = false; }, fail = () => { this.sfxLoading = false; this.sfxFailed = true; };
+    fetch(KAR.SFX.url).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(buf => new Promise((ok, no) => { const p = a.decodeAudioData(buf, ok, no); if (p && p.then) p.then(ok, no); }))   // old Safari: callbacks only
+      .then(done, fail);
+  }
+  has(name) { return !!(this.sfx && (KAR.SFX.clips[name + '1'] || KAR.SFX.clips[name])); }
+  // play a clip: a random numbered variant (name1, name2, ...), or that one take by its full name, at a random
+  // pitch around rate
+  play(name, vol, rate, delay, jitter) {
+    if (!this.has(name)) return null;
+    const C = KAR.SFX.clips; let n = 0; while (C[name + (n + 1)]) n++;
+    const k = C[name] ? name : name + (1 + Math.floor(Math.random() * n));
+    if (n > 1 && k === this.lastVar[name]) return this.play(name, vol, rate, delay, jitter);      // never the same take twice running
+    this.lastVar[name] = k;
+    const [at, len] = C[k], a = this.actx, t0 = a.currentTime + (delay || 0);
+    const s = a.createBufferSource(), g = a.createGain(); s.buffer = this.sfx;
+    s.playbackRate.value = (rate || 1) * (1 + ((jitter === undefined ? 0.05 : jitter) * (Math.random() * 2 - 1)));
+    g.gain.value = vol === undefined ? 1 : vol;
+    s.connect(g); g.connect(this.master); s.start(t0, at, len);
+    return { s, g };
+  }
+
   click() { if (this._ok('click', 40)) { this.tone(660, 0.06, 'square', 0.08); this.tone(990, 0.05, 'square', 0.06, null, 0.03); } }
 
   // ---- the bow ----
@@ -103,6 +138,7 @@ KAR.Audio = class {
     s.connect(f); f.connect(chop); chop.connect(g); g.connect(this.master); s.start(t); lfo.start(t);
     this.creak = { s, f, g, lfo };
     this.tone(140, 0.12, 'triangle', 0.12, 120);                  // the nock seating on the string
+    this.play('creak', 0.32, 0.62, 0.04, 0.08);                    // the limbs taking the weight (a wood creak, pitched down)
   }
   drawSet(p) {
     const c = this.creak; if (!c) return;
@@ -122,33 +158,76 @@ KAR.Audio = class {
   // the release: string slap on the arm guard, the twang of the string settling, the limbs' thump
   loose() {
     this.drawStop();
+    if (this.play('bow', 1.8, 1, 0, 0.06)) {                     // the recorded release, with the synth's limb thump under it
+      this.tone(62, 0.22, 'sine', 0.45, 42); this.tone(104, 0.4, 'triangle', 0.22, 96);
+      return;
+    }
     this.noise(0.05, 0.9, 2200, 'highpass');
     this.noise(0.09, 0.5, 900, 'bandpass', 0.008, 1.5);
     this.tone(104, 0.55, 'triangle', 0.55, 96); this.tone(208, 0.32, 'sawtooth', 0.12, 198); this.tone(312, 0.22, 'sine', 0.1, 300);
     this.tone(62, 0.22, 'sine', 0.6, 42);
   }
-  // the arrow leaving: a whoosh that falls in pitch as it goes away (doppler), long in slow-motion
+  // the arrow leaving: a recorded swish off the string, then a whoosh that falls in pitch as it goes away
+  // (doppler), long in slow-motion
   fly(t) {
     if (!this.actx) return;
+    const rec = !!this.play('swish', 0.7, 1.12, 0.03, 0.08);
     const a = this.actx, d = Math.max(0.25, t), t0 = a.currentTime + 0.02;
     const s = a.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;
     const f = a.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.2; f.frequency.setValueAtTime(2400, t0); f.frequency.exponentialRampToValueAtTime(420, t0 + d);
-    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.45, t0 + 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(rec ? 0.22 : 0.45, t0 + 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
     s.connect(f); f.connect(g); g.connect(this.master); s.start(t0); s.stop(t0 + d + 0.05);
   }
-  // into the straw: a dull thud, the boss's body, then the shaft quivering (a buzzing tone that dies away)
+  // into the straw: the thwack, the boss's body, then the shaft quivering (a buzzing tone that dies away).
+  // THE LADDER: the inner the ring, the tighter and brighter the hit and the higher the little woodblock
+  // tick on top of it (rings 5-8 climb a pentatonic step each), so you hear the score before you read it.
   thud(ring) {
-    this.noise(0.14, 0.9, 520, 'lowpass'); this.tone(118, 0.16, 'sine', 0.7, 52); this.noise(0.06, 0.4, 2400, 'bandpass', 0, 2);
+    const r = Math.max(1, Math.min(10, ring | 0)), up = (r - 1) / 9;
+    if (this.play('hit', 0.9, 0.92 + up * 0.16)) this.play('body', 0.22 + up * 0.18, 0.95 + up * 0.15);       // (the body is mostly low boom: kept under the thwack so it doesn't pump the compressor)
+    else { this.noise(0.14, 0.9, 520, 'lowpass'); this.tone(118, 0.16, 'sine', 0.7, 52); this.noise(0.06, 0.4, 2400, 'bandpass', 0, 2); }
     this.quiver();
-    if (ring >= 9) this.tone(880, 0.14, 'triangle', 0.12, null, 0.06);
+    if (r >= 5 && r <= 8) { const f = [523.25, 587.33, 659.25, 783.99][r - 5]; this.tone(f, 0.09, 'triangle', 0.1 + (r - 5) * 0.03, null, 0.03); this.tone(f * 2, 0.06, 'sine', 0.04, null, 0.03); }
+  }
+  // a struck bell: a few inharmonic partials, the higher ones dying first
+  bell(f, vol, delay, len) {
+    const P = [[1, 1, 1], [2.0, 0.5, 0.7], [2.76, 0.35, 0.5], [5.4, 0.18, 0.3], [8.9, 0.08, 0.18]], d = len || 1.2;
+    for (const [m, v, l] of P) this.tone(f * m, d * l, 'sine', vol * v, null, delay || 0);
+  }
+  // the streak lifts every gold a whole tone (capped an octave up)
+  _lift(streak) { return Math.pow(2, Math.min(6, Math.max(0, (streak || 1) - 1)) * 2 / 12); }
+  // a 9, just outside the 10: the crowd draws breath - "ooh" (layered from one voice), and a little applause
+  ooh() {
+    if (!this._ok('ooh', 600)) return;
+    if (this.has('ooh')) {
+      [[0.84, 0, 0.32], [0.93, 0.03, 0.3], [1.0, 0.05, 0.28], [1.1, 0.02, 0.22], [0.76, 0.07, 0.2]].forEach(([r, d, v]) => this.play('ooh', v, r, 0.12 + d, 0.03));
+      this.play('clap2', 0.18, 1, 0.75, 0.05);
+    } else { this.tone(392, 0.7, 'sawtooth', 0.04, 330, 0.12); this.tone(466, 0.7, 'sawtooth', 0.03, 392, 0.14); this.cheer(false); }
+  }
+  // a 10: a bright bell, a fifth above it, then the sparkle; climbs with the streak
+  ten(streak) {
+    const k = this._lift(streak);
+    this.bell(1046.5 * k, 0.12, 0.03, 1.1); this.bell(1568 * k, 0.07, 0.11, 0.9);
+    this.tone(2093 * k, 0.12, 'triangle', 0.06, null, 0.19);
+    this.cheer(streak >= 3);
+  }
+  // the X: its own signature - a low boom, the two-note bell call (always the same shape, so you learn it), a
+  // rising sparkle run, and the crowd going up
+  xHit(streak) {
+    const k = this._lift(streak);
+    this.tone(55, 0.6, 'sine', 0.5, 38); this.noise(0.5, 0.18, 300, 'lowpass', 0.02);
+    this.bell(784 * k, 0.14, 0.03, 1.4); this.bell(1568 * k, 0.13, 0.17, 1.6);
+    [2093, 2637, 3136, 4186].forEach((f, i) => this.tone(f * k, 0.16, 'triangle', 0.05, null, 0.3 + i * 0.05));
+    this.cheer(true);
   }
   quiver() {
     if (!this.actx) return;
-    const a = this.actx, t0 = a.currentTime + 0.02, o = a.createOscillator(), am = a.createOscillator(), amg = a.createGain(), g = a.createGain();
+    // the wobble rides its own stage (0..1) before the envelope: added straight onto the envelope's gain it would
+    // outlast the fade and ring at full level for the whole note
+    const a = this.actx, t0 = a.currentTime + 0.02, o = a.createOscillator(), am = a.createOscillator(), amg = a.createGain(), wob = a.createGain(), g = a.createGain();
     o.type = 'triangle'; o.frequency.setValueAtTime(230, t0); o.frequency.exponentialRampToValueAtTime(190, t0 + 0.6);
-    am.frequency.value = 38; amg.gain.value = 0.5; am.connect(amg); amg.connect(g.gain);
-    g.gain.setValueAtTime(0.18, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
-    o.connect(g); g.connect(this.master); o.start(t0); am.start(t0); o.stop(t0 + 0.65); am.stop(t0 + 0.65);
+    am.frequency.value = 38; wob.gain.value = 0.5; amg.gain.value = 0.5; am.connect(amg); amg.connect(wob.gain);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+    o.connect(wob); wob.connect(g); g.connect(this.master); o.start(t0); am.start(t0); o.stop(t0 + 0.65); am.stop(t0 + 0.65);
   }
   miss() { this.noise(0.22, 0.4, 500, 'lowpass'); this.tone(200, 0.24, 'sawtooth', 0.08, 110); }
   // streak: each extra gold in a row lifts the chime a whole tone
@@ -158,7 +237,9 @@ KAR.Audio = class {
   // ROBIN the agent pipes up: two quick bird chirps
   chirp() { this.tone(2400, 0.07, 'sine', 0.05, 3400, 0); this.tone(2600, 0.09, 'sine', 0.05, 3800, 0.1); }
   robin() { this.noise(0.08, 0.5, 3200, 'highpass'); [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => this.tone(f, 0.22, 'square', 0.07, null, 0.06 + i * 0.08)); this.cheer(true); }
-  cheer(big) { this.noise(big ? 1.4 : 0.8, big ? 0.3 : 0.18, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.18, 1200, 'bandpass', 0.1, 0.6); }
+  cheer(big) {
+    if (this.has('clap')) { if (big) { this.play('clap1', 0.5, 1, 0.08, 0.04); this.play('clap2', 0.3, 1.06, 0.2, 0.04); } else this.play('clap2', 0.3, 1, 0.1, 0.05); return; }
+    this.noise(big ? 1.4 : 0.8, big ? 0.3 : 0.18, 2200, 'bandpass', 0, 0.5); this.noise(big ? 1.1 : 0.6, 0.18, 1200, 'bandpass', 0.1, 0.6); }
   groan() { this.noise(0.7, 0.12, 500, 'bandpass', 0, 0.7); this.tone(150, 0.6, 'sawtooth', 0.05, 95); }
   win() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { this.tone(f, 0.3, 'triangle', 0.15, null, i * 0.11); this.tone(f / 2, 0.3, 'sine', 0.08, null, i * 0.11); }); this.cheer(true); }
   // a results star landing: each one a step higher (1, 2, 3)

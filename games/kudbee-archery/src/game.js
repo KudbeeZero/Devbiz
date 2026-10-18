@@ -490,9 +490,9 @@ KAR.Game = class {
     else {
       this.audio.thud(res.ring);
       const nm = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'];
-      if (res.x) { this._banner('X!', '#fff6a8', '#ffb82e', row || 'PERFECT CENTRE', 110); this.audio.gold(streak); this._burst(40 + streak * 8); }
-      else if (res.ring === 10) { this._banner('TEN!', '#fff6a8', '#ffb82e', row || 'gold', 96); this.audio.gold(streak); this._burst(26 + streak * 6); }
-      else if (res.ring === 9) { this._banner('NINE', '#fff6a8', '#ff9a1f', row || 'gold', 84); this.audio.cheer(false); if (streak >= 2) this.audio.gold(streak); }
+      if (res.x) { this._banner('X!', '#fff6a8', '#ffb82e', row || 'PERFECT CENTRE', 110); this.audio.xHit(streak); this._burst(40 + streak * 8); }
+      else if (res.ring === 10) { this._banner('TEN!', '#fff6a8', '#ffb82e', row || 'gold', 96); this.audio.ten(streak); this._burst(26 + streak * 6); }
+      else if (res.ring === 9) { this._banner('NINE', '#fff6a8', '#ff9a1f', row || 'gold', 84); this.audio.ooh(); if (streak >= 2) this.audio.gold(streak); }
       else this._banner(nm[res.ring], res.ring >= 7 ? '#ffd0c8' : '#c4ecff', res.ring >= 7 ? '#e8483a' : '#2f86d8', '', 70);
     }
     // a gold lands with a hit-stop: the world holds for a beat under a white flash (none with reduced motion)

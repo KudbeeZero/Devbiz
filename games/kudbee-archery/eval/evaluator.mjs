@@ -11,7 +11,7 @@ import { createFileStore } from '../../../leaderboard/server/store-file.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), 'out'); mkdirSync(OUT, { recursive: true });
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.png': 'image/png', '.css': 'text/css' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2', '.jpg': 'image/jpeg', '.png': 'image/png', '.css': 'text/css', '.mp3': 'audio/mpeg' };
 // /api/* is the real leaderboard API (leaderboard/shared, the same code the Worker runs) on a throwaway file store
 const LBDIR = mkdtempSync(join(tmpdir(), 'kar-lb-')), lb = createFileStore(join(LBDIR, 'lb.json'));
 const server = http.createServer(async (q, s) => {
@@ -710,6 +710,52 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await tctx.close();
 }
 
+// --- SOUND: the recorded core loop (one CC0 sprite) and a score you can hear ---
+{
+  const sc = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const sp = await sc.newPage(); sp.on('pageerror', e => errors.push(e.message));
+  await sp.goto(URL); await sp.waitForFunction(() => window.KARGame);
+  await sp.tap('canvas', { position: { x: 30, y: 30 } });
+  const loaded = await sp.waitForFunction(() => KARGame.audio.sfx || KARGame.audio.sfxFailed, null, { timeout: 10000 }).then(() => sp.evaluate(() => !!KARGame.audio.sfx), () => false);
+  // the sprite decodes, and every clip in the map starts on its sound with silence before and after it
+  const al = loaded && await sp.evaluate(() => {
+    const B = KARGame.audio.sfx, sr = B.sampleRate, d = B.getChannelData(0), bad = [];
+    const pk = (a, z) => { let m = 0; for (let i = Math.max(0, a * sr | 0); i < Math.min(d.length, z * sr | 0); i++) m = Math.max(m, Math.abs(d[i])); return m; };
+    const C = KAR.SFX.clips, names = Object.keys(C);
+    for (const k of names) { const [at, len] = C[k]; if (at + len > B.duration + 0.01 || pk(at - 0.2, at - 0.02) > 0.01 || pk(at + len + 0.03, at + len + 0.2) > 0.01 || pk(at, at + 0.06) < 0.02) bad.push(k); }
+    const kinds = ['bow', 'swish', 'hit', 'body', 'creak', 'ooh', 'clap'].filter(n => !C[n + '1']);
+    return { n: names.length, dur: B.duration, bad, kinds };
+  });
+  rec('sfx-sprite', loaded && al.n >= 14 && !al.bad.length && !al.kinds.length,
+    `the recorded sprite loads and decodes (${al && al.dur.toFixed(1)} s, ${al && al.n} clips: bow, swish, hit, body, creak, ooh, clap); every clip sits on its sound with silence either side${al && al.bad.length ? ' - off: ' + al.bad.join(', ') : ''}`);
+  // the ladder: real shots on FIRST ARROWS (calm, still) aimed to land a 6, a 9, a 10 and an X; listen after each
+  await sp.evaluate(() => { const g = KARGame, a = g.audio, D = KAR.Store.data; a.setMuted(false); a.stopMusic(); a.setWind = () => {}; if (a.windBed) a.windBed.g.gain.value = 0;
+    D.tut = 15; D.mode = 5; D.tourLv = 0; g.startMatch(); g.hintT = 0;
+    const an = a.actx.createAnalyser(); an.fftSize = 2048; a.comp.connect(an);
+    window.__rms = () => { const v = new Float32Array(2048); an.getFloatTimeDomainData(v); let s = 0; for (const x of v) s += x * x; return Math.sqrt(s / v.length); };
+    window.__calls = []; for (const k of ['thud', 'ooh', 'ten', 'xHit', 'play', 'gold']) { const f = a[k].bind(a); a[k] = (...x) => { const r = f(...x); window.__calls.push(k === 'play' ? 'play:' + x[0] + ':' + !!r : k); return r; }; } });
+  const lad = [];
+  for (const [want, dy] of [['6', 0.09], ['9', 0.03], ['10', 0.015], ['X', 0.003]]) {
+    await sp.waitForFunction(() => KARGame.bp === 'ready' && KARGame.screen === 'play', null, { timeout: 15000 });
+    await sp.waitForTimeout(700);                                                   // let the last shot's tail die away
+    const r = await sp.evaluate(dy => { window.__calls = []; const g = KARGame, h = KAR.Bot.hold(g.match, KAR.CFG.FACE_Y + dy, g._kit(0)); g.aimX = h.x; g.aimY = h.y; g.holdT = 0; g.sway = { x: 0, y: 0 }; g.drawing = true; g.draw = 1; g._loose(); const f = g.flight.res; return f.x ? 'X' : String(f.ring); }, dy);
+    await sp.waitForFunction(() => KARGame.flight && KARGame.flight.done, null, { timeout: 15000 });
+    let e = 0; for (let i = 0; i < 30; i++) { await sp.waitForTimeout(40); e += await sp.evaluate(() => window.__rms()); }
+    lad.push({ want, got: r, e, calls: await sp.evaluate(() => window.__calls.slice()) });
+  }
+  const L = Object.fromEntries(lad.map(x => [x.want, x])), has = (w, c) => L[w].calls.includes(c);
+  const ladOk = lad.every(x => x.want === x.got && has(x.want, 'thud') && has(x.want, 'play:hit:true')) && has('9', 'ooh') && has('10', 'ten') && has('X', 'xHit') && !has('6', 'ooh') && !has('6', 'ten')
+    && L.X.e > L['10'].e && L['10'].e > L['6'].e && L['9'].e > L['6'].e;
+  rec('sound-ladder', ladOk, `real shots land ${lad.map(x => x.got).join(' / ')}: each a recorded thwack; the 9 draws the crowd's "ooh", the 10 its bell, the X its own call; heard louder up the ladder (energy over 1.2 s: 6 ${L['6'].e.toFixed(1)}, 9 ${L['9'].e.toFixed(1)}, 10 ${L['10'].e.toFixed(1)}, X ${L.X.e.toFixed(1)})`);
+  // the release and the flight are recorded too, the gold streak climbs, and nothing is lost when the sprite can't load
+  const rel = await sp.evaluate(() => { window.__calls = []; const a = KARGame.audio; a.loose(); a.fly(0.4); a.drawStart(); a.drawStop(); return window.__calls.slice(); });
+  const lift = await sp.evaluate(() => { const a = KARGame.audio; return [1, 2, 3, 4].map(n => a._lift(n)); });
+  const fb = await sp.evaluate(async () => { const a = KARGame.audio, keep = a.sfx; a.sfx = null; a.last = {}; const r = []; for (const f of [() => a.loose(), () => a.thud(8), () => a.ooh(), () => a.xHit(1)]) { await new Promise(z => setTimeout(z, 500)); f(); let m = 0; for (let i = 0; i < 6; i++) { await new Promise(z => setTimeout(z, 30)); m = Math.max(m, window.__rms()); } r.push(m); } a.sfx = keep; return r; });
+  rec('sound-recorded-loop', ['play:bow:true', 'play:swish:true', 'play:creak:true'].every(c => rel.includes(c)) && lift.every((k, i) => !i || k > lift[i - 1]) && fb.every(v => v > 0.01),
+    `the release, the swish and the draw creak play recorded takes; a gold streak lifts the chime (${lift.map(k => k.toFixed(2)).join(' < ')}); with no sprite the synth stands in (rms ${fb.map(v => v.toFixed(3)).join(' / ')})`);
+  await sc.close();
+}
+
 // --- the app: plays offline, offers to install, helps when you're stuck, and feels like it ---
 // OFFLINE: the service worker keeps the game; with the network gone a reload still opens it and a level starts
 {
@@ -722,9 +768,10 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   const res = await op.reload().catch(() => null);
   const up = await op.waitForFunction(() => window.KARGame && document.fonts.check('24px "Lilita One"'), null, { timeout: 8000 }).then(() => true, () => false);
   const lv = up && await op.evaluate(async () => { const D = KAR.Store.data; D.tut = 15; D.mode = 5; D.tourLv = 0; KARGame.startMatch(); await new Promise(r => setTimeout(r, 300)); return { scr: KARGame.screen, lv: KARGame.match.lv, on: navigator.onLine, bg: [...document.images].length }; });
+  const snd = up && await op.evaluate(async () => { const a = KARGame.audio; a.ensure(); for (let i = 0; i < 50 && !a.sfx && !a.sfxFailed; i++) await new Promise(r => setTimeout(r, 100)); return !!a.sfx; });
   await op.screenshot({ path: `${OUT}/offline-play.png` });
-  rec('offline-play', ctl && op.__kept >= 20 && !!res && res.fromServiceWorker() && up && lv.scr === 'play' && lv.lv === 0 && lv.on === false,
-    `the service worker keeps ${op.__kept} files; offline (navigator.onLine ${lv && lv.on}) a reload is served by it (${res && res.fromServiceWorker()}), the font loads and LEVEL 1 starts (${lv && lv.scr})`);
+  rec('offline-play', ctl && op.__kept >= 20 && !!res && res.fromServiceWorker() && up && lv.scr === 'play' && lv.lv === 0 && lv.on === false && snd,
+    `the service worker keeps ${op.__kept} files; offline (navigator.onLine ${lv && lv.on}) a reload is served by it (${res && res.fromServiceWorker()}), the font loads, LEVEL 1 starts (${lv && lv.scr}) and the recorded sounds still load (${snd})`);
   await oc.close();
 }
 // INSTALL: phones, from the second visit. Android: the browser's own prompt, kept and fired from the menu's button.
