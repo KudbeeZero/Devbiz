@@ -121,6 +121,11 @@
     const scale = r.height / VIEW_H;
     this._minFont = scale > 0 && scale < 1 ? 11 / scale : 0;
     if (w === this.viewW) return;
+    // The board recentres; keep darts already in it (and the aim) on it.
+    const dx = (w - this.viewW) / 2;
+    (this.stuckDarts || []).forEach((d) => { d.x += dx; });
+    (this.bounceDarts || []).forEach((d) => { d.x += dx; });
+    if (this.dart) this.dart.aimX += dx;
     this.viewW = w;
     this.canvas.width = w; this.canvas.height = VIEW_H;
     this.camera.viewW = w;
@@ -376,16 +381,45 @@
     if (lvl.won && lvl.next != null) items.push({ id: 'next', label: 'NEXT LEVEL  ›', group: 'primary' });
     items.push({ id: 'retry', label: '↻  RETRY', group: 'btn' });
     items.push({ id: 'levels', label: 'LEVELS', group: 'nav' });
+    items.push({ id: 'share', label: 'SHARE', group: 'share' });
     const w = 210, gap = 16, cx = this.viewW / 2, y = VIEW_H / 2 + 112, h = 54;
     let x = cx - (items.length * w + (items.length - 1) * gap) / 2;
     items.forEach((it) => { it.x = x; it.y = y; it.w = w; it.h = h; x += w + gap; });
     return items;
   };
 
+  // The game's public link: the page's canonical URL, so a share from a
+  // preview deploy still points at the live game and unfurls with its card.
+  Game.prototype._shareLink = function () {
+    const c = document.querySelector('link[rel=canonical]');
+    return (c && c.href) || location.origin + location.pathname;
+  };
+
+  // Phones open the share sheet; elsewhere the line and link are copied.
+  Game.prototype._share = function () {
+    const r = this.matchResult, lvl = r && r.level;
+    if (!lvl) return;
+    const L = KD.Campaign.LEVELS[lvl.idx];
+    const txt = lvl.won
+      ? 'I cleared Level ' + (lvl.idx + 1) + ' \u00b7 ' + L.name + ' ' + '\u2605'.repeat(lvl.stars) + '\u2606'.repeat(3 - lvl.stars) + ' in ' + r.darts + ' darts in Kudbee Darts. Can you beat it?'
+      : L.name + ' beat me on Level ' + (lvl.idx + 1) + ' in Kudbee Darts. Can you take the leg?';
+    const url = this._shareLink();
+    this.shareText = txt + ' ' + url;
+    const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    try {
+      if (navigator.share && coarse) navigator.share({ title: 'Kudbee Darts', text: txt, url: url }).catch(() => {});
+      else {
+        if (navigator.clipboard) navigator.clipboard.writeText(this.shareText).catch(() => {});
+        this.toasts.push({ text: 'COPIED', sub: 'Paste it to a friend', life: 2.2 });
+      }
+    } catch (e) { /* no share sheet or clipboard */ }
+  };
+
   Game.prototype._onMatchButton = function (id) {
     const lvl = this.matchResult.level;
     if (id === 'next') { this.levelIdx = lvl.next; this._startMatch(); }
     else if (id === 'retry') this._startMatch();
+    else if (id === 'share') this._share();
     else if (id === 'levels') {
       this.mapWorld = KD.Campaign.LEVELS[this.levelIdx].world;
       this.state = 'levels';
@@ -872,8 +906,12 @@
     if (backLink) backLink.style.display = this.state === 'menu' ? '' : 'none';
     ctx.clearRect(0, 0, this.viewW, VIEW_H);
 
-    // Backdrop (Firefly image if provided, else procedural neon stage).
-    if (this.sprites.has('bg.stage')) {
+    // Backdrop: a campaign match plays in its world's scenery; otherwise the
+    // Firefly image if provided, else the procedural neon stage.
+    const st = this.state;
+    if (this.levelIdx != null && (st === 'play' || st === 'turnEnd' || st === 'matchOver' || st === 'pause')) {
+      this._drawWorldScene(ctx, KD.Campaign.WORLDS[KD.Campaign.LEVELS[this.levelIdx].world], this.viewW * 0.16, 262);
+    } else if (this.sprites.has('bg.stage')) {
       const img = this.sprites.images['bg.stage'];
       ctx.drawImage(img, 0, 0, this.viewW, VIEW_H);
       ctx.fillStyle = 'rgba(4,6,14,0.45)';
@@ -1427,9 +1465,11 @@
   };
   const STARS_AT = [[70, 80], [190, 150], [330, 60], [520, 118], [640, 52], [880, 190], [260, 210], [600, 200], [930, 60], [430, 40]];
 
-  Game.prototype._drawLevels = function (ctx) {
-    const world = KD.Campaign.WORLDS[this.mapWorld], sky = SKY[world.sky], hills = HILLS[world.sky];
-    const t = this.time, cx = this.viewW / 2;
+  // A world's cartoon scenery: sky, twinkling stars, a sun or moon with
+  // turning rays, drifting clouds, outlined hills and the world's prop. The
+  // level map and the campaign's own matches both paint it.
+  Game.prototype._drawWorldScene = function (ctx, world, sunX, sy) {
+    const sky = SKY[world.sky], hills = HILLS[world.sky], t = this.time;
     ctx.save();
     // Night sky with a bold bottom-to-top gradient.
     const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
@@ -1443,7 +1483,7 @@
     });
     ctx.globalAlpha = 1;
     // Sun / moon with slowly turning rays, outlined like a cartoon.
-    const sunX = this.viewW - 150, sunY = 118, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : '#fff2b3';
+    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : '#fff2b3';
     ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
     ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
     for (let k = 0; k < 12; k++) {
@@ -1470,6 +1510,14 @@
       ctx.fillStyle = hills[li]; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
     });
     this._worldProp(ctx, world.sky, this.viewW - 118, 500);
+    ctx.restore();
+  };
+
+  Game.prototype._drawLevels = function (ctx) {
+    const world = KD.Campaign.WORLDS[this.mapWorld];
+    const t = this.time, cx = this.viewW / 2;
+    ctx.save();
+    this._drawWorldScene(ctx, world, this.viewW - 150, 118);
     // Header.
     ctx.textAlign = 'center';
     ctx.shadowColor = '#c46bff'; ctx.shadowBlur = 22;
@@ -1643,7 +1691,7 @@
     ctx.fillText(r.darts + ' darts  ·  par ' + lvl.par + '  ·  ' + need, cx, cy + 38);
     const btns = this._matchButtons();
     btns.forEach((b) => {
-      const col = b.group === 'primary' ? C.green : b.group === 'btn' ? C.cyan : C.violet;
+      const col = b.group === 'primary' ? C.green : b.group === 'btn' ? C.cyan : b.group === 'share' ? C.gold : C.violet;
       ctx.fillStyle = 'rgba(10,6,24,0.85)'; this._roundRect(ctx, b.x, b.y, b.w, b.h, 14); ctx.fill();
       ctx.lineWidth = 3; ctx.strokeStyle = col; this._roundRect(ctx, b.x, b.y, b.w, b.h, 14); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
@@ -1888,7 +1936,9 @@
     ctx.shadowBlur = 0;
 
     const cx = b.x + b.w / 2;
-    // Mini preview.
+    // Mini preview, clipped to the chip so it never spills onto its neighbours.
+    ctx.save();
+    this._roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, r); ctx.clip();
     if (b.group === 'skin') {
       ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
       this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
@@ -1901,6 +1951,7 @@
       this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
       ctx.restore();
     }
+    ctx.restore();
     // Name.
     ctx.textAlign = 'center'; ctx.fillStyle = b.sel ? '#fff' : C.text;
     ctx.font = 'bold 12px "Space Grotesk", sans-serif';
@@ -1935,11 +1986,13 @@
     const skin = KD.Sprites.SKINS[d.skins.equipped];
     const bob = this.reduceMotion ? 0 : Math.sin(this.time * 1.6) * 6;
     ctx.save();
-    ctx.translate(this.viewW / 2, 180 + bob);
-    ctx.rotate(-Math.PI * 0.12 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.05));
+    // The dart is drawn back from its tip, so the tip sits right of centre and
+    // the whole dart fits between the subtitle and the BARREL row.
+    ctx.translate(this.viewW / 2 + 150, 178 + bob);
+    ctx.rotate(-Math.PI * 0.06 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.04));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 420, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);
     ctx.restore();
 
     // Combined stats panel (bottom-right of preview).
