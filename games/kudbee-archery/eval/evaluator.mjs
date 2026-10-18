@@ -271,7 +271,7 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await page.screenshot({ path: `${OUT}/think-map.png` });
   await click('L24'); await page.waitForTimeout(150);
   const lv = await G(() => ({ lv: KARGame.match.lv, boxes: KAR.Render.boxes && KAR.Render.boxes.length, hint: KARGame.hint }));
-  const wood = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(0.6, 1.0, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  const wood = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(0.6, 1.0, g.match.dist - KAR.BOXZ), px = []; for (const dx of [-24, 0, 24]) for (const dy of [-16, 0, 16]) { const d = g.ctx.getImageData(Math.round((q.x + dx - R.XL) * g.res), Math.round((q.y + dy) * g.res), 1, 1).data; px.push([d[0], d[1], d[2]]); } const ok = px.filter(p => p[0] > p[2] + 60); return ok.length >= 6 ? ok[0] : px.find(p => !(p[0] > p[2] + 60)); });   // 3x3 vote: a wind leaf can cross one pixel
 
   await waitFor(() => KARGame.bp === 'ready', 8000);
   const b1 = await page.evaluate(([x, y]) => { const g = KARGame; g.match.wind = 0; g.match._gust = () => { g.match.wind = 0; }; g.drawing = true; g.draw = 1; g.aimX = x; g.aimY = y; g.sway = { x: 0, y: 0 }; g._loose(); const r = g.flight.res; return { blocked: r.blocked, ring: r.ring }; }, [0.5, 1.0]);
@@ -319,16 +319,17 @@ rec('tour-venues', venues.join() === '0:slide,1:swing,2:-,3:-,4:slide' && errors
   await page.screenshot({ path: `${OUT}/algorand-map.png` });
   await clickWhen('wprev'); await page.waitForFunction(() => KARGame.worldView === 6 && KAR.UI.buttons.some(b => b.id === 'L39' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
   await click('L39'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 39, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
-  const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, x0: KARGame.match.offAt(0).x, x1: KARGame.match.offAt(1.4).x }));
+  const ob = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, orbit: KAR.Render.orbitA, xs: Array.from({ length: 12 }, (_, i) => KARGame.match.offAt(i * 0.5).x) }));   // a whole orbit (~5.7 s): two samples can straddle the end of the loop (random phase)
   const sky = await G(() => { const g = KARGame, R = KAR.Render, d = g.ctx.getImageData(Math.round((30 - R.XL) * g.res), Math.round(12 * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
   await page.screenshot({ path: `${OUT}/solana-orbit.png` });
   await G(() => { KARGame.activate('levels'); KARGame.worldView = 7; }); await page.waitForFunction(() => KARGame.screen === 'levels' && KAR.UI.buttons.some(b => b.id === 'L43' && !b.disabled), null, { timeout: 5000 }).catch(() => {});
   await click('L43'); await page.waitForFunction(() => KARGame.screen === 'play' && KARGame.match.lv === 43, null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
   const fin = await G(() => ({ lv: KARGame.match.lv, venue: KAR.Render.venue, boxes: KAR.Render.boxes && KAR.Render.boxes.length }));
-  const ice = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), d = g.ctx.getImageData(Math.round((q.x - R.XL) * g.res), Math.round(q.y * g.res), 1, 1).data; return [d[0], d[1], d[2]]; });
+  // a 3x3 patch across the crate, majority vote: a drifting wind leaf can cross any single pixel
+  const ice = await G(() => { const g = KARGame, R = KAR.Render, q = R.proj(1.0, 0.6, g.match.dist - KAR.BOXZ), px = []; for (const dx of [-24, 0, 24]) for (const dy of [-16, 0, 16]) { const d = g.ctx.getImageData(Math.round((q.x + dx - R.XL) * g.res), Math.round((q.y + dy) * g.res), 1, 1).data; px.push([d[0], d[1], d[2]]); } const ok = px.filter(p => p[2] >= p[0]); return ok.length >= 6 ? ok[0] : px.find(p => p[2] < p[0]); });
   await page.screenshot({ path: `${OUT}/algorand-finality.png` });
-  rec('crypto-worlds', shut7 && open7 === 'L36' && page8 && ob.lv === 39 && ob.venue === 6 && ob.orbit > 0 && Math.abs(ob.x1 - ob.x0) > 0.2 && sky[2] > sky[1] && fin.lv === 43 && fin.venue === 7 && fin.boxes >= 4 && ice[2] >= ice[0] && errors.length === 0,
-    `SOLANA BEACH opens off the BITCOIN CITY boss (${open7}), the map pages to 8/8 with ALGORAND PEAKS shut; ORBIT paints venue ${ob.venue} (sky rgb ${sky}) with the boss circling its hub; FINALITY paints venue ${fin.venue} with ${fin.boxes} ice blocks (rgb ${ice})`);
+  rec('crypto-worlds', shut7 && open7 === 'L36' && page8 && ob.lv === 39 && ob.venue === 6 && ob.orbit > 0 && Math.max(...ob.xs) - Math.min(...ob.xs) > 0.2 && sky[2] > sky[1] && fin.lv === 43 && fin.venue === 7 && fin.boxes >= 4 && ice[2] >= ice[0] && errors.length === 0,
+    `SOLANA BEACH opens off the BITCOIN CITY boss (${open7}), the map pages to 8/8 with ALGORAND PEAKS shut; ORBIT paints venue ${ob.venue} (sky rgb ${sky}) with the boss circling its hub; FINALITY paints venue ${fin.venue} with ${fin.boxes} ice blocks (rgb ${ice}) [shut7 ${shut7} page8 ${page8} lv ${ob.lv} orbit ${ob.orbit} dx ${(Math.max(...ob.xs) - Math.min(...ob.xs)).toFixed(2)} fin ${fin.lv} errors ${errors.length}]`);
 }
 // THE CUP: pick it from the menu, START CUP by a real click; the HUD names your rival; the tie's results card shows the
 // bracket and NEXT ROUND (a real click goes on to the semi-final at the next distance); a cup in progress survives a
