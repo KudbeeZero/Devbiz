@@ -69,8 +69,11 @@
   Game.prototype._leaveReward = function (to) {
     const bonus = this.rw.src.bonus;
     if (!bonus) { this.matchResult.rewardSeen = true; this.matchOverTimer = 0; }
+    const back = this.rw && this.rw.src.back;
     this.rw = null;
-    if (to === 'upgrade' || bonus) { this.wsPreview = null; this.state = 'workshop'; } else this.state = 'matchOver';
+    if (to === 'upgrade' || (bonus && back !== 'missions')) { this.wsPreview = null; this.state = 'workshop'; }
+    else if (bonus) this.state = 'missions';
+    else this.state = 'matchOver';
   };
 
   Game.prototype._updateReward = function (dt) {
@@ -140,7 +143,7 @@
     ctx.font = 'bold 50px ' + FONT;
     ctx.shadowColor = won ? C.gold : C.red; ctx.shadowBlur = 22;
     ctx.fillStyle = won ? '#fff' : '#ffd6da';
-    ctx.fillText(rw.src.bonus ? 'BONUS CHEST' : won ? 'VICTORY!' : 'DEFEAT', cx, 72);
+    ctx.fillText(rw.src.bonus ? (rw.src.title || 'BONUS CHEST') : won ? 'VICTORY!' : 'DEFEAT', cx, 72);
     ctx.restore();
 
     this._drawLeagueStrip(ctx, rw, r);

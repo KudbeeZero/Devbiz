@@ -216,6 +216,7 @@
     else if (this.state === 'pause') this._updatePause(dt);
     else if (this.state === 'workshop') this._updateWorkshop(dt);
     else if (this.state === 'leaderboard') this._updateLeaderboard(dt);
+    else if (this.state === 'missions') this._updateMissions(dt);
 
     // Board lunge spring (comes in fast, snaps back).
     if (this._lungeT > 0) {
@@ -308,8 +309,9 @@
     // Board look: neon (default) or a classic pub board.
     btns.push({ id: 'theme', label: 'BOARD: ' + (this.board.themeName === 'pub' ? 'PUB' : 'NEON'), x: cx + 280, y: 382, w: 170, h: 44, sel: false, group: 'theme' });
     // Secondary nav: the Dart Workshop and the League Leaderboard.
-    btns.push({ id: 'nav:workshop', label: '🎯  DART WORKSHOP', x: cx - 264, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
-    btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: cx + 10, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:workshop', label: '🎯  DART WORKSHOP', x: cx - 389, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:missions', label: '📅  MISSIONS', x: cx - 125, y: 456, w: 250, h: 54, sel: false, group: 'nav' });
+    btns.push({ id: 'nav:leaderboard', label: '🏆  LEADERBOARD', x: cx + 135, y: 456, w: 254, h: 54, sel: false, group: 'nav' });
     return btns;
   };
 
@@ -454,7 +456,7 @@
         else if (b.group === 'theme') this._toggleBoardTheme();
         else if (b.group === 'nav') {
           const dest = b.id.split(':')[1];
-          this.state = dest;        // 'workshop' | 'leaderboard'
+          this.state = dest;        // 'workshop' | 'missions' | 'leaderboard'
           if (dest === 'leaderboard' && this._openLeaderboard) this._openLeaderboard();
         }
         return;
@@ -604,6 +606,8 @@
       this._groupStrength = Math.min(0.55, this._groupStrength + 0.18);
     }
     this.dartsThisTurn++;
+    // Daily missions count your darts in matches against the AI.
+    if (this.current === 0 && this._missionsOn && this._missionsOn()) this._mission('dart', res);
 
     // Floating score pop + scoring explosion (density scales with the score).
     // A one-dart Cricket close (0 -> 3 marks on a fresh number, e.g. a clean
@@ -742,6 +746,7 @@
           this._slowmoHoldT = 0.35;
         }
       } else if (ts >= 100) this._say(ts + '!', 1.3);
+      if (ts >= 100 && this.current === 0 && this._missionsOn && this._missionsOn()) this._mission('ton', 1);
     } else {
       const ts = cur.scoreState.turnScore;
       if (ts >= 60) this._say('+' + ts, 1.2, C.green);
@@ -830,6 +835,11 @@
       const chest = prog.rollChest(won);
       prog.applyChest(chest);
       reward = { trophies: trophies, chest: chest, matchCoins: won ? 15 : 0 };
+      if (won && this._mission) {
+        this._mission('win', 1);
+        if (this.mode.id === 'x01') this._mission('checkout', 1);
+        if (lvl && lvl.stars) this._mission('stars', lvl.stars);
+      }
     }
     this.matchResult = {
       winner: winner.name, won: won, xp: xp,
@@ -967,6 +977,7 @@
     if (this.state === 'workshop') { this._drawWorkshop(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'reward') { this._drawReward(ctx); this._drawToasts(ctx); return; }
     if (this.state === 'leaderboard') { this._drawLeaderboard(ctx); this._drawToasts(ctx); return; }
+    if (this.state === 'missions') { this._drawMissions(ctx); this._drawToasts(ctx); return; }
 
     // World (board + darts + fx) under the camera transform. The board-lunge
     // scale is applied around the board centre so it "breathes" on each throw.

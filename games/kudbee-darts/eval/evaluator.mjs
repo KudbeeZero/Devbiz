@@ -644,6 +644,59 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   rec('tokens-leaderboard', ok, `leagues=${tk.leagues} promo💎=${tk.promoTokens} once=${tk.noRepeat} chest💎=${tk.chestTokens} fill=${tk.short}->${tk.filled} bonus=${tk.bonusPoor}/${tk.bonus}->${tk.bonusBack} board sorted=${tk.sorted} ai-labelled=${tk.aiLabelled} my-league=${tk.myLeague} find-me=${tk.findMe}`);
 }
 
+// ---------------------------------------------------------------- daily missions
+// Three missions a day (one per kind of event, same three for everyone on a
+// date), counted from your darts vs the AI (not pass-and-play); CLAIM pays
+// coins + 💎; all three claimed opens the Daily Chest once; a new day rolls over.
+{
+  const ms = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, P = window.KD.Progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    const evOf = (id) => P.MISSIONS.find((m) => m.id === id).ev;
+    prog._dayOverride = 20261018; prog.data.daily = null;
+    const a = prog.daily().missions.map((m) => m.id);
+    prog.data.daily = null; const b = prog.daily().missions.map((m) => m.id);
+    out.sameDay = a.join() === b.join() && new Set(a.map(evOf)).size === 3;
+    prog.data.daily.missions = [{ id: 'treble6', have: 0, claimed: false }, { id: 'win1', have: 0, claimed: false }, { id: 'bull3', have: 0, claimed: false }];
+    prog.data.coins = 0; prog.data.tokens = 0;
+    // Pass-and-play doesn't count.
+    g.levelIdx = null; g.selOpp = 'hotseat'; g._startMatch(); out.hotseatOff = !g._missionsOn();
+    // Against the AI: six trebles complete the first mission (with a toast).
+    g.selOpp = 'Pro'; g._startMatch(); g.toasts.length = 0;
+    for (let i = 0; i < 6; i++) g._mission('dart', { ring: 'treble', value: 19 });
+    out.treble = prog.daily().missions[0].have + '/' + g.toasts.some((t) => t.text === 'MISSION COMPLETE!');
+    out.early = prog.claimMission(1);                                  // win1 not done yet
+    g._matchWin(g.players[0]);
+    out.win = prog.daily().missions[1].have;
+    out.claimable = prog.dailyClaimable();
+    const c0 = prog.data.coins, t0 = prog.data.tokens;                // the match itself paid coins + a chest
+    out.claim = prog.claimMission(0) + '/' + prog.claimMission(0) + '/' + (prog.data.coins - c0) + '/' + (prog.data.tokens - t0);   // claimed/already/40/3
+    prog.claimMission(1);
+    out.chestShut = prog.dailyChestReady();
+    for (let i = 0; i < 3; i++) g._mission('dart', { ring: 'inbull', value: 25 });
+    prog.claimMission(2);
+    // The chest from the missions screen plays the chest screen and comes back.
+    g.state = 'missions';
+    const cb = g._missionLayout().find((x) => x.id === 'chest');
+    g.input.pointer.x = cb.bx + 5; g.input.pointer.y = cb.by + 5; g.input.pointer.justDown = true; g._updateMissions(); g.input.pointer.justDown = false;
+    out.chestOpen = g.state + '/' + (g.rw && g.rw.src.title);
+    g._updateReward(0.5); g.input.pointer.justDown = true; g._updateReward(0); g._updateReward(0); g.input.pointer.justDown = false;
+    const cont = g._rewardButtons().find((x) => x.id === 'continue');
+    g.input.pointer.x = cont.x + 4; g.input.pointer.y = cont.y + 4; g.input.pointer.justDown = true; g._updateReward(0); g.input.pointer.justDown = false;
+    out.back = g.state;
+    out.once = prog.claimDailyChest() === null;
+    prog._dayOverride = 20261019;
+    out.rollover = prog.daily().day + '/' + prog.daily().missions.every((m) => !m.claimed && m.have === 0) + '/' + prog.daily().chest;
+    window.__step(2);
+    delete prog._dayOverride; prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = ms.sameDay && ms.hotseatOff && ms.treble === '6/true' && ms.early === 'notyet' && ms.win === 1 && ms.claimable
+    && ms.claim === 'claimed/already/40/3' && ms.chestShut === false && ms.chestOpen === 'reward/DAILY CHEST' && ms.back === 'missions'
+    && ms.once && ms.rollover === '20261019/true/false';
+  rec('daily-missions', ok, `same-day=${ms.sameDay} hotseat-off=${ms.hotseatOff} treble=${ms.treble} early=${ms.early} win=${ms.win} claim=${ms.claim} chest=${ms.chestShut}->${ms.chestOpen}->${ms.back} once=${ms.once} rollover=${ms.rollover}`);
+}
+
 // ---------------------------------------------------------------- curl lead
 // The curl starts bending 30ms before release (already turning as it leaves
 // the hand) but is rescaled so the landing, and so the score, is unchanged.

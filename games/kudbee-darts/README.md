@@ -93,6 +93,16 @@ the online leaderboard server is configured (`KD_LB_CONFIG.API_BASE`) the board 
 field of **AI rivals, labelled AI**; once it is live, matches post `trophies` and the board
 shows real players (`src/league-board.js`).
 
+## Daily missions
+
+**📅 MISSIONS** on the menu (a red dot means something is ready to collect) holds three
+missions a day, e.g. *Hit 6 trebles*, *Win 2 matches against the AI*, *Score 100+ in a
+turn twice*. Everyone gets the same three on the same date, at most one per kind of
+event, and they roll over at local midnight. Your darts count in matches against the AI
+and in Darts Birds (not pass-and-play), and a toast tells you when one completes.
+**CLAIM** pays its coins and 💎; claiming all three opens the free **DAILY CHEST** (your
+league's chest) on the chest screen. The pool and rules live in `src/missions.js`.
+
 ## Controls
 
 | Action            | Mouse / Touch                              | Keyboard |
