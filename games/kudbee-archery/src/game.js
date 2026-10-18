@@ -14,6 +14,8 @@ KAR.Game = class {
     this.ios = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     this.standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches));
     this.quality = 1; this.slow = 0; this.slowN = 0; this._fit();
+    // prefers-reduced-motion: no screen shake, a few confetti instead of a storm, still chips (followed live)
+    try { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); this.calm = mq.matches; if (mq.addEventListener) mq.addEventListener('change', e => { this.calm = e.matches; }); } catch (e) { this.calm = false; }
     KAR.Store.load();
     // a save from before TROPHIES already earned some: count them as announced, quietly (no flood of cards on the first arrow)
     if (!Object.keys(KAR.Store.data.ach).length && KAR.achNew(KAR.Store.data).length) KAR.Store.save();
@@ -63,7 +65,8 @@ KAR.Game = class {
     this.match = D.mode === 5 ? new KAR.Stage({ level: D.tourLv, seed }) : D.mode === 2 ? new KAR.Trick({ seed }) : D.mode === 4 ? new KAR.Trick({ seed: KAR.Daily.seed(day), daily: day })
       : D.mode === 3 ? new KAR.Swing({ seed }) : new KAR.Match({ mode: D.mode === 1 ? 'duel' : 'range', dist: KAR.locked(D.dist, D) ? 2 : D.dist, level: D.level, seed });
     this.shared = -9; this.unlocked = false; this.sideOpen = undefined; this.tourDone = false;
-    this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = [];
+    this.trickShown = 0; this.trickCombo = 0; this.relT = -9; this.agentRound = []; this.starGemsWon = 0;
+    this.introT = this.time; this.windT = -9; this.lastBase = this.match.baseWind;      // the level card; the wind-shift call
     if (this.canFull() && !this.fsLeft) this.goFull(true);
     this.wake(true);
     this.screen = 'play'; this.particles.length = 0; this.pops.length = 0; this.banner = null; this.newBest = false;
@@ -89,6 +92,14 @@ KAR.Game = class {
     if (m.shooter === 1) this.cpu = { t: 0, stage: 'think', plan: null };
     this.drama = this._drama();
     this.coach = this._coach();
+    // a new end re-rolls the wind: say so (louder when it has switched sides) and flash the gauge
+    if (m.arrowNo === 0 && m.endNo > 0 && m.mode !== 'trick' && !m.over) {
+      const W = KAR.CFG.WIND[m.distIdx] || 3, was = this.lastBase || 0, now = m.baseWind, flip = Math.sign(was) !== Math.sign(now) && Math.abs(now) > 0.25 * W && Math.abs(was) > 0.25 * W;
+      const how = Math.abs(now) > Math.abs(was) + 0.3 * W ? 'STRONGER' : Math.abs(now) < Math.abs(was) - 0.3 * W ? 'LIGHTER' : 'STEADY';
+      this.hint = 'END ' + (m.endNo + 1) + '  \u00b7  ' + (flip ? 'THE WIND HAS SWITCHED SIDES!' : 'NEW WIND: ' + Math.abs(m.wind).toFixed(1) + ' ' + (now < 0 ? '\u2190' : '\u2192') + '  ' + how); this.hintT = 2.6;
+      this.windT = this.time; this.windFlip = flip;
+    }
+    this.lastBase = m.baseWind;
   }
 
   // The first-shot tutorial, one card at a time on levels 1 and 2 (each shown once; D.tut keeps a bit per tip):
@@ -183,6 +194,7 @@ KAR.Game = class {
     else if (id === 'pause') this.togglePause();
     else if (id === 'resume') this.screen = 'play';
     else if (id === 'full') { const on = !this.isFull(); this.fsLeft = !on; this.goFull(on); }
+    else if (id === 'aim') { D.aimSpeed = (D.aimSpeed + 1) % KAR.CFG.TOUCH_GAINS.length; KAR.Store.save(); }
     else if (id === 'buzz') { D.haptics = !D.haptics; KAR.Store.save(); this.buzz(20); }
     else if (id === 'menu') { this.wake(false); this.setScreen('menu'); this.bp = 'idle'; this.zoomTarget = 1; this.cpu = null; }
     else if (id === 'mute') this.audio.setMuted(!this.audio.muted);
@@ -258,7 +270,7 @@ KAR.Game = class {
     if (this.screen !== 'play') return;
     if (touch) {
       if (e.pointerId !== this.touchId || !this.grab) return;
-      const k = KAR.CFG.TOUCH_GAIN, gb = this.grab;
+      const k = this.aimGain(), gb = this.grab;
       this.ptr = { x: gb.sx + (p.x - gb.px) * k, y: gb.sy + (p.y - gb.py) * k };
       if (this.human()) this._setAimFromPtr();
     } else if (i < 0 || this.drawing) { this.ptr = p; if (this.human()) this._setAimFromPtr(); }
@@ -287,6 +299,12 @@ KAR.Game = class {
     if (down && k === 'Escape' && this.screen === 'shop') { this.activate('shopBack'); return; }
     if (down && k === 'Escape' && this.screen === 'agent') { this.activate('agentBack'); return; }
     if (down && k === '/' && (this.screen === 'menu' || this.screen === 'paused' || this.screen === 'over')) { e.preventDefault(); this.activate('agent'); return; }
+    // the results card: N next level, R retry / play again, L the level map, Esc the map (levels) or the menu
+    if (down && this.screen === 'over' && !e.repeat) {
+      const has = id => KAR.UI.buttons.some(b => b.id === id && !b.disabled), K = k.toLowerCase();
+      const id = K === 'n' ? 'next' : K === 'r' ? 'rematch' : K === 'l' ? 'levels' : k === 'Escape' ? (has('levels') ? 'levels' : 'menu') : null;
+      if (id && has(id)) { e.preventDefault(); this.activate(id); return; }
+    }
     if (down && (k === 'p' || k === 'P' || k === 'Escape')) { e.preventDefault(); if (this.screen === 'play' || this.screen === 'paused') this.togglePause(); return; }
     if (k === 'b' || k === 'B' || k === 'Shift') { this.holding = down; return; }
     if (this.screen !== 'play') {
@@ -331,9 +349,15 @@ KAR.Game = class {
     this.relT = this.time; this.relTeam = shooter; this.shake = Math.max(this.shake, 2.5);   // the bow kicks away
     if (hero) this.audio.heroIn();
     this.cpu = null;
-    if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; this._quest('arrow', 1); }
+    if (shooter === 0) { const st = KAR.Store.data.stats; st.arrows++; this._quest('arrow', 1); this._dayStreak(); }
   }
 
+  // DAY STREAK: the first arrow of a (UTC) day counts it; day 3 and every 7th pay gems (a card says so)
+  _dayStreak() {
+    const r = KAR.playDay(KAR.Store.data); if (!r) return;
+    KAR.Store.save();
+    if (r.n >= 2 || r.gems) { if (!this.achQ) this.achQ = []; this.achQ.push({ a: { name: r.n + ' DAYS', text: r.gems ? '+' + r.gems + ' gems  ·  keep it going tomorrow' : 'come back tomorrow for day ' + (r.n + 1) }, title: 'DAY STREAK!', gem: !!r.gems }); }
+  }
   // your bow + arrows; the CPU and the Daily (same for everyone) shoot club kit
   _kit(shooter) { return shooter === 0 && !this.match.daily ? KAR.kitOf(KAR.Store.data) : KAR.KIT0; }
   // count a quest event; a finished quest drops in a card (claim it on the QUESTS screen)
@@ -373,8 +397,16 @@ KAR.Game = class {
     if (f.shooter === 0) this._agentNote(res);
     this._achCheck(); KAR.Store.save();
     this.bp = 'result'; this.bpT = 0;
-    if (res.endDone && !m.over) { this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS'); this.hintT = 2.4; }
+    if (res.endDone && !m.over) {
+      const p = m.mode === 'duel' ? null : m.pace(this._best()), pc = p === null ? '' : p > 0 ? '  ·  ' + p + ' AHEAD OF YOUR BEST' : p < 0 ? '  ·  ' + (-p) + ' BEHIND YOUR BEST' : '  ·  LEVEL WITH YOUR BEST';
+      this.hint = 'END COMPLETE  ·  ' + (m.mode === 'duel' ? 'YOU ' + res.endScores[0] + ' – CPU ' + res.endScores[1] : res.endScores[0] + ' POINTS' + pc); this.hintT = 2.4;
+    }
   }
+
+  // your best for what you're shooting (a level, a range distance, the SWINGER); 0 when there's none
+  _best() { const m = this.match, D = KAR.Store.data; return m.mode === 'stage' ? D.tour.best[m.lv] : m.mode === 'range' ? D.best[m.distIdx] : m.mode === 'swing' ? D.swingBest || 0 : 0; }
+  // touch aim speed: sight px per finger px (AIM SPEED in pause)
+  aimGain() { return KAR.CFG.TOUCH_GAINS[KAR.Store.data.aimSpeed] || KAR.CFG.TOUCH_GAIN; }
 
   // BALLOON POP: the arrow reaches the balloons' plane
   _pop(res) {
@@ -428,6 +460,7 @@ KAR.Game = class {
 
   _banner(text, c1, c2, sub, size) { this.banner = { text, c1, c2, sub, size, age: 0, life: 1.5 }; }
   _burst(n) {
+    if (this.calm) n = Math.ceil(n / 4);
     const cols = ['#ffe14d', '#ff6b5a', '#7ac7ff', '#a9ec62', '#ffffff', '#c46bff'];
     for (let i = 0; i < n; i++) this.particles.push({ x: 140 + this.rng() * 680, y: -20 - this.rng() * 120, vx: (this.rng() - 0.5) * 120, vy: 40 + this.rng() * 120, g: 260, rot: this.rng() * 6, vr: (this.rng() - 0.5) * 9, life: 2.2 + this.rng(), col: cols[Math.floor(this.rng() * cols.length)] });
   }
@@ -463,7 +496,7 @@ KAR.Game = class {
     if (m.mode === 'stage') {
       const T = D.tour, i = m.lv, sc = m.total(0), st = m.stars(), wasOpen = KAR.tourOpen(i + 1, D), bosses = () => KAR.TOUR.every((L, j) => !L.boss || T.stars[j] > 0), before = bosses();
       const sides = KAR.TOUR.map((L, j) => L.after === i && !KAR.tourOpen(j, D) ? L.v : -1).filter(v => v >= 0);   // side worlds this level opens
-      this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); T.stars[i] = Math.max(T.stars[i], st);
+      this.newBest = sc > T.best[i]; T.best[i] = Math.max(T.best[i], sc); this.starGemsWon = KAR.starGems(D, T.stars[i], st); T.stars[i] = Math.max(T.stars[i], st);
       this.unlocked = i + 1 < KAR.TOUR.length && !wasOpen && KAR.tourOpen(i + 1, D) && KAR.TOUR[i + 1].after === undefined;
       this.sideOpen = st >= 1 && sides.length ? sides[0] : undefined;
       this.tourDone = !before && bosses();
@@ -487,7 +520,7 @@ KAR.Game = class {
     }
     if (m.mode === 'range') {
       const sc = m.total(0), stars = m.stars(), was = KAR.locked(3, D);
-      this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
+      this.newBest = sc > D.best[m.distIdx]; D.best[m.distIdx] = Math.max(D.best[m.distIdx], sc); this.starGemsWon = KAR.starGems(D, D.stars[m.distIdx], stars); D.stars[m.distIdx] = Math.max(D.stars[m.distIdx], stars);
       this.unlocked = was && !KAR.locked(3, D); gearUp();
       if (sc >= 100) this._quest('range', 1);
     } else { D.stats.duels++; if (m.winner === 0) { D.stats.wins++; if (m.levelIdx === 2) D.stats.legendWins++; this._quest('duel', 1); } }
@@ -604,7 +637,7 @@ KAR.Game = class {
     ctx.setTransform(this.res, 0, 0, this.res, -R.XL * this.res, 0);
     if (document.body.dataset.screen !== this.screen) document.body.dataset.screen = this.screen;
     ctx.save();
-    if (this.shake > 0.3) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
+    if (this.shake > 0.3 && !this.calm) ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
     R.setView(this.zoom, m.dist, m.faceD, m.viewD);
     const sel = this.screen === 'levels', menuish = this.screen === 'menu' || this.screen === 'gear' || this.screen === 'trophies' || this.screen === 'quests' || this.screen === 'shop' || this.screen === 'agent' || sel;
     R.tOff = m.offAt && !menuish ? m.offAt(m.T) : null; R.venue = sel ? (this.worldView | 0) : menuish ? 0 : (m.venue || 0); R.gear = KAR.Store.data.gear; R.railA = m.move === 'slide' ? m.def.amp : 0; R.boss = !menuish && !!(m.def && m.def.boss);

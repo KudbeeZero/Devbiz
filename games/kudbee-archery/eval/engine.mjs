@@ -331,6 +331,24 @@ const rec = (id, pass, note) => { R.push({ id, pass }); console.log((pass ? 'PAS
     && deb && /AVG 7.0/.test(deb.head) && /WIND/.test(deb.line) && none === null && kept.length === 5 && kept[0].dx === 0.12,
     `wind answer reads your drift (wind 2: ${d18.toFixed(1)} rings at 18 m, ${d50.toFixed(1)} at 50 m) and says "aim off more"; kit points at HEAVY CEDAR; 3 stars = 54 on level 1; how-am-I-doing counts tens; debrief "${deb && deb.head} · ${deb && deb.line}"; 5 arrows survive a reload, 3 forged ones are dropped`);
 }
+// PACE, gems for new stars, the DAY STREAK, and the AIM SPEED setting (all saved and checked on load)
+{
+  const ls = { s: null, getItem() { return this.s; }, setItem(k, v) { this.s = v; } };
+  const L = () => loadKAR(['util.js', 'sim.js', 'ach.js', 'quest.js', 'agent.js'], ls), K = L(), D = K.Store.data;
+  const m = new K.Match({ mode: 'range', dist: 0, seed: 3 }), p0 = m.pace(120);
+  for (let i = 0; i < 3; i++) m.shoot(0, C.FACE_Y, 0, 0, 1);
+  const pa = m.pace(120), pb = m.pace(0), mine = m.total(0);
+  const g0 = D.gems, g1 = K.starGems(D, 1, 3), g2 = K.starGems(D, 3, 2), paid = D.gems - g0;
+  const days = [10, 11, 12, 12, 13, 14, 15, 16, 18].map(d => { const r = K.playDay(D, d); return r ? r.n + ':' + r.gems : '-'; }).join(' ');
+  const now18 = K.streakNow(D, 18), now19 = K.streakNow(D, 19), now20 = K.streakNow(D, 20), best = D.streak.best;
+  D.aimSpeed = 2; K.Store.save();
+  const K2 = L(); K2.Store.load(); const kept = K2.Store.data.aimSpeed === 2 && K2.Store.data.streak.n === 1 && K2.Store.data.streak.best === 7;
+  const raw = JSON.parse(ls.s); raw.aimSpeed = 7; raw.streak = { day: 20, n: 500, best: 500 }; ls.s = JSON.stringify(raw);
+  const K3 = L(); K3.Store.load(); const bad = K3.Store.data.aimSpeed === 1 && K3.Store.data.streak.n === 0;
+  rec('pace-gems-streak', p0 === null && pa === mine - 24 && pb === null && g1 === 10 && g2 === 0 && paid === 10
+    && days === '1:0 2:0 3:15 - 4:0 5:0 6:0 7:40 1:0' && now18 === 1 && now19 === 1 && now20 === 0 && best === 7 && kept && bad && K.CFG.TOUCH_GAINS[1] === K.CFG.TOUCH_GAIN,
+    `pace after 3 arrows (${mine}) vs a 120 best = ${pa}; 1→3 stars pays ${g1} gems, a worse round 0; days 10..16 then 18 → ${days}; streak shows 1 on the next day, 0 after a missed one; AIM SPEED + streak survive a reload, a forged 500-day streak and AIM 7 are dropped`);
+}
 const failed = R.filter(r => !r.pass).length;
 console.log(`\n=== ${R.length - failed}/${R.length} passed ===`);
 process.exit(failed ? 1 : 0);

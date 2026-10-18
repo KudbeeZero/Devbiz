@@ -17,6 +17,7 @@ const server = http.createServer((q, s) => {
 await new Promise(r => server.listen(0, r));
 const URL = `http://localhost:${server.address().port}/games/kudbee-archery/index.html`;
 
+const KAR_AIM = ['SLOW', 'NORMAL', 'FAST'];
 const R = [];
 const rec = (id, pass, note) => { R.push(pass); console.log(pass ? 'PASS' : 'FAIL', id, '—', note); };
 // Cloud containers: use the pre-installed Chromium when present (avoids `playwright install`).
@@ -406,6 +407,43 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await G(() => { KARGame.agentLog = []; KARGame.agentTip = null; KAR.Store.data.mode = 0; KARGame.activate('menu'); });
 }
 
+// TEN POLISH ITEMS: the level card (star targets) shows while you get set and goes; PAUSE offers LEVELS on a tour level; a
+// finished level pays gems for new stars and plots your group; N / Escape work on the results card; a new end's wind is
+// called (switched sides!) and the gauge flashes; the END COMPLETE line gives your pace; reduced motion stills the screen
+{
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.stars[0] = 1; D.tour.best.fill(0); D.tut = 15; D.tourLv = 1; D.mode = 5; D.gems = 0; KARGame.achQ = []; KARGame.startMatch(); });
+  await page.waitForTimeout(700);
+  const px = () => G(() => { const g = KARGame, R = KAR.Render; return Array.from(g.ctx.getImageData(Math.round((480 - R.XL) * g.res), Math.round(190 * g.res), 1, 1).data); });
+  const c0 = await px(); await page.screenshot({ path: `${OUT}/level-card.png` });
+  await page.waitForTimeout(4200); const c1 = await px();
+  const card = Math.abs(c0[0] - c1[0]) + Math.abs(c0[1] - c1[1]) + Math.abs(c0[2] - c1[2]) > 60;
+  await page.keyboard.press('p'); await page.waitForTimeout(60);
+  const pl = await G(() => KAR.UI.buttons.some(b => b.id === 'levels'));
+  await click('levels'); await page.waitForTimeout(60);
+  const toMap = await G(() => KARGame.screen);
+  // shoot level 2 out with a perfect wind-reader, then finish it the game's own way
+  const fin = await G(() => { const g = KARGame, D = KAR.Store.data; D.tourLv = 1; g.startMatch(); const m = g.match; while (!m.over) { const h = KAR.Bot.hold(m); m.shoot(h.x, h.y, 0, 0, 1); } g._finishMatch(); g.overlayT = 3; return { st: m.stars(), gems: D.gems, won: g.starGemsWon, saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).gems }; });
+  await page.waitForTimeout(150); await page.screenshot({ path: `${OUT}/results-group.png` });
+  await page.keyboard.press('n'); await page.waitForTimeout(60);
+  const nx = await G(() => ({ scr: KARGame.screen, lv: KARGame.match.lv }));
+  await G(() => { const g = KARGame, m = g.match; while (!m.over) m.shoot(0, 0, 0, 0, 1); g._finishMatch(); g.overlayT = 3; });
+  await page.waitForTimeout(120); await page.keyboard.press('Escape'); await page.waitForTimeout(60);
+  const esc = await G(() => KARGame.screen);
+  // a range: end 2's wind on the other side → the call and the gauge flash; END COMPLETE says how you're doing against your best
+  const ws = await G(() => { const D = KAR.Store.data; D.mode = 0; D.dist = 1; D.best[1] = 120; const g = KARGame; g.startMatch(); const m = g.match;
+    for (let i = 0; i < 3; i++) { g.drawing = true; g.draw = 1; g.aimX = 0; g.aimY = KAR.CFG.FACE_Y; g.sway = { x: 0, y: 0 }; m.wind = 0; g._loose(); g.flight.t = g.flight.tEnd; g._land(); g.bp = 'ready'; }
+    const endHint = g.hint; g.lastBase = -2; m.baseWind = 2; g._nextShot(); return { endHint, hint: g.hint, flash: g.time - g.windT < 0.1, flip: g.windFlip }; });
+  await page.waitForTimeout(250); await page.screenshot({ path: `${OUT}/wind-shift.png` });
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(60);
+  const calm = await G(() => { const g = KARGame, n0 = g.particles.length; g._burst(40); return { calm: g.calm, n: g.particles.length - n0 }; });
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForTimeout(60);
+  const loud = await G(() => KARGame.calm);
+  rec('polish', card && pl && toMap === 'levels' && fin.st === 3 && fin.won === 15 && fin.gems === 15 && fin.saved === 15 && nx.scr === 'play' && nx.lv === 2 && esc === 'levels'
+    && /SWITCHED SIDES/.test(ws.hint) && ws.flash && ws.flip && /END COMPLETE .*(AHEAD OF|BEHIND|LEVEL WITH) YOUR BEST/.test(ws.endHint) && calm.calm && calm.n === 10 && !loud && errors.length === 0,
+    `level card drawn then gone (${c0.slice(0, 3)} → ${c1.slice(0, 3)}); pause → LEVELS → ${toMap}; ${fin.st} new stars pay ${fin.won} gems (saved ${fin.saved}); N → ${nx.scr} level ${nx.lv + 1}; Escape → ${esc}; "${ws.hint}"; "${ws.endHint}"; reduced motion: ${calm.n} confetti for 40`);
+  await G(() => { const D = KAR.Store.data; D.tour.stars.fill(0); D.tour.best.fill(0); D.tourLv = 0; D.best[1] = 0; D.gems = 0; D.mode = 0; KARGame.activate('menu'); });
+}
+
 // SHARING: the page carries a share card (Open Graph + Twitter large image, absolute https URLs) whose image is a real 1200x630
 // file in the repo, and the menu's share button shares the game's public (canonical) link
 {
@@ -499,6 +537,20 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   rec('phone-big-taps', all.length >= 15 && Math.min(...all) * k >= 31 && onMap === 'levels' && tiles === '1:L06,L07,L08,L09,L10,L11' && pick.lv === 6 && pick.scr === 'play' && pick.m === 6,
     `${all.length} menu + map targets, the smallest ${(Math.min(...all) * k).toFixed(0)} CSS px tall; PLAY opens the map, a swipe turns to world 2 (${tiles}), a tap starts level 7`);
   await T(() => KARGame.activate('menu'));
+  // 4b. AIM SPEED: pause on a phone offers SLOW / NORMAL / FAST; tapping it steps the touch gain (saved)
+  {
+    await T(() => { KAR.Store.data.mode = 0; KAR.Store.data.aimSpeed = 1; KARGame.startMatch(); KARGame.togglePause(); });
+    await tp.waitForTimeout(80); await tp.screenshot({ path: `${OUT}/phone-pause.png` });
+    const ab = await T(() => { const x = KAR.UI.buttons.find(b => b.id === 'aim'); return x && { x: x.x + x.w / 2, y: x.y + x.h / 2 }; });
+    if (ab) { await touch('touchStart', [at(ab.x, ab.y)]); await touch('touchEnd', []); await tp.waitForTimeout(60); }
+    const as = await T(() => ({ i: KAR.Store.data.aimSpeed, gain: KARGame.aimGain(), saved: JSON.parse(localStorage.getItem('kudbee.archery.v1')).aimSpeed }));
+    rec('phone-aim-speed', !!ab && as.i === 2 && as.gain === 0.95 && as.saved === 2, `pause shows AIM SPEED; a tap → ${KAR_AIM[as.i] || as.i} (gain ${as.gain}, saved ${as.saved})`);
+    await T(() => { KAR.Store.data.aimSpeed = 1; KAR.Store.save(); KARGame.activate('menu'); });
+    // the level card on a phone (screenshot)
+    await T(() => { const D = KAR.Store.data; D.tour.stars[0] = 1; D.tourLv = 1; D.tut = 15; D.mode = 5; KARGame.startMatch(); });
+    await tp.waitForTimeout(700); await tp.screenshot({ path: `${OUT}/phone-level-card.png` });
+    await T(() => { KAR.Store.data.mode = 0; KARGame.activate('menu'); });
+  }
   // 5. held upright: a full-screen 'turn sideways' card, and a range in progress pauses under it
   await T(() => { KAR.Store.data.mode = 0; KARGame.startMatch(); });
   await tp.setViewportSize({ width: 390, height: 844 }); await tp.waitForTimeout(250);

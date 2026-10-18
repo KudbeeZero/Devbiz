@@ -65,6 +65,23 @@ KAR.questBonusReady = (D, day) => { const Q = KAR.questToday(D, day); return !Q.
 KAR.questBonus = (D, day) => { if (!KAR.questBonusReady(D, day)) return false; KAR.questToday(D, day).bonus = true; D.gems += KAR.QUEST_BONUS; return true; };
 KAR.questClaimable = (D, day) => { const Q = KAR.questToday(D, day); return Q.q.some(x => !x.claimed && x.have >= KAR.questDef(x.id).n) || KAR.questBonusReady(D, day); };
 
+// ---- gems for stars: every star you earn for the first time (a level or a range) pays STAR_GEMS ----
+KAR.STAR_GEMS = 5;
+KAR.starGems = (D, before, after) => { const n = Math.max(0, (after | 0) - (before | 0)) * KAR.STAR_GEMS; D.gems += n; return n; };
+
+// ---- DAY STREAK: shoot on consecutive (UTC) days; day 3 pays 15 gems, day 7 (and every 7th) pays 40 ----
+KAR.STREAK_GEMS = n => n % 7 === 0 ? 40 : n === 3 ? 15 : 0;
+// the first arrow of a day: returns { n, gems } (gems already added), or null when today is already counted
+KAR.playDay = (D, day) => {
+  const today = day === undefined ? KAR.Daily.day() : day, S = D.streak;
+  if (S.day === today) return null;
+  S.n = S.day === today - 1 ? S.n + 1 : 1; S.day = today; S.best = Math.max(S.best, S.n);
+  const gems = KAR.STREAK_GEMS(S.n); D.gems += gems;
+  return { n: S.n, gems };
+};
+// the streak as it stands today (a missed day shows 0 until you shoot again)
+KAR.streakNow = (D, day) => { const today = day === undefined ? KAR.Daily.day() : day, S = D.streak; return S.day === today || S.day === today - 1 ? S.n : 0; };
+
 // ---- buying kit ----
 KAR.kitOwned = (D, kind, i) => i === 0 || ((kind === 'bow' ? D.ownBow : D.ownArrow) >> i & 1) === 1;
 // 'bought' | 'owned' | 'poor'

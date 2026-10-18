@@ -31,7 +31,7 @@ KAR.Util = {
 // blocked storage and quota errors must never break the game.
 KAR.Store = {
   KEY: 'kudbee.archery.v1',
-  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [] },
+  data: { muted: false, haptics: true, mode: 5, tourLv: 0, tour: { stars: Array(30).fill(0), best: Array(30).fill(0) }, gear: { bow: 0, fletch: 0, sight: 0 }, tut: 0, dist: 1, level: 1, best: [0, 0, 0, 0], stars: [0, 0, 0, 0], trickBest: 0, swingBest: 0, daily: { day: 0, best: 0, plays: 0, first: 0 }, stats: { arrows: 0, tens: 0, xs: 0, duels: 0, wins: 0, bestStreak: 0, robins: 0, legendWins: 0, pops: 0, dailies: 0, starBoxes: 0 }, ach: {}, gems: 0, kit: { bow: 0, arrow: 0 }, ownBow: 1, ownArrow: 1, quest: null, agent: true, agentLog: [], streak: { day: 0, n: 0, best: 0 }, aimSpeed: 1 },
   load() {
     try {
       const raw = window.localStorage.getItem(this.KEY);
@@ -44,6 +44,9 @@ KAR.Store = {
           if (typeof d.agent === 'boolean') D.agent = d.agent;
           if (Array.isArray(d.agentLog) && KAR.Agent) D.agentLog = d.agentLog.slice(-KAR.Agent.KEEP).map(x => KAR.Agent.clean(x)).filter(x => x);      // ROBIN remembers your last arrows
           if (pick(d.mode, 6) !== null) D.mode = d.mode;
+          if (pick(d.aimSpeed, 3) !== null) D.aimSpeed = d.aimSpeed;
+          // the day streak: whole numbers, a streak no longer than the days since day 1 (and a best at least as long)
+          if (d.streak && typeof d.streak === 'object') { const s = d.streak; if (Number.isInteger(s.day) && s.day >= 0 && s.day < 1e5 && Number.isInteger(s.n) && s.n >= 0 && s.n <= s.day && Number.isInteger(s.best) && s.best >= s.n && s.best <= s.day) D.streak = { day: s.day, n: s.n, best: s.best }; }
           const v1 = d.tour && Array.isArray(d.tour.stars) && d.tour.stars.length === 15 && KAR.TOUR_V1;   // a save from the 15-level tour
           if (pick(d.tourLv, v1 ? 15 : 30) !== null) D.tourLv = v1 ? v1[d.tourLv] : d.tourLv;
           if (d.gear && typeof d.gear === 'object') for (const k in D.gear) if (pick(d.gear[k], KAR.GEAR ? KAR.GEAR[k].length : 5) !== null) D.gear[k] = d.gear[k];

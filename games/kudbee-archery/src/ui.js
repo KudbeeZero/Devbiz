@@ -215,6 +215,7 @@ KAR.UI = {
       U.text(ctx, g.coach.text, 480, big ? 50 : 46, big ? 26 : 22, '#ffffff', 'center');
       U.fit(ctx, g.coach.sub, 480, big ? 82 : 70, big ? 18 : 13, '#ffffff', cw - 24);
     }
+    this.levelCard(ctx, g);
     ctx.save(); ctx.translate(xl, 0);
     // wind gauge
     const w = m.wind, a = Math.min(1, Math.abs(w) / (KAR.CFG.WIND[m.distIdx] || 3)), wy = h + 30;
@@ -223,10 +224,12 @@ KAR.UI = {
     ctx.save(); ctx.translate(g.coarse ? 128 : 120, wy + 28); ctx.scale(Math.sign(w) || 1, 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const L = g.coarse ? 12 + a * 28 : 14 + a * 34; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(L, 0); ctx.moveTo(L - 11, -9); ctx.lineTo(L, 0); ctx.lineTo(L - 11, 9); ctx.lineWidth = 8; ctx.strokeStyle = U.OUT; ctx.stroke(); ctx.lineWidth = 4.5; ctx.strokeStyle = a > 0.66 ? '#ff9a7a' : a > 0.33 ? '#ffe14d' : '#9be35a'; ctx.stroke(); ctx.restore();
     U.text(ctx, Math.abs(w).toFixed(1), 26, wy + 46, 20, '#ffffff', 'left');
+    const wa = g.time - g.windT;          // a new end's wind: the gauge flashes (orange when it has switched sides)
+    if (wa >= 0 && wa < 1.6 && g.screen === 'play') { ctx.save(); ctx.globalAlpha = (1 - wa / 1.6) * (g.calm ? 0.7 : 0.6 + 0.4 * Math.abs(Math.sin(wa * 9))); U.rr(ctx, 9, wy - 3, 178, 62, 18); ctx.lineWidth = 5; ctx.strokeStyle = g.windFlip ? '#ff9a3c' : '#fff27a'; ctx.stroke(); ctx.restore(); }
     // gold streak chip: 9s and better in a row
     const chip = trick ? (g.trickCombo >= 2 ? 'COMBO \u00d7' + g.trickCombo : '') : (g.streak >= 2 ? 'GOLD STREAK \u00d7' + g.streak : '');
     if (chip) {
-      const pulse = 1 + 0.06 * Math.sin(g.time * 8), sy = wy + 66;
+      const pulse = g.calm ? 1 : 1 + 0.06 * Math.sin(g.time * 8), sy = wy + 66;
       ctx.save(); ctx.translate(12, sy); ctx.scale(pulse, pulse);
       U.rr(ctx, 0, 0, 172, 40, 14); ctx.fillStyle = U.OUT; ctx.fill();
       const sg = ctx.createLinearGradient(0, 3, 0, 37); sg.addColorStop(0, '#ffe888'); sg.addColorStop(1, '#ff9a1f');
@@ -237,7 +240,7 @@ KAR.UI = {
     ctx.restore();
     // last-arrow pressure line
     if (g.drama && g.screen === 'play' && g.bp === 'ready' && !g.banner) {
-      const k = 1 + 0.04 * Math.sin(g.time * 6);
+      const k = g.calm ? 1 : 1 + 0.04 * Math.sin(g.time * 6);
       ctx.save(); ctx.translate(480, 158); ctx.scale(k, k); U.text(ctx, g.drama, 0, 0, 22, '#fff27a', 'center'); ctx.restore();
     }
     // draw + breath meters while a shot is being prepared
@@ -437,7 +440,8 @@ KAR.UI = {
     U.panel(ctx, 100, 74, 760, 530, 'blue');
     U.ribbon(ctx, 480, 46, 380, 'DAILY QUESTS', 'yellow');
     const left = 86400000 - Date.now() % 86400000, h = Math.floor(left / 3600000), mn = Math.floor(left % 3600000 / 60000);
-    U.fit(ctx, 'NEW QUESTS IN ' + h + 'H ' + mn + 'M  ·  gems buy new bows & arrows', 450, 132, U.sz(g, 16), '#ffe9a8', 560);
+    const sk = KAR.streakNow(D), nx = sk + 1, to = [3, 7].find(n => n >= nx) || Math.ceil(nx / 7) * 7;
+    U.fit(ctx, 'NEW QUESTS IN ' + h + 'H ' + mn + 'M  ·  DAY STREAK ' + sk + '  ·  day ' + to + ' pays ' + KAR.STREAK_GEMS(to) + ' gems', 450, 132, U.sz(g, 16), '#ffe9a8', 560);
     U.gems(ctx, g, 832, 134);
     Q.q.forEach((x, i) => {
       const d = KAR.questDef(x.id), y = 148 + i * 96, done = x.have >= d.n;
@@ -619,6 +623,7 @@ KAR.UI = {
     U.fit(ctx, msg[0], 480, 394, msg[2], msg[1], 450);
     if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
+    this.group(ctx, g, 318, 246, 50); this.starGems(ctx, g, 640, 330);
     if (won) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); if (g.sharedKind === 'shareLevel' && g.time - g.shared < 2.5) U.text(ctx, 'COPIED!', 690, 186, 16, '#9be35a', 'center'); }
     // NEXT never walks into a side world (THINK BOX after the world 4 boss): that one is picked on the map
     const next = !last && KAR.tourOpen(m.lv + 1, D) && KAR.TOUR[m.lv + 1].after === undefined;
@@ -640,7 +645,9 @@ KAR.UI = {
   pause(ctx, g) {
     const U = this;
     U.backdrop(ctx, 0.55);
-    const extra = [];
+    const extra = [], stage = g.match.mode === 'stage';
+    if (g.coarse) extra.push(['aim', 'AIM SPEED: ' + KAR.CFG.AIM_NAMES[KAR.Store.data.aimSpeed]]);
+    if (stage) extra.push(['levels', 'LEVELS']);
     if (g.coarse && navigator.vibrate) extra.push(['buzz', KAR.Store.data.haptics ? 'VIBRATE: ON' : 'VIBRATE: OFF']);
     if (g.canFull()) extra.push(['full', g.isFull() ? 'EXIT FULL SCREEN' : 'FULL SCREEN']);
     if (extra.length) {                       // phones: two columns so every button stays big
@@ -652,9 +659,10 @@ KAR.UI = {
         .forEach(([id, label, col], k) => U.button(ctx, g, id, 220 + (k % 2) * 270, 304 + Math.floor(k / 2) * 74, 250, 60, label, { small: true, color: col }));
       return;
     }
-    U.panel(ctx, 290, 130, 380, 430, 'blue');
+    U.panel(ctx, 290, 130, 380, stage ? 496 : 430, 'blue');
     U.ribbon(ctx, 480, 106, 300, 'PAUSED', 'yellow');
     U.button(ctx, g, 'resume', 340, 214, 280, 62, 'RESUME', { primary: true });
+    if (stage) U.button(ctx, g, 'levels', 340, 558, 280, 50, 'LEVELS  (back to the map)', { small: true, color: 'yellow' });
     U.button(ctx, g, 'restart', 340, 294, 280, 50, 'RESTART', { small: true });
     U.button(ctx, g, 'menu', 340, 360, 280, 50, 'MENU', { small: true, color: 'yellow' });
     U.button(ctx, g, 'mute', 340, 426, 280, 50, g.audio.muted ? 'SOUND: OFF' : 'SOUND: ON', { small: true });
@@ -686,10 +694,57 @@ KAR.UI = {
       if (g.unlocked) U.text(ctx, '70 M UNLOCKED!', 480, g.newGear && g.newGear.length ? 376 : 396, 30, '#9be35a', 'center');
       else if (g.newBest) U.text(ctx, 'NEW BEST!', 480, 392, 28, '#fff27a', 'center');
     }
+    if (!duel) { this.group(ctx, g, 318, 236, 50); this.starGems(ctx, g, 640, 330); }
     const ends = m.endScores.map((e, i) => (duel ? e[0] + ':' + e[1] : String(e[0]))).join('   ');
     U.fit(ctx, 'ENDS  ' + ends, 480, 420, U.sz(g, 17), '#ffffff', 450);
     U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
     U.button(ctx, g, 'menu', 560, 450, 150, 56, 'MENU', { small: true, color: 'yellow' });
+    ctx.restore();
+  },
+
+  // the round's arrows on a little target face (results card): where each of yours landed, the gold ones bright
+  group(ctx, g, cx, cy, rr) {
+    const m = g.match, hits = m.arrows[0].filter(a => a.hit && a.hit.z === undefined), half = (m.faceD || KAR.CFG.FACE[m.distIdx]) / 2;
+    if (!m.arrows[0].length) return;
+    const cols = ['#ffd34d', '#ffd34d', '#e8483a', '#e8483a', '#4aa3f0', '#4aa3f0', '#222b38', '#222b38', '#f4f1e8', '#f4f1e8'];
+    for (let i = 10; i >= 1; i--) { ctx.beginPath(); ctx.arc(cx, cy, rr * i / 10, 0, 6.283); ctx.fillStyle = cols[i - 1]; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.283); ctx.lineWidth = 3.5; ctx.strokeStyle = this.OUT; ctx.stroke();
+    hits.forEach((a, i) => {
+      const f = rr / half, dx = KAR.Util.clamp(a.hit.x * f, -rr - 6, rr + 6), dy = KAR.Util.clamp(-(a.hit.y - KAR.CFG.FACE_Y) * f, -rr - 6, rr + 6), t = g.overlayT - 0.3 - i * 0.05;
+      if (t <= 0) return;
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 4.2 * Math.min(1, t * 6), 0, 6.283); ctx.fillStyle = a.ring >= 9 ? '#ffffff' : '#9be35a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = this.OUT; ctx.stroke();
+    });
+    const off = m.arrows[0].length - hits.length;
+    this.fit(ctx, off ? off + ' OFF THE FACE' : 'YOUR GROUP', cx, cy + rr + 20, this.sz(g, 13), '#ffe9a8', 100);
+  },
+  // gems paid for the stars this round earned for the first time (results card)
+  starGems(ctx, g, x, y) {
+    const n = g.starGemsWon; if (!n || g.overlayT < 1.2) return;
+    const k = KAR.Util.easeOut(Math.min(1, (g.overlayT - 1.2) * 3));
+    ctx.save(); ctx.globalAlpha = k; this.gem(ctx, x, y - 7, 13); this.text(ctx, '+' + n, x + 20, y + 2, this.sz(g, 22), '#bff4ff', 'left');
+    this.text(ctx, 'NEW STARS', x - 12, y + 26, this.sz(g, 12), '#bff4ff', 'left'); ctx.restore();
+  },
+  // a tour level's card while you get set: the level, its twist, and the scores for each star (your best beside them)
+  levelCard(ctx, g) {
+    const m = g.match;
+    if (m.mode !== 'stage' || g.coach || g.screen !== 'play' || m.arrows[0].length || m.endNo) return;
+    const age = g.time - g.introT, life = 4.2, k = Math.min(1, age / 0.25, (life - age) / 0.4) * (g.drawing ? 0 : 1);
+    if (age > life || k <= 0) return;
+    const U = this, L = m.def, D = KAR.Store.data, S = L.stars, best = D.tour.best[m.lv], cw = 460, cx = 480 - cw / 2, cy = 168, ch = 178;
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(480, cy + ch / 2); const sc = g.calm ? 1 : 0.9 + 0.1 * Math.min(1, age / 0.25); ctx.scale(sc, sc); ctx.translate(-480, -(cy + ch / 2));
+    U.rr(ctx, cx, cy, cw, ch, 20); ctx.fillStyle = U.OUT; ctx.fill();
+    const cg = ctx.createLinearGradient(0, cy, 0, cy + ch); cg.addColorStop(0, L.boss ? '#ffcf55' : '#5a86c9'); cg.addColorStop(1, L.boss ? '#e0901f' : '#2c4f86');
+    U.rr(ctx, cx + 4, cy + 4, cw - 8, ch - 8, 16); ctx.fillStyle = cg; ctx.fill();
+    if (L.boss) U.crown(ctx, cx + cw - 40, cy + 34, 15);
+    U.text(ctx, (L.boss ? 'BOSS  \u00b7  ' : '') + 'LEVEL ' + (m.lv + 1), 480, cy + 38, U.sz(g, 18), '#ffffff', 'center');
+    U.fit(ctx, L.name, 480, cy + 76, 36, '#fff27a', cw - 100);
+    U.fit(ctx, L.tip.toUpperCase(), 480, cy + 104, U.sz(g, 15), '#ffffff', cw - 40);
+    U.fit(ctx, m.dist + ' M  \u00b7  ' + m.ends + ' ENDS  \u00b7  OUT OF ' + m.max + (best ? '  \u00b7  YOUR BEST ' + best : ''), 480, cy + 128, U.sz(g, 14), '#ffe9a8', cw - 40);
+    for (let i = 0; i < 3; i++) {
+      const x = 480 + (i - 1) * 140, got = D.tour.stars[m.lv] > i;
+      for (let j = 0; j <= i; j++) U.star(ctx, x - 12 - (i - j) * 22, cy + 150, 10, got, 1);       // the stars, then the score for them
+      U.text(ctx, String(S[i]), x + 4, cy + 158, U.sz(g, 20), got ? '#fff27a' : '#ffffff', 'left');
+    }
     ctx.restore();
   },
 
