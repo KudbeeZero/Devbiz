@@ -142,7 +142,7 @@ const m301 = await page.evaluate(() => {
   const out = { label: g.mode.label, start: g.players[0].scoreState.remaining, id: g.mode.id, btns: g._menuLayout().filter((b) => b.group === 'mode').map((b) => b.label) };
   g.selMode = 'x01'; return out;
 });
-rec('mode-301', m301.start === 301 && m301.label === '301' && m301.id === 'x01' && m301.btns.join() === '301,501,CRICKET', `301 match starts at ${m301.start} (label ${m301.label}); mode buttons: ${m301.btns.join(' / ')}`);
+rec('mode-301', m301.start === 301 && m301.label === '301' && m301.id === 'x01' && m301.btns.join() === '301,501,CRICKET,CLOCK,COUNT-UP', `301 match starts at ${m301.start} (label ${m301.label}); mode buttons: ${m301.btns.join(' / ')}`);
 
 // ---------------------------------------------------------------- real throw
 await page.evaluate(() => { const g = window.DARTS; Math.random = Math.random;  g.selMode = 'x01'; g.selOpp = 'hotseat'; g._startMatch(); window.__step(120); });
@@ -807,6 +807,59 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   const ok = ax.count >= 20 && ax.repaired && ax.first === 'bull1/25/1' && ax.again === 0 && ax.league === 'gold,diamond' && ax.leagueLow === '0/4'
     && ax.toast && ax.page === 1 && ax.newPlayer === 0 && ax.veteran === 4 && ax.on && ax.s1 === 1 && ax.s2 === 2 && ax.s3 === 3 && ax.done === '4/50/2' && !ax.off;
   rec('achievements-tutorial', ok, `n=${ax.count} repaired=${ax.repaired} first=${ax.first} again=${ax.again} league=${ax.league} max=${ax.leagueLow} toast=${ax.toast} page=${ax.page} tut new=${ax.newPlayer} vet=${ax.veteran} steps=${ax.s1}${ax.s2}${ax.s3} done=${ax.done} off=${!ax.off}`);
+}
+
+// ---------------------------------------------------------------- party modes + flight polish
+{
+  const pm = await page.evaluate(() => {
+    const g = window.DARTS, KDm = window.KD, out = {};
+    const H = (ring, value, mult) => ({ ring, value, mult, score: ring === 'miss' ? 0 : value * mult });
+    // Around the Clock.
+    const ck = new KDm.Mode_Clock(), A = { scoreState: null }, B = { scoreState: null };
+    ck.initPlayer(A); ck.initPlayer(B);
+    out.c1 = ck.applyDart(A, H('single', 1, 1), B).text + A.scoreState.target;          // +1 -> 2
+    out.cmiss = ck.applyDart(A, H('single', 7, 1), B).text + A.scoreState.target;        // wrong number
+    out.ctreble = ck.applyDart(A, H('treble', 2, 3), B).text + A.scoreState.target;      // +3 -> 5
+    A.scoreState.target = 20; ck.applyDart(A, H('double', 20, 2), B);                    // overshoots to the bull
+    out.cbull = A.scoreState.target;
+    out.cwin = !!ck.applyDart(A, H('inbull', 25, 2), B).win;
+    // Count-Up: 8 rounds each, second shooter ends it; higher total wins, ties by best round.
+    const cu = new KDm.Mode_CountUp(), P = {}, Q = {};
+    cu.initPlayer(P); cu.initPlayer(Q);
+    let last = null;
+    for (let r = 0; r < 8; r++) {
+      cu.beginTurn(P); for (let d = 0; d < 3; d++) last = cu.applyDart(P, H('single', 20, 1), Q);
+      out['mid' + r] = !!last.win;
+      cu.beginTurn(Q); for (let d = 0; d < 3; d++) last = cu.applyDart(Q, H('single', r === 7 && d === 2 ? 20 : 19, 1), P);
+    }
+    out.cuEnd = !!last.win && last.winner === P && P.scoreState.total === 480 && Q.scoreState.total === 8 * 57 + 1;
+    out.cuNoEarly = [0, 1, 2, 3, 4, 5, 6, 7].every((r) => !out['mid' + r]);
+    // Through the real game: menu starts both, HUD renders, AI picks sane targets, results land in stats.
+    const modes = {};
+    ['clock', 'countup'].forEach((m) => {
+      g.levelIdx = null; g.selOpp = 'Pro'; g.selMode = m; g._startMatch();
+      window.__step(3);
+      const t = g.players[1].chooseTarget(g.mode, g.players[0], 3);
+      modes[m] = g.mode.id + ':' + t + ':' + g.state;
+    });
+    out.modes = JSON.stringify(modes);
+    g.progression.recordMatch({ mode: 'clock', won: true, darts: 30, t180: 0, marks: 0, points: 0 });
+    g.progression.recordMatch({ mode: 'countup', won: true, darts: 24, points: 333 });
+    const st = g.progression.data.stats;
+    out.stats = st.clock.played + '/' + st.clock.won + '/' + st.countup.played + '/' + st.countup.best + '/' + (Number.isFinite(st.cricket.marks));
+    // Flight polish: render a hard-flick flight without throwing.
+    g.levelIdx = null; g.selOpp = 'Rookie'; g.selMode = 'x01'; g._startMatch(); g.current = 0; g.players[0].isAI = false;
+    const d = g.dart; d._groupCenter = null; d.reset();
+    d._releaseAt(g.board.cx, g.board.cy - 0.4 * g.board.Rpx, 0, { powf: 1.15, curlX: 1, curlY: 0, sink: 0 });
+    let threw = false;
+    try { for (let i = 0; i < 12; i++) { window.__step(2); } } catch (e) { threw = true; }
+    out.flight = !threw;
+    g.state = 'menu';
+    return out;
+  });
+  const ok = pm.c1 === '+12' && pm.cmiss === 'MISS2' && pm.ctreble === '+35' && pm.cbull === 21 && pm.cwin
+    && pm.cuEnd && pm.cuNoEarly && pm.modes === '{"clock":"clock:T1:play","countup":"countup:T20:play"}' && pm.stats === '1/1/1/333/true' && pm.flight;
+  rec('party-modes', ok, `clock ${pm.c1} ${pm.cmiss} ${pm.ctreble} bull=${pm.cbull} win=${pm.cwin} · countup end=${pm.cuEnd} noEarly=${pm.cuNoEarly} · game ${pm.modes} · stats=${pm.stats} · flight=${pm.flight}`);
 }
 
 // ---------------------------------------------------------------- curl lead

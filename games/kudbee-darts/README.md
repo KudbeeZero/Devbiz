@@ -230,3 +230,9 @@ Bullseye rings a bell (the inner bull adds a low gong), trebles get a triple pin
 ## Achievements & tutorial
 - **Achievements** (menu → 🏅 ACHIEVEMENTS): 23 lifetime goals — wins, darts thrown, bullseyes, trebles/doubles, treble-20s, 100+ turns, 180s, 301/501 legs, Darts Birds stars, leagues (Gold → KUDBEE CHAMPION) and part upgrades. They count from matches against the AI and Darts Birds (not 2P), pay coins + 💎 the moment they unlock, and show progress bars, 8 per page. Saved in `kd.profile.v1` under `ach`.
 - **First-match tutorial**: four tips that advance as you act (aim → throw → read the score → finish on a double), shown beside the board on wide screens or as a top banner on narrow ones. It never blocks input, pays a one-time 50 🪙 + 2 💎, and is skipped by saves that already have matches played. **HOW TO PLAY** (top-left of the menu) replays it.
+
+## More modes & flight polish
+- **Around the Clock**: race 1 → 20, then the bull. A dart on your number advances you — single +1, double +2, treble +3 — so the rings matter. First to the bull wins; the AI plays safe singles on Rookie and trebles above that.
+- **Count-Up**: eight rounds of three darts, every dart adds its score, highest total wins (ties go to the better single round, then whoever threw last). Best total is kept in `stats.countup.best`.
+- Both use the shared score cards with a centre header and count toward trophies, chests, missions' win goals and achievements like any AI match. They live in `src/modes/party.js`.
+- **Flight**: a release wobble that settles over the first third of the flight (upgrades wobble it less, so a steadier dart visibly flies truer), a white-hot trail core, and afterimages on hard flicks. Purely visual — landings and scores are unchanged.

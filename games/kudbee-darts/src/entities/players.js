@@ -51,6 +51,12 @@
   AIPlayer.prototype.chooseTarget = function (mode, opponent, dartsLeft) {
     if (mode.id === 'x01') return this._chooseX01(mode, dartsLeft);
     if (mode.id === 'cricket') return this._chooseCricket(mode, opponent);
+    if (mode.id === 'clock') {
+      const t = this.scoreState.target;
+      if (t >= KD.Mode_Clock.BULL) return this.ambition === 0 ? '25' : 'BULL';
+      return this.ambition === 0 ? '' + t : 'T' + t;      // rookies play the safe single
+    }
+    if (mode.id === 'countup') return this.ambition === 0 ? '20' : 'T20';
     return 'T20';
   };
 
