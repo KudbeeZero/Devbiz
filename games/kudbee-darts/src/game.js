@@ -2578,7 +2578,7 @@
     ctx.translate(G.dartX, G.dartY + bob);
     ctx.rotate(-Math.PI * 0.03 + (still ? 0 : Math.sin(this.time * 0.8) * 0.03));
     // Roll: squash across the long axis, never flatter than 55% so it reads as a turn.
-    if (!still) ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.cos(this.time * 0.9)));
+    if (!still) ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.cos(this.time * 0.45)));
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
     this.sprites.drawDart(ctx, G.dartLen, skin, 0.6, { tip: L.tip, flight: L.flight, shape: L.shape });
     ctx.restore();

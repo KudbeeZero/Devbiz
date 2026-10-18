@@ -615,7 +615,7 @@
     // eases flat on contact. Shallower squash than before so it reads as a roll,
     // not a flip.
     const powerMult = Math.max(0.7, Math.min(1.8, this._powf));
-    const spin = (this._roll || 1) * (k * 8 * powerMult);
+    const spin = (this._roll || 1) * (k * 4 * powerMult);   // ~2/3 of a turn: slow enough to follow
     const roll = Util.lerp(0.72 + 0.28 * Math.abs(Math.cos(spin)), 1, e * e);
     // Foreshortening: thrown away from the camera the dart starts pointing into the
     // screen (short) and comes side-on as it arcs over.
