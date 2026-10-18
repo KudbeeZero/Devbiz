@@ -39,6 +39,8 @@
   const POWER_GAIN = 0.15;      // how strongly flick power changes release speed
   const CURL_ACC = 0.18;        // m/s^2 sideways per unit of curl
   const SINK_ACC = 0.27;        // m/s^2 extra drop per unit of extra pressure
+  const CURL_LEAD = 0.030;      // s: the curl starts bending this much sooner (already
+                                // turning as the dart leaves the hand) for a cleaner arc
   const CRATE_D = 0.12;         // m: THINK BOX crates stand this far in front of the board
   const BASE_LEN = 55;          // flight sprite length at scale 1
   const START_SCALE = 1.9;      // flight size at the hand (closest to the camera)
@@ -307,9 +309,15 @@
     let vx = (X - x0) / T, vy = (Y - y0 - 0.5 * G * T * T) / T, vz = OCHE / T;
     const f = phys ? Util.clamp(1 + (phys.powf - 1) * POWER_GAIN, 0.75, 1.2) : 1;
     vx *= f; vy *= f; vz *= f;
-    const ax = phys ? phys.curlX * CURL_ACC : 0;
-    const ay = G + (phys ? phys.curlY * CURL_ACC + phys.sink * SINK_ACC : 0);
-    this._sim = { x0: x0, y0: y0, vx: vx, vy: vy, vz: vz, ax: ax, ay: ay, T: OCHE / vz };
+    // Curl runs on its own clock, CURL_LEAD ahead of release, so the hook is
+    // already bending as the dart leaves the hand instead of easing in from
+    // dead straight. It is rescaled so the total curl at the board is unchanged:
+    // the arc is cleaner, the landing (and every score) stays the same.
+    const cx = phys ? phys.curlX * CURL_ACC : 0, cy = phys ? phys.curlY * CURL_ACC : 0;
+    const ay = G + (phys ? phys.sink * SINK_ACC : 0);
+    const Tb = OCHE / vz;
+    this._sim = { x0: x0, y0: y0, vx: vx, vy: vy, vz: vz, ay: ay, cx: cx, cy: cy,
+      curlK: Tb * Tb / (Tb * Tb + 2 * CURL_LEAD * Tb), T: Tb };
     // THINK BOX: where the path crosses the crate plane, a crate in the way
     // (at the moment the dart gets there) stops it.
     this.blocked = null;
@@ -332,7 +340,8 @@
 
   Dart.prototype._simAt = function (t) {
     const s = this._sim;
-    return { x: s.x0 + s.vx * t + 0.5 * s.ax * t * t, y: s.y0 + s.vy * t + 0.5 * s.ay * t * t, z: s.vz * t };
+    const c = 0.5 * (t * t + 2 * CURL_LEAD * t) * s.curlK;   // curl travel, lead-shifted
+    return { x: s.x0 + s.vx * t + s.cx * c, y: s.y0 + s.vy * t + 0.5 * s.ay * t * t + s.cy * c, z: s.vz * t };
   };
 
   // The flight at progress k (0..1 of the simulated time), on screen. vx/vy is

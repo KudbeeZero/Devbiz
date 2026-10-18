@@ -72,8 +72,10 @@ sweet spot. A wild, rushed flick scatters more than a smooth, committed one.
 **The flight is simulated**, like the arrow in Kudbee Archery. The release becomes a 3D
 projectile from your hand to the board face (gravity, curl, weight), drawn in
 perspective: a soft flick is slower, so it drops lower; a hard one is faster and flatter,
-so it rides high; curl bends it sideways. Where that path meets the board is what scores
-(`src/entities/dart.js` → `_launch`).
+so it rides high; curl bends it sideways. The curl runs 30 ms ahead of release
+(`CURL_LEAD`), so the hook is already turning as the dart leaves the hand for a cleaner
+arc, and it is rescaled so where it lands is unchanged. Where that path meets the board
+is what scores (`src/entities/dart.js` → `_launch`).
 
 **The power band auto-calibrates to you.** Everyone flicks at their own pace — a short
 trackpad drag, a fast phone swipe. Over your first few throws the game learns your natural
@@ -117,7 +119,11 @@ with a big live preview:
 - **Tip** — Steel · Needle · Neon Spike · Plasma · Gold Point.
 - **Flight** — Standard · Slim · Kite · Shark · Star · Ghost.
 
-Tips and flights are bought once with **coins** earned from matches, then equipped freely.
+Barrels, tips and flights are bought once with **coins** earned from matches, then equipped
+freely. **Try before you buy:** tapping a part you don't own puts it on the big turntable
+dart (tap it again to take it off) and the info card shows its rarity and how it changes
+the loadout's style ratings; **BUY & EQUIP** spends the coins (or says how many more you
+need). Tapping a part you own equips it.
 Everything in the Workshop is **purely cosmetic** — every dart flies through the exact same
 physics, so the game stays fair.
 
