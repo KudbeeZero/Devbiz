@@ -47,6 +47,18 @@ await page.evaluate(() => {
 });
 const step = (n) => page.evaluate((k) => window.__step(k), n);
 
+// ---------------------------------------------------------------- studio intro
+const intro = await page.evaluate(() => {
+  const g = window.DARTS, out = { first: g.state };
+  window.__step(90); out.mid = g.state;                      // 1.5s in: still on the card
+  window.__step(150); out.after = g.state;                   // 4s in: on to the menu
+  g.state = 'intro'; g.introT = 1; g.input.pointer.justDown = true; g._updateIntro(0); out.skip = g.state;
+  g.state = 'menu'; window.__step(2);
+  return out;
+});
+rec('studio-intro', intro.first === 'intro' && intro.mid === 'intro' && intro.after === 'menu' && intro.skip === 'menu',
+  `opens on KUDBEE STUDIOS (${intro.first}), still there at 1.5s (${intro.mid}), menu by 4s (${intro.after}), tap skips (${intro.skip})`);
+
 // ---------------------------------------------------------------- board
 const board = await page.evaluate(() => {
   const g = window.DARTS, b = g.board;
@@ -473,6 +485,61 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   const ok = ws.shapes === 'torpedo,straight,bomb,sharkcut,hex' && ws.poor === 'poor' && ws.buy === 'bought' && ws.coins === 10
     && ws.equipFree === 'equipped' && ws.youWear === 'straight' && ws.aiWears === 'sharkcut' && ws.cleaned === 'torpedo' && ws.distinct;
   rec('workshop-barrels', ok, `shapes=${ws.shapes} poor=${ws.poor} buy=${ws.buy} coins=${ws.coins} you=${ws.youWear} ai(Pro)=${ws.aiWears} bad-save->${ws.cleaned} distinct=${ws.distinct}`);
+}
+
+// ---------------------------------------------------------------- dart workshop: try on, then buy
+// Tapping a part you don't own puts it on the big dart without spending a coin;
+// BUY & EQUIP buys it; tapping an owned part equips it; leaving drops the preview.
+{
+  const wt = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, out = {};
+    const snap = JSON.stringify(prog.data);
+    prog.data.coins = 150; prog.data.ownedTips = ['steel']; prog.data.darts.tip = 'steel';
+    g.state = 'workshop'; g.wsPreview = null;
+    const tap = (id) => { const b = g._workshopLayout().find((x) => x.id === id); if (!b) return false;
+      g.input.pointer.x = b.x + b.w / 2; g.input.pointer.y = b.y + b.h / 2; g.input.pointer.justDown = true;
+      g._updateWorkshop(0); g.input.pointer.justDown = false; return true; };
+    tap('tip:plasma');                                         // 200 > 150: try on only
+    out.tryOn = g.wsPreview && g.wsPreview.key; out.coinsAfterTry = prog.data.coins; out.stillSteel = prog.data.darts.tip;
+    out.shownTip = g._wsLoadout().tip;
+    out.poorBtn = (g._workshopLayout().find((x) => x.id === 'buy') || {}).offer?.kind;
+    tap('buy'); out.poorKept = prog.data.coins === 150 && prog.data.darts.tip === 'steel';
+    tap('tip:needle'); out.buyBtn = (g._workshopLayout().find((x) => x.id === 'buy') || {}).offer?.kind;
+    tap('buy'); out.bought = prog.data.darts.tip + '/' + prog.data.coins + '/' + g.wsPreview;
+    tap('tip:goldp'); tap('tip:goldp'); out.toggledOff = g.wsPreview === null;
+    tap('tip:goldp'); tap('tip:steel'); out.equipOwned = prog.data.darts.tip + '/' + g.wsPreview;
+    tap('tip:plasma'); g.input.justPressed = ((orig) => (k) => k === 'back' || orig.call(g.input, k))(g.input.justPressed);
+    g._updateWorkshop(0); delete g.input.justPressed; out.leave = g.state + '/' + g.wsPreview;
+    const r = g._wsRatings({ skin: 'cyan', shape: 'hex', tip: 'plasma', flight: 'ghost' });
+    out.ratings = [r.speed, r.stability, r.slimness].join(',');
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu'; g.wsPreview = null;
+    return out;
+  });
+  const ok = wt.tryOn === 'plasma' && wt.coinsAfterTry === 150 && wt.stillSteel === 'steel' && wt.shownTip === 'plasma'
+    && wt.poorBtn === 'poor' && wt.poorKept && wt.buyBtn === 'buy' && wt.bought === 'needle/110/null'
+    && wt.toggledOff && wt.equipOwned === 'steel/null' && wt.leave === 'menu/null' && /^\d+,\d+,\d+$/.test(wt.ratings);
+  rec('workshop-try-on', ok, `try=${wt.tryOn} coins=${wt.coinsAfterTry} shown=${wt.shownTip} poor=${wt.poorBtn}/${wt.poorKept} buy=${wt.buyBtn}->${wt.bought} toggle=${wt.toggledOff} equip=${wt.equipOwned} leave=${wt.leave} ratings=${wt.ratings}`);
+}
+
+// ---------------------------------------------------------------- curl lead
+// The curl starts bending 30ms before release (already turning as it leaves
+// the hand) but is rescaled so the landing, and so the score, is unchanged.
+{
+  const cl = await page.evaluate(() => {
+    const g = window.DARTS, d = g.dart, B = g.board, Rp = B.Rpx;
+    g.levelIdx = null; g.selOpp = 'hotseat'; g._startMatch();
+    g._groupCenter = null; g._groupStrength = 0;
+    const ax = B.cx, ay = B.cy - 0.6 * Rp;
+    d.isAI = false; d.reset(); d._releaseAt(ax, ay, 0, { powf: 1, curlX: 1, curlY: 0, sink: 0 });
+    const s = d._sim, T = s.T, k = d._pxPerM();
+    const plain = 0.5 * s.cx * T * T * k;                     // landing curl with no lead
+    const landCurl = d.landX - ax;
+    const t = 0.15 * T, early = d._simAt(t).x - (s.x0 + s.vx * t);
+    const noLead = 0.5 * s.cx * t * t;
+    d.reset(); g.state = 'menu';
+    return { same: Math.abs(landCurl - plain) < 0.01, ratio: early / noLead };
+  });
+  rec('curl-lead', cl.same && cl.ratio > 1.4, `landing curl unchanged=${cl.same}, curl at 15% of the flight = ${cl.ratio.toFixed(2)}x a no-lead curl`);
 }
 
 // ---------------------------------------------------------------- flight simulator

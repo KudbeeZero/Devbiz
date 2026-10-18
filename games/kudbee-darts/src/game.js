@@ -100,7 +100,9 @@
       this.toasts.push({ text: text, sub: sub, life: 2.4 });
     };
 
-    this.state = 'menu';
+    // Every launch opens on the KUDBEE STUDIOS card, then the menu.
+    this.state = 'intro';
+    this.introT = 0;
     this.loop = new KD.Loop(this._update.bind(this), this._render.bind(this));
     this._bindMeta();
   }
@@ -204,7 +206,8 @@
     this.input.poll();
     this.time += dt;
 
-    if (this.state === 'menu') this._updateMenu(dt);
+    if (this.state === 'intro') this._updateIntro(dt);
+    else if (this.state === 'menu') this._updateMenu(dt);
     else if (this.state === 'levels') this._updateLevels(dt);
     else if (this.state === 'play') this._updatePlay(dt);
     else if (this.state === 'turnEnd') this._updateTurnEnd(dt);
@@ -924,6 +927,7 @@
     const backLink = document.querySelector('.back-link');
     if (backLink) backLink.style.display = this.state === 'menu' ? '' : 'none';
     ctx.clearRect(0, 0, this.viewW, VIEW_H);
+    if (this.state === 'intro') { this._drawIntro(ctx); return; }
 
     // Backdrop: a campaign match plays in its world's scenery; otherwise the
     // Firefly image if provided, else the procedural neon stage.
@@ -1000,6 +1004,107 @@
       ctx.fillStyle = '#45586a'; ctx.font = '12px monospace'; ctx.textAlign = 'left';
       ctx.fillText('fps ' + this.loop.fps, 8, VIEW_H - 8);
     }
+  };
+
+  // ---- KUDBEE STUDIOS intro ---------------------------------------------
+  // A short studio card before the menu: the hex mark, KUDBEE, STUDIOS
+  // spelled out, then "presents KUDBEE DARTS". A tap, click or key skips it.
+  const INTRO_DUR = 3.4;
+
+  Game.prototype._updateIntro = function (dt) {
+    this.introT += dt;
+    const skip = this.input.pointer.justDown || this.input.justPressed('confirm') || this.input.justPressed('back');
+    if (this.introT >= INTRO_DUR || (skip && this.introT > 0.25)) this.state = 'menu';
+  };
+
+  Game.prototype._drawIntro = function (ctx) {
+    const t = this.introT, W = this.viewW, H = VIEW_H, cx = W / 2;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const ease = (v) => 1 - Math.pow(1 - clamp01(v), 3);
+    const still = this.reduceMotion;
+
+    // Deep night backdrop with a soft spotlight behind the mark.
+    ctx.fillStyle = '#05070f';
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(cx, 300, 10, cx, 300, 420);
+    glow.addColorStop(0, 'rgba(255,196,64,' + (0.22 * ease(t / 0.8)).toFixed(3) + ')');
+    glow.addColorStop(1, 'rgba(5,7,15,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // The whole card fades out over the last half second.
+    const out = clamp01((INTRO_DUR - t) / 0.5);
+    ctx.save();
+    ctx.globalAlpha = out;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // Hex mark with a dart in its centre, popping in.
+    const a1 = ease(t / 0.6);
+    const sc = still ? 1 : 0.6 + 0.4 * a1 + Math.sin(clamp01(t / 0.6) * Math.PI) * 0.08;
+    ctx.save();
+    ctx.globalAlpha = out * a1;
+    ctx.translate(cx, 200); ctx.scale(sc, sc);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = Math.PI / 6 + i * Math.PI / 3;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(ang) * 62, Math.sin(ang) * 62);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,196,64,0.12)'; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = C.gold;
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 22; ctx.stroke(); ctx.shadowBlur = 0;
+    // Bullseye rings and a dart stuck in the middle.
+    ctx.lineWidth = 3;
+    [34, 20].forEach((r, i) => { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = i ? C.cyan : 'rgba(255,255,255,0.8)'; ctx.stroke(); });
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fillStyle = '#ff4d6d'; ctx.fill();
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = '#e8eef8'; ctx.fillRect(4, -2.5, 42, 5);
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(40, 0); ctx.lineTo(60, -13); ctx.lineTo(56, 0); ctx.lineTo(60, 13); ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // KUDBEE, sliding up into place.
+    const a2 = ease((t - 0.3) / 0.6);
+    ctx.globalAlpha = out * a2;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = C.gold; ctx.shadowBlur = 26;
+    ctx.font = 'bold 92px "Space Grotesk", sans-serif';
+    ctx.fillText('KUDBEE', cx, 340 + (still ? 0 : (1 - a2) * 24));
+    ctx.shadowBlur = 0;
+
+    // S T U D I O S, one letter at a time.
+    const word = 'STUDIOS', gap = 34;
+    ctx.font = 'bold 30px "Space Grotesk", sans-serif';
+    ctx.fillStyle = C.cyan;
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 12;
+    for (let i = 0; i < word.length; i++) {
+      ctx.globalAlpha = out * ease((t - 0.75 - i * 0.07) / 0.3);
+      ctx.fillText(word[i], cx + (i - (word.length - 1) / 2) * gap, 412);
+    }
+    ctx.shadowBlur = 0;
+
+    // A gold rule, then "presents KUDBEE DARTS".
+    const a3 = ease((t - 1.35) / 0.5);
+    ctx.globalAlpha = out * a3;
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(cx - 150 * a3, 448, 300 * a3, 2);
+    ctx.fillStyle = C.dim;
+    ctx.font = 'italic 18px "Space Grotesk", sans-serif';
+    ctx.fillText('presents', cx, 482);
+    const a4 = ease((t - 1.75) / 0.5);
+    ctx.globalAlpha = out * a4;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 18;
+    ctx.font = 'bold 44px "Space Grotesk", sans-serif';
+    ctx.fillText('KUDBEE DARTS', cx, 530);
+    ctx.shadowBlur = 0;
+
+    // Skip hint.
+    ctx.globalAlpha = out * 0.55 * clamp01((t - 0.6) / 0.4);
+    ctx.fillStyle = C.dim;
+    ctx.font = '13px "Space Grotesk", sans-serif';
+    ctx.fillText('TAP TO SKIP', cx, H - 64);
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   };
 
   // ---- Menu render -------------------------------------------------------
@@ -2148,9 +2253,29 @@
     const wide = this.viewW >= 1300;
     return wide
       ? { wide: true, cx: this.viewW * 0.63, rows: [164, 298, 432, 566], chipH: 100,
-          dartX: this.viewW * 0.2 + 150, dartY: 330, dartLen: 340, statX: this.viewW * 0.2 - 130, statY: 430 }
+          dartX: this.viewW * 0.2 + 150, dartY: 300, dartLen: 340,
+          info: { x: this.viewW * 0.2 - 175, y: 400, w: 410, h: 250, top: 24, nameGap: 22, gap: 16, m: 12 }, buyH: 50 }
       : { wide: false, cx: this.viewW / 2, rows: [256, 344, 432, 520], chipH: 66,
-          dartX: this.viewW / 2 + 130, dartY: 150, dartLen: 260, statX: this.viewW / 2 + 160, statY: 130 };
+          dartX: this.viewW / 2 + 90, dartY: 160, dartLen: 250,
+          info: { x: this.viewW / 2 + 128, y: 106, w: 330, h: 140, top: 18, nameGap: 20, gap: 12, m: 10 }, buyH: 28 };
+  };
+
+  // The part on show in the big preview: what you tapped (try before you buy)
+  // swapped into what you have equipped. null when nothing is being previewed.
+  Game.prototype._wsLoadout = function () {
+    const d = this.progression.data, pv = this.wsPreview;
+    const L = { skin: d.skins.equipped, shape: d.darts.shape, tip: d.darts.tip, flight: d.darts.flight };
+    if (pv) L[pv.group] = pv.key;
+    return L;
+  };
+
+  // What the BUY button can do for the previewed part.
+  Game.prototype._wsOffer = function () {
+    const pv = this.wsPreview, prog = this.progression;
+    if (!pv) return null;
+    if (pv.group === 'skin') return { kind: 'locked' };
+    const cost = pv.group === 'shape' ? prog.shapeCost(pv.key) : pv.group === 'tip' ? prog.tipCost(pv.key) : prog.flightCost(pv.key);
+    return prog.data.coins >= cost ? { kind: 'buy', cost: cost } : { kind: 'poor', cost: cost, need: cost - prog.data.coins };
   };
 
   Game.prototype._workshopLayout = function () {
@@ -2179,34 +2304,52 @@
       (id) => prog.data.darts.tip === id, (id) => prog.ownsTip(id), (id) => prog.tipCost(id));
     row(Object.keys(KD.Sprites.FLIGHTS), 'flight', WS_ROWS[3], 108, 9,
       (id) => prog.data.darts.flight === id, (id) => prog.ownsFlight(id), (id) => prog.flightCost(id));
+    const pv = this.wsPreview;
+    if (pv) btns.forEach((b) => { if (b.group === pv.group && b.key === pv.key) b.prev = true; });
+    // BUY for the previewed part, along the bottom of the info card.
+    const off = this._wsOffer();
+    if (off && off.kind !== 'locked') {
+      const I = G.info, m = I.m;
+      btns.push({ id: 'buy', group: 'buy', x: I.x + m, y: I.y + I.h - G.buyH - m, w: I.w - m * 2, h: G.buyH, offer: off });
+    }
     return btns;
   };
 
-  Game.prototype._updateWorkshop = function () {
-    if (this.input.justPressed('back') || this.input.justPressed('pause')) { this.state = 'menu'; return; }
+  // Tapping a part you own equips it. Tapping one you don't puts it on the
+  // big dart to try on (tap it again to put it back); BUY on the info card
+  // buys and equips it. Nothing is ever bought by a single stray tap.
+  Game.prototype._updateWorkshop = function (dt) {
+    this.wsFlash = Math.max(0, (this.wsFlash || 0) - (dt || 0));
+    const leave = () => { this.wsPreview = null; this.state = 'menu'; };
+    if (this.input.justPressed('back') || this.input.justPressed('pause')) { leave(); return; }
     const p = this.input.pointer;
     if (!p.justDown) return;
     const btns = this._workshopLayout();
+    const prog = this.progression;
     for (let i = 0; i < btns.length; i++) {
       const b = btns[i];
       if (p.x < b.x || p.x > b.x + b.w || p.y < b.y || p.y > b.y + b.h) continue;
       this.audio.tick();
-      if (b.group === 'back') { this.state = 'menu'; return; }
-      if (b.group === 'skin') {
-        if (b.owned) { this.progression.equip(b.key); this.audio.chime(0); }
-        else this.toasts.push({ text: 'LOCKED', sub: 'Level up or climb the ladder', life: 2.2 });
-      } else if (b.group === 'tip') {
-        const r = this.progression.chooseTip(b.key);
-        if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
-        else this.audio.chime(r === 'bought' ? 1 : 0);
-      } else if (b.group === 'shape') {
-        const r = this.progression.chooseShape(b.key);
-        if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
-        else this.audio.chime(r === 'bought' ? 1 : 0);
-      } else if (b.group === 'flight') {
-        const r = this.progression.chooseFlight(b.key);
-        if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
-        else this.audio.chime(r === 'bought' ? 1 : 0);
+      if (b.group === 'back') { leave(); return; }
+      if (b.group === 'buy') {
+        const pv = this.wsPreview;
+        if (b.offer.kind === 'poor') {
+          this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
+          return;
+        }
+        const r = pv.group === 'shape' ? prog.chooseShape(pv.key) : pv.group === 'tip' ? prog.chooseTip(pv.key) : prog.chooseFlight(pv.key);
+        if (r === 'bought') { this.audio.chime(1); this.wsPreview = null; this.wsFlash = 0.9; }
+        return;
+      }
+      if (b.owned) {
+        if (b.group === 'skin') prog.equip(b.key);
+        else if (b.group === 'shape') prog.chooseShape(b.key);
+        else if (b.group === 'tip') prog.chooseTip(b.key);
+        else prog.chooseFlight(b.key);
+        this.wsPreview = null;
+        this.audio.chime(0);
+      } else {
+        this.wsPreview = b.prev ? null : { group: b.group, key: b.key };
       }
       return;
     }
@@ -2217,24 +2360,107 @@
     return colors[tier] || '#39e6ff';
   };
 
-  Game.prototype._drawStatBars = function (ctx, x, y, speed, stability, slimness) {
-    const stats = [
-      { label: 'SPEED', val: speed, color: '#ff5d3c' },
-      { label: 'STABILITY', val: stability, color: '#7cffb2' },
-      { label: 'SLIMNESS', val: slimness, color: '#39e6ff' }
-    ];
-    const k = this._textBump();
-    ctx.font = '10px "Space Grotesk", sans-serif';
-    ctx.fillStyle = C.dim;
-    stats.forEach((s, i) => {
-      const sy = y + i * 16 * k, bx = x + 65 * k;
-      ctx.fillText(s.label, x, sy);
-      ctx.fillStyle = 'rgba(180,210,255,0.15)';
-      ctx.fillRect(bx, sy - 6, 60, 8);
-      ctx.fillStyle = s.color;
-      ctx.fillRect(bx, sy - 6, 60 * Math.min(1, s.val * 10), 8);
-      ctx.fillStyle = C.dim;
+  // Loadout stats as a 0..100 rating, where 100 is the best part in every
+  // slot. Style ratings only: the footer is honest that every dart flies the same.
+  const WS_STATS = [['speed', 'SPEED', '#ff5d3c'], ['stability', 'STABILITY', '#7cffb2'], ['slimness', 'SLIMNESS', '#39e6ff']];
+  Game.prototype._wsRatings = function (L) {
+    const S = KD.Sprites;
+    const cats = [[S.SKINS, L.skin], [S.BARRELS, L.shape], [S.TIPS, L.tip], [S.FLIGHTS, L.flight]];
+    const out = {};
+    WS_STATS.forEach(([k]) => {
+      let have = 0, best = 0;
+      cats.forEach(([cat, id]) => {
+        have += (cat[id] || {})[k] || 0;
+        best += Math.max.apply(null, Object.keys(cat).map((j) => cat[j][k] || 0));
+      });
+      out[k] = best > 0 ? Math.round(100 * have / best) : 0;
     });
+    return out;
+  };
+
+  // Bars for the equipped rating; a previewed part shows its change on top
+  // (green for a gain, red for a loss) with the new number.
+  Game.prototype._drawStatBars = function (ctx, x, y, w, cur, nxt) {
+    const k = this._textBump(), labW = 88 * k, numW = 76 * k, bw = w - labW - numW, rowH = 19 * k;
+    WS_STATS.forEach(([key, label, col], i) => {
+      const sy = y + i * rowH, a = cur[key], b = nxt ? nxt[key] : a;
+      ctx.textAlign = 'left'; ctx.fillStyle = C.dim; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+      ctx.fillText(label, x, sy);
+      const bx = x + labW, by = sy - 8;
+      ctx.fillStyle = 'rgba(180,210,255,0.14)'; ctx.fillRect(bx, by, bw, 9);
+      ctx.fillStyle = col; ctx.fillRect(bx, by, bw * Math.min(a, b) / 100, 9);
+      if (b !== a) {
+        ctx.fillStyle = b > a ? C.green : '#ff5d6c';
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(bx + bw * Math.min(a, b) / 100, by, bw * Math.abs(b - a) / 100, 9);
+        ctx.globalAlpha = 1;
+      }
+      ctx.textAlign = 'right'; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+      ctx.fillStyle = b > a ? C.green : b < a ? '#ff5d6c' : C.text;
+      ctx.fillText(b !== a ? b + ' (' + (b > a ? '+' : '') + (b - a) + ')' : String(b), x + w, sy);
+    });
+    ctx.textAlign = 'left';
+  };
+
+  const WS_KIND = { skin: 'FINISH', shape: 'BARREL', tip: 'TIP', flight: 'FLIGHT' };
+  const WS_CAT = (g) => g === 'skin' ? KD.Sprites.SKINS : g === 'shape' ? KD.Sprites.BARRELS : g === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
+
+  // The info card: what's on the big dart, its rarity, the stat change, and BUY.
+  Game.prototype._drawWsInfo = function (ctx, G) {
+    const I = G.info, pv = this.wsPreview, d = this.progression.data, k = this._textBump();
+    const shown = pv ? WS_CAT(pv.group)[pv.key] : null;
+    const tier = shown ? shown.tier : 'common', tierCol = shown ? this._tierColor(tier) : C.cyan;
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,12,26,0.86)';
+    this._roundRect(ctx, I.x, I.y, I.w, I.h, 14); ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = pv ? tierCol : 'rgba(180,210,255,0.22)';
+    this._roundRect(ctx, I.x, I.y, I.w, I.h, 14); ctx.stroke();
+    const m = I.m + 2, tx = I.x + m;
+    let ty = I.y + I.top;
+    ctx.textAlign = 'left';
+    if (pv) {
+      ctx.fillStyle = tierCol; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+      ctx.fillText('TRYING ON · ' + tier.toUpperCase() + ' ' + WS_KIND[pv.group], tx, ty);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 20px "Space Grotesk", sans-serif';
+      ctx.fillText(shown.name, tx, ty + I.nameGap * k);
+    } else {
+      ctx.fillStyle = C.dim; ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+      ctx.fillText('YOUR DART', tx, ty);
+      const S = KD.Sprites;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Space Grotesk", sans-serif';
+      ctx.fillText((S.SKINS[d.skins.equipped] || {}).name + ' · ' + (S.BARRELS[d.darts.shape] || {}).name, tx, ty + I.nameGap * k);
+    }
+    ty += (I.nameGap + I.gap + 4) * k;
+    const cur = this._wsRatings(this._wsLoadout.call({ progression: this.progression, wsPreview: null }));
+    const nxt = pv ? this._wsRatings(this._wsLoadout()) : null;
+    this._drawStatBars(ctx, tx, ty, I.w - m * 2, cur, nxt);
+    if (pv && pv.group === 'skin') {
+      ctx.fillStyle = C.gold; ctx.font = 'bold 12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🔒 Level up or climb the ladder to unlock', I.x + I.w / 2, I.y + I.h - 16);
+    } else if (!pv) {
+      ctx.fillStyle = C.dim; ctx.font = '11px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Tap a part to try it on before you buy', I.x + I.w / 2, I.y + I.h - 16);
+    }
+    ctx.restore();
+    ctx.textAlign = 'left';
+  };
+
+  Game.prototype._drawBuyButton = function (ctx, b) {
+    const ok = b.offer.kind === 'buy';
+    const pulse = ok && !this.reduceMotion ? 0.5 + 0.5 * Math.sin(this.time * 5) : 0;
+    ctx.save();
+    ctx.fillStyle = ok ? 'rgba(255,211,77,' + (0.18 + 0.1 * pulse) + ')' : 'rgba(10,16,32,0.6)';
+    this._roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = ok ? C.gold : 'rgba(180,210,255,0.25)';
+    if (ok) { ctx.shadowColor = C.gold; ctx.shadowBlur = 8 + 8 * pulse; }
+    this._roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = ok ? '#fff' : C.dim;
+    ctx.font = 'bold ' + (b.h >= 40 ? 18 : 14) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(ok ? 'BUY & EQUIP · 🪙 ' + b.offer.cost : 'NEED 🪙 ' + b.offer.need + ' MORE', b.x + b.w / 2, b.y + b.h / 2 + 1);
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   };
 
   Game.prototype._workshopChip = function (ctx, b) {
@@ -2253,6 +2479,13 @@
     ctx.strokeStyle = b.sel ? accent : 'rgba(180,210,255,0.2)';
     if (b.sel) { ctx.shadowColor = accent; ctx.shadowBlur = 14; }
     this._roundRect(ctx, b.x, b.y, b.w, b.h, r); ctx.stroke();
+    if (b.prev) {
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([6, 4]); ctx.lineWidth = 2.5; ctx.strokeStyle = C.gold;
+      ctx.lineDashOffset = this.reduceMotion ? 0 : -this.time * 18;
+      this._roundRect(ctx, b.x - 3, b.y - 3, b.w + 6, b.h + 6, r + 3); ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // Rarity badge
     if (tier !== 'common') {
@@ -2299,6 +2532,7 @@
     // Status line: EQUIPPED / cost / OWNED / LOCKED.
     ctx.font = '11px "Space Grotesk", sans-serif';
     if (b.sel) { ctx.fillStyle = C.green; ctx.fillText('EQUIPPED', cx, b.y + b.h - 5); }
+    else if (b.prev) { ctx.fillStyle = C.gold; ctx.fillText('TRYING ON', cx, b.y + b.h - 5); }
     else if (b.group === 'skin') { ctx.fillStyle = b.owned ? C.dim : C.gold; ctx.fillText(b.owned ? 'tap to equip' : '🔒 locked', cx, b.y + b.h - 5); }
     else if (b.owned) { ctx.fillStyle = C.dim; ctx.fillText('owned', cx, b.y + b.h - 5); }
     else { ctx.fillStyle = C.gold; ctx.fillText('🪙 ' + b.cost, cx, b.y + b.h - 5); }
@@ -2315,40 +2549,41 @@
     ctx.fillText('DART WORKSHOP', this.viewW / 2, 80);
     ctx.shadowBlur = 0;
     ctx.fillStyle = C.violet; ctx.font = '13px "Space Grotesk", sans-serif';
-    ctx.fillText('CRAFT YOUR PERFECT DART · BARREL · TIP · FLIGHT', this.viewW / 2, 104);
+    ctx.fillText('TRY ON ANY PART · BUY WHAT YOU LOVE', this.viewW / 2, 104);
 
     // Coin balance (top-right).
     ctx.textAlign = 'right'; ctx.fillStyle = C.gold;
     ctx.font = 'bold 20px "Space Grotesk", sans-serif';
     ctx.fillText('🪙 ' + d.coins, this.viewW - 24, 52);
 
-    // Big live preview of the equipped loadout, gently bobbing + spinning.
-    const skin = KD.Sprites.SKINS[d.skins.equipped];
-    const bob = this.reduceMotion ? 0 : Math.sin(this.time * 1.6) * 6;
-    ctx.save();
-    // The dart is drawn back from its tip, so the tip sits right of centre and
-    // the whole dart fits between the subtitle and the BARREL row.
+    // Big turntable preview: the equipped dart, or the part you're trying on
+    // swapped in, slowly rolling on its long axis over a glowing pedestal.
+    const L = this._wsLoadout();
+    const skin = KD.Sprites.SKINS[L.skin];
     const G = this._wsGeom();
+    const still = this.reduceMotion;
+    const bob = still ? 0 : Math.sin(this.time * 1.6) * 6;
+    const midX = G.dartX - G.dartLen * 0.45;              // the dart is drawn back from its tip
+    ctx.save();
+    const ped = ctx.createRadialGradient(midX, G.dartY + 70, 4, midX, G.dartY + 70, G.dartLen * 0.6);
+    ped.addColorStop(0, skin.color + '55'); ped.addColorStop(1, skin.color + '00');
+    ctx.fillStyle = ped;
+    ctx.beginPath(); ctx.ellipse(midX, G.dartY + 70, G.dartLen * 0.6, 26, 0, 0, Math.PI * 2); ctx.fill();
+    if (this.wsFlash > 0) {                                // a fresh purchase flares gold
+      const f = this.wsFlash / 0.9;
+      ctx.globalAlpha = f; ctx.strokeStyle = C.gold; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(midX, G.dartY, G.dartLen * (0.75 - 0.25 * f), 60 * (1.6 - f), 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     ctx.translate(G.dartX, G.dartY + bob);
-    ctx.rotate(-Math.PI * 0.03 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.03));
-    // Glow pedestal.
+    ctx.rotate(-Math.PI * 0.03 + (still ? 0 : Math.sin(this.time * 0.8) * 0.03));
+    // Roll: squash across the long axis, never flatter than 55% so it reads as a turn.
+    if (!still) ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.cos(this.time * 0.45)));
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, G.dartLen, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, G.dartLen, skin, 0.6, { tip: L.tip, flight: L.flight, shape: L.shape });
     ctx.restore();
 
-    // Combined stats panel (bottom-right of preview).
-    const skinObj = KD.Sprites.SKINS[d.skins.equipped];
-    const tipObj = KD.Sprites.TIPS[d.darts.tip] || KD.Sprites.TIPS.steel;
-    const flightObj = KD.Sprites.FLIGHTS[d.darts.flight] || KD.Sprites.FLIGHTS.standard;
-    const barObj = KD.Sprites.BARRELS[d.darts.shape] || KD.Sprites.BARRELS.torpedo;
-    const parts4 = [skinObj, barObj, tipObj, flightObj];
-    const sum = (k) => parts4.reduce((a, o) => a + (o[k] || 0), 0);
-    const totalSpeed = sum('speed'), totalStability = sum('stability'), totalSlimness = sum('slimness');
-    const sk = this._textBump();
-    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(G.statX, G.statY, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
-    ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
-    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', G.statX + 10, G.statY + 15);
-    this._drawStatBars(ctx, G.statX + 10, G.statY + 15 + 12 * sk, totalSpeed, totalStability, totalSlimness);
+    this._drawWsInfo(ctx, G);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
@@ -2358,6 +2593,7 @@
     const btns = this._workshopLayout();
     btns.forEach((b) => {
       if (b.group === 'back') this._neonButton(ctx, { x: b.x, y: b.y, w: b.w, h: b.h, label: b.label, group: 'back', sel: false });
+      else if (b.group === 'buy') this._drawBuyButton(ctx, b);
       else this._workshopChip(ctx, b);
     });
     ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
