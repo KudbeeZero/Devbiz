@@ -161,54 +161,132 @@ KCK.Render = {
   },
 
   // ---- people --------------------------------------------------------------------
-  // A cartoon person standing at world (wx, wy). o: shirt, pants, face ('back'|'front'|'side'), run (phase), boost, helmet, bat (swing 0..1), arms (0 down .. 1 up)
+  // A cartoon cricketer standing at world (wx, wy), drawn in metres around the feet (scaled by the camera's px/metre).
+  // o: shirt, shirtDark, pants, face ('back' | 'front'), run (phase), boost, helmet, num, arms (0 down .. 1 up),
+  //    bat (the batter's swing: 0 resting on the ground, ~0.12 backlift, 1 the follow-through), pads, label.
+  // Batters wear pads, gloves and a helmet with a grille and neck guard and hold the bat in both hands; the swing
+  // carries the hands round the front of the body as the blade comes down from the backlift and up into the finish.
+  // Far-away figures (few px per metre) skip the small detail.
   person(ctx, wx, wy, o) {
     const p = this.proj(wx, wy, 0); if (!p) return;
-    const boost = o.boost || 1, k = p.k * boost, OUT = this.OUT;
-    const x = p.x, y = p.y;
-    const H = 1.78 * k, lw = Math.max(1.6, 0.05 * k);
+    const k = p.k * (o.boost || 1), OUT = this.OUT, x = p.x, y = p.y, U = KCK.Util;
+    const fine = k > 40, lw = Math.max(1.2, 0.03 * k) / k;
+    const shirt = o.shirt, dark = o.shirtDark || o.shirt, skin = o.skin || '#f0b98a', pants = o.pants || '#f4f4f4';
+    const batter = o.bat !== undefined && o.bat !== null, padded = batter || o.pads || o.helmet;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x, y, 0.5 * k, 0.16 * k, 0, 0, 7); ctx.fill();
-    const run = o.run === undefined || o.run === null ? 0 : Math.sin(o.run) * 0.28 * k;
-    const hip = y - 0.92 * k, legW = 0.15 * k;
-    for (const s of [-1, 1]) {
-      const lx = x + s * 0.13 * k, off = s * run * (o.face === 'side' ? 1.3 : 0.5);
-      ctx.beginPath(); ctx.moveTo(lx, hip); ctx.lineTo(lx + off * 0.4, y - 0.04 * k);
-      ctx.lineWidth = legW + lw * 2; ctx.strokeStyle = OUT; ctx.stroke();
-      ctx.lineWidth = legW; ctx.strokeStyle = o.pants || '#f4f4f4'; ctx.stroke();
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(lx + off * 0.4, y - 0.02 * k, legW * 0.85, legW * 0.5, 0, 0, 7); ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x, y, 0.55 * k, 0.17 * k, 0, 0, 7); ctx.fill();
+    ctx.translate(x, y); ctx.scale(k, k);
+    // stroke a limb: the outline, then the colour on top
+    const limb = (pts, w, col) => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.lineWidth = w + lw * 2; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke(); };
+    const fillOut = col => { ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke(); };
+    const rrect = (x0, y0, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x0, y0, w, h, r); else ctx.rect(x0, y0, w, h); };
+    // ---- the bat: grip + blade, along direction a (0 points straight down; the swing turns it right -> down -> left) ----
+    const bt = batter ? U.clamp(o.bat, 0, 1) : 0;
+    let ba = 0, hand = [0.2, -0.95];
+    if (batter) {
+      if (bt <= 0.12) { const f = bt / 0.12; ba = U.lerp(0.32, 2.5, f); hand = [U.lerp(0.17, 0.27, f), U.lerp(-0.93, -1.18, f)]; }       // grounded -> backlift
+      else { const f = U.easeOut((bt - 0.12) / 0.88), q = 1 - f; ba = U.lerp(2.5, -2.55, f);                                          // down through the line, into the finish
+        hand = [q * q * 0.27 + 2 * q * f * 0.12 + f * f * -0.3, q * q * -1.18 + 2 * q * f * -0.8 + f * f * -1.42]; }
     }
-    // torso
-    const tw = 0.52 * k, th = 0.68 * k, ty = hip - th + 0.05 * k;
-    ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(x - tw / 2, ty, tw, th, 0.17 * k) : ctx.rect(x - tw / 2, ty, tw, th));
-    const sg = ctx.createLinearGradient(x - tw / 2, 0, x + tw / 2, 0); sg.addColorStop(0, o.shirt); sg.addColorStop(1, o.shirtDark || o.shirt);
-    ctx.fillStyle = sg; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke();
-    if (o.face === 'back' && o.num !== undefined) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '400 ' + Math.max(8, 0.26 * k) + 'px ' + (KCK.UI ? KCK.UI.FONT : 'sans-serif'); ctx.textAlign = 'center'; ctx.fillText(String(o.num), x, ty + th * 0.55); }
-    // arms
-    const sy = ty + 0.12 * k, up = o.arms || 0;
-    for (const s of [-1, 1]) {
-      const ax = x + s * (tw / 2 + 0.02 * k), ex = x + s * (0.42 + up * 0.1) * k, ey = sy + (0.42 - up * 0.72) * k;
-      ctx.beginPath(); ctx.moveTo(ax, sy); ctx.lineTo(ex, ey); ctx.lineWidth = 0.15 * k + lw * 2; ctx.strokeStyle = OUT; ctx.stroke();
-      ctx.lineWidth = 0.15 * k; ctx.strokeStyle = o.shirt; ctx.stroke();
-      ctx.fillStyle = o.skin || '#f0b98a'; ctx.beginPath(); ctx.arc(ex, ey, 0.09 * k, 0, 7); ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke();
-    }
-    // bat
-    if (o.bat !== undefined && o.bat !== null) {
-      const a = KCK.Util.lerp(0.5, -2.2, o.bat), bx = x + 0.35 * k, by = ty + 0.5 * k, L = 0.95 * k;
-      ctx.save(); ctx.translate(bx, by); ctx.rotate(a);
-      ctx.fillStyle = '#e8c27a'; ctx.strokeStyle = OUT; ctx.lineWidth = lw; ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(-0.07 * k, 0, 0.14 * k, L, 0.04 * k) : ctx.rect(-0.07 * k, 0, 0.14 * k, L)); ctx.fill(); ctx.stroke();
+    const dir = [Math.sin(ba), Math.cos(ba)], along = (d) => [hand[0] + dir[0] * d, hand[1] + dir[1] * d];
+    const drawBat = () => {
+      ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(-ba);
+      rrect(-0.022, -0.06, 0.044, 0.3, 0.02); fillOut('#2a2f3a');                     // the rubber grip (from above the top hand)
+      if (fine) { ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 0.008; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-0.022, i * 0.05); ctx.lineTo(0.022, i * 0.05 + 0.02); ctx.stroke(); } }
+      ctx.beginPath(); ctx.moveTo(-0.03, 0.22); ctx.quadraticCurveTo(0, 0.2, 0.03, 0.22); ctx.lineTo(0.058, 0.3); ctx.lineTo(0.06, 0.82); ctx.quadraticCurveTo(0, 0.87, -0.06, 0.82); ctx.lineTo(-0.058, 0.3); ctx.closePath();   // shoulders of the blade down to the toe
+      const g = ctx.createLinearGradient(-0.06, 0, 0.06, 0); g.addColorStop(0, '#f6dca0'); g.addColorStop(0.55, '#e8c27a'); g.addColorStop(1, '#c99a52'); fillOut(g);
+      if (fine) {
+        ctx.fillStyle = '#e8483a'; ctx.fillRect(-0.056, 0.36, 0.112, 0.11); ctx.fillStyle = '#ffd34d'; ctx.fillRect(-0.056, 0.465, 0.112, 0.022);   // the maker's sticker
+        ctx.fillStyle = '#ffffff'; ctx.font = '400 0.055px ' + (KCK.UI ? KCK.UI.FONT : 'sans-serif'); ctx.textAlign = 'center'; ctx.save(); ctx.translate(0, 0.415); ctx.rotate(Math.PI / 2); ctx.fillText('KUDBEE', 0, 0.018); ctx.restore();
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.012; ctx.beginPath(); ctx.moveTo(-0.035, 0.3); ctx.lineTo(-0.035, 0.8); ctx.stroke();   // the light down one edge
+      }
       ctx.restore();
+    };
+    const batBehind = batter && o.face === 'back' && Math.cos(ba) > 0.35;            // pointing at the ground: the blade is in front of the batter, mostly hidden
+    if (batBehind) drawBat();
+    // ---- legs: a batter's stance is wide and a little crouched; running lifts the feet in turn ----
+    const run = o.run === undefined || o.run === null ? null : o.run;
+    const stance = batter && run === null ? 0.21 : 0.13, hipY = batter && run === null ? -0.88 : -0.92;
+    for (const s of [-1, 1]) {
+      const lift = run === null ? 0 : Math.max(0, Math.sin(run + (s > 0 ? 0 : Math.PI))) * 0.16, swingX = run === null ? 0 : Math.cos(run + (s > 0 ? 0 : Math.PI)) * 0.05;
+      const fx = s * stance + swingX, fy = -lift, kx = s * (stance * 0.8 + 0.02) + swingX * 0.5, ky = -0.47 - lift * 0.6, hx = s * 0.1;
+      limb([[hx, hipY], [kx, ky]], 0.17, pants);                                      // thigh
+      if (padded) {                                                                    // the pad: a white guard from boot to above the knee
+        const pw = 0.17, top = ky - 0.16, bot = fy - 0.07;
+        rrect(kx - pw / 2, top, pw, bot - top, 0.06); fillOut('#fbfbf7');
+        if (fine) {
+          ctx.strokeStyle = 'rgba(120,130,150,0.55)'; ctx.lineWidth = lw * 0.8;
+          for (const r of [-0.045, 0, 0.045]) { ctx.beginPath(); ctx.moveTo(kx + r, top + 0.05); ctx.lineTo(kx + r, bot - 0.04); ctx.stroke(); }
+          ctx.strokeStyle = dark; ctx.lineWidth = 0.025;                               // straps
+          for (const f of [0.3, 0.66]) { const sy = top + (bot - top) * f; ctx.beginPath(); ctx.moveTo(kx - pw / 2, sy); ctx.lineTo(kx + pw / 2, sy); ctx.stroke(); }
+        }
+      } else limb([[kx, ky], [fx, fy - 0.06]], 0.14, pants);                           // shin
+      ctx.beginPath(); ctx.ellipse(fx + s * 0.02, fy - 0.03, 0.1, 0.055, 0, 0, 7); fillOut('#ffffff');        // boot
+      if (fine) { ctx.fillStyle = '#9aa3ad'; ctx.fillRect(fx + s * 0.02 - 0.09, fy - 0.012, 0.18, 0.02); }
     }
-    // head + helmet/cap
-    const hr = 0.2 * k, hy = ty - hr * 0.55;
-    ctx.fillStyle = o.skin || '#f0b98a'; ctx.beginPath(); ctx.arc(x, hy, hr, 0, 7); ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke();
-    ctx.fillStyle = o.shirt; ctx.beginPath(); ctx.arc(x, hy - 0.02 * k, hr * 1.05, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill(); ctx.stroke();
-    if (o.helmet) { ctx.beginPath(); ctx.arc(x, hy + 0.02 * k, hr * 1.1, Math.PI * 0.9, Math.PI * 2.1); ctx.strokeStyle = OUT; ctx.lineWidth = lw; ctx.stroke(); }
-    if (o.face === 'front') { ctx.fillStyle = OUT; ctx.beginPath(); ctx.arc(x - hr * 0.35, hy + hr * 0.1, hr * 0.12, 0, 7); ctx.arc(x + hr * 0.35, hy + hr * 0.1, hr * 0.12, 0, 7); ctx.fill(); }
-    if (o.label) KCK.UI.text(ctx, o.label, x, y - H - 6, Math.max(11, 13), '#ffffff', 'center');
+    // ---- torso: shoulders wider than the waist, a collar, the number on the back ----
+    const sh = -1.43, wa = hipY + 0.04;
+    ctx.beginPath(); ctx.moveTo(-0.15, wa); ctx.lineTo(-0.22, sh + 0.06); ctx.quadraticCurveTo(-0.21, sh - 0.02, -0.1, sh - 0.03); ctx.lineTo(0.1, sh - 0.03); ctx.quadraticCurveTo(0.21, sh - 0.02, 0.22, sh + 0.06); ctx.lineTo(0.15, wa); ctx.closePath();
+    const sg = ctx.createLinearGradient(-0.25, 0, 0.25, 0); sg.addColorStop(0, shirt); sg.addColorStop(1, dark); fillOut(sg);
+    ctx.beginPath(); ctx.moveTo(-0.15, wa); ctx.lineTo(0.15, wa); ctx.lineWidth = 0.05; ctx.strokeStyle = pants; ctx.stroke();      // belt line
+    if (fine) {
+      if (o.face === 'back') {
+        if (o.num !== undefined) { ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.font = '400 0.24px ' + (KCK.UI ? KCK.UI.FONT : 'sans-serif'); ctx.textAlign = 'center'; ctx.fillText(String(o.num), 0, -1.06); ctx.font = '400 0.07px ' + (KCK.UI ? KCK.UI.FONT : 'sans-serif'); ctx.fillText(o.name || 'KINGS', 0, -1.3); }
+      } else {                                                                         // a V collar and a placket
+        ctx.beginPath(); ctx.moveTo(-0.09, sh - 0.02); ctx.lineTo(0, sh + 0.1); ctx.lineTo(0.09, sh - 0.02); ctx.lineWidth = 0.035; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(-0.1, sh + 0.12, 0.06, 0.16, 0.2, 0, 7); ctx.fill();   // a sheen
+    }
+    // ---- arms ----
+    const shL = [-0.19, sh + 0.05], shR = [0.19, sh + 0.05];
+    const elbow = (s, h, out) => { const mx = (s[0] + h[0]) / 2, my = (s[1] + h[1]) / 2, dx = h[0] - s[0], dy = h[1] - s[1], l = Math.hypot(dx, dy) || 1, bend = Math.max(0, 0.36 - l / 2) * 1.1 + 0.03; return [mx - dy / l * bend * out, my + dx / l * bend * out]; };
+    const arm = (s, h, out) => { const e = elbow(s, h, out); limb([s, e], 0.105, shirt); limb([e, h], 0.085, skin); };
+    if (batter) {
+      const h2 = along(0.1);                                                           // bottom hand just below the top one
+      arm(shL, hand, -1); arm(shR, h2, 1);
+      if (!batBehind) drawBat();
+      for (const h of [hand, h2]) { ctx.beginPath(); ctx.arc(h[0], h[1], 0.07, 0, 7); fillOut('#ffffff'); if (fine) { ctx.fillStyle = dark; ctx.fillRect(h[0] - 0.07, h[1] + 0.02, 0.14, 0.025); } }   // padded gloves
+    } else {
+      const up = o.arms || 0;
+      for (const s of [-1, 1]) {
+        const sp = s < 0 ? shL : shR, sw = run === null ? 0 : Math.sin(run + (s > 0 ? Math.PI : 0)) * 0.12;
+        const raise = s > 0 ? up : up * 0.3, h = [sp[0] + s * (0.1 + raise * 0.05) + sw * 0.4, sp[1] + U.lerp(0.62, -0.62, raise) - Math.abs(sw) * 0.2];
+        arm(sp, h, -s); ctx.beginPath(); ctx.arc(h[0], h[1], 0.06, 0, 7); fillOut(skin);
+      }
+    }
+    // ---- head ----
+    const hy = sh - 0.19, hr = 0.17;
+    ctx.beginPath(); ctx.rect(-0.05, sh - 0.08, 0.1, 0.08); ctx.fillStyle = skin; ctx.fill();      // neck
+    if (o.helmet) {
+      if (o.face === 'back') {
+        ctx.beginPath(); ctx.arc(0, hy + 0.03, hr * 0.92, 0, Math.PI); ctx.closePath(); fillOut(skin);                    // the back of the head under the helmet
+        ctx.beginPath(); ctx.moveTo(-0.1, hy + 0.07); ctx.quadraticCurveTo(0, hy + 0.13, 0.1, hy + 0.07); ctx.lineTo(0.09, hy + 0.11); ctx.quadraticCurveTo(0, hy + 0.17, -0.09, hy + 0.11); ctx.closePath(); fillOut(shirt);   // the neck guard, a slim flap
+        if (fine) for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 0.17, hy - 0.01); ctx.lineTo(s * 0.21, hy + 0.08); ctx.lineWidth = 0.022; ctx.strokeStyle = '#9aa3ad'; ctx.stroke(); }   // the grille's edges either side
+      } else {
+        ctx.beginPath(); ctx.arc(0, hy + 0.02, hr * 0.95, 0, 7); fillOut(skin);
+        ctx.strokeStyle = '#9aa3ad'; ctx.lineWidth = 0.022; for (const gy of [0.0, 0.06, 0.12]) { ctx.beginPath(); ctx.moveTo(-0.14, hy + gy); ctx.lineTo(0.14, hy + gy); ctx.stroke(); }
+      }
+      ctx.beginPath(); ctx.arc(0, hy - 0.02, hr * 1.12, Math.PI * 0.95, Math.PI * 2.05); ctx.closePath();
+      const hg = ctx.createLinearGradient(0, hy - 0.2, 0, hy + 0.05); hg.addColorStop(0, shirt); hg.addColorStop(1, dark); fillOut(hg);   // the dome
+      if (fine) { ctx.beginPath(); ctx.moveTo(0, hy - 0.2); ctx.lineTo(0, hy - 0.04); ctx.lineWidth = 0.035; ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.stroke(); ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(o.face === 'back' ? 0 : 0.08, hy - 0.1, 0.028, 0, 7); ctx.fill(); }
+      if (o.face !== 'back') { ctx.beginPath(); ctx.ellipse(0, hy - 0.01, 0.2, 0.035, 0, 0, 7); fillOut(dark); }   // the peak
+    } else {
+      ctx.beginPath(); ctx.arc(0, hy, hr, 0, 7); fillOut(skin);
+      if (o.face !== 'back') {
+        for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * hr * 0.98, hy + 0.02, 0.035, 0, 7); fillOut(skin); }      // ears
+        if (fine) {
+          ctx.fillStyle = OUT; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 0.06, hy + 0.01, 0.022, 0, 7); ctx.fill(); }
+          ctx.beginPath(); ctx.arc(0, hy + 0.06, 0.05, 0.2, Math.PI - 0.2); ctx.lineWidth = 0.016; ctx.strokeStyle = OUT; ctx.stroke();
+          ctx.fillStyle = 'rgba(255,120,110,0.35)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 0.1, hy + 0.06, 0.03, 0, 7); ctx.fill(); }
+        }
+      }
+      ctx.beginPath(); ctx.arc(0, hy - 0.02, hr * 1.04, Math.PI * 1.0, Math.PI * 2.0); ctx.closePath(); fillOut(shirt);    // the cap
+      if (o.face !== 'back') { ctx.beginPath(); ctx.ellipse(0, hy - 0.02, 0.21, 0.04, 0, 0, Math.PI); fillOut(dark); }    // its peak
+      else { ctx.beginPath(); ctx.arc(0, hy - 0.04, 0.03, 0, 7); ctx.fillStyle = dark; ctx.fill(); }
+    }
     ctx.restore();
-    return { x, y, k, top: y - H };
+    if (o.label) KCK.UI.text(ctx, o.label, x, y - 1.8 * k - 6, 13, '#ffffff', 'center');
+    return { x, y, k, top: y - 1.8 * k };
   },
 
   stumps(ctx, y) {

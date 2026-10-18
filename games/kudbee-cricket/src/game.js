@@ -346,7 +346,7 @@ KCK.Game = class {
     if (cur) for (const f of this.fieldNow) {
       if (batView && (f.y < 2 || f.role === 'KEEPER')) { if (!(R.blend > 0.05)) continue; }
       const p = this._fielderPos(f);
-      people.push({ x: p.x, y: p.y, o: { shirt: teamF.base, shirtDark: teamF.dark, pants: '#f4f4f4', face: 'front', run: p.run, boost: f.role === 'BOWLER' ? 1 : boost, arms: 0 } });
+      people.push({ x: p.x, y: p.y, o: { shirt: teamF.base, shirtDark: teamF.dark, pants: '#f4f4f4', face: 'front', run: p.run, boost: f.role === 'BOWLER' ? 1 : boost, arms: 0, pads: f.role === 'KEEPER' } });
     }
     // bowler run-up (bat view) replaces the idle bowler figure
     if (cur && (this.bp === 'ready' || this.bp === 'runup' || this.bp === 'flight')) {
@@ -358,12 +358,13 @@ KCK.Game = class {
       people.push({ x: bx, y: by, o: { shirt: teamF.light, shirtDark: teamF.base, face: 'front', run, arms, boost: boost * 0.95 } });
     }
     // non-striker
-    people.push({ x: 1.0, y: C.PITCH - 0.4, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, boost } });
+    people.push({ x: 1.0, y: C.PITCH - 0.4, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: 0, boost } });
     // batter
-    const swingU = this.tap && this.bp !== 'idle' ? KCK.Util.clamp((this.bt - this.tap.t) / 0.14, 0, 1) : (this.bp === 'hit' || this.bp === 'miss' ? 1 : 0);
-    const bu = this.bp === 'hit' || this.bp === 'miss' ? KCK.Util.clamp(1 - (this.hit ? this.hit.t : 0) * 1.5, 0.35, 1) * (this.tap ? 1 : 0.1) : swingU;
+    // the bat: a little tap in the backlift while waiting, the swing (0.12 -> 1 in 0.14 s) once you tap, and the
+    // follow-through held while the shot plays out; a ball left alone keeps the bat up out of the way
     const bwait = this.bp === 'ready' || this.bp === 'runup' || (this.bp === 'flight' && !this.tap);
-    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: bwait ? 0.12 + 0.04 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost, arms: 0.2 } });
+    const bu = this.tap ? KCK.Util.clamp(0.12 + 0.88 * (this.bp === 'flight' ? (this.bt - this.tap.t) / 0.14 : 1), 0.12, 1) : 0.12;
+    people.push({ x: -0.3, y: 0.15, o: { shirt: teamB.base, shirtDark: teamB.dark, face: 'back', helmet: true, bat: bwait ? 0.1 + 0.02 * Math.sin(this.time * 3) : bu, num: m.batterIdx + 7, boost } });
     people.sort((a, b) => b.y - a.y);
     for (const q of people) R.person(ctx, q.x, q.y, q.o);
     // stumps shatter
