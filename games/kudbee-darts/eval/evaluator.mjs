@@ -338,7 +338,7 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
     g.progression.data.campaign = { stars: [] }; g.progression.save(); g.levelIdx = null; g.state = 'menu';
     return out;
   });
-  const campOk = camp.count === 15 && JSON.stringify(camp.bosses) === '[4,9,14]' && JSON.stringify(camp.stars) === '[3,2,1]'
+  const campOk = camp.count === 30 && JSON.stringify(camp.bosses) === '[4,9,14,19,24,29]' && JSON.stringify(camp.stars) === '[3,2,1]'
     && camp.mapState === 'levels' && camp.mapWorld === 0 && camp.layoutTiles === 5 && camp.lockedStart && camp.started
     && camp.won.state === 'matchOver' && camp.won.stars === 3 && camp.won.next === 1 && camp.won.saved === 3 && camp.won.unlock1 && !camp.won.unlock2
     && camp.nextStarted && camp.lossKeeps && camp.clean && camp.btns === 'next,retry,levels,share' && camp.share;
@@ -358,6 +358,150 @@ await page.evaluate(() => document.getElementById('__gallery').remove());
   });
   rec('darts-birds-world-scene', playPx.state === 'play' && playPx.r > 12 && playPx.b > playPx.g, `campaign match bottom-left rgb(${playPx.r},${playPx.g},${playPx.b}) (dawn hills, not the neon floor)`);
   await page.evaluate(() => { const g = window.DARTS; g.state = 'menu'; window.__step(2); });
+}
+// ---------------------------------------------------------------- THINK BOX (crates)
+// A side world of crate levels: it opens from the World 1 boss, NEXT LEVEL never
+// leads into it, an ideal flick at a crate sticks in the wood and scores nothing,
+// a clear bed still scores, a sliding crate moves (and carries its darts), and
+// the AI aims around crates.
+{
+  const tb = await page.evaluate(() => {
+    const g = window.DARTS, C = window.KD.Campaign, prog = g.progression, out = {};
+    const first = C.LEVELS.findIndex((l) => l.after != null);
+    out.first = first; out.world = C.WORLDS[C.LEVELS[first].world].name;
+    prog.data.campaign = { stars: [] };
+    out.shutBefore = !prog.campaignUnlocked(first);
+    prog.data.campaign.stars[4] = 1;
+    out.openAfterBoss1 = prog.campaignUnlocked(first);
+    out.nextSkipsSide = C.nextOf(first - 1) === null && C.nextOf(first) === first + 1;
+    // CRATE ROW: the crate covers T20; T19 is clear.
+    g.levelIdx = first; g._startMatch(); g._groupCenter = null; g._groupStrength = 0;
+    const d = g.dart, B = g.board, P = { powf: 1, curlX: 0, curlY: 0, sink: 0 };
+    const at = (label) => { d.isAI = false; d.reset(); const p = B.targetPoint(label); d._releaseAt(p.x, p.y, 0, P); return d.result; };
+    const r20 = at('T20'); out.t20 = r20.label; out.t20blocked = !!r20.blocked && r20.score === 0;
+    out.t19 = at('T19').label;
+    // Land the blocked dart through the game so it sticks in the crate.
+    at('T20'); d._ft = d._sim.T; g._onDartLand();
+    const stuck = g.stuckDarts[g.stuckDarts.length - 1];
+    out.stuckInCrate = stuck && stuck.crate === 0;
+    // The AI aims around the crate.
+    const aim = g._aiClearShot(B.targetPoint('T20'), 0.5);
+    out.aiDodges = !g._behindCrate(aim.x, aim.y, 0.5);
+    // SHUTTER: the sliding crate moves over time.
+    g.levelIdx = first + 1; g._startMatch();
+    const a = g.crateRects(0)[0].x0, b2 = g.crateRects(0.6)[0].x0;
+    out.slides = Math.abs(a - b2) > 0.01;
+    prog.data.campaign = { stars: [] }; prog.save();
+    d.reset(); g.levelIdx = null; g.state = 'menu';
+    return out;
+  });
+  const ok = tb.world === 'THINK BOX' && tb.shutBefore && tb.openAfterBoss1 && tb.nextSkipsSide
+    && tb.t20blocked && tb.t19 === 'T19' && tb.stuckInCrate && tb.aiDodges && tb.slides;
+  rec('think-box', ok, `world=${tb.world} first=${tb.first} opens-after-boss1=${tb.shutBefore && tb.openAfterBoss1} next-skips-side=${tb.nextSkipsSide} T20=${tb.t20} T19=${tb.t19} stuck-in-crate=${tb.stuckInCrate} ai-dodges=${tb.aiDodges} slides=${tb.slides}`);
+}
+
+// ---------------------------------------------------------------- HALLOWEEN + NIGHTMARE
+// Two spooky side worlds: HALLOWEEN opens after the World 2 boss, NIGHTMARE after
+// the World 3 boss; their pumpkins, bats, ghosts and tombstones block like crates,
+// each draws, a slide.axis 'y' box moves up and down, and their matches use the
+// spooky scenery.
+{
+  const sp = await page.evaluate(() => {
+    const g = window.DARTS, C = window.KD.Campaign, prog = g.progression, out = {};
+    const firstOf = (name) => C.LEVELS.findIndex((l) => C.WORLDS[l.world].name === name);
+    const hw = firstOf('HALLOWEEN'), nm = firstOf('NIGHTMARE');
+    out.hw = hw; out.nm = nm; out.afterHw = C.LEVELS[hw].after; out.afterNm = C.LEVELS[nm].after;
+    prog.data.campaign = { stars: [] };
+    out.shut = !prog.campaignUnlocked(hw) && !prog.campaignUnlocked(nm);
+    prog.data.campaign.stars[9] = 1; out.hwOpen = prog.campaignUnlocked(hw) && !prog.campaignUnlocked(nm);
+    prog.data.campaign.stars[14] = 1; out.nmOpen = prog.campaignUnlocked(nm);
+    out.kinds = [...new Set(C.LEVELS.flatMap((l) => (l.boxes || []).map((b) => b.kind || 'crate')))].sort().join();
+    // Each obstacle kind draws something (pixels change on a blank canvas).
+    const c = document.createElement('canvas'); c.width = 120; c.height = 120; const x = c.getContext('2d');
+    out.drawn = ['crate', 'pumpkin', 'bat', 'ghost', 'tomb'].every((k) => {
+      x.clearRect(0, 0, 120, 120); g._obstacle(x, k, 10, 10, 100, 100);
+      const d = x.getImageData(0, 0, 120, 120).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n > 1500;
+    });
+    // A pumpkin blocks a dart like a crate (PUMPKIN PATCH covers the lower board).
+    g.levelIdx = hw; g._startMatch(); g._groupCenter = null; g._groupStrength = 0;
+    const d = g.dart, B = g.board, P = { powf: 1, curlX: 0, curlY: 0, sink: 0 };
+    const lb = C.LEVELS[hw].boxes[0], tx = B.cx + (lb.x + lb.w / 2) * B.Rpx, ty = B.cy + (lb.y + lb.h / 2) * B.Rpx;
+    d.isAI = false; d.reset(); d._releaseAt(tx, ty, 0, P);
+    out.pumpkinBlocks = !!d.result.blocked;
+    // SLEEP PARALYSIS slides up and down.
+    const sl = C.LEVELS.findIndex((l) => l.name === 'SLEEP PARALYSIS');
+    g.levelIdx = sl; g._startMatch();
+    const a = g.crateRects(0)[0], b2 = g.crateRects(1.5)[0];
+    out.ySlide = Math.abs(a.y0 - b2.y0) > 0.01 && Math.abs(a.x0 - b2.x0) < 1e-9;
+    // The match is painted in the world's scenery (bottom-left is the dark spooky hills).
+    window.__step(2);
+    const px = document.getElementById('game').getContext('2d').getImageData(8, 700, 1, 1).data;
+    out.scene = [px[0], px[1], px[2]];
+    prog.data.campaign = { stars: [] }; prog.save(); d.reset(); g.levelIdx = null; g.state = 'menu';
+    return out;
+  });
+  const ok = sp.afterHw === 9 && sp.afterNm === 14 && sp.shut && sp.hwOpen && sp.nmOpen
+    && sp.kinds === 'bat,crate,ghost,pumpkin,tomb' && sp.drawn && sp.pumpkinBlocks && sp.ySlide && sp.scene[0] < 40 && sp.scene[0] > sp.scene[1] && sp.scene[0] >= sp.scene[2];   // red-black, not the blue neon floor
+  rec('spooky-worlds', ok, `halloween@${sp.hw} after ${sp.afterHw}, nightmare@${sp.nm} after ${sp.afterNm}, opens=${sp.shut && sp.hwOpen && sp.nmOpen} kinds=${sp.kinds} drawn=${sp.drawn} pumpkin-blocks=${sp.pumpkinBlocks} y-slide=${sp.ySlide} scene=rgb(${sp.scene})`);
+}
+
+// ---------------------------------------------------------------- dart workshop: barrels
+// Five barrel shapes (torpedo free, the rest bought with coins), worn in matches,
+// thrown by the AI by tier, cleaned up from a bad save, and each draws a distinct dart.
+{
+  const ws = await page.evaluate(() => {
+    const g = window.DARTS, prog = g.progression, B = window.KD.Sprites.BARRELS, out = {};
+    const snap = JSON.stringify(prog.data);
+    out.shapes = Object.keys(B).join();
+    prog.data.coins = 60; prog.data.ownedShapes = ['torpedo']; prog.data.darts.shape = 'torpedo';
+    out.poor = prog.chooseShape('hex');                    // 180 > 60
+    out.buy = prog.chooseShape('straight'); out.coins = prog.data.coins;   // 60 - 50
+    out.equipFree = prog.chooseShape('torpedo');
+    prog.chooseShape('straight');
+    g.levelIdx = null; g.selOpp = 'Pro'; g._startMatch();
+    out.youWear = g.players[0].dartParts.shape; out.aiWears = g.players[1].dartParts.shape;
+    // A save naming an unknown or unowned barrel falls back to the torpedo.
+    localStorage.setItem('kd.profile.v1', JSON.stringify({ version: 1, darts: { tip: 'steel', flight: 'standard', shape: 'hex' }, ownedShapes: ['torpedo'] }));
+    out.cleaned = new window.KD.Progression().data.darts.shape;
+    // Each barrel draws a different dart.
+    const c = document.createElement('canvas'); c.width = 260; c.height = 60; const x = c.getContext('2d');
+    const sig = Object.keys(B).map((k) => { x.clearRect(0, 0, 260, 60); x.save(); x.translate(250, 30); g.sprites.drawDart(x, 240, window.KD.Sprites.SKINS.cyan, 0, { shape: k }); x.restore(); const d = x.getImageData(0, 0, 260, 60).data; let h = 0; for (let i = 0; i < d.length; i += 97) h = (h * 31 + d[i]) >>> 0; return h; });
+    out.distinct = new Set(sig).size === sig.length;
+    prog.data = JSON.parse(snap); prog.save(); g.state = 'menu';
+    return out;
+  });
+  const ok = ws.shapes === 'torpedo,straight,bomb,sharkcut,hex' && ws.poor === 'poor' && ws.buy === 'bought' && ws.coins === 10
+    && ws.equipFree === 'equipped' && ws.youWear === 'straight' && ws.aiWears === 'sharkcut' && ws.cleaned === 'torpedo' && ws.distinct;
+  rec('workshop-barrels', ok, `shapes=${ws.shapes} poor=${ws.poor} buy=${ws.buy} coins=${ws.coins} you=${ws.youWear} ai(Pro)=${ws.aiWears} bad-save->${ws.cleaned} distinct=${ws.distinct}`);
+}
+
+// ---------------------------------------------------------------- flight simulator
+// The dart flies a simulated projectile (like the archery arrow): an ideal
+// flick lands where the hand error put it, a soft flick drops lower, a hard one
+// rides higher, curl bends it sideways, and the drawn flight is that path
+// (starts at the hand, ends on the landing spot, arcs above the target).
+{
+  const sim = await page.evaluate(() => {
+    const g = window.DARTS, d = g.dart, B = g.board, Rp = B.Rpx;
+    g.levelIdx = null; g.selOpp = 'hotseat'; g._startMatch();
+    const ax = B.cx, ay = B.cy - 0.6 * Rp, out = {};
+    // No grouping pull from earlier throws: this measures the flight alone.
+    const go = (phys) => { g._groupCenter = null; g._groupStrength = 0; d.isAI = !phys; d.reset(); d._releaseAt(ax, ay, 0, phys); return { dx: (d.landX - ax) / Rp, dy: (d.landY - ay) / Rp, label: d.result.label }; };
+    const P = (powf, curlX) => ({ powf, curlX: curlX || 0, curlY: 0, sink: 0 });
+    out.ideal = go(P(1)); out.soft = go(P(0.8)); out.hard = go(P(1.3)); out.curl = go(P(1, 1)); out.ai = go(null);
+    d.isAI = false; d.reset(); d._releaseAt(ax, ay, 0, P(1));
+    const h = d._flightAt(0), e = d._flightAt(1);
+    let apex = 1e9; for (let i = 0; i <= 60; i++) apex = Math.min(apex, d._flightAt(i / 60).y);
+    out.path = { fromHand: Math.hypot(h.x - d._fromX, h.y - d._fromY) < 1, toLand: Math.hypot(e.x - d.landX, e.y - d.landY) < 1, apexAbove: apex < ay - 20, apexOnScreen: apex > 0 };
+    d.isAI = false; d.reset(); g.state = 'menu';
+    return out;
+  });
+  const near = (v) => Math.abs(v) < 0.005;
+  const ok = near(sim.ideal.dx) && near(sim.ideal.dy) && sim.ideal.label === 'T20'
+    && sim.soft.dy > 0.08 && sim.hard.dy < -0.08 && near(sim.soft.dx) && sim.curl.dx > 0.05
+    && near(sim.ai.dx) && near(sim.ai.dy)
+    && sim.path.fromHand && sim.path.toLand && sim.path.apexAbove && sim.path.apexOnScreen;
+  rec('flight-simulator', ok, `ideal ${sim.ideal.label} soft dy=${sim.soft.dy.toFixed(2)}R hard dy=${sim.hard.dy.toFixed(2)}R curl dx=${sim.curl.dx.toFixed(2)}R ai on-target=${near(sim.ai.dx) && near(sim.ai.dy)} path=${JSON.stringify(sim.path)}`);
 }
 rec('no-real-console-errors', consoleErrs.length === 0 && pageErrors.length === 0, consoleErrs.length || pageErrors.length ? (consoleErrs[0] || pageErrors[0]) : 'clean');
 

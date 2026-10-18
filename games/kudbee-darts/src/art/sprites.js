@@ -35,12 +35,24 @@
   // FLIGHTS change the tail feather silhouette + opacity + stat mods. Each `shape` returns
   // the polygon (in barrel-relative units) for one half; the renderer mirrors.
   const FLIGHTS = {
-    standard: { name: 'Standard', alpha: 0.92, spread: 1.30, sweep: 0.50, notch: 0, tier: 'common', speed: 0, stability: 0, slimness: 0 },
-    slim:     { name: 'Slim',     alpha: 0.95, spread: 0.85, sweep: 0.50, notch: 0, tier: 'uncommon', speed: 0, stability: 0, slimness: 0.04 },
-    kite:     { name: 'Kite',     alpha: 0.92, spread: 1.65, sweep: 0.46, notch: 0, tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0 },
-    shark:    { name: 'Shark',    alpha: 0.94, spread: 1.45, sweep: 0.72, notch: 0, tier: 'rare', speed: 0.03, stability: 0.02, slimness: 0 },
-    star:     { name: 'Star',     alpha: 0.95, spread: 1.55, sweep: 0.50, notch: 0.4, tier: 'rare', speed: 0, stability: 0.04, slimness: 0.02 },
-    ghost:    { name: 'Ghost',    alpha: 0.55, spread: 1.70, sweep: 0.50, notch: 0, tier: 'epic', speed: 0.04, stability: 0, slimness: 0.06 },
+    standard: { name: 'Standard', alpha: 0.92, spread: 1.30, sweep: 0.50, notch: 0, print: 'stripe', tier: 'common', speed: 0, stability: 0, slimness: 0 },
+    slim:     { name: 'Slim',     alpha: 0.95, spread: 0.85, sweep: 0.50, notch: 0, print: 'racing', tier: 'uncommon', speed: 0, stability: 0, slimness: 0.04 },
+    kite:     { name: 'Kite',     alpha: 0.92, spread: 1.65, sweep: 0.46, notch: 0, print: 'chevron', tier: 'uncommon', speed: 0.02, stability: 0, slimness: 0 },
+    shark:    { name: 'Shark',    alpha: 0.94, spread: 1.45, sweep: 0.72, notch: 0, print: 'flame', tier: 'rare', speed: 0.03, stability: 0.02, slimness: 0 },
+    star:     { name: 'Star',     alpha: 0.95, spread: 1.55, sweep: 0.50, notch: 0.4, print: 'star', tier: 'rare', speed: 0, stability: 0.04, slimness: 0.02 },
+    ghost:    { name: 'Ghost',    alpha: 0.55, spread: 1.70, sweep: 0.50, notch: 0, print: 'none', tier: 'epic', speed: 0.04, stability: 0, slimness: 0.06 },
+  };
+
+  // BARRELS change the barrel's silhouette, metal and grip machining (the
+  // skin still sets its colour: the whole barrel on coloured ones, the
+  // anodised bands/cuts on tungsten ones). prof = half-widths (x the dart's
+  // height) at the front, the fattest point and the rear. Cosmetic only.
+  const BARRELS = {
+    torpedo:  { name: 'Torpedo',    len: 0.34, prof: [0.40, 0.56, 0.46], metal: false, grip: 'rings', tier: 'common',   speed: 0,    stability: 0,    slimness: 0 },
+    straight: { name: 'Straight',   len: 0.37, prof: [0.44, 0.46, 0.44], metal: true,  grip: 'bands', tier: 'uncommon', speed: 0.01, stability: 0.03, slimness: 0.02 },
+    bomb:     { name: 'Front Bomb', len: 0.31, prof: [0.52, 0.64, 0.34], metal: true,  grip: 'knurl', tier: 'uncommon', speed: 0.03, stability: 0.01, slimness: 0 },
+    sharkcut: { name: 'Shark Cut',  len: 0.36, prof: [0.42, 0.50, 0.44], metal: true,  grip: 'fins',  tier: 'rare',     speed: 0.02, stability: 0.03, slimness: 0.01 },
+    hex:      { name: 'Kudbee Hex', len: 0.35, prof: [0.44, 0.54, 0.44], metal: false, grip: 'hex',   tier: 'epic',     speed: 0.03, stability: 0.03, slimness: 0.03 },
   };
 
   function Sprites() {
@@ -54,6 +66,7 @@
   Sprites.SKINS = SKINS;
   Sprites.TIPS = TIPS;
   Sprites.FLIGHTS = FLIGHTS;
+  Sprites.BARRELS = BARRELS;
 
   Sprites.prototype.load = function (manifestUrl) {
     const self = this;
@@ -111,11 +124,12 @@
     parts = parts || {};
     const tip = TIPS[parts.tip] || TIPS.steel;
     const flight = FLIGHTS[parts.flight] || FLIGHTS.standard;
+    const barrel = BARRELS[parts.shape] || BARRELS.torpedo;
     const L = len, h = len * 0.16;
     const col = skin.color, acc = skin.accent;
     const tipCol = tip.col || col;
     const tipBase = -L * tip.len;                 // where the point meets the barrel
-    const bLen = L * 0.34, bx = tipBase - bLen;   // barrel runs bx .. tipBase
+    const bLen = L * barrel.len, bx = tipBase - bLen;   // barrel runs bx .. tipBase
     const sLen = L * 0.22, sx = bx - sLen;        // shaft runs sx .. bx
     const fTail = sx - L * 0.30;                  // flight tail
     ctx.save();
@@ -145,11 +159,42 @@
     panel(-1); ctx.fillStyle = shade(col, 1.18); ctx.fill();   // upper panel catches the light
     panel(1);  ctx.fillStyle = shade(col, 0.62); ctx.fill();   // lower panel in shade
     ctx.globalAlpha = 1;
-    // Accent stripe along the leading third of each panel + crease + edge light.
-    ctx.globalAlpha = flight.alpha * 0.85;
-    ctx.fillStyle = acc;
-    ctx.beginPath(); ctx.moveTo(fx - (fx - fTail) * 0.10, -spr * 0.10); ctx.lineTo(fx - (fx - fTail) * 0.24, -spr * 0.46); ctx.lineTo(fx - (fx - fTail) * 0.34, -spr * 0.40); ctx.lineTo(fx - (fx - fTail) * 0.20, -spr * 0.06); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(fx - (fx - fTail) * 0.10, spr * 0.10); ctx.lineTo(fx - (fx - fTail) * 0.24, spr * 0.46); ctx.lineTo(fx - (fx - fTail) * 0.34, spr * 0.40); ctx.lineTo(fx - (fx - fTail) * 0.20, spr * 0.06); ctx.closePath(); ctx.fill();
+    // Printed design on each panel (clipped to it) + crease + edge light.
+    const fl = fx - fTail;
+    [-1, 1].forEach(function (sign) {
+      ctx.save();
+      panel(sign); ctx.clip();
+      ctx.globalAlpha = flight.alpha * 0.9;
+      ctx.fillStyle = acc; ctx.strokeStyle = acc;
+      const P = function (u, v) { return [fx - fl * u, sign * spr * v]; };
+      const poly = function (pts) { ctx.beginPath(); pts.forEach(function (q, i) { const r = P(q[0], q[1]); if (i) ctx.lineTo(r[0], r[1]); else ctx.moveTo(r[0], r[1]); }); ctx.closePath(); ctx.fill(); };
+      if (flight.print === 'stripe') {
+        poly([[0.10, 0.10], [0.24, 0.46], [0.34, 0.40], [0.20, 0.06]]);
+      } else if (flight.print === 'racing') {
+        poly([[0.08, 0.30], [0.95, 0.80], [0.95, 0.66], [0.08, 0.18]]);
+        poly([[0.08, 0.50], [0.95, 1.00], [0.95, 0.90], [0.08, 0.42]]);
+      } else if (flight.print === 'chevron') {
+        [0.25, 0.48, 0.71].forEach(function (u) { poly([[u, 0], [u + 0.12, 0.9], [u + 0.2, 0.9], [u + 0.08, 0]]); });
+      } else if (flight.print === 'flame') {
+        ctx.fillStyle = '#ffd34d';
+        poly([[0.05, 0.05], [0.35, 0.30], [0.30, 0.55], [0.55, 0.45], [0.50, 0.80], [0.78, 0.55], [0.95, 0.95], [0.95, 0.0]]);
+        ctx.fillStyle = '#ff5d3c';
+        poly([[0.30, 0.04], [0.52, 0.22], [0.50, 0.40], [0.70, 0.32], [0.72, 0.55], [0.92, 0.42], [0.95, 0.0]]);
+      } else if (flight.print === 'star') {
+        const c = P(0.55, 0.52), rr = spr * 0.28;
+        ctx.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? rr * 0.45 : rr;
+          ctx.lineTo(c[0] + Math.cos(a) * q, c[1] + Math.sin(a) * q);
+        }
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    });
+    // Crisp dark edge so the flight reads on bright scenery too.
+    ctx.globalAlpha = flight.alpha;
+    ctx.strokeStyle = 'rgba(10,6,24,0.55)'; ctx.lineWidth = Math.max(0.6, h * 0.05);
+    panel(-1); ctx.stroke(); panel(1); ctx.stroke();
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(0.6, h * 0.05);
     ctx.beginPath(); ctx.moveTo(fx, -h * 0.02); ctx.lineTo(fTail, -spr); if (flight.notch) ctx.lineTo(midx, -spr * flight.notch); ctx.stroke();
@@ -167,33 +212,80 @@
     ctx.fillRect(sx + sLen * 0.30, -sh, Math.max(0.6, h * 0.06), sh * 2);
     ctx.fillRect(sx + sLen * 0.70, -sh, Math.max(0.6, h * 0.06), sh * 2);
 
-    // ---- Barrel: torpedo profile (slim front, fat middle, slim rear) ------
-    const hw0 = h * 0.40, hw1 = h * 0.56, hw2 = h * 0.46;
+    // ---- Barrel: the chosen silhouette, finish and grip -----------------
+    const hw0 = h * barrel.prof[0], hw1 = h * barrel.prof[1], hw2 = h * barrel.prof[2];
+    const barrelPath = function () {
+      ctx.beginPath();
+      ctx.moveTo(tipBase, -hw0);
+      ctx.quadraticCurveTo(bx + bLen * 0.45, -hw1 * 1.12, bx, -hw2);
+      ctx.lineTo(bx, hw2);
+      ctx.quadraticCurveTo(bx + bLen * 0.45, hw1 * 1.12, tipBase, hw0);
+      ctx.closePath();
+    };
     const bg = ctx.createLinearGradient(0, -hw1, 0, hw1);
-    bg.addColorStop(0, shade(col, 1.55));
-    bg.addColorStop(0.25, shade(col, 1.12));
-    bg.addColorStop(0.62, shade(col, 0.72));
-    bg.addColorStop(1, shade(col, 0.34));
-    ctx.fillStyle = bg;
-    ctx.beginPath();
-    ctx.moveTo(tipBase, -hw0);
-    ctx.quadraticCurveTo(bx + bLen * 0.45, -hw1 * 1.12, bx, -hw2);
-    ctx.lineTo(bx, hw2);
-    ctx.quadraticCurveTo(bx + bLen * 0.45, hw1 * 1.12, tipBase, hw0);
-    ctx.closePath();
-    ctx.fill();
-    // Knurled grip rings across the middle of the barrel.
-    ctx.strokeStyle = 'rgba(0,0,0,0.42)'; ctx.lineWidth = Math.max(0.5, h * 0.05);
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const gx = bx + bLen * (0.22 + i * 0.105);
-      const gh = hw1 * (1 - Math.abs(i - 2.5) * 0.06);
-      ctx.moveTo(gx, -gh); ctx.lineTo(gx, gh);
+    if (barrel.metal) {           // polished tungsten
+      bg.addColorStop(0, '#f4f7fb'); bg.addColorStop(0.3, '#b9c1cc'); bg.addColorStop(0.65, '#5f6876'); bg.addColorStop(1, '#22272f');
+    } else {                      // coloured barrel
+      bg.addColorStop(0, shade(col, 1.55)); bg.addColorStop(0.25, shade(col, 1.12));
+      bg.addColorStop(0.62, shade(col, 0.72)); bg.addColorStop(1, shade(col, 0.34));
     }
-    ctx.stroke();
-    // Specular streak along the top.
+    ctx.fillStyle = bg;
+    barrelPath(); ctx.fill();
+    ctx.save();
+    barrelPath(); ctx.clip();
+    const lw = Math.max(0.5, h * 0.05);
+    if (barrel.grip === 'rings') {          // knurled grip rings across the middle
+      ctx.strokeStyle = 'rgba(0,0,0,0.42)'; ctx.lineWidth = lw;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) { const gx = bx + bLen * (0.22 + i * 0.105); ctx.moveTo(gx, -hw1 * 1.2); ctx.lineTo(gx, hw1 * 1.2); }
+      ctx.stroke();
+    } else if (barrel.grip === 'bands') {   // anodised bands in the skin colour
+      [0.28, 0.48, 0.68].forEach(function (u) {
+        const gx = bx + bLen * u, bw = bLen * 0.1;
+        const cg = ctx.createLinearGradient(0, -hw1, 0, hw1);
+        cg.addColorStop(0, shade(col, 1.4)); cg.addColorStop(0.5, col); cg.addColorStop(1, shade(col, 0.4));
+        ctx.fillStyle = cg; ctx.fillRect(gx, -hw1 * 1.2, bw, hw1 * 2.4);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(gx - lw, -hw1 * 1.2, lw, hw1 * 2.4); ctx.fillRect(gx + bw, -hw1 * 1.2, lw, hw1 * 2.4);
+      });
+    } else if (barrel.grip === 'knurl') {   // fine cross-hatch over the bomb, a coloured ring at the front
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = lw * 0.8;
+      ctx.beginPath();
+      for (let i = -6; i <= 12; i++) {
+        const gx = bx + bLen * 0.12 + i * h * 0.16;
+        ctx.moveTo(gx, -hw1 * 1.2); ctx.lineTo(gx + hw1 * 1.4, hw1 * 1.2);
+        ctx.moveTo(gx + hw1 * 1.4, -hw1 * 1.2); ctx.lineTo(gx, hw1 * 1.2);
+      }
+      ctx.stroke();
+      ctx.fillStyle = col; ctx.fillRect(tipBase - bLen * 0.16, -hw1 * 1.2, bLen * 0.07, hw1 * 2.4);
+    } else if (barrel.grip === 'fins') {    // slanted shark-fin cuts with colour in the grooves
+      for (let i = 0; i < 5; i++) {
+        const gx = bx + bLen * (0.2 + i * 0.13);
+        ctx.strokeStyle = col; ctx.lineWidth = lw * 2.2;
+        ctx.beginPath(); ctx.moveTo(gx, hw1 * 1.1); ctx.lineTo(gx + bLen * 0.1, -hw1 * 1.1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = lw;
+        ctx.beginPath(); ctx.moveTo(gx + lw * 1.4, hw1 * 1.1); ctx.lineTo(gx + bLen * 0.1 + lw * 1.4, -hw1 * 1.1); ctx.stroke();
+      }
+    } else if (barrel.grip === 'hex') {     // honeycomb knurl
+      const r = h * 0.13, dx = r * 1.5, dy = r * Math.sqrt(3);
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = lw * 0.8;
+      ctx.beginPath();
+      for (let cx = bx; cx < tipBase; cx += dx) {
+        const odd = Math.round((cx - bx) / dx) % 2;
+        for (let cy = -hw1 * 1.2 + (odd ? dy / 2 : 0); cy < hw1 * 1.2; cy += dy) {
+          for (let k = 0; k <= 6; k++) {
+            const a = k * Math.PI / 3, px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+            if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+          }
+        }
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Specular streak along the top, and a crisp outline.
     ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(0.7, h * 0.09); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(tipBase - bLen * 0.08, -hw1 * 0.52); ctx.lineTo(bx + bLen * 0.1, -hw1 * 0.62); ctx.stroke();
+    ctx.strokeStyle = 'rgba(10,6,24,0.6)'; ctx.lineWidth = lw;
+    barrelPath(); ctx.stroke();
 
     // ---- Point: slim steel (or themed) cone with a lit edge ---------------
     const tw = h * 0.20;

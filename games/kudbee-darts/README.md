@@ -7,8 +7,10 @@ Play **301**, **501** and **Cricket** against a friend (pass-and-play) or a leag
 rivals. **Drag to aim, then swipe-release to throw** — a true flick whose speed sets the
 power and curl (a tap won't throw). Watch the score land on a **digital seven-segment
 scoreboard** that pops and sheds bricks, follow the **on-board checkout guide** that lights
-up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, and unlock
-**neon dart skins**.
+up exactly what to hit on a finish, climb the **league ladder**, earn **XP**, and build
+your own dart in the **Dart Workshop**: a finish (colour), a barrel (Torpedo, Straight
+tungsten with anodised bands, Front Bomb with a knurled grip, Shark Cut, Kudbee Hex), a tip
+and a printed flight (stripe, racing, chevron, flame, star, ghost). All cosmetic.
 
 ## Play
 
@@ -23,6 +25,16 @@ five levels, each world ending in a boss. A level is a 301 or 501 leg against a 
 rival. Stars come from the darts you throw on the winning leg: 1 star for a win, 2 within
 par + 6, 3 within par. Levels unlock one at a time, and the best stars are saved per
 level (`campaign.js` holds the level list and the star rule).
+
+**THINK BOX** is a side world that opens once the World 1 boss has a star: wooden
+crates stand just in front of the board (some slide side to side), and a dart that meets
+one sticks in the wood and scores nothing, so you plan around them. The AI aims around
+the crates too.
+
+Two spooky side worlds play the same way with their own obstacles and scenery:
+**HALLOWEEN** (opens after the World 2 boss: pumpkins, flapping bats and sliding ghosts
+under an orange moon) and **NIGHTMARE** (opens after the World 3 boss: tombstones, night
+terrors and a ghost that rises and falls, with a blood moon, fog and eyes in the hills).
 
 Each level sets its rival's accuracy, so difficulty ramps level by level. The
 rivals and the star targets (`par`) are tuned with bots, not guesses:
@@ -52,8 +64,13 @@ on roughly half to two-thirds of the wins.
 release **speed** sets the power (too soft drops low and short; too hard sails high and
 out), the sideways flick adds **curl**, and harder **pressure** (pen / 3D-touch) sinks the
 dart with extra weight. A live **power gauge** beside the reticle shows the committed-flick
-sweet spot. Where the dart lands (plus a little scatter) is what scores, so the read is
-honest. A wild, rushed flick scatters more than a smooth, committed one.
+sweet spot. A wild, rushed flick scatters more than a smooth, committed one.
+
+**The flight is simulated**, like the arrow in Kudbee Archery. The release becomes a 3D
+projectile from your hand to the board face (gravity, curl, weight), drawn in
+perspective: a soft flick is slower, so it drops lower; a hard one is faster and flatter,
+so it rides high; curl bends it sideways. Where that path meets the board is what scores
+(`src/entities/dart.js` → `_launch`).
 
 **The power band auto-calibrates to you.** Everyone flicks at their own pace — a short
 trackpad drag, a fast phone swipe. Over your first few throws the game learns your natural

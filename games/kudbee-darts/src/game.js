@@ -55,6 +55,7 @@
     // and the world page shown on the level map.
     this.levelIdx = null;
     this.mapWorld = 0;
+    this.crateT = 0;      // THINK BOX crate clock (runs on slow-mo time, like the dart)
 
     // Board "lunge": a quick scale-in + snap-back on each throw release, so the
     // board reads as reacting to the dart leaving the hand (Darts-of-Fury feel).
@@ -227,6 +228,7 @@
     if (this._slowmoHoldT > 0) this._slowmoHoldT = Math.max(0, this._slowmoHoldT - dt);
     else this.timeScale = Util.approach(this.timeScale, 1, dt * 2.2);
     const adt = dt * this.timeScale;
+    this.crateT += adt;
     this.particles.update(adt);
     this.camera.update(adt);
     if (this.dart.state === 'flying') {
@@ -459,7 +461,7 @@
   Game.prototype._startMatch = function () {
     const prog = this.progression;
     const human = new KD.Player('You', prog.data.skins.equipped);
-    human.dartParts = { tip: prog.data.darts.tip, flight: prog.data.darts.flight };
+    human.dartParts = { tip: prog.data.darts.tip, flight: prog.data.darts.flight, shape: prog.data.darts.shape };
     let opp;
     this.isLadder = false;
     this.ladderRank = prog.data.ladderRank;
@@ -478,7 +480,8 @@
       opp = new KD.AIPlayer(this.selOpp + ' Bot', this.selOpp, 'violet');
     }
     // AIs throw themed darts too (neon tip + a flight chosen from their name).
-    if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark' };
+    // AIs throw themed darts too; the barrel follows their tier.
+    if (opp.isAI) opp.dartParts = { tip: 'neon', flight: 'shark', shape: { Rookie: 'straight', Pro: 'sharkcut', Legend: 'hex' }[opp.tierName] || 'bomb' };
     else opp.dartParts = { tip: 'steel', flight: 'standard' };
 
     const modeKey = level ? level.mode : this.selMode;
@@ -515,7 +518,7 @@
     if (cur.isAI) {
       if (this.dart.state === 'ready') {
         const label = cur.chooseTarget(this.mode, this.players[1 - this.current], this.mode.dartsPerTurn - this.dartsThisTurn);
-        const pt = this.board.targetPoint(label);
+        const pt = this._aiClearShot(this.board.targetPoint(label), cur.thinkTime + KD.Dart.FLIGHT_T);
         this.dart.skin = cur.skin();
         this.dart.parts = cur.dartParts || null;
         // Pressure: weaker AIs choke on checkouts — open their grouping the closer
@@ -553,6 +556,7 @@
 
     const isMiss = res.ring === 'miss';
     if (isMiss) this.audio.clunk(); else this.audio.thud();
+    if (res.blocked) this._say('BLOCKED!', 0.9, '#d79b5c');
     // Impact effects: splinters, glow flash, and shockwave.
     const skinCol = cur.skin().color;
     if (!isMiss) {
@@ -569,7 +573,12 @@
     // A genuine miss doesn't stick — it clips off and tumbles away instead of
     // freezing in a scoring pose (see _spawnBounceDart). Purely cosmetic: the
     // score is 0 either way, this only changes how the whiff *reads*.
-    if (isMiss) this._spawnBounceDart(lx, ly, cur, lean);
+    if (res.blocked) {
+      // Stuck in a THINK BOX crate: remember where the crate was, so the dart rides along with it.
+      const box = KD.Campaign.LEVELS[this.levelIdx].boxes[res.crate];
+      this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time,
+        crate: res.crate, slide0: this._crateSlide(box, this.crateT) });
+    } else if (isMiss) this._spawnBounceDart(lx, ly, cur, lean);
     else this.stuckDarts.push({ x: lx, y: ly, skin: cur.skin(), parts: cur.dartParts || null, ang: lean, landT: this.time });
     cur.dartsThrown++;
 
@@ -612,14 +621,17 @@
     } else {
       // A genuine miss: a duller gray puff instead of colorful splinters —
       // the board didn't register a score, so the fx shouldn't look like it did.
-      this.particles.dust(lx, ly);
+      // A crate hit knocks wood splinters off the crate instead.
+      if (res.blocked) this.particles.bricks(lx, ly, '#b9824a', 10, { speed: 220, size: 6 });
+      else this.particles.dust(lx, ly);
     }
     // Haptic thump on phones that support it (denser for the big hits).
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(big ? [0, 16, 30, 22] : res.score > 0 ? 14 : 8); } catch (_) {}
     }
     this.camera.shake(big ? 0.22 : 0.12);
-    this.particles.scorePop(lx, ly - 6, out.text, big,
+    // A crate hit already shouts BLOCKED!; no second "MISS" pop on top of it.
+    if (!res.blocked) this.particles.scorePop(lx, ly - 6, out.text, big,
       res.ring === 'treble' ? C.green : res.ring === 'double' ? C.gold : null);
 
     // Hot-streak badge: consecutive BIG hits (see above) by the same thrower,
@@ -787,8 +799,15 @@
     if (this.levelIdx != null) {
       const L = KD.Campaign.LEVELS[this.levelIdx];
       const stars = won ? KD.Campaign.starsFor(L, human.dartsThrown) : 0;
-      const rec = this.progression.recordLevel(this.levelIdx, stars);
-      const next = this.levelIdx + 1 < KD.Campaign.LEVELS.length ? this.levelIdx + 1 : null;
+      const prog = this.progression, LV = KD.Campaign.LEVELS;
+      const sideShut = LV.map((l, j) => l.after === this.levelIdx && !prog.campaignUnlocked(j));
+      const rec = prog.recordLevel(this.levelIdx, stars);
+      LV.forEach((l, j) => {
+        if (sideShut[j] && prog.campaignUnlocked(j)) {
+          this.toasts.push({ text: KD.Campaign.WORLDS[l.world].name + ' OPEN!', sub: 'A new world on the level map', life: 3.2 });
+        }
+      });
+      const next = KD.Campaign.nextOf(this.levelIdx);
       lvl = { idx: this.levelIdx, stars: stars, best: rec.best, won: won, par: L.par, boss: !!L.boss, next: won ? next : null };
     }
     const xp = this.progression.recordMatch(result);
@@ -937,8 +956,10 @@
     this.board.draw(ctx);
     if (this.hitFlash) this.board.drawHitFlash(ctx, this.hitFlash.res, this.hitFlash.life, this.hitFlash.col);
     if (this.state === 'play') this._drawCheckoutGuide(ctx);
-    for (let i = 0; i < this.stuckDarts.length; i++) {
-      const d = this.stuckDarts[i];
+    // Darts in the board, then any THINK BOX crates in front of it, then the
+    // darts stuck in those crates (riding along as a crate slides).
+    const drawStuck = (d, ox, oy) => {
+      const x = d.x + ox, y = d.y + oy;
       // A brief settle wobble right after impact — a quick decaying jiggle
       // so a fresh stick reads as landing WITH force, not teleporting in.
       let ang = d.ang;
@@ -949,9 +970,17 @@
       // Thunk: a fresh dart arrives slightly oversized and settles into the board.
       let thunk = 1;
       if (!this.reduceMotion && d.landT != null) thunk += 0.16 * Math.max(0, 1 - (this.time - d.landT) / 0.11);
-      if (thunk !== 1) { ctx.save(); ctx.translate(d.x, d.y); ctx.scale(thunk, thunk); ctx.translate(-d.x, -d.y); }
-      this.sprites.drawStuckDart(ctx, d.x, d.y, d.skin, ang, d.parts);
+      if (thunk !== 1) { ctx.save(); ctx.translate(x, y); ctx.scale(thunk, thunk); ctx.translate(-x, -y); }
+      this.sprites.drawStuckDart(ctx, x, y, d.skin, ang, d.parts);
       if (thunk !== 1) ctx.restore();
+    };
+    for (let i = 0; i < this.stuckDarts.length; i++) {
+      if (this.stuckDarts[i].crate == null) drawStuck(this.stuckDarts[i], 0, 0);
+    }
+    this._drawCrates(ctx);
+    for (let i = 0; i < this.stuckDarts.length; i++) {
+      const d = this.stuckDarts[i];
+      if (d.crate != null) { const sh = this._crateShiftPx(d); drawStuck(d, sh.x, sh.y); }
     }
     this._drawBounceDarts(ctx);
     this.dart.drawFlight(ctx);
@@ -1457,11 +1486,17 @@
     dawn:  ['#120a33', '#3b1d6e', '#a2457e', '#ffb48a'],
     noon:  ['#06203a', '#0f4f6e', '#2c8f9a', '#bff3e0'],
     night: ['#030210', '#0d0a2e', '#2b1657', '#7d5bd0'],
+    box:   ['#1b0d22', '#5a2340', '#c2553f', '#ffc078'],
+    halloween: ['#0d0618', '#2e1245', '#7a2a3a', '#ff8a2b'],
+    nightmare: ['#030104', '#14040c', '#3a0814', '#7a0f1e'],
   };
   const HILLS = {
     dawn:  ['#2a1450', '#1d0d3a', '#120828'],
     noon:  ['#0c3550', '#082638', '#051a28'],
     night: ['#1a1044', '#110a33', '#08051f'],
+    box:   ['#3a1d2a', '#2a1420', '#1a0c16'],
+    halloween: ['#24123a', '#170b28', '#0c0616'],
+    nightmare: ['#1a0a12', '#10050b', '#070205'],
   };
   const STARS_AT = [[70, 80], [190, 150], [330, 60], [520, 118], [640, 52], [880, 190], [260, 210], [600, 200], [930, 60], [430, 40]];
 
@@ -1483,22 +1518,47 @@
     });
     ctx.globalAlpha = 1;
     // Sun / moon with slowly turning rays, outlined like a cartoon.
-    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : '#fff2b3';
-    ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
-    ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
-    for (let k = 0; k < 12; k++) {
-      ctx.rotate(Math.PI / 6);
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-22, 150); ctx.lineTo(22, 150); ctx.closePath(); ctx.fill();
+    const sunY = sy, sunCol = world.sky === 'night' ? '#eef3ff' : world.sky === 'dawn' ? '#ffd34d' : world.sky === 'box' ? '#ffb347' : world.sky === 'halloween' ? '#ff9a3c' : world.sky === 'nightmare' ? '#d4233a' : '#fff2b3';
+    const eerie = world.sky === 'halloween' || world.sky === 'nightmare';
+    if (eerie) {
+      // A haunted moon: a soft pulsing halo instead of rays.
+      const halo = ctx.createRadialGradient(sunX, sunY, 40, sunX, sunY, 150);
+      halo.addColorStop(0, sunCol); halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.35 + 0.1 * Math.sin(t * 1.5);
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(sunX, sunY, 150, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(t * 0.12);
+      ctx.fillStyle = sunCol; ctx.globalAlpha = 0.16;
+      for (let k = 0; k < 12; k++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-22, 150); ctx.lineTo(22, 150); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
     }
-    ctx.restore();
     ctx.globalAlpha = 1;
     ctx.beginPath(); ctx.arc(sunX, sunY, 54, 0, Math.PI * 2);
-    ctx.fillStyle = sunCol; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = OUTLINE; ctx.stroke();
+    ctx.fillStyle = sunCol; ctx.fill();
+    if (eerie) {            // craters
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      [[-18, -14, 11], [16, 8, 14], [-6, 22, 7], [22, -22, 6]].forEach((c) => { ctx.beginPath(); ctx.arc(sunX + c[0], sunY + c[1], c[2], 0, Math.PI * 2); ctx.fill(); });
+    }
+    ctx.lineWidth = 6; ctx.strokeStyle = OUTLINE;
+    ctx.beginPath(); ctx.arc(sunX, sunY, 54, 0, Math.PI * 2); ctx.stroke();
     // Puffy clouds drifting across.
     const drift = (base, s, speed) => ((base + t * speed) % (this.viewW + 260)) - 130;
-    this._cloud(ctx, drift(0, 1, 14), 206, 0.7);
-    this._cloud(ctx, drift(420, 1, 9), 470, 0.8);
-    this._cloud(ctx, drift(700, 1, 18), 236, 0.5);
+    const spooky = world.sky === 'halloween' || world.sky === 'nightmare';
+    const cloudCol = spooky ? 'rgba(52,36,70,0.9)' : null;
+    this._cloud(ctx, drift(0, 1, 14), 206, 0.7, cloudCol);
+    this._cloud(ctx, drift(420, 1, 9), 470, 0.8, cloudCol);
+    this._cloud(ctx, drift(700, 1, 18), 236, 0.5, cloudCol);
+    if (spooky) {
+      // Bats flitting across the sky (the moon backlights them).
+      for (let i = 0; i < 4; i++) {
+        const bx = ((i * 330 + t * (40 + i * 12)) % (this.viewW + 120)) - 60;
+        const by = 90 + i * 45 + Math.sin(t * 2 + i * 2) * 18;
+        this._bat(ctx, bx, by, 46 - i * 5, 22 - i * 2);
+      }
+    }
     // Layered hills, outlined.
     [[500, 0], [560, 1], [620, 2]].forEach(([base, li]) => {
       ctx.beginPath(); ctx.moveTo(0, VIEW_H);
@@ -1510,6 +1570,20 @@
       ctx.fillStyle = hills[li]; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
     });
     this._worldProp(ctx, world.sky, this.viewW - 118, 500);
+    if (world.sky === 'nightmare') {
+      // Low drifting fog, and eyes blinking in the dark hills.
+      for (let i = 0; i < 5; i++) {
+        const fx = ((i * 260 + t * 22) % (this.viewW + 400)) - 200;
+        ctx.fillStyle = 'rgba(190,170,200,0.10)';
+        ctx.beginPath(); ctx.ellipse(fx, 640 + (i % 2) * 30, 220, 36, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      for (let i = 0; i < 4; i++) {
+        if (Math.sin(t * 1.3 + i * 2.7) > 0.85) continue;          // a blink
+        const ex = this.viewW * (0.12 + i * 0.24), ey = 600 + (i % 2) * 34;
+        ctx.fillStyle = '#ff2a3a';
+        ctx.beginPath(); ctx.ellipse(ex, ey, 6, 3, 0, 0, Math.PI * 2); ctx.ellipse(ex + 18, ey, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     ctx.restore();
   };
 
@@ -1575,12 +1649,212 @@
     ctx.restore();
   };
 
-  Game.prototype._cloud = function (ctx, x, y, s) {
+  // ---- THINK BOX crates ---------------------------------------------------
+  // A crate's side-to-side offset (board radii) at crate-clock time t.
+  Game.prototype._crateSlide = function (b, t) {
+    return b.slide ? b.slide.amp * Math.sin(t * b.slide.w + (b.slide.p || 0)) : 0;
+  };
+
+  // The level's crates in board-face metres (x right, y down from the bull),
+  // where they will stand tAhead seconds from now; null when there are none.
+  Game.prototype.crateRects = function (tAhead) {
+    const L = this.levelIdx != null ? KD.Campaign.LEVELS[this.levelIdx] : null;
+    if (!L || !L.boxes) return null;
+    const M = KD.Dart.BOARD_M, t = this.crateT + (tAhead || 0);
+    return L.boxes.map((b, i) => {
+      const o = this._crateOffset(b, t);
+      return { x0: (b.x + o.x) * M, x1: (b.x + o.x + b.w) * M, y0: (b.y + o.y) * M, y1: (b.y + o.y + b.h) * M, crate: i };
+    });
+  };
+
+  // The slide as an {x, y} offset (board radii): along x unless slide.axis is 'y'.
+  Game.prototype._crateOffset = function (b, t) {
+    const o = this._crateSlide(b, t);
+    return b.slide && b.slide.axis === 'y' ? { x: 0, y: o } : { x: o, y: 0 };
+  };
+
+  // How far (px, {x, y}) a dart stuck in a sliding box has moved since it landed.
+  Game.prototype._crateShiftPx = function (d) {
+    const L = KD.Campaign.LEVELS[this.levelIdx], b = L && L.boxes && L.boxes[d.crate];
+    if (!b) return { x: 0, y: 0 };
+    const k = (this._crateSlide(b, this.crateT) - d.slide0) * this.board.Rpx * KD.Dart.depthScale(KD.Dart.CRATE_Z);
+    return b.slide && b.slide.axis === 'y' ? { x: 0, y: k } : { x: k, y: 0 };
+  };
+
+  // Is the board point (px) behind a crate tAhead seconds from now?
+  Game.prototype._behindCrate = function (x, y, tAhead) {
+    const cr = this.crateRects(tAhead);
+    if (!cr) return false;
+    const M = KD.Dart.BOARD_M / this.board.Rpx, pad = 0.012;   // a little margin off the crate edges
+    const X = (x - this.board.cx) * M, Y = (y - this.board.cy) * M;
+    return cr.some((c) => X > c.x0 - pad && X < c.x1 + pad && Y > c.y0 - pad && Y < c.y1 + pad);
+  };
+
+  // An AI whose target sits behind a crate (when its dart would get there)
+  // takes the first clear bed from a list of good scoring spots instead.
+  const DODGE = ['T20', 'T19', 'T18', 'T17', 'T16', 'BULL', 'T15', 'T14', '20', '19', '18', '17', '16', '15', '14', '25', '13', '12', '11'];
+  Game.prototype._aiClearShot = function (pt, tAhead) {
+    if (!this._behindCrate(pt.x, pt.y, tAhead)) return pt;
+    for (let i = 0; i < DODGE.length; i++) {
+      const p = this.board.targetPoint(DODGE[i]);
+      if (!this._behindCrate(p.x, p.y, tAhead)) return p;
+    }
+    return pt;
+  };
+
+  Game.prototype._drawCrates = function (ctx) {
+    const L = this.levelIdx != null ? KD.Campaign.LEVELS[this.levelIdx] : null;
+    if (!L || !L.boxes) return;
+    const B = this.board, R = B.Rpx * KD.Dart.depthScale(KD.Dart.CRATE_Z);
+    L.boxes.forEach((b) => {
+      const o = this._crateOffset(b, this.crateT);
+      this._obstacle(ctx, b.kind || 'crate', B.cx + (b.x + o.x) * R, B.cy + (b.y + o.y) * R, b.w * R, b.h * R);
+    });
+  };
+
+  // ---- Obstacles: how a box is drawn (it blocks the same either way) ----
+  Game.prototype._obstacle = function (ctx, kind, x, y, w, h) {
+    if (kind === 'pumpkin') this._pumpkin(ctx, x, y, w, h);
+    else if (kind === 'bat') this._bat(ctx, x, y, w, h);
+    else if (kind === 'ghost') this._ghost(ctx, x, y, w, h);
+    else if (kind === 'tomb') this._tomb(ctx, x, y, w, h);
+    else this._crate(ctx, x, y, w, h);
+  };
+
+  // A jack-o'-lantern filling the box: ribbed, with a glowing carved face.
+  Game.prototype._pumpkin = function (ctx, x, y, w, h) {
+    const cx = x + w / 2, cy = y + h * 0.58, rx = w / 2, ry = h * 0.42;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx + 8, cy + 10, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3f6b2a'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - w * 0.05, cy - ry + 4); ctx.lineTo(cx - w * 0.02, y); ctx.lineTo(cx + w * 0.08, y + 2); ctx.lineTo(cx + w * 0.05, cy - ry + 4); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    const g = ctx.createRadialGradient(cx - rx * 0.3, cy - ry * 0.4, 2, cx, cy, Math.max(rx, ry));
+    g.addColorStop(0, '#ffb24d'); g.addColorStop(1, '#d4581a');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,35,0,0.55)'; ctx.lineWidth = 2;
+    [0.35, 0.7].forEach((k) => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * k, ry * 0.98, 0, 0, Math.PI * 2); ctx.stroke(); });
+    // Carved face, lit from inside.
+    ctx.fillStyle = '#ffe36b';
+    const tri = (ax, ay, bx2, by2, cx2, cy2) => { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx2, by2); ctx.lineTo(cx2, cy2); ctx.closePath(); ctx.fill(); };
+    tri(cx - rx * 0.55, cy - ry * 0.05, cx - rx * 0.15, cy - ry * 0.05, cx - rx * 0.35, cy - ry * 0.45);
+    tri(cx + rx * 0.15, cy - ry * 0.05, cx + rx * 0.55, cy - ry * 0.05, cx + rx * 0.35, cy - ry * 0.45);
+    ctx.beginPath();
+    ctx.moveTo(cx - rx * 0.6, cy + ry * 0.2);
+    for (let i = 0; i <= 6; i++) ctx.lineTo(cx - rx * 0.6 + rx * 0.2 * i, cy + ry * (i % 2 ? 0.32 : 0.2));
+    ctx.lineTo(cx + rx * 0.5, cy + ry * 0.5); ctx.lineTo(cx - rx * 0.5, cy + ry * 0.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  };
+
+  // A bat with flapping wings across the box, red eyes.
+  Game.prototype._bat = function (ctx, x, y, w, h) {
+    const cx = x + w / 2, cy = y + h / 2, flap = Math.sin(this.time * 12) * h * 0.25;
+    ctx.save();
+    ctx.fillStyle = '#1c0f2a'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - h * 0.15);
+    ctx.quadraticCurveTo(cx - w * 0.25, cy - h * 0.5 - flap, x, cy - h * 0.2 - flap);
+    ctx.quadraticCurveTo(x + w * 0.1, cy + h * 0.1, x + w * 0.16, cy + h * 0.3);
+    ctx.quadraticCurveTo(x + w * 0.25, cy + h * 0.1, x + w * 0.33, cy + h * 0.32);
+    ctx.quadraticCurveTo(cx - w * 0.1, cy + h * 0.2, cx, cy + h * 0.45);
+    ctx.quadraticCurveTo(cx + w * 0.1, cy + h * 0.2, x + w * 0.67, cy + h * 0.32);
+    ctx.quadraticCurveTo(x + w * 0.75, cy + h * 0.1, x + w * 0.84, cy + h * 0.3);
+    ctx.quadraticCurveTo(x + w * 0.9, cy + h * 0.1, x + w, cy - h * 0.2 - flap);
+    ctx.quadraticCurveTo(cx + w * 0.25, cy - h * 0.5 - flap, cx, cy - h * 0.15);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy, w * 0.09, h * 0.32, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath(); ctx.arc(cx - w * 0.03, cy - h * 0.08, Math.max(1.5, w * 0.018), 0, Math.PI * 2); ctx.arc(cx + w * 0.03, cy - h * 0.08, Math.max(1.5, w * 0.018), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  // A sheet ghost: round head, wavy hem, hollow eyes.
+  Game.prototype._ghost = function (ctx, x, y, w, h) {
+    const r = Math.min(w / 2, h * 0.5), t = this.time;
+    ctx.save();
+    ctx.globalAlpha = 0.93;
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x, y + r);
+    ctx.arc(x + w / 2, y + r, w / 2, Math.PI, 0);
+    ctx.lineTo(x + w, y + h);
+    const n = 4;
+    for (let i = n; i > 0; i--) {
+      const xm = x + w * (i - 0.5) / n, x0 = x + w * (i - 1) / n;
+      ctx.quadraticCurveTo(xm, y + h - h * 0.16 * (1 + Math.sin(t * 5 + i) * 0.4), x0, y + h);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#f2eeff'; ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = '#1a1030';
+    ctx.beginPath(); ctx.ellipse(x + w * 0.36, y + r * 0.95, w * 0.07, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.64, y + r * 0.95, w * 0.07, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.5, y + r * 1.35, w * 0.06, h * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  // A rounded tombstone with RIP, a crack and grass at its foot.
+  Game.prototype._tomb = function (ctx, x, y, w, h) {
+    const r = w / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 8, y + r + 10, w, h - r);
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, '#a7b0bb'); g.addColorStop(1, '#5d6672');
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(30,30,40,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + w * 0.7, y + r * 0.6); ctx.lineTo(x + w * 0.6, y + r * 1.1); ctx.lineTo(x + w * 0.72, y + r * 1.4); ctx.stroke();
+    ctx.fillStyle = '#3c434d'; ctx.textAlign = 'center';
+    ctx.font = 'bold ' + Math.round(w * 0.24) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText('RIP', x + w / 2, y + r + w * 0.12);
+    ctx.fillStyle = '#3d7a34';
+    ctx.beginPath(); ctx.moveTo(x - 4, y + h);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(x - 4 + (w + 8) * i / 8, y + h - (i % 2 ? h * 0.12 : 2));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.stroke();
+    ctx.restore();
+  };
+
+  // A cartoon wooden crate: planks, a frame with a diagonal brace, nails, and
+  // a bold outline, with a soft shadow cast back onto whatever is behind it.
+  Game.prototype._crate = function (ctx, x, y, w, h) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 8, y + 10, w, h);
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, '#dca063'); g.addColorStop(1, '#a8693a');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    const n = Math.max(2, Math.round(h / 30));
+    ctx.strokeStyle = 'rgba(70,35,12,0.5)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 1; i < n; i++) { const py = y + h * i / n; ctx.moveTo(x, py); ctx.lineTo(x + w, py); }
+    ctx.stroke();
+    const f = Math.max(5, Math.min(w, h) * 0.13);
+    ctx.fillStyle = '#8a5229';
+    ctx.fillRect(x, y, w, f); ctx.fillRect(x, y + h - f, w, f); ctx.fillRect(x, y, f, h); ctx.fillRect(x + w - f, y, f, h);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x + f, y + f, w - 2 * f, h - 2 * f); ctx.clip();
+    ctx.strokeStyle = '#8a5229'; ctx.lineWidth = f * 0.9;
+    ctx.beginPath(); ctx.moveTo(x + f, y + h - f); ctx.lineTo(x + w - f, y + f); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#3b2412';
+    [[x + f / 2, y + f / 2], [x + w - f / 2, y + f / 2], [x + f / 2, y + h - f / 2], [x + w - f / 2, y + h - f / 2]].forEach((q) => {
+      ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.5, f * 0.18), 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  };
+
+  Game.prototype._cloud = function (ctx, x, y, s, fill) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ctx.beginPath();
     ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.arc(34, -12, 40, 0, Math.PI * 2); ctx.arc(74, 0, 28, 0, Math.PI * 2);
     ctx.arc(30, 14, 26, 0, Math.PI * 2); ctx.arc(-8, 14, 22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(236,230,255,0.92)'; ctx.fill();
+    ctx.fillStyle = fill || 'rgba(236,230,255,0.92)'; ctx.fill();
     ctx.lineWidth = 5; ctx.strokeStyle = OUTLINE; ctx.stroke();
     ctx.restore();
   };
@@ -1604,6 +1878,31 @@
         ctx.fill(); ctx.stroke();
         ctx.restore();
       });
+    } else if (sky === 'halloween') {
+      // A crooked bare tree and a jack-o'-lantern at its foot.
+      ctx.strokeStyle = '#1a0f20'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 20, y + 80); ctx.quadraticCurveTo(x + 6, y + 10, x + 26, y - 70);
+      ctx.moveTo(x + 18, y - 10); ctx.quadraticCurveTo(x - 20, y - 30, x - 44, y - 64);
+      ctx.moveTo(x + 22, y - 40); ctx.quadraticCurveTo(x + 50, y - 60, x + 70, y - 96);
+      ctx.moveTo(x - 20, y - 36); ctx.lineTo(x - 30, y - 78);
+      ctx.stroke();
+      this._pumpkin(ctx, x - 58, y + 24, 70, 56);
+    } else if (sky === 'nightmare') {
+      // A dead tree with something watching from it, and a leaning tombstone.
+      ctx.strokeStyle = '#08030a'; ctx.lineWidth = 10; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y + 80); ctx.lineTo(x + 4, y - 60);
+      ctx.moveTo(x + 2, y - 10); ctx.lineTo(x - 46, y - 70);
+      ctx.moveTo(x + 3, y - 34); ctx.lineTo(x + 52, y - 92);
+      ctx.moveTo(x - 30, y - 50); ctx.lineTo(x - 58, y - 52);
+      ctx.stroke();
+      ctx.fillStyle = '#ffd400';
+      ctx.beginPath(); ctx.ellipse(x - 6, y - 30, 5, 3, 0, 0, Math.PI * 2); ctx.ellipse(x + 10, y - 30, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(x - 70, y + 10); ctx.rotate(-0.12); this._tomb(ctx, 0, 0, 48, 66); ctx.restore();
+    } else if (sky === 'box') {
+      // A stack of crates.
+      this._crate(ctx, x - 52, y - 4, 60, 56);
+      this._crate(ctx, x + 6, y - 4, 60, 56);
+      this._crate(ctx, x - 24, y - 58, 60, 54);
     } else {
       // A lantern on a pole.
       ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 4, y - 70, 8, 110); ctx.strokeRect(x - 4, y - 70, 8, 110);
@@ -1652,7 +1951,10 @@
       ctx.beginPath(); ctx.arc(cx, y + 30, 19, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Space Grotesk", sans-serif';
       ctx.fillText(String(idx + 1), cx, y + 36);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (L.boss ? 15 : 17) + 'px "Space Grotesk", sans-serif';
+      // Long names shrink to fit the tile.
+      let fs = L.boss ? 15 : 17;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + fs + 'px "Space Grotesk", sans-serif';
+      while (fs > 9 && ctx.measureText(L.name).width > w - 14) { fs--; ctx.font = 'bold ' + fs + 'px "Space Grotesk", sans-serif'; }
       ctx.fillText(L.name, cx, y + 84);
       ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px "Space Grotesk", sans-serif';
       ctx.fillText((L.mode === 'x301' ? '301' : '501') + '  ·  ' + (L.boss ? 'BOSS' : L.tier), cx, y + 84 + 20 * this._textBump());
@@ -1664,7 +1966,7 @@
       ctx.fillRect(cx - 22, y + 62, 44, 34);
       ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.arc(cx, y + 78, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = C.dim; ctx.font = '12px "Space Grotesk", sans-serif';
-      ctx.fillText('Beat level ' + idx, cx, y + h - 28);
+      ctx.fillText('Beat level ' + (KD.Campaign.opener(idx) + 1), cx, y + h - 28);
     }
     ctx.restore();
   };
@@ -1679,7 +1981,11 @@
     ctx.shadowColor = r.won ? C.green : C.ember; ctx.shadowBlur = 24;
     ctx.font = 'bold 60px "Space Grotesk", sans-serif';
     let title = r.won ? 'LEVEL CLEARED!' : 'DEFEAT';
-    if (boss) title = 'WORLD ' + (KD.Campaign.LEVELS[lvl.idx].world + 1) + ' COMPLETE!';
+    if (boss) {
+      const w = KD.Campaign.LEVELS[lvl.idx].world, W = KD.Campaign.WORLDS[w];
+      const side = KD.Campaign.LEVELS.some((l) => l.world === w && l.after != null);
+      title = (side ? W.name : 'WORLD ' + (w + 1)) + ' COMPLETE!';
+    }
     ctx.fillText(title, cx, cy - 58);
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff'; ctx.font = '20px "Space Grotesk", sans-serif';
@@ -1834,28 +2140,44 @@
   // ====================================================================
   // DART WORKSHOP  — pick a barrel (skin), a tip and a flight.
   // ====================================================================
+  // Workshop geometry. 4:3 screens stack the preview above four rows of
+  // chips (finish, barrel, tip, flight); wide screens (phones in landscape)
+  // put the preview and stats on the left and taller chips on the right,
+  // since they have width to spare but little height.
+  Game.prototype._wsGeom = function () {
+    const wide = this.viewW >= 1300;
+    return wide
+      ? { wide: true, cx: this.viewW * 0.63, rows: [164, 298, 432, 566], chipH: 100,
+          dartX: this.viewW * 0.2 + 150, dartY: 330, dartLen: 340, statX: this.viewW * 0.2 - 130, statY: 430 }
+      : { wide: false, cx: this.viewW / 2, rows: [256, 344, 432, 520], chipH: 66,
+          dartX: this.viewW / 2 + 130, dartY: 150, dartLen: 260, statX: this.viewW / 2 + 160, statY: 130 };
+  };
+
   Game.prototype._workshopLayout = function () {
     const prog = this.progression;
     const btns = [];
     btns.push({ id: 'back', label: '← BACK', x: 24, y: 72, w: 110, h: 40, group: 'back' });
 
+    const G = this._wsGeom(), WS_ROWS = G.rows, WS_CHIP_H = G.chipH;
     const row = (ids, kind, y, cw, gap, sel, owned, cost) => {
       const total = ids.length * cw + (ids.length - 1) * gap;
-      let x = this.viewW / 2 - total / 2;
+      let x = G.cx - total / 2;
       ids.forEach((id) => {
         btns.push({
-          id: kind + ':' + id, group: kind, key: id, x: x, y: y, w: cw, h: 70,
+          id: kind + ':' + id, group: kind, key: id, x: x, y: y, w: cw, h: WS_CHIP_H,
           sel: sel(id), owned: owned(id), cost: cost(id),
         });
         x += cw + gap;
       });
     };
 
-    row(['cyan', 'violet', 'green', 'gold', 'ember'], 'skin', 286, 132, 10,
+    row(['cyan', 'violet', 'green', 'gold', 'ember'], 'skin', WS_ROWS[0], 132, 10,
       (id) => prog.data.skins.equipped === id, (id) => prog.owns(id), () => 0);
-    row(Object.keys(KD.Sprites.TIPS), 'tip', 396, 132, 10,
+    row(Object.keys(KD.Sprites.BARRELS), 'shape', WS_ROWS[1], 132, 10,
+      (id) => prog.data.darts.shape === id, (id) => prog.ownsShape(id), (id) => prog.shapeCost(id));
+    row(Object.keys(KD.Sprites.TIPS), 'tip', WS_ROWS[2], 132, 10,
       (id) => prog.data.darts.tip === id, (id) => prog.ownsTip(id), (id) => prog.tipCost(id));
-    row(Object.keys(KD.Sprites.FLIGHTS), 'flight', 506, 108, 9,
+    row(Object.keys(KD.Sprites.FLIGHTS), 'flight', WS_ROWS[3], 108, 9,
       (id) => prog.data.darts.flight === id, (id) => prog.ownsFlight(id), (id) => prog.flightCost(id));
     return btns;
   };
@@ -1875,6 +2197,10 @@
         else this.toasts.push({ text: 'LOCKED', sub: 'Level up or climb the ladder', life: 2.2 });
       } else if (b.group === 'tip') {
         const r = this.progression.chooseTip(b.key);
+        if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
+        else this.audio.chime(r === 'bought' ? 1 : 0);
+      } else if (b.group === 'shape') {
+        const r = this.progression.chooseShape(b.key);
         if (r === 'poor') this.toasts.push({ text: 'NOT ENOUGH COINS', sub: 'Win matches to earn coins', life: 2.2 });
         else this.audio.chime(r === 'bought' ? 1 : 0);
       } else if (b.group === 'flight') {
@@ -1914,7 +2240,7 @@
   Game.prototype._workshopChip = function (ctx, b) {
     const r = 12;
     const skinCol = (KD.Sprites.SKINS[b.key] || {}).color || C.cyan;
-    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
+    const cat = b.group === 'skin' ? KD.Sprites.SKINS : b.group === 'shape' ? KD.Sprites.BARRELS : b.group === 'tip' ? KD.Sprites.TIPS : KD.Sprites.FLIGHTS;
     const cosmetic = cat[b.key];
     const tier = cosmetic ? cosmetic.tier : 'common';
     const tierCol = this._tierColor(tier);
@@ -1936,19 +2262,33 @@
     ctx.shadowBlur = 0;
 
     const cx = b.x + b.w / 2;
+    // Preview centre: middle of the room above the name and status lines.
+    const py = b.y + Math.max(16, (b.h - 5 - 25 * this._textBump()) / 2);
     // Mini preview, clipped to the chip so it never spills onto its neighbours.
     ctx.save();
     this._roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, r); ctx.clip();
     if (b.group === 'skin') {
-      ctx.save(); ctx.translate(cx, b.y + 28); ctx.rotate(-Math.PI * 0.18);
+      ctx.save(); ctx.translate(cx, py); ctx.rotate(-Math.PI * 0.12);
       this.sprites.drawDart(ctx, 98, KD.Sprites.SKINS[b.key], 0.3, this.progression.data.darts);
+      ctx.restore();
+    } else if (b.group === 'shape') {
+      // Side-on, with the barrel centred in the chip so its shape and grip read.
+      const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
+      const d = this.progression.data.darts;
+      ctx.save(); ctx.translate(cx + 44, py);
+      this.sprites.drawDart(ctx, 116, skin, 0.2, { tip: d.tip, flight: d.flight, shape: b.key });
       ctx.restore();
     } else {
       const skin = KD.Sprites.SKINS[this.progression.data.skins.equipped];
-      const parts = b.group === 'tip' ? { tip: b.key, flight: this.progression.data.darts.flight }
-                                       : { tip: this.progression.data.darts.tip, flight: b.key };
-      ctx.save(); ctx.translate(cx + 22, b.y + 28); ctx.rotate(Math.PI);
-      this.sprites.drawDart(ctx, 109, skin, 0.2, parts);
+      const dd = this.progression.data.darts;
+      const parts = b.group === 'tip' ? { tip: b.key, flight: dd.flight, shape: dd.shape }
+                                       : { tip: dd.tip, flight: b.key, shape: dd.shape };
+      // Pointing left, slid so the part being chosen sits mid-chip: the tip
+      // and barrel for tips, the flight (about 0.9 of the length back) for flights.
+      // Flights are tall, so short chips get a smaller dart.
+      const L = b.group === 'flight' && b.h < 80 ? 80 : 102;
+      ctx.save(); ctx.translate(b.group === 'tip' ? cx - L / 3 : cx - L * 0.9, py); ctx.rotate(Math.PI);
+      this.sprites.drawDart(ctx, L, skin, 0.2, parts);
       ctx.restore();
     }
     ctx.restore();
@@ -1988,31 +2328,31 @@
     ctx.save();
     // The dart is drawn back from its tip, so the tip sits right of centre and
     // the whole dart fits between the subtitle and the BARREL row.
-    ctx.translate(this.viewW / 2 + 150, 178 + bob);
-    ctx.rotate(-Math.PI * 0.06 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.04));
+    const G = this._wsGeom();
+    ctx.translate(G.dartX, G.dartY + bob);
+    ctx.rotate(-Math.PI * 0.03 + (this.reduceMotion ? 0 : Math.sin(this.time * 0.8) * 0.03));
     // Glow pedestal.
     ctx.shadowColor = skin.color; ctx.shadowBlur = 30;
-    this.sprites.drawDart(ctx, 300, skin, 0.6, d.darts);
+    this.sprites.drawDart(ctx, G.dartLen, skin, 0.6, d.darts);
     ctx.restore();
 
     // Combined stats panel (bottom-right of preview).
     const skinObj = KD.Sprites.SKINS[d.skins.equipped];
     const tipObj = KD.Sprites.TIPS[d.darts.tip] || KD.Sprites.TIPS.steel;
     const flightObj = KD.Sprites.FLIGHTS[d.darts.flight] || KD.Sprites.FLIGHTS.standard;
-    const totalSpeed = (skinObj.speed || 0) + (tipObj.speed || 0) + (flightObj.speed || 0);
-    const totalStability = (skinObj.stability || 0) + (tipObj.stability || 0) + (flightObj.stability || 0);
-    const totalSlimness = (skinObj.slimness || 0) + (tipObj.slimness || 0) + (flightObj.slimness || 0);
+    const barObj = KD.Sprites.BARRELS[d.darts.shape] || KD.Sprites.BARRELS.torpedo;
+    const parts4 = [skinObj, barObj, tipObj, flightObj];
+    const sum = (k) => parts4.reduce((a, o) => a + (o[k] || 0), 0);
+    const totalSpeed = sum('speed'), totalStability = sum('stability'), totalSlimness = sum('slimness');
     const sk = this._textBump();
-    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(this.viewW / 2 + 160, 130, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
+    ctx.fillStyle = 'rgba(10,16,32,0.8)'; ctx.fillRect(G.statX, G.statY, 75 + 65 * sk, 32 + 48 * sk); // stat panel bg
     ctx.fillStyle = C.dim; ctx.font = 'bold 10px "Space Grotesk", sans-serif';
-    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', this.viewW / 2 + 170, 145);
-    this._drawStatBars(ctx, this.viewW / 2 + 170, 145 + 12 * this._textBump(), totalSpeed, totalStability, totalSlimness);
+    ctx.textAlign = 'left'; ctx.fillText('LOADOUT STATS', G.statX + 10, G.statY + 15);
+    this._drawStatBars(ctx, G.statX + 10, G.statY + 15 + 12 * sk, totalSpeed, totalStability, totalSlimness);
 
     // Section labels.
     ctx.textAlign = 'center'; ctx.fillStyle = C.dim; ctx.font = 'bold 12px "Space Grotesk", sans-serif';
-    ctx.fillText('BARREL', this.viewW / 2, 274);
-    ctx.fillText('TIP', this.viewW / 2, 384);
-    ctx.fillText('FLIGHT', this.viewW / 2, 494);
+    ['FINISH', 'BARREL', 'TIP', 'FLIGHT'].forEach((t, i) => ctx.fillText(t, G.cx, G.rows[i] - 7));
     ctx.restore();
 
     const btns = this._workshopLayout();

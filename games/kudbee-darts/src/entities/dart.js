@@ -11,8 +11,12 @@
  *   - Weight: harder PRESSURE sinks the dart a touch and adds curl/scatter.
  *   - Guard : a tap (tiny, slow swipe) does NOT throw — you get a nudge.
  *
- * The cosmetic 2.5D flight is animation only; the LANDING POINT is what
- * scores (via Board.hitTest), so the reticle and the result share one path.
+ * The flight is SIMULATED, like the arrow in Kudbee Archery: the release
+ * becomes a real 3D projectile (metres, seconds, gravity, curl) from the
+ * hand to the board face, drawn in perspective. Where that trajectory
+ * meets the board is the landing point that scores (via Board.hitTest).
+ * The thrower's hand error (sigma) picks the point an ideal flick would
+ * hit; the actual flick's power and curl then play out through the physics.
  * ===================================================================== */
 (function (KD) {
   'use strict';
@@ -26,7 +30,16 @@
   const MIN_SWIPE_LEN = 24;     // below this a release is a "tap" -> no throw
   const MIN_REL_SPEED = 240;    // px/s: too slow to count as a flick
 
-  const FLIGHT_TIME = 0.42;     // seconds, cosmetic (loft hang-time)
+  // ---- Flight simulator (metres, seconds) --------------------------------
+  const T_IDEAL = 0.40;         // s, flight time of an ideal flick
+  const OCHE = 2.37;            // m, the throw line to the board face
+  const G = 5.5;                // m/s^2: softer than Earth's 9.81 so the arc stays on screen
+  const BOARD_M = 0.170;        // m in one board radius (outer edge of the doubles)
+  const CAM_BACK = 4.0;         // m from the camera to the hand: the view's depth
+  const POWER_GAIN = 0.15;      // how strongly flick power changes release speed
+  const CURL_ACC = 0.18;        // m/s^2 sideways per unit of curl
+  const SINK_ACC = 0.27;        // m/s^2 extra drop per unit of extra pressure
+  const CRATE_D = 0.12;         // m: THINK BOX crates stand this far in front of the board
   const BASE_LEN = 55;          // flight sprite length at scale 1
   const START_SCALE = 1.9;      // flight size at the hand (closest to the camera)
   const HAND_X = (g) => g.viewW / 2 + 120;   // throwing hand: right of the oche centre
@@ -162,30 +175,16 @@
     const rlen = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
     rdx /= rlen; rdy /= rlen;
 
-    if (powf < 1) {
-      // Soft flick: the dart pulls in toward the centre with minimal depth change.
-      const soft = (1 - powf);
-      ly += soft * Rpx * 0.03;                       // minimal gravity sag
-      lx -= rdx * soft * Rpx * 0.08; ly -= rdy * soft * Rpx * 0.02;  // pull inward
-    } else {
-      // Hard flick: overshoot outward along the throw line (can sail off).
-      const hard = Math.min(1.1, powf - 1);
-      lx += rdx * hard * Rpx * 0.22;
-      ly += rdy * hard * Rpx * 0.01;                // near-zero Y overshoot
-    }
-
-    // Curl: sideways component of the release direction pulls the landing and
-    // bends the cosmetic flight. Measured perpendicular to the aim radial.
+    // Curl: the sideways part of the release, measured across the aim radial.
     const rs = pt.relSpeed || 1;
     const ux = pt.relVX / rs, uy = pt.relVY / rs;     // unit release dir
     const lateral = ux * (-rdy) + uy * (rdx);         // signed perp component
     this._curl = lateral;
-    lx += (-rdy) * lateral * Rpx * 0.09;
-    ly += (rdx) * lateral * Rpx * 0.09;
 
-    // Weight from pressure (pen / 3D-touch): heavier = sinks + more curl.
+    // Weight from pressure (pen / 3D-touch): a heavier throw sinks a touch and curls more.
     const pr = pt.pressure || 0;
-    if (pr > 0.55) { ly += (pr - 0.55) * Rpx * 0.14; this._curl *= 1 + (pr - 0.55); }
+    const sink = pr > 0.55 ? pr - 0.55 : 0;
+    if (sink) this._curl *= 1 + sink;
 
     // Scatter grows when the throw is far from an ideal, committed flick.
     const wildness = Math.min(1.3, Math.abs(powf - 1) * 0.9 + Math.abs(lateral) * 0.5
@@ -201,11 +200,12 @@
       : { text: 'CLEAN FLICK', col: '#cfe9ff' };
     this.game.flickFb = { text: fb.text, col: fb.col, life: 1.15 };
 
-    return this._releaseAt(lx, ly, sigma);
+    // Power, curl and weight go to the flight simulator, not straight onto the landing.
+    return this._releaseAt(lx, ly, sigma, { powf: powf, curlX: -rdy * this._curl, curlY: rdx * this._curl, sink: sink });
   };
 
   // Shared landing + flight kickoff for human and AI.
-  Dart.prototype._releaseAt = function (lx, ly, sigma) {
+  Dart.prototype._releaseAt = function (lx, ly, sigma, phys) {
     const Rpx = this.game.board.Rpx;
     const cx = this.game.board.cx, cy = this.game.board.cy;
 
@@ -237,17 +237,20 @@
       landY = landY * (1 - g) + gc.y * g;
     }
 
-    this.landX = landX;
-    this.landY = landY;
-    this.result = this.game.board.hitTest(this.landX, this.landY);
-
-    // Cosmetic flight: from the player's hand (just right of the oche centre)
-    // up to the landing point, with a little hand-sway on the way.
+    // (landX, landY) is where an ideal flick would land after the hand error.
+    // The simulator flies the ACTUAL release (power, curl, weight) from the
+    // hand through gravity; where it meets the board face is what scores.
+    // The AI always throws an ideal flick, so its landings keep their sigma.
     this._fromX = HAND_X(this.game); this._fromY = HAND_Y(this.game);
-    this._sway = (Math.random() * 2 - 1) * 22;
+    if (!phys) { this._curl = 0; this._powf = 1; }
+    this._launch(landX, landY, phys || null);
+    // A dart stopped by a THINK BOX crate scores nothing (ring 'miss', so every
+    // mode treats it as a miss) and is flagged so it sticks in the wood.
+    this.result = this.blocked
+      ? { score: 0, ring: 'miss', mult: 0, value: 0, label: 'BLOCKED', blocked: true, crate: this.blocked.crate }
+      : this.game.board.hitTest(this.landX, this.landY);
     this._roll = (Math.random() < 0.5 ? -1 : 1);
-    if (this.isAI) { this._curl = (Math.random() * 2 - 1) * 0.25; this._powf = 1; }
-    this._embedAng = this.embedAngle(landX, landY);
+    this._embedAng = this.embedAngle(this.landX, this.landY);
     this._ft = 0;
     this.state = 'flying';
     this.game.audio.whoosh();
@@ -275,49 +278,78 @@
   Dart.prototype.update = function (dt) {
     if (this.state !== 'flying') return false;
     this._ft += dt;
-    if (this._ft >= FLIGHT_TIME) {
+    if (this._ft >= this._sim.T) {
       this.state = 'done';
       return true; // signals arrival to the game
     }
     return false;
   };
 
-  // Quadratic-Bézier hand -> curl control point -> landing, shared by the
-  // flight render and the trail-emission sampler below. `k` is 0..1 flight
-  // progress; the returned vx/vy is dPosition/dk (chain rule through the
-  // smoothstep easing), i.e. the dart's actual instantaneous travel direction.
-  Dart.prototype._bezierFlight = function (k) {
-    const e = Util.smooth(k);
-    const om = 1 - e;
-    const x0 = this._fromX, y0 = this._fromY, x1 = this.landX, y1 = this.landY;
-    const mx = (x0 + x1) / 2;
-    const dx = x1 - x0, dy = y1 - y0;
-    const dl = Math.sqrt(dx * dx + dy * dy) || 1;
-    const nx = -dy / dl, ny = dx / dl;
-    const Rpx = this.game.board.Rpx;
-    const curlPx = (this._curl || 0) * Rpx * 0.55 + (this._sway || 0);
-    // Loft the control point ABOVE the board (min(y0,y1) is the higher point on
-    // screen) so the dart rises over the target and descends tip-first into it.
-    // The flight tangent then sweeps smoothly from a nose-up launch to a nose-
-    // down landing — no flat path that snaps over right at the board.
-    const loft = Math.min(Rpx, 0.42 * Math.abs(dy) + Rpx * 0.25);
-    let cyp = Math.min(y0, y1) - loft;
-    const minY = this.game.board.cy - Rpx;          // keep the apex off the board rim
-    if (cyp < minY) cyp = minY;
-    const cxp = mx + nx * curlPx;
-    cyp += ny * curlPx;
-    const x = om * om * x0 + 2 * om * e * cxp + e * e * x1;
-    const y = om * om * y0 + 2 * om * e * cyp + e * e * y1;
-    const tx = 2 * om * (cxp - x0) + 2 * e * (x1 - cxp);
-    const ty = 2 * om * (cyp - y0) + 2 * e * (y1 - cyp);
-    const deriv_e = 6 * k - 6 * k * k;
-    return { x: x, y: y, vx: deriv_e * tx, vy: deriv_e * ty, tx: tx, ty: ty, cxp: cxp, cyp: cyp, om: om, e: e };
+  // ---- Flight simulator ------------------------------------------------
+  // Board-face metres: x right, y down (gravity is +y), z from the hand (0)
+  // to the board (OCHE). The view is a perspective camera CAM_BACK behind the
+  // hand, scaled so z = OCHE lands exactly on the board's own pixels.
+  Dart.prototype._pxPerM = function () { return this.game.board.Rpx / BOARD_M; };
+  Dart.prototype._depthScale = function (z) { return (OCHE + CAM_BACK) / (z + CAM_BACK); };
+  Dart.prototype._project = function (p) {
+    const b = this.game.board, k = this._pxPerM(), s = this._depthScale(p.z);
+    return { x: b.cx + p.x * k * s, y: b.cy + p.y * k * s, s: s };
+  };
+
+  // Launch toward (tx, ty) on the board: solve the velocity an ideal flick
+  // needs to meet it in T_IDEAL, then apply the real flick. A soft flick is
+  // slower, so gravity has longer to pull it down; a hard one is faster and
+  // flatter, so it rides high. Curl and weight are steady sideways/down pushes.
+  Dart.prototype._launch = function (tx, ty, phys) {
+    const b = this.game.board, k = this._pxPerM(), s0 = this._depthScale(0);
+    const x0 = (this._fromX - b.cx) / (k * s0), y0 = (this._fromY - b.cy) / (k * s0);
+    const X = (tx - b.cx) / k, Y = (ty - b.cy) / k, T = T_IDEAL;
+    let vx = (X - x0) / T, vy = (Y - y0 - 0.5 * G * T * T) / T, vz = OCHE / T;
+    const f = phys ? Util.clamp(1 + (phys.powf - 1) * POWER_GAIN, 0.75, 1.2) : 1;
+    vx *= f; vy *= f; vz *= f;
+    const ax = phys ? phys.curlX * CURL_ACC : 0;
+    const ay = G + (phys ? phys.curlY * CURL_ACC + phys.sink * SINK_ACC : 0);
+    this._sim = { x0: x0, y0: y0, vx: vx, vy: vy, vz: vz, ax: ax, ay: ay, T: OCHE / vz };
+    // THINK BOX: where the path crosses the crate plane, a crate in the way
+    // (at the moment the dart gets there) stops it.
+    this.blocked = null;
+    const tc = (OCHE - CRATE_D) / vz;
+    const crates = this.game.crateRects ? this.game.crateRects(tc) : null;
+    if (crates) {
+      const pc = this._simAt(tc);
+      for (let i = 0; i < crates.length; i++) {
+        const c = crates[i];
+        if (pc.x >= c.x0 && pc.x <= c.x1 && pc.y >= c.y0 && pc.y <= c.y1) {
+          this.blocked = { crate: c.crate };
+          this._sim.T = tc;
+          break;
+        }
+      }
+    }
+    const end = this._project(this._simAt(this._sim.T));
+    this.landX = end.x; this.landY = end.y;
+  };
+
+  Dart.prototype._simAt = function (t) {
+    const s = this._sim;
+    return { x: s.x0 + s.vx * t + 0.5 * s.ax * t * t, y: s.y0 + s.vy * t + 0.5 * s.ay * t * t, z: s.vz * t };
+  };
+
+  // The flight at progress k (0..1 of the simulated time), on screen. vx/vy is
+  // screen velocity (px/s), tx/ty the screen travel direction, and e the depth
+  // progress (0 at the hand, 1 at the board) that sizes the sprite.
+  Dart.prototype._flightAt = function (k) {
+    const sim = this._sim, t = Util.clamp(k, 0, 1) * sim.T, dt = sim.T * 0.01;
+    const p = this._project(this._simAt(t)), q = this._project(this._simAt(t + dt));
+    const s0 = this._depthScale(0);
+    const tx = q.x - p.x, ty = q.y - p.y;
+    return { x: p.x, y: p.y, vx: tx / dt, vy: ty / dt, tx: tx, ty: ty, e: (s0 - p.s) / (s0 - 1) };
   };
 
   // Current position + velocity along the flight arc, for trail emission.
   Dart.prototype._getFlightPos = function () {
     if (this.state !== 'flying') return null;
-    const f = this._bezierFlight(this._ft / FLIGHT_TIME);
+    const f = this._flightAt(this._ft / this._sim.T);
     return { x: f.x, y: f.y, vx: f.vx, vy: f.vy };
   };
 
@@ -499,8 +531,8 @@
   // flights flutter — the Darts-of-Fury "loop in" feel.
   Dart.prototype.drawFlight = function (ctx) {
     if (this.state !== 'flying') return;
-    const k = this._ft / FLIGHT_TIME;
-    const f = this._bezierFlight(k);
+    const k = this._ft / this._sim.T;
+    const f = this._flightAt(k);
     const e = f.e, x = f.x, y = f.y;
 
     // Ends at the stuck dart's drawn length (40/46) so the dart doesn't pop in size on contact.
@@ -542,7 +574,7 @@
       ctx.strokeStyle = col; ctx.lineCap = 'round';
       let px = x, py = y;
       for (let i = 1; i <= SEG; i++) {
-        const q = this._bezierFlight(Math.max(0, k - SPAN * i / SEG));
+        const q = this._flightAt(Math.max(0, k - SPAN * i / SEG));
         const u = 1 - i / (SEG + 1);                      // 1 at the dart -> 0 at the tail
         ctx.globalAlpha = 0.75 * u * (1 - e * 0.35);
         ctx.lineWidth = (1.5 + 6.5 * u) * scale;
@@ -558,10 +590,10 @@
       ctx.restore();
     }
 
-    // Orientation = the Bézier tangent, so the nose always points the way the
-    // dart is actually travelling (up-and-over, then down onto the board). The
+    // Orientation = the simulated travel direction, so the nose always points
+    // the way the dart is moving (up-and-over, then down onto the board). The
     // path already lands nose-down, so the embed-pose match is only a gentle
-    // tail-end settle over the last ~30% — not the old 180° snap.
+    // tail-end settle over the last ~30%.
     let ang = Math.atan2(f.ty, f.tx);
     if (this._embedAng != null) {
       let d = this._embedAng - ang;
@@ -590,6 +622,12 @@
     this.game.sprites.drawDart(ctx, BASE_LEN * scale, this.skin, k, this.parts);
     ctx.restore();
   };
+
+  // Shared with the game's THINK BOX crates (drawn and hit in the same space).
+  Dart.BOARD_M = BOARD_M;
+  Dart.CRATE_Z = OCHE - CRATE_D;
+  Dart.depthScale = function (z) { return (OCHE + CAM_BACK) / (z + CAM_BACK); };
+  Dart.FLIGHT_T = T_IDEAL;
 
   KD.Dart = Dart;
 })(window.KD = window.KD || {});

@@ -13,6 +13,9 @@
     { name: 'DART DAWN',      sub: 'Rookie rivals',   sky: 'dawn' },
     { name: 'NEON NOON',      sub: 'Pro rivals',      sky: 'noon' },
     { name: 'MIDNIGHT MARKS', sub: 'Legend rivals',   sky: 'night' },
+    { name: 'THINK BOX',      sub: 'Crates in the way · opens after World 1', sky: 'box' },
+    { name: 'HALLOWEEN',      sub: 'Pumpkins, bats & ghosts · opens after World 2', sky: 'halloween' },
+    { name: 'NIGHTMARE',      sub: 'Tombstones & night terrors · opens after World 3', sky: 'nightmare' },
   ];
 
   // sigma = the rival's scatter in board-radius units (smaller is tighter;
@@ -36,6 +39,54 @@
     { world: 2, name: 'Zenith II',   mode: 'x301', tier: 'Legend', skin: 'gold',   sigma: 0.13,  par: 17 },
     { world: 2, name: 'Apex II',     mode: 'x301', tier: 'Legend', skin: 'ember',  sigma: 0.125, par: 17 },
     { world: 2, name: 'THE EMPEROR', mode: 'x01',  tier: 'Legend', skin: 'violet', sigma: 0.115, par: 27, boss: true },
+    // THINK BOX: a side world that opens once the World 1 boss has a star.
+    // Wooden crates stand just in front of the board; a dart that meets one
+    // sticks in the wood and scores nothing, so you plan around them. Boxes
+    // are in board radii from the bull (x right, y down); slide = side-to-side
+    // amplitude (radii) and speed (rad/s).
+    { world: 3, name: 'CRATE ROW',   mode: 'x301', tier: 'Rookie', skin: 'cyan',   sigma: 0.14,  par: 21, after: 4,
+      boxes: [{ x: -0.32, y: -1.12, w: 0.64, h: 0.52 }] },
+    { world: 3, name: 'SHUTTER',     mode: 'x301', tier: 'Rookie', skin: 'green',  sigma: 0.135, par: 22,
+      boxes: [{ x: -0.3, y: -0.3, w: 0.6, h: 0.6, slide: { amp: 0.75, w: 1.3 } }] },
+    { world: 3, name: 'TWO WINDOWS', mode: 'x01',  tier: 'Pro',    skin: 'violet', sigma: 0.14,  par: 30,
+      boxes: [{ x: -1.12, y: -0.55, w: 0.62, h: 1.1 }, { x: 0.5, y: -0.55, w: 0.62, h: 1.1 }] },
+    { world: 3, name: 'CRISS-CROSS', mode: 'x01',  tier: 'Pro',    skin: 'gold',   sigma: 0.135, par: 31,
+      boxes: [{ x: -0.3, y: -0.98, w: 0.6, h: 0.5, slide: { amp: 0.6, w: 1.2 } },
+              { x: -0.3, y: 0.48, w: 0.6, h: 0.5, slide: { amp: 0.6, w: 1.2, p: Math.PI } }] },
+    { world: 3, name: 'THE BIG BOX', mode: 'x01',  tier: 'Pro',    skin: 'ember',  sigma: 0.125, par: 31, boss: true,
+      boxes: [{ x: -1.12, y: -1.12, w: 0.86, h: 0.74 }, { x: 0.26, y: -1.12, w: 0.86, h: 0.74 },
+              { x: -0.26, y: 0.3, w: 0.52, h: 0.5, slide: { amp: 0.62, w: 1.6 } }] },
+    // HALLOWEEN (opens after the World 2 boss) and NIGHTMARE (after the World 3
+    // boss): the same blocking rules, with spooky obstacles (`kind` only
+    // changes how a box is drawn). slide.axis 'y' moves a box up and down.
+    { world: 4, name: 'PUMPKIN PATCH', mode: 'x301', tier: 'Pro', skin: 'ember', sigma: 0.14, par: 21, after: 9,
+      boxes: [{ x: -0.95, y: 0.3, w: 0.6, h: 0.55, kind: 'pumpkin' }, { x: 0.35, y: 0.3, w: 0.6, h: 0.55, kind: 'pumpkin' }] },
+    { world: 4, name: 'BAT CAVE',      mode: 'x301', tier: 'Pro', skin: 'violet', sigma: 0.135, par: 21,
+      boxes: [{ x: -0.24, y: -0.82, w: 0.48, h: 0.3, kind: 'bat', slide: { amp: 0.8, w: 2.1 } },
+              { x: -0.24, y: 0.12, w: 0.48, h: 0.3, kind: 'bat', slide: { amp: 0.8, w: 1.7, p: 1.3 } }] },
+    { world: 4, name: 'HAUNTED HALL',  mode: 'x01',  tier: 'Pro', skin: 'cyan',   sigma: 0.14, par: 29,
+      boxes: [{ x: -0.3, y: -0.4, w: 0.6, h: 0.75, kind: 'ghost', slide: { amp: 0.72, w: 1.1 } }] },
+    { world: 4, name: 'TRICK OR TREAT', mode: 'x01', tier: 'Pro', skin: 'gold',   sigma: 0.135,  par: 31,
+      boxes: [{ x: -0.3, y: -1.1, w: 0.6, h: 0.52, kind: 'pumpkin' },
+              { x: -0.24, y: 0.45, w: 0.48, h: 0.3, kind: 'bat', slide: { amp: 0.75, w: 2.0 } }] },
+    { world: 4, name: 'PUMPKIN KING',  mode: 'x01',  tier: 'Pro', skin: 'ember',  sigma: 0.115,  par: 29, boss: true,
+      boxes: [{ x: -1.12, y: -1.1, w: 0.8, h: 0.66, kind: 'pumpkin' }, { x: 0.32, y: -1.1, w: 0.8, h: 0.66, kind: 'pumpkin' },
+              { x: -0.3, y: -0.05, w: 0.6, h: 0.72, kind: 'ghost', slide: { amp: 0.65, w: 1.4 } }] },
+    { world: 5, name: 'GRAVEYARD',     mode: 'x301', tier: 'Legend', skin: 'violet', sigma: 0.14, par: 21, after: 14,
+      boxes: [{ x: -1.05, y: 0.28, w: 0.5, h: 0.7, kind: 'tomb' }, { x: -0.25, y: 0.42, w: 0.5, h: 0.6, kind: 'tomb' },
+              { x: 0.55, y: 0.28, w: 0.5, h: 0.7, kind: 'tomb' }] },
+    { world: 5, name: 'NIGHT TERRORS', mode: 'x301', tier: 'Legend', skin: 'gold',   sigma: 0.135, par: 20,
+      boxes: [{ x: -0.28, y: -0.95, w: 0.56, h: 0.62, kind: 'ghost', slide: { amp: 0.75, w: 1.5 } },
+              { x: -0.28, y: 0.25, w: 0.56, h: 0.62, kind: 'ghost', slide: { amp: 0.75, w: 1.5, p: Math.PI } }] },
+    { world: 5, name: 'DEAD END',      mode: 'x01',  tier: 'Legend', skin: 'ember',  sigma: 0.13,  par: 29,
+      boxes: [{ x: -1.12, y: -0.5, w: 0.58, h: 1.0, kind: 'tomb' }, { x: 0.54, y: -0.5, w: 0.58, h: 1.0, kind: 'tomb' },
+              { x: -0.24, y: -0.15, w: 0.48, h: 0.3, kind: 'bat', slide: { amp: 0.6, w: 1.9 } }] },
+    { world: 5, name: 'SLEEP PARALYSIS', mode: 'x01', tier: 'Legend', skin: 'cyan',  sigma: 0.125, par: 28,
+      boxes: [{ x: -0.55, y: -0.4, w: 1.1, h: 0.62, kind: 'ghost', slide: { amp: 0.6, w: 0.9, axis: 'y' } }] },
+    { world: 5, name: 'THE NIGHTMARE', mode: 'x01',  tier: 'Legend', skin: 'violet', sigma: 0.125, par: 29, boss: true,
+      boxes: [{ x: -1.1, y: 0.3, w: 0.62, h: 0.8, kind: 'tomb' }, { x: 0.48, y: 0.3, w: 0.62, h: 0.8, kind: 'tomb' },
+              { x: -0.28, y: -0.95, w: 0.56, h: 0.6, kind: 'ghost', slide: { amp: 0.7, w: 1.6 } },
+              { x: -0.22, y: 0.35, w: 0.44, h: 0.28, kind: 'bat', slide: { amp: 0.55, w: 2.4, p: 1 } }] },
   ];
 
   // Stars for a WON leg thrown in `darts` darts. A loss is always 0.
@@ -52,5 +103,18 @@
     return { first: first, count: count };
   }
 
-  KD.Campaign = { WORLDS: WORLDS, LEVELS: LEVELS, starsFor: starsFor, worldRange: worldRange };
+  // The level whose star opens level i (-1 for the first level). A side
+  // world's first level names it with `after`; everything else follows on.
+  function opener(i) {
+    const L = LEVELS[i];
+    return L.after != null ? L.after : i - 1;
+  }
+
+  // The level NEXT LEVEL leads to from i: never into a side world.
+  function nextOf(i) {
+    const n = i + 1;
+    return n < LEVELS.length && LEVELS[n].after == null ? n : null;
+  }
+
+  KD.Campaign = { WORLDS: WORLDS, LEVELS: LEVELS, starsFor: starsFor, worldRange: worldRange, opener: opener, nextOf: nextOf };
 })(window.KD = window.KD || {});
