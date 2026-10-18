@@ -15,8 +15,8 @@ compatibility_date = "2026-05-21"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "kudbee-leaderboard"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_name = "devbiz"
+database_id = "5871eca2-9a8c-4c02-aacb-dc06a000dd00"
 
 [vars]
 # Leave Clerk unset to run in keyless DEMO mode. To go live, set the
