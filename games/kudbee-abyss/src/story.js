@@ -29,6 +29,7 @@ ABY.CHAPTERS = [
   { n: 6, label: 'Day Two' },
   { n: 7, label: 'The Door' },
   { n: 8, label: 'Day Three' },
+  { n: 9, label: 'Day Four' },
 ];
 
 ABY.SPEAKERS = {
@@ -37,6 +38,7 @@ ABY.SPEAKERS = {
   GUARDIAN: { color: '#ff8a5c', focus: 'guardian' },
   VEY: { color: '#7cffb2', focus: 'vey' },
   EYE: { color: '#ff4d5e', focus: 'queen' },
+  CHOIR: { color: '#7fe0d0', focus: 'queen' },
 };
 
 ABY.START = 'awakening';
@@ -56,6 +58,9 @@ ABY.RITES = {
   lull: { name: 'THE EYE\'S LULLABY', step: 0.34, tint: '#c46bff', lanes: ['#c46bff', '#39e6ff', '#ff4d5e'],
     mel: [[5, 0], [3, 1], [5, 1], [7, 1], [5, 2], [3, 1], [2, 1], [3, 2], [5, 1], [7, 1], [9, 1], [7, 1], [5, 2], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [7, 1], [8, 1], [9, 2], [7, 1], [5, 1], [3, 1], [2, 1], [0, 3]],
     fx: [[3, 'whisper'], [7, 'flash'], [10, 'knock'], [15, 'blood'], [19, 'door'], [23, 'scream'], [28, 'flash'], [31, 'blood']] },
+  choir: { name: 'THE DROWNED CHOIR', step: 0.40, tint: '#3fd6c0', lanes: ['#3fd6c0', '#8fb8ff', '#e8f6ff'],
+    mel: [[0, 0], [2, 2], [3, 1], [5, 1], [3, 2], [2, 1], [0, 1], [2, 2], [5, 1], [7, 1], [5, 1], [3, 2], [2, 1], [3, 1], [5, 2], [7, 1], [9, 1], [7, 2], [5, 1], [3, 1], [2, 1], [0, 2], [3, 1], [5, 1], [7, 1], [5, 1], [3, 1], [2, 1], [0, 3]],
+    fx: [[1, 'drip'], [4, 'whisper'], [8, 'drip'], [11, 'knock'], [15, 'dark'], [18, 'scream'], [22, 'drip'], [26, 'flash'], [30, 'whisper']] },
 };
 ABY.RITE_IDS = Object.keys(ABY.RITES);
 ABY.MAX_DREAD = 6;
@@ -74,6 +79,9 @@ ABY.NOTES = {
   captain_name: { title: 'The signature', text: '"Corvin Ash, captain, who held the door." The Guardian\'s name, on the last page, in his own neat hand.' },
   eye_stairs: { title: 'Photo: the stairs', text: 'A staircase that goes down into a ceiling-high red Eye. Every step is lit from below, one by one, like a welcome. The photo was taken from where you are standing.' },
   eye: { title: 'What the Eye wants', text: '"I don\'t want your name. I want to be remembered too. Nobody ever sings to me."' },
+  holders: { title: 'Contact: Everyone Before You', text: 'One contact, 214 numbers. Every one of them held this phone. The last name is yours. The one above it is in handwriting you know from birthday cards.' },
+  next_line: { title: 'The blank line', text: 'Under your name there is one more line, already selected, the cursor blinking. Placeholder text, very faint: "who is next?"' },
+  choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
 ABY.NODES = {
@@ -833,6 +841,119 @@ ABY.NODES = {
     text: 'You look away.', choices: [],
   },
 
+  // ======================= act four: day four (the drowned choir, and everyone before you) =======================
+  d4_wake: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'day four. (The phone is wet. There is water behind the glass, and in the water, faces, pressed up against the screen from the inside.) 1 new contact: Everyone Before You.',
+    choices: [
+      { label: 'Open the contact', next: 'd4_contact', add: { dread: 1 } },
+      { label: 'Ask the Queen about the faces', next: 'd4_queen' },
+      { label: 'Switch on the flashlight', next: 'd4_wake', light: 1, req: { noLight: 1 } },
+      { label: 'Go back to the singing stones', next: 'd4_stones', add: { resolve: 1 } },
+    ],
+  },
+  d4_queen: {
+    ch: 9, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+    text: 'The stones always sang. I told myself it was the cave. (A long pause, three dots that come and go.) It was never the cave. Everyone who held this phone and would not open the gate, I... put them somewhere quiet. I thought it was kind.',
+    choices: [
+      { label: 'Ask her how many', next: 'd4_contact', add: { trust: 1 } },
+      { label: 'Tell her it was not kind', next: 'd4_stones', add: { resolve: 1, trust: -1 } },
+      { label: 'Tell her you will go and listen to them', next: 'd4_stones', add: { heart: 1, trust: 1 } },
+    ],
+  },
+  d4_contact: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true, scare: 'whisper', note: 'holders',
+    text: 'One contact. 214 numbers. You scroll and the list keeps going: names, dates, a photo of a hand on a phone, the same phone. Near the bottom, your name. Just above it, a name in handwriting you know from birthday cards.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd4_contact', light: 1, req: { noLight: 1 } },
+      { label: 'Read every name out loud', next: 'd4_stones', set: 'read_names', add: { heart: 1 }, bat: 4 },
+      { label: 'Scroll past your own name', next: 'd4_bottom', add: { dread: 1 } },
+      { label: 'Delete the contact', next: 'd4_delete' },
+    ],
+  },
+  d4_delete: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'contact deleted. (The phone buzzes in your hand.) 1 new contact: Everyone Before You (and you). we are not a list. you cannot put us in the bin. we have been in the water for a very long time and we are very good at coming back.',
+    choices: [
+      { label: 'Stop deleting it', next: 'd4_stones', add: { dread: 1 } },
+      { label: 'Open it again', next: 'd4_contact', add: { dread: 1 } },
+    ],
+  },
+  d4_bottom: {
+    ch: 9, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'eye', note: 'next_line',
+    text: 'Under your name there is one more line. It is blank, and already selected, and the cursor is blinking in it. The keyboard has come up by itself. Very faint, the placeholder text says: who is next?',
+    choices: [
+      { label: 'Type a name', next: 'd4_type', add: { dread: 1 } },
+      { label: 'Leave it blank and put the phone down', next: 'd4_stones', add: { resolve: 1 } },
+    ],
+  },
+  d4_type: {
+    ch: 9, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'good. (It is a name you did not mean to type. Someone you love.) now tell them it is 3:07. tell them they should not have woken up. it is so much lighter, once someone else is holding it.',
+    choices: [
+      { label: 'Press send', next: 'end_caller' },
+      { label: 'Delete it, one letter at a time', next: 'd4_stones', set: 'refused_next', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  d4_stones: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', dark: true, scare: 'whisper', img: 'corrupt',
+    text: 'The cave of singing stones has flooded to the knee. The stones are not stones. Under the black water, faces, eyes shut, mouths moving, all singing the same eleven notes, very slowly, the way you sing to someone who is falling asleep.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd4_stones', light: 1, req: { noLight: 1 } },
+      { label: 'Raise the flute and sing with them', next: 'd4_choir', add: { heart: 1 } },
+      { label: 'Wade in to the deepest face', next: 'd4_choir', add: { dread: 1, resolve: 1 } },
+    ],
+  },
+  d4_choir: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'gate', song: 'choir', scare: 'whisper',
+    text: 'The Drowned Choir. Two hundred and fourteen voices under the water, and they have lost the tune. Every note you catch, the water drops a step. Every note you drop, it rises, and something cold closes round your ankle to keep time.',
+    songNext: { win: 'd4_choir_win', fail: 'd4_choir_fail', give: 'd4_choir_give' },
+  },
+  d4_choir_win: {
+    ch: 9, speaker: 'CHOIR', mood: 'dawn', focus: 'queen',
+    text: 'we remember the end now. (The water goes down, step by step, and they come up with it: wet hair, open eyes, two hundred and fourteen people blinking at a ceiling.) we were waiting for someone to finish it. nobody ever finishes it.',
+    choices: [
+      { label: 'Ask them their names', next: 'd4_shore', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  d4_choir_fail: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'The water comes up to the screen. You hold the phone over your head and the faces come up with it, pressed flat against the glass from the inside, all of them mouthing the next note at you. Hands. So many hands, very gently, around your legs.',
+    choices: [
+      { label: 'Find the note again', next: 'd4_choir', retry: true },
+      { label: 'Get out of the water', next: 'd4_choir_give', add: { dread: 1 } },
+    ],
+  },
+  d4_choir_give: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'stay. it is warm under. nobody texts you under. nobody asks you to open anything. (A hand you know from birthday cards takes yours, under the water, and holds on.) everyone stays, in the end.',
+    choices: [
+      { label: 'Stay', next: 'end_drowned' },
+      { label: 'Pull your hand free and climb out', next: 'd4_shore', add: { dread: 1, resolve: 1 } },
+    ],
+  },
+  d4_shore: {
+    ch: 9, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
+    text: 'You are on the shore and the phone is dry, and the contact is open on its own: every name, and yours, and the blank line under it. "Someone has to close that book," the Queen says, very quietly. "Or write the next name in it. I always wrote the next name."',
+    choices: [
+      { label: 'Say every name, then yours, and close the book', next: 'end_names', req: { all: ['rite_choir', 'read_names'], min: { mem: 7 }, maxDread: 4 } },
+      { label: 'Write the next name, like she always did', next: 'end_caller' },
+      { label: 'Throw the phone into the water', next: 'end_drowned' },
+    ],
+  },
+  end_names: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'names',
+    text: 'You close the book.', choices: [],
+  },
+  end_caller: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'caller',
+    text: 'Message sent.', choices: [],
+  },
+  end_drowned: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'drowned',
+    text: 'The water closes.', choices: [],
+  },
+
   // ======================= forced scenes (they interrupt wherever she is) =======================
   blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
@@ -903,10 +1024,16 @@ ABY.ENDINGS = {
     text: 'You hold the door so she can sleep. It is not so heavy, at first. The Guardian lies down in the warm grass and the Queen finally dreams something that is not a flute. On the phone it will always be 3:07, and your name will be the only message on it, and it will say: someone has to be on this side.' },
   loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark', cont: 'd3_wake',
     text: 'The phone goes black and then, politely, it turns itself back on. 3:07. A new message from a number you do not know: you should not have woken up. The Queen opens her eyes on the floor of a very familiar room and has no idea who you are, and you cannot be certain, any more, that you do.' },
-  chorus: { tag: 'DAY THREE: SING ALL THREE RITES AS ONE', name: 'The Eye Remembered', hint: 'On Day Three, win all three rites, then sing them as one.', mood: 'dawn',
+  chorus: { tag: 'DAY THREE: SING ALL THREE RITES AS ONE', name: 'The Eye Remembered', hint: 'On Day Three, win all three rites, then sing them as one.', mood: 'dawn', cont: 'd4_wake',
     text: 'You sing the doors and the red corridor and the lullaby as one song, and the Eye, which has never been sung to, sings the last line back, a little wrong, perfectly. Every door in the Abyss opens at once, and for the first time anything that was ever watched there is allowed to look away.' },
-  watched: { tag: 'DAY THREE: LOOK AWAY', name: 'The Watched', hint: 'On Day Three, look away from the Eye.', mood: 'dark',
+  watched: { tag: 'DAY THREE: LOOK AWAY', name: 'The Watched', hint: 'On Day Three, look away from the Eye.', mood: 'dark', cont: 'd4_wake',
     text: 'You look away. It is such a small thing. The Eye does not mind, not exactly. It only learns, very slowly, what it is to be looked away from, and starts to practise on you: every screen, every window, every dark glass you ever pass. It is always, quietly, watching.' },
+  names: { tag: 'DAY FOUR: SAY EVERY NAME, CLOSE THE BOOK', name: 'The Last Name', hint: 'On Day Four, read every name, finish the Drowned Choir\'s song, then close the book. It only closes for someone who has been here many times.', mood: 'dawn',
+    text: 'You say all two hundred and fourteen names, and then your own, and then you close the book. It is only a contact, in the end: it deletes like anything else. In the cave the water is gone, and the stones are only stones, and they are quiet. The phone shows 3:07 for one more second. Then, for the first time in four days, it shows the right time.' },
+  caller: { tag: 'DAY FOUR: WRITE THE NEXT NAME', name: 'The Next Caller', hint: 'On Day Four, write a name on the blank line.', mood: 'dark',
+    text: 'Message sent. It is so much lighter, the way it promised. Somewhere across town a phone lights up on a bedside table, 3:07, from a number they do not know, and someone you love sits up in the dark. You were never the one being haunted. You were the next voice in the phone.' },
+  drowned: { tag: 'DAY FOUR: STAY IN THE WATER', name: 'The Drowned Choir', hint: 'On Day Four, stay with the choir under the water.', mood: 'dark',
+    text: 'The water closes over the screen and it is warm, as they said. You find the tune at once: everyone does, down here. Two hundred and fifteen voices now, mouthing eleven slow notes. The next person who wakes up in the cave will think the stones are singing.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
@@ -1012,6 +1139,7 @@ ABY.BADGES = [
   { id: 'day_two', name: 'Day Two', hint: 'Reach an ending on Day Two.' },
   { id: 'collector', name: 'Collector', hint: 'Find 5 endings.' },
   { id: 'real_morning', name: 'Real Morning', hint: 'Open the door on Day Two.' },
+  { id: 'last_name', name: 'The Last Name', hint: 'Close the book on Day Four.' },
   { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
 ];
 ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
@@ -1028,6 +1156,7 @@ ABY.badgesFor = function (found, s) {
   if (id === 'daybreak' || id === 'keeper' || id === 'loop') out.push('day_two');
   if (n >= 5) out.push('collector');
   if (id === 'daybreak') out.push('real_morning');
+  if (id === 'names') out.push('last_name');
   if (n >= ABY.ENDING_IDS.length) out.push('completionist');
   return out;
 };

@@ -9,7 +9,7 @@ import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'no
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-const VER = 5;
+const VER = 6;
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..', '..'), GAME = resolve(HERE, '..');
 const { chromium } = createRequire(resolve(ROOT, 'package.json'))('playwright');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png' };

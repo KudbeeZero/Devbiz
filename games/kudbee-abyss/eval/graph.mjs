@@ -17,7 +17,7 @@ export function graphChecks() {
   rec('story-links', dead.length === 0 && badNotes.length === 0 && N[ABY.START], dead.concat(badNotes).join(', ') || ids.length + ' nodes, every choice leads somewhere, every clue exists');
 
   const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'], SCARES = ['glitch', 'jump', 'whisper', 'eye', 'blackout'], IMGS = ['corrupt', 'stairs', 'city', 'queen', 'eye'];
-  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
+  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
   rec('story-nodes-shaped', odd.length === 0, odd.join(', ') || 'speaker, mood, focus, chapter and text on every node; scares, pictures and endings are known');
 
   // STRUCTURE (proven for every possible state, no walking needed): a gated choice can hide others, so every scene needs at least one choice that
@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names'];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -91,6 +91,15 @@ export function graphChecks() {
     rec('rite-giveup-resets-tries', t.tries === 0, 'giving up a rite resets the retry count');
   }
   rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && ABY.ENDINGS.loop.cont === 'd3_wake' && N.d3_wake.ch === 8, 'keeper and loop carry into Day Three');
+  { // DAY FOUR: both Day Three endings carry on; the book only closes for a veteran (7+ endings) who read the names and won the choir
+    const toNames = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_names'));
+    const d4 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_watched', flags: { rite_doors: 1 } }));
+    const shore = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_shore' }, o)).some(x => x.c.next === 'end_names');
+    rec('day-four', ABY.ENDINGS.chorus.cont === 'd4_wake' && ABY.ENDINGS.watched.cont === 'd4_wake' && d4 && d4.node === 'd4_wake' && d4.flags.rite_doors === 1 && N.d4_wake.ch === 9
+      && toNames.length > 0 && toNames.every(c => c.req && c.req.min && c.req.min.mem >= 7 && c.req.all.includes('rite_choir'))
+      && shore({ mem: 7, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 6, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 9, flags: { read_names: 1 } }),
+      'chorus and watched carry into Day Four; closing the book needs 7+ endings found, the names read and the Drowned Choir won');
+  }
 
   // DAY TWO: the true ending only opens for someone who has found earlier endings (mem), and only the endings with a way on continue
   const toDay = ids.filter(id => N[id].choices && N[id].choices.some(c => c.next === 'end_daybreak')).flatMap(id => N[id].choices.filter(c => c.next === 'end_daybreak'));
