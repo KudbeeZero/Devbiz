@@ -108,7 +108,7 @@ async function openMessages(pg) {                       // lock -> home -> Messa
 }
 async function pick(pg, text) {                         // wait for the reply chips (Enter skips the typing dots), tap the one with this text
   await pg.waitForFunction(() => ABY.game.delivering || document.querySelector('#replies.on .chip'), null, { timeout: 15000 });
-  for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(150); }
+  for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
   await pg.locator('#replies .chip', { hasText: text }).first().click();
   await sleep(250);
@@ -262,7 +262,7 @@ rec('song-fail', failed.node === 'song_fail' && failed.fail === 'fail' && failed
 // ================= the horror: dread, flashlight, battery, calls, clues, scares, forced scenes =================
 const at = async (pg, id, patch) => {                  // be at a scene (a test hook) and let its messages arrive
   await pg.evaluate(([i, p]) => ABY.debug.goto(i, p), [id, patch || {}]);
-  for (let i = 0; i < 12 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  for (let i = 0; i < 12 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await sleep(250);
 };
 const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
@@ -288,7 +288,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('dark-needs-flashlight', !d0.includes('Read the ledger') && hint.torchHint && hint.says && d1.includes('Read the ledger'), 'dark: ' + d0.join(' / ') + ' (torch button pulses); after the torch: ' + d1.join(' / '));
   // a clue unlocks a hidden choice, and lands in Notes
   await pg.locator('#replies .chip', { hasText: 'Read the ledger' }).first().click(); await sleep(400);
-  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); } await sleep(400);
+  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); } await sleep(400);
   const nb = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), flag: ABY.game.state.flags.ledger, banner: document.getElementById('banner').textContent }));
   await at(pg, 'g_meet', { flags: { ledger: 1 }, dread: 2 }); const g1 = await chips(pg); await at(pg, 'g_meet', {}); const g0 = await chips(pg);
   rec('clues-unlock-choices', nb.notes.includes('ledger') && nb.flag === 1 && /New clue/.test(nb.banner) && g1.includes('Read him the ledger') && g1.includes('Look him in the eye') && !g0.includes('Read him the ledger') && !g0.includes('Look him in the eye'), 'with the ledger and dread 2 she can say: ' + g1.join(' / ') + ' | without: ' + g0.join(' / '));
@@ -297,7 +297,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const cl = await pg.evaluate(() => ({ who: document.getElementById('callWho').textContent, btns: [...document.querySelectorAll('#callAct .cbtn')].map(b => ({ t: b.textContent.replace(/[^A-Za-z]/g, ''), w: b.querySelector('i').getBoundingClientRect().width })), locked: ABY.Phone.locked }));
   rec('incoming-call', cl.who === 'Unknown (you)' && cl.btns.length === 2 && /Answer/.test(cl.btns[0].t) && /Decline/.test(cl.btns[1].t) && cl.btns.every(b => b.w >= 60) && cl.locked, 'a full-screen call from "' + cl.who + '": ' + cl.btns.map(b => b.t).join(' / ') + ' (home locked while it rings)');
   await pg.screenshot({ path: join(OUT, 'horror-call.png') }); await pg.locator('#callAct .cbtn').first().click(); await sleep(500);
-  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); } await sleep(300);
+  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); } await sleep(300);
   const ca = await pg.evaluate(() => ({ node: ABY.game.state.node, hidden: !document.getElementById('call').classList.contains('on'), notes: ABY.game.state.notes.slice() }));
   await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(500); const nl = await pg.evaluate(() => [...document.querySelectorAll('#noteList .nt h3')].map(h => h.textContent));
   rec('call-answered-and-noted', ca.node === 'call_self' && ca.hidden && ca.notes.includes('future_call') && nl.includes('Call from your own number'), 'answered -> ' + ca.node + '; Notes now holds: ' + nl.join(' | ')); await pg.screenshot({ path: join(OUT, 'horror-notes.png') });
@@ -318,23 +318,23 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const { ctx, pg } = await open({}, 'forced'); await wake(pg); await openMessages(pg);
   await at(pg, 'flute_path', { bat: 1 }); await tapChip(pg, 'Climb the broken spire');
   const blk = await pg.waitForSelector('#blackout.on', { timeout: 6000 }).then(() => true, () => false);
-  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const bc = await chips(pg), bn = await pg.evaluate(() => ({ node: ABY.game.state.node, back: ABY.game.state.back, bat: ABY.game.state.bat }));
   rec('battery-dies', blk && bn.node === 'blackout' && bn.back === 'spire' && bn.bat === 0 && bc.join() === 'Wait for the light,Scream for help', 'the phone died on the way to the spire: ' + bc.join(' / ') + ' (no crystal, no way back)');
   await tapChip(pg, 'Wait for the light'); const z = await memoryShown(pg); rec('ending-blackout', z.name === 'Zero Percent', '"' + z.name + '"');
   await pg.click('#memAct'); await sleep(600);
   await at(pg, 'flute_path', { bat: 1, flags: { crystal: 1 } }); await tapChip(pg, 'Climb the broken spire'); await sleep(800);
-  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const rc = await chips(pg); await tapChip(pg, 'Hold the phone to the crystal'); await sleep(500);
   const rb = await pg.evaluate(() => ({ node: ABY.game.state.node, bat: ABY.game.state.bat }));
   rec('battery-recharge', rc.includes('Hold the phone to the crystal') && rb.node === 'spire' && rb.bat >= 30, 'with the crystal she recharges (' + rb.bat + '%) and goes on to the ' + rb.node);
   await at(pg, 'hollow_walk', { dread: 5, trust: 3 }); await tapChip(pg, 'Keep walking'); await sleep(500);
-  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const hc = await chips(pg), hn = await pg.evaluate(() => ABY.game.state.node);
   await tapChip(pg, 'Take the hand'); await sleep(500); const hb = await pg.evaluate(() => ({ node: ABY.game.state.node, dread: ABY.game.state.dread }));
   rec('mind-comes-apart-and-trust-saves', hn === 'hollowing' && hc.includes('Take the hand') && hb.node === 'g_meet' && hb.dread < 6, 'at dread 6 she comes apart; with trust 3 she can take Vey\'s hand and go on (dread ' + hb.dread + ')');
   await at(pg, 'hollow_walk', { dread: 5, trust: 0 }); await tapChip(pg, 'Keep walking'); await sleep(500);
-  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const lc = await chips(pg); await tapChip(pg, 'Let go'); const hq = await memoryShown(pg);
   rec('ending-hollow-from-dread', lc.join() === 'Let go' && hq.name === 'The Hollow Queen', 'without trust the only choice is "' + lc.join() + '": "' + hq.name + '"');
   await ctx.close();
