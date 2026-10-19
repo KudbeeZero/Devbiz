@@ -404,6 +404,11 @@
   });
 
   // ---- boot ----
+  function bootScreen() {                                                  // the phone powers on under the studio's name, then the lock screen is already waiting
+    var b = $('boot'), l = $('bLine'), ms = reduced ? 500 : 2200, steps = ['Starting phone', 'Listening for the Abyss', 'Kudbee Nightmares Studio'];
+    b.style.setProperty('--bt', ms + 'ms'); steps.forEach(function (t, i) { setTimeout(function () { l.textContent = t; }, ms * i / steps.length); });
+    setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.classList.add('gone'); }, 700); }, ms);
+  }
   function boot() {
     load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
     ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
@@ -411,7 +416,7 @@
     function ready(gl) {
       if (booted) return; booted = true; if (!gl) stage.classList.add('nogl');
       if (G.saved) { G.state = G.saved.state; G.node = N[G.state.node]; G.log = G.saved.log; } ABY.Scene.setMood('void'); ABY.Scene.setFocus('queen'); world(); P.show('lock');
-      setTimeout(function () { pre.classList.add('done'); }, 250); wake();
+      setTimeout(function () { pre.classList.add('done'); }, 250); bootScreen(); wake();
     }
     var img = new Image(), bgi = new Image(), bgi2 = new Image(), bgi3 = new Image(), bgi4 = new Image(), tried = 0, got = 0;
     function both() { if (++got === 5) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null, bgi4.naturalWidth ? bgi4 : null)); }

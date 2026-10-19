@@ -74,6 +74,9 @@
   .s-lock #homebar { display:none; }
 
   /* ---- screens ---- */
+  #boot { position:absolute; inset:0; z-index:45; background:#05030c; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; pointer-events:none; opacity:1; transition:opacity .6s ease; } #boot.done { opacity:0; } #boot.gone { display:none; }
+  #boot .bmark { font-size:40px; color:#9a6bff; text-shadow:0 0 22px #6a2cff; animation:bpulse 1.6s ease-in-out infinite; } #boot .bname { font:800 22px/1.15 var(--fd); letter-spacing:.22em; text-transform:uppercase; color:#e9e4ff; } #boot .bbar { width:120px; height:3px; border-radius:3px; background:rgba(255,255,255,0.14); overflow:hidden; margin-top:6px; } #boot .bbar i { display:block; height:100%; width:0; background:linear-gradient(90deg,#6a2cff,#39e6ff); animation:bload var(--bt,2s) ease-out forwards; } #boot .bline { font-size:12px; color:#8fa0c0; min-height:16px; letter-spacing:.06em; }
+  @keyframes bpulse { 50% { opacity:.45; } } @keyframes bload { to { width:100%; } } @media (prefers-reduced-motion:reduce) { #boot .bmark { animation:none; } }
   .scr { position:absolute; inset:0; z-index:20; opacity:0; visibility:hidden; transform:scale(1.04); transition:opacity .35s ease, transform .45s var(--ease), visibility 0s .45s; }
   .scr.on { opacity:1; visibility:visible; transform:none; transition:opacity .35s ease, transform .45s var(--ease), visibility 0s; }
   .app { background:linear-gradient(180deg, rgba(6,4,20,0.78), rgba(6,4,20,0.9)); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding-top:calc(var(--sbh) + var(--st)); display:flex; flex-direction:column; }
@@ -223,6 +226,8 @@
       <div class="r"><span class="carrier" id="carrier">ECHO</span><span class="sig" id="sig"><i></i><i></i><i></i><i></i></span><span id="batN">87%</span><span class="bat" id="bat"><b style="width:87%"></b></span></div>
     </div>
     <div id="island"></div>
+
+    <div id="boot" aria-hidden="true"><div class="bmark">&#9680;</div><div class="bname">Kudbee<br>Nightmares<br>Studio</div><div class="bbar"><i></i></div><div class="bline" id="bLine">Starting phone</div></div>
 
     <section class="scr on" id="lock" aria-label="Lock screen">
       <div class="carrier2">Kudbee &middot; Abyss</div>

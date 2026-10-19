@@ -84,7 +84,7 @@ const browser = await chromium.launch(launch);
 
 const NOISE = /Failed to load resource|ERR_|net::|fonts\.g|GL Driver Message|GPU stall|WebGL/;
 const errs = [];
-async function open(opts = {}, tag = '', { cdn = true, pre } = {}) {
+async function open(opts = {}, tag = '', { cdn = true, pre, keepBoot } = {}) {
   const ctx = await browser.newContext(Object.assign({ viewport: { width: 960, height: 600 } }, opts.ctx || {}));
   const pg = await ctx.newPage();
   pg.on('pageerror', e => errs.push(tag + ' ' + e.message)); pg.on('console', x => { if (x.type() === 'error' && !NOISE.test(x.text())) errs.push(tag + ' ' + x.text().slice(0, 140)); });
@@ -95,6 +95,7 @@ async function open(opts = {}, tag = '', { cdn = true, pre } = {}) {
   if (pre) await pg.addInitScript(pre);
   await pg.goto(URL, { waitUntil: 'load' });
   await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done'), null, { timeout: 15000 });
+  if (!keepBoot) await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 });   // the power-on screen has its own check
   return { ctx, pg };
 }
 const PHONES = [{ n: 'landscape-844x390', w: 844, h: 390 }, { n: 'small-landscape-667x375', w: 667, h: 375 }, { n: 'portrait-390x844', w: 390, h: 844 }];
@@ -277,6 +278,15 @@ if (THREE_PATH) {
     const off = await pg.evaluate(() => ABY.Scene.eye);
     rec('eye-backdrop', on > 0.8 && off < 0.2, 'the Eye fades in on its scene (' + on.toFixed(2) + ') and away after (' + off.toFixed(2) + ')');
   }
+  await ctx.close();
+}
+{
+  // power-on: the phone boots under the studio's name, never blocks a tap, then is gone
+  ({ ctx, pg } = await open({}, 'boot', { keepBoot: true }));
+  const b1 = await pg.evaluate(() => { const b = document.getElementById('boot'); return { txt: b.textContent, gone: b.classList.contains('gone'), pe: getComputedStyle(b).pointerEvents }; });
+  await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 });
+  const b2 = await pg.evaluate(() => getComputedStyle(document.getElementById('boot')).display);
+  rec('phone-boot', /Kudbee\s*Nightmares\s*Studio/.test(b1.txt) && !b1.gone && b1.pe === 'none' && b2 === 'none', 'the phone powers on as Kudbee Nightmares Studio, lets taps through, then clears');
   await ctx.close();
 }
 {
