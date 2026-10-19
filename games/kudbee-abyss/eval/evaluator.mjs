@@ -181,11 +181,15 @@ await ctx.close();
 // the Echo Flute app: practice by touch and by key; fail; the best score is kept
 ({ ctx, pg } = await open(phoneCtx(PHONES[0]), 'flute')); await wake(pg); await pg.click('#unlock'); await sleep(500); await pg.click('[data-app=flute]'); await sleep(500);
 await pg.click('#fPlay'); await pg.waitForFunction(() => ABY.Song.active);
-const hit = async (viaTouch) => {
-  const n = await pg.evaluate(() => { const S = ABY.Song, o = S.notes.find(x => x.s === 0); return o ? { lane: o.lane } : null; });
-  await pg.waitForFunction(() => { const S = ABY.Song, o = S.notes.find(x => x.s === 0); return o && o.t - S.t < 0.05; }, null, { polling: 'raf', timeout: 8000 });
-  if (viaTouch) { const x = await pg.evaluate((l) => document.getElementById('songCv').getBoundingClientRect().left + ABY.Song.laneX(l), n.lane); await pg.touchscreen.tap(x, 300); } else await pg.keyboard.press(['a', 's', 'd'][n.lane]);
-  await sleep(120); return pg.evaluate(() => ABY.Song.stats.perfect + ABY.Song.stats.good);
+const hit = async (viaTouch) => {                       // tap a little early (a tap takes ~100 ms to arrive) and allow a few notes for slow machines
+  for (let k = 0; k < 4; k++) {
+    const before = await pg.evaluate(() => ABY.Song.stats.perfect + ABY.Song.stats.good);
+    const n = await pg.evaluate(() => { const S = ABY.Song, o = S.notes.find(x => x.s === 0); return o ? { lane: o.lane } : null; });
+    await pg.waitForFunction(() => { const S = ABY.Song, o = S.notes.find(x => x.s === 0); return o && o.t - S.t < 0.09; }, null, { polling: 'raf', timeout: 8000 });
+    if (viaTouch) { const x = await pg.evaluate((l) => document.getElementById('songCv').getBoundingClientRect().left + ABY.Song.laneX(l), n.lane); await pg.touchscreen.tap(x, 300); } else await pg.keyboard.press(['a', 's', 'd'][n.lane]);
+    await sleep(150); const after = await pg.evaluate(() => ABY.Song.stats.perfect + ABY.Song.stats.good); if (after > before) return after;
+  }
+  return pg.evaluate(() => ABY.Song.stats.perfect + ABY.Song.stats.good);
 };
 const h1 = await hit(true), h2 = await hit(false);
 rec('song-touch-and-keys', h1 >= 1 && h2 >= 2, 'a touch tap landed (' + h1 + ') and a key landed (' + h2 + ')');
