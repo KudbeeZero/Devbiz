@@ -115,7 +115,15 @@ ABY.Audio = (function () {
       case 'daybreak': [0, 2, 4, 5, 7, 9, 11].forEach(function (s, i) { A.flute(SCALE[s % SCALE.length], 3, 0.13, i * 0.3, true); }); A.tone(220, 3.5, 'sine', 0.08, 440); break;
       case 'keeper': A.tone(55, 4, 'sine', 0.2, 41); A.flute(SCALE[0], 4.5, 0.09, 0.4); A.noise(3, 0.05, 400, 120, 0.8); break;
       case 'loop': A.tone(1318, 0.12, 'square', 0.04); A.tone(1318, 0.12, 'square', 0.04, null, 0.9); A.noise(1.6, 0.08, 2400, 300, 1, 1.6); A.tone(74, 3, 'sawtooth', 0.1, 50, 1.6); break;
+      case 'chorus': [0, 2, 3, 5, 7, 9, 10, 12].forEach(function (s, i) { A.flute(SCALE[s % SCALE.length], 3, 0.13, i * 0.25, true); }); A.tone(110, 4, 'sine', 0.12, 220); A.tone(165, 4, 'sine', 0.06, 330, 0.3); break;
+      case 'watched': A.tone(48, 4, 'sine', 0.2, 30); A.noise(3, 0.07, 3000, 200, 2); A.tone(1760, 0.1, 'square', 0.03, null, 1.4); break;
       case 'blackout': A.tone(60, 3.5, 'sine', 0.22, 24); A.noise(2.5, 0.12, 300, 60, 0.8); break;
+      case 'door': A.tone(95, 1.3, 'sawtooth', 0.06, 210); A.tone(140, 1.1, 'sawtooth', 0.04, 330, 0.1); A.noise(1.3, 0.1, 500, 1800, 5); A.tone(48, 0.5, 'sine', 0.2, 30, 1.1); break;
+      case 'crack': A.noise(0.09, 0.5, 6000, 900, 0.8); A.noise(0.05, 0.4, 3000, 400, 1, 0.06); A.tone(180, 0.18, 'square', 0.07, 40); break;
+      case 'drip': A.tone(1800, 0.05, 'sine', 0.07, 700); A.noise(0.12, 0.05, 2400, 900, 2, 0.04); break;
+      case 'knock': A.tone(70, 0.14, 'sine', 0.35, 45); A.tone(70, 0.14, 'sine', 0.3, 45, 0.28); A.tone(70, 0.16, 'sine', 0.38, 42, 0.52); A.noise(0.1, 0.12, 400, 150, 1.2); break;
+      case 'scream': A.noise(0.9, 0.3, 1800, 5200, 2.5); A.tone(880, 0.8, 'sawtooth', 0.07, 1760); A.tone(1320, 0.7, 'square', 0.04, 600, 0.1); break;
+      case 'thud': A.tone(55, 0.45, 'sine', 0.45, 28); A.noise(0.25, 0.25, 300, 80, 0.8); break;
       case 'crown': A.tone(110, 3.2, 'sawtooth', 0.1, 55); A.tone(116, 3.2, 'sawtooth', 0.08, 58); A.tone(55, 3.5, 'sine', 0.14, 36); break;
     }
   };

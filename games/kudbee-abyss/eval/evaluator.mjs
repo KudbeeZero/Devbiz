@@ -91,6 +91,7 @@ async function open(opts = {}, tag = '', { cdn = true, pre } = {}) {
   await pg.route('https://fonts.*/**', r => r.abort());
   if (cdn && THREE_PATH) await pg.route('https://cdnjs.cloudflare.com/**', r => r.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, path: THREE_PATH }));
   else await pg.route('https://cdnjs.cloudflare.com/**', r => r.abort());
+  if (!opts.guide) await pg.addInitScript(`try { if (!localStorage.getItem('kudbee.abyss.v2')) localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);   // the first-run guide has its own check; every other flow starts past it
   if (pre) await pg.addInitScript(pre);
   await pg.goto(URL, { waitUntil: 'load' });
   await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done'), null, { timeout: 15000 });
@@ -208,7 +209,7 @@ const prev = await pg.evaluate(() => { const c = document.querySelector('#shPrev
 rec('share-screen-card', prev && prev.w === 1200 && prev.h === 630 && prev.colours > 60 && /\/s\/song\/$/.test(prev.link) && /Song Remembered/.test(prev.sub) && prev.native, prev ? 'a ' + prev.w + 'x' + prev.h + ' card painted (' + prev.colours + ' colour buckets), link ' + prev.link + ', native Share... button shown' : 'no preview canvas');
 await pg.screenshot({ path: join(OUT, 'desktop-share.png') });
 await pg.click('#shNative'); await sleep(300); const sh = await pg.evaluate(() => { const d = window.__shared; return d && { url: d.url, text: d.text, file: d.files && d.files[0] && { n: d.files[0].name, t: d.files[0].type, sz: d.files[0].size } }; });
-rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 13/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
+rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 15/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
 await pg.click('#shX'); await pg.click('#shFb'); await pg.click('#shWa'); const op = await pg.evaluate(() => window.__opened), land = encodeURIComponent(SITE + '/games/kudbee-abyss/s/song/');
 rec('share-network-links', op.length === 3 && op[0].startsWith('https://twitter.com/intent/tweet?') && op[0].includes('url=' + land) && op[1].startsWith('https://www.facebook.com/sharer/sharer.php?u=' + land) && op[2].startsWith('https://wa.me/?text=') && op[2].includes(land), 'X, Facebook and WhatsApp all carry the landing-page link');
 await pg.click('#shCopy'); await sleep(200); const cp = await pg.evaluate(() => window.__copied);
@@ -217,7 +218,7 @@ const dl = await Promise.all([pg.waitForEvent('download', { timeout: 5000 }).cat
 rec('share-save-image', dn === 'kudbee-abyss-song.png', 'Save image downloads ' + dn);
 // progress share (from Pulse): the count is personal, the link is the progress page
 await pg.click('#shBack'); await sleep(300); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500); await pg.click('#pShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await pg.click('#shNative'); await sleep(300);
-const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 13 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
+const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 15 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
 await pg.evaluate(() => ABY.Phone.show('home')); await sleep(300);
 // the Gallery: the found ending is a photo, the rest are locked; tapping the photo reopens the memory; Pulse shows the stats; Settings toggles
 await pg.mouse.move(550, 860).catch(() => {}); await pg.evaluate(() => ABY.Phone.show('home')); await sleep(400);
@@ -228,7 +229,7 @@ await pg.click('#tiles .tile.f'); await sleep(300); rec('gallery-opens-memory', 
 await pg.click('#memAct'); await sleep(300);
 await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(900);
 const pl = await pg.evaluate(() => ({ rows: [...document.querySelectorAll('#ringsL .rl .v')].map(v => v.textContent), sub: document.getElementById('pSub').textContent }));
-rec('pulse-rings', pl.rows.length === 4 && /Endings found 1\/13/.test(pl.sub), 'Heart / Resolve / Trust / Dread ' + pl.rows.join(', ') + ' | ' + pl.sub);
+rec('pulse-rings', pl.rows.length === 4 && /Endings found 1\/15/.test(pl.sub), 'Heart / Resolve / Trust / Dread ' + pl.rows.join(', ') + ' | ' + pl.sub);
 await ctx.close();
 
 // the Echo Flute app: practice by touch and by key; fail; the best score is kept
@@ -374,7 +375,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('badges-earned', got === 'day_two,fearless,first_light,lamplighter,name_keeper,real_morning' && /Badge earned/.test(bn), 'one ending earned: ' + got + ' | banner "' + bn.slice(0, 50) + '"');
   await pg.click('#memAct'); await sleep(500); await pg.evaluate(() => ABY.Phone.show('gallery')); await sleep(500);
   const g = await pg.evaluate(() => ({ tiles: document.querySelectorAll('#tiles .tile').length, found: document.querySelectorAll('#tiles .tile.f').length, on: document.querySelectorAll('#badges .bdg.on').length, all: document.querySelectorAll('#badges .bdg').length, fb: [...document.querySelectorAll('#faction .fbtn')].map(b => b.textContent), lean: [...document.querySelectorAll('#faction .fbtn.lean')].length }));
-  rec('gallery-badges-factions', g.tiles === 13 && g.found === 1 && g.on === 6 && g.all === 12 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
+  rec('gallery-badges-factions', g.tiles === 15 && g.found === 1 && g.on === 6 && g.all === 12 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
   await pg.locator('#faction .fbtn', { hasText: 'Order of the Door' }).click(); await sleep(300);
   const jf = await pg.evaluate(() => ({ f: ABY.game.faction, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).faction, title: document.querySelector('#faction h3').textContent, txt: ABY.Share.moment('progress', '', ABY.game.found, { faction: ABY.game.faction, badges: 6 }) }));
   rec('faction-pledge', jf.f === 'order' && jf.saved === 'order' && /Sworn to The Order of the Door/.test(jf.title) && /Order of the Door \(6 badges\)/.test(jf.txt.text) && /SWORN TO THE ORDER/.test(jf.txt.info.line1), 'pledged and saved: "' + jf.title + '"; the share says "' + jf.txt.text.slice(0, 80) + '..."');
@@ -469,11 +470,33 @@ for (const [name, raw, want] of [
   ['hostile log', JSON.stringify({ run: { node: 'spire', choices: 2, log: [{ k: 'in', who: 'QUEEN', t: '<img src=x onerror=__pwn()>' }, { k: 'evil', t: 'x' }, { k: 'sys', t: 5 }, 7, { k: 'out', who: 'HACKER', t: 'ok' }] }, found: { echo: 1 } }), 1],
 ]) {
   const c = await open({}, 'hostile-' + name, { pre: `window.__ran = false; window.__pwn = () => { window.__ran = true; }; try { localStorage.setItem('kudbee.abyss.v2', ${JSON.stringify(raw)}); } catch (e) {}` });
-  await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); await c.pg.click('#icMsg'); await sleep(1200);
+  await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); if (await c.pg.isVisible('#gOk')) await c.pg.click('#gOk'); await c.pg.click('#icMsg'); await sleep(1200);
   const o = await c.pg.evaluate(() => ({ lock: true, found: Object.keys(ABY.game.found).length, ran: window.__ran, img: !!document.querySelector('#thread img'), outs: document.querySelectorAll('#thread .m').length }));
   rec('save-hostile-' + name.replace(' ', '-'), o.found === want && !o.ran && !o.img, 'loads clean; endings found ' + o.found + '; no injected markup ran; ' + o.outs + ' messages drawn');
   await c.ctx.close();
 }
+
+// ================= first run: reply from the lock screen, the guide, swipe between home pages =================
+{ const c = await open({ guide: true, ctx: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } }, 'firstrun'); const pg = c.pg; await wake(pg);
+  await pg.waitForSelector('#lkNotes .nrep button', { timeout: 8000 });
+  const chips = await pg.$$eval('#lkNotes .nrep button', bs => bs.map(x => ({ t: x.textContent, h: Math.round(x.getBoundingClientRect().height) })));
+  await pg.click('#lkNotes .nrep button >> nth=0');
+  await pg.waitForSelector('#guide:not([hidden])', { timeout: 8000 });
+  const steps = await pg.$$eval('#guide li', l => l.length); await pg.click('#gOk');
+  await pg.waitForFunction(() => ABY.game.state.choices >= 1, null, { timeout: 20000 });
+  const o = await pg.evaluate(() => ({ node: ABY.game.state.node, out: [...document.querySelectorAll('#thread .m.out')].map(e => e.textContent), guided: ABY.game.guided, hidden: document.getElementById('guide').hidden }));
+  rec('lock-reply-starts-level-one', chips.length >= 2 && chips.every(x => x.h >= 43) && o.node !== 'awakening' && o.out.length === 1 && o.out[0] === chips[0].t, chips.length + ' reply chips on the lock note (' + chips.map(x => x.h).join('/') + 'px); tapping "' + chips[0].t + '" -> ' + o.node);
+  rec('first-run-guide', steps >= 4 && o.guided && o.hidden, 'a ' + steps + '-step guide shows on a first run, "Got it" dismisses and remembers it');
+  await pg.evaluate(() => ABY.Phone.show('home')); await sleep(1200);
+  const swipe = async (x0, x1) => { const s = await c.ctx.newCDPSession(pg); const pt = (x, t) => s.send('Input.dispatchTouchEvent', { type: t, touchPoints: t === 'touchEnd' ? [] : [{ x, y: 400, id: 1 }] }); await pt(x0, 'touchStart'); await pt((x0 + x1) / 2, 'touchMove'); await pt(x1, 'touchMove'); await pt(x1, 'touchEnd'); await sleep(600); };
+  await swipe(330, 60); const l = await pg.evaluate(() => ABY.Phone.screen);
+  await swipe(60, 330); const r = await pg.evaluate(() => ABY.Phone.screen);
+  await pg.evaluate(() => ABY.Phone.show('home')); await sleep(1200); await swipe(300, 40); const ic = await pg.evaluate(() => ABY.Phone.screen);
+  rec('swipe-home-pages', l === 'home2' && r === 'home' && ic === 'home2', 'swipe left -> ' + l + ', right -> ' + r + ', a swipe that starts on an icon -> ' + ic + ' (never opens the app)');
+  await pg.reload(); await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done'));
+  const back = await pg.evaluate(() => ({ hidden: document.getElementById('guide').hidden, chips: document.querySelectorAll('#lkNotes .nrep').length }));
+  rec('returning-player-no-guide', back.hidden && back.chips === 0, 'a saved journey skips the guide and the lock-screen reply chips');
+  await c.ctx.close(); }
 
 // ================= robustness =================
 { const c = await open({}, 'nocdn', { cdn: false }); await wake(c.pg); const nogl = await c.pg.evaluate(() => document.getElementById('screen').classList.contains('nogl'));

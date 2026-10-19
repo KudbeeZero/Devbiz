@@ -16,8 +16,8 @@ export function graphChecks() {
   const badNotes = ids.filter(id => N[id].note && !ABY.NOTES[N[id].note]);
   rec('story-links', dead.length === 0 && badNotes.length === 0 && N[ABY.START], dead.concat(badNotes).join(', ') || ids.length + ' nodes, every choice leads somewhere, every clue exists');
 
-  const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'], SCARES = ['glitch', 'jump', 'whisper', 'eye', 'blackout'], IMGS = ['corrupt', 'stairs', 'city', 'queen'];
-  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
+  const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'], SCARES = ['glitch', 'jump', 'whisper', 'eye', 'blackout'], IMGS = ['corrupt', 'stairs', 'city', 'queen', 'eye'];
+  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
   rec('story-nodes-shaped', odd.length === 0, odd.join(', ') || 'speaker, mood, focus, chapter and text on every node; scares, pictures and endings are known');
 
   // STRUCTURE (proven for every possible state, no walking needed): a gated choice can hide others, so every scene needs at least one choice that
@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull'];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -76,6 +76,15 @@ export function graphChecks() {
   let s = ABY.newState(); s.node = 'song_intro'; let n = 0;
   while (s.node !== 'reconcile' && n++ < 20) { s = ABY.songDone(s, false); if (s.node === 'song_fail') s = ABY.choose(s, 0); }
   rec('song-retries-bounded', s.node === 'reconcile' && n <= ABY.MAX_SONG_TRIES + 2, 'after ' + ABY.MAX_SONG_TRIES + ' fails the Guardian is held instead');
+
+  // the rites (Day Three): each is bounded the same way, and every rite node has all three ways out
+  const rites = ids.filter(id => typeof N[id].song === 'string');
+  const ritesOk = rites.length === ABY.RITE_IDS.length && rites.every(id => ABY.RITES[N[id].song] && ['win', 'fail', 'give'].every(k => N[N[id].songNext && N[id].songNext[k]]));
+  let rs = Object.assign(ABY.newState(), { node: 'd3_hall' }), rn = 0;
+  while (rs.node === 'd3_hall' || rs.node === 'd3_doors_fail') { rs = rs.node === 'd3_hall' ? ABY.songDone(rs, false) : ABY.choose(rs, 0); if (rn++ > 20) break; }
+  const rw = ABY.songDone(Object.assign(ABY.newState(), { node: 'd3_hall' }), true);
+  rec('rites-bounded', ritesOk && rs.node === 'd3_doors_give' && rw.node === 'd3_doors_win' && rw.flags.rite_doors === 1, rites.length + ' rites; each can be retried ' + ABY.MAX_SONG_TRIES + ' times, then it lets you pass; a win sets its flag');
+  rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && ABY.ENDINGS.loop.cont === 'd3_wake' && N.d3_wake.ch === 8, 'keeper and loop carry into Day Three');
 
   // DAY TWO: the true ending only opens for someone who has found earlier endings (mem), and only the endings with a way on continue
   const toDay = ids.filter(id => N[id].choices && N[id].choices.some(c => c.next === 'end_daybreak')).flatMap(id => N[id].choices.filter(c => c.next === 'end_daybreak'));

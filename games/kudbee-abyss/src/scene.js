@@ -25,7 +25,7 @@ ABY.Scene = (function () {
     throne: { fog: 0x0e0006, key: 0xff3a2a, rim: 0xffa83c, shard: 0xff4a1c, tint: [0.78, 0.66, 0.7], rays: 0.1, dens: 0.022 },
     dark:  { fog: 0x070008, key: 0xff3c3c, rim: 0x6a0fcc, shard: 0xb01030, tint: [0.55, 0.50, 0.62], rays: 0.03, dens: 0.026 },
   };
-  var GATE = { dawn: [0xffd34d, 0xff9a5c], song: [0x39e6ff, 0xff6ec7], echo: [0xc46bff, 0x7cffb2], silence: [0x8890a8, 0x40485c], crown: [0xff2040, 0x400010], daybreak: [0xfff1b0, 0xffd34d], keeper: [0x8aa0ff, 0x1a1a3a], loop: [0x30ff90, 0x101020] };
+  var GATE = { dawn: [0xffd34d, 0xff9a5c], song: [0x39e6ff, 0xff6ec7], echo: [0xc46bff, 0x7cffb2], silence: [0x8890a8, 0x40485c], crown: [0xff2040, 0x400010], daybreak: [0xfff1b0, 0xffd34d], keeper: [0x8aa0ff, 0x1a1a3a], loop: [0x30ff90, 0x101020], chorus: [0xff9ad5, 0xffd34d], watched: [0xff4d5e, 0x05030c] };
   var CHAR = { queen: [0.47, 0.20, 0.60], guardian: [0.17, 0.30, 0.78], vey: [0.80, 0.60, 0.78] };   // art u, v(from the top), how close the camera comes (1 = framing the whole art)
   var tmpC;                                                       // (made in make(): THREE may not have loaded, and the game still runs without the 3D)
 
