@@ -73,7 +73,7 @@
     if (kind === 'in' && who) { var w = document.createElement('span'); w.className = 'who'; w.textContent = WHO[who] || who; w.style.color = ABY.SPEAKERS[who] ? ABY.SPEAKERS[who].color : '#fff'; el.appendChild(w); }
     el.appendChild(document.createTextNode(text)); th.appendChild(el); scrollEnd(!quiet); return el;
   }
-  var PICS = { corrupt: 'assets/world/abyss-city-corrupt.webp', stairs: 'assets/world/abyss-stairs.webp', city: 'assets/world/abyss-city.webp', queen: 'assets/character/queen-960.webp' };
+  var PICS = { corrupt: 'assets/world/abyss-city-corrupt.webp', stairs: 'assets/world/abyss-stairs.webp', eye: 'assets/world/abyss-eye.webp', city: 'assets/world/abyss-city.webp', queen: 'assets/character/queen-960.webp' };
   function photo(key, quiet) {
     var th = $('thread'), el = document.createElement('div'); el.className = 'm photo'; if (quiet) el.style.animation = 'none'; el.setAttribute('role', 'img'); el.setAttribute('aria-label', 'A photo from the phone'); el.style.backgroundImage = 'url(' + (PICS[key] || PICS.corrupt) + ')'; th.appendChild(el); scrollEnd(!quiet); return el;
   }
@@ -382,7 +382,8 @@
     function both() { if (++got === 4) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null)); }
     img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both; bgi3.onload = both; bgi3.onerror = both;      // the cities are a bonus: without them the nebula stays
     img.onerror = function () { if (tried++ === 0) img.src = 'assets/character/queen.png'; else ready(false); };
-    ABY.Art = { queen: img, city: bgi, corrupt: bgi2, stairs: bgi3 };                       // the share cards are painted from these
+    var eyeImg = new Image(); eyeImg.src = 'assets/world/abyss-eye.webp';
+    ABY.Art = { queen: img, city: bgi, corrupt: bgi2, stairs: bgi3, eye: eyeImg };                       // the share cards are painted from these
     img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp'; bgi3.src = 'assets/world/abyss-stairs.webp';
     setTimeout(function () { ready(false); }, 6000);                    // a slow or blocked 3D library never keeps her waiting
   }
