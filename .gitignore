@@ -37,3 +37,7 @@ games/kudbee-darts/eval/out/
 
 # Jackpot evaluator screenshots (regenerated each run)
 games/kudbee-jackpot/eval/out/
+
+# Abyss evaluator: downloaded three.js copy + screenshots
+games/kudbee-abyss/eval/.cache/
+games/kudbee-abyss/eval/out/
