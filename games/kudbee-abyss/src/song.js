@@ -9,7 +9,7 @@
 var ABY = window.ABY = window.ABY || {};
 
 ABY.Song = (function () {
-  var Sg = { active: false, t: 0, notes: [], stats: null, bot: false, WIN: 0.6, LEAD: 2.2, FALL: 1.7, P: 0.075, G: 0.15 };
+  var Sg = { active: false, t: 0, notes: [], stats: null, bot: false, rate: 1, WIN: 0.6, LEAD: 2.2, FALL: 1.7, P: 0.075, G: 0.15 };
   // the melody: [index into the flute scale, steps after the last note]  (a step is 0.42 s)
   var MEL = [[2, 0], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [7, 1], [5, 2], [3, 1], [2, 1], [3, 1], [5, 1], [7, 1], [9, 1], [8, 2], [7, 1], [5, 1], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 2], [0, 3]];
   var STEP = 0.42, cv, cx, W = 1, H = 1, dpr = 1, lanes = [], cb = null, finishAt = 0, shake = 0, flash = [0, 0, 0], hint = 1, held = {};
@@ -57,12 +57,13 @@ ABY.Song = (function () {
     if (ABY.Audio) { ABY.Audio.flute(ABY.Audio.scale[n.idx], 1.3, n.s === 1 ? 0.2 : 0.15, 0, true); ABY.Audio.buzz(8); }
     if (ABY.Scene) ABY.Scene.burst(lanes[l].x, Sg.hitY, n.s === 1 ? 0xffffff : parseInt(COL[l].slice(1), 16), n.s === 1 ? 22 : 12, 3);
   }
+  Sg.laneX = function (l) { return lanes[l].x; };               // (the evaluator taps where a lane is)
   Sg.press = press;                                           // (the evaluator and the bot press lanes through this)
 
   Sg.score = function () { var s = Sg.stats; return s ? (s.perfect + s.good * 0.65) / s.total : 0; };
 
   Sg.update = function (dt) {
-    if (!Sg.active) return; dt = Math.min(dt, 0.05); Sg.t += dt; shake *= 0.9;
+    if (!Sg.active) return; dt = Math.min(dt, 0.05) * Sg.rate; Sg.t += dt; shake *= 0.9;
     for (var i = 0; i < 3; i++) flash[i] *= 0.86;
     for (i = 0; i < Sg.notes.length; i++) {
       var n = Sg.notes[i];

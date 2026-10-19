@@ -256,7 +256,29 @@ See `docs/GAMES_STUDIO_ROADMAP.md` for the phased integration plan.
 - Local verification only: run project's lint/typecheck/test commands before declaring green
 - Green gate from repo root: `npm run verify` (pinball 24/24 + leaderboard unit tests). Pinball-only: `npm run pinball:eval`
 - Manual gates documented in ledger (browser, wallet, payment, API key, deploy verification)
-- Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball) for headless verification
+- Test hooks: `window.__kbTest` (pinball), `window.RIFF` (riff), `window.PINBALL` (pinball), `window.ABY` (abyss: `ABY.game`, `ABY.Song`, `ABY.Scene`) for headless verification
+- Per-game gates from repo root: `npm run archery:engine` + `archery:eval`, `abyss:eval`, `voidrunner:eval`, `darts:eval`, `cornhole:*`, `cricket:*` (each prints `N/N passed`; say "local passed, no CI configured")
+- Games security gate: `npm run games:csp` loads every `games/*/index.html` under the `/games/*` CSP from `_headers` and fails on any violation or any cross-site script/stylesheet without an `integrity` hash
+
+## Security rules for games (owner priority, 2026-10)
+
+- **Nothing from outside goes into `innerHTML`.** Leaderboard names, cloud saves, share links and `localStorage` are data, never markup: use `textContent` / `createElement`, or escape (voidrunner `escHtml`). A hostile name once ran script on Voidrunner's game-over screen (`board-name-is-text` guards it).
+- **A save or a link is never trusted.** Clamp and type-check every field on load (archery `Store.load`, `Ghost.decode`; abyss `ABY.cleanState`), cap sizes, and refuse the whole thing on one bad field.
+- **Cross-site scripts carry `integrity` + `crossorigin="anonymous"`**, pinned to an exact version (Abyss: three.js r128 from cdnjs). A dynamic `import()` cannot take SRI, so pin an exact version and ask the owner (wallet code is OWNER-OK territory).
+- **The leaderboard refuses what cannot be real**, not clamps it: a metric can have `floor` (values below are dropped) and a game can have `rules` (a contradicting line is dropped whole) in `leaderboard/shared/core.js`. Rebuild the single-file worker after editing (`node leaderboard/worker/build-single.mjs`); the test fails if `dist/` is stale. Redeploying the Worker is owner-only.
+- **CSP**: `/*` and `/games/*` both ship Report-Only. Widen the policy for a legitimate need; never enforce before real-phone checks.
+- Production switches an agent cannot flip (owner, in the Cloudflare dashboard): `ALLOW_DEMO=0`, `ALLOWED_ORIGINS`, rate limits. Never ask for keys or tokens in chat.
+
+## Kudbee Abyss (`games/kudbee-abyss/`)
+
+A branching 3D story with a flute rhythm game and five endings. Zero build; files load in this order: `src/story.js` (pure data + pure functions, also loaded by node), `fx.js` (generated sound), `scene.js` (three.js r128 stage), `song.js` (the rhythm game), `game.js` (state, dialogue, screens, loop).
+
+- **Story = data.** `ABY.NODES` (speaker, mood, focus, text, choices with `add` stats / `set` flag), three hidden stats (heart / resolve / trust), `ABY.endingFor(state)` picks one of five endings. Add a node, then run `node games/kudbee-abyss/eval/graph.mjs`: it walks every reachable state (links exist, every node reachable, no dead ends, every state can finish, all five endings reachable). **Work out the reachable stat maxima before setting an ending threshold** (the first "Another Gate" threshold was unreachable and only the walk caught it).
+- **Gate: `npm run abyss:eval`** (graph checks + Playwright: plays all five endings by clicking, the song by touch / key / bot, phone fit on three phones, notch, hostile saves, no-3D / no-WebGL fallback, hidden tab, reduced motion, share, sound). three.js is fetched once into `eval/.cache/` by curl and its hash is checked against the page's `integrity`, so the run also proves the SRI hash. No network: the 3D checks skip.
+- **Phone first.** The dialogue card sits beside the scene (landscape) or under it (portrait) and never hides it; buttons >= 44px, text >= 11.5px, safe areas via `env()`; the world is offset so the art stays clear of the card (`Scene.aim`). If the 3D library or WebGL is missing the picture fallback still plays the whole story.
+- A `hidden` attribute loses to any `display:` rule: keep `[hidden]{display:none !important}`.
+- Test hooks that must stay: `ABY.Song.bot` (perfect player), `ABY.Song.rate` (time scale), `ABY.Song.laneX`, `ABY.debug.frames()`.
+- Not yet: real-device check (iPhone Safari + Android Chrome: WebGL cost, audio unlock, touch lanes), a share card image, ending art beyond the one painting.
 
 ## Pinball physics rules (`games/kudbee-pinball/index.html`)
 

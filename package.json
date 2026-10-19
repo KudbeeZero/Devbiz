@@ -3,6 +3,7 @@
     "verify": "npm run site:filing && npm run pinball:eval && npm run darts:eval && npm run jackpot:eval && npm run aether:eval && npm run voidrunner:eval && npm run birds:eval && npm run cornhole:engine && npm run cornhole:eval && npm run cricket:engine && npm run cricket:eval && npm run archery:engine && npm run archery:eval && npm run test:leaderboard",
     "pinball:eval": "node games/kudbee-pinball/eval/evaluator.mjs",
     "aether:eval": "node lab/aether-wing/eval/evaluator.mjs",
+    "abyss:eval": "node games/kudbee-abyss/eval/evaluator.mjs",
     "games:csp": "node tools/games-csp-check.mjs",
     "voidrunner:eval": "node games/kudbee-voidrunner/eval/evaluator.mjs",
     "birds:engine": "node games/kudbee-angrybirds/eval/engine.mjs",
