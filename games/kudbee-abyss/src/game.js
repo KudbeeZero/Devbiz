@@ -326,7 +326,7 @@
     // test hook: be at scene `id` with some stats (the evaluator and the screenshots use it; a player never does)
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
-      G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
+      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
       if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
     },
     tick: function (dt) { ambient(dt); } };
