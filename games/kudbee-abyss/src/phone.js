@@ -12,9 +12,10 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Phone = (function () {
   var P = { screen: 'lock', hooks: {}, locked: false };
   var $ = function (id) { return document.getElementById(id); };
-  var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings', 'share'], bannerT = 0, badges = { msg: 0, gallery: 0 };
+  var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
+  P.orient = 'portrait';
 
   // story time -> "3:07" (the clock is part of the story; it never shows the real time)
   P.fmt = function (mins) { var h = Math.floor(mins / 60) % 12 || 12, m = mins % 60; return h + ':' + (m < 10 ? '0' : '') + m; };
@@ -27,7 +28,7 @@ ABY.Phone = (function () {
   P.setDate = function (txt) { $('lkDate').textContent = txt; };
 
   P.badge = function (app, n) {
-    badges[app] = n; var host = app === 'msg' ? $('icMsg') : app === 'gallery' ? $('icGal') : null; if (!host) return;
+    badges[app] = n; var host = app === 'msg' ? $('icMsg') : app === 'gallery' ? $('icGal') : app === 'notes' ? $('icNotes') : null; if (!host) return;
     var b = host.querySelector('.badge'); if (!n) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('span'); b.className = 'badge'; host.appendChild(b); } b.textContent = n > 9 ? '9+' : String(n);
   };
@@ -68,6 +69,14 @@ ABY.Phone = (function () {
       var b = document.createElement('span'); b.className = 'b'; b.textContent = o.text; tx.appendChild(h); tx.appendChild(b); n.appendChild(ic); n.appendChild(tx);
       n.addEventListener('click', function (e) { e.stopPropagation(); if (o.onTap) o.onTap(); }); box.appendChild(n);
     });
+  };
+
+  // ---- orientation: on a real phone the screen turns by itself; on a desktop the simulated phone can be laid on its side ----
+  P.canRotate = function () { var b = $('rotBtn'); return !!b && getComputedStyle(b).display !== 'none'; };
+  P.setOrient = function (o) {
+    P.orient = o === 'landscape' ? 'landscape' : 'portrait'; $('device').classList.toggle('land', P.orient === 'landscape');
+    var b = $('rotBtn'); if (b) { b.setAttribute('aria-pressed', P.orient === 'landscape' ? 'true' : 'false'); b.setAttribute('aria-label', P.orient === 'landscape' ? 'Hold the phone upright' : 'Turn the phone on its side'); }
+    requestAnimationFrame(function () { window.dispatchEvent(new Event('resize')); });
   };
 
   // ---- gestures ----

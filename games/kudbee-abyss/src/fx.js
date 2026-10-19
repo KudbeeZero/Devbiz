@@ -78,6 +78,13 @@ ABY.Audio = (function () {
     for (var k = 0; k < n; k++) { i = Math.max(0, Math.min(SCALE.length - 1, i + (Math.random() < 0.5 ? -1 : 1) * (1 + (Math.random() * 2 | 0)))); A.flute(SCALE[i] * (mood === 'dark' ? 0.5 : 1), 1.4 + Math.random(), 0.07, k * 0.7); }
   };
 
+  // filtered noise: breath, static, a gust, a scream (f0 -> f1 is the filter sweep)
+  A.noise = function (dur, vol, f0, f1, q, at, type) {
+    if (!A.ctx || A.muted) return; var c = A.ctx, t = c.currentTime + (at || 0), n = Math.floor(c.sampleRate * dur), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    var src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); src.buffer = b; f.type = type || 'bandpass'; f.frequency.setValueAtTime(f0, t); if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur); f.Q.value = q || 1;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.06, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); src.connect(f); f.connect(g); g.connect(dry); g.connect(wet); src.start(t);
+  };
   var last = {};
   A.sfx = function (name) {
     if (!A.ctx || A.muted) return; var now = performance.now(); if (now - (last[name] || 0) < 30) return; last[name] = now;
@@ -85,6 +92,18 @@ ABY.Audio = (function () {
       case 'choice': A.tone(392, 0.35, 'sine', 0.09, 784); A.tone(587, 0.5, 'sine', 0.07, 1174, 0.06); A.flute(SCALE[5], 0.9, 0.08, 0.04); break;
       case 'ding': A.tone(988, 0.16, 'sine', 0.08, 1318); A.tone(1318, 0.28, 'sine', 0.06, 1568, 0.09); break;
       case 'send': A.tone(520, 0.12, 'sine', 0.07, 880); break;
+      case 'click': A.tone(2400, 0.02, 'square', 0.03); break;
+      case 'ring': A.tone(1046, 0.14, 'square', 0.035); A.tone(784, 0.14, 'square', 0.035, null, 0.16); A.tone(1046, 0.14, 'square', 0.035, null, 0.5); A.tone(784, 0.14, 'square', 0.035, null, 0.66); break;
+      case 'creep': A.tone(90, 1.4, 'sawtooth', 0.05, 58); A.noise(1.2, 0.05, 700, 260, 2); break;
+      case 'whisper': A.noise(1.5, 0.09, 2600, 1700, 3.2); A.noise(1.1, 0.06, 3400, 2100, 4, 0.5); break;
+      case 'glitch': A.noise(0.06, 0.16, 3000, 800, 1); A.noise(0.05, 0.14, 600, 4000, 1, 0.1); A.noise(0.08, 0.12, 2000, 300, 1, 0.22); A.tone(220, 0.1, 'square', 0.04, 90, 0.05); break;
+      case 'jump': A.noise(0.5, 0.55, 5000, 260, 0.7); A.tone(70, 0.6, 'sawtooth', 0.22, 38); A.tone(1500, 0.2, 'square', 0.08, 300); break;
+      case 'eyes': A.tone(41, 3.2, 'sine', 0.3, 27); A.tone(61, 3, 'sine', 0.12, 40, 0.2); A.noise(2.8, 0.18, 160, 90, 0.7); break;
+      case 'blackfx': A.tone(120, 1.8, 'sine', 0.22, 30); A.noise(1.6, 0.1, 900, 80, 1); break;
+      case 'hollow': A.tone(82, 3.4, 'sawtooth', 0.12, 41); A.noise(3, 0.07, 2200, 900, 3); break;
+      case 'eye': A.tone(41, 3.6, 'sine', 0.3, 27); A.flute(SCALE[0], 4, 0.1, 0.4); A.noise(3, 0.14, 140, 70, 0.7); break;
+      case 'mirror': [5, 3, 0].forEach(function (s, i) { A.flute(SCALE[s], 3, 0.1, i * 0.6, true); }); A.tone(55, 3.5, 'sine', 0.08); break;
+      case 'betrayal': A.flute(SCALE[4], 2.5, 0.12); A.flute(SCALE[4] * 1.06, 2.5, 0.09, 0.5); A.tone(98, 3, 'sawtooth', 0.06, 70, 0.5); break;
       case 'tick': A.tone(1400 + Math.random() * 400, 0.025, 'sine', 0.012); break;
       case 'chapter': A.flute(SCALE[2], 1.6, 0.12); A.flute(SCALE[5], 1.8, 0.1, 0.25); A.flute(SCALE[8], 2.2, 0.08, 0.5); break;
       case 'miss': A.tone(150, 0.2, 'sawtooth', 0.05, 90); break;
@@ -93,6 +112,7 @@ ABY.Audio = (function () {
       case 'song': [0, 2, 3, 5, 7, 9, 8, 9].forEach(function (s, i) { A.flute(SCALE[s], 2.6, 0.14, i * 0.22, true); }); A.tone(110, 3, 'sine', 0.1, 220); break;
       case 'echo': [9, 7, 5, 9, 8, 6].forEach(function (s, i) { A.flute(SCALE[s], 3, 0.1, i * 0.3, true); A.tone(SCALE[s] * 2, 2.5, 'sine', 0.04, null, i * 0.3); }); break;
       case 'silence': A.flute(SCALE[0], 4.5, 0.12); A.tone(55, 4, 'sine', 0.08, 40); break;
+      case 'blackout': A.tone(60, 3.5, 'sine', 0.22, 24); A.noise(2.5, 0.12, 300, 60, 0.8); break;
       case 'crown': A.tone(110, 3.2, 'sawtooth', 0.1, 55); A.tone(116, 3.2, 'sawtooth', 0.08, 58); A.tone(55, 3.5, 'sine', 0.14, 36); break;
     }
   };

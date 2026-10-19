@@ -1,6 +1,6 @@
 // Kudbee Abyss - playability + safety rubric (Playwright + Chromium). From the repo root: `npm run abyss:eval`.
 // Walks the story in node (graph.mjs), then plays the real page AS A PHONE: lock screen, home screen, status bar, the Messages
-// chat (all five endings by tapping replies), the Echo Flute (by touch, key and bot), Gallery, Pulse, Settings, banners and
+// chat (the endings by tapping replies, and the horror: dread, flashlight, battery, calls, clues, scares, forced scenes), the Echo Flute (by touch, key and bot), Gallery, Pulse, Settings, banners and
 // badges, phone fit + notch on three phones, the desktop bezel, saves (good and hostile), no-WebGL / no-CDN, hidden tab, reduced motion, share.
 // three.js comes from cdnjs on the live site; here it is fetched once (curl), checked against the page's integrity hash
 // (so this also proves the SRI hash is right) and served through a route. No network -> the 3D checks are skipped, not failed.
@@ -11,6 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { graphChecks } from './graph.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url)), GAME = resolve(HERE, '..'), ROOT = resolve(GAME, '..', '..');
@@ -20,6 +21,7 @@ const skip = (id, why) => console.log('SKIP ' + id + ' - ' + why);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 for (const r of graphChecks()) rec(r.id, r.pass, r.note);
+const ABYS = createRequire(import.meta.url)(join(GAME, 'src', 'story.js'));
 
 // ---- three.js, verified ----
 const html = readFileSync(join(GAME, 'index.html'), 'utf8');
@@ -54,7 +56,7 @@ const imgFile = (u) => join(ROOT, new globalThis.URL(u).pathname);
   rec('share-meta-game-page', problems.length === 0, problems.join('; ') || 'og + twitter cards: absolute versioned 1200x630 image, alt text, canonical');
 }
 {
-  const problems = [], slugs = ['dawn', 'song', 'echo', 'silence', 'crown', 'progress'];
+  const problems = [], slugs = ABYS.ENDING_IDS.concat(['progress']);
   for (const slug of slugs) {
     const f = join(GAME, 's', slug, 'index.html'); if (!existsSync(f)) { problems.push(slug + ': no landing page'); continue; }
     const M = metaOf(readFileSync(f, 'utf8')), want = SITE + '/games/kudbee-abyss/s/' + slug + '/';
@@ -152,7 +154,7 @@ await pg.click('#icMsg'); await pg.waitForFunction(() => ABY.Phone.screen === 'm
 const sawTyping = await pg.waitForSelector('#thread .m.typing', { timeout: 4000 }).then(() => true, () => false);
 await pg.waitForSelector('#replies.on .chip', { timeout: 12000 });
 const m0 = await pg.evaluate(() => ({ bubbles: document.querySelectorAll('#thread .m.sys').length, clock: document.getElementById('clock').textContent, bat: parseInt(document.getElementById('batN').textContent), av: document.getElementById('mAv').className, chips: document.querySelectorAll('#replies .chip').length }));
-rec('chat-typing-and-bubbles', sawTyping && m0.bubbles >= 1 && m0.chips === 2, 'typing dots shown first: ' + sawTyping + ', ' + m0.bubbles + ' message bubble(s), ' + m0.chips + ' quick replies');
+rec('chat-typing-and-bubbles', sawTyping && m0.bubbles >= 1 && m0.chips === 3, 'typing dots shown first: ' + sawTyping + ', ' + m0.bubbles + ' message bubble(s), ' + m0.chips + ' quick replies');
 await pick(pg, 'Listen to the stones'); await pick(pg, 'Ask Vey to guide me'); await pg.waitForSelector('#replies.on .chip');
 const m1 = await pg.evaluate(() => ({ outs: [...document.querySelectorAll('#thread .m.out')].map(e => e.textContent), clock: document.getElementById('clock').textContent, bat: parseInt(document.getElementById('batN').textContent), av: document.getElementById('mAv').className, name: document.getElementById('mName').textContent, bars: document.querySelectorAll('#sig i.on').length, pips: document.getElementById('sT').textContent }));
 rec('chat-reply-bubbles', m1.outs.join('|') === 'Listen to the stones|Ask Vey to guide me', 'her replies appear as outgoing bubbles: ' + m1.outs.join(' / '));
@@ -193,6 +195,7 @@ const st = await pg.evaluate(() => ({ stats: ABY.Song.stats, flags: ABY.game.sta
 rec('song-win', st.flags.song === 'win' && st.stats.perfect + st.stats.good >= 24 && st.report, st.stats.perfect + ' perfect / ' + st.stats.good + ' good / ' + st.stats.miss + ' missed; the result is texted into the chat');
 await pick(pg, 'Walk into the dawn'); const es = await memoryShown(pg);
 rec('ending-song', es.name === 'The Song Remembered', '"' + es.name + '"');
+rec('gallery-badge', await pg.evaluate(() => !!document.querySelector('#icGal .badge')), 'the Gallery shows a badge for the new memory');
 // SHARE: the Share screen previews the card; the native sheet gets the picture + the landing-page link; each network button opens the right link
 await pg.evaluate(() => {
   window.__shared = null; window.__opened = []; window.__copied = null;
@@ -205,7 +208,7 @@ const prev = await pg.evaluate(() => { const c = document.querySelector('#shPrev
 rec('share-screen-card', prev && prev.w === 1200 && prev.h === 630 && prev.colours > 60 && /\/s\/song\/$/.test(prev.link) && /Song Remembered/.test(prev.sub) && prev.native, prev ? 'a ' + prev.w + 'x' + prev.h + ' card painted (' + prev.colours + ' colour buckets), link ' + prev.link + ', native Share... button shown' : 'no preview canvas');
 await pg.screenshot({ path: join(OUT, 'desktop-share.png') });
 await pg.click('#shNative'); await sleep(300); const sh = await pg.evaluate(() => { const d = window.__shared; return d && { url: d.url, text: d.text, file: d.files && d.files[0] && { n: d.files[0].name, t: d.files[0].type, sz: d.files[0].size } }; });
-rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 5/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
+rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 10/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
 await pg.click('#shX'); await pg.click('#shFb'); await pg.click('#shWa'); const op = await pg.evaluate(() => window.__opened), land = encodeURIComponent(SITE + '/games/kudbee-abyss/s/song/');
 rec('share-network-links', op.length === 3 && op[0].startsWith('https://twitter.com/intent/tweet?') && op[0].includes('url=' + land) && op[1].startsWith('https://www.facebook.com/sharer/sharer.php?u=' + land) && op[2].startsWith('https://wa.me/?text=') && op[2].includes(land), 'X, Facebook and WhatsApp all carry the landing-page link');
 await pg.click('#shCopy'); await sleep(200); const cp = await pg.evaluate(() => window.__copied);
@@ -213,20 +216,19 @@ rec('share-copy-link', cp && /Song Remembered/.test(cp) && cp.endsWith(SITE + '/
 const dl = await Promise.all([pg.waitForEvent('download', { timeout: 5000 }).catch(() => null), pg.click('#shSave')]); const dn = dl[0] && dl[0].suggestedFilename();
 rec('share-save-image', dn === 'kudbee-abyss-song.png', 'Save image downloads ' + dn);
 // progress share (from Pulse): the count is personal, the link is the progress page
-await pg.click('#shBack'); await sleep(300); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500); await pg.click('#pShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await pg.click('#shNative'); await sleep(300);
-const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 5 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
+await pg.click('#shBack'); await sleep(300); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500); await pg.click('#pShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await pg.click('#shNative'); await sleep(300);
+const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 10 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
 await pg.evaluate(() => ABY.Phone.show('home')); await sleep(300);
 // the Gallery: the found ending is a photo, the rest are locked; tapping the photo reopens the memory; Pulse shows the stats; Settings toggles
 await pg.mouse.move(550, 860).catch(() => {}); await pg.evaluate(() => ABY.Phone.show('home')); await sleep(400);
-rec('gallery-badge', await pg.evaluate(() => !!document.querySelector('#icGal .badge')), 'the Gallery shows a badge for the new memory');
 await pg.click('#icGal'); await sleep(500);
 const gal = await pg.evaluate(() => [...document.querySelectorAll('#tiles .tile')].map(t => ({ f: t.classList.contains('f'), h: t.querySelector('h3').textContent })));
-rec('gallery-tiles', gal.length === 5 && gal.filter(g => g.f).length === 1 && gal.filter(g => g.h === 'Locked').length === 4, gal.map(g => g.h).join(' | '));
+rec('gallery-tiles', gal.length === ABYS.ENDING_IDS.length && gal.filter(g => g.f).length === 1 && gal.filter(g => g.h === 'Locked').length === ABYS.ENDING_IDS.length - 1, gal.map(g => g.h).join(' | '));
 await pg.click('#tiles .tile.f'); await sleep(300); rec('gallery-opens-memory', await pg.evaluate(() => document.getElementById('memory').classList.contains('on') && /Song Remembered/.test(document.getElementById('eName').textContent) && document.getElementById('eKick').textContent === 'Memory'), 'a found photo reopens its memory');
 await pg.click('#memAct'); await sleep(300);
 await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(900);
 const pl = await pg.evaluate(() => ({ rows: [...document.querySelectorAll('#ringsL .rl .v')].map(v => v.textContent), sub: document.getElementById('pSub').textContent }));
-rec('pulse-rings', pl.rows.length === 3 && /Endings found 1\/5/.test(pl.sub), 'Heart / Resolve / Trust ' + pl.rows.join(', ') + ' | ' + pl.sub);
+rec('pulse-rings', pl.rows.length === 4 && /Endings found 1\/10/.test(pl.sub), 'Heart / Resolve / Trust / Dread ' + pl.rows.join(', ') + ' | ' + pl.sub);
 await ctx.close();
 
 // the Echo Flute app: practice by touch and by key; fail; the best score is kept
@@ -255,6 +257,114 @@ await pick(pg, 'Listen to the stones'); await pick(pg, 'Ask Vey'); await pick(pg
 await pg.waitForFunction(() => !ABY.Song.active, null, { timeout: 40000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
 const failed = await pg.evaluate(() => ({ node: ABY.game.state.node, fail: ABY.game.state.flags.song, chips: [...document.querySelectorAll('#replies .chip')].map(b => b.textContent) }));
 rec('song-fail', failed.node === 'song_fail' && failed.fail === 'fail' && failed.chips.some(o => /again/i.test(o)), 'node ' + failed.node + ' | ' + failed.chips.join(' / ')); await ctx.close();
+
+
+// ================= the horror: dread, flashlight, battery, calls, clues, scares, forced scenes =================
+const at = async (pg, id, patch) => {                  // be at a scene (a test hook) and let its messages arrive
+  await pg.evaluate(([i, p]) => ABY.debug.goto(i, p), [id, patch || {}]);
+  for (let i = 0; i < 12 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  await sleep(250);
+};
+const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
+const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pg.locator('#replies .chip', { hasText: text }).first().click(); await sleep(300); };
+{
+  let { ctx, pg } = await open({}, 'horror'); await wake(pg); await openMessages(pg);
+  // the first scare: the unknown number glitches the screen, the contact turns red, dread rises
+  await pick(pg, 'Check your phone');
+  const glitch = await pg.waitForSelector('#screen.glitch', { timeout: 5000 }).then(() => true, () => false);
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  const e1 = await pg.evaluate(() => ({ name: document.getElementById('mName').textContent, dread: document.getElementById('sD').textContent, av: document.getElementById('mAv').className }));
+  rec('scare-glitch-unknown-number', glitch && e1.name === 'No Caller ID' && /eye/.test(e1.av) && e1.dread === '◉1', 'the screen glitched; the contact is "' + e1.name + '"; dread ' + e1.dread);
+  // the flashlight: on by a choice, costs battery on every later choice, and by hand
+  await pick(pg, 'Switch on the flashlight');
+  const t1 = await pg.evaluate(() => ({ on: document.getElementById('torchBtn').classList.contains('on'), light: ABY.game.state.light, bat: ABY.game.state.bat, torch: ABY.Scene.torchT }));
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pick(pg, 'Keep the light on');
+  const t2 = await pg.evaluate(() => ({ bat: ABY.game.state.bat })); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  await pg.click('#torchBtn'); await sleep(200); const t3 = await pg.evaluate(() => ({ on: document.getElementById('torchBtn').classList.contains('on'), bat: ABY.game.state.bat }));
+  rec('flashlight-costs-battery', t1.on && t1.light === 1 && t1.torch === 1 && t1.bat === ABYS.BAT0 - 2 && t2.bat === t1.bat - 1 - ABYS.TORCH && !t3.on && t3.bat === t2.bat - ABYS.TORCH_TOGGLE, 'torch on (' + t1.bat + '%), the next choice cost ' + (t1.bat - t2.bat) + ' (1 + ' + ABYS.TORCH + '), switching it off cost ' + (t2.bat - t3.bat));
+  // a dark room: she is scared without the light, and a choice needs it
+  await at(pg, 'pillar_door', {}); const d0 = await chips(pg), hint = await pg.evaluate(() => ({ torchHint: document.getElementById('torchBtn').classList.contains('hint'), says: [...document.querySelectorAll('#thread .m.sys')].some(e => /too dark/i.test(e.textContent)) }));
+  await pg.click('#torchBtn'); await sleep(300); const d1 = await chips(pg);
+  rec('dark-needs-flashlight', !d0.includes('Read the ledger') && hint.torchHint && hint.says && d1.includes('Read the ledger'), 'dark: ' + d0.join(' / ') + ' (torch button pulses); after the torch: ' + d1.join(' / '));
+  // a clue unlocks a hidden choice, and lands in Notes
+  await pg.locator('#replies .chip', { hasText: 'Read the ledger' }).first().click(); await sleep(400);
+  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); } await sleep(400);
+  const nb = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), flag: ABY.game.state.flags.ledger, banner: document.getElementById('banner').textContent }));
+  await at(pg, 'g_meet', { flags: { ledger: 1 }, dread: 2 }); const g1 = await chips(pg); await at(pg, 'g_meet', {}); const g0 = await chips(pg);
+  rec('clues-unlock-choices', nb.notes.includes('ledger') && nb.flag === 1 && /New clue/.test(nb.banner) && g1.includes('Read him the ledger') && g1.includes('Look him in the eye') && !g0.includes('Read him the ledger') && !g0.includes('Look him in the eye'), 'with the ledger and dread 2 she can say: ' + g1.join(' / ') + ' | without: ' + g0.join(' / '));
+  // an incoming call
+  await at(pg, 'call_1', {}); await pg.waitForSelector('#call.on', { timeout: 5000 });
+  const cl = await pg.evaluate(() => ({ who: document.getElementById('callWho').textContent, btns: [...document.querySelectorAll('#callAct .cbtn')].map(b => ({ t: b.textContent.replace(/[^A-Za-z]/g, ''), w: b.querySelector('i').getBoundingClientRect().width })), locked: ABY.Phone.locked }));
+  rec('incoming-call', cl.who === 'Unknown (you)' && cl.btns.length === 2 && /Answer/.test(cl.btns[0].t) && /Decline/.test(cl.btns[1].t) && cl.btns.every(b => b.w >= 60) && cl.locked, 'a full-screen call from "' + cl.who + '": ' + cl.btns.map(b => b.t).join(' / ') + ' (home locked while it rings)');
+  await pg.screenshot({ path: join(OUT, 'horror-call.png') }); await pg.locator('#callAct .cbtn').first().click(); await sleep(500);
+  for (let i = 0; i < 8 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); } await sleep(300);
+  const ca = await pg.evaluate(() => ({ node: ABY.game.state.node, hidden: !document.getElementById('call').classList.contains('on'), notes: ABY.game.state.notes.slice() }));
+  await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(500); const nl = await pg.evaluate(() => [...document.querySelectorAll('#noteList .nt h3')].map(h => h.textContent));
+  rec('call-answered-and-noted', ca.node === 'call_self' && ca.hidden && ca.notes.includes('future_call') && nl.includes('Call from your own number'), 'answered -> ' + ca.node + '; Notes now holds: ' + nl.join(' | ')); await pg.screenshot({ path: join(OUT, 'horror-notes.png') });
+  // a photo, and a jump scare
+  await pg.evaluate(() => ABY.Phone.show('msg')); await at(pg, 'vey_photo', {});
+  const ph = await pg.evaluate(() => { const e = document.querySelector('#thread .m.photo'); return { n: document.querySelectorAll('#thread .m.photo').length, bg: e && e.style.backgroundImage, w: e && e.getBoundingClientRect().width }; });
+  rec('photo-in-the-chat', ph.n === 1 && /corrupt/.test(ph.bg) && ph.w > 100, 'a photo bubble in the thread (' + ph.bg.slice(0, 50) + ')');
+  // dread everywhere
+  await at(pg, 'eye_top', { dread: 5, choices: 10 }); await sleep(600);
+  const dr = await pg.evaluate(() => ({ sD: document.getElementById('sD').textContent, uneasy: document.getElementById('screen').classList.contains('uneasy'), v: getComputedStyle(document.getElementById('screen')).getPropertyValue('--dread') }));
+  await pg.evaluate(() => ABY.debug.tick(30));
+  const amb = await pg.waitForSelector('#screen.glitch', { timeout: 3000 }).then(() => true, () => false);
+  await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(700); const pr = await pg.evaluate(() => [...document.querySelectorAll('#ringsL .rl b')].map(b => b.textContent));
+  rec('dread-shows', dr.sD === '◉5' && dr.uneasy && +dr.v > 0.8 && amb && pr.join() === 'Heart,Resolve,Trust,Dread', 'dread 5 of 6: the screen is uneasy (' + dr.v.trim() + '), it glitches by itself, and Pulse has four rings');
+  await ctx.close();
+}
+{ // the phone dies; her mind comes apart
+  const { ctx, pg } = await open({}, 'forced'); await wake(pg); await openMessages(pg);
+  await at(pg, 'flute_path', { bat: 1 }); await tapChip(pg, 'Climb the broken spire');
+  const blk = await pg.waitForSelector('#blackout.on', { timeout: 6000 }).then(() => true, () => false);
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const bc = await chips(pg), bn = await pg.evaluate(() => ({ node: ABY.game.state.node, back: ABY.game.state.back, bat: ABY.game.state.bat }));
+  rec('battery-dies', blk && bn.node === 'blackout' && bn.back === 'spire' && bn.bat === 0 && bc.join() === 'Wait for the light,Scream for help', 'the phone died on the way to the spire: ' + bc.join(' / ') + ' (no crystal, no way back)');
+  await tapChip(pg, 'Wait for the light'); const z = await memoryShown(pg); rec('ending-blackout', z.name === 'Zero Percent', '"' + z.name + '"');
+  await pg.click('#memAct'); await sleep(600);
+  await at(pg, 'flute_path', { bat: 1, flags: { crystal: 1 } }); await tapChip(pg, 'Climb the broken spire'); await sleep(800);
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const rc = await chips(pg); await tapChip(pg, 'Hold the phone to the crystal'); await sleep(500);
+  const rb = await pg.evaluate(() => ({ node: ABY.game.state.node, bat: ABY.game.state.bat }));
+  rec('battery-recharge', rc.includes('Hold the phone to the crystal') && rb.node === 'spire' && rb.bat >= 30, 'with the crystal she recharges (' + rb.bat + '%) and goes on to the ' + rb.node);
+  await at(pg, 'hollow_walk', { dread: 5, trust: 3 }); await tapChip(pg, 'Keep walking'); await sleep(500);
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const hc = await chips(pg), hn = await pg.evaluate(() => ABY.game.state.node);
+  await tapChip(pg, 'Take the hand'); await sleep(500); const hb = await pg.evaluate(() => ({ node: ABY.game.state.node, dread: ABY.game.state.dread }));
+  rec('mind-comes-apart-and-trust-saves', hn === 'hollowing' && hc.includes('Take the hand') && hb.node === 'g_meet' && hb.dread < 6, 'at dread 6 she comes apart; with trust 3 she can take Vey\'s hand and go on (dread ' + hb.dread + ')');
+  await at(pg, 'hollow_walk', { dread: 5, trust: 0 }); await tapChip(pg, 'Keep walking'); await sleep(500);
+  for (let i = 0; i < 10 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.keyboard.press('Enter'); await sleep(140); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const lc = await chips(pg); await tapChip(pg, 'Let go'); const hq = await memoryShown(pg);
+  rec('ending-hollow-from-dread', lc.join() === 'Let go' && hq.name === 'The Hollow Queen', 'without trust the only choice is "' + lc.join() + '": "' + hq.name + '"');
+  await ctx.close();
+}
+{ // the other new endings, each from the scene that decides it
+  const { ctx, pg } = await open({}, 'newends'); await wake(pg); await openMessages(pg);
+  const run = async (id, patch, label, want, tag) => { await at(pg, id, patch); await tapChip(pg, label); const m = await memoryShown(pg); rec('ending-' + tag, m.name === want && m.kick === 'New memory saved', '"' + m.name + '" (' + m.kick + ')'); await pg.click('#memAct'); await sleep(700); };
+  await run('eye_top', { dread: 2, choices: 12 }, 'Answer: remember me', 'The Eye Opens', 'eye');
+  await run('vault_choice', { flags: { truth: 1 }, choices: 12 }, 'Take his place', 'The Other Queen', 'mirror');
+  await run('vault_choice', { choices: 12 }, 'Lock the door again', 'The Hollow Queen', 'seal');
+  await run('reconcile', { flags: { vey_trusted: 1 }, dread: 3, trust: 2, choices: 12 }, 'Open the gate', 'Vey’s Smile', 'betrayal');
+  const left = await pg.evaluate(() => Object.keys(ABY.game.found).length);
+  rec('gallery-fills', left === 5 || left >= 4, left + ' endings saved in this run (new ones, each a memory in the Gallery)');
+  await ctx.close();
+}
+{ // the phone turns: on a desktop it can be laid on its side; on a real phone it turns by itself, mid-chat
+  let { ctx, pg } = await open({ ctx: { viewport: { width: 1200, height: 900 } } }, 'rotate'); await wake(pg);
+  const dim = () => pg.evaluate(() => { const d = document.getElementById('device').getBoundingClientRect(); return { r: d.width / d.height, land: document.getElementById('device').classList.contains('land'), orient: ABY.Phone.orient, canvas: (document.querySelector('#three-canvas canvas') || {}).width }; });
+  const p0 = await dim(); await pg.click('#rotBtn'); await sleep(900); const p1 = await dim(); await pg.screenshot({ path: join(OUT, 'desktop-landscape.png') });
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done')); const p2 = await dim();
+  await pg.keyboard.press('r'); await sleep(800); const p3 = await dim();
+  rec('desktop-rotate', !p0.land && Math.abs(p0.r - 0.49) < 0.03 && p1.land && p1.orient === 'landscape' && Math.abs(p1.r - 2.04) < 0.15 && p2.land && !p3.land && Math.abs(p3.r - 0.49) < 0.03, 'portrait ' + p0.r.toFixed(2) + ' -> landscape ' + p1.r.toFixed(2) + ' (kept after a reload) -> the R key turns it back ' + p3.r.toFixed(2));
+  await ctx.close();
+  ({ ctx, pg } = await open(phoneCtx(PHONES[2]), 'turn')); await wake(pg); await openMessages(pg); await pick(pg, 'Listen to the stones'); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  const lay = () => pg.evaluate(() => { const sh = document.getElementById('sheet'), cs = getComputedStyle(sh), vw = innerWidth, vh = innerHeight, bad = [...document.querySelectorAll('#replies .chip')].filter(c => { const r = c.getBoundingClientRect(); return r.right > vw + 1 || r.bottom > vh + 1 || r.left < -1 || r.top < -1; }).length; return { pos: cs.position, node: ABY.game.state.node, chips: document.querySelectorAll('#replies .chip').length, bad, canvasOk: (() => { const c = document.querySelector('#three-canvas canvas'); return !c || Math.abs(c.getBoundingClientRect().width - document.getElementById('screen').getBoundingClientRect().width) < 2; })() }; });
+  const a0 = await lay(); await pg.setViewportSize({ width: 844, height: 390 }); await sleep(900); const a1 = await lay(); await pg.screenshot({ path: join(OUT, 'phone-turned-landscape.png') });
+  await pg.setViewportSize({ width: 390, height: 844 }); await sleep(900); const a2 = await lay();
+  rec('phone-turns-mid-game', a0.pos !== 'absolute' && a1.pos === 'absolute' && a2.pos !== 'absolute' && a0.node === a1.node && a1.node === a2.node && a1.chips === a0.chips && a1.bad === 0 && a2.bad === 0 && a1.canvasOk && a2.canvasOk, 'upright -> on its side -> upright mid-chat: same scene (' + a1.node + '), ' + a1.chips + ' replies, none cut off, the 3D follows');
+  await ctx.close();
+}
 
 // Settings: sound and vibration persist; the danger buttons need two taps
 { const c = await open({}, 'settings'); await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); await c.pg.click('[data-app=settings]'); await sleep(400);
@@ -288,7 +398,7 @@ for (const p of PHONES) {
   await pg.click('#unlock'); await sleep(600); await fit('home'); await pg.screenshot({ path: join(OUT, `${p.n}-2home.png`) });
   await pg.click('#icMsg'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await fit('chat'); await pg.screenshot({ path: join(OUT, `${p.n}-3chat.png`) });
   await pick(pg, 'Listen to the stones'); await pick(pg, 'Approach the guardian'); await pg.waitForSelector('#replies.on .chip'); await fit('chat, 3 replies'); await pg.screenshot({ path: join(OUT, `${p.n}-4chat3.png`) });
-  for (const [app, n] of [['gallery', '5gallery'], ['pulse', '6pulse'], ['settings', '7settings'], ['flute', '8flute']]) { await pg.evaluate((a) => ABY.Phone.show(a), app); await sleep(900); await fit(app); await pg.screenshot({ path: join(OUT, `${p.n}-${n}.png`) }); }
+  for (const [app, n] of [['gallery', '5gallery'], ['pulse', '6pulse'], ['settings', '7settings'], ['flute', '8flute'], ['notes', '8notes']]) { await pg.evaluate((a) => ABY.Phone.show(a), app); await sleep(900); await fit(app); await pg.screenshot({ path: join(OUT, `${p.n}-${n}.png`) }); }
   await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300); await pick(pg, 'Embrace'); await pick(pg, 'Open the gate'); await memoryShown(pg); await sleep(500); await fit('memory'); await pg.screenshot({ path: join(OUT, `${p.n}-9memory.png`) });
   await pg.click('#shareBtn'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await fit('share'); await pg.screenshot({ path: join(OUT, `${p.n}-10share.png`) });
   rec('phone-fit-' + p.n, checks.length === 0, checks.join(' | ') || 'targets >= 44px, text >= 11.5px, nothing cut off (lock, home, chat, 3 replies, gallery, pulse, settings, flute, memory)');

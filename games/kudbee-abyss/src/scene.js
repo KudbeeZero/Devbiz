@@ -11,8 +11,8 @@ var ABY = window.ABY = window.ABY || {};
 
 ABY.Scene = (function () {
   var T = window.THREE;
-  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, dark: 0, throne: 0, reduced: false, layout: { land: false, d0: 12 } };
-  var scene, camera, renderer, art, artMat, bg, bgMat, bg2, bg2Mat, bg3, bg3Mat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
+  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, dark: 0, throne: 0, torch: 0, torchT: 0, dread: 0, reduced: false, layout: { land: false, d0: 12 } };
+  var scene, camera, renderer, art, artMat, bg, bgMat, bg2, bg2Mat, bg3, bg3Mat, torchL, torchCone, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
   var W = 1, H = 1, Hp = 8, Wp = 6, pointer = { x: 0, y: 0 }, tilt = { x: 0, y: 0 };
   var cam = { x: 0, y: 0, z: 9, lx: 0, ly: 0 }, camT = { x: 0, y: 0, z: 9, lx: 0, ly: 0 };
   var look = { crystal: 0, gate: 0, artA: 1, open: 0 }, lookT = { crystal: 0, gate: 0, artA: 1, open: 0 };
@@ -46,6 +46,9 @@ ABY.Scene = (function () {
     keyL = new T.DirectionalLight(0xc46bff, 1.0); keyL.position.set(4, 5, 6); scene.add(keyL);
     rimL = new T.PointLight(0x39e6ff, 1.5, 30); rimL.position.set(-5, 2, 5); scene.add(rimL);
     fillL = new T.PointLight(0xff6ec7, 0.9, 30); fillL.position.set(5, -3, 4); scene.add(fillL);
+    torchL = new T.PointLight(0xfff0d0, 0, 28); scene.add(torchL);                                      // the phone's flashlight
+    var tc = document.createElement('canvas'); tc.width = tc.height = 128; var tx = tc.getContext('2d'), tg = tx.createRadialGradient(64, 64, 0, 64, 64, 64); tg.addColorStop(0, 'rgba(255,244,214,0.9)'); tg.addColorStop(0.4, 'rgba(255,236,190,0.35)'); tg.addColorStop(1, 'rgba(255,230,180,0)'); tx.fillStyle = tg; tx.fillRect(0, 0, 128, 128);
+    torchCone = new T.Mesh(new T.PlaneGeometry(16, 16), new T.MeshBasicMaterial({ map: new T.CanvasTexture(tc), transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, fog: false })); torchCone.position.z = 3; scene.add(torchCone);
 
     // far nebula
     var nc = document.createElement('canvas'); nc.width = nc.height = 256; var nx = nc.getContext('2d');
@@ -181,6 +184,8 @@ ABY.Scene = (function () {
     if (S.ready) { aim(!!snap); if (snap) { look.crystal = lookT.crystal; look.gate = lookT.gate; look.artA = lookT.artA; } }
   };
   S.setStage = function (stage, dim) { S.stage = stage; S.dimT = dim == null ? 1 : dim; if (S.ready) aim(false); };
+  S.setTorch = function (on) { S.torchT = on ? 1 : 0; };
+  S.setDread = function (d) { S.dread = Math.max(0, Math.min(1, d || 0)); };
   S.setGate = function (ending) {
     var g = GATE[ending] || GATE.dawn; gateMat.uniforms.c1.value.setHex(g[0]); gateMat.uniforms.c2.value.setHex(g[1]);
     S.gateRing.material.color.setHex(g[0]); S.gateRing2.material.color.setHex(g[1]);
@@ -213,12 +218,13 @@ ABY.Scene = (function () {
     // mood: fog, lights, tint, shard glow
     tmpC.setHex(M.fog); scene.fog.color.lerp(tmpC, ease); scene.background.lerp(tmpC, ease); scene.fog.density += (M.dens - scene.fog.density) * ease;
     tmpC.setHex(M.key); keyL.color.lerp(tmpC, ease); tmpC.setHex(M.rim); rimL.color.lerp(tmpC, ease);
-    tmpC.setHex(M.shard); shards.material.emissive.lerp(tmpC, ease);
+    tmpC.setHex(M.shard); shards.material.emissive.lerp(tmpC, ease); if (S.dread > 0) { tmpC.setHex(0xff1830); shards.material.emissive.lerp(tmpC, S.dread * 0.35 * ease * 3); }
     if (bgMat) { bgMat.color.r += (M.tint[0] - bgMat.color.r) * ease; bgMat.color.g += (M.tint[1] - bgMat.color.g) * ease; bgMat.color.b += (M.tint[2] - bgMat.color.b) * ease; var fade = 1 - Math.pow(0.25, dt); S.dark += ((S.mood === 'dark' ? 1 : 0) - S.dark) * fade; S.throne += ((S.mood === 'throne' ? 1 : 0) - S.throne) * fade; var other = Math.max(S.dark, S.throne);
       bgMat.opacity = Math.min(1, 0.55 + 0.45 * (1 - S.dim) + (1 - look.artA) * 0.25) * (1 - other * 0.9);
       if (bg3) { bg3Mat.opacity = Math.min(1, S.throne * (0.75 + 0.25 * (1 - S.dim) + (1 - look.artA) * 0.3)); bg3.position.x = bg.position.x; bg3.position.y = bg.position.y; bg3.scale.setScalar(1.02 + Math.sin(t * 0.4) * 0.012 * rm); bg3Mat.color.setScalar(0.85 + 0.15 * Math.sin(t * 1.1)); }
       if (bg2) { bg2Mat.opacity = Math.min(1, S.dark * (0.7 + 0.3 * (1 - S.dim) + (1 - look.artA) * 0.3)); bg2.position.x = bg.position.x; bg2.position.y = bg.position.y; bg2.scale.setScalar(1 + Math.sin(t * 0.55) * 0.012 * rm); bg2Mat.color.setScalar(0.85 + 0.15 * Math.sin(t * 0.9)); } bg.position.x = -camera.position.x * 2.2 + Math.sin(t * 0.02) * 1.2 * rm; bg.position.y = 1 - camera.position.y * 1.2; }
-    artMat.color.r += (M.tint[0] - artMat.color.r) * ease; artMat.color.g += (M.tint[1] - artMat.color.g) * ease; artMat.color.b += (M.tint[2] - artMat.color.b) * ease;
+    S.torch += (S.torchT - S.torch) * ease; var tb = 1 + S.torch * 0.4;
+    artMat.color.r += (M.tint[0] * tb - artMat.color.r) * ease; artMat.color.g += (M.tint[1] * tb - artMat.color.g) * ease; artMat.color.b += (M.tint[2] * tb - artMat.color.b) * ease;
     for (var i = 0; i < rays.length; i++) { rays[i].material.color.lerp(keyL.color, ease); rays[i].material.opacity += (M.rays * (0.8 + 0.4 * Math.sin(t * 0.4 + i)) - rays[i].material.opacity) * ease; rays[i].position.x += Math.sin(t * 0.12 + i) * 0.0015 * rm; }
 
     // focus: look and set pieces
@@ -226,6 +232,8 @@ ABY.Scene = (function () {
     for (k in camT) cam[k] += (camT[k] - cam[k]) * (1 - Math.pow(0.0006, dt));
     var sway = rm * 0.22, px = pointer.x * 0.35 + tilt.x * 0.5, py = pointer.y * 0.2 + tilt.y * 0.3;
     camera.position.set(cam.x + Math.sin(t * 0.17) * sway + px, cam.y + Math.sin(t * 0.13) * sway * 0.6 + py, cam.z);
+    if (S.dread > 0.66 && rm) { camera.position.x += (Math.random() - 0.5) * 0.04 * S.dread; camera.position.y += (Math.random() - 0.5) * 0.03 * S.dread; }
+    torchL.intensity = S.torch * 2.6; torchL.position.set(camera.position.x, camera.position.y, camera.position.z - 3); torchCone.material.opacity = S.torch * 0.22 * (0.85 + 0.15 * Math.sin(t * 9)); torchCone.position.set(cam.lx, cam.ly, 3);
     camera.lookAt(cam.lx, cam.ly, 0);
     S.dim += (S.dimT - S.dim) * ease; artMat.opacity = look.artA * S.dim * (1 - S.throne * 0.5); art.position.z = (1 - look.artA) * -1.2;
     var pulse = 0.5 + 0.5 * Math.sin(t * 1.6); halo.material.opacity = (0.35 + pulse * 0.4) * look.artA * S.dim; halo.scale.setScalar(1 + pulse * 0.06);

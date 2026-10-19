@@ -4,24 +4,27 @@
  * speaker's bubbles (a long beat is split in two or three, like texting). Her answers
  * are quick-reply chips. The Song of Recall is the Echo Flute app (also a practice
  * mode), every ending is saved as a memory in the Gallery, the three hidden stats are
- * the Pulse rings, and the status bar clock / signal / battery answer the story.
+ * the Pulse rings, and the status bar clock / signal / battery answer the story. The phone
+ * itself is the horror: a real battery, a flashlight she must manage, calls, clues in Notes,
+ * and scares (glitches, jumps, whispers, the Eye) that grow with her dread.
  * Progress is saved after every choice; a save from outside is never trusted.
  * ===================================================================== */
 (function () {
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, ending: null, practice: false };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, ending: null, practice: false, seen: {}, orient: 'portrait' };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {};
-  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey' };
-  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'] };
+  var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
+  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID' };
+  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'] };
+  var CREEPS = ['behind you', 'it is 3:07', 'i can hear you breathing', 'don\u2019t look at the screen', 'you left the door open', 'she is not the one texting you', 'count the steps', 'turn around slowly'];
 
   // ---- save ----
   function cleanLog(raw) {
     var out = []; if (!Array.isArray(raw)) return out;
     raw.slice(-60).forEach(function (e) {
-      if (!e || typeof e !== 'object' || ['in', 'out', 'sys', 'stamp'].indexOf(e.k) < 0 || typeof e.t !== 'string') return;
+      if (!e || typeof e !== 'object' || ['in', 'out', 'sys', 'stamp', 'img'].indexOf(e.k) < 0 || typeof e.t !== 'string') return;
       out.push({ k: e.k, who: ABY.SPEAKERS[e.who] ? e.who : '', t: e.t.slice(0, 400), n: typeof e.n === 'string' && Object.prototype.hasOwnProperty.call(N, e.n) ? e.n : '' });
     });
     return out;
@@ -30,13 +33,13 @@
     var d = null; try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object') d = {};
     G.found = {}; if (d.found && typeof d.found === 'object') ABY.ENDING_IDS.forEach(function (id) { if (d.found[id] === 1) G.found[id] = 1; });
-    ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0;
+    ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
     G.saved = null;
     if (d.run && typeof d.run === 'object') { var s = ABY.cleanState(d.run); if (s.choices > 0 || s.node !== ABY.START) G.saved = { state: s, log: cleanLog(d.run.log) }; }
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -44,18 +47,21 @@
 
   // ---- the phone's face follows the story ----
   function world() {
-    var s = G.state; P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(Math.max(6, 87 - s.choices * 2 - (s.flags.song ? 3 : 0)));
+    var s = G.state; P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(s.bat);
     P.setSignal(G.node ? G.node.mood : 'void');
-    [['sH', '♥', s.heart], ['sR', '◆', s.resolve], ['sT', '✦', s.trust]].forEach(function (a) {
+    [['sH', '\u2665', s.heart], ['sR', '\u25C6', s.resolve], ['sT', '\u2726', s.trust], ['sD', '\u25C9', s.dread]].forEach(function (a) {
       var el = $(a[0]), v = a[2], was = +el.getAttribute('data-v') || 0; el.textContent = a[1] + v;
       if (v > was) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); } el.setAttribute('data-v', v);
     });
     $('stats3').classList.toggle('on', active() && s.choices > 0);
+    var d = active() ? s.dread / ABY.MAX_DREAD : 0; $('screen').style.setProperty('--dread', d.toFixed(2)); $('screen').classList.toggle('uneasy', d >= 0.66);
+    var t = $('torchBtn'); t.classList.toggle('on', !!s.light); t.setAttribute('aria-pressed', s.light ? 'true' : 'false'); t.classList.toggle('hint', !!(G.node && G.node.dark && !s.light));
+    ABY.Scene.setTorch(!!s.light); ABY.Scene.setDread(d);
   }
   function contact(sp) {
-    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : '';
+    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : '';
     $('mName').textContent = WHO[key]; $('mName').style.color = ABY.SPEAKERS[key].color;
-    $('mSub').innerHTML = key === 'GUARDIAN' ? '<span class="live" style="background:var(--ember);box-shadow:0 0 8px var(--ember)"></span>signal unstable' : key === 'NARRATOR' ? 'unknown number' : '<span class="live"></span>online';
+    $('mSub').innerHTML = key === 'GUARDIAN' ? '<span class="live" style="background:var(--ember);box-shadow:0 0 8px var(--ember)"></span>signal unstable' : key === 'EYE' ? '<span class="live" style="background:#ff4d5e;box-shadow:0 0 8px #ff4d5e"></span>it knows you are here' : key === 'NARRATOR' ? 'unknown number' : '<span class="live"></span>online';
   }
 
   // ---- the chat ----
@@ -64,6 +70,10 @@
     var th = $('thread'), el = document.createElement('div'); el.className = 'm ' + kind; if (quiet) el.style.animation = 'none';
     if (kind === 'in' && who) { var w = document.createElement('span'); w.className = 'who'; w.textContent = WHO[who] || who; w.style.color = ABY.SPEAKERS[who] ? ABY.SPEAKERS[who].color : '#fff'; el.appendChild(w); }
     el.appendChild(document.createTextNode(text)); th.appendChild(el); scrollEnd(!quiet); return el;
+  }
+  var PICS = { corrupt: 'assets/world/abyss-city-corrupt.webp', stairs: 'assets/world/abyss-stairs.webp', city: 'assets/world/abyss-city.webp', queen: 'assets/character/queen-960.webp' };
+  function photo(key, quiet) {
+    var th = $('thread'), el = document.createElement('div'); el.className = 'm photo'; if (quiet) el.style.animation = 'none'; el.setAttribute('role', 'img'); el.setAttribute('aria-label', 'A photo from the phone'); el.style.backgroundImage = 'url(' + (PICS[key] || PICS.corrupt) + ')'; th.appendChild(el); scrollEnd(!quiet); return el;
   }
   function entry(kind, who, text, nodeId) { G.log.push({ k: kind, who: who || '', t: text, n: nodeId || '' }); if (G.log.length > 60) G.log.shift(); }
   function split(text) {                                                  // a long beat arrives as two or three texts, like a person typing
@@ -76,12 +86,23 @@
 
   function showReplies(n) {
     var box = $('replies'); box.innerHTML = ''; box.classList.remove('on');
+    var opts = ABY.options(G.state);
     if (!G.run) { chip('Begin a new journey', true, function () { startRun(); }); }
-    else if (n.song) chip('♪ Raise the flute', true, function () { startSong(false); });
-    else n.choices.forEach(function (c, i) { chip(c.label, n.choices.length === 1, function (ev) { choose(i, ev); }); });
+    else if (n.song) chip('\u266A Raise the flute', true, function () { startSong(false); });
+    else if (n.call) { showCall(n, opts); }
+    else opts.forEach(function (o) { chip(o.c.label, opts.length === 1, function (ev) { choose(o.i, ev); }); });
     requestAnimationFrame(function () { box.classList.add('on'); scrollEnd(false); });
     var f = box.querySelector('.chip'); if (f && matchMedia('(pointer:fine)').matches && P.screen === 'msg') f.focus({ preventScroll: true });
   }
+  // an incoming call: a full-screen ring with the node's two choices as Answer / Decline
+  function showCall(n, opts) {
+    var el = $('call'); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
+    var act = $('callAct'); act.innerHTML = '';
+    opts.forEach(function (o, k) { var b = document.createElement('button'); b.type = 'button'; b.className = 'cbtn ' + (k === 0 ? 'yes' : 'no'); b.innerHTML = '<i>' + (k === 0 ? '\u260E' : '\u2715') + '</i><span></span>'; b.querySelector('span').textContent = o.c.label; b.addEventListener('click', function (ev) { stopRing(); choose(o.i, ev); }); act.appendChild(b); });
+    el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, 1500);
+  }
+  function ring1() { ABY.Audio.sfx('ring'); buzz(200); }
+  function stopRing() { clearInterval(ringT); ringT = 0; $('call').classList.remove('on'); P.lockAll(false); }
   function chip(label, go, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (go ? ' go' : ''); b.textContent = label; b.addEventListener('click', fn); $('replies').appendChild(b); }
 
   // deliver a node: typing dots, then its bubbles, then the reply chips
@@ -89,6 +110,7 @@
     var n = N[id] || N[ABY.START]; id = N[id] ? id : ABY.START; G.node = n; G.state.node = id; G.delivering = true; G.fast = false;
     contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
     if (n.ending) return finale();
+    if (n.dark && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
     if (!fromLog && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
     var parts = n.speaker === 'NARRATOR' ? [n.text] : split(n.text), done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length;
     $('replies').classList.remove('on');
@@ -96,8 +118,10 @@
       if (i >= parts.length) { G.delivering = false; if (G.run) save(); return showReplies(n); }
       var typing = document.createElement('div'); typing.className = 'm typing'; typing.innerHTML = '<i></i><i></i><i></i>'; $('thread').appendChild(typing); scrollEnd(true);
       wait(380 + parts[i].length * 9 > 1500 ? 1500 : 380 + parts[i].length * 9, function () {
-        typing.remove(); var narr = n.speaker === 'NARRATOR'; bubble(narr ? 'sys' : 'in', n.speaker, parts[i]); entry(narr ? 'sys' : 'in', n.speaker, parts[i], id);
-        ABY.Audio.sfx('ding'); buzz(10);
+        typing.remove(); var narr = n.speaker === 'NARRATOR', b = bubble(narr ? 'sys' : 'in', n.speaker, parts[i]); entry(narr ? 'sys' : 'in', n.speaker, parts[i], id);
+        if (i === 0 && !fromLog) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, parts[i]);
+        if (n.speaker === 'EYE') ABY.Audio.sfx('creep'); else ABY.Audio.sfx('ding'); buzz(10);
+        if (n.note && !G.seen[n.note] && i === parts.length - 1) { G.seen[n.note] = 1; P.badge('notes', ++noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: 'New clue: ' + ABY.NOTES[n.note].title, onTap: function () { open('notes'); } }); }
         if (P.screen !== 'msg') { G.pending++; P.badge('msg', G.pending); P.banner({ title: WHO[n.speaker] || 'Unknown', text: parts[i], onTap: function () { open('msg'); } }); }
         step(i + 1);
       });
@@ -105,12 +129,34 @@
   }
 
   function choose(i, ev) {
-    if (G.busy || G.delivering) return; var ns = ABY.choose(G.state, i); if (!ns) return;
+    if (G.busy || G.delivering) return; var ns = ABY.choose(G.state, i); if (!ns) return; clearTimeout(scareT);
     var label = G.node.choices[i].label; ABY.Audio.init(); ABY.Audio.sfx('send'); buzz(12);
     var r = ev && ev.target && ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : null;
     if (r) { var sr = $('screen').getBoundingClientRect(); ABY.Scene.burst(r.left - sr.left + 24, r.top - sr.top + r.height / 2, parseInt(ABY.SPEAKERS[G.node.speaker].color.slice(1), 16), 24, 3.2); }
     $('replies').classList.remove('on'); bubble('out', '', label); entry('out', '', label, '');
     G.state = ns; deliver(ns.node);
+  }
+
+  // ---- scares: the phone and the dark do things to her ----
+  function fx(el, cls, ms) { el.classList.add(cls); setTimeout(function () { el.classList.remove(cls); }, reduced ? Math.min(ms, 500) : ms); }
+  function scare(type) {
+    var sc = $('screen');
+    if (type === 'jump') { ABY.Audio.sfx('jump'); buzz(90); fx(sc, 'jump', 700); ABY.Scene.burst(240, 300, 0xff3050, 40, 5); }
+    else if (type === 'glitch') { ABY.Audio.sfx('glitch'); buzz(30); fx(sc, 'glitch', 900); }
+    else if (type === 'eye') { ABY.Audio.sfx('eyes'); buzz(60); fx(sc, 'eyeflash', 2600); }
+    else if (type === 'blackout') { ABY.Audio.sfx('blackfx'); buzz(120); var b = $('blackout'); b.classList.add('on'); setTimeout(function () { b.classList.remove('on'); }, reduced ? 500 : 2200); }
+    else { ABY.Audio.sfx('whisper'); fx(sc, 'flick', 1100); }                     // whisper
+  }
+  function corrupt(el, text) {                                                    // at high dread her own words are not quite stable
+    if (reduced || Math.random() < 0.4) return; var node = el.lastChild; if (!node || node.nodeType !== 3) return;
+    var glyphs = '\u2593\u2592\u2591#@%&?', arr = text.split(''), n = Math.min(5, Math.floor(text.length / 8));
+    for (var k = 0; k < n; k++) { var i = Math.floor(Math.random() * arr.length); if (arr[i] !== ' ') arr[i] = glyphs.charAt(Math.floor(Math.random() * glyphs.length)); }
+    node.nodeValue = arr.join(''); setTimeout(function () { node.nodeValue = text; }, 700);
+  }
+  function ambient(dt) {                                                          // dread >= 4: the screen glitches by itself; >= 5: strangers text
+    if (!G.run || G.state.dread < 4 || P.screen !== 'msg' || ABY.Song.active || G.delivering || document.body.classList.contains('finale')) return;
+    ambT -= dt; if (ambT > 0) return; ambT = 9 + Math.random() * 9;
+    scare('glitch'); if (G.state.dread >= 5 && Math.random() < 0.55) { ABY.Audio.sfx('creep'); P.banner({ title: 'No Caller ID', icon: 'ic-eye', glyph: '\u25C9', text: CREEPS[Math.floor(Math.random() * CREEPS.length)] }); }
   }
 
   // ---- the song (the Echo Flute) ----
@@ -133,13 +179,14 @@
 
   // ---- the end: the gate opens, then the memory ----
   function finale() {
-    var id = ABY.endingFor(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false;
+    var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
-    P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
+    P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
     var first = !G.found[id]; G.found[id] = 1; G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); }, reduced ? 300 : 2600);
   }
   function memory(id, kicker, ended) {
+    $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
     $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('shareBtn').textContent = 'Share';
@@ -167,13 +214,13 @@
 
   // ---- a journey ----
   function startRun() {
-    G.state = ABY.newState(); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+    G.state = ABY.newState(); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
     var stamp = 'Today ' + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
     if (P.screen !== 'msg') P.show('msg'); world(); wait(700, function () { deliver(ABY.START); });
   }
   function rebuild() {                                                     // the saved chat, drawn at once
-    $('thread').innerHTML = ''; G.log.forEach(function (e) { bubble(e.k, e.who, e.t, true); }); scrollEnd(false);
+    $('thread').innerHTML = ''; G.log.forEach(function (e) { if (e.k === 'img') photo(e.t, true); else bubble(e.k, e.who, e.t, true); }); scrollEnd(false);
   }
   function openMsgApp() {
     if (G.run && G.started) { scrollEnd(false); return; }
@@ -181,7 +228,7 @@
     startRun();
   }
   function resume() {
-    G.state = G.saved.state; G.log = G.saved.log; G.saved = null; G.run = true; G.started = true; G.lastCh = N[G.state.node] ? N[G.state.node].ch : 0; G.pending = 0; rebuild();
+    G.state = G.saved.state; G.log = G.saved.log; G.saved = null; G.run = true; G.seen = {}; G.state.notes.forEach(function (k) { G.seen[k] = 1; }); G.started = true; G.lastCh = N[G.state.node] ? N[G.state.node].ch : 0; G.pending = 0; rebuild();
     deliver(G.state.node, true);
   }
 
@@ -191,16 +238,16 @@
     [bg, fg].forEach(function (e) { e.setAttribute('cx', cx); e.setAttribute('cy', cx); e.setAttribute('r', r); e.setAttribute('stroke-width', w); svg.appendChild(e); });
     bg.setAttribute('class', 'bg'); fg.setAttribute('stroke', color); fg.setAttribute('stroke-dasharray', '0 ' + c); requestAnimationFrame(function () { requestAnimationFrame(function () { fg.setAttribute('stroke-dasharray', (c * Math.max(0.02, frac)) + ' ' + c); }); });
   }
-  function rings(svg, size, rs, w) { svg.innerHTML = ''; var s = G.state, v = active() ? [s.heart, s.resolve, s.trust] : [0, 0, 0], col = ['#ff6ec7', '#ffd34d', '#7cffb2']; rs.forEach(function (r, i) { ring(svg, size / 2, r, w, v[i] / 5, col[i]); }); }
+  function rings(svg, size, rs, w) { svg.innerHTML = ''; var s = G.state, v = active() ? [s.heart, s.resolve, s.trust, s.dread * 5 / ABY.MAX_DREAD] : [0, 0, 0, 0], col = ['#ff6ec7', '#ffd34d', '#7cffb2', '#ff4d5e']; rs.forEach(function (r, i) { ring(svg, size / 2, r, w, v[i] / 5, col[i]); }); }
   function renderHome() {
-    rings($('wRings'), 64, [28, 21, 14], 5); var s = G.state;
+    rings($('wRings'), 64, [29, 23, 17, 11], 4); var s = G.state;
     $('wT').textContent = active() && G.node ? 'Chapter ' + G.node.ch + ' · ' + ABY.CHAPTERS[G.node.ch - 1].label : 'The Guardian’s Gate';
-    $('wS').textContent = active() ? 'Heart ' + s.heart + ' · Resolve ' + s.resolve + ' · Trust ' + s.trust : (foundN() ? 'Endings found ' + foundN() + '/5 · open Messages' : 'A message is waiting in Messages');
+    $('wS').textContent = active() ? 'Heart ' + s.heart + ' · Resolve ' + s.resolve + ' · Trust ' + s.trust + ' · Dread ' + s.dread : (foundN() ? 'Endings found ' + foundN() + '/' + ABY.ENDING_IDS.length + ' · open Messages' : 'A message is waiting in Messages');
   }
   function renderLock() {
     var list = [], last = null; for (var i = G.log.length - 1; i >= 0; i--) if (G.log[i].k === 'in' || G.log[i].k === 'sys') { last = G.log[i]; break; }
     if (active() && last) list.push({ title: WHO[last.who] || 'Unknown', text: last.t, when: 'now', onTap: function () { open('msg'); } });
-    else if (!active() && foundN() > 0) list.push({ title: 'Gallery', icon: 'ic-gal', glyph: '❉', text: 'You have found ' + foundN() + ' of 5 memories.', when: 'today', onTap: function () { open('gallery'); } });
+    else if (!active() && foundN() > 0) list.push({ title: 'Gallery', icon: 'ic-gal', glyph: '❉', text: 'You have found ' + foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories.', when: 'today', onTap: function () { open('gallery'); } });
     else list.push({ title: 'Unknown', text: 'You’re awake. Do you hear it? The flute is calling.', when: 'now', onTap: function () { open('msg'); } });
     list.push({ title: 'Echo Flute', icon: 'ic-flute', glyph: '♪', text: G.songBest ? 'Your best: ' + G.songBest + '%. The song is waiting.' : 'Your flute is ready. The Song of Recall is waiting.', when: '3:07', onTap: function () { open('flute'); } });
     P.setNotes(list);
@@ -215,12 +262,18 @@
     });
   }
   function renderPulse() {
-    rings($('bigR'), 120, [52, 40, 28], 9); var s = G.state, v = active() ? [s.heart, s.resolve, s.trust] : [0, 0, 0], box = $('ringsL'); box.innerHTML = '';
-    [['Heart', '#ff6ec7', 'What she remembers'], ['Resolve', '#ffd34d', 'What she will risk'], ['Trust', '#7cffb2', 'Who she lets in']].forEach(function (r, i) {
+    rings($('bigR'), 120, [54, 44, 34, 24], 8); var s = G.state, v = active() ? [s.heart, s.resolve, s.trust, s.dread] : [0, 0, 0, 0], box = $('ringsL'); box.innerHTML = '';
+    [['Heart', '#ff6ec7', 'What she remembers'], ['Resolve', '#ffd34d', 'What she will risk'], ['Trust', '#7cffb2', 'Who she lets in'], ['Dread', '#ff4d5e', 'What has seen her (at 6 she comes apart)']].forEach(function (r, i) {
       var d = document.createElement('div'); d.className = 'rl'; var l = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small'), val = document.createElement('span');
-      b.textContent = r[0]; b.style.color = r[1]; sm.textContent = r[2]; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = r[1]; val.textContent = v[i] + '/5'; d.appendChild(l); d.appendChild(val); box.appendChild(d);
+      b.textContent = r[0]; b.style.color = r[1]; sm.textContent = r[2]; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = r[1]; val.textContent = v[i] + '/' + (i === 3 ? ABY.MAX_DREAD : 5); d.appendChild(l); d.appendChild(val); box.appendChild(d);
     });
-    $('pSub').textContent = (active() ? 'Choices made ' + s.choices + ' · ' : '') + 'Endings found ' + foundN() + '/5' + (G.songBest ? ' · Song best ' + G.songBest + '%' : '');
+    $('pSub').textContent = (active() ? 'Choices made ' + s.choices + ' · ' : '') + 'Endings found ' + foundN() + '/' + ABY.ENDING_IDS.length + (G.songBest ? ' · Song best ' + G.songBest + '%' : '');
+  }
+  function renderNotes() {
+    var box = $('noteList'); box.innerHTML = ''; noteN = 0; P.badge('notes', 0); var ks = active() ? G.state.notes : [];
+    $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues';
+    if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
+    ks.forEach(function (k) { var n = ABY.NOTES[k], d = document.createElement('div'); d.className = 'nt'; var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = n.title; p.textContent = n.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
   }
   function renderFlute() { $('fBest').textContent = G.songBest ? G.songBest + '%' : '—'; }
   function renderSettings() {
@@ -235,19 +288,26 @@
   function open(app) { P.show(app); }
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
-    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'flute') renderFlute(); else if (name === 'settings') renderSettings();
+    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
     if (name !== 'msg' && G.node && name !== 'lock') { /* the wallpaper keeps the speaker in view */ }
   }
 
   // ---- loop ----
   function flash(fn) { var f = $('flash'); f.style.opacity = '1'; setTimeout(function () { fn(); setTimeout(function () { f.style.opacity = '0'; }, 60); }, reduced ? 30 : 200); }
-  function update(dt, now) { if (ABY.Song.active) ABY.Song.update(dt); else ABY.Audio.wander(now, ABY.Scene.mood); }
+  function update(dt, now) { if (ABY.Song.active) ABY.Song.update(dt); else { ABY.Audio.wander(now, ABY.Scene.mood); ambient(dt); } }
   function frame(now) { raf = requestAnimationFrame(frame); var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now; update(dt, now); ABY.Scene.render(now); ABY.Song.draw(); }
   function wake() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
   function sleep() { cancelAnimationFrame(raf); raf = 0; }
   document.addEventListener('visibilitychange', function () { if (document.hidden) { sleep(); if (ABY.Audio.ctx) ABY.Audio.ctx.suspend(); } else { wake(); if (ABY.Audio.ctx && !ABY.Audio.muted) ABY.Audio.ctx.resume(); } });
-  ABY.debug = { frames: function () { return ABY.Scene.frames; }, running: function () { return !!raf; } };
+  ABY.debug = { frames: function () { return ABY.Scene.frames; }, running: function () { return !!raf; },
+    // test hook: be at scene `id` with some stats (the evaluator and the screenshots use it; a player never does)
+    goto: function (id, patch) {
+      G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
+      G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
+      if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
+    },
+    tick: function (dt) { ambient(dt); } };
   function resize() { ABY.Scene.resize(); ABY.Song.resize(); }
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
@@ -256,6 +316,12 @@
   $('screen').addEventListener('pointermove', function (e) { if (e.pointerType !== 'mouse') return; var r = $('screen').getBoundingClientRect(); ABY.Scene.pointer(((e.clientX - r.left) / r.width - 0.5) * 2, ((e.clientY - r.top) / r.height - 0.5) * 2); });
   document.addEventListener('pointerdown', function () { ABY.Audio.init(); ABY.Audio.pad(G.node ? G.node.mood : 'void'); }, { once: true });
   $('thread').addEventListener('click', skip);
+  $('torchBtn').addEventListener('click', function () {                            // the flashlight: costs battery, and the dark is worse without it
+    if (!G.run || P.locked || G.busy) return; ABY.Audio.init(); ABY.Audio.sfx('click'); buzz(8);
+    var ns = ABY.toggleLight(G.state), moved = ns.node !== G.state.node; G.state = ns; world(); save();
+    if (moved) { $('replies').classList.remove('on'); deliver(ns.node); } else if (!G.delivering && G.node && !G.node.ending) showReplies(G.node);
+  });
+  $('rotBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); });
   $('fPlay').addEventListener('click', function () { startSong(true); });
   $('shareBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('ending', G.shown, 'gallery'); });
   $('shNative').addEventListener('click', function () { shareAct('native'); }); $('shX').addEventListener('click', function () { shareAct('x'); }); $('shFb').addEventListener('click', function () { shareAct('fb'); }); $('shWa').addEventListener('click', function () { shareAct('wa'); }); $('shCopy').addEventListener('click', function () { shareAct('copy'); }); $('shSave').addEventListener('click', function () { shareAct('save'); });
@@ -269,6 +335,8 @@
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }
+    if (k === 'r' && P.canRotate()) { P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); return; }
+    if (k === 'f' && P.screen === 'msg' && G.run) { $('torchBtn').click(); return; }
     if (ABY.Song.active) return;
     if (P.screen === 'lock' && (k === 'enter' || k === ' ')) { e.preventDefault(); P.unlock(); return; }
     if (P.screen === 'msg') {
@@ -279,7 +347,7 @@
 
   // ---- boot ----
   function boot() {
-    load(); ABY.Song.init($('songCv')); P.init({ onShow: onShow });
+    load(); ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
     var pre = $('pre'), booted = false, stage = $('screen');
     function ready(gl) {
       if (booted) return; booted = true; if (!gl) stage.classList.add('nogl');

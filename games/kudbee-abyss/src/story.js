@@ -1,13 +1,22 @@
 /* =====================================================================
  * Kudbee Abyss - story.js (THE STORY, as data)
- * Pure data + two pure functions, so the evaluator can walk every path in node
- * (eval/graph.mjs) with no browser. Three hidden stats shape the ending:
- *   heart   - what she remembers          resolve - what she will risk          trust - who she lets in
- * A choice can add to a stat (`add`) and raise a flag (`set`). A node with `song`
- * hands the player the flute (the rhythm game) instead of choices; the result goes
- * in flags.song ('win' | 'fail'). `ending: 'auto'` is decided by endingFor().
- * `focus` says who the camera looks at (queen | guardian | vey | crystal | gate) and
- * `mood` the world around her (void | spire | dusk | gate | dawn | dark | throne).
+ * Pure data + pure functions, so the evaluator can walk every path in node
+ * (eval/graph.mjs) with no browser. The player is the voice in the phone, texting
+ * the Queen, Vey and the Guardian; the phone itself is cursed, and it is the source
+ * of most of the horror.
+ *
+ * Four stats and two resources shape the ending:
+ *   heart   what she remembers      resolve what she will risk      trust who she lets in
+ *   dread   what has seen her (0-6; at 6 she starts to come apart)
+ *   bat     the phone's battery (it drains with every choice, and fast with the flashlight on;
+ *           at 0 the phone dies in the dark)        light  the flashlight (dark scenes need it)
+ * A choice can add to a stat (`add`), set a flag (`set`), switch the flashlight (`light`), cost
+ * or give battery (`bat`: positive drains, negative charges), and can be hidden until a rule
+ * holds (`req`: { flag, noflag, min:{trust:2}, maxDread, minDread, light, noLight }).
+ * A node can scare (`scare`: glitch | jump | whisper | eye | blackout), be dark (`dark`: the
+ * flashlight is needed or dread climbs), ring (`call`), show a picture (`img`), file a clue
+ * (`note`), or end (`ending`: an id, or 'auto' = endingFor()). `@back` returns to where a
+ * forced scene (the blackout, the hollowing) interrupted.
  * ===================================================================== */
 var ABY = (typeof window !== 'undefined') ? (window.ABY = window.ABY || {}) : {};   // (node loads this file too, for eval/graph.mjs)
 
@@ -15,6 +24,8 @@ ABY.CHAPTERS = [
   { n: 1, label: 'The Awakening' },
   { n: 2, label: 'The Companion' },
   { n: 3, label: "The Guardian's Gate" },
+  { n: 4, label: 'The Descent' },
+  { n: 5, label: 'The Eye' },
 ];
 
 ABY.SPEAKERS = {
@@ -22,20 +33,76 @@ ABY.SPEAKERS = {
   QUEEN: { color: '#39e6ff', focus: 'queen' },
   GUARDIAN: { color: '#ff8a5c', focus: 'guardian' },
   VEY: { color: '#7cffb2', focus: 'vey' },
+  EYE: { color: '#ff4d5e', focus: 'queen' },
 };
 
 ABY.START = 'awakening';
 ABY.STATS = ['heart', 'resolve', 'trust'];
 ABY.MAX_SONG_TRIES = 3;
+ABY.MAX_DREAD = 6;
+ABY.BAT0 = 62;            // the battery she starts with
+ABY.TORCH = 7;            // extra battery a choice costs while the flashlight is on
+ABY.TORCH_TOGGLE = 2;     // and switching it on or off
+
+// the clues she can find (they show in the Notes app, and some unlock choices)
+ABY.NOTES = {
+  recording: { title: 'Recording: the stones', text: 'Under the choir, very faint, a voice you know: hers. "DON\'T OPEN THE GATE. I LOCKED HIM IN SO YOU\'D NEVER—" The file ends there.' },
+  ledger: { title: 'The captain\'s ledger', text: '"She asked me to wear the crown of shadows. \'Only for a night,\' she said. \'Only to hold the door.\' I said yes. I always said yes."' },
+  vey_photo: { title: 'Photo: Vey', text: 'The Queen, the pillar, and behind her, close enough to touch her hair: Vey, standing on two legs, with far too many hands.' },
+  future_call: { title: 'Call from your own number', text: '"Don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him."' },
+  voicemail: { title: 'Voicemail (0:30)', text: 'You did not play it. It played itself. "...she locked him in so he\'d never remember what he held. Count the steps. Do not count the steps."' },
+  eye: { title: 'What the Eye wants', text: '"I don\'t want your name. I want to be remembered too. Nobody ever sings to me."' },
+};
 
 ABY.NODES = {
-  // ---- chapter 1: the awakening ----
+  // ======================= chapter 1: the awakening =======================
   awakening: {
     ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
     text: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.',
     choices: [
       { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
       { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  unknown_sms: {
+    ch: 1, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'i can see you holding it. it is 3:07. it is always 3:07 here. you should not have woken up.',
+    choices: [
+      { label: 'Who is this?', next: 'unknown_who' },
+      { label: 'Switch on the flashlight', next: 'torch_first', light: 1 },
+      { label: 'Ignore it and follow the flute', next: 'flute_path', add: { resolve: 1 } },
+    ],
+  },
+  unknown_who: {
+    ch: 1, speaker: 'EYE', mood: 'dark', focus: 'queen',
+    text: 'i keep the door. she locked it and forgot. ask her what she did with her captain. ask her why the stones sing.',
+    choices: [
+      { label: 'Ask the Queen what she did', next: 'queen_denies' },
+      { label: 'Block the number', next: 'block_it' },
+    ],
+  },
+  queen_denies: {
+    ch: 1, speaker: 'QUEEN', mood: 'void', focus: 'queen',
+    text: 'I... don\'t remember. Please. Don\'t listen to it. It only lies. It only ever lies.',
+    choices: [
+      { label: 'Trust the Queen', next: 'flute_path', add: { trust: 1 } },
+      { label: 'Keep it in mind', next: 'flute_path', add: { resolve: 1, dread: 1 }, set: 'doubt' },
+    ],
+  },
+  block_it: {
+    ch: 1, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'blocked. you cannot block the thing that is looking at you. (1 new message from a number you blocked.) hello again.',
+    choices: [
+      { label: 'Stop answering it', next: 'flute_path', add: { dread: 1 } },
+    ],
+  },
+  torch_first: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'The flashlight cuts a thin white road through the haze. At the edge of it, something very tall and very thin steps back into the dark. It was standing there before you looked.',
+    choices: [
+      { label: 'Keep the light on', next: 'flute_path', add: { dread: 1 } },
+      { label: 'Switch it off', next: 'flute_path', add: { dread: 1 }, light: 0 },
     ],
   },
   flute_path: {
@@ -44,6 +111,7 @@ ABY.NODES = {
     choices: [
       { label: 'Climb the broken spire', next: 'spire', add: { resolve: 1 } },
       { label: 'Call to the small creature', next: 'vey_come', add: { trust: 1 } },
+      { label: 'Play the flute at the dark', next: 'choir_1', add: { dread: 1 } },
     ],
   },
   stones_path: {
@@ -52,16 +120,59 @@ ABY.NODES = {
     choices: [
       { label: 'Approach the guardian', next: 'g_meet', add: { resolve: 1 } },
       { label: 'Ask Vey to guide me', next: 'vey_guide', add: { trust: 1 } },
+      { label: 'Search the broken pillar', next: 'pillar_door' },
+      { label: 'Press your ear to the stones', next: 'choir_1', add: { dread: 1 } },
+    ],
+  },
+  pillar_door: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true,
+    text: 'Behind the pillar there is a hollow in the stone, and in the hollow a leather ledger, wet with something. The pages are in a soldier\'s neat hand. You cannot read it in this dark.',
+    choices: [
+      { label: 'Read the ledger', next: 'ledger_read', light: 1, req: { light: 1 }, add: { dread: 1 }, set: 'ledger' },
+      { label: 'Switch on the flashlight', next: 'pillar_door', light: 1, req: { noLight: 1 } },
+      { label: 'Leave it', next: 'stones_path' },
+    ],
+  },
+  ledger_read: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'ledger',
+    text: '"She asked me to wear the crown of shadows. \'Only for a night,\' she said. \'Only to hold the door.\' I said yes. I always said yes." The last page has been torn out. The torn edge is still warm.',
+    choices: [
+      { label: 'Close the ledger', next: 'stones_path', add: { resolve: 1 } },
+    ],
+  },
+  choir_1: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'The stones are singing. Hundreds of thin voices pressed together, saying her name backwards. The flute in her blood answers before she can stop it.',
+    choices: [
+      { label: 'Sing along', next: 'choir_join', add: { heart: 1, dread: 2 }, set: 'choir' },
+      { label: 'Record it on the phone', next: 'record', add: { dread: 1 } },
+      { label: 'Cover your ears and run', next: 'vey_come', add: { resolve: 1 } },
+    ],
+  },
+  choir_join: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'The song is beautiful. That is the worst part. For three minutes she remembers everything: a throne, a door, a man in iron kneeling. Then the memory is wrenched out of her like a tooth.',
+    choices: [
+      { label: 'Chase the memory', next: 'spire', add: { heart: 1 } },
+      { label: 'Let it go', next: 'vey_come', add: { trust: 1 } },
+    ],
+  },
+  record: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'recording', scare: 'whisper',
+    text: 'You play it back. Under the choir, very faint, is a voice you know. Hers. Screaming: "DON\'T OPEN THE GATE. I LOCKED HIM IN SO YOU\'D NEVER—" and then the file ends.',
+    choices: [
+      { label: 'Play it for the Queen', next: 'spire', add: { dread: 1 }, set: 'heard' },
+      { label: 'Delete it', next: 'vey_come', add: { trust: 1 } },
     ],
   },
 
-  // ---- chapter 2: the companion ----
+  // ======================= chapter 2: the companion =======================
   spire: {
     ch: 2, speaker: 'NARRATOR', mood: 'spire', focus: 'crystal',
     text: 'The spire crumbles under each step. At the top, a crystal pulses like a heartbeat. The song in her flute answers it.',
     choices: [
-      { label: 'Take the crystal', next: 'crystal', add: { resolve: 1 }, set: 'crystal' },
-      { label: 'Offer the flute instead', next: 'offering', add: { heart: 1, trust: 1 } },
+      { label: 'Take the crystal', next: 'crystal', add: { resolve: 1 }, set: 'crystal', bat: -20 },
+      { label: 'Offer the flute instead', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12 },
     ],
   },
   vey_come: {
@@ -70,6 +181,8 @@ ABY.NODES = {
     choices: [
       { label: 'Confront the guardian', next: 'g_meet', add: { resolve: 1 } },
       { label: 'Hide and watch', next: 'hide', add: { heart: 1 } },
+      { label: 'Take a photo of Vey', next: 'vey_photo', add: { dread: 1 } },
+      { label: 'Answer your buzzing phone', next: 'call_1', add: { dread: 1 } },
     ],
   },
   vey_guide: {
@@ -78,17 +191,102 @@ ABY.NODES = {
     choices: [
       { label: 'Reach out your hand', next: 'reconcile', add: { trust: 1 } },
       { label: 'Play the Song of Recall', next: 'song_intro', add: { heart: 1 } },
+      { label: 'Ask Vey what it really is', next: 'vey_secret', add: { dread: 1 } },
     ],
   },
-
-  // ---- chapter 3: the guardian's gate ----
-  g_meet: {
-    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
-    text: '...you... carry the echo... my lady... the corruption... it burns... but the song remembers what I have forgotten.',
+  vey_secret: {
+    ch: 2, speaker: 'VEY', mood: 'dusk', focus: 'vey', scare: 'whisper',
+    text: 'I was a hollow once. We all were. I woke up when she woke up, and she was kind to me. I would like to stay awake.',
     choices: [
-      { label: 'Embrace the Guardian', next: 'reconcile', add: { trust: 1 } },
-      { label: 'Play the flute', next: 'song_intro', add: { heart: 1 } },
-      { label: 'Stand your ground', next: 'standoff', add: { resolve: 1 } },
+      { label: 'Trust Vey', next: 'hollow_pass', add: { trust: 1 }, set: 'vey_trusted' },
+      { label: 'Take a photo of Vey', next: 'vey_photo', add: { dread: 1 } },
+    ],
+  },
+  vey_photo: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'vey', scare: 'jump', img: 'corrupt', note: 'vey_photo',
+    text: 'The photo develops on the screen. The Queen. The pillar. And behind her, close enough to touch her hair, Vey, except it is standing on two legs, and it has far too many hands.',
+    choices: [
+      { label: 'Show Vey the photo', next: 'vey_react', add: { dread: 1 } },
+      { label: 'Say nothing. Keep it.', next: 'hollow_pass', add: { dread: 1 }, set: 'vey_doubt' },
+    ],
+  },
+  vey_react: {
+    ch: 2, speaker: 'VEY', mood: 'dusk', focus: 'vey', scare: 'whisper',
+    text: 'Oh. You can see that. Please don\'t be afraid of me. I am afraid of it too. It is the thing that wears me when I sleep.',
+    choices: [
+      { label: 'Stay with Vey', next: 'hollow_pass', add: { trust: 1, dread: 1 }, set: 'vey_trusted' },
+      { label: 'Back away', next: 'hollow_pass', add: { dread: 1 }, set: 'vey_doubt' },
+    ],
+  },
+  hide: {
+    ch: 3, speaker: 'VEY', mood: 'dark', focus: 'guardian',
+    text: 'We watch. The Guardian kneels. The crown of shadows falls away like dust. It was never waiting to fight, only to be seen.',
+    choices: [
+      { label: 'Step forward', next: 'reconcile', add: { trust: 1 } },
+    ],
+  },
+  hollow_pass: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'vey', scare: 'whisper', dark: true,
+    text: 'Wings. Dozens, overhead, in the stairwell of the sky: the Hollows, hanging like leaves. They have not noticed you yet. Everything about them is waiting.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'hollow_light', light: 1, req: { noLight: 1 } },
+      { label: 'Hold your breath and walk', next: 'hollow_walk', add: { resolve: 1 } },
+      { label: 'Play the flute softly', next: 'hollow_song', add: { heart: 1 } },
+      { label: 'Stand your ground', next: 'g_meet', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  hollow_light: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'vey', scare: 'jump',
+    text: 'The light hits them and they screech, not in pain but in recognition. All of them turn at once. Every skull has Vey\'s eyes.',
+    choices: [
+      { label: 'Run', next: 'g_meet', add: { dread: 2 } },
+      { label: 'Hold the light steady', next: 'g_meet', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  hollow_walk: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'vey', scare: 'glitch',
+    text: 'Step. Step. Don\'t breathe. One of them leans down and sniffs her hair. It says, very softly, in the Queen\'s own voice: "Mine."',
+    choices: [
+      { label: 'Keep walking', next: 'g_meet', add: { dread: 1, resolve: 1 } },
+    ],
+  },
+  hollow_song: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
+    text: 'She plays one low note. The wings shiver. They begin to hum it back, and the hum is the choir\'s, and they are not afraid of her at all.',
+    choices: [
+      { label: 'Keep playing', next: 'song_intro', add: { heart: 1, dread: 1 } },
+      { label: 'Stop. Back away.', next: 'g_meet', add: { dread: 2 } },
+    ],
+  },
+  call_1: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', call: { from: 'Unknown (you)', sub: 'incoming call' },
+    text: 'The phone rings. The caller ID is your own number.',
+    choices: [
+      { label: 'Answer', next: 'call_self', bat: 6, add: { dread: 1 } },
+      { label: 'Decline', next: 'call_missed' },
+    ],
+  },
+  call_self: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'future_call', scare: 'glitch',
+    text: 'It is your voice. Out of breath. Wet. "Listen: don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him." The line fills with static, then breathing, then a click.',
+    choices: [
+      { label: 'Hang up', next: 'g_meet', add: { dread: 1 }, set: 'warned' },
+      { label: 'Call it back', next: 'call_back' },
+    ],
+  },
+  call_back: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'It connects on the first ring. Nobody says anything. Then, very close to the microphone: "the number you have dialed is you."',
+    choices: [
+      { label: 'Throw the phone down', next: 'g_meet', add: { dread: 2 }, set: 'warned' },
+    ],
+  },
+  call_missed: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', note: 'voicemail',
+    text: 'The call ends. A voicemail arrives anyway, thirty seconds long. You don\'t press play. It plays itself.',
+    choices: [
+      { label: 'Listen to all of it', next: 'g_meet', add: { dread: 1, heart: 1 } },
+      { label: 'Delete it', next: 'g_meet' },
     ],
   },
   crystal: {
@@ -107,11 +305,17 @@ ABY.NODES = {
       { label: 'Walk through the light', next: 'reconcile', add: { heart: 1, trust: 1 } },
     ],
   },
-  hide: {
-    ch: 3, speaker: 'VEY', mood: 'dark', focus: 'guardian',
-    text: 'We watch. The Guardian kneels. The crown of shadows falls away like dust. It was never waiting to fight, only to be seen.',
+
+  // ======================= chapter 3: the guardian's gate =======================
+  g_meet: {
+    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+    text: '...you... carry the echo... my lady... the corruption... it burns... but the song remembers what I have forgotten.',
     choices: [
-      { label: 'Step forward', next: 'reconcile', add: { trust: 1 } },
+      { label: 'Embrace the Guardian', next: 'reconcile', add: { trust: 1 } },
+      { label: 'Play the flute', next: 'song_intro', add: { heart: 1 } },
+      { label: 'Stand your ground', next: 'standoff', add: { resolve: 1 } },
+      { label: 'Read him the ledger', next: 'g_ledger', req: { flag: 'ledger' } },
+      { label: 'Look him in the eye', next: 'eye_gaze', req: { minDread: 2 }, add: { dread: 1 } },
     ],
   },
   standoff: {
@@ -120,6 +324,22 @@ ABY.NODES = {
     choices: [
       { label: 'Embrace the Guardian', next: 'reconcile', add: { resolve: 1, trust: 1 } },
       { label: 'Play the flute', next: 'song_intro', add: { resolve: 1 } },
+    ],
+  },
+  g_ledger: {
+    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+    text: '...that is my hand. That is... I wrote that. She asked, and I said yes. I wore it. For a thousand years I held the door shut, and I never once asked what was behind it.',
+    choices: [
+      { label: 'Tell him it is over', next: 'reconcile', add: { heart: 2 }, set: 'truth' },
+      { label: 'Ask what was behind the door', next: 'descent_door', add: { dread: 1 }, set: 'truth' },
+    ],
+  },
+  eye_gaze: {
+    ch: 3, speaker: 'EYE', mood: 'throne', focus: 'guardian', scare: 'eye',
+    text: 'there you are. i have been looking at you since the first note. the sky splits. a great red eye opens over his shoulder, and every Hollow turns to look at you too.',
+    choices: [
+      { label: 'Look away', next: 'standoff', add: { dread: 1 } },
+      { label: 'Stare back', next: 'descent_door', add: { resolve: 1, dread: 2 }, set: 'marked' },
     ],
   },
   reconcile: {
@@ -137,7 +357,117 @@ ABY.NODES = {
     ],
   },
 
-  // ---- the song (a rhythm game) ----
+  // ======================= chapter 4: the descent =======================
+  descent_door: {
+    ch: 4, speaker: 'NARRATOR', mood: 'dark', focus: 'guardian', scare: 'whisper',
+    text: 'The ground opens like a mouth. Stone steps lead down. And, impossibly, behind them, a second stair, black and slick with tendon, spirals up toward the eye.',
+    choices: [
+      { label: 'Go down into the vault', next: 'vault_1' },
+      { label: 'Climb the stairs', next: 'stairs_1' },
+    ],
+  },
+  vault_1: {
+    ch: 4, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true,
+    text: 'Down. The air smells like old blood and incense. A door of black iron, padlocked from the outside, the way you lock a thing in rather than out. The Queen\'s handprint is burned into the lock.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'vault_1', light: 1, req: { noLight: 1 } },
+      { label: 'Open the door', next: 'vault_memory', add: { dread: 1 } },
+      { label: 'Listen at the door', next: 'vault_listen', add: { dread: 1 } },
+    ],
+  },
+  vault_listen: {
+    ch: 4, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'Behind the door someone is breathing in time with you. When you hold your breath, it holds its breath. It knocks twice and says, politely: "Thank you for coming back."',
+    choices: [
+      { label: 'Open the door', next: 'vault_memory', add: { dread: 2 } },
+      { label: 'Run back up', next: 'g_meet', add: { dread: 1 } },
+    ],
+  },
+  vault_memory: {
+    ch: 4, speaker: 'QUEEN', mood: 'dusk', focus: 'queen', scare: 'glitch',
+    text: 'I remember. It was me. The Eye came asking for a door, and I gave it a man. I said it would only be for a night. I put the crown on his head myself. He thanked me. He thanked me.',
+    choices: [
+      { label: 'Tell her you believe her', next: 'vault_choice', add: { heart: 2, dread: 1 }, set: 'truth' },
+      { label: 'Tell her it is a lie', next: 'vault_choice', add: { resolve: 1, dread: 2 } },
+    ],
+  },
+  vault_choice: {
+    ch: 4, speaker: 'NARRATOR', mood: 'dark', focus: 'guardian',
+    text: 'The door is open now. In the dark inside, a captain in iron kneels with the crown of shadows grown into his skull. He lifts his head. He is smiling the way a man smiles who has finally been allowed to stop.',
+    choices: [
+      { label: 'Free him', next: 'gate_opens', add: { heart: 1, trust: 1 } },
+      { label: 'Lock the door again', next: 'gate_opens', add: { dread: 2 }, set: 'sealed' },
+      { label: 'Take his place', next: 'end_mirror', req: { flag: 'truth' } },
+    ],
+  },
+
+  // ======================= chapter 5: the eye =======================
+  stairs_1: {
+    ch: 5, speaker: 'NARRATOR', mood: 'throne', focus: 'queen',
+    text: 'Each step is a vertebra. They flex a little under her weight, politely. In the walls, skulls with lit red eyes watch her climb and count under their breath.',
+    choices: [
+      { label: 'Count with them', next: 'stairs_2', add: { dread: 1 } },
+      { label: 'Don\'t look at the walls', next: 'stairs_2', add: { resolve: 1 } },
+      { label: 'Switch on the flashlight', next: 'stairs_light', light: 1, req: { noLight: 1 } },
+    ],
+  },
+  stairs_light: {
+    ch: 5, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'jump',
+    text: 'The light shows what the walls are made of. It would have been kinder not to know. The skulls scream together, very high and very thin, and the stairs lurch.',
+    choices: [
+      { label: 'Keep climbing', next: 'stairs_2', add: { dread: 2 } },
+    ],
+  },
+  stairs_2: {
+    ch: 5, speaker: 'EYE', mood: 'throne', focus: 'queen', scare: 'whisper',
+    text: 'you are doing so well. only ninety steps left. you can stop and sit if you are tired. sit.',
+    choices: [
+      { label: 'Sit down', next: 'stairs_sit', add: { dread: 2 } },
+      { label: 'Keep climbing', next: 'stairs_3', add: { resolve: 1 } },
+      { label: 'Text back: who are you really?', next: 'stairs_3', add: { dread: 1 }, set: 'asked_eye' },
+    ],
+  },
+  stairs_sit: {
+    ch: 5, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'glitch',
+    text: 'She sits. The stair does not mind. It wraps one tendon gently around her ankle, and the climb continues without her.',
+    choices: [
+      { label: 'Cut the tendon with the flute', next: 'stairs_3', add: { resolve: 1, dread: 1 } },
+      { label: 'Let it carry you', next: 'eye_top', add: { dread: 2 }, set: 'carried' },
+    ],
+  },
+  stairs_3: {
+    ch: 5, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'glitch',
+    text: 'The top. A throne of folded wings and a crown that hums her song. And above it all, close enough to breathe on, the Eye. It blinks. The whole sky blinks.',
+    choices: [
+      { label: 'Go to the throne', next: 'eye_top' },
+    ],
+  },
+  eye_top: {
+    ch: 5, speaker: 'EYE', mood: 'throne', focus: 'queen', scare: 'eye', note: 'eye',
+    text: 'i don\'t want your name. i want to be remembered too. nobody ever sings to me.',
+    choices: [
+      { label: 'Play it a lullaby', next: 'eye_song', add: { heart: 1 } },
+      { label: 'Smash the crown with the flute', next: 'crown_smashed', req: { min: { resolve: 3 } } },
+      { label: 'Wear the crown', next: 'gate_opens', set: 'crown' },
+      { label: 'Answer: remember me', next: 'end_eye', add: { dread: 1 } },
+    ],
+  },
+  eye_song: {
+    ch: 5, speaker: 'NARRATOR', mood: 'dawn', focus: 'queen',
+    text: 'She plays. For a long minute the Eye listens, then it closes, wet-lashed, like a child falling asleep. The stairs go soft and fold away beneath her feet.',
+    choices: [
+      { label: 'Wake up', next: 'gate_opens', add: { heart: 2 }, set: 'lullaby' },
+    ],
+  },
+  crown_smashed: {
+    ch: 5, speaker: 'NARRATOR', mood: 'dawn', focus: 'queen', scare: 'jump',
+    text: 'The crown shatters. White light pours out, loud, the first honest light this place has ever seen. The Hollows fall like leaves. The Eye weeps. And far below, a man in iron stands up.',
+    choices: [
+      { label: 'Walk down into the light', next: 'gate_opens', add: { heart: 1, trust: 1 }, set: 'broken' },
+    ],
+  },
+
+  // ======================= the song (a rhythm game) =======================
   song_intro: {
     ch: 3, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', song: true,
     text: 'She lifts the flute. The Song of Recall is not played. It is remembered, one note at a time. Catch each note as it reaches the light.',
@@ -150,7 +480,7 @@ ABY.NODES = {
     ],
   },
   song_fail: {
-    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian', scare: 'glitch',
     text: 'The melody falters, and the corruption surges. It is not too late. But the song must be whole.',
     choices: [
       { label: 'Try the song again', next: 'song_intro', retry: true },
@@ -158,57 +488,156 @@ ABY.NODES = {
     ],
   },
 
-  // ---- the end ----
+  // ======================= forced scenes (they interrupt wherever she is) =======================
+  blackout: {
+    ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
+    text: 'The screen dims. Dims. The last bar of battery blinks once and goes out. The dark is not empty.',
+    choices: [
+      { label: 'Hold the phone to the crystal', next: '@back', bat: -35, req: { flag: 'crystal' } },
+      { label: 'Strike the flute on the stone for a spark', next: '@back', bat: -12, req: { min: { resolve: 3 } }, add: { dread: 1 } },
+      { label: 'Wait for the light', next: 'end_blackout' },
+      { label: 'Scream for help', next: 'end_blackout' },
+    ],
+  },
+  hollowing: {
+    ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch', safe: true,
+    text: 'Her edges are coming undone. Names fall out of her like loose teeth. Somewhere a small warm hand (Vey\'s, or something wearing it) closes over hers.',
+    choices: [
+      { label: 'Take the hand', next: '@back', req: { min: { trust: 3 } }, add: { dread: -3 } },
+      { label: 'Let go', next: 'end_hollow' },
+    ],
+  },
+
+  // ======================= the endings =======================
   gate_opens: {
     ch: 3, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', ending: 'auto',
     text: 'The gate opens.',
     choices: [],
   },
+  end_mirror: {
+    ch: 4, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', ending: 'mirror',
+    text: 'She takes his place in the dark.', choices: [],
+  },
+  end_eye: {
+    ch: 5, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', ending: 'eye',
+    text: 'The Eye opens all the way.', choices: [],
+  },
+  end_hollow: {
+    ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'hollow',
+    text: 'She lets go.', choices: [],
+  },
+  end_blackout: {
+    ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'blackout',
+    text: 'Zero percent.', choices: [],
+  },
 };
 
-// ---- the endings (decided by endingFor) ----
+// ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
   dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn',
     text: 'The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered, and another echo called her name.' },
   song: { tag: 'PLAY THE WHOLE SONG OF RECALL', name: 'The Song Remembered', hint: 'Play the whole Song of Recall.', mood: 'dawn',
     text: 'Every note found its place. The song poured through the gate and the shadows sang back. The Guardian remembered his name, and she remembered hers.' },
-  echo: { tag: 'HEART, COURAGE AND TRUST', name: 'Another Gate', hint: 'Walk the path with heart, courage and trust.', mood: 'gate',
+  echo: { tag: 'HEART, COURAGE AND TRUST', name: 'Another Gate', hint: 'Walk the path with heart, courage and trust, and keep your nerve.', mood: 'gate',
     text: 'Heart, courage and trust: the gate does not open. It unfolds. Beyond it stretch a thousand more gates, and every one of them is humming her song.' },
   silence: { tag: 'THE GATE OPENS. NOTHING FOLLOWS.', name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate',
     text: 'The gate opens, and nothing follows. The Guardian is free, but the hum is gone from the air. She walks on alone, the flute silent at her back.' },
   crown: { tag: 'TAKE THE CROWN FOR YOURSELF', name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
     text: 'The crown settles on her brow and the whole void bows. It is a very quiet kind of power. Somewhere far away, a flute falls to the floor.' },
+  hollow: { tag: 'LOCK THE DOOR AGAIN', name: 'The Hollow Queen', hint: 'Let the dread take her, or lock the door again.', mood: 'dark',
+    text: 'The door locks. The key is warm. By morning she can no longer remember which side of it she is standing on, and the Hollows kneel to what they take for a queen.' },
+  eye: { tag: 'ANSWER THE EYE', name: 'The Eye Opens', hint: 'Climb the stairs and answer the Eye.', mood: 'throne',
+    text: 'She answers, and the Eye opens all the way. It is not hungry. It is lonely, and now it is looking at everything that ever looked away. The phone goes warm in your hand. Your reflection in the black glass blinks half a second late.' },
+  mirror: { tag: 'TAKE HIS PLACE IN THE DARK', name: 'The Other Queen', hint: 'Learn the truth in the vault, and pay for it.', mood: 'dark',
+    text: 'She takes his place in the dark, and the door swings shut on the right side. The Guardian climbs into the light, free, weeping. Her thin voice reaches you one last time through the phone: "Hold the line. Someone has to be on this side."' },
+  betrayal: { tag: 'TRUST VEY WHEN YOU SHOULD NOT', name: 'Vey’s Smile', hint: 'Trust Vey after you have seen what Vey is.', mood: 'dark',
+    text: 'The gate opens and Vey is the first thing through it. It turns, takes one polite step back toward her, and smiles with a mouth much too wide. "Thank you for trusting me," it says in the Queen\'s voice. "It is so hard to wear someone who is paying attention."' },
+  blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
+    text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
 
+// ---- state ----
 ABY.newState = function () {
-  return { node: ABY.START, heart: 0, resolve: 0, trust: 0, flags: {}, tries: 0, choices: 0 };
+  return { node: ABY.START, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
 };
 
-// what the gate does, given everything she did
+// what the gate does, given everything she did (the five hidden stats + the flags)
 ABY.endingFor = function (s) {
   const f = s.flags || {};
   if (f.crown) return 'crown';
+  if (f.vey_trusted && !f.vey_doubt && s.dread >= 3) return 'betrayal';
+  if (f.sealed) return 'hollow';
   if (f.song === 'win') return 'song';
-  if (s.heart >= 2 && s.resolve >= 2 && s.trust >= 2) return 'echo';
-  if (s.trust >= 2) return 'dawn';
+  if (f.lullaby) return 'echo';
+  if (f.broken) return 'dawn';
+  if (s.heart >= 2 && s.resolve >= 2 && s.trust >= 2 && s.dread <= 2) return 'echo';
+  if (s.trust >= 2 || f.truth) return 'dawn';
   return 'silence';
 };
+// the ending a node shows (the gate decides; the other final nodes fix theirs)
+ABY.endingOf = function (s) { const n = ABY.NODES[s.node]; return n && n.ending ? (n.ending === 'auto' ? ABY.endingFor(s) : n.ending) : null; };
 
-// a choice taken: returns the new state (never mutates), or null if it is not a choice of this node
+// does a choice's rule hold?
+ABY.okReq = function (s, r) {
+  if (!r) return true;
+  if (r.flag && !s.flags[r.flag]) return false;
+  if (r.noflag && s.flags[r.noflag]) return false;
+  if (r.min) for (const k in r.min) if ((s[k] || 0) < r.min[k]) return false;
+  if (r.maxDread !== undefined && s.dread > r.maxDread) return false;
+  if (r.minDread !== undefined && s.dread < r.minDread) return false;
+  if (r.light && !s.light) return false;
+  if (r.noLight && s.light) return false;
+  return true;
+};
+// the choices she can see right now: [{ i: its index in the node, c: the choice }]
+ABY.options = function (s) {
+  const n = ABY.NODES[s.node], out = [];
+  if (n && n.choices) n.choices.forEach((c, i) => { if (ABY.okReq(s, c.req)) out.push({ i, c }); });
+  return out;
+};
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// a choice taken (i = its index in the node): returns the new state (never mutates), or null if it is not an available choice
 ABY.choose = function (s, i) {
   const n = ABY.NODES[s.node], c = n && n.choices && n.choices[i];
-  if (!c || !ABY.NODES[c.next]) return null;
-  const o = { node: c.next, heart: s.heart, resolve: s.resolve, trust: s.trust, flags: Object.assign({}, s.flags), tries: s.tries, choices: s.choices + 1 };
-  if (c.add) for (const k of ABY.STATS) if (c.add[k]) o[k] = Math.min(5, o[k] + c.add[k]);
+  if (!c || !ABY.okReq(s, c.req)) return null;
+  const o = { node: c.next, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back };
+  if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
+  if (!ABY.NODES[o.node]) return null;
+  if (c.add) { for (const k of ABY.STATS) if (c.add[k]) o[k] = clamp(o[k] + c.add[k], 0, 5); if (c.add.dread) o.dread = clamp(o.dread + c.add.dread, 0, ABY.MAX_DREAD); }
   if (c.set) o.flags[c.set] = 1;
   if (c.retry) o.tries++;
+  if (c.light !== undefined) o.light = c.light ? 1 : 0;
+  o.bat -= (c.bat !== undefined ? c.bat : 1) + (s.light ? ABY.TORCH : 0);
+  return ABY._land(o);
+};
+
+// she arrives at o.node: a dark room without the light frightens her, a clue is filed, and the phone or her mind can break first
+ABY._land = function (o) {
+  const n = ABY.NODES[o.node];
+  if (n.note && o.notes.indexOf(n.note) < 0) o.notes.push(n.note);
+  if (n.dark && !o.light) o.dread = clamp(o.dread + 1, 0, ABY.MAX_DREAD);
+  o.bat = clamp(o.bat, 0, 100);
+  const forced = !n.safe && !n.ending;                           // endings and the forced scenes themselves are never interrupted
+  if (forced && o.bat <= 0) { o.back = o.node; o.node = 'blackout'; o.light = 0; }
+  else if (forced && o.dread >= ABY.MAX_DREAD) { o.back = o.node; o.node = 'hollowing'; }
+  return o;
+};
+
+// the flashlight, switched by hand (not a story choice): costs a little battery; returns the new state
+ABY.toggleLight = function (s) {
+  const n = ABY.NODES[s.node]; if ((n && n.ending) || s.bat <= 0) return s;                  // a dead phone has no light to switch
+  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice(), light: s.light ? 0 : 1, bat: s.bat - ABY.TORCH_TOGGLE });
+  if (o.bat <= 0 && !(n && n.safe)) { o.bat = 0; return ABY._land(Object.assign(o, { node: s.node })); }
+  o.bat = Math.max(0, o.bat);
   return o;
 };
 
 // the song ended: 'win' or 'fail' decides what the Guardian says next
 ABY.songDone = function (s, won) {
-  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags) });
+  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() });
   o.flags.song = won ? 'win' : 'fail';
   o.node = won ? 'song_win' : (s.tries >= ABY.MAX_SONG_TRIES ? 'reconcile' : 'song_fail');
   return o;
@@ -218,16 +647,24 @@ ABY.songDone = function (s, won) {
 ABY.cleanState = function (raw) {
   const s = ABY.newState();
   if (!raw || typeof raw !== 'object') return s;
-  if (typeof raw.node === 'string' && Object.prototype.hasOwnProperty.call(ABY.NODES, raw.node) && !ABY.NODES[raw.node].ending) s.node = raw.node;
-  for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = Math.max(0, Math.min(5, raw[k]));
-  if (Number.isInteger(raw.tries)) s.tries = Math.max(0, Math.min(ABY.MAX_SONG_TRIES, raw.tries));
-  if (Number.isInteger(raw.choices)) s.choices = Math.max(0, Math.min(999, raw.choices));
+  const ok = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(ABY.NODES, id);
+  if (ok(raw.node) && !ABY.NODES[raw.node].ending) s.node = raw.node;
+  for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = clamp(raw[k], 0, 5);
+  if (Number.isInteger(raw.dread)) s.dread = clamp(raw.dread, 0, ABY.MAX_DREAD);
+  if (Number.isInteger(raw.bat)) s.bat = clamp(raw.bat, 1, 100);
+  if (raw.light === 1) s.light = 1;
+  if (Number.isInteger(raw.tries)) s.tries = clamp(raw.tries, 0, ABY.MAX_SONG_TRIES);
+  if (Number.isInteger(raw.choices)) s.choices = clamp(raw.choices, 0, 999);
+  if (ok(raw.back) && !ABY.NODES[raw.back].ending && !ABY.NODES[raw.back].safe) s.back = raw.back;
+  if (!ABY.NODES[s.node].safe) s.back = '';
   if (raw.flags && typeof raw.flags === 'object') {
-    if (raw.flags.crown === 1) s.flags.crown = 1;
-    if (raw.flags.crystal === 1) s.flags.crystal = 1;
+    for (const k of ABY.FLAGS) if (raw.flags[k] === 1) s.flags[k] = 1;
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
   }
+  if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
   return s;
 };
+// every flag the story can set (a save may only carry these)
+ABY.FLAGS = (function () { const f = {}; for (const id in ABY.NODES) for (const c of (ABY.NODES[id].choices || [])) if (c.set) f[c.set] = 1; return Object.keys(f); })();
 
 if (typeof module !== 'undefined') module.exports = ABY;

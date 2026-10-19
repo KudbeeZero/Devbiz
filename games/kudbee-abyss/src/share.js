@@ -2,7 +2,7 @@
  * Kudbee Abyss - share.js (SHARING)
  * Every ending and the player's progress make a 1200 x 630 card painted from the
  * game's own art: the world painting, the Queen on the phone's lock screen, the
- * ending's name and "N of 5 endings found". Phones hand the picture straight to the
+ * ending's name and "N of 10 endings found". Phones hand the picture straight to the
  * share sheet; elsewhere the Share screen previews it with X / Facebook / WhatsApp /
  * copy / save. The link in every share is a landing page per ending (s/<slug>/)
  * whose og:image is the same card without the personal count, so a pasted link
@@ -14,17 +14,19 @@ ABY.Share = {
   SITE: 'https://devbiz.kudbee.workers.dev',
   PATH: '/games/kudbee-abyss/',
   W: 1200, H: 630,
-  SLUGS: ['dawn', 'song', 'echo', 'silence', 'crown', 'progress'],            // the landing pages (one card each, /assets/og/abyss/<slug>.jpg)
+  SLUGS: ABY.ENDING_IDS.concat(['progress']),                                  // the landing pages (one card each, /assets/og/abyss/<slug>.jpg)
+  WORDS: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'],
   FONT: '"Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-  WORLD: { dawn: ['city', 'rgba(255,196,90,0.20)'], song: ['city', 'rgba(57,230,255,0.16)'], echo: ['city', 'rgba(196,107,255,0.22)'], silence: ['city', 'rgba(120,128,150,0.45)'], crown: ['stairs', 'rgba(255,40,60,0.14)'], progress: ['city', 'rgba(120,70,255,0.12)'], game: ['corrupt', 'rgba(0,0,0,0)'] },
+  WORLD: { dawn: ['city', 'rgba(255,196,90,0.20)'], song: ['city', 'rgba(57,230,255,0.16)'], echo: ['city', 'rgba(196,107,255,0.22)'], silence: ['city', 'rgba(120,128,150,0.45)'], crown: ['stairs', 'rgba(255,40,60,0.14)'], progress: ['city', 'rgba(120,70,255,0.12)'], game: ['corrupt', 'rgba(0,0,0,0)'],
+    hollow: ['corrupt', 'rgba(130,40,220,0.26)'], eye: ['stairs', 'rgba(255,30,60,0.18)'], mirror: ['city', 'rgba(150,170,215,0.30)'], betrayal: ['corrupt', 'rgba(60,255,150,0.10)'], blackout: ['corrupt', 'rgba(0,0,0,0.72)'] },
   url(slug) { return this.SITE + this.PATH + (slug ? 's/' + slug + '/' : 'index.html'); },
 
   // the card for a landing page / the game page: no personal numbers
   generic(slug) {
-    const E = ABY.ENDINGS[slug], ids = ABY.ENDING_IDS;
-    if (E) return { world: slug, kicker: 'ONE OF FIVE ENDINGS', title: E.name, line1: E.tag, line2: 'FIND ALL FIVE ON A HAUNTED PHONE', found: ids.map(i => i === slug), label: 'WHICH ENDING WILL YOU FIND?', note: ['GALLERY · now', 'New memory saved', E.name], time: '3:22', signal: slug === 'crown' ? 'NO SERVICE' : 'ECHO 5G' };
-    if (slug === 'progress') return { world: 'progress', kicker: 'A STORY ON A HAUNTED PHONE', title: 'FIND ALL 5 ENDINGS', line1: 'TEXT THE QUEEN  ·  PLAY THE SONG', line2: 'CAN YOU FREE THE GUARDIAN?', found: ids.map(() => false), label: '5 ENDINGS TO FIND', note: ['MESSAGES · now', 'Unknown', 'You’re awake. Do you hear it?'], time: '3:07', signal: 'ECHO' };
-    return { world: 'game', kicker: 'AN INTERACTIVE 3D STORY', title: 'THE GUARDIAN’S GATE', line1: 'A STORY TOLD THROUGH A HAUNTED PHONE', line2: 'TEXT THE QUEEN  ·  PLAY THE SONG  ·  5 ENDINGS', found: ids.map(() => false), label: '5 ENDINGS TO FIND', note: ['MESSAGES · now', 'Unknown', 'You’re awake. Do you hear it?'], time: '3:07', signal: 'NO SERVICE' };
+    const E = ABY.ENDINGS[slug], ids = ABY.ENDING_IDS, NW = this.WORDS[ids.length] || String(ids.length);
+    if (E) return { world: slug, kicker: 'ONE OF ' + NW + ' ENDINGS', title: E.name, line1: E.tag, line2: 'FIND ALL ' + NW + ' ON A HAUNTED PHONE', found: ids.map(i => i === slug), label: 'WHICH ENDING WILL YOU FIND?', note: ['GALLERY \u00B7 now', 'New memory saved', E.name], time: '3:22', signal: E.mood === 'dark' || E.mood === 'throne' ? 'NO SERVICE' : 'ECHO 5G' };
+    if (slug === 'progress') return { world: 'progress', kicker: 'A HORROR STORY ON A HAUNTED PHONE', title: 'FIND ALL ' + ids.length + ' ENDINGS', line1: 'TEXT THE QUEEN  \u00B7  SURVIVE THE DARK', line2: 'CAN YOU FREE THE GUARDIAN?', found: ids.map(() => false), label: ids.length + ' ENDINGS TO FIND', note: ['MESSAGES \u00B7 now', 'Unknown', 'You\u2019re awake. Do you hear it?'], time: '3:07', signal: 'ECHO' };
+    return { world: 'game', kicker: 'A HORROR STORY ON A HAUNTED PHONE', title: 'THE GUARDIAN\u2019S GATE', line1: 'SURVIVE THE DARK  \u00B7  TRUST THE WRONG THING', line2: 'TEXT THE QUEEN  \u00B7  ' + ids.length + ' ENDINGS', found: ids.map(() => false), label: ids.length + ' ENDINGS TO FIND', note: ['MESSAGES \u00B7 now', 'Unknown', 'You\u2019re awake. Do you hear it?'], time: '3:07', signal: 'NO SERVICE' };
   },
 
   // ---- the card ----
@@ -85,8 +87,8 @@ ABY.Share = {
     c.save(); c.shadowColor = 'rgba(196,107,255,0.8)'; c.shadowBlur = 0; c.restore();
     if (info.line1) this._t(c, info.line1, L, y, 29, '#ffe9a8', 700, 'left', 740, 0.5);
     if (info.line2) this._t(c, info.line2, L, y + 42, 24, '#e6eeff', 600, 'left', 740, 0.5);
-    // five endings, found ones lit
-    const dy = 468; (info.found || []).forEach((f, i) => { const x = L + i * 76; this._rr(c, x, dy, 64, 13, 6.5); if (f) { const g = c.createLinearGradient(x, 0, x + 64, 0); g.addColorStop(0, '#39e6ff'); g.addColorStop(1, '#c46bff'); c.fillStyle = g; } else c.fillStyle = 'rgba(255,255,255,0.18)'; c.fill(); });
+    // the endings, found ones lit
+    const fa = info.found || [], gap = 9, pw = Math.floor((700 - gap * (fa.length - 1)) / Math.max(1, fa.length)), dy = 468; fa.forEach((f, i) => { const x = L + i * (pw + gap); this._rr(c, x, dy, pw, 13, 6.5); if (f) { const g = c.createLinearGradient(x, 0, x + pw, 0); g.addColorStop(0, '#39e6ff'); g.addColorStop(1, '#c46bff'); c.fillStyle = g; } else c.fillStyle = 'rgba(255,255,255,0.18)'; c.fill(); });
     this._t(c, info.label || '', L, dy + 46, 22, '#cfe0ff', 700, 'left', 740, 2);
     // where to play
     const t = 'PLAY FREE  ·  ' + this.SITE.replace(/^https:\/\//, '').toUpperCase(); c.font = '700 22px ' + this.FONT; const w = Math.min(740, c.measureText(t).width + 56), cy = 548;
@@ -100,11 +102,11 @@ ABY.Share = {
     const ids = ABY.ENDING_IDS, n = ids.filter(i => found[i]).length, F = ids.map(i => !!found[i]);
     if (kind === 'ending' && ABY.ENDINGS[id]) {
       const E = ABY.ENDINGS[id], g = this.generic(id);
-      return { slug: id, url: this.url(id), text: 'I found “' + E.name + '” in Kudbee Abyss, a story told through a haunted phone (' + n + ' of ' + ids.length + ' endings found). Can you find them all?',
-        info: Object.assign(g, { kicker: n === ids.length ? 'ALL FIVE ENDINGS FOUND' : 'NEW MEMORY SAVED', found: F, label: n + ' OF ' + ids.length + ' ENDINGS FOUND' }) };
+      return { slug: id, url: this.url(id), text: 'I found “' + E.name + '” in Kudbee Abyss, a horror story told through a haunted phone (' + n + ' of ' + ids.length + ' endings found). Can you find them all?',
+        info: Object.assign(g, { kicker: n === ids.length ? 'ALL ' + (this.WORDS[ids.length] || ids.length) + ' ENDINGS FOUND' : 'NEW MEMORY SAVED', found: F, label: n + ' OF ' + ids.length + ' ENDINGS FOUND' }) };
     }
     const g = this.generic('progress');
-    return { slug: 'progress', url: this.url('progress'), text: n ? 'I’ve found ' + n + ' of ' + ids.length + ' endings in Kudbee Abyss, a story told through a haunted phone. Can you find them all?' : 'Kudbee Abyss: a story told through a haunted phone. Text the Queen, play the Song of Recall, find all five endings.',
+    return { slug: 'progress', url: this.url('progress'), text: n ? 'I’ve found ' + n + ' of ' + ids.length + ' endings in Kudbee Abyss, a horror story told through a haunted phone. Can you find them all?' : 'Kudbee Abyss: a horror story told through a haunted phone. Text the Queen, survive the dark, find all ' + ids.length + ' endings.',
       info: Object.assign(g, { kicker: 'MY JOURNEY SO FAR', title: n + ' OF ' + ids.length + ' ENDINGS', line1: 'FOUND ON A HAUNTED PHONE', found: F, label: n ? n + ' OF ' + ids.length + ' FOUND  ·  CAN YOU BEAT THAT?' : '5 ENDINGS TO FIND' }) };
   },
   // the card as a PNG file for the share sheet (made as the Share screen opens, so the tap that shares it still counts as the user's gesture)
