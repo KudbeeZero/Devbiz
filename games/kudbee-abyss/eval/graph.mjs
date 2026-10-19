@@ -84,6 +84,12 @@ export function graphChecks() {
   while (rs.node === 'd3_hall' || rs.node === 'd3_doors_fail') { rs = rs.node === 'd3_hall' ? ABY.songDone(rs, false) : ABY.choose(rs, 0); if (rn++ > 20) break; }
   const rw = ABY.songDone(Object.assign(ABY.newState(), { node: 'd3_hall' }), true);
   rec('rites-bounded', ritesOk && rs.node === 'd3_doors_give' && rw.node === 'd3_doors_win' && rw.flags.rite_doors === 1, rites.length + ' rites; each can be retried ' + ABY.MAX_SONG_TRIES + ' times, then it lets you pass; a win sets its flag');
+  { // review fixes: a Day Three ending can't loop back, a give-up doesn't starve later rites
+    const v = N.d3_finale.choices.find(c => c.next === 'end_vigil');
+    rec('d3-keeper-final', !!v && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_vigil' })) === null && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper' })) !== null, 'the Day Three vigil ending is final; the Day Two keeper still carries on');
+    const t = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd3_hall', tries: ABY.MAX_SONG_TRIES }), false);
+    rec('rite-giveup-resets-tries', t.tries === 0, 'giving up a rite resets the retry count');
+  }
   rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && ABY.ENDINGS.loop.cont === 'd3_wake' && N.d3_wake.ch === 8, 'keeper and loop carry into Day Three');
 
   // DAY TWO: the true ending only opens for someone who has found earlier endings (mem), and only the endings with a way on continue

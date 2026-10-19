@@ -763,7 +763,7 @@ ABY.NODES = {
     ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
     text: 'You knew it. You said it, and I kept it. (The door opens an inch, and a lantern comes out on the end of an iron arm.) I can not leave this door. I can give you what I have. A lamp. A promise to hold the door behind you.',
     choices: [
-      { label: 'Take the lantern', next: 'd3_table', set: 'corvin_lamp', bat: -20, add: { dread: -1 } },
+      { label: 'Take the lantern', next: 'd3_table', set: 'corvin_lamp', bat: -20 /* negative = recharge, like the crystal */, add: { dread: -1 } },
       { label: 'Ask him to hold the door behind you', next: 'd3_table', set: 'corvin_door', add: { resolve: 1 } },
     ],
   },
@@ -816,13 +816,17 @@ ABY.NODES = {
     text: 'The room waits. The doors are open behind you, or shut, or gone. The Eye is not hungry. It is only very, very large, and it has been listening to you carry this phone for three days. The next thing you do is the last thing it will remember about you.',
     choices: [
       { label: 'Sing all three songs as one', next: 'end_chorus', req: { all: ['rite_doors', 'rite_blood', 'rite_lull'] } },
-      { label: 'Hold the Eye\'s door so it can sleep', next: 'end_keeper', req: { min: { resolve: 3 } } },
+      { label: 'Hold the Eye\'s door so it can sleep', next: 'end_vigil', req: { min: { resolve: 3 } } },
       { label: 'Look away', next: 'end_watched' },
     ],
   },
   end_chorus: {
     ch: 8, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'chorus',
     text: 'The Eye sings back.', choices: [],
+  },
+  end_vigil: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'keeper', final: 1,
+    text: 'You hold the Eye\'s door.', choices: [],
   },
   end_watched: {
     ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'watched',
@@ -990,7 +994,7 @@ ABY.toggleLight = function (s) {
 // Day Two: an ending that has a way on (`cont`) can be carried into the next act. She keeps her stats, flags and clues; the dread eases, the phone is
 // recharged to at least 48 and the flashlight is off. Returns null when the ending is final.
 ABY.carry = function (s) {
-  const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id]; if (!E || !E.cont) return null;
+  const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id], n = ABY.NODES[s.node]; if (!E || !E.cont || (n && n.final)) return null;
   return Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
 };
 
@@ -1049,8 +1053,9 @@ ABY.rank = function (badges) { const n = badges; return n >= 7 ? 'Elder' : n >= 
 ABY.songDone = function (s, won) {
   const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() }), n = ABY.NODES[s.node], id = n && typeof n.song === 'string' ? n.song : '';
   if (id && n.songNext) {
-    if (won) { o.flags['rite_' + id] = 1; o.tries = 0; } else o.flags['fail_' + id] = 1;
-    o.node = won ? n.songNext.win : (s.tries >= ABY.MAX_SONG_TRIES ? n.songNext.give : n.songNext.fail);
+    if (won) o.flags['rite_' + id] = 1; else o.flags['fail_' + id] = 1;
+    const gaveUp = !won && s.tries >= ABY.MAX_SONG_TRIES; o.tries = won || gaveUp ? 0 : s.tries;
+    o.node = won ? n.songNext.win : (gaveUp ? n.songNext.give : n.songNext.fail);
     return o;
   }
   o.flags.song = won ? 'win' : 'fail';

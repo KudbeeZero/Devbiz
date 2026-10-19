@@ -193,7 +193,7 @@
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont); $('shareBtn').textContent = 'Share';
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont && ABY.carry(G.state)); $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
   }
   function closeMemory() { $('memory').classList.remove('on'); document.body.classList.remove('finale'); }
@@ -264,7 +264,7 @@
     var b = $('h2Badges'); b.innerHTML = ''; ABY.BADGES.forEach(function (x) { var e = document.createElement('span'); e.textContent = G.badges[x.id] ? x.name : '? ' + x.hint; if (!G.badges[x.id]) e.className = 'off'; b.appendChild(e); });
   }
   function maybeGuide() {                                                   // first run only: say what to do, once
-    if (G.guided || foundN() > 0) return; $('guide').hidden = false; $('gOk').focus({ preventScroll: true });
+    if (G.guided || foundN() > 0 || !$('guide').hidden || $('memory').classList.contains('on') || ABY.Song.active) return; $('guide').hidden = false; $('gOk').focus({ preventScroll: true });
   }
   function renderGallery() {
     var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0); $('gShare').hidden = foundN() === 0;
@@ -318,11 +318,11 @@
     b.addEventListener('click', function () { if (armT[id]) { clearTimeout(armT[id]); armT[id] = 0; s.textContent = orig; doIt(); } else { s.textContent = msg; armT[id] = setTimeout(function () { armT[id] = 0; s.textContent = orig; }, 3200); } });
   }
 
-  function maybeGuideHook(name) { if (name === 'home') maybeGuide(); }
-  function open(app) { P.show(app); }
+    function open(app) { P.show(app); }
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
-    if (name === 'home' || name === 'lock') maybeGuideHook(name);
+    if (name !== 'msg') G.autoPick = null;
+    if (name === 'home') maybeGuide();
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
     if (name !== 'msg' && G.node && name !== 'lock') { /* the wallpaper keeps the speaker in view */ }
