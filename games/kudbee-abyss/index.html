@@ -151,12 +151,13 @@
   .fl { text-align:center; padding-top:8px; } .fl .big { font:700 56px/1 var(--fd); margin-top:10px; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent; } .fl p { color:#b9c6e0; font-size:14px; line-height:1.55; margin-top:10px; }
 
   /* the phone is cursed: flashlight, notes, calls, photos, scares */
-  .ic-notes { background:linear-gradient(145deg,#ffd34d,#ff9a1f); color:#3a2400; } .ic-eye { background:linear-gradient(145deg,#ff4d5e,#6a0010); }
+  .ic-store { background:linear-gradient(145deg,#3d8bff,#6a2cff); } .ic-notes { background:linear-gradient(145deg,#ffd34d,#ff9a1f); color:#3a2400; } .ic-eye { background:linear-gradient(145deg,#ff4d5e,#6a0010); }
   .torch { flex:none; min-width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); font-size:20px; line-height:1; filter:grayscale(1) brightness(0.8); transition:filter .2s, background .2s, box-shadow .2s; } .torch.on { filter:none; background:rgba(255,230,150,0.25); border-color:#ffe08a; box-shadow:0 0 18px rgba(255,224,138,0.6); }
   .torch.hint { animation:torchHint 1.1s ease-in-out infinite; border-color:#ffe08a; } @keyframes torchHint { 50% { box-shadow:0 0 22px rgba(255,224,138,0.85); } }
   #msg .bar .grow h2, #msg .bar .grow .sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #msg .stats3 { padding:6px 8px; gap:6px; font-size:12px; margin-left:auto; flex:none; } @media (max-width:420px) { #msg .stats3 { gap:4px; padding:6px 6px; } #msg .bar { gap:6px; } }
   .stats3 .d { color:#ff4d5e; } .av.eye { background:radial-gradient(circle at 50% 50%, #ff4d5e, #3a0010); border-color:#ff4d5e; animation:eyeav 2.4s ease-in-out infinite; } @keyframes eyeav { 50% { box-shadow:0 0 14px #ff4d5e; } }
   .m.photo { align-self:flex-start; width:80%; max-width:340px; aspect-ratio:16/10; background-size:cover; background-position:50% 40%; border-radius:16px; border:1px solid rgba(255,255,255,0.18); filter:contrast(1.15) saturate(1.25) brightness(0.9); position:relative; padding:0; } .m.photo::after { content:"1 of 1  \00B7  no flash"; position:absolute; left:10px; bottom:8px; font:600 11.5px/1 var(--fd); color:#ffb4bc; text-shadow:0 1px 4px #000; }
+  .sti { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); margin-bottom:10px; } .sti .ico { width:52px; height:52px; border-radius:14px; font-size:24px; } .sti .tx { flex:1; min-width:0; } .sti b { display:block; font:700 15px/1.2 var(--fd); } .sti small { display:block; margin-top:3px; font-size:12px; line-height:1.4; color:#a9b4d0; } .sti .get { flex:none; min-width:74px; min-height:44px; border-radius:999px; border:1px solid rgba(57,230,255,0.7); background:rgba(57,230,255,0.14); color:#bff6ff; font:700 13px/1 var(--fd); cursor:pointer; } .sti .get.lk { border-color:rgba(255,255,255,0.18); background:none; color:#7d89a6; cursor:default; } .sti.lk .ico { filter:grayscale(1) brightness(.6); }
   .nt { padding:14px 16px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); margin-bottom:10px; } .nt h3 { font:700 15px/1.2 var(--fd); color:#ffd34d; } .nt p { margin-top:6px; font-size:14px; line-height:1.55; color:#dbe6fb; }
   #call { position:absolute; inset:0; z-index:58; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:calc(var(--sbh) + var(--st) + 36px) calc(24px + var(--sr)) calc(56px + var(--sb)) calc(24px + var(--sl)); background:radial-gradient(ellipse at 50% 30%, rgba(60,10,30,0.88), rgba(4,2,12,0.97)); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); opacity:0; visibility:hidden; transition:opacity .3s, visibility 0s .3s; text-align:center; } #call.on { opacity:1; visibility:visible; transition:opacity .3s; }
   #call .cav { width:96px; height:96px; margin:0 auto; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:42px; color:#fff; background:radial-gradient(circle, #ff4d5e, #3a0010); animation:callPulse 1.5s ease-out infinite; } @keyframes callPulse { 0% { box-shadow:0 0 0 0 rgba(255,77,94,0.6); } 100% { box-shadow:0 0 0 38px rgba(255,77,94,0); } }
@@ -241,6 +242,7 @@
         <button class="appi" data-app="pulse" type="button"><span class="ico ic-pulse">&#9673;</span><span>Pulse</span></button>
         <button class="appi" data-app="settings" type="button"><span class="ico ic-set">&#9881;</span><span>Settings</span></button>
         <button class="appi" data-app="notes" type="button" id="icNotes"><span class="ico ic-notes">&#9998;</span><span>Notes</span></button>
+        <button class="appi" data-app="store" type="button" id="icStore"><span class="ico ic-store">&#9632;</span><span>App Store</span></button>
       </div>
       <div id="dock">
         <button class="appi" data-app="msg" type="button" id="icMsg"><span class="ico ic-msg">&#128172;</span><span>Messages</span></button>
@@ -319,6 +321,16 @@
     <section class="scr app" id="notes" aria-label="Notes">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Notes</h2><div class="sub" id="nSub">0 clues</div></div></div>
       <div class="pad"><div id="noteList"></div></div>
+    </section>
+
+    <section class="scr app" id="store" aria-label="App Store">
+      <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>App Store</h2><div class="sub" id="stSub">Free. Always free.</div></div></div>
+      <div class="pad"><div id="stList"></div><p class="hint2">Nothing here costs money. Some of it costs more.</p></div>
+    </section>
+
+    <section class="scr app" id="appx" aria-label="App">
+      <div class="bar"><button class="back" id="axBack" type="button" aria-label="Back to the App Store">&#8249;</button><div class="grow"><h2 id="axName">App</h2><div class="sub" id="axTag"></div></div></div>
+      <div class="pad"><div id="axBody"></div></div>
     </section>
 
     <section class="scr app" id="share" aria-label="Share">

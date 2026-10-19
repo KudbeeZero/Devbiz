@@ -1089,4 +1089,13 @@ ABY.cleanState = function (raw) {
 // every flag the story can set (a save may only carry these); the rite flags are set by songDone, not by a choice
 ABY.FLAGS = (function () { const f = {}; for (const id in ABY.NODES) for (const c of (ABY.NODES[id].choices || [])) if (c.set) f[c.set] = 1; return Object.keys(f); })();
 
+// the phone's App Store: a fictional shop, nothing is bought; each listing is free, unlocks by endings found, and opens a page of lore
+ABY.STORE = [
+  { id: 'lantern', name: 'Lantern', glyph: '\u2600', c: ['#ffe27a', '#e07a10'], tag: 'Light for dark rooms', need: 0, blurb: 'A torch that remembers where you have been. Tap it twice before you go in.', lore: ['Installed by 4 people in your building.', 'It never asks for a permission. It knows which ones you would grant.', 'Review: "It lit the hall. Then it lit the thing in the hall."'] },
+  { id: 'hush', name: 'Hush', glyph: '\u263E', c: ['#8fa0ff', '#3a2a8a'], tag: 'Silence, on demand', need: 1, blurb: 'Mutes every call, every ring. Not the one that is already inside.', lore: ['Muting keeps the sound out. It does not keep the caller out.', 'Review: "Slept eight hours. Woke with my phone open to a voicemail I did not record."'] },
+  { id: 'echo', name: 'Echo Map', glyph: '\u25CE', c: ['#39e6ff', '#0a5a7a'], tag: 'Draws rooms by sound', need: 2, blurb: 'Listens, then draws. Some rooms on the map are newer than the building.', lore: ['The map has one more door than the floor plan.', 'Review: "Accurate until the third stair. Then it just says COME DOWN."'] },
+  { id: 'ledger', name: 'Ledger of Names', glyph: '\u2020', c: ['#ff8a8a', '#7a1020'], tag: 'Who stayed, who left', need: 3, blurb: 'Lists everyone who held this phone before you. The list is longer than you think.', lore: ['Your name is already on it, in your own handwriting.', 'It is sorted by who answered the last call.'] },
+  { id: 'eye', name: 'The Eye', glyph: '\u25C9', c: ['#ff4d5e', '#3a0008'], tag: 'It is watching you back', need: 5, blurb: 'Not an app. It installed itself. This listing is only here so you can find it.', lore: ['There is no uninstall.', 'It rates you five stars. It rates everyone five stars.'] }
+];
+
 if (typeof module !== 'undefined') module.exports = ABY;

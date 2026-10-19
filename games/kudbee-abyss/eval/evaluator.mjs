@@ -271,12 +271,31 @@ if (THREE_PATH) {
   // the Eye backdrop: an `img: 'eye'` scene fades it in over the world, and leaving the scene fades it out
   const eyeId = await pg.evaluate(() => Object.keys(ABY.NODES || {}).find(k => ABY.NODES[k].img === 'eye'));
   if (eyeId) {
-    await pg.evaluate(id => ABY.debug.goto(id, {}), eyeId); await sleep(2500);
+    await pg.evaluate(id => ABY.debug.goto(id, {}), eyeId); await pg.waitForFunction(() => ABY.Scene.eye > 0.8, null, { timeout: 15000 }).catch(() => {});
     const on = await pg.evaluate(() => ABY.Scene.eye);
-    await pg.evaluate(() => ABY.debug.goto(ABY.START, {})); await sleep(2500);
+    await pg.evaluate(() => ABY.debug.goto(ABY.START, {})); await pg.waitForFunction(() => ABY.Scene.eye < 0.2, null, { timeout: 15000 }).catch(() => {});
     const off = await pg.evaluate(() => ABY.Scene.eye);
     rec('eye-backdrop', on > 0.8 && off < 0.2, 'the Eye fades in on its scene (' + on.toFixed(2) + ') and away after (' + off.toFixed(2) + ')');
   }
+  await ctx.close();
+}
+{
+  // the App Store: free listings, gated by endings found; GET installs (and is remembered), OPEN shows its page
+  ({ ctx, pg } = await open({}, 'store')); await wake(pg);
+  const st = await pg.evaluate(async () => {
+    const G = ABY.game, P = ABY.Phone, out = {};
+    G.found = { song: 1 }; P.show('store');
+    const rows = [...document.querySelectorAll('#stList .sti')]; out.rows = rows.length; out.locked = rows.filter(r => r.classList.contains('lk')).length;
+    out.icon = !!document.querySelector('.appi[data-app="store"]');
+    return out;
+  });
+  const btn = pg.locator('#stList .sti:not(.lk) .get').first();
+  const bb = await btn.boundingBox();
+  await btn.click(); await sleep(300);
+  const after = await pg.evaluate(() => ({ appx: document.getElementById('appx').classList.contains('on'), name: document.getElementById('axName').textContent, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2') || '{}').apps }));
+  await pg.click('#axBack'); await sleep(300);
+  const back = await pg.evaluate(() => ({ store: document.getElementById('store').classList.contains('on'), open: [...document.querySelectorAll('#stList .get')].map(b => b.textContent) }));
+  rec('app-store', st.icon && st.rows >= 4 && st.locked === st.rows - 2 && bb && bb.height >= 43.5 && after.appx && after.name === 'Lantern' && after.saved && after.saved.lantern === 1 && back.store && back.open[0] === 'OPEN', st.rows + ' listings (' + st.locked + ' locked), GET installs "' + after.name + '" and it is saved, back returns to the store, GET button ' + (bb ? bb.height : 0) + 'px');
   await ctx.close();
 }
 const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
@@ -453,7 +472,7 @@ for (const p of PHONES) {
   await pg.click('#unlock'); await sleep(600); await fit('home'); await pg.screenshot({ path: join(OUT, `${p.n}-2home.png`) });
   await pg.click('#icMsg'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await fit('chat'); await pg.screenshot({ path: join(OUT, `${p.n}-3chat.png`) });
   await pick(pg, 'Listen to the stones'); await pick(pg, 'Approach the guardian'); await pg.waitForSelector('#replies.on .chip'); await fit('chat, 3 replies'); await pg.screenshot({ path: join(OUT, `${p.n}-4chat3.png`) });
-  for (const [app, n] of [['gallery', '5gallery'], ['pulse', '6pulse'], ['settings', '7settings'], ['flute', '8flute'], ['notes', '8notes']]) { await pg.evaluate((a) => ABY.Phone.show(a), app); await sleep(900); await fit(app); await pg.screenshot({ path: join(OUT, `${p.n}-${n}.png`) }); }
+  for (const [app, n] of [['gallery', '5gallery'], ['pulse', '6pulse'], ['settings', '7settings'], ['flute', '8flute'], ['notes', '8notes'], ['store', '9store']]) { await pg.evaluate((a) => ABY.Phone.show(a), app); await sleep(900); await fit(app); await pg.screenshot({ path: join(OUT, `${p.n}-${n}.png`) }); }
   await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300); await pick(pg, 'Embrace'); await pick(pg, 'Open the gate'); await memoryShown(pg); await sleep(500); await fit('memory'); await pg.screenshot({ path: join(OUT, `${p.n}-9memory.png`) });
   await pg.click('#shareBtn'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await fit('share'); await pg.screenshot({ path: join(OUT, `${p.n}-10share.png`) });
   rec('phone-fit-' + p.n, checks.length === 0, checks.join(' | ') || 'targets >= 44px, text >= 11.5px, nothing cut off (lock, home, chat, 3 replies, gallery, pulse, settings, flute, memory)');

@@ -120,6 +120,8 @@ export function graphChecks() {
     && c2.node === ABY.START && c3.node === ABY.START && c4.node === ABY.START && c4.back === '' && c5.node === 'blackout' && c5.back === 'spire' && c6.back === '', 'out-of-range, wrong-type and unknown values dropped; a return point only survives on a forced scene');
   const base = ABY.newState(), after = ABY.choose(base, 0);
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
+  const ST = ABY.STORE, sids = ST.map(a => a.id);
+  rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && Number.isInteger(a.need) && a.need >= 0 && a.need <= ABY.ENDING_IDS.length) && ST.some(a => a.need === 0) && ST.some(a => a.need >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock reachable');
   return R;
 }
 
