@@ -15,7 +15,7 @@ export function graphChecks() {
   rec('story-links', dead.length === 0 && N[ABY.START], dead.join(', ') || ids.length + ' nodes, every choice leads somewhere');
 
   // each node is either a choice node, a song node or an ending, and speakers/moods are known
-  const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'];
+  const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'];
   const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3].includes(n.ch); });
   rec('story-nodes-shaped', odd.length === 0, odd.join(', ') || 'speaker, mood, focus, chapter and text on every node');
 

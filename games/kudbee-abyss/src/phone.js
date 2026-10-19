@@ -14,7 +14,7 @@ ABY.Phone = (function () {
   var $ = function (id) { return document.getElementById(id); };
   var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings'], bannerT = 0, badges = { msg: 0, gallery: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0 };
+  var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
 
   // story time -> "3:07" (the clock is part of the story; it never shows the real time)
   P.fmt = function (mins) { var h = Math.floor(mins / 60) % 12 || 12, m = mins % 60; return h + ':' + (m < 10 ? '0' : '') + m; };

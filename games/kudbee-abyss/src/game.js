@@ -135,7 +135,7 @@
   function finale() {
     var id = ABY.endingFor(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false;
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
-    ABY.Audio.sfx(id); buzz(30); ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
+    P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
     var first = !G.found[id]; G.found[id] = 1; G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); }, reduced ? 300 : 2600);
   }
@@ -271,11 +271,11 @@
       if (G.saved) { G.state = G.saved.state; G.node = N[G.state.node]; G.log = G.saved.log; } ABY.Scene.setMood('void'); ABY.Scene.setFocus('queen'); world(); P.show('lock');
       setTimeout(function () { pre.classList.add('done'); }, 250); wake();
     }
-    var img = new Image(), bgi = new Image(), bgi2 = new Image(), tried = 0, got = 0;
-    function both() { if (++got === 3) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null)); }
-    img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both;      // the cities are a bonus: without them the nebula stays
+    var img = new Image(), bgi = new Image(), bgi2 = new Image(), bgi3 = new Image(), tried = 0, got = 0;
+    function both() { if (++got === 4) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null)); }
+    img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both; bgi3.onload = both; bgi3.onerror = both;      // the cities are a bonus: without them the nebula stays
     img.onerror = function () { if (tried++ === 0) img.src = 'assets/character/queen.png'; else ready(false); };
-    img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp';
+    img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp'; bgi3.src = 'assets/world/abyss-stairs.webp';
     setTimeout(function () { ready(false); }, 6000);                    // a slow or blocked 3D library never keeps her waiting
   }
   boot();

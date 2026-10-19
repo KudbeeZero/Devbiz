@@ -7,7 +7,7 @@
  * hands the player the flute (the rhythm game) instead of choices; the result goes
  * in flags.song ('win' | 'fail'). `ending: 'auto'` is decided by endingFor().
  * `focus` says who the camera looks at (queen | guardian | vey | crystal | gate) and
- * `mood` the world around her (void | spire | dusk | gate | dawn | dark).
+ * `mood` the world around her (void | spire | dusk | gate | dawn | dark | throne).
  * ===================================================================== */
 var ABY = (typeof window !== 'undefined') ? (window.ABY = window.ABY || {}) : {};   // (node loads this file too, for eval/graph.mjs)
 
@@ -130,7 +130,7 @@ ABY.NODES = {
     ],
   },
   crown_taken: {
-    ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+    ch: 3, speaker: 'GUARDIAN', mood: 'throne', focus: 'guardian',
     text: 'No... not you too... The crown does not give power, my lady. It only borrows it. And it always comes to collect.',
     choices: [
       { label: 'Wear it anyway', next: 'gate_opens' },
@@ -176,7 +176,7 @@ ABY.ENDINGS = {
     text: 'Heart, courage and trust: the gate does not open. It unfolds. Beyond it stretch a thousand more gates, and every one of them is humming her song.' },
   silence: { name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate',
     text: 'The gate opens, and nothing follows. The Guardian is free, but the hum is gone from the air. She walks on alone, the flute silent at her back.' },
-  crown: { name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'dark',
+  crown: { name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
     text: 'The crown settles on her brow and the whole void bows. It is a very quiet kind of power. Somewhere far away, a flute falls to the floor.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);

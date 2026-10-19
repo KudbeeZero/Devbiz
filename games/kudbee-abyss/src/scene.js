@@ -11,8 +11,8 @@ var ABY = window.ABY = window.ABY || {};
 
 ABY.Scene = (function () {
   var T = window.THREE;
-  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, dark: 0, reduced: false, layout: { land: false, d0: 12 } };
-  var scene, camera, renderer, art, artMat, bg, bgMat, bg2, bg2Mat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
+  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, dark: 0, throne: 0, reduced: false, layout: { land: false, d0: 12 } };
+  var scene, camera, renderer, art, artMat, bg, bgMat, bg2, bg2Mat, bg3, bg3Mat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
   var W = 1, H = 1, Hp = 8, Wp = 6, pointer = { x: 0, y: 0 }, tilt = { x: 0, y: 0 };
   var cam = { x: 0, y: 0, z: 9, lx: 0, ly: 0 }, camT = { x: 0, y: 0, z: 9, lx: 0, ly: 0 };
   var look = { crystal: 0, gate: 0, artA: 1, open: 0 }, lookT = { crystal: 0, gate: 0, artA: 1, open: 0 };
@@ -22,13 +22,14 @@ ABY.Scene = (function () {
     dusk:  { fog: 0x1a0a30, key: 0xff8a5c, rim: 0x7cffb2, shard: 0xff7a5c, tint: [1.00, 0.82, 0.80], rays: 0.06, dens: 0.018 },
     gate:  { fog: 0x120830, key: 0xffd34d, rim: 0xc46bff, shard: 0xffd34d, tint: [0.90, 0.85, 1.00], rays: 0.12, dens: 0.014 },
     dawn:  { fog: 0x24163c, key: 0xffe9b0, rim: 0x7cffb2, shard: 0xffe9b0, tint: [1.00, 1.00, 1.00], rays: 0.14, dens: 0.012 },
+    throne: { fog: 0x0e0006, key: 0xff3a2a, rim: 0xffa83c, shard: 0xff4a1c, tint: [0.78, 0.66, 0.7], rays: 0.1, dens: 0.022 },
     dark:  { fog: 0x070008, key: 0xff3c3c, rim: 0x6a0fcc, shard: 0xb01030, tint: [0.55, 0.50, 0.62], rays: 0.03, dens: 0.026 },
   };
   var GATE = { dawn: [0xffd34d, 0xff9a5c], song: [0x39e6ff, 0xff6ec7], echo: [0xc46bff, 0x7cffb2], silence: [0x8890a8, 0x40485c], crown: [0xff2040, 0x400010] };
   var CHAR = { queen: [0.47, 0.20, 0.60], guardian: [0.17, 0.30, 0.78], vey: [0.80, 0.60, 0.78] };   // art u, v(from the top), how close the camera comes (1 = framing the whole art)
   var tmpC;                                                       // (made in make(): THREE may not have loaded, and the game still runs without the 3D)
 
-  function make(container, img, bgImg, bgImg2) {
+  function make(container, img, bgImg, bgImg2, bgImg3) {
     if (!T) return false;
     tmpC = new T.Color();
     try {
@@ -62,6 +63,11 @@ ABY.Scene = (function () {
       if (bgImg2 && bgImg2.naturalWidth) {
         var bt2 = new T.Texture(bgImg2); bt2.needsUpdate = true; bg2Mat = new T.MeshBasicMaterial({ map: bt2, transparent: true, opacity: 0, depthWrite: false, fog: false });
         bg2 = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg2.naturalHeight / bgImg2.naturalWidth), bg2Mat); bg2.position.set(0, 1, -45.5); scene.add(bg2);
+      }
+      // and the stairway to the eye: the world of the crown (mood 'throne')
+      if (bgImg3 && bgImg3.naturalWidth) {
+        var bt3 = new T.Texture(bgImg3); bt3.needsUpdate = true; bg3Mat = new T.MeshBasicMaterial({ map: bt3, transparent: true, opacity: 0, depthWrite: false, fog: false });
+        bg3 = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg3.naturalHeight / bgImg3.naturalWidth), bg3Mat); bg3.position.set(0, 1, -45); scene.add(bg3);
       }
     }
 
@@ -208,7 +214,9 @@ ABY.Scene = (function () {
     tmpC.setHex(M.fog); scene.fog.color.lerp(tmpC, ease); scene.background.lerp(tmpC, ease); scene.fog.density += (M.dens - scene.fog.density) * ease;
     tmpC.setHex(M.key); keyL.color.lerp(tmpC, ease); tmpC.setHex(M.rim); rimL.color.lerp(tmpC, ease);
     tmpC.setHex(M.shard); shards.material.emissive.lerp(tmpC, ease);
-    if (bgMat) { bgMat.color.r += (M.tint[0] - bgMat.color.r) * ease; bgMat.color.g += (M.tint[1] - bgMat.color.g) * ease; bgMat.color.b += (M.tint[2] - bgMat.color.b) * ease; S.dark += ((S.mood === 'dark' ? 1 : 0) - S.dark) * (1 - Math.pow(0.25, dt)); bgMat.opacity = Math.min(1, 0.55 + 0.45 * (1 - S.dim) + (1 - look.artA) * 0.25) * (1 - S.dark * 0.9);
+    if (bgMat) { bgMat.color.r += (M.tint[0] - bgMat.color.r) * ease; bgMat.color.g += (M.tint[1] - bgMat.color.g) * ease; bgMat.color.b += (M.tint[2] - bgMat.color.b) * ease; var fade = 1 - Math.pow(0.25, dt); S.dark += ((S.mood === 'dark' ? 1 : 0) - S.dark) * fade; S.throne += ((S.mood === 'throne' ? 1 : 0) - S.throne) * fade; var other = Math.max(S.dark, S.throne);
+      bgMat.opacity = Math.min(1, 0.55 + 0.45 * (1 - S.dim) + (1 - look.artA) * 0.25) * (1 - other * 0.9);
+      if (bg3) { bg3Mat.opacity = Math.min(1, S.throne * (0.75 + 0.25 * (1 - S.dim) + (1 - look.artA) * 0.3)); bg3.position.x = bg.position.x; bg3.position.y = bg.position.y; bg3.scale.setScalar(1.02 + Math.sin(t * 0.4) * 0.012 * rm); bg3Mat.color.setScalar(0.85 + 0.15 * Math.sin(t * 1.1)); }
       if (bg2) { bg2Mat.opacity = Math.min(1, S.dark * (0.7 + 0.3 * (1 - S.dim) + (1 - look.artA) * 0.3)); bg2.position.x = bg.position.x; bg2.position.y = bg.position.y; bg2.scale.setScalar(1 + Math.sin(t * 0.55) * 0.012 * rm); bg2Mat.color.setScalar(0.85 + 0.15 * Math.sin(t * 0.9)); } bg.position.x = -camera.position.x * 2.2 + Math.sin(t * 0.02) * 1.2 * rm; bg.position.y = 1 - camera.position.y * 1.2; }
     artMat.color.r += (M.tint[0] - artMat.color.r) * ease; artMat.color.g += (M.tint[1] - artMat.color.g) * ease; artMat.color.b += (M.tint[2] - artMat.color.b) * ease;
     for (var i = 0; i < rays.length; i++) { rays[i].material.color.lerp(keyL.color, ease); rays[i].material.opacity += (M.rays * (0.8 + 0.4 * Math.sin(t * 0.4 + i)) - rays[i].material.opacity) * ease; rays[i].position.x += Math.sin(t * 0.12 + i) * 0.0015 * rm; }
@@ -219,7 +227,7 @@ ABY.Scene = (function () {
     var sway = rm * 0.22, px = pointer.x * 0.35 + tilt.x * 0.5, py = pointer.y * 0.2 + tilt.y * 0.3;
     camera.position.set(cam.x + Math.sin(t * 0.17) * sway + px, cam.y + Math.sin(t * 0.13) * sway * 0.6 + py, cam.z);
     camera.lookAt(cam.lx, cam.ly, 0);
-    S.dim += (S.dimT - S.dim) * ease; artMat.opacity = look.artA * S.dim; art.position.z = (1 - look.artA) * -1.2;
+    S.dim += (S.dimT - S.dim) * ease; artMat.opacity = look.artA * S.dim * (1 - S.throne * 0.5); art.position.z = (1 - look.artA) * -1.2;
     var pulse = 0.5 + 0.5 * Math.sin(t * 1.6); halo.material.opacity = (0.35 + pulse * 0.4) * look.artA * S.dim; halo.scale.setScalar(1 + pulse * 0.06);
 
     crystal.visible = look.crystal > 0.01;
@@ -257,7 +265,7 @@ ABY.Scene = (function () {
     renderer.render(scene, camera); S.frames++;
   };
 
-  S.init = function (container, img, bgImg, bgImg2) { return make(container, img, bgImg, bgImg2); };
+  S.init = function (container, img, bgImg, bgImg2, bgImg3) { return make(container, img, bgImg, bgImg2, bgImg3); };
   S.resize = resize;
   S.drawCalls = function () { return renderer ? renderer.info.render.calls : 0; };
   S.camera = function () { return camera ? { x: camera.position.x, y: camera.position.y, z: camera.position.z } : null; };
