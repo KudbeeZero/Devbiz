@@ -208,7 +208,7 @@ const prev = await pg.evaluate(() => { const c = document.querySelector('#shPrev
 rec('share-screen-card', prev && prev.w === 1200 && prev.h === 630 && prev.colours > 60 && /\/s\/song\/$/.test(prev.link) && /Song Remembered/.test(prev.sub) && prev.native, prev ? 'a ' + prev.w + 'x' + prev.h + ' card painted (' + prev.colours + ' colour buckets), link ' + prev.link + ', native Share... button shown' : 'no preview canvas');
 await pg.screenshot({ path: join(OUT, 'desktop-share.png') });
 await pg.click('#shNative'); await sleep(300); const sh = await pg.evaluate(() => { const d = window.__shared; return d && { url: d.url, text: d.text, file: d.files && d.files[0] && { n: d.files[0].name, t: d.files[0].type, sz: d.files[0].size } }; });
-rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 10/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
+rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 13/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
 await pg.click('#shX'); await pg.click('#shFb'); await pg.click('#shWa'); const op = await pg.evaluate(() => window.__opened), land = encodeURIComponent(SITE + '/games/kudbee-abyss/s/song/');
 rec('share-network-links', op.length === 3 && op[0].startsWith('https://twitter.com/intent/tweet?') && op[0].includes('url=' + land) && op[1].startsWith('https://www.facebook.com/sharer/sharer.php?u=' + land) && op[2].startsWith('https://wa.me/?text=') && op[2].includes(land), 'X, Facebook and WhatsApp all carry the landing-page link');
 await pg.click('#shCopy'); await sleep(200); const cp = await pg.evaluate(() => window.__copied);
@@ -217,7 +217,7 @@ const dl = await Promise.all([pg.waitForEvent('download', { timeout: 5000 }).cat
 rec('share-save-image', dn === 'kudbee-abyss-song.png', 'Save image downloads ' + dn);
 // progress share (from Pulse): the count is personal, the link is the progress page
 await pg.click('#shBack'); await sleep(300); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500); await pg.click('#pShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await pg.click('#shNative'); await sleep(300);
-const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 10 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
+const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 13 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
 await pg.evaluate(() => ABY.Phone.show('home')); await sleep(300);
 // the Gallery: the found ending is a photo, the rest are locked; tapping the photo reopens the memory; Pulse shows the stats; Settings toggles
 await pg.mouse.move(550, 860).catch(() => {}); await pg.evaluate(() => ABY.Phone.show('home')); await sleep(400);
@@ -228,7 +228,7 @@ await pg.click('#tiles .tile.f'); await sleep(300); rec('gallery-opens-memory', 
 await pg.click('#memAct'); await sleep(300);
 await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(900);
 const pl = await pg.evaluate(() => ({ rows: [...document.querySelectorAll('#ringsL .rl .v')].map(v => v.textContent), sub: document.getElementById('pSub').textContent }));
-rec('pulse-rings', pl.rows.length === 4 && /Endings found 1\/10/.test(pl.sub), 'Heart / Resolve / Trust / Dread ' + pl.rows.join(', ') + ' | ' + pl.sub);
+rec('pulse-rings', pl.rows.length === 4 && /Endings found 1\/13/.test(pl.sub), 'Heart / Resolve / Trust / Dread ' + pl.rows.join(', ') + ' | ' + pl.sub);
 await ctx.close();
 
 // the Echo Flute app: practice by touch and by key; fail; the best score is kept
@@ -348,6 +348,22 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await run('reconcile', { flags: { vey_trusted: 1 }, dread: 3, trust: 2, choices: 12 }, 'Open the gate', 'Vey’s Smile', 'betrayal');
   const left = await pg.evaluate(() => Object.keys(ABY.game.found).length);
   rec('gallery-fills', left === 5 || left >= 4, left + ' endings saved in this run (new ones, each a memory in the Gallery)');
+  await ctx.close();
+}
+{ // Day Two: some endings carry on into act two; its true ending only opens for someone who has found others
+  const { ctx, pg } = await open({}, 'day2'); await wake(pg); await openMessages(pg);
+  await at(pg, 'gate_opens', { trust: 3, flags: { lullaby: 1 }, choices: 12 }); const m = await memoryShown(pg);
+  const nx = await pg.evaluate(() => { const b = document.getElementById('memNext'); return { shown: !b.hidden && b.getBoundingClientRect().height >= 40, t: b.textContent }; });
+  rec('day-two-offered', m.name === 'Another Gate' && nx.shown && nx.t === 'Day Two', '"' + m.name + '" offers a ' + nx.t + ' button');
+  await pg.click('#memNext'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const d = await pg.evaluate(() => ({ node: ABY.game.state.node, lull: ABY.game.state.flags.lullaby, bat: ABY.game.state.bat, mem: ABY.game.state.mem, thread: document.getElementById('thread').textContent, open: document.getElementById('memory').classList.contains('on'), chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent) }));
+  rec('day-two-begins', d.node === 'd2_wake' && d.lull === 1 && d.bat >= 47 && !d.open && /Day Two/.test(d.thread) && d.chips.length === 3, 'Day Two opens with her flags kept (battery ' + d.bat + '%): ' + d.chips.join(' / '));
+  await at(pg, 'd2_door', { trust: 3, mem: 4, dread: 0, flags: { knew_name: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c1 = await chips(pg);
+  await at(pg, 'd2_door', { trust: 3, mem: 0, dread: 0, flags: { knew_name: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c0 = await chips(pg);
+  rec('day-two-true-ending-gated', c1.some(c => /open it/.test(c)) && !c0.some(c => /open it/.test(c)) && c0.length >= 1, 'with 4 endings found: ' + c1.length + ' choices incl. the true ending; with none: ' + c0.length + ' (it stays hidden)');
+  await at(pg, 'd2_door', { trust: 3, mem: 4, dread: 0, flags: { knew_name: 1 } }); await tapChip(pg, 'Say their names together, and open it'); const e = await memoryShown(pg);
+  const fin = await pg.evaluate(() => document.getElementById('memNext').hidden);
+  rec('ending-daybreak', e.name === 'Real Morning' && fin, '"' + e.name + '" (a final ending: no Day Two button)'); await pg.screenshot({ path: join(OUT, 'day2-daybreak.png') });
   await ctx.close();
 }
 { // the phone turns: on a desktop it can be laid on its side; on a real phone it turns by itself, mid-chat

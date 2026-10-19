@@ -9,7 +9,7 @@ import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'no
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-const VER = 2;
+const VER = 3;
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..', '..'), GAME = resolve(HERE, '..');
 const { chromium } = createRequire(resolve(ROOT, 'package.json'))('playwright');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png' };
@@ -34,8 +34,8 @@ for (const c of cards) {
   if (!c.slug) { writeFileSync(resolve(ROOT, 'assets', 'og', 'abyss.jpg'), buf); console.log('wrote assets/og/abyss.jpg', Math.round(buf.length / 1024) + 'KB'); continue; }
   writeFileSync(resolve(ROOT, 'assets', 'og', 'abyss', c.slug + '.jpg'), buf);
   const I = c.info, imgURL = `${c.site}/assets/og/abyss/${c.slug}.jpg?v=${VER}`;
-  const title = c.slug === 'progress' ? 'Find all 5 endings — Kudbee Abyss' : `${I.title} — Kudbee Abyss`;
-  const desc = c.slug === 'progress' ? 'A story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute and find all five endings. Free in your browser, built for phones.' : `${cap(I.line1)}. A story told through a haunted phone: text the Queen, play the Song of Recall, find all five endings. Free in your browser, built for phones.`;
+  const title = c.slug === 'progress' ? 'Find all ' + I.found.length + ' endings — Kudbee Abyss' : `${I.title} — Kudbee Abyss`;
+  const desc = c.slug === 'progress' ? 'A story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute and find all ' + I.found.length + ' endings. Free in your browser, built for phones.' : `${cap(I.line1)}. A story told through a haunted phone: text the Queen, play the Song of Recall, find all ${I.found.length} endings. Free in your browser, built for phones.`;
   const alt = `Kudbee Abyss share card: ${I.title}`;
   const html = `<!doctype html>
 <html lang="en">
