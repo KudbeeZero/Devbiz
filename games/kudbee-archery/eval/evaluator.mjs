@@ -1036,6 +1036,55 @@ await G(() => { KAR.Store.data.tour.stars.fill(0); KAR.Store.data.tourLv = 0; KA
   await fc.close();
 }
 
+// --- PHONE FIT: every screen on a small, a mid and a big landscape phone; buttons you can hit, print you can read,
+// a notch kept clear, and menu buttons that act on lift (slide off to cancel) ---
+{
+  const sizes = [['iPhone SE', 667, 375], ['iPhone 14', 844, 390], ['Pro Max', 932, 430]], scr = ['menu', 'levels', 'gear', 'shop', 'quests', 'trophies', 'agent', 'cloud', 'install', 'play', 'paused', 'over'];
+  const bad = [];
+  for (const [nm, w, h] of sizes) {
+    const pc = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    const pp = await pc.newPage(); pp.on('pageerror', e => errors.push(e.message));
+    await pp.addInitScript(() => { window.KAR_API = null; });
+    await pp.goto(URL); await pp.waitForFunction(() => window.KARGame && KAR.UI.buttons.length);
+    await pp.evaluate(() => { const U = KAR.UI, t = U.text; window.__small = []; U.text = function (c, s, x, y, size) { if (s && size * KARGame.cssK < 11) window.__small.push(String(s).slice(0, 24) + '@' + (size * KARGame.cssK).toFixed(1)); return t.apply(this, arguments); }; });
+    for (const s of scr) {
+      await pp.evaluate(s => { const g = KARGame; if (/^(play|paused|over)$/.test(s)) { if (!/^(play|paused)$/.test(g.screen)) { KAR.Store.data.mode = 0; g.startMatch(); } if (s === 'paused') g.setScreen('paused'); if (s === 'over') { const m = g.match; for (let i = 0; i < 15; i++) m.arrows[0].push({ ring: 9, hit: { x: 0.03 * (i % 3 - 1), y: KAR.CFG.FACE_Y } }); m.endScores = [[45], [45], [45], [45], [45]]; m.over = true; g.setScreen('over'); g.overlayT = 9; } } else g.setScreen(s); window.__small = []; }, s);
+      await pp.waitForTimeout(250);
+      const r = await pp.evaluate(() => { const k = KARGame.cssK; return { tiny: KAR.UI.buttons.filter(b => Math.min(b.w, b.h) * k < 32 || (b.fs && b.fs * k < 11)).map(b => b.id), small: [...new Set(window.__small)] }; });
+      if (r.tiny.length || r.small.length) bad.push(`${nm} ${s}: ${r.tiny.concat(r.small).slice(0, 3).join(', ')}`);
+      if (s === 'over') await pp.evaluate(() => KARGame.setScreen('menu'));
+    }
+    await pc.close();
+  }
+  rec('phone-fit', bad.length === 0, bad.length ? bad.slice(0, 3).join(' | ') : `${sizes.length} phones x ${scr.length} screens: every button 32+ CSS px, all print 11+ CSS px`);
+
+  // a notch (iPhone 14 landscape: 47 px each side): scenery runs edge to edge, no button under it
+  const nc = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const np = await nc.newPage(), cdp = await nc.newCDPSession(np); np.on('pageerror', e => errors.push(e.message));
+  await np.addInitScript(() => { window.KAR_API = null; });
+  await np.goto(URL); await np.waitForFunction(() => window.KARGame && KAR.UI.buttons.length);
+  await np.addStyleTag({ content: '#safe { padding: 0 47px 21px 47px !important; }' });
+  await np.evaluate(() => KARGame._fit()); await np.waitForTimeout(200);
+  const edges = async () => np.evaluate(() => { const R = KAR.Render, k = KARGame.cssK, bs = KAR.UI.buttons; return { full: Math.round(KARGame.canvas.getBoundingClientRect().width), l: Math.min(...bs.map(b => (b.x - R.XL) * k)), r: Math.max(...bs.map(b => (b.x + b.w - R.XL) * k)) }; });
+  const e1 = await edges(); await np.evaluate(() => { KAR.Store.data.mode = 0; KARGame.startMatch(); }); await np.waitForTimeout(250); const e2 = await edges();
+  rec('phone-notch', e1.full >= 843 && Math.min(e1.l, e2.l) >= 47 && Math.max(e1.r, e2.r) <= 844 - 47, `canvas ${e1.full}/844 px wide; buttons span ${Math.round(Math.min(e1.l, e2.l))}..${Math.round(Math.max(e1.r, e2.r))} px (notch 47 px each side)`);
+
+  // press and lift: a menu button sinks under the finger and acts on lift; slid off, it does nothing
+  await np.evaluate(() => KARGame.setScreen('menu')); await np.waitForTimeout(200);
+  const at = id => np.evaluate(i => { const b = KAR.UI.buttons.find(b => b.id === i), R = KAR.Render, c = KARGame.canvas.getBoundingClientRect(); return b && { x: c.left + (b.x + b.w / 2 - R.XL) * c.width / R.XW, y: c.top + (b.y + b.h / 2) * c.height / 640 }; }, id);
+  const tp = await at('gear');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...tp, id: 0 }] }); await np.waitForTimeout(80);
+  const held = await np.evaluate(() => ({ scr: KARGame.screen, press: KARGame.press && KARGame.press.id }));
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: tp.x, y: tp.y + 160, id: 0 }] }); await np.waitForTimeout(60);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ x: tp.x, y: tp.y + 160, id: 0 }] }); await np.waitForTimeout(80);
+  const slid = await np.evaluate(() => KARGame.screen);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...tp, id: 0 }] }); await np.waitForTimeout(60);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ ...tp, id: 0 }] }); await np.waitForTimeout(80);
+  const lifted = await np.evaluate(() => KARGame.screen);
+  rec('phone-press', held.scr === 'menu' && held.press === 'gear' && slid === 'menu' && lifted === 'gear', `finger down on GEAR: still ${held.scr}, pressed ${held.press}; slid off and lifted: ${slid}; tapped: ${lifted}`);
+  await nc.close();
+}
+
 await page.setViewportSize({ width: 390, height: 780 });
 rec('mobile-fit', await G(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal scroll at phone width');
 rec('no-errors', errors.length === 0, `${errors.length} page errors${errors.length ? ': ' + errors[0] : ''}`);

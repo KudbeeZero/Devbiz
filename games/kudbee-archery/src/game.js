@@ -49,10 +49,21 @@ KAR.Game = class {
     R.XW = LW; R.XL = -(LW - 960) / 2;
     const cssW = Math.min(vw, vh * LW / 640), cssH = cssW * 640 / LW;
     c.style.width = cssW + 'px'; c.style.height = cssH + 'px';
+    // the notch / Dynamic Island side of a landscape iPhone: scenery runs under it, buttons and scores keep clear (stage units)
+    const sa = this._safe(), gap = (vw - cssW) / 2, k = LW / cssW;
+    R.SL = Math.max(0, sa.l - gap) * k; R.SR = Math.max(0, sa.r - gap) * k; R.SB = Math.max(0, sa.b - (vh - cssH) / 2) * k;
+    this.cssK = cssH / 640;                             // CSS px per stage unit (phone print and tap-target sizes key off it)
     this.res = KAR.Util.clamp(cssH * (window.devicePixelRatio || 1) / 640, 0.6, 2) * this.quality;
     R.res = this.res;                                   // the level map paints its still layers at this resolution
     c.width = Math.round(LW * this.res); c.height = Math.round(640 * this.res);
     if (this.coarse && vh > vw && this.screen === 'play') this.togglePause();      // turned upright mid-range: pause under the 'turn sideways' card
+  }
+
+  _safe() {
+    const el = this._safeEl || (this._safeEl = document.getElementById('safe'));
+    if (!el) return { l: 0, r: 0, b: 0 };
+    const cs = getComputedStyle(el);
+    return { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0 };
   }
 
   _resetShot() {
@@ -197,7 +208,7 @@ KAR.Game = class {
     return '';
   }
 
-  setScreen(s) { this.screen = s; this.overlayT = 0; this.focusPending = true; }
+  setScreen(s) { this.screen = s; this.overlayT = 0; this.focusPending = true; this.press = null; }
 
   // ---- the app: offline + install ---------------------------------------------------
   // sw.js keeps a copy of the game so it opens with no signal. Android Chrome offers an install prompt (kept for the
@@ -231,7 +242,14 @@ KAR.Game = class {
 
   // ---- phone comforts ------------------------------------------------------------
   // a short buzz (Android; iOS Safari has no vibration API, so this quietly does nothing there)
-  buzz(p) { if (this.coarse && KAR.Store.data.haptics && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* ignore */ } }
+  // Android: the vibration motor. iPhone Safari has no vibrate(), but (iOS 18 on) tapping a switch control ticks the
+  // Taptic Engine, so a hidden one (index.html #haptic) is clicked instead: one tick per moment, whatever the pattern
+  buzz(p) {
+    if (!this.coarse || !KAR.Store.data.haptics || !p) return;
+    if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) { /* ignore */ } return; }
+    const h = this._hap || (this._hap = document.getElementById('haptic'));
+    if (h) try { h.click(); this.hapN = (this.hapN || 0) + 1; } catch (e) { /* ignore */ }
+  }
   canFull() { const d = document.documentElement; return this.coarse && !!(d.requestFullscreen || d.webkitRequestFullscreen); }
   isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
   // full screen + landscape lock where the browser allows it (Android Chrome, iPad); must run inside a tap
@@ -324,11 +342,11 @@ KAR.Game = class {
     // which used to throw the draw away - the bow came back but the arrow never left. So: block those
     // gestures at the touch level, keep the draw through a touch pointercancel, and loose when the last
     // finger actually lifts (touchend fires even after the pointer stream was cancelled).
-    c.addEventListener('pointercancel', e => { if (e.pointerType !== 'touch') { this.drawing = false; this.draw = 0; this.holding = false; } });
+    c.addEventListener('pointercancel', e => { if (this.press && e.pointerId === this.press.pid) this.press = null; if (e.pointerType !== 'touch') { this.drawing = false; this.draw = 0; this.holding = false; } });
     const block = e => { if (this.screen === 'play' && e.cancelable) e.preventDefault(); };
     c.addEventListener('touchstart', block, { passive: false });
     c.addEventListener('touchmove', block, { passive: false });
-    const lift = e => { this._firstGesture(); if (e.touches.length === 0) { if (this.breathId !== undefined) this.holding = false; this.breathId = undefined; this.touchId = undefined; this.grab = null; if (this.drawing && !this.cpu) this._loose(); } };
+    const lift = e => { this._firstGesture(); if (this.press && e.touches.length === 0) { const t = e.type === 'touchend' && e.changedTouches && e.changedTouches[0]; if (t) { const p = this._pt(t); this._endPress(p.x, p.y); } else this.press = null; } if (e.touches.length === 0) { if (this.breathId !== undefined) this.holding = false; this.breathId = undefined; this.touchId = undefined; this.grab = null; if (this.drawing && !this.cpu) this._loose(); } };
     window.addEventListener('click', () => this._firstGesture());          // iOS unlocks audio on touchend / click
     window.addEventListener('touchend', lift); window.addEventListener('touchcancel', lift);
     c.addEventListener('contextmenu', e => e.preventDefault());
@@ -350,7 +368,13 @@ KAR.Game = class {
     const p = this._pt(e), i = KAR.UI.hit(p.x, p.y), touch = e.pointerType === 'touch';
     // the level map: taps act on lift, so a sideways swipe (to the next world) never starts the tile under it
     if (this.screen === 'levels') { this.swipe = { x: p.x, y: p.y, i }; e.preventDefault(); return; }
-    if (i >= 0) { e.preventDefault(); this.activate(KAR.UI.buttons[i].id); return; }
+    if (i >= 0) {
+      e.preventDefault();
+      // a finger on a menu button: it sinks under the finger and acts on lift, and sliding off cancels it (as phone apps do).
+      // In the range itself buttons act at once (BREATH must steady you the moment a second finger lands)
+      if (touch && this.screen !== 'play') { this.press = { id: KAR.UI.buttons[i].id, pid: e.pointerId, scr: this.screen }; this.buzz(6); return; }
+      this.activate(KAR.UI.buttons[i].id); return;
+    }
     if (this.screen !== 'play') return;
     if (this.bp === 'flight' && this.flight && this.flight.hero) { this.flight.skip = true; return; }
     if (touch && this.drawing && this.touchId !== undefined && e.pointerId !== this.touchId) { this.holding = true; this.breathId = e.pointerId; return; }
@@ -366,6 +390,8 @@ KAR.Game = class {
     const p = this._pt(e), i = KAR.UI.hit(p.x, p.y), touch = e.pointerType === 'touch';
     if (!touch) { if (i >= 0) this.focusIdx = i; else if (this.screen === 'play') this.focusIdx = -1; }
     this.canvas.style.cursor = i >= 0 ? 'pointer' : (this.screen === 'play' ? 'crosshair' : 'default');
+    if (this.press && e.pointerId === this.press.pid) this.press.off = !(i >= 0 && KAR.UI.buttons[i].id === this.press.id);      // slid off: it pops back up
+    if (this.swipe && Math.hypot(p.x - this.swipe.x, p.y - this.swipe.y) >= 30) this.swipe.moved = true;
     if (this.screen !== 'play') return;
     if (touch) {
       if (e.pointerId !== this.touchId || !this.grab) return;
@@ -374,7 +400,13 @@ KAR.Game = class {
       if (this.human()) this._setAimFromPtr();
     } else if (i < 0 || this.drawing) { this.ptr = p; if (this.human()) this._setAimFromPtr(); }
   }
+  _endPress(x, y) {
+    const pr = this.press; this.press = null;
+    const i = KAR.UI.hit(x, y);
+    if (pr.scr === this.screen && i >= 0 && KAR.UI.buttons[i].id === pr.id) this.activate(pr.id);
+  }
   _onUp(e) {
+    if (this.press && e.pointerId === this.press.pid) { const p = this._pt(e); this._endPress(p.x, p.y); return; }
     if (this.screen === 'levels' && this.swipe) {
       const p = this._pt(e), sw = this.swipe, dx = p.x - sw.x, dy = p.y - sw.y; this.swipe = null;
       if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) this.activate(dx < 0 ? 'wnext' : 'wprev');
@@ -843,6 +875,7 @@ KAR.Game = class {
       else if (this.screen === 'share') U.shareScreen(ctx, this);
     }
     if (this.screen !== 'share') U.achToast(ctx, this);     // (held while the SHARE screen previews its card; it shows after)
+    U.pressFx(ctx, this);
     if (this.focusPending) { this.focusPending = false; if (this.screen !== 'play') { const i = U.buttons.findIndex(b => b.primary && !b.disabled); this.focusIdx = i >= 0 ? i : 0; } }
   }
 

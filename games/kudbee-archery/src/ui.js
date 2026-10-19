@@ -35,6 +35,7 @@ KAR.UI = {
     this.text(ctx, s, x, y, w > maxW ? Math.max(10, Math.floor(size * maxW / w)) : size, color, align || 'center');
   },
   // phones show the 960 x 640 stage at about 0.6 of its size: small print gets bigger there so it stays readable
+  ph(g, n) { return g.coarse ? Math.max(n, 11.5 / (g.cssK || 1)) : n; },          // phone print: never under ~11.5 CSS px
   sz(g, n) { return g.coarse ? Math.round(n < 20 ? n * 1.25 + 1 : n * 1.1) : n; },
 
   bubble(ctx, s, x, y, size, c1, c2, tilt) {
@@ -62,7 +63,8 @@ KAR.UI = {
   button(ctx, g, id, x, y, w, h, label, opts) {
     opts = opts || {};
     const idx = this.buttons.length;
-    this.buttons.push({ id, x, y, w, h, disabled: !!opts.disabled, primary: !!opts.primary });
+    const pd = opts.pad || 0;          // (a taller tap area than the drawn button, where the layout has no room to grow it)
+    this.buttons.push({ id, pd, x: x - pd, y: y - pd, w: w + pd * 2, h: h + pd * 2, disabled: !!opts.disabled, primary: !!opts.primary });
     const focused = g.focusIdx === idx && !opts.disabled;
     const cs = this.COL[opts.disabled ? 'grey' : (opts.color || (opts.primary ? 'green' : 'blue'))];
     ctx.save();
@@ -77,11 +79,20 @@ KAR.UI = {
       let size = opts.small ? 20 : 30;
       ctx.font = '400 ' + size + 'px ' + this.FONT;
       const lw = ctx.measureText(label).width; if (lw > w - 14) { size = Math.max(11, Math.floor(size * (w - 14) / lw)); ctx.font = '400 ' + size + 'px ' + this.FONT; }     // a long label shrinks to fit
+      this.buttons[idx].fs = size;
       ctx.font = '400 ' + size + 'px ' + this.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
       ctx.lineWidth = size * 0.22; ctx.strokeStyle = opts.disabled ? '#555' : this.OUT; ctx.strokeText(label, x + w / 2, y + h / 2 + 2);
       ctx.fillStyle = opts.disabled ? '#d8dde3' : '#ffffff'; ctx.fillText(label, x + w / 2, y + h / 2 + 2);
     }
     ctx.restore();
+  },
+
+  // the button under a finger sinks (darkens) until the finger lifts, and pops back if the finger slides off
+  pressFx(ctx, g) {
+    const sw = g.swipe, id = g.press && !g.press.off ? g.press.id : sw && sw.i >= 0 && !sw.moved && this.buttons[sw.i] ? this.buttons[sw.i].id : null;
+    const b = id && this.buttons.find(b => b.id === id); if (!b) return;
+    const pd = b.pd || 0;
+    ctx.save(); ctx.fillStyle = 'rgba(8,16,34,0.3)'; this.rr(ctx, b.x + pd, b.y + pd, b.w - pd * 2, b.h - pd * 2, b.hud ? (b.w - pd * 2) / 2 : 15); ctx.fill(); ctx.restore();
   },
 
   hit(x, y) {
@@ -148,8 +159,10 @@ KAR.UI = {
     ctx.restore();
   },
 
+  // a round icon button: phones get one at least ~42 CSS px across, whatever the screen size (an iPhone SE draws the stage small)
+  iconR(g) { return g.coarse ? Math.max(27, Math.min(36, 21 / (g.cssK || 1))) : 27; },
   roundIcon(ctx, g, id, cx, cy, kind, big) {
-    const r = big ? 27 : 21, idx = this.buttons.length;
+    const r = big ? this.iconR(g) : 21, idx = this.buttons.length;
     this.buttons.push({ id, x: cx - r, y: cy - r, w: r * 2, h: r * 2, disabled: false, primary: false, hud: true });
     const focused = g.focusIdx === idx;
     ctx.save();
@@ -174,7 +187,7 @@ KAR.UI = {
 
   hud(ctx, g) {
     const U = this, m = g.match, duel = m.mode === 'duel', trick = m.mode === 'trick', R = KAR.Render, gh = m.ghost;
-    const h = duel || gh ? 138 : 104, xl = R.XL, xr = -R.XL;          // on a wide screen the panels ride out to the edges
+    const h = duel || gh ? 138 : 104, xl = R.XL + (R.SL || 0), xr = -R.XL - (R.SR || 0);          // on a wide screen the panels ride out to the edges (clear of a notch)
     ctx.save(); ctx.translate(xl, 0);
     U.rr(ctx, 14, 16, 300, h, 18); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     U.rr(ctx, 12, 12, 300, h, 18); ctx.fillStyle = U.OUT; ctx.fill();
@@ -214,7 +227,7 @@ KAR.UI = {
     else if (!duel) U.fit(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  ' + m.dist + ' M' + (m.mode === 'swing' ? '  \u00b7  SWINGER' : ''), 28, 98, U.sz(g, 17), '#ffe9a8', 272, 'left');
     else U.fit(ctx, 'END ' + Math.min(m.endNo + 1, m.ends) + ' / ' + m.ends + '  \u00b7  SETS ' + m.sets[0] + ' - ' + m.sets[1], 28, 128, U.sz(g, 16), '#ffe9a8', 272, 'left');
     ctx.restore();
-    const big = g.coarse, ri = big ? 62 : 50, ry = big ? 40 : 36, rx = 926 - (big ? 4 : 0) + xr;
+    const big = g.coarse, rr = U.iconR(g), ri = big ? rr * 2 + 8 : 50, ry = big ? rr + 13 : 36, rx = big ? 949 - rr + xr : 926 + xr;
     if (g.screen !== 'over') {          // (behind the results card they would still take clicks and keyboard focus)
       U.roundIcon(ctx, g, 'pause', rx, ry, 'pause', big);
       U.roundIcon(ctx, g, 'mute', rx - ri, ry, g.audio.muted ? 'mute' : 'sound', big);
@@ -222,7 +235,7 @@ KAR.UI = {
     }
     // the tutorial card, top centre while the tip applies (between the score panel and the round buttons)
     if (g.coach && g.screen === 'play' && g.bp === 'ready' && !g.banner && !m.over) {
-      const room = Math.min(480 - (322 + xl), rx - ri * 2 - (big ? 27 : 21) - 10 - 480), cw = Math.min(big ? 640 : 520, room * 2), cx = 480 - cw / 2, ch = big ? 84 : 70;
+      const room = Math.min(480 - (322 + xl), rx - ri * 2 - (big ? rr : 21) - 10 - 480), cw = Math.min(big ? 640 : 520, room * 2), cx = 480 - cw / 2, ch = big ? 84 : 70;
       U.rr(ctx, cx, 14, cw, ch, 16); ctx.fillStyle = U.OUT; ctx.fill();
       const cg = ctx.createLinearGradient(0, 17, 0, 11 + ch); cg.addColorStop(0, '#ffe888'); cg.addColorStop(1, '#ffb82e');
       U.rr(ctx, cx + 3, 17, cw - 6, ch - 6, 13); ctx.fillStyle = cg; ctx.fill();
@@ -314,11 +327,11 @@ KAR.UI = {
       U.bubble(ctx, 'ARCHERY', 480, 178, 92, '#fff27a', '#ff9a1f', -0.03 + Math.sin(t * 1.4) * 0.008);
       U.fit(ctx, 'READ THE WIND  \u00b7  HOLD YOUR BREATH  \u00b7  HIT THE GOLD', 480, 212, U.sz(g, 17), '#ffffff', 900);
     }
-    const xl = KAR.Render.XL, xr = -xl;
+    const Rn = KAR.Render, xl = Rn.XL + (Rn.SL || 0), xr = -Rn.XL - (Rn.SR || 0);
     U.button(ctx, g, 'gear', 16 + xl, 14, C ? 190 : 170, C ? 60 : 48, 'GEAR \u2605' + KAR.starTotal(D), { small: true, color: 'yellow' });
     U.button(ctx, g, 'trophies', 16 + xl + (C ? 202 : 180), 14, C ? 230 : 200, C ? 60 : 48, 'TROPHIES ' + KAR.achCount(D) + '/' + KAR.ACH.length, { small: true, color: 'yellow' });
-    U.button(ctx, g, 'agent', 16 + xl, C ? 84 : 72, C ? 190 : 170, C ? 46 : 44, '    AGENT', { small: true, color: 'blue' });
-    this.robin(ctx, 16 + xl + 30, (C ? 84 : 72) + (C ? 23 : 22), C ? 17 : 16, g.time);
+    U.button(ctx, g, 'agent', 16 + xl, C ? 82 : 72, C ? 190 : 170, C ? 52 : 44, '    AGENT', { small: true, color: 'blue', pad: C ? 4 : 0 });
+    this.robin(ctx, 16 + xl + 30, (C ? 82 : 72) + (C ? 26 : 22), C ? 17 : 16, g.time);
     if (KAR.Cloud.on()) {                  // CLOUD SAVE: a green dot once this phone is synced
       const cx = 16 + xl, cw = C ? 200 : 180, cy = 504;          // bottom left (INSTALL goes under it on phones)
       U.button(ctx, g, 'cloud', cx, cy, cw, C ? 56 : 48, 'CLOUD SAVE', { small: true, color: 'blue' });
@@ -327,7 +340,7 @@ KAR.UI = {
     const trick = D.mode === 2, swing = D.mode === 3, daily = D.mode === 4;
     const tour = D.mode === 5;
     const cup = D.mode === 6;
-    [[5, 'LEVELS'], [6, 'THE CUP'], [0, 'RANGE'], [1, 'DUEL'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 4) * 222 : 22 + k * 132, C ? 126 + Math.floor(k / 4) * 66 : 232, C ? 210 : 124, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i >= 5 || i === 4 ? 'yellow' : i >= 2 ? 'red' : 'blue'), selected: D.mode === i }));
+    [[5, 'LEVELS'], [6, 'THE CUP'], [0, 'RANGE'], [1, 'DUEL'], [2, 'BALLOON POP'], [3, 'SWINGER'], [4, 'DAILY']].forEach(([i, n], k) => U.button(ctx, g, 'mode' + i, C ? 36 + (k % 4) * 222 : 22 + k * 132, C ? 140 + Math.floor(k / 4) * 66 : 232, C ? 210 : 124, C ? 58 : 44, n, { small: true, color: D.mode === i ? 'green' : (i >= 5 || i === 4 ? 'yellow' : i >= 2 ? 'red' : 'blue'), selected: D.mode === i }));
     if (cup) this.cupMenu(ctx, g);
     if (tour) {
       const T = D.tour, tot = T.stars.reduce((a, b) => a + b, 0), L = KAR.TOUR[D.tourLv], W = KAR.VENUES[L.v];
@@ -380,14 +393,14 @@ KAR.UI = {
     else if (!cup) U.button(ctx, g, 'play', 330, 462, 300, 70, daily ? 'PLAY TODAY' : swing ? 'START SWINGER' : trick ? 'START POPPING' : duel ? 'START DUEL' : 'START RANGE', { primary: true });
     if (!tour && !cup) U.fit(ctx, (C ? 'touch & hold to draw  \u00b7  drag anywhere to aim  \u00b7  lift to loose' : 'press & hold to draw  \u00b7  move to aim  \u00b7  release to loose'), 480, 568, U.sz(g, 16), '#ffffff', 900);
     if (!C) U.fit(ctx, D.stats.arrows + ' arrows shot  \u00b7  ' + D.stats.tens + ' tens  \u00b7  ' + D.stats.xs + ' X  \u00b7  best streak ' + D.stats.bestStreak + (D.stats.robins ? '  \u00b7  ' + D.stats.robins + ' robin hood' + (D.stats.robins > 1 ? 's' : '') : ''), 480, 594, U.sz(g, 15), '#ffe9a8', 900);
-    U.roundIcon(ctx, g, 'mute', 926 + xr - (C ? 4 : 0), C ? 40 : 36, g.audio.muted ? 'mute' : 'sound', C);
-    { const qw = C ? 214 : 180, qx = 926 + xr - (C ? 66 : 50) * (g.canFull() ? 3 : 2) - qw / 2 - (C ? 30 : 22), qh = C ? 60 : 48;
+    const ir = U.iconR(g), ri = C ? ir * 2 + 12 : 50, icx = C ? 949 - ir + xr : 926 + xr, icy = C ? ir + 13 : 36;
+    U.roundIcon(ctx, g, 'mute', icx, icy, g.audio.muted ? 'mute' : 'sound', C);
+    { const qr = icx - ri * (g.canFull() ? 2 : 1) - (C ? ir + 14 : 22), qw = Math.min(C ? 214 : 180, qr - 626), qx = qr - qw / 2, qh = C ? 60 : 48;      // (never under the logo)
       U.button(ctx, g, 'quests', qx - qw / 2, 14, qw, qh, 'QUESTS', { small: true, color: 'blue' });
       this.gem(ctx, qx + qw / 2 - 22, 14 + qh / 2, C ? 11 : 9);
       if (KAR.questClaimable(D)) { ctx.beginPath(); ctx.arc(qx + qw / 2 - 6, 20, 9, 0, 6.283); ctx.fillStyle = '#ff3b4f'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = U.OUT; ctx.stroke(); } }
-    const ri = C ? 66 : 50;
-    if (g.canFull()) U.roundIcon(ctx, g, 'full', 926 + xr - ri, 40, g.isFull() ? 'unfull' : 'full', true);
-    U.roundIcon(ctx, g, 'shareGame', 926 + xr - ri * (g.canFull() ? 2 : 1) - (C ? 4 : 0), C ? 40 : 36, 'share', C);
+    if (g.canFull()) U.roundIcon(ctx, g, 'full', icx - ri, C ? icy : 40, g.isFull() ? 'unfull' : 'full', true);
+    U.roundIcon(ctx, g, 'shareGame', icx - ri * (g.canFull() ? 2 : 1), icy, 'share', C);
     // iPhone Safari has no full-screen mode for pages; added to the home screen the game opens full screen
     if (g.canInstall()) U.button(ctx, g, 'install', 16 + xl, 640 - 14 - 56, 170, 56, 'INSTALL', { small: true, color: 'green' });      // (second visit on)
     else if (C && g.ios && !g.standalone && !g.canFull()) U.fit(ctx, 'TIP: SHARE \u2192 ADD TO HOME SCREEN TO PLAY FULL SCREEN', 480, 624, U.sz(g, 16), '#ffffff', 900);
@@ -493,7 +506,7 @@ KAR.UI = {
         U.button(ctx, g, 'g' + k[0] + i, x, y + 26, 130, 88, '', { small: true, color: on ? 'green' : 'blue', selected: on, disabled: !open });
         if (open) this.swatch(ctx, k, it, x + 65, y + 58);
         else { this.lock(ctx, x + 65, y + 52); }
-        U.text(ctx, open ? it.name : '\u2605 ' + it.need, x + 65, y + 104 + (g.coarse ? 2 : 0), U.sz(g, 12), open ? '#ffffff' : '#ffe9a8', 'center');
+        U.fit(ctx, open ? it.name : '\u2605 ' + it.need, x + 65, y + 104 + (g.coarse ? 3 : 0), U.ph(g, U.sz(g, 12)), open ? '#ffffff' : '#ffe9a8', 122);
       });
     });
     U.button(ctx, g, 'shop', 250, 520, 250, 56, 'BOWS & ARROWS', { small: true, color: 'yellow' });
@@ -511,13 +524,15 @@ KAR.UI = {
       if (done) { const idx = U.buttons.length; U.buttons.push({ id: 'tsh' + (pg * per + k), x, y, w: 248, h: 102, disabled: false, primary: false }); if (g.focusIdx === idx) { U.rr(ctx, x - 4, y - 4, 256, 110, 16); ctx.lineWidth = 4; ctx.strokeStyle = '#fff6a8'; ctx.stroke(); } }
       U.rr(ctx, x, y, 248, 102, 14); ctx.fillStyle = U.OUT; ctx.fill();
       U.rr(ctx, x + 3, y + 3, 242, 96, 12); ctx.fillStyle = done ? '#c9802e' : '#2c4f86'; ctx.fill();
-      this.medal(ctx, x + 40, y + 44, done);
-      U.fit(ctx, a.name, x + 76, y + 32, U.sz(g, 16), done ? '#fff6a8' : '#ffffff', done ? 134 : 164, 'left');
+      const C = g.coarse, tx = C ? 62 : 76, tw = 240 - tx;          // (phones: a smaller medal gives the words the room)
+      if (C) { ctx.save(); ctx.translate(x + 32, y + 44); ctx.scale(0.8, 0.8); this.medal(ctx, 0, 0, done); ctx.restore(); } else this.medal(ctx, x + 40, y + 44, done);
+      U.fit(ctx, a.name, x + tx, y + 32, U.sz(g, 16), done ? '#fff6a8' : '#ffffff', done ? tw - 30 : tw, 'left');
       if (done) U.icon(ctx, 'share', x + 226, y + 24, '#fff6a8');
-      U.fit(ctx, a.text, x + 76, y + 54, U.sz(g, 13), '#ffe9a8', 164, 'left');
-      U.rr(ctx, x + 76, y + 66, 100, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
-      if (v > 0) { U.rr(ctx, x + 76, y + 66, Math.max(12, 100 * v / a.n), 12, 6); ctx.fillStyle = done ? '#fff27a' : '#7ac7ff'; ctx.fill(); }
-      U.fit(ctx, done ? 'WON' : v + ' / ' + a.n, x + 236, y + 77, U.sz(g, 12), '#ffffff', 54, 'right');
+      U.fit(ctx, a.text, x + tx, y + (C ? 57 : 54), U.ph(g, U.sz(g, 13)), '#ffe9a8', tw, 'left');
+      const bw = C ? 76 : 100, by = C ? 72 : 66;
+      U.rr(ctx, x + tx, y + by, bw, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      if (v > 0) { U.rr(ctx, x + tx, y + by, Math.max(12, bw * v / a.n), 12, 6); ctx.fillStyle = done ? '#fff27a' : '#7ac7ff'; ctx.fill(); }
+      U.fit(ctx, done ? 'WON' : v + ' / ' + a.n, x + 238, y + (C ? 86 : 77), U.ph(g, U.sz(g, 12)), '#ffffff', C ? 238 - tx - bw - 8 : 54, 'right');
     });
     U.button(ctx, g, 'tprev', 96, 494, 130, 56, '\u2039 PREV', { small: true, color: 'blue', disabled: pg === 0 });
     U.text(ctx, (pg + 1) + ' / ' + pages, 290, 532, U.sz(g, 18), '#ffffff', 'center');
@@ -607,17 +622,17 @@ KAR.UI = {
         const x = 84 + i * 200, own = KAR.kitOwned(D, kind, i), on = D.kit[kind] === i, picked = sel && sel.kind === kind && sel.i === i;
         U.button(ctx, g, pre + i, x, y + 26, 188, 148, '', { small: true, color: on ? 'green' : picked ? 'yellow' : 'blue', selected: on || picked });
         U.fit(ctx, it.name, x + 94, y + 58, U.sz(g, 16), '#ffffff', 172);
-        U.fit(ctx, '+ ' + it.plus, x + 94, y + 88, U.sz(g, 13), '#d6ffb8', 174);
-        if (it.minus) U.fit(ctx, '− ' + it.minus, x + 94, y + 112, U.sz(g, 13), '#ffd0c8', 174);
+        U.fit(ctx, '+ ' + it.plus, x + 94, y + 88, U.ph(g, U.sz(g, 13)), '#d6ffb8', 178);
+        if (it.minus) U.fit(ctx, '− ' + it.minus, x + 94, y + 114, U.ph(g, U.sz(g, 13)), '#ffd0c8', 178);
         if (on) U.text(ctx, 'EQUIPPED', x + 94, y + 158, U.sz(g, 15), '#fff27a', 'center');
-        else if (own) U.fit(ctx, 'OWNED · TAP TO USE', x + 94, y + 158, U.sz(g, 13), '#ffffff', 172);
+        else if (own) U.fit(ctx, 'OWNED · TAP TO USE', x + 94, y + 158, U.ph(g, U.sz(g, 13)), '#ffffff', 176);
         else { this.gem(ctx, x + 78, y + 151, 10); U.text(ctx, '' + it.cost, x + 94, y + 159, U.sz(g, 18), '#bff4ff', 'left'); }
       });
     });
     if (sel) {
       const it = KAR.KIT[sel.kind][sel.i], can = D.gems >= it.cost;
       U.button(ctx, g, 'kbuy', 84, 540, 380, 62, can ? 'BUY ' + it.name : 'NEED ' + (it.cost - D.gems) + ' MORE GEMS', { small: true, color: can ? 'green' : 'blue', disabled: !can, primary: can });
-    } else U.fit(ctx, 'tap kit you own to use it  ·  tap new kit, then BUY', 274, 578, U.sz(g, 15), '#ffe9a8', 380);
+    } else U.fit(ctx, g.coarse ? 'tap yours to use it  ·  new kit: tap, then BUY' : 'tap kit you own to use it  ·  tap new kit, then BUY', 274, 578, U.sz(g, 15), '#ffe9a8', 380);
     U.button(ctx, g, 'shopBack', 650, 540, 226, 62, 'BACK', { primary: !sel || D.gems < KAR.KIT[sel.kind][sel.i].cost });
   },
 
@@ -748,7 +763,7 @@ KAR.UI = {
   // the LEVEL MAP, one world per page (like the Kudbee Birds worlds): six big tiles, the boss last with a crown,
   // < 1/4 > to page (or swipe), BACK to the menu. A tile shows its number, name and stars, or a padlock.
   levels(ctx, g) {
-    const U = this, D = KAR.Store.data, T = D.tour, v = g.worldView | 0, W = KAR.VENUES[v], C = g.coarse, xl = KAR.Render.XL;
+    const U = this, D = KAR.Store.data, T = D.tour, v = g.worldView | 0, W = KAR.VENUES[v], C = g.coarse, xl = KAR.Render.XL + (KAR.Render.SL || 0);
     U.bubble(ctx, 'WORLD ' + (v + 1), 480, 70, 58, '#ffffff', '#cfe9ff', -0.02);
     U.text(ctx, W.name, 480, 108, 28, '#fff27a', 'center');
     const ws = T.stars.slice(v * 6, v * 6 + 6).reduce((a, b) => a + b, 0);
@@ -770,7 +785,7 @@ KAR.UI = {
     U.button(ctx, g, 'wnext', 526, 506, 82, 68, '', { color: v < n - 1 ? 'blue' : 'grey', disabled: v === n - 1 });
     U.icon(ctx, 'next', 567, 540, '#ffffff');
     U.button(ctx, g, 'back', 24 + xl, 510, 180, 64, 'BACK', { small: true, color: 'yellow' });
-    if (C) U.text(ctx, 'or swipe', 480, 604, 17, '#ffffff', 'center');
+    if (C) U.text(ctx, 'or swipe', 480, 606, U.ph(g, 17), '#ffffff', 'center');
   },
   // a little gold crown (the boss levels)
   crown(ctx, x, y, u) {
@@ -822,7 +837,7 @@ KAR.UI = {
     else U.ribbon(ctx, 480, 76, 440, won ? (g.tourDone ? 'TOUR COMPLETE!' : boss ? 'WORLD ' + (m.venue + 1) + ' COMPLETE!' : 'LEVEL CLEARED!') : 'NOT THIS TIME', won ? 'green' : 'red');
     U.fit(ctx, KAR.VENUES[m.venue].name + '  \u00b7  ' + m.def.name, 480, 166, U.sz(g, 19), '#ffe9a8', 450);
     U.text(ctx, String(g.scoreShown()), 480, 236, 80, '#ffffff', 'center');
-    U.fit(ctx, 'OUT OF ' + m.max + '   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 450);
+    U.fit(ctx, 'OUT OF ' + m.max + '  \u00b7  ' + m.xs(0) + ' X  \u00b7  ' + m.dist + ' M', 480, 268, U.sz(g, 19), '#ffe9a8', 260);          // (narrow: clear of the group plot)
     for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < st, T > 0.4 + i * 0.3 ? 1 : 0.01);
     const S = m.def.stars, msg = side !== undefined && g.unlocked ? ['WORLD ' + (m.venue + 2) + ' + ' + KAR.VENUES[side].name + ' OPEN!', '#9be35a', 26] : side !== undefined ? [KAR.VENUES[side].name + ' WORLD OPEN!', '#9be35a', 26]
       : g.unlocked ? (boss ? ['WORLD ' + (m.venue + 2) + ' OPEN: ' + KAR.VENUES[m.venue + 1].name, '#9be35a', 26] : ['LEVEL ' + (m.lv + 2) + ' UNLOCKED!', '#9be35a', 28])
@@ -833,7 +848,7 @@ KAR.UI = {
     if (gh) U.fit(ctx, 'YOU ' + m.total(0) + '   ·   ' + gh.name + ' ' + gh.total + (practice ? '   ·   PRACTICE: LEVEL ' + (m.lv + 1) + ' ISN\'T OPEN FOR YOU YET' : ''), 480, 426, U.sz(g, 15), practice ? '#cfe9ff' : '#ffe9a8', 450);
     else if (g.newGear && g.newGear.length) U.fit(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name + (n.kind === 'bow' ? ' BOW' : n.kind === 'sight' ? ' SIGHT' : ' FLETCHING')).join(' \u00b7 '), 480, 426, U.sz(g, 16), '#9be35a', 450);
     else U.fit(ctx, '\u2605 ' + S[0] + '   \u2605\u2605 ' + S[1] + '   \u2605\u2605\u2605 ' + S[2] + '   \u00b7   ENDS  ' + m.endScores.map(e => e[0]).join(' '), 480, 426, U.sz(g, 15), '#ffffff', 450);
-    this.group(ctx, g, 318, 246, 50); this.starGems(ctx, g, 640, 330);
+    this.group(ctx, g, 300, 246, 46); this.starGems(ctx, g, 640, 330);
     if (won && !practice) { U.roundIcon(ctx, g, 'shareLevel', 690, 140, 'share', g.coarse); U.text(ctx, 'SHARE', 690, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
     // CHALLENGE: send this round as a ghost for a friend to beat (any score on the board)
     if (m.total(0) > 0) { U.roundIcon(ctx, g, 'shareChallenge', 270, 140, 'vs', g.coarse); U.text(ctx, 'CHALLENGE', 270, g.coarse ? 192 : 184, U.sz(g, 14), '#ffffff', 'center'); }
@@ -864,7 +879,7 @@ KAR.UI = {
     const extra = [], stage = g.match.mode === 'stage';
     if (g.coarse) extra.push(['aim', 'AIM SPEED: ' + KAR.CFG.AIM_NAMES[KAR.Store.data.aimSpeed]]);
     if (stage) extra.push(['levels', 'LEVELS']);
-    if (g.coarse && navigator.vibrate) extra.push(['buzz', KAR.Store.data.haptics ? 'VIBRATE: ON' : 'VIBRATE: OFF']);
+    if (g.coarse) extra.push(['buzz', KAR.Store.data.haptics ? 'VIBRATE: ON' : 'VIBRATE: OFF']);
     if (g.canFull()) extra.push(['full', g.isFull() ? 'EXIT FULL SCREEN' : 'FULL SCREEN']);
     if (extra.length) {                       // phones: two columns so every button stays big
       const rows = Math.ceil((4 + extra.length) / 2);
@@ -901,17 +916,17 @@ KAR.UI = {
       U.text(ctx, 'SETS ' + m.sets[0] + ' \u2013 ' + m.sets[1] + '   \u00b7   X ' + m.xs(0) + ' \u2013 ' + m.xs(1), 480, 256, 20, '#ffe9a8', 'center');
     } else if (swing) {
       U.text(ctx, String(g.scoreShown()), 480, 222, 86, '#ffffff', 'center');
-      U.text(ctx, 'OUT OF 120   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M ON THE SWING', 480, 258, 20, '#ffe9a8', 'center');
+      U.fit(ctx, 'OUT OF 120  \u00b7  ' + m.xs(0) + ' X  \u00b7  ' + m.dist + ' M SWING', 480, 258, U.sz(g, 19), '#ffe9a8', 260);
       U.text(ctx, g.newBest && m.total(0) > 0 ? 'NEW BEST!' : 'BEST ' + (KAR.Store.data.swingBest || 0), 480, 340, g.newBest ? 40 : 28, g.newBest ? '#fff27a' : '#ffffff', 'center');
     } else {
       U.text(ctx, String(g.scoreShown()), 480, 222, 86, '#ffffff', 'center');
-      U.text(ctx, 'OUT OF 150   \u00b7   ' + m.xs(0) + ' X   \u00b7   ' + m.dist + ' M', 480, 258, 20, '#ffe9a8', 'center');
+      U.fit(ctx, 'OUT OF 150  \u00b7  ' + m.xs(0) + ' X  \u00b7  ' + m.dist + ' M', 480, 258, U.sz(g, 19), '#ffe9a8', 260);
       for (let i = 0; i < 3; i++) U.star(ctx, 480 + (i - 1) * 78, 330 - (i === 1 ? 14 : 0), i === 1 ? 38 : 30, i < m.stars(), T > 0.4 + i * 0.3 ? 1 : 0.01);
       if (g.newGear && g.newGear.length) U.text(ctx, 'NEW GEAR: ' + g.newGear.map(n => n.name).join(' \u00b7 '), 480, 396, g.unlocked ? 18 : 22, '#9be35a', 'center');
       if (g.unlocked) U.text(ctx, '70 M UNLOCKED!', 480, g.newGear && g.newGear.length ? 376 : 396, 30, '#9be35a', 'center');
       else if (g.newBest) U.text(ctx, 'NEW BEST!', 480, 392, 28, '#fff27a', 'center');
     }
-    if (!duel) { this.group(ctx, g, 318, 236, 50); this.starGems(ctx, g, 640, 330); }
+    if (!duel) { this.group(ctx, g, 300, 236, 46); this.starGems(ctx, g, 640, 330); }
     const ends = m.endScores.map((e, i) => (duel ? e[0] + ':' + e[1] : String(e[0]))).join('   ');
     U.fit(ctx, 'ENDS  ' + ends, 480, 420, U.sz(g, 17), '#ffffff', 450);
     U.button(ctx, g, 'rematch', 270, 450, 270, 56, 'PLAY AGAIN', { primary: true });
@@ -932,7 +947,7 @@ KAR.UI = {
       ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 4.2 * Math.min(1, t * 6), 0, 6.283); ctx.fillStyle = a.ring >= 9 ? '#ffffff' : '#9be35a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = this.OUT; ctx.stroke();
     });
     const off = m.arrows[0].length - hits.length;
-    this.fit(ctx, off ? off + ' OFF THE FACE' : 'YOUR GROUP', cx, cy + rr + 20, this.sz(g, 13), '#ffe9a8', 100);
+    this.fit(ctx, off ? off + ' OFF THE FACE' : 'YOUR GROUP', cx, cy + rr + 20, this.ph(g, this.sz(g, 13)), '#ffe9a8', 128);
   },
   // gems paid for the stars this round earned for the first time (results card)
   starGems(ctx, g, x, y) {
@@ -1016,8 +1031,8 @@ KAR.UI = {
     U.fit(ctx, shown.length ? 'LAST ' + shown.length + ' ARROWS  ·  AVG ' + avg.toFixed(1) : 'PLAY A ROUND, THEN ASK ME', cx, cy + rr + 32, U.sz(g, 16), '#ffe9a8', 250);
     this.robin(ctx, 128, 470, 40, g.time);
     U.text(ctx, A.NAME, 182, 466, 28, '#ffffff', 'left');
-    U.fit(ctx, 'your archery coach', 182, 492, U.sz(g, 14), '#bfe3ff', 130, 'left');
-    U.fit(ctx, 'ask me below \u2192', 182, 516, U.sz(g, 14), '#9be35a', 130, 'left');
+    U.fit(ctx, g.coarse ? 'your coach' : 'your archery coach', 182, 492, U.sz(g, 14), '#bfe3ff', 146, 'left');
+    U.fit(ctx, 'ask me below \u2192', 182, 516, U.sz(g, 14), '#9be35a', 146, 'left');
     // right: what I see + what's next, or the answer to the question you tapped
     const X = 336, W = 532, fs = U.sz(g, 16), lh = g.coarse ? 24 : 21, q = g.agentQ;
     if (q !== null && q !== undefined && A.QS[q]) {
@@ -1033,7 +1048,7 @@ KAR.UI = {
       for (const p of plan.slice(0, 3)) { ctx.beginPath(); ctx.arc(X + 7, y - 6, 5, 0, 6.283); ctx.fillStyle = ic[p.kind] || '#ffffff'; ctx.fill(); U.fit(ctx, p.text, X + 22, y, fs, '#ffffff', W - 22, 'left'); y += lh + 8; }
     }
     // ASK ROBIN: four questions (tap again to go back to the overview)
-    A.QS.forEach((x, i) => U.button(ctx, g, 'aq' + i, X + (i % 2) * 272, 400 + Math.floor(i / 2) * 62, 260, 52, x.q, { small: true, color: q === i ? 'green' : 'blue', selected: q === i }));
+    A.QS.forEach((x, i) => U.button(ctx, g, 'aq' + i, X + (i % 2) * 272, 396 + Math.floor(i / 2) * 64, 260, 56, x.q, { small: true, color: q === i ? 'green' : 'blue', selected: q === i, pad: 3 }));
     U.button(ctx, g, 'agentTips', X, 530, 300, 56, D.agent ? 'TIPS IN GAME: ON' : 'TIPS IN GAME: OFF', { small: true, color: D.agent ? 'green' : 'grey' });
     U.button(ctx, g, 'agentBack', X + 316, 530, 216, 56, 'BACK', { primary: true });
   },

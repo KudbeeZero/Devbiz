@@ -419,14 +419,14 @@ KAR.gearBetween = (s0, s1) => { const out = []; for (const k of ['bow', 'fletch'
 KAR.KIT = {
   bow: [
     { name: 'CLUB RECURVE',   cost: 0,   speed: 1.00, sway: 1.00, tire: 1.0, plus: 'the all-rounder', minus: '' },
-    { name: 'HUNTER LONGBOW', cost: 30,  speed: 0.92, sway: 0.72, tire: 0.8, plus: 'steady, forgiving sight', minus: 'slow arrow: more drift' },
+    { name: 'HUNTER LONGBOW', cost: 30,  speed: 0.92, sway: 0.72, tire: 0.8, plus: 'steady, forgiving', minus: 'slow: more drift' },
     { name: 'OLYMPIC RECURVE', cost: 60, speed: 1.09, sway: 1.25, tire: 1.0, plus: 'fast, flat arrow', minus: 'twitchy sight' },
-    { name: 'COMPOUND',       cost: 100, speed: 1.12, sway: 0.85, tire: 2.2, plus: 'fast and calm', minus: 'tires fast at full draw' },
+    { name: 'COMPOUND',       cost: 100, speed: 1.12, sway: 0.85, tire: 2.2, plus: 'fast and calm', minus: 'tires at full draw' },
   ],
   arrow: [
     { name: 'ALUMINIUM',      cost: 0,   speed: 1.00, wind: 1.00, weak: 1.0, plus: 'the all-rounder', minus: '' },
-    { name: 'CARBON',         cost: 25,  speed: 1.03, wind: 0.82, weak: 1.8, plus: 'cuts the wind', minus: 'short draws drop hard' },
-    { name: 'HEAVY CEDAR',    cost: 40,  speed: 0.90, wind: 0.70, weak: 0.7, plus: 'shrugs off wind & short draws', minus: 'slow: lead movers more' },
+    { name: 'CARBON',         cost: 25,  speed: 1.03, wind: 0.82, weak: 1.8, plus: 'cuts the wind', minus: 'weak short draws' },
+    { name: 'HEAVY CEDAR',    cost: 40,  speed: 0.90, wind: 0.70, weak: 0.7, plus: 'shrugs off wind', minus: 'slow: lead movers' },
     { name: 'X10 PRO',        cost: 80,  speed: 1.06, wind: 0.72, weak: 2.6, plus: 'fast, barely drifts', minus: 'needs a full draw' },
   ],
 };
