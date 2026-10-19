@@ -271,11 +271,11 @@
       if (G.saved) { G.state = G.saved.state; G.node = N[G.state.node]; G.log = G.saved.log; } ABY.Scene.setMood('void'); ABY.Scene.setFocus('queen'); world(); P.show('lock');
       setTimeout(function () { pre.classList.add('done'); }, 250); wake();
     }
-    var img = new Image(), bgi = new Image(), tried = 0, got = 0;
-    function both(gl) { if (++got === 2) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null)); }
-    img.onload = both; bgi.onload = both; bgi.onerror = both;                  // the city is a bonus: without it the nebula stays
+    var img = new Image(), bgi = new Image(), bgi2 = new Image(), tried = 0, got = 0;
+    function both() { if (++got === 3) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null)); }
+    img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both;      // the cities are a bonus: without them the nebula stays
     img.onerror = function () { if (tried++ === 0) img.src = 'assets/character/queen.png'; else ready(false); };
-    img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp';
+    img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp';
     setTimeout(function () { ready(false); }, 6000);                    // a slow or blocked 3D library never keeps her waiting
   }
   boot();
