@@ -803,6 +803,56 @@ ABY.carry = function (s) {
   return Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
 };
 
+// ---- badges and factions (a player's own, kept on their phone) ----
+// A badge is earned at an ending, from what she found so far (`found`: { endingId: 1 }) and the state she ended in. Pure, so the graph test can check it.
+ABY.BADGES = [
+  { id: 'first_light', name: 'First Light', hint: 'Find your first ending.' },
+  { id: 'night_owl', name: 'Night Owl', hint: 'Let the battery die in the dark.' },
+  { id: 'hollowed', name: 'Hollowed Out', hint: 'Let the dread take her.' },
+  { id: 'crowned', name: 'Crowned', hint: 'Wear the crown of shadows.' },
+  { id: 'truth_teller', name: 'Truth-Teller', hint: 'Take his place in the dark.' },
+  { id: 'fearless', name: 'Fearless', hint: 'Reach an ending with dread at 1 or less.' },
+  { id: 'lamplighter', name: 'Lamplighter', hint: 'Reach an ending with the battery above 30%.' },
+  { id: 'name_keeper', name: 'Name-Keeper', hint: 'Learn the Guardian\'s name.' },
+  { id: 'day_two', name: 'Day Two', hint: 'Reach an ending on Day Two.' },
+  { id: 'collector', name: 'Collector', hint: 'Find 5 endings.' },
+  { id: 'real_morning', name: 'Real Morning', hint: 'Open the door on Day Two.' },
+  { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
+];
+ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
+ABY.badgesFor = function (found, s) {
+  const id = ABY.endingOf(s), n = ABY.ENDING_IDS.filter(e => found[e]).length, f = s.flags || {}, out = [];
+  if (n >= 1) out.push('first_light');
+  if (id === 'blackout') out.push('night_owl');
+  if (id === 'hollow') out.push('hollowed');
+  if (id === 'crown') out.push('crowned');
+  if (id === 'mirror') out.push('truth_teller');
+  if (id && s.dread <= 1) out.push('fearless');
+  if (id && s.bat >= 30) out.push('lamplighter');
+  if (id && f.knew_name) out.push('name_keeper');
+  if (id === 'daybreak' || id === 'keeper' || id === 'loop') out.push('day_two');
+  if (n >= 5) out.push('collector');
+  if (id === 'daybreak') out.push('real_morning');
+  if (n >= ABY.ENDING_IDS.length) out.push('completionist');
+  return out;
+};
+// the three factions: where her choices lean. A player pledges to one (their own choice); it ranks up with badges.
+ABY.FACTIONS = {
+  choir: { name: 'The Choir of Recall', color: '#39e6ff', blurb: 'Those who sing the lost back. They trust the song.' },
+  order: { name: 'The Order of the Door', color: '#ffd34d', blurb: 'Those who hold the door so others can sleep. They trust resolve.' },
+  court: { name: 'The Hollow Court', color: '#c46bff', blurb: 'Those the dark has kept. They trust what is watching.' },
+};
+ABY.FACTION_IDS = Object.keys(ABY.FACTIONS);
+ABY.leaning = function (s) {
+  const f = s.flags || {}, sc = {
+    choir: s.heart + (f.lullaby ? 1 : 0) + (f.song === 'win' ? 1 : 0),
+    order: s.resolve + (f.knew_name ? 1 : 0) + (f.ledger ? 1 : 0),
+    court: s.dread + (f.crown ? 2 : 0) + (f.vey_trusted ? 1 : 0),
+  };
+  return ABY.FACTION_IDS.reduce((a, k) => sc[k] > sc[a] ? k : a, 'choir');
+};
+ABY.rank = function (badges) { const n = badges; return n >= 7 ? 'Elder' : n >= 3 ? 'Adept' : 'Initiate'; };
+
 // the song ended: 'win' or 'fail' decides what the Guardian says next
 ABY.songDone = function (s, won) {
   const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() });

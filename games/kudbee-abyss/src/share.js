@@ -98,16 +98,16 @@ ABY.Share = {
 
   // ---- turning a moment into a share: { slug, url, text, info } ----
   // ending: the player's ending id; progress: how far she is
-  moment(kind, id, found) {
-    const ids = ABY.ENDING_IDS, n = ids.filter(i => found[i]).length, F = ids.map(i => !!found[i]);
+  moment(kind, id, found, who) {
+    const fac = who && who.faction && ABY.FACTIONS[who.faction], ids = ABY.ENDING_IDS, n = ids.filter(i => found[i]).length, F = ids.map(i => !!found[i]);
     if (kind === 'ending' && ABY.ENDINGS[id]) {
       const E = ABY.ENDINGS[id], g = this.generic(id);
       return { slug: id, url: this.url(id), text: 'I found “' + E.name + '” in Kudbee Abyss, a horror story told through a haunted phone (' + n + ' of ' + ids.length + ' endings found). Can you find them all?',
         info: Object.assign(g, { kicker: n === ids.length ? 'ALL ' + (this.WORDS[ids.length] || ids.length) + ' ENDINGS FOUND' : 'NEW MEMORY SAVED', found: F, label: n + ' OF ' + ids.length + ' ENDINGS FOUND' }) };
     }
     const g = this.generic('progress');
-    return { slug: 'progress', url: this.url('progress'), text: n ? 'I’ve found ' + n + ' of ' + ids.length + ' endings in Kudbee Abyss, a horror story told through a haunted phone. Can you find them all?' : 'Kudbee Abyss: a horror story told through a haunted phone. Text the Queen, survive the dark, find all ' + ids.length + ' endings.',
-      info: Object.assign(g, { kicker: 'MY JOURNEY SO FAR', title: n + ' OF ' + ids.length + ' ENDINGS', line1: 'FOUND ON A HAUNTED PHONE', found: F, label: n ? n + ' OF ' + ids.length + ' FOUND  ·  CAN YOU BEAT THAT?' : ids.length + ' ENDINGS TO FIND' }) };
+    return { slug: 'progress', url: this.url('progress'), text: n ? 'I’ve found ' + n + ' of ' + ids.length + ' endings' + (fac ? ' and sworn to ' + fac.name + (who.badges ? ' (' + who.badges + ' badges)' : '') : '') + ' in Kudbee Abyss, a horror story told through a haunted phone. Can you find them all?' : 'Kudbee Abyss: a horror story told through a haunted phone. Text the Queen, survive the dark, find all ' + ids.length + ' endings.',
+      info: Object.assign(g, { kicker: 'MY JOURNEY SO FAR', title: n + ' OF ' + ids.length + ' ENDINGS', line1: fac ? 'SWORN TO ' + fac.name.toUpperCase() : 'FOUND ON A HAUNTED PHONE', found: F, label: n ? n + ' OF ' + ids.length + ' FOUND  ·  CAN YOU BEAT THAT?' : ids.length + ' ENDINGS TO FIND' }) };
   },
   // the card as a PNG file for the share sheet (made as the Share screen opens, so the tap that shares it still counts as the user's gesture)
   file(cv) { return new Promise(res => { try { cv.toBlob(b => res(b ? new File([b], 'kudbee-abyss.png', { type: 'image/png' }) : null), 'image/png'); } catch (e) { res(null); } }); },
