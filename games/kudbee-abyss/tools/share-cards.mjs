@@ -64,7 +64,7 @@ for (const c of cards) {
 <meta name="twitter:image" content="${imgURL}">
 <meta name="twitter:image:alt" content="${esc(alt)}">
 <meta name="theme-color" content="#05031a">
-<script>location.replace('../../index.html');</script>
+<script>location.replace('../../index.html?fresh=1');</script>
 <style>
   html, body { margin: 0; min-height: 100%; background: #05031a; color: #fff; font: 600 16px/1.4 system-ui, sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 24px 16px; text-align: center; }
@@ -75,7 +75,7 @@ for (const c of cards) {
 <body>
 <main>
   <img src="/assets/og/abyss/${c.slug}.jpg?v=${VER}" width="1200" height="630" alt="${esc(alt)}">
-  <a class="play" href="../../index.html">Play Kudbee Abyss</a>
+  <a class="play" href="../../index.html?fresh=1">Play Kudbee Abyss</a>
 </main>
 </body>
 </html>
