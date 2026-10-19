@@ -83,6 +83,8 @@ ABY.Audio = (function () {
     if (!A.ctx || A.muted) return; var now = performance.now(); if (now - (last[name] || 0) < 30) return; last[name] = now;
     switch (name) {
       case 'choice': A.tone(392, 0.35, 'sine', 0.09, 784); A.tone(587, 0.5, 'sine', 0.07, 1174, 0.06); A.flute(SCALE[5], 0.9, 0.08, 0.04); break;
+      case 'ding': A.tone(988, 0.16, 'sine', 0.08, 1318); A.tone(1318, 0.28, 'sine', 0.06, 1568, 0.09); break;
+      case 'send': A.tone(520, 0.12, 'sine', 0.07, 880); break;
       case 'tick': A.tone(1400 + Math.random() * 400, 0.025, 'sine', 0.012); break;
       case 'chapter': A.flute(SCALE[2], 1.6, 0.12); A.flute(SCALE[5], 1.8, 0.1, 0.25); A.flute(SCALE[8], 2.2, 0.08, 0.5); break;
       case 'miss': A.tone(150, 0.2, 'sawtooth', 0.05, 90); break;

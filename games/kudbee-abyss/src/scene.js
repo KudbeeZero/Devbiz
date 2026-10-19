@@ -11,7 +11,7 @@ var ABY = window.ABY = window.ABY || {};
 
 ABY.Scene = (function () {
   var T = window.THREE;
-  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', reduced: false, layout: { side: 0.5, bottom: 0 } };
+  var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, reduced: false, layout: { land: false, d0: 12 } };
   var scene, camera, renderer, art, artMat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
   var W = 1, H = 1, Hp = 8, Wp = 6, pointer = { x: 0, y: 0 }, tilt = { x: 0, y: 0 };
   var cam = { x: 0, y: 0, z: 9, lx: 0, ly: 0 }, camT = { x: 0, y: 0, z: 9, lx: 0, ly: 0 };
@@ -140,13 +140,14 @@ ABY.Scene = (function () {
   // where the camera goes for the current focus (the art is kept clear of the dialogue)
   function aim(snap) {
     var land = W / H >= 1.05, d0, fov = camera.fov * Math.PI / 180, tanH = Math.tan(fov / 2);
-    var vh = land ? 1 : 0.62;                                   // the share of the height the art may use (portrait: the dialogue takes the lower part)
+    var wall = S.stage !== 'chat';                              // the phone's lock / home / app screens: the art is a wallpaper, centred
+    var vh = wall ? 0.88 : (land ? 1 : 0.62);                   // the share of the height the art may use (in the chat, portrait: the sheet takes the lower part)
     d0 = (Hp * 1.02) / (2 * tanH * vh);                          // distance at which the whole art fits that share
-    var f = S.focus, ch = CHAR[f], zoom = ch ? ch[2] : 1.0;
+    var f = S.focus, ch = CHAR[f], zoom = ch ? (wall ? Math.max(0.9, ch[2]) : ch[2]) : 1.0;
     var cx = ch ? (ch[0] - 0.5) * Wp : 0, cy = ch ? (0.5 - ch[1]) * Hp : 0;
     var d = d0 * (ch ? zoom : 1.0);
     var vis = 2 * d * tanH, visW = vis * camera.aspect;
-    var shiftX = land ? visW * 0.20 : 0, shiftY = land ? 0 : -vis * 0.17;   // the world moves left (landscape) or up (portrait), out of the dialogue's way
+    var shiftX = (!wall && land) ? visW * 0.20 : 0, shiftY = wall ? -vis * 0.02 : (land ? 0 : -vis * 0.17);   // in the chat the world moves left (landscape) or up (portrait), out of the sheet's way
     camT.lx = cx + shiftX; camT.ly = cy + shiftY; camT.x = camT.lx; camT.y = camT.ly; camT.z = d;
     S.layout = { land: land, d0: d0 };
     if (snap) { for (var k in camT) cam[k] = camT[k]; }
@@ -162,6 +163,7 @@ ABY.Scene = (function () {
     lookT.artA = (f === 'crystal' || f === 'gate') ? 0.18 : 1;
     if (S.ready) { aim(!!snap); if (snap) { look.crystal = lookT.crystal; look.gate = lookT.gate; look.artA = lookT.artA; } }
   };
+  S.setStage = function (stage, dim) { S.stage = stage; S.dimT = dim == null ? 1 : dim; if (S.ready) aim(false); };
   S.setGate = function (ending) {
     var g = GATE[ending] || GATE.dawn; gateMat.uniforms.c1.value.setHex(g[0]); gateMat.uniforms.c2.value.setHex(g[1]);
     S.gateRing.material.color.setHex(g[0]); S.gateRing2.material.color.setHex(g[1]);
@@ -204,8 +206,8 @@ ABY.Scene = (function () {
     var sway = rm * 0.22, px = pointer.x * 0.35 + tilt.x * 0.5, py = pointer.y * 0.2 + tilt.y * 0.3;
     camera.position.set(cam.x + Math.sin(t * 0.17) * sway + px, cam.y + Math.sin(t * 0.13) * sway * 0.6 + py, cam.z);
     camera.lookAt(cam.lx, cam.ly, 0);
-    artMat.opacity = look.artA; art.position.z = (1 - look.artA) * -1.2;
-    var pulse = 0.5 + 0.5 * Math.sin(t * 1.6); halo.material.opacity = (0.35 + pulse * 0.4) * look.artA; halo.scale.setScalar(1 + pulse * 0.06);
+    S.dim += (S.dimT - S.dim) * ease; artMat.opacity = look.artA * S.dim; art.position.z = (1 - look.artA) * -1.2;
+    var pulse = 0.5 + 0.5 * Math.sin(t * 1.6); halo.material.opacity = (0.35 + pulse * 0.4) * look.artA * S.dim; halo.scale.setScalar(1 + pulse * 0.06);
 
     crystal.visible = look.crystal > 0.01;
     if (crystal.visible) {
