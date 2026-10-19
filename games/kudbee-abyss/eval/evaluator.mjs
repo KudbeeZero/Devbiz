@@ -422,7 +422,8 @@ for (const p of PHONES) {
   const fit = async (screen) => {
     const o = await pg.evaluate((visSrc) => {
       const isVis = eval(visSrc), vw = innerWidth, vh = innerHeight, bad = [];
-      for (const el of document.querySelectorAll('button, a.appi, #homebar')) { if (!isVis(el) || el.closest('#banner')) continue;      // (a banner is a passing overlay, not layout) const r = el.getBoundingClientRect();
+      for (const el of document.querySelectorAll('button, a.appi, #homebar')) { if (!isVis(el) || el.closest('#banner')) continue;      // (a banner is a passing overlay, not layout)
+        const r = el.getBoundingClientRect();
         const scrolls = !!el.closest('.pad, #thread');                      // content in a scrolling list may sit below the fold
         if (r.left < -1 || r.right > vw + 1 || (!scrolls && (r.top < -1 || r.bottom > vh + 1))) bad.push('off-screen ' + (el.id || el.className) + ' ' + Math.round(r.left) + '..' + Math.round(r.right) + ' x ' + Math.round(r.bottom));
         if (el.id !== 'homebar' && (r.height < 43.5 || r.width < 43.5)) bad.push('small target ' + (el.id || el.className) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)); }
