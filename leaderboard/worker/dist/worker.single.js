@@ -565,6 +565,8 @@ const GAMES = {
       bestStreak: { label: 'Best streak', dir: 'max', min: 0, max: 1e4, rank: true },
       cups:       { label: 'Cups won',    dir: 'max', min: 0, max: 1e5, rank: true },
     },
+    // every X is also a ten, so a line with more Xs than tens cannot be real
+    rules: [(m) => m.xs !== undefined && m.golds !== undefined && m.xs > m.golds],
   },
   darts: {
     label: 'Kudbee Darts',
@@ -649,7 +651,8 @@ const GAMES = {
     primary: 'boardsSolved',
     metrics: {
       boardsSolved:  { label: 'Boards Solved', dir: 'max', min: 0, max: 1e6, rank: true },
-      bestMoves:     { label: 'Best Moves',    dir: 'min', min: 0, max: 1e6, rank: true },
+      // a board takes at least one move: 0 would sit at #1 for ever, so a value under `floor` is refused, not clamped
+      bestMoves:     { label: 'Best Moves',    dir: 'min', min: 0, max: 1e6, floor: 1, rank: true },
       flawlessStreak:{ label: 'Flawless Streak', dir: 'max', min: 0, max: 1e4, rank: true },
     },
   },
@@ -704,8 +707,11 @@ function sanitizeMetrics(game, metrics) {
     v = Number(v);
     if (!Number.isFinite(v)) continue;
     v = Math.max(spec.min, Math.min(spec.max, Math.round(v)));
+    if (spec.floor !== undefined && v < spec.floor) continue;
     out[key] = v;
   }
+  // a line that contradicts itself is dropped whole (the player's earlier best stays)
+  if (def.rules && def.rules.some((bad) => bad(out))) return {};
   return out;
 }
 

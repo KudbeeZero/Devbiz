@@ -109,7 +109,10 @@
         rows.appendChild(row);
       });
     }).catch(function (err) {
-      rows.innerHTML = '<div class="empty">Couldn\'t load standings (' + (err.message || 'error') + ').</div>';
+      rows.innerHTML = '';
+      var bad = document.createElement('div'); bad.className = 'empty';
+      bad.textContent = 'Couldn\'t load standings (' + (err.message || 'error') + ').';
+      rows.appendChild(bad);
     });
   }
 

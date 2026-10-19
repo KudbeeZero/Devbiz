@@ -279,3 +279,13 @@ test('dir:min metric (puzzles bestMoves) ranks ascending — lower is better', a
   assert.equal(highRec.bestMoves, 8);   // unchanged — MIN(8, 15) = 8
   assert.equal(highRec.boardsSolved, 6); // MAX(5, 6) = 6 — max still applies
 });
+
+// Hardening: lines that cannot be real are refused, not clamped into a winning score.
+test('sanitizeMetrics: impossible lines are refused (puzzles 0 moves, archery X > tens)', () => {
+  assert.equal(sanitizeMetrics('puzzles', { boardsSolved: 3, bestMoves: 0 }).bestMoves, undefined);
+  assert.equal(sanitizeMetrics('puzzles', { boardsSolved: 3, bestMoves: -4 }).bestMoves, undefined);
+  assert.equal(sanitizeMetrics('puzzles', { boardsSolved: 3, bestMoves: 1 }).bestMoves, 1);
+  assert.deepEqual(sanitizeMetrics('archery', { stars: 10, golds: 5, xs: 9 }), {});
+  assert.equal(sanitizeMetrics('archery', { stars: 10, golds: 9, xs: 9 }).xs, 9);
+  assert.equal(sanitizeMetrics('archery', { stars: 999 }).stars, 144);
+});

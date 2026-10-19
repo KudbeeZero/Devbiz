@@ -136,6 +136,26 @@ const phPaused = await phone.evaluate(() => window.VOID.paused);
 await phone.screenshot({ path: OUT + '/04-phone-paused.png' });
 rec('phone-pause', ph.btn === 'pauseBtn' && ph.mid === 'game' && phPaused, 'tap target #' + ph.btn + ' · mid-screen #' + ph.mid + ' · paused=' + phPaused);
 
+// ---- hostile leaderboard name: shown as text, never run as markup ----
+{
+  const ctx = await browser.newContext({ viewport: { width: 960, height: 640 } });
+  const pg = await ctx.newPage();
+  let ran = false;
+  await pg.exposeFunction('__pwn', () => { ran = true; });
+  await pg.addInitScript(() => {
+    Object.defineProperty(window, 'KDLeaderboard', { configurable: false, writable: false, value: { create: () => Promise.resolve({ leaderboard: () => Promise.resolve({ entries: [{ name: '<img src=x onerror=__pwn()>', value: 5 }] }) }) } });
+  });
+  await pg.goto(URL, { waitUntil: 'domcontentloaded' });
+  await pg.waitForFunction(() => !!window.VOID, null, { timeout: 15000 });
+  await pg.evaluate(() => window.VOID.endIntro()); await sleep(600);
+  await pg.evaluate(() => document.getElementById('startBtn').click()); await sleep(600);
+  await pg.evaluate(async () => { const V = window.VOID, s = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 40 && V.state !== 'over'; i++) { V.forceRockAtShip(); await s(250); } });
+  await sleep(1200);
+  const nm = await pg.evaluate(() => { const e = document.querySelector('#board .nm'); return e ? { text: e.textContent, kids: e.children.length } : null; });
+  rec('board-name-is-text', !!nm && nm.kids === 0 && nm.text.indexOf('<img') === 0 && !ran, nm ? 'name rendered as text · injected script ran=' + ran : 'board never drew');
+  await ctx.close();
+}
+
 rec('no-console-errors', consoleErrs.length === 0 && errors.length === 0,
   consoleErrs.concat(errors).slice(0, 2).join(' | ').slice(0, 200) || 'clean (file:// API fetches + fonts ignored)');
 

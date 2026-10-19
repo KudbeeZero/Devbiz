@@ -1639,6 +1639,8 @@
     lbPostCloud(cloudSnap);
     return list.indexOf(entry);
   }
+  // Names come from the leaderboard / localStorage: never trust them as markup.
+  function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function renderBoard(highlight) {
     var board = document.getElementById('board'); if (!board) return;
     var list = loadScores();
@@ -1647,7 +1649,7 @@
     var html = '<h3>Top Pilots</h3><ol>';
     for (var i = 0; i < list.length; i++) {
       html += '<li' + (i === highlight ? ' class="me"' : '') + '><span class="rk">' + (i + 1) +
-        '</span><span class="nm">' + list[i].name + '</span><span class="sc">' + list[i].score.toLocaleString() + '</span></li>';
+        '</span><span class="nm">' + escHtml(list[i].name) + '</span><span class="sc">' + list[i].score.toLocaleString() + '</span></li>';
     }
     board.innerHTML = html + '</ol>';
   }
@@ -3273,7 +3275,7 @@
     for (var i = 0; i < Math.min(10, entries.length); i++) {
       var e = entries[i];
       html += '<li' + (e.you ? ' class="me"' : '') + '><span class="rk">' + (i + 1) +
-        '</span><span class="nm">' + e.name + '</span><span class="sc">' + (e.value || 0).toLocaleString() + '</span></li>';
+        '</span><span class="nm">' + escHtml(e.name) + '</span><span class="sc">' + (e.value || 0).toLocaleString() + '</span></li>';
     }
     board.innerHTML = html + '</ol>';
   }
@@ -3452,7 +3454,7 @@
     var el = document.getElementById('gateStats'); if (!el) return;
     var tops = loadScores(), bits = [];
     if (best > 0) bits.push('Your best <b>' + best.toLocaleString() + '</b>');
-    if (tops.length) bits.push('Top pilot <span class="nm">' + tops[0].name + '</span> <b>' + tops[0].score.toLocaleString() + '</b>');
+    if (tops.length) bits.push('Top pilot <span class="nm">' + escHtml(tops[0].name) + '</span> <b>' + tops[0].score.toLocaleString() + '</b>');
     if (bits.length) { el.innerHTML = '⬡ ' + bits.join(' &nbsp;·&nbsp; '); el.classList.remove('hidden'); }
   })();
   (function idle(now) { if (state === 'gate') { draw(now || 0); requestAnimationFrame(idle); } })();
