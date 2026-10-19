@@ -266,6 +266,19 @@ const at = async (pg, id, patch) => {                  // be at a scene (a test 
   for (let i = 0; i < 12 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(140); }
   await sleep(250);
 };
+if (THREE_PATH) {
+  ({ ctx, pg } = await open({}, 'eye')); await wake(pg);
+  // the Eye backdrop: an `img: 'eye'` scene fades it in over the world, and leaving the scene fades it out
+  const eyeId = await pg.evaluate(() => Object.keys(ABY.NODES || {}).find(k => ABY.NODES[k].img === 'eye'));
+  if (eyeId) {
+    await pg.evaluate(id => ABY.debug.goto(id, {}), eyeId); await sleep(2500);
+    const on = await pg.evaluate(() => ABY.Scene.eye);
+    await pg.evaluate(() => ABY.debug.goto(ABY.START, {})); await sleep(2500);
+    const off = await pg.evaluate(() => ABY.Scene.eye);
+    rec('eye-backdrop', on > 0.8 && off < 0.2, 'the Eye fades in on its scene (' + on.toFixed(2) + ') and away after (' + off.toFixed(2) + ')');
+  }
+  await ctx.close();
+}
 const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
 const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pg.locator('#replies .chip', { hasText: text }).first().click(); await sleep(300); };
 {
