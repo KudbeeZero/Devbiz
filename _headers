@@ -14,6 +14,16 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://docs.opencv.org https://*.clerk.accounts.dev; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' https://*.workers.dev https://api.anthropic.com https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://tessdata.projectnaptha.com https://docs.opencv.org; frame-src 'self' https://cal.com
 
+# Games: a tighter policy than the site-wide one (Report-Only, like it - nothing is blocked).
+# The games load almost nothing from outside: their own files, Google Fonts, three.js from
+# cdnjs (Abyss), the leaderboard Worker, and the Solana RPC (Jackpot). No frames, no plugins,
+# no forms posting elsewhere, no remote images or media. Inline script/style stay allowed
+# (the games are single-file pages) until they move to nonces. Cloudflare merges this with the
+# /* policy above (both report). `npm run games:csp` loads every game under THIS policy and
+# lists anything it would have blocked; enforce only once that is clean on real phones.
+/games/*
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://kudbee-leaderboard.kudbee.workers.dev https://api.mainnet-beta.solana.com
+
 # HTML: always revalidate so content updates ship immediately.
 /
   Cache-Control: public, max-age=0, must-revalidate
