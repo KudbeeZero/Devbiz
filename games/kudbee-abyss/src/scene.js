@@ -187,6 +187,7 @@ ABY.Scene = (function () {
   S.setTorch = function (on) { S.torchT = on ? 1 : 0; };
   S.setDread = function (d) { S.dread = Math.max(0, Math.min(1, d || 0)); };
   S.setGate = function (ending) {
+    if (!S.ready) return;                                           // no 3D (blocked library, no WebGL): the ending still shows over the picture
     var g = GATE[ending] || GATE.dawn; gateMat.uniforms.c1.value.setHex(g[0]); gateMat.uniforms.c2.value.setHex(g[1]);
     S.gateRing.material.color.setHex(g[0]); S.gateRing2.material.color.setHex(g[1]);
   };
