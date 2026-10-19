@@ -12,7 +12,7 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Scene = (function () {
   var T = window.THREE;
   var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, reduced: false, layout: { land: false, d0: 12 } };
-  var scene, camera, renderer, art, artMat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
+  var scene, camera, renderer, art, artMat, bg, bgMat, halo, shards, crystal, gate, gateMat, rays = [], motes, sparks, keyL, rimL, fillL, crystalL;
   var W = 1, H = 1, Hp = 8, Wp = 6, pointer = { x: 0, y: 0 }, tilt = { x: 0, y: 0 };
   var cam = { x: 0, y: 0, z: 9, lx: 0, ly: 0 }, camT = { x: 0, y: 0, z: 9, lx: 0, ly: 0 };
   var look = { crystal: 0, gate: 0, artA: 1, open: 0 }, lookT = { crystal: 0, gate: 0, artA: 1, open: 0 };
@@ -28,7 +28,7 @@ ABY.Scene = (function () {
   var CHAR = { queen: [0.47, 0.20, 0.60], guardian: [0.17, 0.30, 0.78], vey: [0.80, 0.60, 0.78] };   // art u, v(from the top), how close the camera comes (1 = framing the whole art)
   var tmpC;                                                       // (made in make(): THREE may not have loaded, and the game still runs without the 3D)
 
-  function make(container, img) {
+  function make(container, img, bgImg) {
     if (!T) return false;
     tmpC = new T.Color();
     try {
@@ -51,8 +51,14 @@ ABY.Scene = (function () {
     var ng = nx.createRadialGradient(128, 128, 0, 128, 128, 128);
     ng.addColorStop(0, 'rgba(120,40,220,0.55)'); ng.addColorStop(0.5, 'rgba(57,230,255,0.14)'); ng.addColorStop(1, 'rgba(5,3,26,0)');
     nx.fillStyle = ng; nx.fillRect(0, 0, 256, 256);
-    var neb = new T.Mesh(new T.PlaneGeometry(46, 34), new T.MeshBasicMaterial({ map: new T.CanvasTexture(nc), transparent: true, opacity: 0.7, depthWrite: false }));
+    var neb = new T.Mesh(new T.PlaneGeometry(46, 34), new T.MeshBasicMaterial({ map: new T.CanvasTexture(nc), transparent: true, opacity: 0.35, depthWrite: false }));
     neb.position.z = -26; scene.add(neb); S.neb = neb;
+
+    // the world behind her: a far painting of the city of towers (parallax; the mood tints it; a missing image just leaves the nebula)
+    if (bgImg && bgImg.naturalWidth) {
+      var bt = new T.Texture(bgImg); bt.needsUpdate = true; bgMat = new T.MeshBasicMaterial({ map: bt, transparent: true, depthWrite: false, fog: false });
+      bg = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg.naturalHeight / bgImg.naturalWidth), bgMat); bg.position.set(0, 1, -46); scene.add(bg);
+    }
 
     // stars
     var sp = new Float32Array(360 * 3);
@@ -155,7 +161,7 @@ ABY.Scene = (function () {
 
   S.setMood = function (m, snap) {
     S.mood = MOODS[m] ? m : 'void'; S.moodT = MOODS[S.mood];
-    if (snap && S.ready) { var M = S.moodT; scene.fog.color.setHex(M.fog); scene.background.setHex(M.fog); keyL.color.setHex(M.key); rimL.color.setHex(M.rim); shards.material.emissive.setHex(M.shard); artMat.color.setRGB(M.tint[0], M.tint[1], M.tint[2]); scene.fog.density = M.dens; }
+    if (snap && S.ready) { var M = S.moodT; scene.fog.color.setHex(M.fog); scene.background.setHex(M.fog); keyL.color.setHex(M.key); rimL.color.setHex(M.rim); shards.material.emissive.setHex(M.shard); artMat.color.setRGB(M.tint[0], M.tint[1], M.tint[2]); if (bgMat) bgMat.color.setRGB(M.tint[0], M.tint[1], M.tint[2]); scene.fog.density = M.dens; }
   };
   S.setFocus = function (f, snap) {
     S.focus = f;
@@ -197,6 +203,7 @@ ABY.Scene = (function () {
     tmpC.setHex(M.fog); scene.fog.color.lerp(tmpC, ease); scene.background.lerp(tmpC, ease); scene.fog.density += (M.dens - scene.fog.density) * ease;
     tmpC.setHex(M.key); keyL.color.lerp(tmpC, ease); tmpC.setHex(M.rim); rimL.color.lerp(tmpC, ease);
     tmpC.setHex(M.shard); shards.material.emissive.lerp(tmpC, ease);
+    if (bgMat) { bgMat.color.r += (M.tint[0] - bgMat.color.r) * ease; bgMat.color.g += (M.tint[1] - bgMat.color.g) * ease; bgMat.color.b += (M.tint[2] - bgMat.color.b) * ease; bgMat.opacity = Math.min(1, 0.55 + 0.45 * (1 - S.dim) + (1 - look.artA) * 0.25); bg.position.x = -camera.position.x * 2.2 + Math.sin(t * 0.02) * 1.2 * rm; bg.position.y = 1 - camera.position.y * 1.2; }
     artMat.color.r += (M.tint[0] - artMat.color.r) * ease; artMat.color.g += (M.tint[1] - artMat.color.g) * ease; artMat.color.b += (M.tint[2] - artMat.color.b) * ease;
     for (var i = 0; i < rays.length; i++) { rays[i].material.color.lerp(keyL.color, ease); rays[i].material.opacity += (M.rays * (0.8 + 0.4 * Math.sin(t * 0.4 + i)) - rays[i].material.opacity) * ease; rays[i].position.x += Math.sin(t * 0.12 + i) * 0.0015 * rm; }
 
@@ -244,7 +251,7 @@ ABY.Scene = (function () {
     renderer.render(scene, camera); S.frames++;
   };
 
-  S.init = function (container, img) { return make(container, img); };
+  S.init = function (container, img, bgImg) { return make(container, img, bgImg); };
   S.resize = resize;
   S.drawCalls = function () { return renderer ? renderer.info.render.calls : 0; };
   S.camera = function () { return camera ? { x: camera.position.x, y: camera.position.y, z: camera.position.z } : null; };

@@ -38,7 +38,7 @@ ABY.Phone = (function () {
     var prev = P.screen; P.screen = name;
     ['lock', 'home'].concat(APPS).forEach(function (id) { $(id).classList.toggle('on', id === name); });
     var dev = $('device'); dev.classList.remove('s-lock', 's-home', 's-app'); dev.classList.add(name === 'lock' ? 's-lock' : name === 'home' ? 's-home' : 's-app');
-    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' ? 0.55 : name === 'msg' ? 1 : 0.32);
+    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' ? 0.1 : name === 'msg' ? 1 : 0.1);
     if (name === 'msg') P.badge('msg', 0);
     if (P.hooks.onShow) P.hooks.onShow(name, prev);
   };
