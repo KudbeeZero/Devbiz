@@ -12,14 +12,17 @@
 <meta property="og:title" content="Kudbee Abyss — The Guardian's Gate">
 <meta property="og:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all five endings in your Gallery. Art by Desiree Design.">
 <meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html">
-<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg">
+<meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=2">
+<meta property="og:image:secure_url" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=2">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Kudbee Abyss — The Guardian's Gate — gameplay preview">
+<meta property="og:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and five endings to find">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kudbee Abyss — The Guardian's Gate">
 <meta name="twitter:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all five endings in your Gallery. Art by Desiree Design.">
-<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg">
+<meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=2">
+<meta name="twitter:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and five endings to find">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -141,6 +144,10 @@
   .bigbtn { display:block; width:100%; min-height:52px; margin-top:14px; padding:13px 24px; border-radius:999px; border:1px solid rgba(57,230,255,0.7); background:linear-gradient(120deg, rgba(57,230,255,0.22), rgba(196,107,255,0.28)); font:700 16px/1 var(--fd); color:#fff; box-shadow:0 12px 40px -12px rgba(57,230,255,0.6); } .bigbtn.ghost { border-color:rgba(196,107,255,0.45); background:rgba(255,255,255,0.06); box-shadow:none; } .bigbtn:active { transform:scale(0.98); }
   .fl { text-align:center; padding-top:8px; } .fl .big { font:700 56px/1 var(--fd); margin-top:10px; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent; } .fl p { color:#b9c6e0; font-size:14px; line-height:1.55; margin-top:10px; }
 
+  /* share screen */
+  #shPrev { border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.16); box-shadow:0 18px 50px -16px rgba(0,0,0,0.7); background:#0a0420; aspect-ratio:1200/630; } #shPrev canvas { display:block; width:100%; height:100%; }
+  .sgrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; } .sbtn { min-height:50px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); font:700 15px/1.2 var(--fd); } .sbtn.wide { grid-column:1 / -1; } .sbtn:active { transform:scale(0.98); background:rgba(255,255,255,0.14); }
+  @container phone (min-aspect-ratio:21/20) { #share .pad { display:grid; grid-template-columns:1.1fr 1fr; gap:6px 18px; align-content:start; } #shPrev { grid-row:1 / 4; } #shNative { margin-top:0; } .sgrid { margin-top:0; } #share .hint2 { grid-column:2; margin-top:4px; } }
   /* memory (an ending, or a photo opened from the Gallery) */
   #memory { z-index:55; display:flex; align-items:flex-end; justify-content:center; padding:0 calc(10px + var(--sr)) calc(14px + var(--sb)) calc(10px + var(--sl)); background:none; pointer-events:none; } #memory.on { pointer-events:auto; }
   #memory .card { width:100%; max-width:520px; max-height:78%; overflow-y:auto; text-align:center; padding:clamp(18px,3vw,28px); border-radius:26px; background:linear-gradient(160deg, rgba(18,12,42,0.92), rgba(8,5,22,0.95)); border:1px solid rgba(196,107,255,0.35); box-shadow:0 24px 70px rgba(0,0,0,0.6); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
@@ -221,12 +228,12 @@
 
     <section class="scr app" id="gallery" aria-label="Gallery">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Gallery</h2><div class="sub" id="gSub">Memories</div></div></div>
-      <div class="pad"><div class="tiles" id="tiles"></div><p class="hint2">Every ending is saved here as a memory.<br>Find all five.</p></div>
+      <div class="pad"><div class="tiles" id="tiles"></div><button class="bigbtn ghost" id="gShare" type="button">Share my progress</button><p class="hint2">Every ending is saved here as a memory.<br>Find all five.</p></div>
     </section>
 
     <section class="scr app" id="pulse" aria-label="Pulse">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Pulse</h2><div class="sub">What the journey is doing to her</div></div></div>
-      <div class="pad"><svg class="big-r" id="bigR" viewBox="0 0 120 120" aria-hidden="true"></svg><div class="ringsL" id="ringsL"></div><p class="hint2" id="pSub"></p></div>
+      <div class="pad"><svg class="big-r" id="bigR" viewBox="0 0 120 120" aria-hidden="true"></svg><div class="ringsL" id="ringsL"></div><p class="hint2" id="pSub"></p><button class="bigbtn ghost" id="pShare" type="button">Share my progress</button></div>
     </section>
 
     <section class="scr app" id="settings" aria-label="Settings">
@@ -237,6 +244,16 @@
         <button class="row danger" id="setNew" type="button"><b>Begin a new journey<small id="setNewS">Starts the chat over (your Gallery is kept)</small></b></button>
         <button class="row danger" id="setRes" type="button"><b>Erase the Gallery<small id="setResS">Forgets every ending you found</small></b></button>
         <p class="hint2">Kudbee Abyss &middot; art by Desiree Design</p>
+      </div>
+    </section>
+
+    <section class="scr app" id="share" aria-label="Share">
+      <div class="bar"><button class="back" id="shBack" type="button" aria-label="Back">&#8249;</button><div class="grow"><h2>Share</h2><div class="sub" id="shSub">Send it to a friend</div></div></div>
+      <div class="pad">
+        <div id="shPrev"></div>
+        <button class="bigbtn" id="shNative" type="button">Share&hellip;</button>
+        <div class="sgrid"><button class="sbtn" id="shX" type="button">X</button><button class="sbtn" id="shFb" type="button">Facebook</button><button class="sbtn" id="shWa" type="button">WhatsApp</button><button class="sbtn" id="shCopy" type="button">Copy link</button><button class="sbtn wide" id="shSave" type="button">Save image</button></div>
+        <p class="hint2" id="shLink"></p>
       </div>
     </section>
 
@@ -259,6 +276,7 @@
 <script src="src/fx.js"></script>
 <script src="src/scene.js"></script>
 <script src="src/song.js"></script>
+<script src="src/share.js"></script>
 <script src="src/phone.js"></script>
 <script src="src/game.js"></script>
 </body>

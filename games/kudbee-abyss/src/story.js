@@ -168,15 +168,15 @@ ABY.NODES = {
 
 // ---- the endings (decided by endingFor) ----
 ABY.ENDINGS = {
-  dawn: { name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn',
+  dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn',
     text: 'The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered, and another echo called her name.' },
-  song: { name: 'The Song Remembered', hint: 'Play the whole Song of Recall.', mood: 'dawn',
+  song: { tag: 'PLAY THE WHOLE SONG OF RECALL', name: 'The Song Remembered', hint: 'Play the whole Song of Recall.', mood: 'dawn',
     text: 'Every note found its place. The song poured through the gate and the shadows sang back. The Guardian remembered his name, and she remembered hers.' },
-  echo: { name: 'Another Gate', hint: 'Walk the path with heart, courage and trust.', mood: 'gate',
+  echo: { tag: 'HEART, COURAGE AND TRUST', name: 'Another Gate', hint: 'Walk the path with heart, courage and trust.', mood: 'gate',
     text: 'Heart, courage and trust: the gate does not open. It unfolds. Beyond it stretch a thousand more gates, and every one of them is humming her song.' },
-  silence: { name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate',
+  silence: { tag: 'THE GATE OPENS. NOTHING FOLLOWS.', name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate',
     text: 'The gate opens, and nothing follows. The Guardian is free, but the hum is gone from the air. She walks on alone, the flute silent at her back.' },
-  crown: { name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
+  crown: { tag: 'TAKE THE CROWN FOR YOURSELF', name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
     text: 'The crown settles on her brow and the whole void bows. It is a very quiet kind of power. Somewhere far away, a flute falls to the floor.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);

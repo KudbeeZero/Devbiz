@@ -12,7 +12,7 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Phone = (function () {
   var P = { screen: 'lock', hooks: {}, locked: false };
   var $ = function (id) { return document.getElementById(id); };
-  var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings'], bannerT = 0, badges = { msg: 0, gallery: 0 };
+  var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings', 'share'], bannerT = 0, badges = { msg: 0, gallery: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
 

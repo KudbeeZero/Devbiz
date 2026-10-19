@@ -36,6 +36,37 @@ if (m) {
   } else skip('abyss-sri-matches-cdn-file', 'cdnjs unreachable from here');
 }
 
+// ---- link previews: the game page and every landing page carry an image of the right size ----
+const jpegSize = (file) => { const b = readFileSync(file); if (b[0] !== 0xff || b[1] !== 0xd8) return null; for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xff) { i++; continue; } const m = b[i + 1]; if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) }; i += 2 + b.readUInt16BE(i + 2); } return null; };
+const metaOf = (html) => { const o = {}; for (const t of html.match(/<meta\b[^>]*>/gi) || []) { const k = (t.match(/(?:property|name)="([^"]+)"/) || [])[1], v = (t.match(/content="([^"]*)"/) || [])[1]; if (k && v !== undefined) o[k] = v; } o.canonical = (html.match(/<link rel="canonical" href="([^"]+)"/) || [])[1]; o.title = (html.match(/<title>([^<]*)<\/title>/) || [])[1]; return o; };
+const SITE = 'https://devbiz.kudbee.workers.dev';
+const imgFile = (u) => join(ROOT, new globalThis.URL(u).pathname);
+{
+  const problems = [], M = metaOf(html);
+  for (const k of ['og:title', 'og:description', 'og:image', 'og:image:alt', 'twitter:card', 'twitter:image', 'twitter:image:alt']) if (!M[k]) problems.push('missing ' + k);
+  if (M['twitter:card'] !== 'summary_large_image') problems.push('twitter:card is ' + M['twitter:card']);
+  if (M['og:image'] && !M['og:image'].startsWith(SITE + '/') || M['og:image'] !== M['twitter:image']) problems.push('og:image / twitter:image are not the same absolute URL');
+  if (M['og:image'] && !/\?v=\d+$/.test(M['og:image'])) problems.push('og:image has no ?v= (cards are cached for days)');
+  const f = M['og:image'] && imgFile(M['og:image']), sz = f && existsSync(f) ? jpegSize(f) : null;
+  if (!sz || sz.w !== 1200 || sz.h !== 630) problems.push('image is ' + (sz ? sz.w + 'x' + sz.h : 'missing') + ', not 1200x630');
+  if (M['og:image:width'] !== '1200' || M['og:image:height'] !== '630') problems.push('og:image:width/height are not 1200/630');
+  if (M.canonical !== SITE + '/games/kudbee-abyss/index.html') problems.push('canonical is ' + M.canonical);
+  rec('share-meta-game-page', problems.length === 0, problems.join('; ') || 'og + twitter cards: absolute versioned 1200x630 image, alt text, canonical');
+}
+{
+  const problems = [], slugs = ['dawn', 'song', 'echo', 'silence', 'crown', 'progress'];
+  for (const slug of slugs) {
+    const f = join(GAME, 's', slug, 'index.html'); if (!existsSync(f)) { problems.push(slug + ': no landing page'); continue; }
+    const M = metaOf(readFileSync(f, 'utf8')), want = SITE + '/games/kudbee-abyss/s/' + slug + '/';
+    if (M.canonical !== want || M['og:url'] !== want) problems.push(slug + ': canonical/og:url is not ' + want);
+    if (M['twitter:card'] !== 'summary_large_image' || !M['og:title'] || !M['og:description'] || !M['og:image:alt']) problems.push(slug + ': card tags incomplete');
+    const im = M['og:image'], p2 = im && imgFile(im), sz = p2 && existsSync(p2) ? jpegSize(p2) : null;
+    if (!im || !im.startsWith(SITE + '/assets/og/abyss/' + slug + '.jpg?v=') || im !== M['twitter:image']) problems.push(slug + ': og:image is ' + im);
+    else if (!sz || sz.w !== 1200 || sz.h !== 630) problems.push(slug + ': image ' + (sz ? sz.w + 'x' + sz.h : 'missing'));
+  }
+  rec('share-landing-pages', problems.length === 0, problems.join('; ') || slugs.length + ' landing pages (' + slugs.join(', ') + '): canonical + og + twitter cards, each with its own 1200x630 image');
+}
+
 // ---- a static server (a folder URL serves its index.html) ----
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json' };
 const srv = http.createServer((q, r) => {
@@ -162,9 +193,29 @@ const st = await pg.evaluate(() => ({ stats: ABY.Song.stats, flags: ABY.game.sta
 rec('song-win', st.flags.song === 'win' && st.stats.perfect + st.stats.good >= 24 && st.report, st.stats.perfect + ' perfect / ' + st.stats.good + ' good / ' + st.stats.miss + ' missed; the result is texted into the chat');
 await pick(pg, 'Walk into the dawn'); const es = await memoryShown(pg);
 rec('ending-song', es.name === 'The Song Remembered', '"' + es.name + '"');
-await pg.evaluate(() => { window.__shared = null; navigator.share = d => { window.__shared = d; return Promise.resolve(); }; });
-await pg.click('#shareBtn'); await sleep(200); const sh = await pg.evaluate(() => window.__shared);
-rec('share-text', sh && /Song Remembered/.test(sh.text) && sh.url === 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/', sh ? sh.text.slice(0, 60) + '... -> ' + sh.url : 'navigator.share not called');
+// SHARE: the Share screen previews the card; the native sheet gets the picture + the landing-page link; each network button opens the right link
+await pg.evaluate(() => {
+  window.__shared = null; window.__opened = []; window.__copied = null;
+  navigator.canShare = () => true; navigator.share = d => { window.__shared = d; return Promise.resolve(); };
+  window.open = (u) => { window.__opened.push(u); return null; };
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copied = t; return Promise.resolve(); } }, configurable: true });
+});
+await pg.click('#shareBtn'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(500);
+const prev = await pg.evaluate(() => { const c = document.querySelector('#shPrev canvas'), x = c && c.getContext('2d'); if (!c) return null; const seen = new Set(); for (let i = 0; i < 400; i++) { const d = x.getImageData((i * 53) % c.width, (i * 97) % c.height, 1, 1).data; seen.add(d[0] >> 4 << 8 | d[1] >> 4 << 4 | d[2] >> 4); } return { w: c.width, h: c.height, colours: seen.size, link: document.getElementById('shLink').textContent, sub: document.getElementById('shSub').textContent, native: !document.getElementById('shNative').hidden }; });
+rec('share-screen-card', prev && prev.w === 1200 && prev.h === 630 && prev.colours > 60 && /\/s\/song\/$/.test(prev.link) && /Song Remembered/.test(prev.sub) && prev.native, prev ? 'a ' + prev.w + 'x' + prev.h + ' card painted (' + prev.colours + ' colour buckets), link ' + prev.link + ', native Share... button shown' : 'no preview canvas');
+await pg.screenshot({ path: join(OUT, 'desktop-share.png') });
+await pg.click('#shNative'); await sleep(300); const sh = await pg.evaluate(() => { const d = window.__shared; return d && { url: d.url, text: d.text, file: d.files && d.files[0] && { n: d.files[0].name, t: d.files[0].type, sz: d.files[0].size } }; });
+rec('share-native-sheet', sh && sh.url === SITE + '/games/kudbee-abyss/s/song/' && /Song Remembered/.test(sh.text) && /1 of 5/.test(sh.text) && sh.file && sh.file.n === 'kudbee-abyss.png' && sh.file.t === 'image/png' && sh.file.sz > 50000, sh ? 'share sheet got the link ' + sh.url.replace(SITE, '') + ' + ' + (sh.file ? sh.file.n + ' (' + Math.round(sh.file.sz / 1024) + 'KB)' : 'NO IMAGE') : 'navigator.share not called');
+await pg.click('#shX'); await pg.click('#shFb'); await pg.click('#shWa'); const op = await pg.evaluate(() => window.__opened), land = encodeURIComponent(SITE + '/games/kudbee-abyss/s/song/');
+rec('share-network-links', op.length === 3 && op[0].startsWith('https://twitter.com/intent/tweet?') && op[0].includes('url=' + land) && op[1].startsWith('https://www.facebook.com/sharer/sharer.php?u=' + land) && op[2].startsWith('https://wa.me/?text=') && op[2].includes(land), 'X, Facebook and WhatsApp all carry the landing-page link');
+await pg.click('#shCopy'); await sleep(200); const cp = await pg.evaluate(() => window.__copied);
+rec('share-copy-link', cp && /Song Remembered/.test(cp) && cp.endsWith(SITE + '/games/kudbee-abyss/s/song/'), 'the copied text ends with the landing-page link');
+const dl = await Promise.all([pg.waitForEvent('download', { timeout: 5000 }).catch(() => null), pg.click('#shSave')]); const dn = dl[0] && dl[0].suggestedFilename();
+rec('share-save-image', dn === 'kudbee-abyss-song.png', 'Save image downloads ' + dn);
+// progress share (from Pulse): the count is personal, the link is the progress page
+await pg.click('#shBack'); await sleep(300); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500); await pg.click('#pShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await pg.click('#shNative'); await sleep(300);
+const sp = await pg.evaluate(() => window.__shared); rec('share-progress', sp && sp.url === SITE + '/games/kudbee-abyss/s/progress/' && /1 of 5 endings/.test(sp.text) && sp.files && sp.files[0], sp ? sp.text.slice(0, 60) + '... -> ' + sp.url.replace(SITE, '') : 'navigator.share not called');
+await pg.evaluate(() => ABY.Phone.show('home')); await sleep(300);
 // the Gallery: the found ending is a photo, the rest are locked; tapping the photo reopens the memory; Pulse shows the stats; Settings toggles
 await pg.mouse.move(550, 860).catch(() => {}); await pg.evaluate(() => ABY.Phone.show('home')); await sleep(400);
 rec('gallery-badge', await pg.evaluate(() => !!document.querySelector('#icGal .badge')), 'the Gallery shows a badge for the new memory');
@@ -239,6 +290,7 @@ for (const p of PHONES) {
   await pick(pg, 'Listen to the stones'); await pick(pg, 'Approach the guardian'); await pg.waitForSelector('#replies.on .chip'); await fit('chat, 3 replies'); await pg.screenshot({ path: join(OUT, `${p.n}-4chat3.png`) });
   for (const [app, n] of [['gallery', '5gallery'], ['pulse', '6pulse'], ['settings', '7settings'], ['flute', '8flute']]) { await pg.evaluate((a) => ABY.Phone.show(a), app); await sleep(900); await fit(app); await pg.screenshot({ path: join(OUT, `${p.n}-${n}.png`) }); }
   await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300); await pick(pg, 'Embrace'); await pick(pg, 'Open the gate'); await memoryShown(pg); await sleep(500); await fit('memory'); await pg.screenshot({ path: join(OUT, `${p.n}-9memory.png`) });
+  await pg.click('#shareBtn'); await pg.waitForFunction(() => ABY.Phone.screen === 'share'); await sleep(700); await fit('share'); await pg.screenshot({ path: join(OUT, `${p.n}-10share.png`) });
   rec('phone-fit-' + p.n, checks.length === 0, checks.join(' | ') || 'targets >= 44px, text >= 11.5px, nothing cut off (lock, home, chat, 3 replies, gallery, pulse, settings, flute, memory)');
   await ctx.close();
 }

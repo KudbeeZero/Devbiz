@@ -142,15 +142,27 @@
   function memory(id, kicker, ended) {
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? '▶ New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('shareBtn').textContent = 'Share';
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
   }
   function closeMemory() { $('memory').classList.remove('on'); document.body.classList.remove('finale'); }
-  function share() {
-    var E = ABY.ENDINGS[G.shown] || ABY.ENDINGS.dawn, text = 'I found "' + E.name + '" in Kudbee Abyss (' + foundN() + '/' + ABY.ENDING_IDS.length + ' endings). Can you find them all?';
-    var done = function (msg) { var b = $('shareBtn'); b.textContent = msg; clearTimeout(shareTimer); shareTimer = setTimeout(function () { b.textContent = 'Share'; }, 2200); };
-    if (navigator.share) { navigator.share({ title: 'Kudbee Abyss', text: text, url: URL }).catch(function () {}); return; }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + URL).then(function () { done('Link copied'); }, function () { done('Copy failed'); }); else done('Copy failed');
+  // ---- sharing: a card painted from the game's art, a Share screen, a landing page per ending ----
+  function openShare(kind, id, from) {
+    var m = ABY.Share.moment(kind, id, G.found); G.share = m; G.shareFrom = from || 'gallery'; m.cv = ABY.Share.card(m.info);
+    var prev = $('shPrev');
+    var paint = function () { m.cv = ABY.Share.card(m.info); prev.innerHTML = ''; prev.appendChild(m.cv); m.cv.setAttribute('role', 'img'); m.cv.setAttribute('aria-label', 'Share card: ' + m.info.title); ABY.Share.file(m.cv).then(function (f) { m.file = f; }); };   // the file is ready before the tap that shares it
+    paint(); if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('700 30px "Space Grotesk"'), document.fonts.load('500 20px "Space Grotesk"')]).then(function () { if (G.share === m) paint(); }, function () {});   // repaint once the game's font is in
+    $('shSub').textContent = kind === 'ending' ? ABY.ENDINGS[id].name : 'My progress'; $('shLink').textContent = m.url.replace(/^https:\/\//, '');
+    $('shNative').hidden = !navigator.share; ['shCopy'].forEach(function (b) { $(b).textContent = 'Copy link'; });
+    P.show('share');
+  }
+  function shareAct(what) {
+    var m = G.share; if (!m) return; ABY.Audio.sfx('ui');
+    var done = function (id, msg, back) { var b = $(id); b.textContent = msg; clearTimeout(shareTimer); shareTimer = setTimeout(function () { b.textContent = back; }, 2200); };
+    if (what === 'native') { var d = { title: 'Kudbee Abyss', text: m.text, url: m.url }; if (m.file && ABY.Share.canFiles(m.file)) d.files = [m.file]; if (navigator.share) navigator.share(d).catch(function () {}); return; }
+    if (what === 'copy') { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(m.text + ' ' + m.url).then(function () { done('shCopy', 'Link copied', 'Copy link'); }, function () { done('shCopy', 'Copy failed', 'Copy link'); }); else done('shCopy', 'Copy failed', 'Copy link'); return; }
+    if (what === 'save') { var a = document.createElement('a'); a.download = 'kudbee-abyss-' + m.slug + '.png'; a.href = m.cv.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); done('shSave', 'Saved', 'Save image'); return; }
+    window.open(ABY.Share.intent(what, m.text, m.url), '_blank', 'noopener');
   }
 
   // ---- a journey ----
@@ -194,7 +206,7 @@
     P.setNotes(list);
   }
   function renderGallery() {
-    var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0);
+    var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0); $('gShare').hidden = foundN() === 0;
     ABY.ENDING_IDS.forEach(function (id) {
       var E = ABY.ENDINGS[id], f = G.found[id], b = document.createElement('button'); b.type = 'button'; b.className = 'tile ' + (f ? 'f' : 'locked');
       if (f) { b.style.setProperty('--g1', ECOL[id][0] + '88'); b.style.setProperty('--g2', ECOL[id][1]); }
@@ -245,7 +257,10 @@
   document.addEventListener('pointerdown', function () { ABY.Audio.init(); ABY.Audio.pad(G.node ? G.node.mood : 'void'); }, { once: true });
   $('thread').addEventListener('click', skip);
   $('fPlay').addEventListener('click', function () { startSong(true); });
-  $('shareBtn').addEventListener('click', share);
+  $('shareBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('ending', G.shown, 'gallery'); });
+  $('shNative').addEventListener('click', function () { shareAct('native'); }); $('shX').addEventListener('click', function () { shareAct('x'); }); $('shFb').addEventListener('click', function () { shareAct('fb'); }); $('shWa').addEventListener('click', function () { shareAct('wa'); }); $('shCopy').addEventListener('click', function () { shareAct('copy'); }); $('shSave').addEventListener('click', function () { shareAct('save'); });
+  $('shBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show(G.shareFrom || 'home'); });
+  $('pShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'pulse'); }); $('gShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'gallery'); });
   $('memAct').addEventListener('click', function () { ABY.Audio.sfx('ui'); if ($('memAct').getAttribute('data-ended') === '1') { closeMemory(); startRun(); } else closeMemory(); });
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
@@ -275,6 +290,7 @@
     function both() { if (++got === 4) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null)); }
     img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both; bgi3.onload = both; bgi3.onerror = both;      // the cities are a bonus: without them the nebula stays
     img.onerror = function () { if (tried++ === 0) img.src = 'assets/character/queen.png'; else ready(false); };
+    ABY.Art = { queen: img, city: bgi, corrupt: bgi2, stairs: bgi3 };                       // the share cards are painted from these
     img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp'; bgi3.src = 'assets/world/abyss-stairs.webp';
     setTimeout(function () { ready(false); }, 6000);                    // a slow or blocked 3D library never keeps her waiting
   }
