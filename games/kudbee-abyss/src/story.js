@@ -26,6 +26,8 @@ ABY.CHAPTERS = [
   { n: 3, label: "The Guardian's Gate" },
   { n: 4, label: 'The Descent' },
   { n: 5, label: 'The Eye' },
+  { n: 6, label: 'Day Two' },
+  { n: 7, label: 'The Door' },
 ];
 
 ABY.SPEAKERS = {
@@ -51,6 +53,8 @@ ABY.NOTES = {
   vey_photo: { title: 'Photo: Vey', text: 'The Queen, the pillar, and behind her, close enough to touch her hair: Vey, standing on two legs, with far too many hands.' },
   future_call: { title: 'Call from your own number', text: '"Don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him."' },
   voicemail: { title: 'Voicemail (0:30)', text: 'You did not play it. It played itself. "...she locked him in so he\'d never remember what he held. Count the steps. Do not count the steps."' },
+  photo_you: { title: 'Photo: you', text: 'You, from behind, holding this phone. 3:07. A hand on your shoulder that is not in the room. The photo keeps updating.' },
+  captain_name: { title: 'The signature', text: '"Corvin Ash, captain, who held the door." The Guardian\'s name, on the last page, in his own neat hand.' },
   eye: { title: 'What the Eye wants', text: '"I don\'t want your name. I want to be remembered too. Nobody ever sings to me."' },
 };
 
@@ -488,6 +492,157 @@ ABY.NODES = {
     ],
   },
 
+  // ======================= act two: day two (after the gate opens) =======================
+  d2_wake: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen',
+    text: 'Day Two. The gate is open and nothing came through it, and the phone is still warm in your hand. The clock says 3:07. It said 3:07 yesterday. A new name sits at the top of your messages: YOU.',
+    choices: [
+      { label: 'Open the thread from YOU', next: 'd2_you', add: { dread: 1 } },
+      { label: 'Message the Queen', next: 'd2_queen' },
+      { label: 'Look at the new photo in your gallery', next: 'd2_photo' },
+    ],
+  },
+  d2_queen: {
+    ch: 6, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+    text: 'Is that you? I woke and the gate was open and I couldn\'t remember closing it. Vey says there is a way out. Vey says it a lot. How long have I been asleep?',
+    choices: [
+      { label: 'Believe her', next: 'd2_vey', add: { trust: 1 } },
+      { label: 'Ask what she did with the time', next: 'd2_time', add: { dread: 1 } },
+      { label: 'Tell her what the ledger said', next: 'd2_ledger_back', req: { flag: 'ledger' } },
+    ],
+  },
+  d2_ledger_back: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'guardian', note: 'captain_name',
+    text: 'The torn last page is on your screen now, as if the phone had been holding it for you. Under the warm edge, a signature: "Corvin Ash, captain, who held the door." You say the name out loud, and somewhere below, the dark leans in to listen.',
+    choices: [
+      { label: 'Call down to the Guardian', next: 'd2_captain', set: 'knew_name', add: { resolve: 1 } },
+    ],
+  },
+  d2_time: {
+    ch: 6, speaker: 'QUEEN', mood: 'dark', focus: 'queen', scare: 'glitch', call: { from: 'The Queen', sub: 'she is calling from 3:07' },
+    text: 'I stopped the clocks. I think I stopped them. I asked the captain to hold the door for one night. It has been one night for such a very long time. Please, say something kind. I can feel the minutes standing behind me.',
+    choices: [
+      { label: 'Answer: tell her the truth', next: 'd2_captain', add: { heart: 1, dread: 1 } },
+      { label: 'Decline the call', next: 'd2_stairs2', add: { dread: 1 } },
+    ],
+  },
+  d2_photo: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true, scare: 'eye', img: 'corrupt', note: 'photo_you',
+    text: 'A photo you never took: you, from behind, holding this phone, in this room. The timestamp reads 3:07. The timestamp keeps reading 3:07. In the corner of the frame, someone has put a hand on your shoulder.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd2_photo', light: 1, req: { noLight: 1 } },
+      { label: 'Turn around', next: 'd2_turn' },
+      { label: 'Put the phone down and open YOU', next: 'd2_you', add: { dread: 1 } },
+    ],
+  },
+  d2_turn: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'Nothing is there. The phone buzzes in your hand. The photo has updated: now you are facing the camera, and you are smiling, and you are not.',
+    choices: [
+      { label: 'Open the thread from YOU', next: 'd2_you', add: { dread: 1 } },
+    ],
+  },
+  d2_you: {
+    ch: 6, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'this is your number. i am what you left on the other side of the gate. you opened it with trust or with a song or with nothing at all and it does not matter which. i only needed it open.',
+    choices: [
+      { label: 'What do you want?', next: 'd2_want' },
+      { label: 'Play it a lullaby', next: 'd2_lull', req: { flag: 'lullaby' } },
+      { label: 'Turn the phone off', next: 'end_loop' },
+    ],
+  },
+  d2_want: {
+    ch: 6, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'morning. i have never seen one. she locked time behind the gate so she would never have to feel it pass. i am what time looks like when nobody lets it end. take me to the bottom of the stairs. i will show you the door.',
+    choices: [
+      { label: 'Walk down the stairs', next: 'd2_stairs2' },
+      { label: 'That is a lie', next: 'd2_vey', set: 'doubt2', add: { resolve: 1 } },
+    ],
+  },
+  d2_lull: {
+    ch: 6, speaker: 'EYE', mood: 'dawn', focus: 'queen',
+    text: 'you sang to me. nobody ever sings to me. i will not be a door for you tonight. i will be a light. carry me down and i will keep the dark from stepping on your heels.',
+    choices: [
+      { label: 'Carry it down', next: 'd2_stairs2', set: 'ally', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  d2_vey: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
+    text: 'I have the Queen\'s voice, you know. She won\'t need it where she is going. Give me the phone and I will keep it warm. I keep everything warm. You can trust me. You always did.',
+    choices: [
+      { label: 'Give Vey the phone', next: 'end_loop' },
+      { label: 'Refuse', next: 'd2_stairs2', set: 'refused_vey', add: { resolve: 1, dread: 1 } },
+      { label: 'Say: I remember what you did', next: 'd2_vey_called', req: { min: { mem: 3 } } },
+    ],
+  },
+  d2_vey_called: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'jump',
+    text: 'You... remember? Nobody remembers. That is the whole kindness of the place. (It steps back, and for one second it is standing on two legs, with far too many hands, and all of them are covering its face.)',
+    choices: [
+      { label: 'Walk past it', next: 'd2_stairs2', set: 'vey_known', add: { resolve: 2, dread: 1 } },
+    ],
+  },
+  d2_captain: {
+    ch: 6, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+    text: 'My lady asked me to hold the door. I held it. I held it so long I forgot my own name. If you know it, say it now, and I can put the door down. If you guess, I will believe you. That is the danger of me.',
+    choices: [
+      { label: 'Say: Corvin Ash', next: 'd2_name', req: { flag: 'knew_name' } },
+      { label: 'Say: Aldric', next: 'd2_wrongname' },
+      { label: 'Say: I don\'t know it', next: 'd2_vey', add: { dread: 1 } },
+    ],
+  },
+  d2_wrongname: {
+    ch: 6, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian', scare: 'glitch',
+    text: 'Aldric. Yes. Yes, that is who I am. (The shadow on him tightens like a hand. It is a very good lie. It is not his.)',
+    choices: [
+      { label: 'Back away slowly', next: 'd2_vey', add: { dread: 2 } },
+    ],
+  },
+  d2_name: {
+    ch: 6, speaker: 'GUARDIAN', mood: 'dawn', focus: 'guardian',
+    text: 'Corvin. Corvin Ash. (A long breath, like a man putting down something he forgot he was carrying.) Thank you. I can feel the door in my hands, and for the first time it is only a door.',
+    choices: [
+      { label: 'Walk down together', next: 'd2_stairs2', set: 'freed_name', add: { trust: 1, heart: 1 } },
+    ],
+  },
+  d2_stairs2: {
+    ch: 7, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', dark: true,
+    text: 'The stairs are back, and this time they go down. Each step is a minute. For the first time since you woke, the clock in your status bar is counting up. It is 3:08. It is 3:09. Every step the dark is a little warmer, like the inside of a mouth.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd2_stairs2', light: 1, req: { noLight: 1 } },
+      { label: 'Count the steps', next: 'd2_clock', add: { dread: 1 } },
+      { label: 'Do not count the steps', next: 'd2_clock', add: { resolve: 1 } },
+    ],
+  },
+  d2_clock: {
+    ch: 7, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'whisper',
+    text: 'Halfway down, every skull in the wall begins, very quietly, to tell you the time. 3:12. 3:13. They have been waiting so long to be wrong about something. At the bottom, a door. It is not locked. It is held.',
+    choices: [
+      { label: 'Go to the door', next: 'd2_door' },
+    ],
+  },
+  d2_door: {
+    ch: 7, speaker: 'NARRATOR', mood: 'gate', focus: 'gate',
+    text: 'The door the Queen locked: iron, warm, with a keyhole the shape of a phone. Behind it, you can hear a morning breathing. Someone has to hold it open, or someone has to remember what it is called.',
+    choices: [
+      { label: 'Hold the door yourself, so she can sleep', next: 'end_keeper', req: { min: { resolve: 3 } } },
+      { label: 'Say their names together, and open it', next: 'end_daybreak', req: { flag: 'knew_name', min: { trust: 3, mem: 4 }, maxDread: 3 } },
+      { label: 'Put the phone in the lock and turn it off', next: 'end_loop' },
+    ],
+  },
+  end_daybreak: {
+    ch: 7, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'daybreak',
+    text: 'The door opens on morning.', choices: [],
+  },
+  end_keeper: {
+    ch: 7, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'keeper',
+    text: 'You hold the door.', choices: [],
+  },
+  end_loop: {
+    ch: 7, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'loop',
+    text: 'It is 3:07.', choices: [],
+  },
+
   // ======================= forced scenes (they interrupt wherever she is) =======================
   blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
@@ -534,13 +689,13 @@ ABY.NODES = {
 
 // ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
-  dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn',
+  dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn', cont: 'd2_wake',
     text: 'The gate opens. The corruption dissipates. At last, peace. And in the distance, another gate shimmered, and another echo called her name.' },
-  song: { tag: 'PLAY THE WHOLE SONG OF RECALL', name: 'The Song Remembered', hint: 'Play the whole Song of Recall.', mood: 'dawn',
+  song: { tag: 'PLAY THE WHOLE SONG OF RECALL', name: 'The Song Remembered', hint: 'Play the whole Song of Recall.', mood: 'dawn', cont: 'd2_wake',
     text: 'Every note found its place. The song poured through the gate and the shadows sang back. The Guardian remembered his name, and she remembered hers.' },
-  echo: { tag: 'HEART, COURAGE AND TRUST', name: 'Another Gate', hint: 'Walk the path with heart, courage and trust, and keep your nerve.', mood: 'gate',
+  echo: { tag: 'HEART, COURAGE AND TRUST', name: 'Another Gate', hint: 'Walk the path with heart, courage and trust, and keep your nerve.', mood: 'gate', cont: 'd2_wake',
     text: 'Heart, courage and trust: the gate does not open. It unfolds. Beyond it stretch a thousand more gates, and every one of them is humming her song.' },
-  silence: { tag: 'THE GATE OPENS. NOTHING FOLLOWS.', name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate',
+  silence: { tag: 'THE GATE OPENS. NOTHING FOLLOWS.', name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate', cont: 'd2_wake',
     text: 'The gate opens, and nothing follows. The Guardian is free, but the hum is gone from the air. She walks on alone, the flute silent at her back.' },
   crown: { tag: 'TAKE THE CROWN FOR YOURSELF', name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
     text: 'The crown settles on her brow and the whole void bows. It is a very quiet kind of power. Somewhere far away, a flute falls to the floor.' },
@@ -552,14 +707,21 @@ ABY.ENDINGS = {
     text: 'She takes his place in the dark, and the door swings shut on the right side. The Guardian climbs into the light, free, weeping. Her thin voice reaches you one last time through the phone: "Hold the line. Someone has to be on this side."' },
   betrayal: { tag: 'TRUST VEY WHEN YOU SHOULD NOT', name: 'Vey’s Smile', hint: 'Trust Vey after you have seen what Vey is.', mood: 'dark',
     text: 'The gate opens and Vey is the first thing through it. It turns, takes one polite step back toward her, and smiles with a mouth much too wide. "Thank you for trusting me," it says in the Queen\'s voice. "It is so hard to wear someone who is paying attention."' },
+  daybreak: { tag: 'DAY TWO: SAY THEIR NAMES, OPEN THE DOOR', name: 'Real Morning', hint: 'On Day Two, know the Guardian\'s name and open the door. The door only opens for someone it has seen before.', mood: 'dawn',
+    text: 'You say both names together, and the door is only a door. Behind it there is a window, and in the window there is a thin grey line that gets brighter. 3:07 becomes 3:08. Then 6:00. The phone chimes once, like a bell in a village a long way off, and for the first time in a very long time nobody is awake who should not be.' },
+  keeper: { tag: 'DAY TWO: HOLD THE DOOR YOURSELF', name: 'The Night Keeper', hint: 'On Day Two, hold the door so she can sleep.', mood: 'throne',
+    text: 'You hold the door so she can sleep. It is not so heavy, at first. The Guardian lies down in the warm grass and the Queen finally dreams something that is not a flute. On the phone it will always be 3:07, and your name will be the only message on it, and it will say: someone has to be on this side.' },
+  loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark',
+    text: 'The phone goes black and then, politely, it turns itself back on. 3:07. A new message from a number you do not know: you should not have woken up. The Queen opens her eyes on the floor of a very familiar room and has no idea who you are, and you cannot be certain, any more, that you do.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
 
 // ---- state ----
-ABY.newState = function () {
-  return { node: ABY.START, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+ABY.newState = function (mem) {
+  return { node: ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
 };
 
 // what the gate does, given everything she did (the five hidden stats + the flags)
@@ -597,13 +759,12 @@ ABY.options = function (s) {
   return out;
 };
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // a choice taken (i = its index in the node): returns the new state (never mutates), or null if it is not an available choice
 ABY.choose = function (s, i) {
   const n = ABY.NODES[s.node], c = n && n.choices && n.choices[i];
   if (!c || !ABY.okReq(s, c.req)) return null;
-  const o = { node: c.next, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back };
+  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back };
   if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
   if (!ABY.NODES[o.node]) return null;
   if (c.add) { for (const k of ABY.STATS) if (c.add[k]) o[k] = clamp(o[k] + c.add[k], 0, 5); if (c.add.dread) o.dread = clamp(o.dread + c.add.dread, 0, ABY.MAX_DREAD); }
@@ -635,6 +796,63 @@ ABY.toggleLight = function (s) {
   return o;
 };
 
+// Day Two: an ending that has a way on (`cont`) can be carried into the next act. She keeps her stats, flags and clues; the dread eases, the phone is
+// recharged to at least 48 and the flashlight is off. Returns null when the ending is final.
+ABY.carry = function (s) {
+  const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id]; if (!E || !E.cont) return null;
+  return Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
+};
+
+// ---- badges and factions (a player's own, kept on their phone) ----
+// A badge is earned at an ending, from what she found so far (`found`: { endingId: 1 }) and the state she ended in. Pure, so the graph test can check it.
+ABY.BADGES = [
+  { id: 'first_light', name: 'First Light', hint: 'Find your first ending.' },
+  { id: 'night_owl', name: 'Night Owl', hint: 'Let the battery die in the dark.' },
+  { id: 'hollowed', name: 'Hollowed Out', hint: 'Let the dread take her.' },
+  { id: 'crowned', name: 'Crowned', hint: 'Wear the crown of shadows.' },
+  { id: 'truth_teller', name: 'Truth-Teller', hint: 'Take his place in the dark.' },
+  { id: 'fearless', name: 'Fearless', hint: 'Reach an ending with dread at 1 or less.' },
+  { id: 'lamplighter', name: 'Lamplighter', hint: 'Reach an ending with the battery above 30%.' },
+  { id: 'name_keeper', name: 'Name-Keeper', hint: 'Learn the Guardian\'s name.' },
+  { id: 'day_two', name: 'Day Two', hint: 'Reach an ending on Day Two.' },
+  { id: 'collector', name: 'Collector', hint: 'Find 5 endings.' },
+  { id: 'real_morning', name: 'Real Morning', hint: 'Open the door on Day Two.' },
+  { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
+];
+ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
+ABY.badgesFor = function (found, s) {
+  const id = ABY.endingOf(s), n = ABY.ENDING_IDS.filter(e => found[e]).length, f = s.flags || {}, out = [];
+  if (n >= 1) out.push('first_light');
+  if (id === 'blackout') out.push('night_owl');
+  if (id === 'hollow') out.push('hollowed');
+  if (id === 'crown') out.push('crowned');
+  if (id === 'mirror') out.push('truth_teller');
+  if (id && s.dread <= 1) out.push('fearless');
+  if (id && s.bat >= 30) out.push('lamplighter');
+  if (id && f.knew_name) out.push('name_keeper');
+  if (id === 'daybreak' || id === 'keeper' || id === 'loop') out.push('day_two');
+  if (n >= 5) out.push('collector');
+  if (id === 'daybreak') out.push('real_morning');
+  if (n >= ABY.ENDING_IDS.length) out.push('completionist');
+  return out;
+};
+// the three factions: where her choices lean. A player pledges to one (their own choice); it ranks up with badges.
+ABY.FACTIONS = {
+  choir: { name: 'The Choir of Recall', color: '#39e6ff', blurb: 'Those who sing the lost back. They trust the song.' },
+  order: { name: 'The Order of the Door', color: '#ffd34d', blurb: 'Those who hold the door so others can sleep. They trust resolve.' },
+  court: { name: 'The Hollow Court', color: '#c46bff', blurb: 'Those the dark has kept. They trust what is watching.' },
+};
+ABY.FACTION_IDS = Object.keys(ABY.FACTIONS);
+ABY.leaning = function (s) {
+  const f = s.flags || {}, sc = {
+    choir: s.heart + (f.lullaby ? 1 : 0) + (f.song === 'win' ? 1 : 0),
+    order: s.resolve + (f.knew_name ? 1 : 0) + (f.ledger ? 1 : 0),
+    court: s.dread + (f.crown ? 2 : 0) + (f.vey_trusted ? 1 : 0),
+  };
+  return ABY.FACTION_IDS.reduce((a, k) => sc[k] > sc[a] ? k : a, 'choir');
+};
+ABY.rank = function (badges) { const n = badges; return n >= 7 ? 'Elder' : n >= 3 ? 'Adept' : 'Initiate'; };
+
 // the song ended: 'win' or 'fail' decides what the Guardian says next
 ABY.songDone = function (s, won) {
   const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() });
@@ -649,6 +867,7 @@ ABY.cleanState = function (raw) {
   if (!raw || typeof raw !== 'object') return s;
   const ok = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(ABY.NODES, id);
   if (ok(raw.node) && !ABY.NODES[raw.node].ending) s.node = raw.node;
+  if (Number.isInteger(raw.mem)) s.mem = clamp(raw.mem, 0, 99);
   for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = clamp(raw[k], 0, 5);
   if (Number.isInteger(raw.dread)) s.dread = clamp(raw.dread, 0, ABY.MAX_DREAD);
   if (Number.isInteger(raw.bat)) s.bat = clamp(raw.bat, 1, 100);

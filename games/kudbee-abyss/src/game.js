@@ -13,11 +13,11 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, ending: null, practice: false, seen: {}, orient: 'portrait' };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait' };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID' };
-  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'] };
+  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'] };
   var CREEPS = ['behind you', 'it is 3:07', 'i can hear you breathing', 'don\u2019t look at the screen', 'you left the door open', 'she is not the one texting you', 'count the steps', 'turn around slowly'];
 
   // ---- save ----
@@ -33,13 +33,15 @@
     var d = null; try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object') d = {};
     G.found = {}; if (d.found && typeof d.found === 'object') ABY.ENDING_IDS.forEach(function (id) { if (d.found[id] === 1) G.found[id] = 1; });
+    G.badges = {}; if (d.badges && typeof d.badges === 'object') ABY.BADGE_IDS.forEach(function (id) { if (d.badges[id] === 1) G.badges[id] = 1; });
+    G.faction = ABY.FACTIONS[d.faction] ? d.faction : ''; G.lean = ABY.FACTIONS[d.lean] ? d.lean : '';
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
     G.saved = null;
     if (d.run && typeof d.run === 'object') { var s = ABY.cleanState(d.run); if (s.choices > 0 || s.node !== ABY.START) G.saved = { state: s, log: cleanLog(d.run.log) }; }
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -182,20 +184,21 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
-    var first = !G.found[id]; G.found[id] = 1; G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
-    clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); }, reduced ? 300 : 2600);
+    var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
+    clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
   }
+  function badge(id) { return ABY.BADGES.filter(function (b) { return b.id === id; })[0]; }
   function memory(id, kicker, ended) {
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('shareBtn').textContent = 'Share';
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont); $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
   }
   function closeMemory() { $('memory').classList.remove('on'); document.body.classList.remove('finale'); }
   // ---- sharing: a card painted from the game's art, a Share screen, a landing page per ending ----
   function openShare(kind, id, from) {
-    var m = ABY.Share.moment(kind, id, G.found); G.share = m; G.shareFrom = from || 'gallery'; m.cv = ABY.Share.card(m.info);
+    var m = ABY.Share.moment(kind, id, G.found, { faction: G.faction, badges: badgeN() }); G.share = m; G.shareFrom = from || 'gallery'; m.cv = ABY.Share.card(m.info);
     var prev = $('shPrev');
     var paint = function () { m.cv = ABY.Share.card(m.info); prev.innerHTML = ''; prev.appendChild(m.cv); m.cv.setAttribute('role', 'img'); m.cv.setAttribute('aria-label', 'Share card: ' + m.info.title); ABY.Share.file(m.cv).then(function (f) { m.file = f; }); };   // the file is ready before the tap that shares it
     paint(); if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('700 30px "Space Grotesk"'), document.fonts.load('500 20px "Space Grotesk"')]).then(function () { if (G.share === m) paint(); }, function () {});   // repaint once the game's font is in
@@ -213,11 +216,11 @@
   }
 
   // ---- a journey ----
-  function startRun() {
-    G.state = ABY.newState(); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+  function startRun(carry) {
+    var day2 = carry && ABY.carry(G.state); G.state = day2 || ABY.newState(foundN()); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; if (day2) day2.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
-    var stamp = 'Today ' + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
-    if (P.screen !== 'msg') P.show('msg'); world(); wait(700, function () { deliver(ABY.START); });
+    var stamp = (day2 ? 'Day Two \u00B7 ' : 'Today ') + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
+    if (P.screen !== 'msg') P.show('msg'); world(); var first = G.state.node; wait(700, function () { deliver(first); });
   }
   function rebuild() {                                                     // the saved chat, drawn at once
     $('thread').innerHTML = ''; G.log.forEach(function (e) { if (e.k === 'img') photo(e.t, true); else bubble(e.k, e.who, e.t, true); }); scrollEnd(false);
@@ -259,6 +262,25 @@
       if (f) { b.style.setProperty('--g1', ECOL[id][0] + '88'); b.style.setProperty('--g2', ECOL[id][1]); }
       var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = f ? E.name : 'Locked'; p.textContent = f ? '' : E.hint; b.appendChild(h); b.appendChild(p);
       if (f) b.addEventListener('click', function () { ABY.Audio.sfx('ui'); memory(id, 'Memory', false); }); box.appendChild(b);
+    });
+    renderFaction(); renderBadges();
+  }
+  function badgeN() { return ABY.BADGE_IDS.filter(function (b) { return G.badges[b]; }).length; }
+  function renderFaction() {
+    var box = $('faction'); box.innerHTML = ''; var F = ABY.FACTIONS, cur = G.faction && F[G.faction], lean = G.lean && F[G.lean];
+    var h = document.createElement('h3'); h.textContent = cur ? 'Sworn to ' + cur.name : 'Factions'; box.appendChild(h);
+    var p = document.createElement('p'); p.textContent = cur ? ABY.rank(badgeN()) + ' \u00B7 ' + badgeN() + ' of ' + ABY.BADGE_IDS.length + ' badges. ' + cur.blurb : (foundN() ? (lean ? lean.name + ' is calling you. ' : '') + 'Pledge to one. It is your own choice, and you can change it.' : 'Find an ending to hear them call.'); box.appendChild(p);
+    if (!foundN()) return;
+    var row = document.createElement('div'); row.className = 'facrow';
+    ABY.FACTION_IDS.forEach(function (id) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'fbtn' + (G.faction === id ? ' on' : '') + (G.lean === id ? ' lean' : ''); b.style.setProperty('--fc', F[id].color); b.setAttribute('aria-pressed', G.faction === id ? 'true' : 'false'); b.textContent = F[id].name.replace('The ', '');
+      b.addEventListener('click', function () { ABY.Audio.sfx('ui'); G.faction = id; save(); renderFaction(); }); row.appendChild(b);
+    }); box.appendChild(row);
+  }
+  function renderBadges() {
+    var box = $('badges'); box.innerHTML = ''; $('bSub').textContent = badgeN() + ' of ' + ABY.BADGE_IDS.length + ' badges';
+    ABY.BADGES.forEach(function (b) {
+      var e = !!G.badges[b.id], d = document.createElement('div'); d.className = 'bdg' + (e ? ' on' : ''); var i = document.createElement('i'); i.textContent = e ? '\u2605' : '\u2022'; var t = document.createElement('span'); t.textContent = e ? b.name : b.hint; d.appendChild(i); d.appendChild(t); d.setAttribute('title', b.hint); box.appendChild(d);
     });
   }
   function renderPulse() {
@@ -304,7 +326,7 @@
     // test hook: be at scene `id` with some stats (the evaluator and the screenshots use it; a player never does)
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
-      G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
+      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
       if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
     },
     tick: function (dt) { ambient(dt); } };
@@ -327,11 +349,12 @@
   $('shNative').addEventListener('click', function () { shareAct('native'); }); $('shX').addEventListener('click', function () { shareAct('x'); }); $('shFb').addEventListener('click', function () { shareAct('fb'); }); $('shWa').addEventListener('click', function () { shareAct('wa'); }); $('shCopy').addEventListener('click', function () { shareAct('copy'); }); $('shSave').addEventListener('click', function () { shareAct('save'); });
   $('shBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show(G.shareFrom || 'home'); });
   $('pShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'pulse'); }); $('gShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'gallery'); });
+  $('memNext').addEventListener('click', function () { ABY.Audio.sfx('ui'); closeMemory(); startRun(true); });
   $('memAct').addEventListener('click', function () { ABY.Audio.sfx('ui'); if ($('memAct').getAttribute('data-ended') === '1') { closeMemory(); startRun(); } else closeMemory(); });
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.badges = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }
@@ -347,7 +370,8 @@
 
   // ---- boot ----
   function boot() {
-    load(); ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
+    load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
+    ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
     var pre = $('pre'), booted = false, stage = $('screen');
     function ready(gl) {
       if (booted) return; booted = true; if (!gl) stage.classList.add('nogl');

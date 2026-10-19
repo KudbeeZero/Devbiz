@@ -112,6 +112,9 @@ ABY.Audio = (function () {
       case 'song': [0, 2, 3, 5, 7, 9, 8, 9].forEach(function (s, i) { A.flute(SCALE[s], 2.6, 0.14, i * 0.22, true); }); A.tone(110, 3, 'sine', 0.1, 220); break;
       case 'echo': [9, 7, 5, 9, 8, 6].forEach(function (s, i) { A.flute(SCALE[s], 3, 0.1, i * 0.3, true); A.tone(SCALE[s] * 2, 2.5, 'sine', 0.04, null, i * 0.3); }); break;
       case 'silence': A.flute(SCALE[0], 4.5, 0.12); A.tone(55, 4, 'sine', 0.08, 40); break;
+      case 'daybreak': [0, 2, 4, 5, 7, 9, 11].forEach(function (s, i) { A.flute(SCALE[s % SCALE.length], 3, 0.13, i * 0.3, true); }); A.tone(220, 3.5, 'sine', 0.08, 440); break;
+      case 'keeper': A.tone(55, 4, 'sine', 0.2, 41); A.flute(SCALE[0], 4.5, 0.09, 0.4); A.noise(3, 0.05, 400, 120, 0.8); break;
+      case 'loop': A.tone(1318, 0.12, 'square', 0.04); A.tone(1318, 0.12, 'square', 0.04, null, 0.9); A.noise(1.6, 0.08, 2400, 300, 1, 1.6); A.tone(74, 3, 'sawtooth', 0.1, 50, 1.6); break;
       case 'blackout': A.tone(60, 3.5, 'sine', 0.22, 24); A.noise(2.5, 0.12, 300, 60, 0.8); break;
       case 'crown': A.tone(110, 3.2, 'sawtooth', 0.1, 55); A.tone(116, 3.2, 'sawtooth', 0.08, 58); A.tone(55, 3.5, 'sine', 0.14, 36); break;
     }
