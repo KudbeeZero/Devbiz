@@ -12,7 +12,7 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Phone = (function () {
   var P = { screen: 'lock', hooks: {}, locked: false };
   var $ = function (id) { return document.getElementById(id); };
-  var APPS = ['msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
+  var APPS = ['home2', 'msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
   P.orient = 'portrait';
@@ -38,8 +38,9 @@ ABY.Phone = (function () {
     if (P.locked) return;
     var prev = P.screen; P.screen = name;
     ['lock', 'home'].concat(APPS).forEach(function (id) { $(id).classList.toggle('on', id === name); });
-    var dev = $('device'); dev.classList.remove('s-lock', 's-home', 's-app'); dev.classList.add(name === 'lock' ? 's-lock' : name === 'home' ? 's-home' : 's-app');
-    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' ? 0.1 : name === 'msg' ? 1 : 0.1);
+    var dev = $('device'); dev.classList.remove('s-lock', 's-home', 's-app'); dev.classList.add(name === 'lock' ? 's-lock' : name === 'home' || name === 'home2' ? 's-home' : 's-app');
+    var pg = $('pager').children; pg[0].classList.toggle('on', name !== 'home2'); pg[1].classList.toggle('on', name === 'home2');
+    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' || name === 'home2' ? 0.1 : name === 'msg' ? 1 : 0.1);
     if (name === 'msg') P.badge('msg', 0);
     if (P.hooks.onShow) P.hooks.onShow(name, prev);
   };
@@ -68,6 +69,10 @@ ABY.Phone = (function () {
       var tx = document.createElement('span'); tx.className = 'tx'; var h = document.createElement('span'); h.className = 'h'; var a = document.createElement('span'); a.textContent = o.title; var w = document.createElement('span'); w.textContent = o.when || 'now'; h.appendChild(a); h.appendChild(w);
       var b = document.createElement('span'); b.className = 'b'; b.textContent = o.text; tx.appendChild(h); tx.appendChild(b); n.appendChild(ic); n.appendChild(tx);
       n.addEventListener('click', function (e) { e.stopPropagation(); if (o.onTap) o.onTap(); }); box.appendChild(n);
+      if (o.replies) {                                                    // quick replies under a notification: answer without opening it
+        var rw = document.createElement('div'); rw.className = 'nrep'; rw.style.animation = 'noteIn .6s var(--ease) both'; rw.style.animationDelay = (0.45 + i * 0.18) + 's';
+        o.replies.forEach(function (r) { var b2 = document.createElement('button'); b2.type = 'button'; b2.textContent = r.label; b2.addEventListener('click', function (e) { e.stopPropagation(); r.fn(); }); rw.appendChild(b2); }); box.appendChild(rw);
+      }
     });
   };
 
@@ -87,16 +92,31 @@ ABY.Phone = (function () {
     window.addEventListener('pointercancel', function () { y0 = null; });
   }
 
+  function hswipe(el, left, right) {                                   // a sideways flick between the two home pages (no pointer capture: the icons still get their taps)
+    var x0 = null, y0 = 0, hit = 0;
+    el.addEventListener('pointerdown', function (e) { x0 = e.clientX; y0 = e.clientY; });
+    window.addEventListener('pointerup', function (e) {
+      if (x0 === null) return; var dx = e.clientX - x0, dy = e.clientY - y0; x0 = null;
+      if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) { hit = performance.now(); if (dx < 0) left(); else right(); }
+    });
+    window.addEventListener('pointercancel', function () { x0 = null; });
+    el.addEventListener('click', function (e) { if (performance.now() - hit < 350) { e.stopPropagation(); e.preventDefault(); } }, true);   // the tap that ends a swipe is not a tap
+  }
+
   P.init = function (hooks) {
     P.hooks = hooks || {};
     swipe($('homebar'), P.goHome, P.goHome);
     $('homebar').addEventListener('keydown', function (e) { if (e.key === 'Enter') P.goHome(); }); $('homebar').setAttribute('tabindex', '0');
     swipe($('lock'), P.unlock, null);
+    hswipe($('home'), function () { if (P.screen === 'home') P.show('home2'); }, function () {});
+    hswipe($('home2'), function () {}, function () { if (P.screen === 'home2') P.show('home'); });
+    $('h2Gal').addEventListener('click', function () { P.show('gallery'); });
     $('unlock').addEventListener('click', P.unlock);
     document.querySelectorAll('[data-home]').forEach(function (b) { b.addEventListener('click', function () { if (ABY.Audio) ABY.Audio.sfx('ui'); P.goHome(); }); });
     document.querySelectorAll('.appi[data-app]').forEach(function (b) { b.addEventListener('click', function () { if (ABY.Audio) { ABY.Audio.init(); ABY.Audio.sfx('ui'); } P.show(b.getAttribute('data-app')); }); });
     $('wPulse').addEventListener('click', function () { if (ABY.Audio) ABY.Audio.sfx('ui'); P.show('pulse'); });
     var d = new Date(); P.setDate(DAY[d.getDay()] + ' · Echo hour');
+    window.addEventListener('keydown', function (e) { if (!P.locked && (P.screen === 'home' || P.screen === 'home2') && $('guide').hidden) { if (e.key === 'ArrowLeft' && P.screen === 'home2') P.show('home'); else if (e.key === 'ArrowRight' && P.screen === 'home') P.show('home2'); } });
     window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !P.locked && P.screen !== 'lock' && P.screen !== 'home') P.goHome(); });
   };
   return P;

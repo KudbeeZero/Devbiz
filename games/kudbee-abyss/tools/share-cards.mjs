@@ -9,7 +9,7 @@ import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'no
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-const VER = 3;
+const VER = 5;
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..', '..'), GAME = resolve(HERE, '..');
 const { chromium } = createRequire(resolve(ROOT, 'package.json'))('playwright');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png' };
@@ -20,7 +20,7 @@ const page = await b.newPage({ viewport: { width: 1200, height: 630 }, deviceSca
 await page.route('https://cdnjs.cloudflare.com/**', r => r.abort());          // the cards are 2D: the 3D library is not needed
 await page.route('https://fonts.*/**', r => r.abort());
 await page.goto(`http://localhost:${server.address().port}/games/kudbee-abyss/index.html`);
-await page.waitForFunction(() => window.ABY && ABY.Art && ABY.Art.queen && ABY.Art.queen.complete && ABY.Art.city.complete && ABY.Art.corrupt.complete && ABY.Art.stairs.complete && ABY.Art.stairs.naturalWidth, null, { timeout: 20000 });
+await page.waitForFunction(() => window.ABY && ABY.Art && ABY.Art.queen && ABY.Art.queen.complete && ABY.Art.city.complete && ABY.Art.corrupt.complete && ABY.Art.stairs.complete && ABY.Art.eye.complete && ABY.Art.stairs.naturalWidth, null, { timeout: 20000 });
 await page.evaluate(() => document.fonts.ready);
 const cards = await page.evaluate(() => ABY.Share.SLUGS.concat(['']).map(slug => {
   const info = ABY.Share.generic(slug || 'game'), cv = ABY.Share.card(info);

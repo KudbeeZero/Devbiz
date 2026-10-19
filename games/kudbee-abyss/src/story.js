@@ -28,6 +28,7 @@ ABY.CHAPTERS = [
   { n: 5, label: 'The Eye' },
   { n: 6, label: 'Day Two' },
   { n: 7, label: 'The Door' },
+  { n: 8, label: 'Day Three' },
 ];
 
 ABY.SPEAKERS = {
@@ -41,6 +42,22 @@ ABY.SPEAKERS = {
 ABY.START = 'awakening';
 ABY.STATS = ['heart', 'resolve', 'trust'];
 ABY.MAX_SONG_TRIES = 3;
+
+// the rites: Guitar-Hero-style rhythm levels (a node with `song: '<id>'` plays one; `song: true` is the Song of Recall). A chart is a melody
+// [index into the flute scale, steps after the last note], the length of a step in seconds, and the haunting: `fx` = [steps from the start, what happens]
+// (door | crack | flash | blood | knock | scream | drip | dark). `tint` colours the page; `lanes` the three lanes.
+ABY.RITES = {
+  doors: { name: 'THE HALL OF DOORS', step: 0.46, tint: '#ffb86b', lanes: ['#ffb86b', '#ff6ec7', '#9fb0ff'],
+    mel: [[2, 0], [2, 2], [3, 1], [2, 2], [0, 2], [2, 1], [3, 1], [5, 2], [3, 1], [2, 1], [3, 2], [5, 1], [6, 1], [5, 2], [3, 2], [2, 1], [0, 1], [2, 2], [3, 1], [5, 1], [7, 2], [5, 1], [3, 1], [2, 2], [3, 1], [2, 1], [0, 3]],
+    fx: [[2, 'drip'], [5, 'door'], [11, 'knock'], [14, 'door'], [20, 'crack'], [24, 'door'], [30, 'flash']] },
+  blood: { name: 'THE RED CORRIDOR', step: 0.38, tint: '#ff2a4a', lanes: ['#ff2a4a', '#ff8a5c', '#ffd1d1'],
+    mel: [[0, 0], [2, 1], [0, 1], [3, 1], [2, 1], [5, 2], [3, 1], [2, 1], [0, 1], [2, 2], [5, 1], [6, 1], [5, 1], [3, 1], [2, 2], [0, 1], [2, 1], [3, 1], [5, 1], [7, 1], [6, 1], [5, 2], [3, 1], [5, 1], [2, 1], [3, 1], [0, 3]],
+    fx: [[1, 'drip'], [4, 'blood'], [9, 'crack'], [12, 'blood'], [16, 'scream'], [19, 'blood'], [24, 'flash'], [27, 'blood']] },
+  lull: { name: 'THE EYE\'S LULLABY', step: 0.34, tint: '#c46bff', lanes: ['#c46bff', '#39e6ff', '#ff4d5e'],
+    mel: [[5, 0], [3, 1], [5, 1], [7, 1], [5, 2], [3, 1], [2, 1], [3, 2], [5, 1], [7, 1], [9, 1], [7, 1], [5, 2], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [7, 1], [8, 1], [9, 2], [7, 1], [5, 1], [3, 1], [2, 1], [0, 3]],
+    fx: [[3, 'whisper'], [7, 'flash'], [10, 'knock'], [15, 'blood'], [19, 'door'], [23, 'scream'], [28, 'flash'], [31, 'blood']] },
+};
+ABY.RITE_IDS = Object.keys(ABY.RITES);
 ABY.MAX_DREAD = 6;
 ABY.BAT0 = 62;            // the battery she starts with
 ABY.TORCH = 7;            // extra battery a choice costs while the flashlight is on
@@ -55,6 +72,7 @@ ABY.NOTES = {
   voicemail: { title: 'Voicemail (0:30)', text: 'You did not play it. It played itself. "...she locked him in so he\'d never remember what he held. Count the steps. Do not count the steps."' },
   photo_you: { title: 'Photo: you', text: 'You, from behind, holding this phone. 3:07. A hand on your shoulder that is not in the room. The photo keeps updating.' },
   captain_name: { title: 'The signature', text: '"Corvin Ash, captain, who held the door." The Guardian\'s name, on the last page, in his own neat hand.' },
+  eye_stairs: { title: 'Photo: the stairs', text: 'A staircase that goes down into a ceiling-high red Eye. Every step is lit from below, one by one, like a welcome. The photo was taken from where you are standing.' },
   eye: { title: 'What the Eye wants', text: '"I don\'t want your name. I want to be remembered too. Nobody ever sings to me."' },
 };
 
@@ -643,6 +661,178 @@ ABY.NODES = {
     text: 'It is 3:07.', choices: [],
   },
 
+  // ======================= act three: day three (the Eye, and three rites) =======================
+  d3_wake: {
+    ch: 8, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'day three. i have been practising your face. come down: i have set a table, and lit the doors. there are three rooms between us, and every one of them wants a song.',
+    choices: [
+      { label: 'Open the photo it sent', next: 'd3_photo', add: { dread: 1 } },
+      { label: 'Switch on the flashlight', next: 'd3_wake', light: 1, req: { noLight: 1 } },
+      { label: 'Go down to the first door', next: 'd3_hall' },
+    ],
+  },
+  d3_photo: {
+    ch: 8, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', dark: true, scare: 'eye', img: 'eye', note: 'eye_stairs',
+    text: 'A staircase going down into a ceiling-high red Eye. Every step is lit from below, one by one, like a welcome. The photo was taken from exactly where you are standing, a half second from now.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd3_photo', light: 1, req: { noLight: 1 } },
+      { label: 'Count the doors on the stairs', next: 'd3_hall', add: { dread: 1 } },
+      { label: 'Go down anyway', next: 'd3_hall', add: { resolve: 1 } },
+    ],
+  },
+  d3_hall: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', song: 'doors', scare: 'whisper',
+    text: 'The Hall of Doors. A hundred of them, shut, and every one is listening. Raise the flute: each note you catch makes one of them open. Each note you drop, something on the other side leans on it.',
+    songNext: { win: 'd3_doors_win', fail: 'd3_doors_fail', give: 'd3_doors_give' },
+  },
+  d3_doors_win: {
+    ch: 8, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+    text: 'Every door you played open stayed open, and not one of them had anything behind it but the next room. I have not heard my own song in so long. It sounds like someone I used to be.',
+    choices: [
+      { label: 'Step through', next: 'd3_fork', add: { heart: 1 } },
+    ],
+  },
+  d3_doors_fail: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'A door slams on the song. The wood bows inward, like a held breath. Something on the other side has put its whole weight on it, patiently, and is waiting for you to be quiet.',
+    choices: [
+      { label: 'Play it again', next: 'd3_hall', retry: true },
+      { label: 'Leave the doors shut and find another way', next: 'd3_doors_give', add: { dread: 1 } },
+    ],
+  },
+  d3_doors_give: {
+    ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
+    text: 'Oh, don\'t play for them. Doors are rude. There is a servants\' stair behind the third one, and only Vey knows which third. (A small warm hand slides into yours before you have said yes.)',
+    choices: [
+      { label: 'Follow Vey', next: 'd3_fork', set: 'skipped_doors', add: { dread: 1 } },
+    ],
+  },
+  d3_fork: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+    text: 'The hall splits three ways. A red corridor, where the walls are wet and the floor is warm. A servants\' stair that smells like Vey\'s hands. And a plain door with a name scratched into it in a soldier\'s neat handwriting.',
+    choices: [
+      { label: 'Take the red corridor', next: 'd3_blood', add: { resolve: 1 } },
+      { label: 'Follow Vey down the servants\' stair', next: 'd3_vey3', add: { dread: 1 } },
+      { label: 'Knock on the plain door', next: 'd3_corvin', req: { flag: 'knew_name' } },
+    ],
+  },
+  d3_blood: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', song: 'blood', scare: 'eye',
+    text: 'The Red Corridor. The walls weep as you walk, and the weeping keeps time. Keep the song whole and the walls stay walls. Drop it, and they remember they were something else.',
+    songNext: { win: 'd3_blood_win', fail: 'd3_blood_fail', give: 'd3_blood_give' },
+  },
+  d3_blood_win: {
+    ch: 8, speaker: 'QUEEN', mood: 'dawn', focus: 'queen',
+    text: 'It dried. Look, it dried, and it was only paint. Someone painted the whole corridor to look like something was hurt here. Nobody was. Somebody just wanted very badly to be believed.',
+    choices: [
+      { label: 'Follow the dry floor', next: 'd3_table', add: { heart: 1 } },
+    ],
+  },
+  d3_blood_fail: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'A crack runs the length of the corridor, and the wall splits down its middle like a mouth. What comes out is warm and red, and it is not the worst thing here. The worst thing is that it knows your name.',
+    choices: [
+      { label: 'Raise the flute again', next: 'd3_blood', retry: true },
+      { label: 'Cover your eyes and run', next: 'd3_blood_give', add: { dread: 1 } },
+    ],
+  },
+  d3_blood_give: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+    text: 'You run with your eyes shut and a hand over the screen. The floor goes slick, then dry, then gone. When you open your eyes the corridor is behind you and your sleeve is the wrong colour.',
+    choices: [
+      { label: 'Do not look at your sleeve', next: 'd3_table', add: { dread: 1 } },
+    ],
+  },
+  d3_vey3: {
+    ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
+    text: 'The stair is not shorter, only quieter. I can carry you. I can carry the phone. I can carry what is on the phone, which is more than you know. Come. I have never once let anything fall.',
+    choices: [
+      { label: 'Take its hand', next: 'd3_table', set: 'vey3_hand', add: { dread: 1 } },
+      { label: 'Say: I know what you are', next: 'd3_vey3_names', req: { min: { mem: 2 } } },
+      { label: 'Go back to the fork', next: 'd3_fork' },
+    ],
+  },
+  d3_vey3_names: {
+    ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'glitch',
+    text: 'It lets go. For one second there are far too many hands, and every one of them is trying to cover a different part of its face. "Fine," it says in someone else\'s voice. "Go down. I will be at the bottom. I am always at the bottom."',
+    choices: [
+      { label: 'Walk down on your own', next: 'd3_table', set: 'vey3_cowed', add: { resolve: 1 } },
+    ],
+  },
+  d3_corvin: {
+    ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+    text: 'You knew it. You said it, and I kept it. (The door opens an inch, and a lantern comes out on the end of an iron arm.) I can not leave this door. I can give you what I have. A lamp. A promise to hold the door behind you.',
+    choices: [
+      { label: 'Take the lantern', next: 'd3_table', set: 'corvin_lamp', bat: -20 /* negative = recharge, like the crystal */, add: { dread: -1 } },
+      { label: 'Ask him to hold the door behind you', next: 'd3_table', set: 'corvin_door', add: { resolve: 1 } },
+    ],
+  },
+  d3_table: {
+    ch: 8, speaker: 'EYE', mood: 'throne', focus: 'queen', dark: true, scare: 'eye', img: 'eye',
+    text: 'A long table with one chair, laid for one, and above it, the Eye, close enough to feel its breath on the glass of the phone. "Sit," it says. "I have been practising. I know how to say please. Will you sing me one thing? Just one. Nobody ever has."',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd3_table', light: 1, req: { noLight: 1 } },
+      { label: 'Sing to it', next: 'd3_lull', add: { heart: 1 } },
+      { label: 'Look it in the eye and say nothing', next: 'd3_stare', req: { maxDread: 4 } },
+      { label: 'Turn the phone face down', next: 'end_watched' },
+    ],
+  },
+  d3_stare: {
+    ch: 8, speaker: 'EYE', mood: 'throne', focus: 'queen', scare: 'whisper',
+    text: 'It blinks first. Nobody has ever made it blink. It looks, for one second, very afraid, and very glad. "You did not look away," it says. "Why does that feel like being sung to?"',
+    choices: [
+      { label: 'Say: sit down, I will teach you one', next: 'd3_lull', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  d3_lull: {
+    ch: 8, speaker: 'EYE', mood: 'throne', focus: 'queen', song: 'lull', scare: 'whisper',
+    text: 'The Eye\'s Lullaby. It does not know any songs, so it will learn this one from you, off your fingers, a note at a time. It will try to scare you out of it. It is only afraid you will stop.',
+    songNext: { win: 'd3_lull_win', fail: 'd3_lull_fail', give: 'd3_lull_give' },
+  },
+  d3_lull_win: {
+    ch: 8, speaker: 'EYE', mood: 'dawn', focus: 'queen',
+    text: 'again. play it again. no, do not play it again, i would only want it again. (Something very large lowers its head to the table, and the red light goes out of the room by degrees, like a child finally falling asleep.)',
+    choices: [
+      { label: 'Sit with it', next: 'd3_finale', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  d3_lull_fail: {
+    ch: 8, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'that was wrong. (The table splits. The light turns the colour of the inside of an eyelid.) that was wrong, and i learned it anyway, and now i can not stop hearing it.',
+    choices: [
+      { label: 'Try it again, gently', next: 'd3_lull', retry: true },
+      { label: 'Stop singing', next: 'd3_lull_give', add: { dread: 1 } },
+    ],
+  },
+  d3_lull_give: {
+    ch: 8, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'you stopped. everyone stops. (It is not angry. That is the worst of it.) it is all right. it is very late. i will keep the table set.',
+    choices: [
+      { label: 'Stand up', next: 'd3_finale', add: { dread: 1 } },
+    ],
+  },
+  d3_finale: {
+    ch: 8, speaker: 'EYE', mood: 'throne', focus: 'gate', scare: 'eye',
+    text: 'The room waits. The doors are open behind you, or shut, or gone. The Eye is not hungry. It is only very, very large, and it has been listening to you carry this phone for three days. The next thing you do is the last thing it will remember about you.',
+    choices: [
+      { label: 'Sing all three songs as one', next: 'end_chorus', req: { all: ['rite_doors', 'rite_blood', 'rite_lull'] } },
+      { label: 'Hold the Eye\'s door so it can sleep', next: 'end_vigil', req: { min: { resolve: 3 } } },
+      { label: 'Look away', next: 'end_watched' },
+    ],
+  },
+  end_chorus: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'chorus',
+    text: 'The Eye sings back.', choices: [],
+  },
+  end_vigil: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'keeper', final: 1,
+    text: 'You hold the Eye\'s door.', choices: [],
+  },
+  end_watched: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'watched',
+    text: 'You look away.', choices: [],
+  },
+
   // ======================= forced scenes (they interrupt wherever she is) =======================
   blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
@@ -709,10 +899,14 @@ ABY.ENDINGS = {
     text: 'The gate opens and Vey is the first thing through it. It turns, takes one polite step back toward her, and smiles with a mouth much too wide. "Thank you for trusting me," it says in the Queen\'s voice. "It is so hard to wear someone who is paying attention."' },
   daybreak: { tag: 'DAY TWO: SAY THEIR NAMES, OPEN THE DOOR', name: 'Real Morning', hint: 'On Day Two, know the Guardian\'s name and open the door. The door only opens for someone it has seen before.', mood: 'dawn',
     text: 'You say both names together, and the door is only a door. Behind it there is a window, and in the window there is a thin grey line that gets brighter. 3:07 becomes 3:08. Then 6:00. The phone chimes once, like a bell in a village a long way off, and for the first time in a very long time nobody is awake who should not be.' },
-  keeper: { tag: 'DAY TWO: HOLD THE DOOR YOURSELF', name: 'The Night Keeper', hint: 'On Day Two, hold the door so she can sleep.', mood: 'throne',
+  keeper: { tag: 'DAY TWO: HOLD THE DOOR YOURSELF', name: 'The Night Keeper', hint: 'On Day Two, hold the door so she can sleep.', mood: 'throne', cont: 'd3_wake',
     text: 'You hold the door so she can sleep. It is not so heavy, at first. The Guardian lies down in the warm grass and the Queen finally dreams something that is not a flute. On the phone it will always be 3:07, and your name will be the only message on it, and it will say: someone has to be on this side.' },
-  loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark',
+  loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark', cont: 'd3_wake',
     text: 'The phone goes black and then, politely, it turns itself back on. 3:07. A new message from a number you do not know: you should not have woken up. The Queen opens her eyes on the floor of a very familiar room and has no idea who you are, and you cannot be certain, any more, that you do.' },
+  chorus: { tag: 'DAY THREE: SING ALL THREE RITES AS ONE', name: 'The Eye Remembered', hint: 'On Day Three, win all three rites, then sing them as one.', mood: 'dawn',
+    text: 'You sing the doors and the red corridor and the lullaby as one song, and the Eye, which has never been sung to, sings the last line back, a little wrong, perfectly. Every door in the Abyss opens at once, and for the first time anything that was ever watched there is allowed to look away.' },
+  watched: { tag: 'DAY THREE: LOOK AWAY', name: 'The Watched', hint: 'On Day Three, look away from the Eye.', mood: 'dark',
+    text: 'You look away. It is such a small thing. The Eye does not mind, not exactly. It only learns, very slowly, what it is to be looked away from, and starts to practise on you: every screen, every window, every dark glass you ever pass. It is always, quietly, watching.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
@@ -745,6 +939,7 @@ ABY.okReq = function (s, r) {
   if (!r) return true;
   if (r.flag && !s.flags[r.flag]) return false;
   if (r.noflag && s.flags[r.noflag]) return false;
+  if (r.all) for (const f of r.all) if (!s.flags[f]) return false;
   if (r.min) for (const k in r.min) if ((s[k] || 0) < r.min[k]) return false;
   if (r.maxDread !== undefined && s.dread > r.maxDread) return false;
   if (r.minDread !== undefined && s.dread < r.minDread) return false;
@@ -799,7 +994,7 @@ ABY.toggleLight = function (s) {
 // Day Two: an ending that has a way on (`cont`) can be carried into the next act. She keeps her stats, flags and clues; the dread eases, the phone is
 // recharged to at least 48 and the flashlight is off. Returns null when the ending is final.
 ABY.carry = function (s) {
-  const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id]; if (!E || !E.cont) return null;
+  const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id], n = ABY.NODES[s.node]; if (!E || !E.cont || (n && n.final)) return null;
   return Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
 };
 
@@ -853,9 +1048,16 @@ ABY.leaning = function (s) {
 };
 ABY.rank = function (badges) { const n = badges; return n >= 7 ? 'Elder' : n >= 3 ? 'Adept' : 'Initiate'; };
 
-// the song ended: 'win' or 'fail' decides what the Guardian says next
+// the song ended: 'win' or 'fail' decides what comes next. The Song of Recall goes to the Guardian; a rite (a node with `song: '<id>'`) sets its own flag
+// (`rite_<id>` on a win, `fail_<id>` on a loss) and goes to the node's `songNext`. A rite can only be retried ABY.MAX_SONG_TRIES times.
 ABY.songDone = function (s, won) {
-  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() });
+  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() }), n = ABY.NODES[s.node], id = n && typeof n.song === 'string' ? n.song : '';
+  if (id && n.songNext) {
+    if (won) o.flags['rite_' + id] = 1; else o.flags['fail_' + id] = 1;
+    const gaveUp = !won && s.tries >= ABY.MAX_SONG_TRIES; o.tries = won || gaveUp ? 0 : s.tries;
+    o.node = won ? n.songNext.win : (gaveUp ? n.songNext.give : n.songNext.fail);
+    return o;
+  }
   o.flags.song = won ? 'win' : 'fail';
   o.node = won ? 'song_win' : (s.tries >= ABY.MAX_SONG_TRIES ? 'reconcile' : 'song_fail');
   return o;
@@ -879,11 +1081,12 @@ ABY.cleanState = function (raw) {
   if (raw.flags && typeof raw.flags === 'object') {
     for (const k of ABY.FLAGS) if (raw.flags[k] === 1) s.flags[k] = 1;
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
+    for (const r of ABY.RITE_IDS) for (const k of ['rite_' + r, 'fail_' + r]) if (raw.flags[k] === 1) s.flags[k] = 1;
   }
   if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
   return s;
 };
-// every flag the story can set (a save may only carry these)
+// every flag the story can set (a save may only carry these); the rite flags are set by songDone, not by a choice
 ABY.FLAGS = (function () { const f = {}; for (const id in ABY.NODES) for (const c of (ABY.NODES[id].choices || [])) if (c.set) f[c.set] = 1; return Object.keys(f); })();
 
 if (typeof module !== 'undefined') module.exports = ABY;
