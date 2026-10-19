@@ -111,7 +111,7 @@
   // deliver a node: typing dots, then its bubbles, then the reply chips
   function deliver(id, fromLog) {
     var n = N[id] || N[ABY.START]; id = N[id] ? id : ABY.START; G.node = n; G.state.node = id; G.delivering = true; G.fast = false;
-    contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
+    contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setEye(n.img === 'eye'); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
     if (n.ending) return finale();
     if (n.dark && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
     if (!fromLog && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
@@ -392,11 +392,11 @@
       if (G.saved) { G.state = G.saved.state; G.node = N[G.state.node]; G.log = G.saved.log; } ABY.Scene.setMood('void'); ABY.Scene.setFocus('queen'); world(); P.show('lock');
       setTimeout(function () { pre.classList.add('done'); }, 250); wake();
     }
-    var img = new Image(), bgi = new Image(), bgi2 = new Image(), bgi3 = new Image(), tried = 0, got = 0;
-    function both() { if (++got === 4) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null)); }
-    img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both; bgi3.onload = both; bgi3.onerror = both;      // the cities are a bonus: without them the nebula stays
+    var img = new Image(), bgi = new Image(), bgi2 = new Image(), bgi3 = new Image(), bgi4 = new Image(), tried = 0, got = 0;
+    function both() { if (++got === 5) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null, bgi4.naturalWidth ? bgi4 : null)); }
+    img.onload = both; bgi.onload = both; bgi.onerror = both; bgi2.onload = both; bgi2.onerror = both; bgi3.onload = both; bgi3.onerror = both; bgi4.onload = both; bgi4.onerror = both;      // the cities are a bonus: without them the nebula stays
     img.onerror = function () { if (tried++ === 0) img.src = 'assets/character/queen.png'; else ready(false); };
-    var eyeImg = new Image(); eyeImg.src = 'assets/world/abyss-eye.webp';
+    var eyeImg = bgi4; eyeImg.src = 'assets/world/abyss-eye.webp';
     ABY.Art = { queen: img, city: bgi, corrupt: bgi2, stairs: bgi3, eye: eyeImg };                       // the share cards are painted from these
     img.src = 'assets/character/queen-960.webp'; bgi.src = 'assets/world/abyss-city.webp'; bgi2.src = 'assets/world/abyss-city-corrupt.webp'; bgi3.src = 'assets/world/abyss-stairs.webp';
     setTimeout(function () { ready(false); }, 6000);                    // a slow or blocked 3D library never keeps her waiting
