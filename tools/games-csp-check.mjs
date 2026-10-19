@@ -28,9 +28,18 @@ const launch = { headless: true, args: ['--no-sandbox'] };
 if (existsSync('/opt/pw-browsers/chromium')) launch.executablePath = '/opt/pw-browsers/chromium';
 const browser = await chromium.launch(launch);
 let bad = 0;
+// every script/stylesheet a page pulls from another site must carry an integrity hash (a tampered CDN copy is refused)
+for (const g of games) {
+  const html = readFileSync(join(ROOT, 'games', g, 'index.html'), 'utf8');
+  for (const t of html.match(/<(?:script|link)\b[^>]*>/gi) || []) {
+    const ext = /(?:src|href)\s*=\s*["']https?:\/\//i.test(t) && /<script|rel=["']stylesheet/i.test(t) && !/fonts\.googleapis\.com/.test(t);
+    if (ext && !/\bintegrity\s*=/.test(t)) { bad++; console.log('NO-SRI   ', g, t.slice(0, 120)); }
+  }
+}
 for (const g of games) {
   const page = await browser.newPage();
-  const seen = new Map();
+  const seen = new Map(); let cdnDown = false;
+  page.on('requestfailed', q => { if (/cdnjs\.cloudflare\.com/.test(q.url())) cdnDown = true; });
   await page.exposeFunction('__csp', (d, b) => { seen.set(d + ' ' + b, 1); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => window.__csp(e.violatedDirective, e.blockedURI || e.sample || 'inline')));
   await page.goto(`${base}/games/${g}/`, { waitUntil: 'load' }).catch(() => {});
@@ -39,6 +48,7 @@ for (const g of games) {
   await page.waitForTimeout(800);
   // 'inline' is expected and allowed by the policy; anything listed here is outside it
   const list = [...seen.keys()];
+  if (g === 'kudbee-abyss') { const ok = await page.evaluate(() => typeof window.THREE !== 'undefined').catch(() => false); if (!ok && cdnDown) console.log('   (abyss: cdnjs unreachable from here - three.js integrity not exercised; static SRI check still ran)'); else if (!ok) list.push('three.js was fetched but refused: its integrity hash no longer matches'); }
   if (list.length) { bad++; console.log('VIOLATION', g, '\n   ' + list.join('\n   ')); } else console.log('clean    ', g);
   await page.close();
 }
