@@ -1004,9 +1004,19 @@ ABY.NODES = {
     ch: 9, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
     text: 'You are on the shore and the phone is dry, and the contact is open on its own: every name, and yours, and the blank line under it. "Someone has to close that book," the Queen says, very quietly. "Or write the next name in it. I always wrote the next name."',
     choices: [
+      { label: 'Take out the little crown', next: 'd4_crown', req: { flag: 'little_crown', noflag: 'crown_laid' } },
       { label: 'Say every name, then yours, and close the book', next: 'end_names', req: { all: ['rite_choir', 'read_names'], min: { mem: 7 }, maxDread: 4 } },
       { label: 'Write the next name, like she always did', next: 'end_caller' },
       { label: 'Throw the phone into the water', next: 'end_drowned' },
+    ],
+  },
+  d4_crown: {
+    ch: 9, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
+    text: 'You still have the little crown from the first night. It is dry, which is wrong, and it is warm. The Queen looks at it for a long time. "I made that for her," she says. "Before I made anything else. Put it where it goes."',
+    choices: [
+      { label: 'Lay it on the water', next: 'd4_shore', add: { heart: 1, dread: -1 }, set: 'crown_laid' },
+      { label: 'Keep it. It is yours now', next: 'd4_shore', add: { resolve: 1, dread: 1 }, set: 'crown_laid' },
+      { label: 'Cut her name into the blank space, beside yours', next: 'd4_shore', add: { heart: 1, dread: -1 }, set: 'crown_laid', req: { flag: 'read_names' } },
     ],
   },
   end_names: {

@@ -101,6 +101,16 @@ export function graphChecks() {
       'chorus and watched carry into Day Four; closing the book needs 7+ endings found, the names read and the Drowned Choir won');
   }
 
+  { // the intro's little crown pays off on Day Four, once, and never traps the shore
+    const sh = (o) => Object.assign(ABY.newState(0), { node: 'd4_shore' }, o);
+    const offer = (o) => ABY.options(sh(o)).some(x => x.c.next === 'd4_crown');
+    const laid = ABY.choose(Object.assign(ABY.newState(0), { node: 'd4_crown', dread: 3 }), 0);
+    const named = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_crown' }, o)).length;
+    rec('d4-little-crown', offer({ flags: { little_crown: 1 } }) && !offer({}) && !offer({ flags: { little_crown: 1, crown_laid: 1 } })
+      && laid && laid.node === 'd4_shore' && laid.flags.crown_laid === 1 && laid.dread === 2 && named({ flags: { read_names: 1 } }) === 3 && named({}) === 2,
+      'taking out the little crown needs it from the first night, can be done once, lowers dread when laid down, and returns to the shore');
+  }
+
   { // DAY FIVE: both dark Day Four endings carry on; the warning only works for a veteran who won the wake-up and told the truth
     const toWarned = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_warned'));
     const d5 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_caller', flags: { rite_choir: 1 } }));
