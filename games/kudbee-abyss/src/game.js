@@ -218,7 +218,7 @@
   }
 
   // ---- a journey ----
-  function dayOf(id) { var n = ABY.NODES[id], c = n && ABY.CHAPTERS[n.ch - 1]; return c && /^Day /.test(c.label) ? c.label : 'Day Two'; }   // the act a carried run opens on (its chapter's name)
+  function dayOf(id) { var n = ABY.NODES[id], c = n && ABY.CHAPTERS[n.ch - 1]; return c ? c.label : 'Day Two'; }   // the act a carried run opens on (its chapter's name)
   function startRun(carry) {
     var day2 = carry && ABY.carry(G.state); G.state = day2 || ABY.newState(foundN()); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; if (day2) day2.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);

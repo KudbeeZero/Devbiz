@@ -168,7 +168,8 @@ if (THREE_PATH) {
 }
 await pg.screenshot({ path: join(OUT, 'desktop-chat.png') });
 // the home bar: a swipe up goes home; then a banner + badge when a message arrives while she is elsewhere
-await pg.mouse.move(550, 860); await pg.mouse.down(); await pg.mouse.move(550, 760, { steps: 5 }); await pg.mouse.up(); await sleep(500);
+const hb = await pg.evaluate(() => { const r = document.getElementById('homebar').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });   // (start on the bar itself: its place moves with the phone's size)
+await pg.mouse.move(hb.x, hb.y); await pg.mouse.down(); await pg.mouse.move(hb.x, hb.y - 100, { steps: 5 }); await pg.mouse.up(); await pg.waitForFunction(() => ABY.Phone.screen === 'home', null, { timeout: 3000 }).catch(() => {});
 rec('homebar-swipe', await pg.evaluate(() => ABY.Phone.screen) === 'home', 'swiping up from the home bar leaves the app');
 await pg.click('#icMsg'); await pg.waitForFunction(() => ABY.Phone.screen === 'msg'); await pg.waitForSelector('#replies.on .chip');
 await pg.locator('#replies .chip').first().click(); await sleep(150); await pg.click('.scr.on [data-home]');
@@ -522,6 +523,10 @@ for (const p of PHONES) {
   ({ ctx, pg } = await open(phoneCtx(p), 'fit-' + p.n)); await wake(pg);
   const checks = [];
   const fit = async (screen) => {
+    await pg.evaluate(() => new Promise(done => {          // measure a screen only once it has stopped sliding in (a slow machine finishes the transition late)
+      const at = () => [...document.querySelectorAll('#homebar, .scr.on button')].slice(0, 8).map(e => { const r = e.getBoundingClientRect(); return Math.round(r.left * 10) + ',' + Math.round(r.top * 10); }).join(';');
+      let last = '', same = 0, n = 0; (function tick() { const now = at(); same = now === last ? same + 1 : 0; last = now; if (same >= 6 || ++n > 240) done(); else requestAnimationFrame(tick); })();
+    }));
     const o = await pg.evaluate((visSrc) => {
       const isVis = eval(visSrc), vw = innerWidth, vh = innerHeight, bad = [];
       for (const el of document.querySelectorAll('button, a.appi, #homebar')) { if (!isVis(el) || el.closest('#banner')) continue;      // (a banner is a passing overlay, not layout)

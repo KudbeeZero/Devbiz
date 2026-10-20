@@ -2,7 +2,7 @@
  * Kudbee Abyss - share.js (SHARING)
  * Every ending and the player's progress make a 1200 x 630 card painted from the
  * game's own art: the world painting, the Queen on the phone's lock screen, the
- * ending's name and "N of 18 endings found". Phones hand the picture straight to the
+ * ending's name and "N of <total> endings found". Phones hand the picture straight to the
  * share sheet; elsewhere the Share screen previews it with X / Facebook / WhatsApp /
  * copy / save. The link in every share is a landing page per ending (s/<slug>/)
  * whose og:image is the same card without the personal count, so a pasted link
@@ -15,7 +15,7 @@ ABY.Share = {
   PATH: '/games/kudbee-abyss/',
   W: 1200, H: 630,
   SLUGS: ABY.ENDING_IDS.concat(['progress']),                                  // the landing pages (one card each, /assets/og/abyss/<slug>.jpg)
-  WORDS: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN', 'TWENTY'],
+  WORDS: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN', 'TWENTY', 'TWENTY-ONE', 'TWENTY-TWO', 'TWENTY-THREE', 'TWENTY-FOUR', 'TWENTY-FIVE'],
   FONT: '"Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   WORLD: { dawn: ['city', 'rgba(255,196,90,0.20)'], song: ['city', 'rgba(57,230,255,0.16)'], echo: ['city', 'rgba(196,107,255,0.22)'], silence: ['city', 'rgba(120,128,150,0.45)'], crown: ['stairs', 'rgba(255,40,60,0.14)'], progress: ['city', 'rgba(120,70,255,0.12)'], game: ['corrupt', 'rgba(0,0,0,0)'],
     hollow: ['corrupt', 'rgba(130,40,220,0.26)'], eye: ['stairs', 'rgba(255,30,60,0.18)'], mirror: ['city', 'rgba(150,170,215,0.30)'], betrayal: ['corrupt', 'rgba(60,255,150,0.10)'], blackout: ['corrupt', 'rgba(0,0,0,0.72)'], daybreak: ['city', 'rgba(255,214,120,0.30)'], keeper: ['stairs', 'rgba(110,130,255,0.20)'], loop: ['corrupt', 'rgba(40,255,140,0.14)'], chorus: ['eye', 'rgba(255,150,210,0.18)'], watched: ['eye', 'rgba(255,40,70,0.26)'], names: ['city', 'rgba(140,240,220,0.22)'], caller: ['corrupt', 'rgba(150,240,110,0.14)'], drowned: ['corrupt', 'rgba(30,200,190,0.30)'], warned: ['city', 'rgba(255,220,140,0.32)'], nightline: ['stairs', 'rgba(255,190,120,0.20)'], passed: ['eye', 'rgba(255,100,160,0.22)'] },

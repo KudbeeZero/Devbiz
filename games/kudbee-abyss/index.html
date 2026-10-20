@@ -4,25 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05031a">
-<meta name="description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all eighteen endings in your Gallery. Art by Desiree Design.">
+<meta name="description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all twenty-one endings in your Gallery. Art by Desiree Design.">
 <title>Kudbee Abyss — The Guardian's Gate</title>
 <link rel="canonical" href="https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kudbee">
 <meta property="og:title" content="Kudbee Abyss — The Guardian's Gate">
-<meta property="og:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all eighteen endings in your Gallery. Art by Desiree Design.">
+<meta property="og:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all twenty-one endings in your Gallery. Art by Desiree Design.">
 <meta property="og:url" content="https://devbiz.kudbee.workers.dev/games/kudbee-abyss/index.html">
 <meta property="og:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=7">
 <meta property="og:image:secure_url" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=7">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and eighteen endings to find">
+<meta property="og:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and twenty-one endings to find">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kudbee Abyss — The Guardian's Gate">
-<meta name="twitter:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all eighteen endings in your Gallery. Art by Desiree Design.">
+<meta name="twitter:description" content="Kudbee Abyss — a story told through a haunted phone. Text the Queen, play the Song of Recall on the Echo Flute, and find all twenty-one endings in your Gallery. Art by Desiree Design.">
 <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=7">
-<meta name="twitter:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and eighteen endings to find">
+<meta name="twitter:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and twenty-one endings to find">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
   /* ---- the device: a bezel on a roomy desktop, the whole screen on a phone ---- */
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at 50% 35%, #1a0f3a 0%, #07041a 60%, #030010 100%); }
   #device { position:relative; width:100%; height:100%; container-type:size; container-name:phone; }
-  #screen { position:absolute; inset:0; overflow:hidden; background:var(--ink); isolation:isolate; }
+  #screen { position:absolute; inset:0; overflow:hidden; overflow:clip; background:var(--ink); isolation:isolate; }   /* clip: unlike hidden it can never be scrolled, so a focus inside a parked screen cannot slide the whole phone sideways */
   .side { display:none; }
   @media (hover:hover) and (pointer:fine) and (min-height:700px) and (min-width:520px) {
     #device { height:min(calc(100vh - 28px), 900px); width:calc(min(calc(100vh - 28px), 900px) * 0.49); padding:11px; border-radius:58px; background:linear-gradient(145deg,#2a2342,#0d0a1c 40%,#1d1735); box-shadow:0 0 0 2px #3a2f5c, 0 40px 120px rgba(0,0,0,0.75), 0 0 140px rgba(120,60,255,0.22), inset 0 0 0 2px rgba(255,255,255,0.05); }

@@ -115,6 +115,11 @@ export function graphChecks() {
       'bells ' + sh[0].chords + ' chords / ' + sh[0].len + ' notes / ' + sh[0].secs.toFixed(0) + 's, riff ' + sh[1].chords + ' chords / ' + sh[1].len + ' notes / ' + sh[1].secs.toFixed(0) + 's; each faster than every plain rite (' + slowest + 's), no chord inside one lane, no two notes of a lane closer than 0.2s; each offered once and optional');
   }
 
+  { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
+    const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));
+    rec('carry-opens-a-day', bad.length === 0 && ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont).length >= 10, bad.join(', ') || 'every continuing ending opens a node in a chapter named "Day ..."');
+  }
+
   { // the intro's little crown pays off on Day Four, once, and never traps the shore
     const sh = (o) => Object.assign(ABY.newState(0), { node: 'd4_shore' }, o);
     const offer = (o) => ABY.options(sh(o)).some(x => x.c.next === 'd4_crown');
