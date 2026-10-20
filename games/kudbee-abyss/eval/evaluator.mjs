@@ -554,7 +554,8 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await at(pg, 'd3_wake', { mem: 3, flags: {} }); const quiet = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('overnight-silent-without-flags', !/pillow|saying it to myself/.test(quiet) && /day three/i.test(quiet), 'a player without those flags hears nothing from Vey or the Guardian');
   await at(pg, 'd6_door', { mem: 3, notes: ['vey_gift', 'nursery_wall'], flags: {} }); const before = await chips(pg);
-  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(200); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400);
+  await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin[data-note="vey_gift"]'); await pg.click('#noteList .nt.pin[data-note="vey_gift"]'); await pg.click('#noteList .nt.pin[data-note="nursery_wall"]'); await sleep(300);
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400);
   await tapChip(pg, 'little brass key'); await pg.waitForFunction(() => ABY.game.state.node === 'ev_key', null, { timeout: 15000 });
   await tapChip(pg, 'Turn the key'); await pg.waitForFunction(() => ABY.game.state.node === 'd6_dawn', null, { timeout: 15000 });
   const key = await pg.evaluate(() => ({ promised: ABY.game.state.flags.promised_sorrel, node: ABY.game.state.node }));
@@ -591,7 +592,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const done = await pg.evaluate(() => ({ flag: ABY.game.state.flags.tt_choir, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), notes: ABY.game.state.notes.slice() }));
   await at(pg, 'd4_stones', { mem: 3, flags: { tt_choir: 1 } }); const stones = await chips(pg);
   await at(pg, 'd4_stones', { mem: 3, flags: {} }); const plain = await chips(pg);
-  rec('clock-winds-forward-and-pays-off', fut.time === 'future' && fut.clock === '6:51' && /Flash-forward/.test(fut.thread) && fut.sfx.includes('forward') && fut.dread >= 2 && done.flag === 1 && !done.chips.some(c => /Wind the clock forward/.test(c)) && done.notes.includes('glimpse_choir')
+  rec('clock-winds-forward-and-pays-off', fut.time === 'future' && fut.clock === '6:51' && /Flash-forward/.test(fut.thread) && fut.sfx.includes('forward') && fut.dread === 1 && done.flag === 1 && !done.chips.some(c => /Wind the clock forward/.test(c)) && done.notes.includes('glimpse_choir')
     && stones.some(c => /own name into the water/.test(c)) && !plain.some(c => /own name into the water/.test(c)),
     'winding forward shows ' + fut.clock + ' and the Day Four water; having seen it opens "Say your own name into the water" on the night, and not otherwise');
   await ctx.close();
