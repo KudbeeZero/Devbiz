@@ -52,7 +52,7 @@
 
   // ---- the phone's face follows the story ----
   function world() {
-    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(s.bat);
+    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); var tm = (N[s.node] || {}).time; $('screen').setAttribute('data-time', tm || ''); P.setTime(tm === 'past' ? 68 : tm === 'future' ? 411 : 187 + s.choices * 3 + s.tries * 2); /* inside a slip the clock reads another hour */ P.setBattery(s.bat);
     P.setSignal(G.node ? G.node.mood : 'void');
     [['sH', '\u2665', s.heart], ['sR', '\u25C6', s.resolve], ['sT', '\u2726', s.trust], ['sD', '\u25C9', s.dread]].forEach(function (a) {
       var el = $(a[0]), v = a[2], was = +el.getAttribute('data-v') || 0; el.textContent = a[1] + v;
@@ -102,33 +102,42 @@
   }
   // an incoming call: a full-screen ring with the node's two choices as Answer / Decline
   function showCall(n, opts) {
-    var el = $('call'); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
+    var el = $('call'), lv = Math.max(1, Math.min(3, n.call.ring || 1)); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
+    el.setAttribute('data-ring', lv); G.ringLv = lv;                         // how insistent: 2 rings louder and faster, 3 has already answered itself
     var act = $('callAct'); act.innerHTML = '';
     opts.forEach(function (o, k) { var b = document.createElement('button'); b.type = 'button'; b.className = 'cbtn ' + (k === 0 ? 'yes' : 'no'); b.innerHTML = '<i>' + (k === 0 ? '\u260E' : '\u2715') + '</i><span></span>'; b.querySelector('span').textContent = o.c.label; b.addEventListener('click', function (ev) { stopRing(); choose(o.i, ev); }); act.appendChild(b); });
-    el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, 1500);
+    el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, [1500, 1500, 1000, 700][lv]);
+    if (lv > 1) { scare(lv > 2 ? 'jump' : 'glitch'); fx($('call'), 'shudder', 600); }
   }
-  function ring1() { ABY.Audio.sfx('ring'); buzz(200); }
+  function ring1() { var lv = G.ringLv || 1; ABY.Audio.sfx(lv > 1 ? 'ring2' : 'ring'); buzz(lv > 2 ? 420 : lv > 1 ? 300 : 200); }
   function stopRing() { clearInterval(ringT); ringT = 0; $('call').classList.remove('on'); P.lockAll(false); }
   function chip(label, go, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (go ? ' go' : ''); b.textContent = label; b.addEventListener('click', fn); $('replies').appendChild(b); }
 
   // deliver a node: typing dots, then its bubbles, then the reply chips
   function deliver(id, fromLog) {
     var n = N[id] || N[ABY.START]; id = N[id] ? id : ABY.START; G.node = n; G.state.node = id; G.delivering = true; G.fast = false;
+    // the Clock: a flashback or flash-forward is announced when she goes in, and the glass settles when she comes out
+    if (!fromLog) { if (n.time && !G.slip) { var ts = n.time === 'past' ? '\u21BA Flashback \u00B7 the clock runs back' : '\u21BB Flash-forward \u00B7 the clock runs ahead'; bubble('stamp', '', ts); entry('stamp', '', ts, id); ABY.Audio.sfx(n.time === 'past' ? 'rewind' : 'forward'); buzz(40); } else if (!n.time && G.slip) { var te = '\u2014 the clock settles \u2014'; bubble('stamp', '', te); entry('stamp', '', te, id); ABY.Audio.sfx('ding'); } } G.slip = n.time || '';
     contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setEye(n.img === 'eye'); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
     if (n.ending) return finale();
     if (n.dark && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
     if (!fromLog && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
-    var parts = n.speaker === 'NARRATOR' ? [n.text] : split(n.text), done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length;
+    // what people said while she slept (ABY.OVERNIGHT) comes first, each from its own contact; then the scene's own text
+    var items = ABY.overnightFor(G.state).map(function (m) { return { who: m.who, text: m.text, note: m.note || '' }; });
+    (n.speaker === 'NARRATOR' ? [n.text] : split(n.text)).forEach(function (t, k, all) { items.push({ who: n.speaker, text: t, note: k === all.length - 1 ? n.note || '' : '' }); });
+    var done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length, cur = n.speaker;
     $('replies').classList.remove('on');
     (function step(i) {
-      if (i >= parts.length) { G.delivering = false; if (G.run) save(); return showReplies(n); }
+      if (i >= items.length) { G.delivering = false; if (G.run) save(); return showReplies(n); }
       var typing = document.createElement('div'); typing.className = 'm typing'; typing.innerHTML = '<i></i><i></i><i></i>'; $('thread').appendChild(typing); scrollEnd(true);
-      wait(380 + parts[i].length * 9 > 1500 ? 1500 : 380 + parts[i].length * 9, function () {
-        typing.remove(); var narr = n.speaker === 'NARRATOR', b = bubble(narr ? 'sys' : 'in', n.speaker, parts[i]); entry(narr ? 'sys' : 'in', n.speaker, parts[i], id);
-        if (i === 0 && !fromLog) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, parts[i]);
-        if (n.speaker === 'EYE') ABY.Audio.sfx('creep'); else ABY.Audio.sfx('ding'); buzz(10);
-        if (n.note && !G.seen[n.note] && i === parts.length - 1) { G.seen[n.note] = 1; P.badge('notes', ++noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: 'New clue: ' + ABY.NOTES[n.note].title, onTap: function () { open('notes'); } }); }
-        if (P.screen !== 'msg') { G.pending++; P.badge('msg', G.pending); P.banner({ title: WHO[n.speaker] || 'Unknown', text: parts[i], onTap: function () { open('msg'); } }); }
+      var it = items[i];
+      wait(380 + it.text.length * 9 > 1500 ? 1500 : 380 + it.text.length * 9, function () {
+        typing.remove(); var narr = it.who === 'NARRATOR', b = bubble(narr ? 'sys' : 'in', it.who, it.text); entry(narr ? 'sys' : 'in', it.who, it.text, id);
+        if (it.who !== cur) { cur = it.who; contact(cur); }
+        if (i === 0 && !fromLog) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, it.text);
+        if (it.who === 'EYE') ABY.Audio.sfx('creep'); else ABY.Audio.sfx('ding'); buzz(10);
+        if (it.note && !G.seen[it.note]) { G.seen[it.note] = 1; P.badge('notes', ++noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: 'New clue: ' + ABY.NOTES[it.note].title, onTap: function () { open('notes'); } }); }
+        if (P.screen !== 'msg') { G.pending++; P.badge('msg', G.pending); P.banner({ title: WHO[it.who] || 'Unknown', text: it.text, onTap: function () { open('msg'); } }); }
         step(i + 1);
       });
     })(done);
@@ -136,11 +145,20 @@
 
   function choose(i, ev) {
     if (G.busy || G.delivering) return; var ns = ABY.choose(G.state, i); if (!ns) return; clearTimeout(scareT);
-    var label = G.node.choices[i].label; ABY.Audio.init(); ABY.Audio.sfx('send'); buzz(12);
+    var c = G.node.choices[i], label = c.label, dark = !!(c.add && c.add.dread > 0); ABY.Audio.init(); ABY.Audio.sfx(dark ? 'pickdark' : 'pick'); buzz(dark ? 34 : 14);
     var r = ev && ev.target && ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : null;
     if (r) { var sr = $('screen').getBoundingClientRect(); ABY.Scene.burst(r.left - sr.left + 24, r.top - sr.top + r.height / 2, parseInt(ABY.SPEAKERS[G.node.speaker].color.slice(1), 16), 24, 3.2); }
+    struck(ev, r, dark);
     $('replies').classList.remove('on'); bubble('out', '', label); entry('out', '', label, '');
     G.state = ns; deliver(ns.node);
+  }
+
+  // a reply is felt: a ring of light spreads from the thumb, the glass flexes, and a choice that frightens her lands dark and low (red, a shudder)
+  function struck(ev, r, dark) {
+    var sc = $('screen'), sr = sc.getBoundingClientRect(), x = ev && ev.clientX ? ev.clientX : (r ? r.left + r.width / 2 : sr.left + sr.width / 2), y = ev && ev.clientY ? ev.clientY : (r ? r.top + r.height / 2 : sr.top + sr.height * 0.8);
+    var w = document.createElement('i'); w.className = 'ripple' + (dark ? ' dark' : ''); w.setAttribute('aria-hidden', 'true'); w.style.left = (x - sr.left) + 'px'; w.style.top = (y - sr.top) + 'px'; sc.appendChild(w);
+    setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 800);
+    sc.classList.remove('struck', 'struck-dark'); void sc.offsetWidth; fx(sc, dark ? 'struck-dark' : 'struck', dark ? 520 : 360);
   }
 
   // ---- scares: the phone and the dark do things to her ----
@@ -236,7 +254,7 @@
   }
   function begin(state, stampHead, checkpoint, told) {   // `told`: notes from her past self to point out (her scars)
     G.state = state; if (checkpoint) G.cp = ABY.cleanState(JSON.parse(JSON.stringify(state)));   // every dawn is a checkpoint (a wake starts from the one it had)
-    G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+    G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.slip = ''; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); if (checkpoint) ABY.overnightFor(state).forEach(function (m) { if (m.note && !(told || []).some(function (k) { return k === m.note; })) delete G.seen[m.note]; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     if (told && told.length) { noteN = told.length; P.badge('notes', noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: told.length === 1 ? 'In your own handwriting: ' + ABY.NOTES[told[0]].title.replace(/^Note to self: /, '') : 'You left yourself ' + told.length + ' notes', onTap: function () { open('notes'); } }); }
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
     var stamp = stampHead + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
@@ -330,10 +348,15 @@
     if (ks.indexOf(pick) < 0) pick = null;
     $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues' + (ded.length ? ' · ' + ded.length + (ded.length === 1 ? ' deduction' : ' deductions') : '');
     if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
+    // the tray stays on screen while the list scrolls (position: sticky): what she has picked, a way to put it down, and what her last pin did
+    var tray = document.createElement('div'); tray.className = 'pintray' + (live ? ' on' : ''); tray.setAttribute('role', 'status'); tray.setAttribute('aria-live', 'polite');
+    var tt = document.createElement('span'); tt.id = 'nMsg';
+    tt.textContent = msg || (live ? (pick ? '' : 'Tap two clues that belong together to pin them. A wrong pair costs you.') : 'Clues can be pinned together during a journey.');
+    if (pick) { var b = document.createElement('b'); b.textContent = '\u201C' + ABY.NOTES[pick].title + '\u201D'; tt.appendChild(document.createTextNode('Pinning ')); tt.appendChild(b); tt.appendChild(document.createTextNode(': now tap the clue it goes with.')); }
+    tray.appendChild(tt);
+    if (pick) { var x = document.createElement('button'); x.type = 'button'; x.className = 'pincancel'; x.id = 'nCancel'; x.textContent = 'Cancel'; x.addEventListener('click', function () { pick = null; ABY.Audio.sfx('click'); renderNotes(); }); tray.appendChild(x); }
+    box.appendChild(tray);
     ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
-    var tip = document.createElement('p'); tip.className = 'hint2 pinhint'; tip.id = 'nMsg'; tip.setAttribute('aria-live', 'polite');
-    tip.textContent = msg || (live ? (pick ? 'Now tap the clue it goes with.' : 'Tap two clues that belong together to pin them. A wrong pair costs you.') : 'Clues can be pinned together during a journey.');
-    box.appendChild(tip);
     ks.forEach(function (k) {
       var n = ABY.NOTES[k], d = document.createElement(live ? 'button' : 'div'); d.className = 'nt' + (live ? ' pin' : '') + (pick === k ? ' sel' : ''); d.setAttribute('data-note', k);
       if (live) { d.type = 'button'; d.setAttribute('aria-pressed', pick === k ? 'true' : 'false'); d.addEventListener('click', function () { pinTap(k); }); }
@@ -410,7 +433,7 @@
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
       G.cp = ABY.cleanState(JSON.parse(JSON.stringify(G.state))); G.wakes = ABY.WAKES;   // (the scene it jumps to is its dawn; a test sets ABY.game.wakes to spend them)
-      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
+      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.slip = ''; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
       if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
     },
     tick: function (dt) { ambient(dt); } };

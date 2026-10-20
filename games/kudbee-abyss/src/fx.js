@@ -92,6 +92,11 @@ ABY.Audio = (function () {
       case 'choice': A.tone(392, 0.35, 'sine', 0.09, 784); A.tone(587, 0.5, 'sine', 0.07, 1174, 0.06); A.flute(SCALE[5], 0.9, 0.08, 0.04); break;
       case 'ding': A.tone(988, 0.16, 'sine', 0.08, 1318); A.tone(1318, 0.28, 'sine', 0.06, 1568, 0.09); break;
       case 'send': A.tone(520, 0.12, 'sine', 0.07, 880); break;
+      case 'rewind': A.noise(1.3, 0.1, 5200, 260, 1.2); [9, 7, 5, 3, 2, 0].forEach(function (s, i) { A.flute(SCALE[s] * 0.5, 0.7, 0.07, i * 0.13, true); }); A.tone(1760, 1.2, 'sine', 0.04, 220); break;   // the clock runs back: a falling sweep and a falling scale
+      case 'forward': A.noise(1.3, 0.1, 240, 5200, 1.2); [0, 2, 3, 5, 7, 9].forEach(function (s, i) { A.flute(SCALE[s] * 2, 0.7, 0.06, i * 0.13, true); }); A.tone(220, 1.2, 'sine', 0.04, 1760); break;   // and ahead: a rising sweep and a rising scale
+      case 'pick': A.tone(98, 0.22, 'sine', 0.18, 49); A.tone(784, 0.2, 'triangle', 0.07, 1046, 0.01); A.tone(1175, 0.42, 'sine', 0.05, 1568, 0.07); A.noise(0.3, 0.05, 7000, 2600, 2, 0.02); break;   // a reply lands: a soft thump, a bright struck chime, a shimmer
+      case 'pickdark': A.tone(62, 0.6, 'sawtooth', 0.12, 36); A.tone(466, 0.5, 'sine', 0.05, 440, 0.03); A.tone(494, 0.5, 'sine', 0.05, 466, 0.03); A.noise(0.7, 0.08, 700, 3200, 1.5, 0.06); break;   // a frightening one: low, sour, a breath drawn in
+      case 'ring2': A.tone(988, 0.12, 'square', 0.05); A.tone(740, 0.12, 'square', 0.05, null, 0.13); A.tone(988, 0.12, 'square', 0.05, null, 0.36); A.tone(740, 0.12, 'square', 0.05, null, 0.49); A.tone(55, 0.7, 'sawtooth', 0.08, 41); A.noise(0.5, 0.05, 2400, 600, 1, 0.1); break;   // a call that will not stop: harsher, lower, closer
       case 'click': A.tone(2400, 0.02, 'square', 0.03); break;
       case 'ring': A.tone(1046, 0.14, 'square', 0.035); A.tone(784, 0.14, 'square', 0.035, null, 0.16); A.tone(1046, 0.14, 'square', 0.035, null, 0.5); A.tone(784, 0.14, 'square', 0.035, null, 0.66); break;
       case 'creep': A.tone(90, 1.4, 'sawtooth', 0.05, 58); A.noise(1.2, 0.05, 700, 260, 2); break;
