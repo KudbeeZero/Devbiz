@@ -142,6 +142,8 @@ ABY.NOTES = {
   scar_cradle: { title: 'Note to self: the nursery', text: 'Crayon, in your hand, pressed very hard: you can\'t stay with her. Somebody has to come back out and say her name.' },
   scar_again: { title: 'Note to self: the seventh night', text: 'Your handwriting, very calm: you have let it be 3:07 before. You were so brave, and then you forgot. Not this time.' },
   scar_blackout: { title: 'Note to self: the battery', text: 'Your handwriting, in the dark, mostly off the page: keep it charged. It knocks from the other side of the glass.' },
+  vey_gift: { title: 'Message: Vey, overnight', text: 'Vey left you a message, and a small cold weight on the pillow: a brass key, much too small for any door in this building. "For later," it says. "You\u2019ll know the lock when you see it. It is very low down."' },
+  eye_noticed: { title: 'Message: the Eye, overnight', text: 'you would not write a name. nobody ever does not. the book does not know what to do with you, and neither do i, and i have never been so interested in anyone.' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -155,10 +157,33 @@ ABY.LINKS = [
   { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
   { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
   { id: 'first_name', a: 'holders', b: 'first_page', at: 'd7_end', title: 'The first name in the book', text: '214 numbers, and above them all the first page: not a name, a crayon door and a crayon crown. The book did not begin with someone holding the phone. It began with a child drawing the way home.' },
+  { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
   { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
 ];
 ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
 ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => (l.a === a && l.b === b) || (l.a === b && l.b === a))[0] || null; };
+
+// overnight: what the people she has been kind or cruel to say to her while she sleeps. A day's wake scene (`at`) shows these messages before its own,
+// for whoever holds the flag (`req`, like a choice's). They are pure data, so the graph test can prove each one is reachable and its flag is set
+// on an earlier day; a message with a `note` also files that clue. They give the flags nothing else reads a voice.
+ABY.OVERNIGHT = [
+  { id: 'n_heard', at: 'd2_wake', req: { flag: 'heard' }, who: 'QUEEN', text: 'You heard the recording. I know, because I heard you hear it. I was not going to ask what it said. I know what it said.' },
+  { id: 'n_marked', at: 'd2_wake', req: { flag: 'marked' }, who: 'EYE', text: 'you looked at me. nobody looks. i kept the look, in a drawer, and i have taken it out all night.' },
+  { id: 'n_carried', at: 'd2_wake', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with it. On the stairs, in the dark, you sat. I have never been able to do that. I wanted you to know that I saw.' },
+  { id: 'n_vey_known', at: 'd3_wake', req: { flag: 'vey_known' }, who: 'VEY', note: 'vey_gift', text: 'You said my name aloud, in the dark, where I could hear. I left something on your pillow. Don’t look at it yet. Look at it when you are standing in front of the right lock.' },
+  { id: 'n_refused_vey', at: 'd3_wake', req: { flag: 'refused_vey' }, who: 'VEY', text: 'You kept me at arm’s length. That is all right. I have had a long time to get used to the length of arms.' },
+  { id: 'n_freed_name', at: 'd3_wake', req: { flag: 'freed_name' }, who: 'GUARDIAN', text: 'My name, said once, out loud. I have been saying it to myself all night, in case it leaves.' },
+  { id: 'n_corvin_lamp', at: 'd4_wake', req: { flag: 'corvin_lamp' }, who: 'GUARDIAN', text: 'The lamp. I can see it from here, at the end of every corridor. Keep it lit. It is the only light I have ever been given.' },
+  { id: 'n_corvin_door', at: 'd4_wake', req: { flag: 'corvin_door' }, who: 'GUARDIAN', text: 'I held the door behind you all night. Nothing came through. I did not know my arms could still do that.' },
+  { id: 'n_vey_hand', at: 'd4_wake', req: { flag: 'vey3_hand' }, who: 'VEY', text: 'Your hand was so warm. Is it always like that? I do not remember. I think it is the best thing I have ever carried.' },
+  { id: 'n_vey_cowed', at: 'd4_wake', req: { flag: 'vey3_cowed' }, who: 'VEY', text: 'You said you knew what I was. I do too. I have been waiting for someone to say it, so I could stop pretending to be anything else.' },
+  { id: 'n_refused_next', at: 'd5_wake', req: { flag: 'refused_next' }, who: 'EYE', note: 'eye_noticed', text: 'you would not write a name. nobody ever does not. the book has not slept; i have never seen it so cross.' },
+  { id: 'n_stayed_line', at: 'd6_wake', req: { flag: 'stayed_line' }, who: 'WREN', text: 'I did not hang up. I slept with it on the pillow and I could hear you breathing. Is that weird? It is the best I have slept since I was little.' },
+  { id: 'n_blamed', at: 'd7_wake', req: { flag: 'blamed_queen' }, who: 'QUEEN', text: 'You said I did this to all of them. You were right. I counted them, every one. All two hundred and fourteen. I know their names, and I have not slept.' },
+  { id: 'n_door_shut', at: 'd7_wake', req: { flag: 'door_shut' }, who: 'SORREL', text: 'i heard the door. it is ok. everybody does that. (a long pause.) did you come back?' },
+  { id: 'n_page_unread', at: 'd7_wake', req: { flag: 'page_unread' }, who: 'QUEEN', text: 'You did not read the first page. That is all right. I could not either, for a very long time.' },
+];
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -1487,6 +1512,7 @@ ABY.NODES = {
       { label: 'Give her the little crown back', next: 'd6_crown', req: { flag: 'little_crown' }, add: { heart: 1, trust: 1 } },
       { label: 'Tell her you will come back tomorrow', next: 'd6_dawn', add: { trust: 1 }, set: 'promised_sorrel' },
       { label: 'Shut the door on her', next: 'd6_shut', add: { resolve: 1, dread: 1 } },
+      { label: 'Try the little brass key in the low lock', next: 'ev_key', req: { flag: 'link_low_lock' } },
     ],
   },
   d6_lull: {
@@ -1816,6 +1842,13 @@ ABY.NODES = {
       { label: 'Then read it like a map', next: 'd7_end', set: 'ev_first', add: { heart: 1, dread: -1 } },
     ],
   },
+  ev_key: {
+    ch: 11, speaker: 'SORREL', mood: 'dawn', focus: 'queen',
+    text: 'That is Vey\u2019s key. (A very small click, from very low down.) Vey made it for me, a long time ago, when it still loved me. I kept thinking the lock was for somebody tall. (The red through the gap goes the colour of a nightlight.) Can I come out? Not for long. Only as far as the landing.',
+    choices: [
+      { label: 'Turn the key, and step back', next: 'd6_dawn', set: 'promised_sorrel', add: { heart: 2, trust: 1, dread: -1 } },
+    ],
+  },
   ev_watch: {
     ch: 12, speaker: 'SORREL', mood: 'dawn', focus: 'queen', scare: 'eye',
     text: 'you read it. (The red blinks, slowly.) all of it? the bit at the bottom where the letters are big? nobody reads to the bottom. they look at the eye and they scream and they never read to the bottom. (Smaller now. Much smaller.) Sorrel. you can say it. I want to hear somebody say it while they are looking at me.',
@@ -1968,6 +2001,7 @@ ABY.choose = function (s, i) {
 ABY._land = function (o) {
   const n = ABY.NODES[o.node];
   if (n.note && o.notes.indexOf(n.note) < 0) o.notes.push(n.note);
+  for (const m of ABY.overnightFor(o)) if (m.note && o.notes.indexOf(m.note) < 0) o.notes.push(m.note);   // overnight messages can file a clue
   if (n.dark && !o.light) o.dread = clamp(o.dread + 1, 0, ABY.MAX_DREAD);
   o.bat = clamp(o.bat, 0, 100);
   const forced = !n.safe && !n.ending;                           // endings and the forced scenes themselves are never interrupted
@@ -2003,7 +2037,9 @@ ABY.link = function (s, a, b) {
 // recharged to at least 48 and the flashlight is off. Returns null when the ending is final.
 ABY.carry = function (s) {
   const id = ABY.endingOf(s), E = id && ABY.ENDINGS[id], n = ABY.NODES[s.node]; if (!E || !E.cont || (n && n.final)) return null;
-  return Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
+  const o = Object.assign({}, s, { node: E.cont, flags: Object.assign({}, s.flags), notes: s.notes.slice(), dread: Math.max(0, s.dread - 2), bat: Math.max(s.bat, 48), light: 0, tries: 0, back: '' });
+  for (const m of ABY.overnightFor(o)) if (m.note && o.notes.indexOf(m.note) < 0) o.notes.push(m.note);     // a new day's overnight clues arrive with it
+  return o;
 };
 
 // ---- badges and factions (a player's own, kept on their phone) ----

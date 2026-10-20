@@ -540,6 +540,27 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
     'Corvin Ash calls; declined, it rings again ("' + r2.sub + '", harsher), declined again it answers itself (only "' + r3.btns.join() + '"), dread ' + r1.dread + ' -> ' + r3.dread + '; then on to ' + done.node);
   await ctx.close();
 }
+{ // overnight messages: a day that carries on opens with what the people she met said while she slept, for the flags she earned, each from its own
+  // contact; a clue filed by one is announced, and it unlocks a deduction (the little key + the nursery wall) that opens a way past the low lock
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'overnight'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd2_door', { mem: 3, resolve: 3, flags: { vey_known: 1, freed_name: 1 } }); await tapChip(pg, 'Hold the door yourself'); await memoryShown(pg);
+  await pg.click('#memNext'); await pg.waitForFunction(() => ABY.game.state.node === 'd3_wake', null, { timeout: 15000 });
+  for (let i = 0; i < 14 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(160); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const m = await pg.evaluate(() => ({ who: [...document.querySelectorAll('#thread .who')].map(w => w.textContent), thread: document.getElementById('thread').textContent, notes: ABY.game.state.notes.slice(), banner: document.getElementById('banner').textContent, badge: (document.querySelector('[data-app="notes"] .badge') || {}).textContent, head: document.getElementById('mName').textContent }));
+  await pg.screenshot({ path: join(OUT, 'overnight-day-three.png') });
+  rec('overnight-messages-arrive', m.who.slice(0, 3).join() === 'Vey,Guardian,Eye' && /left something on your pillow/.test(m.thread) && /saying it to myself all night/.test(m.thread) && /day three/i.test(m.thread) && m.notes.includes('vey_gift') && /New clue: Message: Vey/.test(m.banner) && m.head === 'Eye',
+    'Day Three opens with ' + m.who.slice(0, 3).join(' then ') + ' before the Eye; Vey’s message files "' + (m.notes.includes('vey_gift') ? 'Message: Vey, overnight' : '?') + '" and the banner announces it; the header goes back to ' + m.head);
+  await at(pg, 'd3_wake', { mem: 3, flags: {} }); const quiet = await pg.evaluate(() => document.getElementById('thread').textContent);
+  rec('overnight-silent-without-flags', !/pillow|saying it to myself/.test(quiet) && /day three/i.test(quiet), 'a player without those flags hears nothing from Vey or the Guardian');
+  await at(pg, 'd6_door', { mem: 3, notes: ['vey_gift', 'nursery_wall'], flags: {} }); const before = await chips(pg);
+  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300);
+  await tapChip(pg, 'little brass key'); await pg.waitForFunction(() => ABY.game.state.node === 'ev_key', null, { timeout: 15000 });
+  await tapChip(pg, 'Turn the key'); await pg.waitForFunction(() => ABY.game.state.node === 'd6_dawn', null, { timeout: 15000 });
+  const key = await pg.evaluate(() => ({ promised: ABY.game.state.flags.promised_sorrel, node: ABY.game.state.node }));
+  rec('little-key-opens-the-low-lock', !before.some(c => /little brass key/.test(c)) && key.promised === 1 && key.node === 'd6_dawn', 'pinning the key to the nursery wall adds "Try the little brass key in the low lock"; turning it frees Sorrel and promises to come back');
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);

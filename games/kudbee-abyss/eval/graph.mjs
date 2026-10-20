@@ -32,7 +32,7 @@ export function graphChecks() {
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
-  READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first');   // the evidence board's deductions, and its once-only scenes
+  READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next');   // the evidence board's deductions, and its once-only scenes
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   // the evidence board costs nothing when the pair is right, so the walk pins every right pair as soon as she holds both clues (notes are not in
   // the key; the deductions are). A player who never pins anything only sees fewer choices, so this hides no path.
@@ -233,6 +233,21 @@ export function graphChecks() {
     const days = [...new Set(calls.map(id => DAY(N[id].ch)))].sort();
     rec('calls-must-be-answered', calls.length >= 11 && shaped.length === calls.length && louder && heads.length >= 3 && self.length >= 2 && selfOk && days.length === 7 && calls.every(id => reach.has(id)) && N.c4_choir_talk.note === 'choir',
       calls.length + ' calls over all seven days, each reached; ' + heads.length + ' will not take no (' + heads.join(', ') + '): declined, they ring again louder, and ' + self.length + ' end by answering themselves; the drowned choir finally files its clue');
+  }
+  { // overnight messages: while she sleeps the people she has met write to her. Each is a real voice on a real day, for a flag a choice sets on an
+    // EARLIER day (so it is always remembered, never invented), shown only to whoever holds the flag; some file a clue, and a carried day files it too
+    const O = ABY.OVERNIGHT, setAt = f => ids.filter(id => (N[id].choices || []).some(c => c.set === f)), day = id => N[id].ch;
+    const bad = O.filter(o => !ABY.SPEAKERS[o.who] || !N[o.at] || !/_wake$/.test(o.at) || !o.text || !o.req || !o.req.flag || (o.note && !ABY.NOTES[o.note])
+      || !setAt(o.req.flag).length || !setAt(o.req.flag).some(id => reach.has(id) && day(id) < day(o.at))).map(o => o.id);
+    const days = [...new Set(O.map(o => o.at))].sort(), who = new Set(O.map(o => o.who));
+    const holder = (o) => ABY.overnightFor(Object.assign(ABY.newState(0), { node: o.at, flags: { [o.req.flag]: 1 } })).some(x => x.id === o.id);
+    const none = ABY.overnightFor(Object.assign(ABY.newState(0), { node: 'd3_wake' })).length === 0;
+    const carried = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper', flags: { vey_known: 1 } })), plain = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper' }));
+    const landed = ABY._land(Object.assign(ABY.newState(0), { node: 'd5_wake', flags: { refused_next: 1 } }));
+    const unread = new Set(ids.flatMap(f => (N[f].choices || []).filter(c => c.set).map(c => c.set))), nowRead = O.filter(o => unread.has(o.req.flag)).length;
+    rec('overnight-messages', O.length >= 15 && bad.length === 0 && new Set(O.map(o => o.id)).size === O.length && days.join() === 'd2_wake,d3_wake,d4_wake,d5_wake,d6_wake,d7_wake' && ['QUEEN', 'VEY', 'GUARDIAN', 'EYE', 'WREN', 'SORREL'].every(w => who.has(w))
+      && O.every(holder) && none && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed') && nowRead === O.length,
+      O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
   }
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
     const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));
