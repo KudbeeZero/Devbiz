@@ -465,6 +465,24 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
     'no wakes left: "' + last.kick + '", only "' + last.act + '"; the new journey opens at ' + fresh.node + ' with ' + fresh.wakes + ' wakes');
   await ctx.close();
 }
+{ // scars: the fall she just suffered wakes with her (a way past it, and a note in her own handwriting); a new journey carries every scar, and the glass shows them
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'scars'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd2_you', { mem: 2, dread: 1 }); const before = await chips(pg); await tapChip(pg, 'Turn the phone off'); await memoryShown(pg);
+  await pg.click('#memNext'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const w = await pg.evaluate(() => ({ chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), scar: ABY.game.state.flags.scar_loop, notes: ABY.game.state.notes.slice(), glass: document.getElementById('screen').getAttribute('data-scars'), badge: (document.querySelector('[data-app="notes"] .badge') || {}).textContent }));
+  await pg.screenshot({ path: join(OUT, 'scar-wake.png') });
+  await tapChip(pg, 'Leave it on'); const n1 = await pg.evaluate(() => ABY.game.state.node);
+  rec('scar-wakes-wiser', !before.some(c => /Leave it on/.test(c)) && w.chips.some(c => /Leave it on/.test(c)) && w.scar === 1 && w.notes.includes('scar_loop') && w.glass === '1' && w.badge === '1' && n1 === 'd2_want',
+    'after 3:07 Again she wakes with the scar: "' + w.chips.filter(c => /Leave/.test(c))[0] + '" -> ' + n1 + '; a note in her own handwriting; the glass is cracked (' + w.glass + ')');
+  await ctx.close();
+  const pre = `try { localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { loop: 1, drowned: 1, hollow: 1, dawn: 1 } })); } catch (e) {}`;
+  const c2 = await open(phoneCtx({ w: 844, h: 390 }), 'scars-new', { pre }); await wake(c2.pg); await openMessages(c2.pg); await c2.pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const j = await c2.pg.evaluate(() => ({ flags: Object.keys(ABY.game.state.flags).sort().join(), notes: ABY.game.state.notes.length, glass: document.getElementById('screen').getAttribute('data-scars'), banner: document.getElementById('banner').textContent, cracks: getComputedStyle(document.querySelector('#cracks .c2')).display }));
+  await c2.pg.screenshot({ path: join(OUT, 'scars-new-journey.png') });
+  rec('scars-carry-into-new-journeys', j.flags === 'scar_drowned,scar_hollow,scar_loop' && j.notes === 3 && j.glass === '2' && j.cracks !== 'none' && /3 notes/.test(j.banner),
+    'three falls in the Gallery: the new journey starts with ' + j.flags + ', ' + j.notes + ' notes ("' + j.banner.trim().slice(0, 60) + '"), and the glass at crack level ' + j.glass);
+  await c2.ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);

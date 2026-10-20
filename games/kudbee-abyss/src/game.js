@@ -51,7 +51,7 @@
 
   // ---- the phone's face follows the story ----
   function world() {
-    var s = G.state; P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(s.bat);
+    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(s.bat);
     P.setSignal(G.node ? G.node.mood : 'void');
     [['sH', '\u2665', s.heart], ['sR', '\u25C6', s.resolve], ['sT', '\u2726', s.trust], ['sD', '\u25C9', s.dread]].forEach(function (a) {
       var el = $(a[0]), v = a[2], was = +el.getAttribute('data-v') || 0; el.textContent = a[1] + v;
@@ -226,15 +226,17 @@
   function startRun(carry) {
     var day2 = carry && ABY.carry(G.state), forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
     if (!day2) { G.lastOpen = opening; G.wakes = ABY.WAKES; }                       // a new journey: a new opening, and every wake back
-    begin(day2 || ABY.newState(foundN(), opening), day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true);
+    var st = day2 || ABY.newState(foundN(), opening, G.found);
+    begin(st, day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true, day2 ? [] : st.notes.filter(function (k) { return /^scar_/.test(k); }));
   }
   function wakeRun() {                                                     // a fall: back to the last dawn, one wake fewer, a little more afraid
-    var s = ABY.wake(G.cp, G.wakes, foundN()); if (!s) return startRun();
-    G.wakes--; begin(s, (dayOf(s.node) === ABY.CHAPTERS[0].label ? 'You wake again' : dayOf(s.node) + ', again') + ' \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') + ' \u00B7 ', false);
+    var s = ABY.wake(G.cp, G.wakes, foundN(), G.found); if (!s) return startRun();
+    var had = G.cp.notes || []; G.wakes--; begin(s, (dayOf(s.node) === ABY.CHAPTERS[0].label ? 'You wake again' : dayOf(s.node) + ', again') + ' \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') + ' \u00B7 ', false, s.notes.filter(function (k) { return had.indexOf(k) < 0; }));
   }
-  function begin(state, stampHead, checkpoint) {
+  function begin(state, stampHead, checkpoint, told) {   // `told`: notes from her past self to point out (her scars)
     G.state = state; if (checkpoint) G.cp = ABY.cleanState(JSON.parse(JSON.stringify(state)));   // every dawn is a checkpoint (a wake starts from the one it had)
     G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+    if (told && told.length) { noteN = told.length; P.badge('notes', noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: told.length === 1 ? 'In your own handwriting: ' + ABY.NOTES[told[0]].title.replace(/^Note to self: /, '') : 'You left yourself ' + told.length + ' notes', onTap: function () { open('notes'); } }); }
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
     var stamp = stampHead + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
     if (P.screen !== 'msg') P.show('msg'); maybeGuide(); world(); var at = G.state.node; save(); wait(700, function () { deliver(at); });

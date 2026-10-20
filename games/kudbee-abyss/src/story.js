@@ -133,6 +133,15 @@ ABY.NOTES = {
   wren_seven: { title: 'Message: Wren, 3:07', text: 'outside. not letting you do the last one on your own. (Sent from the drive. Delivered. Read.)' },
   ten_doors: { title: 'What starts again', text: '"A lift. A bath. A bus. Ten doors, and every one of them opens onto me. You are always so brave on the seventh night, and then it is 3:07 again."' },
   seventh: { title: 'The seventh night', text: 'The first page, every name under it, and the blank line, blinking. "Whatever you choose, I will not write another name."' },
+  scar_crown: { title: 'Note to self: the crown', text: 'In your handwriting, pressed hard: don\'t put it on. It gets so quiet. You stop hearing the flute and you don\'t even miss it.' },
+  scar_hollow: { title: 'Note to self: the key', text: 'Your handwriting, shaking: do not lock the door. The key gets warm. By morning you forget which side you\'re on.' },
+  scar_eye: { title: 'Note to self: the Eye', text: 'Your handwriting: it doesn\'t want to be answered. It wants to be remembered. Those aren\'t the same thing.' },
+  scar_betrayal: { title: 'Note to self: Vey', text: 'Your handwriting, very small: it smiles with a mouth much too wide. Be kind to it. Don\'t hand it anything.' },
+  scar_loop: { title: 'Note to self: 3:07', text: 'Your handwriting, over and over down the page: don\'t turn it off. It only turns itself back on. Don\'t turn it off.' },
+  scar_drowned: { title: 'Note to self: the water', text: 'Your handwriting, the ink run: it is warm under. That is how it gets you. Let go of the hand.' },
+  scar_cradle: { title: 'Note to self: the nursery', text: 'Crayon, in your hand, pressed very hard: you can\'t stay with her. Somebody has to come back out and say her name.' },
+  scar_again: { title: 'Note to self: the seventh night', text: 'Your handwriting, very calm: you have let it be 3:07 before. You were so brave, and then you forgot. Not this time.' },
+  scar_blackout: { title: 'Note to self: the battery', text: 'Your handwriting, in the dark, mostly off the page: keep it charged. It knocks from the other side of the glass.' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -425,6 +434,7 @@ ABY.NODES = {
     choices: [
       { label: 'Trust Vey', next: 'hollow_pass', add: { trust: 1 }, set: 'vey_trusted' },
       { label: 'Take a photo of Vey', next: 'vey_photo', add: { dread: 1 } },
+      { label: 'You have seen that smile before. Be kind, and keep it at arm\'s length', next: 'hollow_pass', add: { resolve: 1 }, set: 'vey_doubt', req: { flag: 'scar_betrayal' } },
     ],
   },
   vey_photo: {
@@ -521,6 +531,7 @@ ABY.NODES = {
       { label: 'Reach out', next: 'reconcile', add: { trust: 1 } },
       { label: 'Play the Song of Recall', next: 'song_intro', add: { heart: 1 } },
       { label: 'Take the crown for myself', next: 'crown_taken', set: 'crown' },
+      { label: 'Leave the crown. You remember how quiet it got', next: 'reconcile', add: { resolve: 1, trust: 1 }, req: { flag: 'scar_crown' } },
     ],
   },
   offering: {
@@ -623,6 +634,7 @@ ABY.NODES = {
       { label: 'Free him', next: 'gate_opens', add: { heart: 1, trust: 1 } },
       { label: 'Lock the door again', next: 'gate_opens', add: { dread: 2 }, set: 'sealed' },
       { label: 'Take his place', next: 'end_mirror', req: { flag: 'truth' } },
+      { label: 'You know how warm the key gets. Give it to him', next: 'gate_opens', add: { trust: 2 }, req: { flag: 'scar_hollow' } },
     ],
   },
 
@@ -675,6 +687,7 @@ ABY.NODES = {
       { label: 'Smash the crown with the flute', next: 'crown_smashed', req: { min: { resolve: 3 } } },
       { label: 'Wear the crown', next: 'gate_opens', set: 'crown' },
       { label: 'Answer: remember me', next: 'end_eye', add: { dread: 1 } },
+      { label: 'You answered it once. This time, tell it you remember it', next: 'eye_song', add: { heart: 1, dread: -1 }, req: { flag: 'scar_eye' } },
     ],
   },
   eye_song: {
@@ -770,6 +783,7 @@ ABY.NODES = {
       { label: 'What do you want?', next: 'd2_want' },
       { label: 'Play it a lullaby', next: 'd2_lull', req: { flag: 'lullaby' } },
       { label: 'Turn the phone off', next: 'end_loop' },
+      { label: 'Leave it on. You know it only turns itself back on', next: 'd2_want', add: { resolve: 1 }, req: { flag: 'scar_loop' } },
     ],
   },
   d2_want: {
@@ -1125,6 +1139,7 @@ ABY.NODES = {
     choices: [
       { label: 'Stay', next: 'end_drowned' },
       { label: 'Pull your hand free and climb out', next: 'd4_shore', add: { dread: 1, resolve: 1 } },
+      { label: 'You have drowned here before. Let go, and swim', next: 'd4_shore', add: { resolve: 1, dread: -1 }, req: { flag: 'scar_drowned' } },
     ],
   },
   d4_shore: {
@@ -1446,6 +1461,7 @@ ABY.NODES = {
     text: 'The door\'s open a bit. You can come in if you want. (Very quietly.) But if you come in you have to stay. That\'s the rule. Somebody always has to be in here with me, or I get big, and when I get big everyone has to look at me.',
     choices: [
       { label: 'Go in and keep her company', next: 'end_cradle', add: { heart: 1 } },
+      { label: 'You stayed in this room once. Promise to come back instead', next: 'd6_dawn', set: 'promised_sorrel', add: { heart: 1, trust: 1 }, req: { flag: 'scar_cradle' } },
       { label: 'Sing her the lullaby through the door', next: 'd6_lull', req: { flag: 'lullaby' }, add: { heart: 1, dread: -1 } },
       { label: 'Give her the little crown back', next: 'd6_crown', req: { flag: 'little_crown' }, add: { heart: 1, trust: 1 } },
       { label: 'Tell her you will come back tomorrow', next: 'd6_dawn', add: { trust: 1 }, set: 'promised_sorrel' },
@@ -1522,6 +1538,7 @@ ABY.NODES = {
     choices: [
       { label: 'Say her name: Sorrel', next: 'd7_named', req: { flag: 'eye_is_sorrel' }, add: { heart: 2, dread: -2 }, set: 'named_eye' },
       { label: 'Ask what starts again', next: 'd7_again', add: { dread: 1 } },
+      { label: 'You let it start again once. Not this time', next: 'd7_gather', add: { resolve: 2, dread: -1 }, set: 'knows_loop', req: { flag: 'scar_again' } },
       { label: 'Block the number', next: 'd7_gather', add: { dread: 1 } },
     ],
   },
@@ -1705,16 +1722,27 @@ ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
 // journey is over and only a new one is possible.
 ABY.WAKES = 3;
 ABY.isFall = function (id) { return !!(ABY.ENDINGS[id] && ABY.ENDINGS[id].fall); };
-// the dawn she wakes at (a copy of the checkpoint), or null when there is no checkpoint or no wake left. `mem` is what she has found by now.
-ABY.wake = function (cp, wakes, mem) {
+// SCARS: every fall a player has suffered (it is in their Gallery) marks every later journey: a flag `scar_<fall>` a choice can ask for
+// (someone who has died this way before sees a way past it) and a note from their past self. `found` is the Gallery ({ id: 1 }) or a list.
+ABY.scarsOf = function (found) {
+  const has = Array.isArray(found) ? (id => found.indexOf(id) >= 0) : (id => !!(found && found[id]));
+  return ABY.ENDING_IDS.filter(id => ABY.isFall(id) && has(id));
+};
+// the dawn she wakes at (a copy of the checkpoint), or null when there is no checkpoint or no wake left. `mem` is what she has found by now, and
+// `found` her Gallery: she wakes remembering every fall so far, the one she just suffered included (its scar, and its note).
+ABY.wake = function (cp, wakes, mem, found) {
   if (!cp || !ABY.NODES[cp.node] || !(wakes > 0)) return null;
-  return Object.assign({}, cp, { flags: Object.assign({}, cp.flags), notes: (cp.notes || []).slice(), mem: Math.max(cp.mem || 0, Number.isInteger(mem) ? mem : 0), dread: Math.min(ABY.MAX_DREAD - 1, (cp.dread || 0) + 1), tries: 0, back: '' });
+  const o = Object.assign({}, cp, { flags: Object.assign({}, cp.flags), notes: (cp.notes || []).slice(), mem: Math.max(cp.mem || 0, Number.isInteger(mem) ? mem : 0), dread: Math.min(ABY.MAX_DREAD - 1, (cp.dread || 0) + 1), tries: 0, back: '' });
+  for (const id of ABY.scarsOf(found)) { o.flags['scar_' + id] = 1; if (o.notes.indexOf('scar_' + id) < 0) o.notes.push('scar_' + id); }
+  return o;
 };
 
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-ABY.newState = function (mem, open) {
-  return { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
+ABY.newState = function (mem, open, scars) {
+  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
+  for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
+  return s;
 };
 
 // what the gate does, given everything she did (the five hidden stats + the flags)
@@ -1887,6 +1915,7 @@ ABY.cleanState = function (raw) {
     for (const k of ABY.FLAGS) if (raw.flags[k] === 1) s.flags[k] = 1;
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
     for (const r of ABY.RITE_IDS) for (const k of ['rite_' + r, 'fail_' + r]) if (raw.flags[k] === 1) s.flags[k] = 1;
+    for (const id of ABY.ENDING_IDS) if (ABY.isFall(id) && raw.flags['scar_' + id] === 1) s.flags['scar_' + id] = 1;
   }
   if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
   return s;
