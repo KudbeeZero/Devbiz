@@ -341,10 +341,15 @@
     if (ks.indexOf(pick) < 0) pick = null;
     $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues' + (ded.length ? ' · ' + ded.length + (ded.length === 1 ? ' deduction' : ' deductions') : '');
     if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
+    // the tray stays on screen while the list scrolls (position: sticky): what she has picked, a way to put it down, and what her last pin did
+    var tray = document.createElement('div'); tray.className = 'pintray' + (live ? ' on' : ''); tray.setAttribute('role', 'status'); tray.setAttribute('aria-live', 'polite');
+    var tt = document.createElement('span'); tt.id = 'nMsg';
+    tt.textContent = msg || (live ? (pick ? '' : 'Tap two clues that belong together to pin them. A wrong pair costs you.') : 'Clues can be pinned together during a journey.');
+    if (pick) { var b = document.createElement('b'); b.textContent = '\u201C' + ABY.NOTES[pick].title + '\u201D'; tt.appendChild(document.createTextNode('Pinning ')); tt.appendChild(b); tt.appendChild(document.createTextNode(': now tap the clue it goes with.')); }
+    tray.appendChild(tt);
+    if (pick) { var x = document.createElement('button'); x.type = 'button'; x.className = 'pincancel'; x.id = 'nCancel'; x.textContent = 'Cancel'; x.addEventListener('click', function () { pick = null; ABY.Audio.sfx('click'); renderNotes(); }); tray.appendChild(x); }
+    box.appendChild(tray);
     ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
-    var tip = document.createElement('p'); tip.className = 'hint2 pinhint'; tip.id = 'nMsg'; tip.setAttribute('aria-live', 'polite');
-    tip.textContent = msg || (live ? (pick ? 'Now tap the clue it goes with.' : 'Tap two clues that belong together to pin them. A wrong pair costs you.') : 'Clues can be pinned together during a journey.');
-    box.appendChild(tip);
     ks.forEach(function (k) {
       var n = ABY.NOTES[k], d = document.createElement(live ? 'button' : 'div'); d.className = 'nt' + (live ? ' pin' : '') + (pick === k ? ' sel' : ''); d.setAttribute('data-note', k);
       if (live) { d.type = 'button'; d.setAttribute('aria-pressed', pick === k ? 'true' : 'false'); d.addEventListener('click', function () { pinTap(k); }); }

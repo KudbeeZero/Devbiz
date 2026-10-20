@@ -489,6 +489,15 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await at(pg, 'd2_door', { mem: 2, dread: 1, notes: ['recording', 'future_call', 'ledger'] }); const before = await chips(pg);
   await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin', { timeout: 5000 });
   const s0 = await pg.evaluate(() => ({ bat: ABY.game.state.bat, dread: ABY.game.state.dread, h: Math.min(...[...document.querySelectorAll('#noteList .nt.pin')].map(e => e.getBoundingClientRect().height)) }));
+  // with a long list the tray must stay in view (the pinned clue and what the last pin did), or the player scrolls away from the answer
+  await pg.evaluate(() => { const st = ABY.game.state; ['vey_photo', 'photo_you', 'holders', 'first_page', 'next_line', 'wren_call', 'eye', 'nursery_wall', 'door_crack', 'bargain'].forEach(k => { if (!st.notes.includes(k)) st.notes.push(k); }); ABY.Phone.show('home'); ABY.Phone.show('notes'); });
+  await pg.waitForSelector('#noteList .nt.pin[data-note="bargain"]'); await pg.evaluate(() => { document.querySelector('#notes .pad').scrollTop = 99999; });
+  await pg.click('#noteList .nt.pin[data-note="bargain"]'); await sleep(300);
+  const tray = await pg.evaluate(() => { const t = document.querySelector('.pintray'), p = document.querySelector('#notes .pad').getBoundingClientRect(), r = t.getBoundingClientRect(), c = document.getElementById('nCancel'); return { inView: r.top >= p.top - 1 && r.bottom <= p.bottom && r.height > 0, text: t.textContent, cancel: !!c && c.getBoundingClientRect().height >= 36, scrolled: document.querySelector('#notes .pad').scrollTop > 200 }; });
+  await pg.click('#nCancel'); await sleep(200); const cleared = await pg.evaluate(() => ({ sel: document.querySelectorAll('#noteList .nt.sel').length, cancel: !!document.getElementById('nCancel'), tray: document.getElementById('nMsg').textContent }));
+  await pg.evaluate(() => { document.querySelector('#notes .pad').scrollTop = 0; });
+  rec('notes-tray-stays-in-view', tray.inView && tray.scrolled && /What the Queen gave/.test(tray.text) && tray.cancel && cleared.sel === 0 && !cleared.cancel && /Tap two clues/.test(cleared.tray),
+    'with a long clue list scrolled to the bottom, the tray stays pinned in view ("' + tray.text.replace(/Cancel$/, '').trim() + '") with a Cancel; Cancel puts the clue down');
   await pg.click('#noteList .nt.pin[data-note="recording"]'); await pg.click('#noteList .nt.pin[data-note="ledger"]'); await sleep(300);
   const bad = await pg.evaluate(() => ({ bat: ABY.game.state.bat, dread: ABY.game.state.dread, msg: document.getElementById('nMsg').textContent, ded: document.querySelectorAll('#noteList .ded').length }));
   await pg.click('#noteList .nt.pin[data-note="future_call"]'); const sel = await pg.evaluate(() => { const e = document.querySelector('#noteList .nt.sel'); return e ? e.getAttribute('data-note') + ':' + e.getAttribute('aria-pressed') : ''; });
