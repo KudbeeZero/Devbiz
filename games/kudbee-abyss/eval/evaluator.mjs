@@ -549,12 +549,12 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const m = await pg.evaluate(() => ({ who: [...document.querySelectorAll('#thread .who')].map(w => w.textContent), thread: document.getElementById('thread').textContent, notes: ABY.game.state.notes.slice(), banner: document.getElementById('banner').textContent, badge: (document.querySelector('[data-app="notes"] .badge') || {}).textContent, head: document.getElementById('mName').textContent }));
   await pg.screenshot({ path: join(OUT, 'overnight-day-three.png') });
-  rec('overnight-messages-arrive', m.who.slice(0, 3).join() === 'Vey,Guardian,Eye' && /left something on your pillow/.test(m.thread) && /saying it to myself all night/.test(m.thread) && /day three/i.test(m.thread) && m.notes.includes('vey_gift') && /New clue: Message: Vey/.test(m.banner) && m.head === 'Eye',
-    'Day Three opens with ' + m.who.slice(0, 3).join(' then ') + ' before the Eye; Vey’s message files "' + (m.notes.includes('vey_gift') ? 'Message: Vey, overnight' : '?') + '" and the banner announces it; the header goes back to ' + m.head);
+  rec('overnight-messages-arrive', m.who.slice(0, 3).join() === 'Vey,Guardian,No Caller ID' && /left something on your pillow/.test(m.thread) && /saying it to myself all night/.test(m.thread) && /day three/i.test(m.thread) && m.notes.includes('vey_gift') && /New clue: Message: Vey/.test(m.banner) && m.head === 'No Caller ID',
+    'Day Three opens with ' + m.who.slice(0, 3).join(' then ') + ' (the Eye\u2019s own line comes last); Vey’s message files "' + (m.notes.includes('vey_gift') ? 'Message: Vey, overnight' : '?') + '" and the banner announces it; the header goes back to ' + m.head);
   await at(pg, 'd3_wake', { mem: 3, flags: {} }); const quiet = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('overnight-silent-without-flags', !/pillow|saying it to myself/.test(quiet) && /day three/i.test(quiet), 'a player without those flags hears nothing from Vey or the Guardian');
   await at(pg, 'd6_door', { mem: 3, notes: ['vey_gift', 'nursery_wall'], flags: {} }); const before = await chips(pg);
-  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300);
+  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(200); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400);
   await tapChip(pg, 'little brass key'); await pg.waitForFunction(() => ABY.game.state.node === 'ev_key', null, { timeout: 15000 });
   await tapChip(pg, 'Turn the key'); await pg.waitForFunction(() => ABY.game.state.node === 'd6_dawn', null, { timeout: 15000 });
   const key = await pg.evaluate(() => ({ promised: ABY.game.state.flags.promised_sorrel, node: ABY.game.state.node }));
