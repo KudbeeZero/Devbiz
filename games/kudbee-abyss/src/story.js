@@ -88,14 +88,15 @@ ABY.NOTES = {
   next_line: { title: 'The blank line', text: 'Under your name there is one more line, already selected, the cursor blinking. Placeholder text, very faint: "who is next?"' },
   wren_call: { title: 'Call log: Wren, 3:07', text: 'Answered, 41 minutes. Wren picked up. She did not hang up. Nobody has ever stayed on the line this long.' },
   new_line: { title: 'The book, tonight', text: 'The contact has grown a line, in the handwriting you know from birthday cards: Wren. Under it, the blank one, selected, blinking. who is next?' },
+  door_crack: { title: 'The door in the haze', text: 'It was open a hand\'s width, and the light inside smelled of birthday candles. Someone small was counting down to something, and you were meant to be inside before they reached one.' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
   awakening: {
-    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
-    text: 'Consciousness returns in fragments. The void whispers a name she cannot remember. All that remains is the weight of the flute at her back, and the echo of its song in her blood.',
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch',
+    text: 'Something wakes her. Not a sound: the end of one. 3:07, says the phone in your hand, and somewhere in the haze a door has just stopped closing. She cannot remember her name. She can remember the weight of the flute at her back, and the echo of its song in her blood. Something has already begun to count.',
     choices: [
       { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
       { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
@@ -149,6 +150,31 @@ ABY.NODES = {
       { label: 'Climb the broken spire', next: 'spire', add: { resolve: 1 } },
       { label: 'Call to the small creature', next: 'vey_come', add: { trust: 1 } },
       { label: 'Play the flute at the dark', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Follow the wet footprints', next: 'footprints', add: { heart: 1 } },
+    ],
+  },
+  footprints: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'Small bare footprints cross the haze, still wet. They are hers. They come out of the dark and stop at her feet, and nothing leads away. Someone has been walking toward her for a very long time.',
+    choices: [
+      { label: 'Walk them backwards', next: 'footprints_door', add: { resolve: 1 } },
+      { label: 'Ignore them and climb', next: 'spire', add: { dread: 1 } },
+    ],
+  },
+  footprints_door: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', note: 'door_crack',
+    text: 'The prints end at a door standing alone in the haze, open a hand\'s width. A crack of warm light. A smell of birthday candles. From inside, a child\'s voice, counting down: nine. Eight. Seven.',
+    choices: [
+      { label: 'Push it open', next: 'door_open', add: { heart: 1 } },
+      { label: 'Hold it shut with your shoulder', next: 'spire', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  door_open: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'A small room. A cot. A crown no bigger than a bowl. On the wall, scratched in by a child: SHE LEFT THE DOOR OPEN FIRST. The counting reaches one, and the light behind you goes out.',
+    choices: [
+      { label: 'Take the little crown', next: 'spire', add: { heart: 1, dread: 1 }, set: 'little_crown', bat: 8 },
+      { label: 'Back out slowly', next: 'vey_come', add: { trust: 1 } },
     ],
   },
   stones_path: {
@@ -159,6 +185,23 @@ ABY.NODES = {
       { label: 'Ask Vey to guide me', next: 'vey_guide', add: { trust: 1 } },
       { label: 'Search the broken pillar', next: 'pillar_door' },
       { label: 'Press your ear to the stones', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Read the names cut into them', next: 'names_cut', add: { heart: 1 } },
+    ],
+  },
+  names_cut: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'Hundreds of names are cut into the stones, each in a different hand. The newest is still wet: yours. Beside it, the Queen\'s. Beneath both, a space the exact width of one more.',
+    choices: [
+      { label: 'Scratch out your name', next: 'names_scratch', add: { resolve: 1 } },
+      { label: 'Say them aloud', next: 'choir_1', add: { dread: 1 } },
+    ],
+  },
+  names_scratch: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'The stone bleeds where you scratch. Every other name slides across the rock and rearranges itself into a single word, over and over, the whole length of the wall: STAY.',
+    choices: [
+      { label: 'Leave. Quickly.', next: 'vey_come', add: { dread: 1, resolve: 1 } },
+      { label: 'Stay a moment longer', next: 'pillar_door', add: { heart: 1, dread: 1 } },
     ],
   },
   pillar_door: {
@@ -209,6 +252,24 @@ ABY.NODES = {
     text: 'The spire crumbles under each step. At the top, a crystal pulses like a heartbeat. The song in her flute answers it.',
     choices: [
       { label: 'Take the crystal', next: 'crystal', add: { resolve: 1 }, set: 'crystal', bat: -20 },
+      { label: 'Offer the flute instead', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12 },
+      { label: 'Count the steps', next: 'stair_count', add: { dread: 1 } },
+      { label: 'Offer the little crown', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12, req: { flag: 'little_crown' } },
+    ],
+  },
+  stair_count: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'crystal', scare: 'whisper',
+    text: 'One. Two. At seventy the steps begin counting you back. At one hundred and eleven the spire is shorter than it was a minute ago, and still you climb, because the number is the only thing that stays the same.',
+    choices: [
+      { label: 'Keep counting', next: 'stair_end', add: { dread: 1, resolve: 1 } },
+      { label: 'Stop. Look at the phone.', next: 'stair_end', add: { dread: 1 } },
+    ],
+  },
+  stair_end: {
+    ch: 2, speaker: 'NARRATOR', mood: 'dark', focus: 'crystal', scare: 'glitch',
+    text: 'Three hundred and seven. The last step is the top, and the clock says 3:07, and the crystal is already in your hand. You do not remember reaching for it.',
+    choices: [
+      { label: 'Take it', next: 'crystal', add: { resolve: 1 }, set: 'crystal', bat: -20 },
       { label: 'Offer the flute instead', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12 },
     ],
   },
