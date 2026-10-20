@@ -67,6 +67,22 @@ ABY.RITES = {
     mel: [[5, 0], [5, 1], [3, 1], [5, 2], [7, 1], [5, 1], [3, 2], [2, 1], [3, 1], [5, 1], [7, 2], [9, 1], [7, 1], [5, 2], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [3, 1], [5, 1], [7, 1], [8, 1], [9, 2], [7, 1], [5, 1], [3, 1], [5, 3]],
     fx: [[2, 'knock'], [6, 'flash'], [10, 'drip'], [13, 'door'], [17, 'whisper'], [21, 'crack'], [25, 'flash'], [29, 'scream']] },
 };
+// the two hard rites (optional, late): faster, longer, and with CHORDS: a third number [note, steps, note2] drops two notes in two lanes at once, and
+// both have to be struck together for a SLAM (the Kudbee Riff idea). `win` is how much of the song has to be whole; the plain rites ask for 60%.
+ABY.RITES.bells = { name: 'THE DROWNED BELLS', step: 0.27, win: 0.66, fall: 1.1, tint: '#7fe0ff', lanes: ['#7fe0ff', '#c9a8ff', '#fff1b0'],
+  mel: [
+    [3, 0], [5, 1], [7, 1], [5, 1], [3, 1, 0], [2, 2], [3, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1, 2], [6, 2], [5, 1], [3, 1], [5, 1], [6, 1], [7, 1], [9, 1, 3], [8, 2], [7, 1], [5, 1], [3, 1], [2, 1], [0, 1], [2, 1, 7],
+    [9, 3], [7, 1], [9, 1], [7, 1], [5, 1], [7, 1], [5, 1, 0], [3, 1], [5, 1], [3, 1], [2, 1], [3, 1, 9], [5, 2], [6, 1], [7, 1], [8, 1], [9, 1], [8, 1], [7, 1], [6, 1, 1], [5, 2], [3, 1], [2, 1], [0, 1], [2, 2, 6],
+    [5, 3], [7, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1, 0], [3, 2], [5, 1], [3, 1], [5, 1], [7, 1], [5, 1], [3, 1, 9], [2, 2], [3, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1, 1], [7, 2], [5, 1], [7, 1], [9, 1], [8, 1], [7, 1], [5, 1, 2], [3, 2], [2, 1], [0, 1, 6], [0, 3, 7]],
+  fx: [[2, 'drip'], [8, 'whisper'], [14, 'knock'], [20, 'dark'], [27, 'drip'], [34, 'scream'], [41, 'flash'], [48, 'blood'], [55, 'knock'], [62, 'door'], [70, 'scream'], [78, 'flash'], [86, 'dark'], [94, 'scream']] };
+ABY.RITES.riff = { name: 'THE 3:07 RIFF', step: 0.25, win: 0.72, fall: 1.0, tint: '#ff4d9a', lanes: ['#ff4d9a', '#ffd34d', '#39e6ff'],
+  mel: [
+    [0, 0, 3], [0, 1], [0, 1, 3], [2, 2, 5], [0, 1], [2, 1, 5], [3, 2, 6], [2, 1], [0, 1, 3], [0, 2],
+    [5, 3], [6, 1], [7, 1], [9, 1], [7, 1], [6, 1], [5, 1], [3, 1], [5, 1], [6, 1], [8, 1, 2], [7, 2], [9, 1], [8, 1], [7, 1, 1], [5, 2], [3, 1], [5, 1, 0],
+    [0, 2, 3], [0, 1], [0, 1, 3], [2, 2, 5], [0, 1], [2, 1, 5], [3, 2, 6], [5, 1], [3, 1, 7], [2, 2],
+    [3, 3, 7], [3, 1, 7], [5, 1, 9], [2, 2, 6], [0, 1, 5], [2, 1, 7], [3, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1], [3, 1], [2, 1, 8], [0, 2, 3], [0, 1, 6],
+    [6, 2], [7, 1], [9, 1], [7, 1, 2], [6, 1], [5, 1], [3, 1, 8], [2, 1], [3, 1], [5, 1, 9], [7, 2, 0], [5, 1], [3, 1, 6], [2, 2, 5], [0, 1, 3], [0, 3, 7]],
+  fx: [[0, 'knock'], [6, 'flash'], [12, 'knock'], [20, 'scream'], [28, 'door'], [36, 'flash'], [44, 'blood'], [52, 'crack'], [60, 'scream'], [68, 'flash'], [76, 'blood'], [84, 'scream'], [92, 'flash']] };
 ABY.RITE_IDS = Object.keys(ABY.RITES);
 ABY.MAX_DREAD = 6;
 ABY.BAT0 = 62;            // the battery she starts with
@@ -254,7 +270,7 @@ ABY.NODES = {
       { label: 'Take the crystal', next: 'crystal', add: { resolve: 1 }, set: 'crystal', bat: -20 },
       { label: 'Offer the flute instead', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12 },
       { label: 'Count the steps', next: 'stair_count', add: { dread: 1 } },
-      { label: 'Offer the little crown', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12, req: { flag: 'little_crown' } },
+      { label: 'Offer the little crown', next: 'offering', add: { heart: 1, trust: 1 }, bat: -12, set: 'crown_laid', req: { flag: 'little_crown' } },
     ],
   },
   stair_count: {
@@ -1005,6 +1021,7 @@ ABY.NODES = {
     text: 'You are on the shore and the phone is dry, and the contact is open on its own: every name, and yours, and the blank line under it. "Someone has to close that book," the Queen says, very quietly. "Or write the next name in it. I always wrote the next name."',
     choices: [
       { label: 'Take out the little crown', next: 'd4_crown', req: { flag: 'little_crown', noflag: 'crown_laid' } },
+      { label: 'Ring the drowned bells', next: 'd4_bells', req: { noflag: 'bells_done' } },
       { label: 'Say every name, then yours, and close the book', next: 'end_names', req: { all: ['rite_choir', 'read_names'], min: { mem: 7 }, maxDread: 4 } },
       { label: 'Write the next name, like she always did', next: 'end_caller' },
       { label: 'Throw the phone into the water', next: 'end_drowned' },
@@ -1015,8 +1032,35 @@ ABY.NODES = {
     text: 'You still have the little crown from the first night. It is dry, which is wrong, and it is warm. The Queen looks at it for a long time. "I made that for her," she says. "Before I made anything else. Put it where it goes."',
     choices: [
       { label: 'Lay it on the water', next: 'd4_shore', add: { heart: 1, dread: -1 }, set: 'crown_laid' },
-      { label: 'Keep it. It is yours now', next: 'd4_shore', add: { resolve: 1, dread: 1 }, set: 'crown_laid' },
+      { label: 'Keep it. It is yours now', next: 'd4_shore', add: { resolve: 1 }, set: 'crown_laid' },
       { label: 'Cut her name into the blank space, beside yours', next: 'd4_shore', add: { heart: 1, dread: -1 }, set: 'crown_laid', req: { flag: 'read_names' } },
+    ],
+  },
+  d4_bells: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'gate', song: 'bells', scare: 'whisper',
+    text: 'Under the shallows there is a bell tower, and the bells are still ringing: not one note but two and three at a time, the way the choir was taught before anyone came to teach it wrong. Strike the pairs together. Where a bell rings alone and you answer one note, the water remembers how heavy it is.',
+    songNext: { win: 'd4_bells_win', fail: 'd4_bells_fail', give: 'd4_bells_give' },
+  },
+  d4_bells_win: {
+    ch: 9, speaker: 'CHOIR', mood: 'dawn', focus: 'queen',
+    text: 'The last pair rings out clean, and the whole lake answers in one voice, and for one held breath all two hundred and fourteen of them are singing the right tune. Nobody is holding your ankle. Somebody has taken your hand and is only holding it.',
+    choices: [
+      { label: 'Wade back to the shore', next: 'd4_shore', add: { heart: 1, dread: -2 }, set: 'bells_done' },
+    ],
+  },
+  d4_bells_fail: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'You land one bell of the pair and not the other, and the one you missed rings alone, a long way down, and the water takes the weight of it out on you. Something under the tower is counting your mistakes.',
+    choices: [
+      { label: 'Strike the bells again', next: 'd4_bells', retry: true },
+      { label: 'Put the flute down', next: 'd4_bells_give', add: { dread: 1 } },
+    ],
+  },
+  d4_bells_give: {
+    ch: 9, speaker: 'CHOIR', mood: 'dusk', focus: 'queen',
+    text: 'It is all right. (They have waited this long.) The bells go on without you, slowly, a little flat, and nobody blames you. They only ask if you will come back, and they do not say when.',
+    choices: [
+      { label: 'Wade back to the shore', next: 'd4_shore', add: { dread: 1 }, set: 'bells_done' },
     ],
   },
   end_names: {
@@ -1140,9 +1184,37 @@ ABY.NODES = {
     ch: 10, speaker: 'WREN', mood: 'gate', focus: 'gate',
     text: 'It is 5:51. The window is grey. She is sitting on the floor with the phone against her ear and the book open on the screen: every name, and hers, and the blank line, still blinking. "You can say what happens now," she says. "I will do whatever you say. I always did."',
     choices: [
+      { label: 'Play her the riff, loud, to wake the street', next: 'd5_riff', req: { noflag: 'riff_done' } },
       { label: 'Have her call the first number in the book', next: 'end_warned', req: { all: ['rite_wake', 'told_truth'], min: { mem: 8 }, maxDread: 4 } },
       { label: 'Promise to stay on the line, every night', next: 'end_nightline', req: { flag: 'told_truth' } },
       { label: 'Hang up and let the book have her', next: 'end_passed' },
+    ],
+  },
+  d5_riff: {
+    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'gate', song: 'riff', scare: 'jump',
+    text: '"Play it like you mean it," Wren says, and holds the phone up to her open window, and the whole grey street is listening. It is not a lullaby. It is the loudest thing the flute has ever been: two notes at a time, hard, on the beat, and every smash puts one more light on in one more kitchen. Miss the chord, and the street goes dark again.',
+    songNext: { win: 'd5_riff_win', fail: 'd5_riff_fail', give: 'd5_riff_give' },
+  },
+  d5_riff_win: {
+    ch: 10, speaker: 'WREN', mood: 'dawn', focus: 'queen',
+    text: 'Every window on the street is lit. People are standing in them in their pyjamas, holding up their phones, and every phone is playing the riff back at you, a bit out of time. Wren is laughing, wildly, with her hand over her mouth. "That was so loud," she says. "That was so loud. They\'ll never be able to say they didn\'t hear."',
+    choices: [
+      { label: 'Come down off the roof of the song', next: 'd5_dawn', add: { heart: 1, resolve: 1, dread: -1 }, set: 'riff_done' },
+    ],
+  },
+  d5_riff_fail: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'The chord comes out ragged, a note short, and the lights on the street go out one at a time, in order, as if someone is walking along the row with a hand on every switch. "Again," Wren whispers. "Harder. They can still hear you."',
+    choices: [
+      { label: 'Hit it again', next: 'd5_riff', retry: true },
+      { label: 'Let the street go quiet', next: 'd5_riff_give', add: { dread: 1 } },
+    ],
+  },
+  d5_riff_give: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+    text: 'Okay. Okay. (She closes the window on the dark street.) It was a lot to ask. We can try the quiet way.',
+    choices: [
+      { label: 'Go back to the dawn', next: 'd5_dawn', add: { dread: 1 }, set: 'riff_done' },
     ],
   },
   end_warned: {

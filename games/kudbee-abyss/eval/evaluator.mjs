@@ -421,10 +421,10 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const w = await pg.evaluate(() => ({ node: ABY.game.state.node, flag: ABY.game.state.flags.rite_choir }));
   await tapChip(pg, 'Ask them their names'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c1 = await chips(pg);
   await tapChip(pg, 'Say every name'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden);
-  rec('day-four-choir-and-names', w.node === 'd4_choir_win' && w.flag === 1 && c1.length === 3 && e.name === 'The Last Name' && fin, 'the choir is won (' + w.node + '), the shore shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day4-names.png') });
+  rec('day-four-choir-and-names', w.node === 'd4_choir_win' && w.flag === 1 && c1.length === 4 && e.name === 'The Last Name' && fin, 'the choir is won (' + w.node + '), the shore shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day4-names.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd4_shore', { mem: 2, flags: { rite_choir: 1, read_names: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c0 = await chips(pg);
-  rec('day-four-true-ending-gated', !c0.some(c => /every name/.test(c)) && c0.length === 2, 'with only 2 endings found the book will not close: ' + c0.join(' / '));
+  rec('day-four-true-ending-gated', !c0.some(c => /every name/.test(c)) && c0.length === 3, 'with only 2 endings found the book will not close: ' + c0.join(' / '));
   await ctx.close();
 }
 { // Day Five: a dark Day Four ending carries on as Wren's caller; the warning only works for a veteran who told the truth and won the wake-up
@@ -439,10 +439,33 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const w = await pg.evaluate(() => ({ node: ABY.game.state.node, flag: ABY.game.state.flags.rite_wake }));
   await tapChip(pg, 'Tell her to hold on until the light'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c1 = await chips(pg);
   await tapChip(pg, 'Have her call the first number'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden);
-  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 3 && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
+  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 4 && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd5_dawn', { mem: 2, flags: { rite_wake: 1, told_truth: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c0 = await chips(pg);
-  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 2, 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
+  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 3, 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
+  await ctx.close();
+}
+{ // the two hard rites: chords. A perfect player slams every chord and wins; half a chord is not a slam; a rite that is given up still goes on
+  const { ctx, pg } = await open({}, 'hardrites'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd4_shore', { mem: 7, dread: 3, flags: { rite_choir: 1, read_names: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  await tapChip(pg, 'Ring the drowned bells'); await playSong(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const b = await pg.evaluate(() => { const s = ABY.Song.stats, g = ABY.game.state; return { node: g.node, flag: g.flags.rite_bells, slam: s.slam, chords: s.chords, acc: s.acc, total: s.total }; });
+  await tapChip(pg, 'Wade back to the shore'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c = await chips(pg);
+  const sd = await pg.evaluate(() => ({ node: ABY.game.state.node, dread: ABY.game.state.dread, done: ABY.game.state.flags.bells_done }));
+  rec('hard-rite-bells', b.node === 'd4_bells_win' && b.flag === 1 && b.chords >= 12 && b.slam === b.chords && b.acc === 1 && sd.node === 'd4_shore' && sd.dread === 1 && sd.done === 1 && !c.some(x => /drowned bells/.test(x)),
+    'the bot lands ' + b.slam + '/' + b.chords + ' slams of ' + b.total + ' notes and wins; dread 3 -> ' + sd.dread + '; the bells are offered once: ' + c.join(' / ')); await pg.screenshot({ path: join(OUT, 'day4-bells-won.png') });
+  await at(pg, 'd5_dawn', { mem: 8, dread: 2, flags: { rite_wake: 1, told_truth: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  await tapChip(pg, 'Play her the riff'); await playSong(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const r = await pg.evaluate(() => { const s = ABY.Song.stats, g = ABY.game.state; return { node: g.node, flag: g.flags.rite_riff, slam: s.slam, chords: s.chords, total: s.total }; });
+  rec('hard-rite-riff', r.node === 'd5_riff_win' && r.flag === 1 && r.chords >= 24 && r.slam === r.chords, 'the bot lands ' + r.slam + '/' + r.chords + ' slams of ' + r.total + ' notes and wins'); await pg.screenshot({ path: join(OUT, 'day5-riff-won.png') });
+  // half a chord is not a slam; both together is; a chord is two notes that both have to be struck
+  const h = await pg.evaluate(() => {
+    const S = ABY.Song; S.start(() => {}, ABY.RITES.riff); S.bot = false; const ch = S.notes.filter(n => n.pair && n.lane < n.pair.lane);
+    const a = ch[0], a2 = a.pair; S.t = a.t; S.press(a.lane); S.t = a.t + 0.14; S.press(a2.lane);            // 0.14 s apart: both land, no slam
+    const slow = S.stats.slam, b = ch[1], b2 = b.pair; S.t = b.t; S.press(b.lane); S.press(b2.lane);        // together: a slam
+    const out = { slow, together: S.stats.slam, hits: S.stats.perfect + S.stats.good, total: S.stats.total, chords: S.stats.chords }; S.stop(); return out;
+  });
+  rec('chord-slam-needs-both-together', h.slow === 0 && h.together === 1 && h.hits === 4 && h.chords >= 24, 'struck 0.14s apart: ' + h.slow + ' slams; together: ' + h.together + ' (' + h.hits + ' notes hit)');
   await ctx.close();
 }
 { // badges and factions are the player's own; a shared link starts from the beginning

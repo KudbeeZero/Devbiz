@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done'];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -99,6 +99,20 @@ export function graphChecks() {
       && toNames.length > 0 && toNames.every(c => c.req && c.req.min && c.req.min.mem >= 7 && c.req.all.includes('rite_choir'))
       && shore({ mem: 7, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 6, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 9, flags: { read_names: 1 } }),
       'chorus and watched carry into Day Four; closing the book needs 7+ endings found, the names read and the Drowned Choir won');
+  }
+
+  { // the two hard rites: faster than the plain ones, with chords (two notes in two lanes at once), harder to win, optional, and bounded like any rite
+    const lane = i => i <= 2 ? 0 : i <= 5 ? 1 : 2, plain = ['doors', 'blood', 'lull', 'choir', 'wake'], hard = ['bells', 'riff'];
+    const stats = id => { const c = ABY.RITES[id]; let chords = 0, bad = 0, t = 0, close = 0, last = [-9, -9, -9]; for (const m of c.mel) { t += m[1] * c.step; if (m[2] !== undefined) { chords++; if (lane(m[0]) === lane(m[2])) bad++; }
+      for (const i of m[2] !== undefined ? [m[0], m[2]] : [m[0]]) { if (t - last[lane(i)] < 0.2) close++; last[lane(i)] = t; } if (m[1] === 0 && m !== c.mel[0] && m[2] === undefined) bad++; }
+      return { chords, bad, close, len: c.mel.length + chords, secs: t }; };
+    const sh = hard.map(stats), slowest = Math.min(...plain.map(id => ABY.RITES[id].step));
+    const entry = (id, node, flag, o) => ABY.options(Object.assign(ABY.newState(0), { node }, o)).some(x => x.c.next === id);
+    const w = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd4_bells' }), true), f = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd5_riff', tries: ABY.MAX_SONG_TRIES }), false);
+    rec('hard-rites', hard.every((id, i) => ABY.RITES[id].step <= slowest - 0.05 && ABY.RITES[id].win > 0.6 && ABY.RITES[id].win <= 0.8 && sh[i].chords >= 12 && sh[i].bad === 0 && sh[i].close === 0 && sh[i].len > 80)
+      && entry('d4_bells', 'd4_shore', 0, {}) && !entry('d4_bells', 'd4_shore', 0, { flags: { bells_done: 1 } }) && entry('d5_riff', 'd5_dawn', 0, {}) && !entry('d5_riff', 'd5_dawn', 0, { flags: { riff_done: 1 } })
+      && w.node === 'd4_bells_win' && w.flags.rite_bells === 1 && f.node === 'd5_riff_give',
+      'bells ' + sh[0].chords + ' chords / ' + sh[0].len + ' notes / ' + sh[0].secs.toFixed(0) + 's, riff ' + sh[1].chords + ' chords / ' + sh[1].len + ' notes / ' + sh[1].secs.toFixed(0) + 's; each faster than every plain rite (' + slowest + 's), no chord inside one lane, no two notes of a lane closer than 0.2s; each offered once and optional');
   }
 
   { // the intro's little crown pays off on Day Four, once, and never traps the shore

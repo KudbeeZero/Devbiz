@@ -173,7 +173,7 @@
   }
   function songDone(won, st) {
     $('songCv').classList.remove('on'); document.body.classList.remove('song'); P.lockAll(false);
-    var rite = !G.practice && ABY.RITES[ABY.NODES[G.state.node].song], pct = Math.round(st.acc * 100), note = (rite ? rite.name.replace(/\b(\w)(\w*)/g, function (m, a, b) { return a + b.toLowerCase(); }) : 'Song of Recall') + ': ' + pct + '%  ·  ' + st.perfect + ' perfect, ' + st.good + ' good, ' + st.miss + ' missed';
+    var rite = !G.practice && ABY.RITES[ABY.NODES[G.state.node].song], pct = Math.round(st.acc * 100), note = (rite ? rite.name.replace(/\b(\w)(\w*)/g, function (m, a, b) { return a + b.toLowerCase(); }) : 'Song of Recall') + ': ' + pct + '%  ·  ' + st.perfect + ' perfect, ' + st.good + ' good, ' + st.miss + ' missed' + (st.chords ? ', ' + st.slam + '/' + st.chords + ' slams' : '');
     if (pct > G.songBest) { G.songBest = pct; }
     if (won) { ABY.Audio.sfx('song'); ABY.Scene.burst(240, 260, 0xffffff, 70, 5); }
     if (G.practice) { P.show('flute'); $('fTxt').textContent = (won ? 'The song held. ' : 'The song faltered. ') + note.replace(/^[^:]*: /, ''); save(); return; }
