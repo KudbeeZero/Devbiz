@@ -2,6 +2,7 @@
 // can still reach an ending, all ten endings are reachable, the forced scenes (blackout, hollowing) are reachable and recoverable,
 // hidden choices can be unlocked, and the pure helpers behave. The walk covers the flashlight too (switched by hand at any node).
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 const ABY = createRequire(import.meta.url)(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'));
@@ -26,13 +27,14 @@ export function graphChecks() {
   const noWay = ids.filter(id => !N[id].ending && !N[id].song && open(id).length === 0);
   rec('story-no-dead-ends', noWay.length === 0, noWay.join(', ') || 'every scene has at least one choice that is always available');
   const sure = new Set(ids.filter(id => N[id].ending));
-  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
+  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back') : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
   rec('story-always-finishable', ids.every(id => sure.has(id)), ids.filter(id => !sure.has(id)).join(', ') || 'from every scene the always-available choices reach an ending (' + sure.size + '/' + ids.length + ')');
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
-  READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next');   // the evidence board's deductions, and its once-only scenes
+  READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
+    ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   // the evidence board costs nothing when the pair is right, so the walk pins every right pair as soon as she holds both clues (notes are not in
   // the key; the deductions are). A player who never pins anything only sees fewer choices, so this hides no path.
@@ -248,6 +250,33 @@ export function graphChecks() {
     rec('overnight-messages', O.length >= 15 && bad.length === 0 && new Set(O.map(o => o.id)).size === O.length && days.join() === 'd2_wake,d3_wake,d4_wake,d5_wake,d6_wake,d7_wake' && ['QUEEN', 'VEY', 'GUARDIAN', 'EYE', 'WREN', 'SORREL'].every(w => who.has(w))
       && O.every(holder) && none && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed') && nowRead === O.length,
       O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
+  }
+  { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
+    // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
+    // choice on a LATER scene of the same or a later day (what she saw matters); each of the five origins offers one of each; the slips file clues
+    const slips = ids.filter(id => N[id].time), entries = ids.flatMap(id => (N[id].choices || []).filter(c => N[c.next] && N[c.next].time).map(c => ({ from: id, to: c.next, c })));
+    const tt = id => [...new Set(N[id].choices.map(c => c.set))];
+    const readers = (f) => ids.filter(id => !N[id].time && (N[id].choices || []).some(c => c.req && (c.req.flag === f || (c.req.all || []).includes(f))));
+    const dayOf = id => N[id].ch, shapedSlip = slips.filter(id => ['past', 'future'].includes(N[id].time) && N[id].safe && N[id].choices.length >= 2 && N[id].choices.every(c => c.next === '@back') && tt(id).length === 1 && /^tt_/.test(tt(id)[0])
+      && entries.filter(e => e.to === id).length === 1 && N[id].note && ABY.NOTES[N[id].note] && reach.has(id));
+    const entryOk = entries.every(e => !N[e.from].time && dayOf(e.from) === dayOf(e.to) && e.c.req && e.c.req.noflag === tt(e.to)[0] && N[e.to].choices.every(c => c.set === tt(e.to)[0]));
+    const pays = slips.filter(id => readers(tt(id)[0]).some(r => dayOf(r) >= dayOf(id))), origins = [...new Set(entries.map(e => e.from))];
+    const both = origins.every(o => ['past', 'future'].every(t => entries.some(e => e.from === o && N[e.to].time === t)));
+    // behaviour: a slip remembers and returns; being in one never interrupts her (no blackout, no hollowing) but the return does; a save keeps the way back
+    const o0 = Object.assign(ABY.newState(0), { node: 'd3_wake', bat: 40 }), inside = ABY.choose(o0, o0 ? N.d3_wake.choices.findIndex(c => c.next === 'fb_locking') : 0);
+    const out = inside && ABY.choose(inside, 0), again = out && ABY.options(out).some(x => x.c.next === 'fb_locking'), tired = ABY.choose(Object.assign(ABY.newState(0), { node: 'fb_locking', back: 'd3_wake', bat: 1, dread: 5 }), 1);
+    const kept = ABY.cleanState(JSON.parse(JSON.stringify(inside || {}))), lost = ABY.cleanState({ node: 'fb_locking', back: '' });
+    rec('time-slips', slips.length === 10 && shapedSlip.length === slips.length && entries.length === 10 && entryOk && origins.length === 5 && both && pays.length === slips.length
+      && inside && inside.node === 'fb_locking' && inside.back === 'd3_wake' && out && out.node === 'd3_wake' && out.back === '' && out.flags.tt_locking === 1 && out.notes.includes('locking') && !again
+      && tired && tired.node === 'blackout' && kept.node === 'fb_locking' && kept.back === 'd3_wake' && lost.node === ABY.START,
+      slips.length + ' slips (5 flashbacks, 5 flash-forwards) from ' + origins.join(', ') + ': each seen once, each returns where she was, each filing a clue, each read by a later choice; a tired return can still end in the dark; a save keeps the way back');
+  }
+  { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
+    const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));
+    const set = [...new Set(ids.flatMap(id => (N[id].choices || []).filter(c => c.set).map(c => c.set)))];
+    const read = new Set(ids.flatMap(id => (N[id].choices || []).flatMap(c => c.req ? [c.req.flag, c.req.noflag, ...(c.req.all || [])] : [])).filter(Boolean).concat(ABY.OVERNIGHT.map(o => o.req.flag)));
+    const unread = set.filter(f => !read.has(f) && !new RegExp('\\b' + f + '\\b').test(tail));
+    rec('every-flag-is-read', unread.length === 0, unread.join(', ') || set.length + ' flags set by choices, every one read by a gated choice, an ending rule, a badge or an overnight message');
   }
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
     const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));

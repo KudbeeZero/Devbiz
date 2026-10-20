@@ -144,6 +144,16 @@ ABY.NOTES = {
   scar_blackout: { title: 'Note to self: the battery', text: 'Your handwriting, in the dark, mostly off the page: keep it charged. It knocks from the other side of the glass.' },
   vey_gift: { title: 'Message: Vey, overnight', text: 'Vey left you a message, and a small cold weight on the pillow: a brass key, much too small for any door in this building. "For later," it says. "You\u2019ll know the lock when you see it. It is very low down."' },
   eye_noticed: { title: 'Message: the Eye, overnight', text: 'you would not write a name. nobody ever does not. the book does not know what to do with you, and neither do i, and i have never been so interested in anyone.' },
+  locking: { title: 'Flashback: the night of the lock', text: 'It was raining and the door was new. Corvin Ash stood in front of it in a clean coat, not yet iron. The Queen\u2019s hands shook so hard the key would not go in. On the stair behind them Vey carried something very small, asleep, in a paper crown.' },
+  vey_stair: { title: 'Flashback: the servants\u2019 stair', text: 'Vey, with only two hands, carrying someone asleep down to the door. "I have never once let anything fall," it said, to nobody. "Please. Let me carry her the whole way in." It did not hand her over. It carried her all the way.' },
+  nine_years: { title: 'Flashback: nine years ago', text: 'A landing with a nightlight, and Wren at nine in dinosaur pyjamas, holding the banister with both hands. "Don\u2019t," she said. "It\u2019s three seven. It\u2019s always three seven when someone goes." The phone on the hall table kept ringing. It is very patient.' },
+  birthday_night: { title: 'Flashback: a fourth birthday', text: 'Four candles, paper hats, and a table laid for a party nobody had come to yet. The Queen knelt in front of a girl in a paper crown and said, brightly, "Make a wish." The wish was not for a cake. The Queen\u2019s smile did something terrible and she turned her face to the dark in the corner and asked it for the other thing.' },
+  first_night: { title: 'Flashback: the first night', text: 'An ordinary kitchen at 3:07. A child on a stool drawing with a fat crayon: a door, a crown, a woman with a flute, a phone. "So I can find the way home if I get lost," she told the woman at the sink, who was not yet a Queen, only a mother with a flute at her back and the very first phone in her hand.' },
+  glimpse_choir: { title: 'Flash-forward: the water', text: 'A cave flooded to the knee, tomorrow night. Two hundred and fourteen faces under the water, mouthing the same eleven notes, and the one nearest you has stopped and is mouthing something else. Your name.' },
+  glimpse_hand: { title: 'Flash-forward: a hand', text: 'A bedroom with birthday cards on the corkboard, and a phone face down on the bedside table. A hand comes out of the blankets towards it, very slowly, shaking. Someone who has been told never to pick up, and is going to.' },
+  glimpse_door: { title: 'Flash-forward: a small door', text: 'A house with no windows. A cot, paper hats, and a door standing open a hand\u2019s width onto red light. The light blinked once, as if it had been waiting a very long time for someone to come up the stairs.' },
+  glimpse_seventh: { title: 'Flash-forward: the seventh night', text: 'Everyone in one room: the captain at the door, Vey at your ankle, the choir along the walls, the Queen with her flute. In the gap of the door, enormous and wet with crying, a child\u2019s eye. You open your mouth, and the screen cuts out before you can hear what you say.' },
+  glimpse_morning: { title: 'Flash-forward: the morning after', text: 'Real light on a real wall. A phone, switched off, on a kitchen table. A quarter to seven, not 3:07. A kettle, a folded cot, and in the corridor an ordinary door.' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -157,6 +167,7 @@ ABY.LINKS = [
   { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
   { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
   { id: 'first_name', a: 'holders', b: 'first_page', at: 'd7_end', title: 'The first name in the book', text: '214 numbers, and above them all the first page: not a name, a crayon door and a crayon crown. The book did not begin with someone holding the phone. It began with a child drawing the way home.' },
+  { id: 'what_she_gave', a: 'locking', b: 'bargain', at: 'd6_story', title: 'Who she locked away', text: 'A girl in a paper crown, asleep on Vey\u2019s shoulder, on the night of the lock. A bargain that keeps someone safe on the other side, for as long as the phone is held. It was never a monster. The Queen locked her own child away to keep her, and called it a door.' },
   { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
   { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
 ];
@@ -928,6 +939,8 @@ ABY.NODES = {
       { label: 'Open the photo it sent', next: 'd3_photo', add: { dread: 1 } },
       { label: 'Switch on the flashlight', next: 'd3_wake', light: 1, req: { noLight: 1 } },
       { label: 'Go down to the first door', next: 'd3_hall' },
+      { label: 'Turn the clock back: the night she locked the door', next: 'fb_locking', bat: 3, req: { noflag: 'tt_locking' } },
+      { label: 'Wind the clock forward: the night of the water', next: 'ff_choir', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_choir' } },
     ],
   },
   d3_photo: {
@@ -1103,6 +1116,8 @@ ABY.NODES = {
       { label: 'Ask the Queen about the faces', next: 'd4_queen' },
       { label: 'Switch on the flashlight', next: 'd4_wake', light: 1, req: { noLight: 1 } },
       { label: 'Go back to the singing stones', next: 'd4_stones', add: { resolve: 1 } },
+      { label: 'Turn the clock back: the servants\u2019 stair, the night of the lock', next: 'fb_vey_stair', bat: 3, req: { noflag: 'tt_vey' } },
+      { label: 'Wind the clock forward: a bedroom, 3:07', next: 'ff_wren', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_wren' } },
     ],
   },
   d4_queen: {
@@ -1155,6 +1170,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd4_stones', light: 1, req: { noLight: 1 } },
       { label: 'Raise the flute and sing with them', next: 'd4_choir', add: { heart: 1 } },
       { label: 'Wade in to the deepest face', next: 'd4_choir', add: { dread: 1, resolve: 1 } },
+      { label: 'Say your own name into the water, before they can', next: 'd4_choir', req: { flag: 'tt_choir' }, add: { heart: 1, resolve: 1 } },
     ],
   },
   d4_choir: {
@@ -1254,6 +1270,9 @@ ABY.NODES = {
       { label: 'Say her name', next: 'd5_hello', add: { heart: 1 } },
       { label: 'Breathe, the way it was done to you', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Hang up before she answers', next: 'd5_hang' },
+      { label: 'Turn the clock back: the night you took the phone', next: 'fb_nine', bat: 3, req: { noflag: 'tt_nine' } },
+      { label: 'Wind the clock forward: a small door, red light', next: 'ff_door', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_door' } },
+      { label: 'You saw her hand reach for the phone. Say her name before she answers', next: 'd5_truth', req: { flag: 'tt_wren' }, set: 'told_truth', add: { trust: 1 } },
     ],
   },
   d5_hello: {
@@ -1263,6 +1282,7 @@ ABY.NODES = {
       { label: 'Tell her the truth', next: 'd5_truth', set: 'told_truth', add: { trust: 1 } },
       { label: 'Say it is a wrong number', next: 'd5_lie', add: { dread: 1 } },
       { label: 'Say nothing', next: 'd5_breathe', add: { dread: 1 } },
+      { label: 'Remind her: I held your hand on the landing when you were nine', next: 'd5_truth', req: { flag: 'tt_nine' }, set: 'told_truth', add: { heart: 1, trust: 1 } },
     ],
   },
   d5_breathe: {
@@ -1425,6 +1445,8 @@ ABY.NODES = {
     choices: [
       { label: 'Tell her you would have done the same', next: 'd6_ring', add: { heart: 1, trust: 1 } },
       { label: 'Tell her she did this to all of them', next: 'd6_ring', add: { resolve: 1, dread: 1 }, set: 'blamed_queen' },
+      { label: 'Tell her you were there the night of the lock: you saw the key shake in her hand', next: 'd6_ring', req: { flag: 'tt_locking' }, add: { heart: 2, trust: 1 } },
+      { label: 'Tell her you know who she locked away: a girl in a paper crown', next: 'd6_ring', req: { flag: 'link_what_she_gave' }, add: { heart: 2, trust: 2, dread: 1 } },
     ],
   },
   d6_page: {
@@ -1493,6 +1515,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd6_room', light: 1, req: { noLight: 1 } },
       { label: 'Go to the door', next: 'd6_door' },
       { label: 'Paper hats, birthday candles: ask whose party it is', next: 'ev_party', req: { flag: 'link_birthday' } },
+      { label: 'Go straight to the door: you have already seen it', next: 'd6_door', req: { flag: 'tt_door' }, add: { resolve: 1 } },
     ],
   },
   d6_wall: {
@@ -1542,6 +1565,8 @@ ABY.NODES = {
     choices: [
       { label: 'Say you will come back', next: 'end_firstpage', add: { resolve: 1 } },
       { label: 'Go back through the door and stay with Sorrel', next: 'end_cradle', req: { flag: 'promised_sorrel' } },
+      { label: 'Turn the clock back: a fourth birthday', next: 'fb_birthday', bat: 3, req: { noflag: 'tt_birthday' } },
+      { label: 'Wind the clock forward: the seventh night', next: 'ff_seventh', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_seventh' } },
     ],
   },
   end_firstpage: {
@@ -1588,6 +1613,8 @@ ABY.NODES = {
       { label: 'You let it start again once. Not this time', next: 'd7_gather', add: { resolve: 2, dread: -1 }, set: 'knows_loop', req: { flag: 'scar_again' } },
       { label: 'Block the number', next: 'd7_gather', add: { dread: 1 } },
       { label: 'Tell her you read her wall. You see her', next: 'ev_watch', req: { flag: 'link_watcher' } },
+      { label: 'Sing her the birthday song she never got to finish', next: 'd7_named', req: { flag: 'tt_birthday' }, set: 'named_eye', add: { heart: 2, dread: -2 } },
+      { label: 'You saw this in the clock. Say her name first: Sorrel', next: 'd7_named', req: { flag: 'tt_seventh' }, set: 'named_eye', add: { heart: 1, dread: -1 } },
     ],
   },
   d7_again: {
@@ -1611,6 +1638,11 @@ ABY.NODES = {
     choices: [
       { label: 'Raise the flute', next: 'd7_rite', add: { resolve: 1 } },
       { label: 'Give the phone to the Queen', next: 'd7_end', add: { trust: 1, dread: 1 } },
+      { label: 'Turn the clock back: the very first night', next: 'fb_first', bat: 3, req: { noflag: 'tt_first' } },
+      { label: 'Wind the clock forward: the morning after', next: 'ff_morning', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_morning' } },
+      { label: 'Let Vey carry the phone for you, just this once', next: 'd7_rite', req: { flag: 'tt_vey' }, add: { trust: 1, dread: -1 } },
+      { label: 'Tell the Queen what the clock showed you: a morning. A real one', next: 'd7_end', req: { flag: 'tt_morning' }, add: { trust: 1, heart: 1, dread: -1 } },
+      { label: 'Tell the Queen you were in the kitchen on the first night: it was always a map', next: 'd7_end', req: { flag: 'tt_first' }, add: { heart: 1, trust: 1, dread: -1 } },
     ],
   },
   d7_rite: {
@@ -1797,6 +1829,96 @@ ABY.NODES = {
     text: 'Your own voice, from the first night, a week younger: "Don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him." And then the part that was cut off, the part you have never heard: "It\'s her. It\'s her little girl. Say her name."',
     choices: [
       { label: 'Hang up, and answer No Caller ID', next: 'd7_eye', set: 'eye_is_sorrel', add: { resolve: 1 } },
+    ],
+  },
+  // ---- time slips: the Clock. From a day's scene the player can turn the clock back (a flashback) or wind it forward (a flash-forward). A slip is a `safe` scene
+  // with `time: 'past' | 'future'`; entering one remembers where she was (`back`), and every choice in it returns there (`@back`) and sets its `tt_` flag, so each
+  // slip is seen once. What she saw opens choices on later days (flags `tt_*`), and the clues they file join the evidence board. ----
+  fb_locking: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dusk', focus: 'gate', time: 'past', safe: true, note: 'locking',
+    text: 'The numbers on the lock screen run backwards, faster and faster, and stop. It is raining, and the door is new. Corvin Ash stands in front of it in a clean coat, younger, not yet iron. The Queen has the key and she is shaking so hard it will not go in. "Only for a night," she says. "Yes," says the captain. Behind them on the stair Vey carries something very small, asleep on its shoulder, in a paper crown.',
+    choices: [
+      { label: 'Watch, and say nothing', next: '@back', set: 'tt_locking', add: { heart: 1 } },
+      { label: 'Whisper to the Queen: not like this', next: '@back', set: 'tt_locking', add: { heart: 1, dread: 1 } },
+      { label: 'You doubted her then too. Ask why a gate needs a lock this small', next: '@back', set: 'tt_locking', req: { flag: 'doubt' }, add: { resolve: 1 } },
+    ],
+  },
+  ff_choir: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', time: 'future', safe: true, note: 'glimpse_choir', scare: 'whisper',
+    text: 'The numbers run forward and the glass goes wet. Tomorrow night, a cave, flooded to the knee. The stones are not stones. Under the water two hundred and fourteen faces are mouthing the same eleven notes, and the one nearest you has stopped, and is mouthing something else. It is your name. The water is warm.',
+    choices: [
+      { label: 'Memorise the eleven notes', next: '@back', set: 'tt_choir', add: { resolve: 1, dread: 1 } },
+      { label: 'Cover your ears, and look anyway', next: '@back', set: 'tt_choir', add: { heart: 1 } },
+      { label: 'You asked the Eye something once. The faces are mouthing the answer: read it', next: '@back', set: 'tt_choir', req: { flag: 'asked_eye' }, add: { heart: 1, dread: 1 } },
+    ],
+  },
+  fb_vey_stair: {
+    ch: 9, speaker: 'VEY', mood: 'dusk', focus: 'vey', time: 'past', safe: true, note: 'vey_stair',
+    text: 'Clean rain, and the servants’ stair, and Vey, with only two hands, carrying someone asleep down to the door. It is humming eleven notes, very low, the way you hum to a thing that must not wake. At the bottom the captain holds out his arms, and Vey, very carefully, does not hand her over. I have never once let anything fall, it says, to nobody. Please. Let me carry her the whole way in.',
+    choices: [
+      { label: 'Let it carry her', next: '@back', set: 'tt_vey', add: { trust: 1 } },
+      { label: 'Try to take her from it, and feel your hands go through', next: '@back', set: 'tt_vey', add: { heart: 1, dread: 1 } },
+      { label: 'You sang to the Eye once. Hum the eleven notes with Vey', next: '@back', set: 'tt_vey', req: { flag: 'ally' }, add: { heart: 2, dread: -1 } },
+    ],
+  },
+  ff_wren: {
+    ch: 9, speaker: 'NARRATOR', mood: 'void', focus: 'queen', time: 'future', safe: true, note: 'glimpse_hand',
+    text: 'A bedroom you do not know, with a corkboard you do: birthday cards, in handwriting you would know anywhere. Tomorrow, 3:07, a phone face down on the bedside table. A hand comes out of the blankets towards it, very slowly, shaking. The hand of someone who has been told never to pick up, and is going to.',
+    choices: [
+      { label: 'Watch the hand', next: '@back', set: 'tt_wren', add: { heart: 1, dread: 1 } },
+      { label: 'Reach for it, and feel your own hand pass through', next: '@back', set: 'tt_wren', add: { trust: 1, dread: 1 } },
+      { label: 'You skipped the doors. In the glimpse one is already open behind her', next: '@back', set: 'tt_wren', req: { flag: 'skipped_doors' }, add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  fb_nine: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen', time: 'past', safe: true, note: 'nine_years',
+    text: 'The numbers run back nine years. A landing with a nightlight, a small girl in dinosaur pyjamas holding the banister with both hands, and you, not yet a voice, standing in front of a phone on the hall table that has begun, very quietly, to ring. "Don’t," says Wren, at nine. "Please don’t. It’s three seven. It’s always three seven when someone goes."',
+    choices: [
+      { label: 'Pick it up. Tell her to go back to bed', next: '@back', set: 'tt_nine', add: { resolve: 1, dread: 1 } },
+      { label: 'Let it ring, and pick her up instead', next: '@back', set: 'tt_nine', add: { heart: 2 } },
+      { label: 'You doubted yourself once, on Day Two. Tell her: I am not sure I am brave', next: '@back', set: 'tt_nine', req: { flag: 'doubt2' }, add: { trust: 1, heart: 1 } },
+    ],
+  },
+  ff_door: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', time: 'future', safe: true, note: 'glimpse_door',
+    text: 'A house with no windows. A cot, paper hats, and a door standing open a hand’s width onto red light. Tomorrow someone will stand exactly where you are standing, and the light will blink once, as if it had been waiting a very long time for somebody to come up the stairs.',
+    choices: [
+      { label: 'Walk towards the light', next: '@back', set: 'tt_door', add: { resolve: 1, dread: 1 } },
+      { label: 'Say hello to the door', next: '@back', set: 'tt_door', add: { heart: 1 } },
+    ],
+  },
+  fb_birthday: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, note: 'birthday_night',
+    text: 'Candles, four of them, and paper hats, and a table laid for a party nobody has come to yet. The Queen kneels in front of a small girl in a paper crown and says, very brightly, "Make a wish." The girl wishes. It is not a wish for a cake. The Queen’s smile does something terrible, and she lifts her head to the dark in the corner of the room, and asks it for the other thing.',
+    choices: [
+      { label: 'Blow out the candles for her', next: '@back', set: 'tt_birthday', add: { heart: 1, dread: 1 } },
+      { label: 'Watch the Queen ask', next: '@back', set: 'tt_birthday', add: { resolve: 1, dread: 1 } },
+      { label: 'You have seen the crayon page. Watch the small hand draw it', next: '@back', set: 'tt_birthday', req: { flag: 'first_page' }, add: { heart: 2 } },
+    ],
+  },
+  ff_seventh: {
+    ch: 11, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', time: 'future', safe: true, note: 'glimpse_seventh', scare: 'eye',
+    text: 'Tomorrow night, everyone, in one room: the captain at the door, Vey at your ankle, the choir along the walls, the Queen with her flute. And in the gap of the door, enormous, red and round, a child’s eye, wet with crying, looking at the phone. In the glimpse you open your mouth. The screen cuts out before you can hear what you say.',
+    choices: [
+      { label: 'Hold the picture', next: '@back', set: 'tt_seventh', add: { resolve: 1, dread: 1 } },
+      { label: 'Rehearse the name', next: '@back', set: 'tt_seventh', add: { heart: 1, dread: 1 } },
+    ],
+  },
+  fb_first: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dawn', focus: 'queen', time: 'past', safe: true, note: 'first_night',
+    text: 'The very first night. Before the book, before the crown, before the number was written backwards. An ordinary kitchen at 3:07, and a child on a stool drawing with a fat crayon: a door, a crown, a woman with a flute, a phone. "So I can find the way home if I get lost," she tells the woman at the sink, who is not yet a Queen, only a mother with a flute at her back and the first phone in her hand.',
+    choices: [
+      { label: 'Watch her draw', next: '@back', set: 'tt_first', add: { heart: 1 } },
+      { label: 'Tell the child: you are not lost', next: '@back', set: 'tt_first', add: { heart: 1, dread: 1 } },
+      { label: 'You know it starts again. Tell her to draw a way out', next: '@back', set: 'tt_first', req: { flag: 'knows_loop' }, add: { resolve: 1, heart: 1 } },
+    ],
+  },
+  ff_morning: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', time: 'future', safe: true, note: 'glimpse_morning',
+    text: 'The morning after. Real light on a real wall, and a phone, switched off, on a kitchen table. It is a quarter to seven, not 3:07. A kettle. A cot, folded away. In the corridor, an ordinary door.',
+    choices: [
+      { label: 'Hold the picture', next: '@back', set: 'tt_morning', add: { heart: 1, dread: -1 } },
+      { label: 'Wren is at the sink, humming the eleven notes, badly', next: '@back', set: 'tt_morning', req: { flag: 'wren_with' }, add: { heart: 2, dread: -1 } },
     ],
   },
   // ---- the evidence board's scenes: each opens only for a player who pinned the right two clues together in Notes (ABY.LINKS) ----
@@ -1988,6 +2110,7 @@ ABY.choose = function (s, i) {
   if (!c || !ABY.okReq(s, c.req)) return null;
   const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back };
   if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
+  else if (ABY.NODES[c.next] && ABY.NODES[c.next].time && !(n && n.time)) o.back = s.node;       // a time slip: remember where she was, every choice in it comes back
   if (!ABY.NODES[o.node]) return null;
   if (c.add) { for (const k of ABY.STATS) if (c.add[k]) o[k] = clamp(o[k] + c.add[k], 0, 5); if (c.add.dread) o.dread = clamp(o.dread + c.add.dread, 0, ABY.MAX_DREAD); }
   if (c.set) o.flags[c.set] = 1;
@@ -2130,6 +2253,7 @@ ABY.cleanState = function (raw) {
   if (Number.isInteger(raw.choices)) s.choices = clamp(raw.choices, 0, 999);
   if (ok(raw.back) && !ABY.NODES[raw.back].ending && !ABY.NODES[raw.back].safe) s.back = raw.back;
   if (!ABY.NODES[s.node].safe) s.back = '';
+  if (ABY.NODES[s.node].time && !s.back) s.node = ABY.START;                                  // a slip with nowhere to return to (a hand-edited save) starts over
   if (raw.flags && typeof raw.flags === 'object') {
     for (const k of ABY.FLAGS) if (raw.flags[k] === 1) s.flags[k] = 1;
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
