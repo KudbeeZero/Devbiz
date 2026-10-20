@@ -206,10 +206,10 @@
   #call.shudder { animation:glt .6s steps(2) both; }
   /* the Clock: a flashback is warm, grainy and soft at the edges; a flash-forward is cold, scanned and too sharp */
   #timefx { position:absolute; inset:0; z-index:61; pointer-events:none; opacity:0; transition:opacity .6s ease; }
-  #screen[data-time="past"] #timefx { opacity:1; background:radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(60,28,6,0.55) 100%), linear-gradient(rgba(255,196,120,0.10), rgba(255,196,120,0.10)); mix-blend-mode:multiply; }
-  #screen[data-time="past"] #three-canvas, #screen[data-time="past"] #sheet { filter:sepia(.65) saturate(.85) contrast(1.05); }
+  #screen[data-time="past"] #timefx { opacity:1; background:radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(60,28,6,0.55) 100%), linear-gradient(rgba(255,190,110,0.22), rgba(255,190,110,0.22)); mix-blend-mode:multiply; }
+  #screen[data-time="past"] #three-canvas, #screen[data-time="past"] #artFb, #screen[data-time="past"] #sheet { filter:sepia(.7) saturate(.9) contrast(1.05); }
   #screen[data-time="future"] #timefx { opacity:1; background:repeating-linear-gradient(0deg, rgba(120,230,255,0.07) 0 2px, transparent 2px 5px), radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,40,70,0.55) 100%); animation:scan 3s linear infinite; }
-  #screen[data-time="future"] #three-canvas, #screen[data-time="future"] #sheet { filter:hue-rotate(150deg) saturate(1.2) contrast(1.08); }
+  #screen[data-time="future"] #three-canvas, #screen[data-time="future"] #artFb, #screen[data-time="future"] #sheet { filter:hue-rotate(-75deg) saturate(1.15) brightness(1.05) contrast(1.06); }
   @keyframes scan { to { background-position:0 10px, 0 0; } }
   @media (prefers-reduced-motion: reduce) { #screen.glitch #three-canvas, #screen.glitch #sheet, #screen.jump { animation:none; } #screen[data-time="future"] #timefx { animation:none; } #screen.uneasy #dreadv, .torch.hint, #call .cav, .av.eye, #call.shudder, #screen.struck #sheet, #screen.struck-dark #sheet { animation:none; } .ripple { animation-duration:.35s; } #screen.jump::after { animation-duration:.4s; } }
   /* rotate the simulated phone (desktop only) */
