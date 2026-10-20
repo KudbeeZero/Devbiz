@@ -16,8 +16,8 @@
   var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait' };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
-  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You' };
-  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'], chorus: ['#ff9ad5', '#ffd34d'], watched: ['#ff4d5e', '#05030c'], names: ['#f4f0e0', '#3fd6c0'], caller: ['#9fe870', '#0a1a10'], drowned: ['#3fd6c0', '#03141a'] };
+  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren' };
+  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'], chorus: ['#ff9ad5', '#ffd34d'], watched: ['#ff4d5e', '#05030c'], names: ['#f4f0e0', '#3fd6c0'], caller: ['#9fe870', '#0a1a10'], drowned: ['#3fd6c0', '#03141a'], warned: ['#fff1b0', '#ffc27a'], nightline: ['#ffc27a', '#1a1030'], passed: ['#ff7aa8', '#08040e'] };
   var CREEPS = ['behind you', 'it is 3:07', 'i can hear you breathing', 'don\u2019t look at the screen', 'you left the door open', 'she is not the one texting you', 'count the steps', 'turn around slowly'];
 
   // ---- save ----
@@ -62,7 +62,7 @@
     ABY.Scene.setTorch(!!s.light); ABY.Scene.setDread(d);
   }
   function contact(sp) {
-    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : key === 'CHOIR' ? '≈' : '';
+    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : key === 'CHOIR' ? '≈' : key === 'WREN' ? 'W' : '';
     $('mName').textContent = WHO[key]; $('mName').style.color = ABY.SPEAKERS[key].color;
     $('mSub').innerHTML = key === 'GUARDIAN' ? '<span class="live" style="background:var(--ember);box-shadow:0 0 8px var(--ember)"></span>signal unstable' : key === 'EYE' ? '<span class="live" style="background:#ff4d5e;box-shadow:0 0 8px #ff4d5e"></span>it knows you are here' : key === 'NARRATOR' ? 'unknown number' : '<span class="live"></span>online';
   }

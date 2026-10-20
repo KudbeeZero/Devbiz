@@ -30,6 +30,7 @@ ABY.CHAPTERS = [
   { n: 7, label: 'The Door' },
   { n: 8, label: 'Day Three' },
   { n: 9, label: 'Day Four' },
+  { n: 10, label: 'Day Five' },
 ];
 
 ABY.SPEAKERS = {
@@ -39,6 +40,7 @@ ABY.SPEAKERS = {
   VEY: { color: '#7cffb2', focus: 'vey' },
   EYE: { color: '#ff4d5e', focus: 'queen' },
   CHOIR: { color: '#7fe0d0', focus: 'queen' },
+  WREN: { color: '#ffc27a', focus: 'queen' },
 };
 
 ABY.START = 'awakening';
@@ -61,6 +63,9 @@ ABY.RITES = {
   choir: { name: 'THE DROWNED CHOIR', step: 0.40, tint: '#3fd6c0', lanes: ['#3fd6c0', '#8fb8ff', '#e8f6ff'],
     mel: [[0, 0], [2, 2], [3, 1], [5, 1], [3, 2], [2, 1], [0, 1], [2, 2], [5, 1], [7, 1], [5, 1], [3, 2], [2, 1], [3, 1], [5, 2], [7, 1], [9, 1], [7, 2], [5, 1], [3, 1], [2, 1], [0, 2], [3, 1], [5, 1], [7, 1], [5, 1], [3, 1], [2, 1], [0, 3]],
     fx: [[1, 'drip'], [4, 'whisper'], [8, 'drip'], [11, 'knock'], [15, 'dark'], [18, 'scream'], [22, 'drip'], [26, 'flash'], [30, 'whisper']] },
+  wake: { name: 'THE 3:07 WAKE-UP', step: 0.36, tint: '#ffc27a', lanes: ['#ffc27a', '#ff7aa8', '#9be7ff'],
+    mel: [[5, 0], [5, 1], [3, 1], [5, 2], [7, 1], [5, 1], [3, 2], [2, 1], [3, 1], [5, 1], [7, 2], [9, 1], [7, 1], [5, 2], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [3, 1], [5, 1], [7, 1], [8, 1], [9, 2], [7, 1], [5, 1], [3, 1], [5, 3]],
+    fx: [[2, 'knock'], [6, 'flash'], [10, 'drip'], [13, 'door'], [17, 'whisper'], [21, 'crack'], [25, 'flash'], [29, 'scream']] },
 };
 ABY.RITE_IDS = Object.keys(ABY.RITES);
 ABY.MAX_DREAD = 6;
@@ -81,6 +86,8 @@ ABY.NOTES = {
   eye: { title: 'What the Eye wants', text: '"I don\'t want your name. I want to be remembered too. Nobody ever sings to me."' },
   holders: { title: 'Contact: Everyone Before You', text: 'One contact, 214 numbers. Every one of them held this phone. The last name is yours. The one above it is in handwriting you know from birthday cards.' },
   next_line: { title: 'The blank line', text: 'Under your name there is one more line, already selected, the cursor blinking. Placeholder text, very faint: "who is next?"' },
+  wren_call: { title: 'Call log: Wren, 3:07', text: 'Answered, 41 minutes. Wren picked up. She did not hang up. Nobody has ever stayed on the line this long.' },
+  new_line: { title: 'The book, tonight', text: 'The contact has grown a line, in the handwriting you know from birthday cards: Wren. Under it, the blank one, selected, blinking. who is next?' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -954,6 +961,132 @@ ABY.NODES = {
     text: 'The water closes.', choices: [],
   },
 
+  // ======================= act five: day five (the next caller: you are the voice in someone else's phone) =======================
+  d5_wake: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'day five. 3:07. (You are not in the cave any more. You are the voice in a phone on a bedside table, and next to it someone is sitting up in the dark, one hand already out for the screen.) 1 new contact: Wren.',
+    choices: [
+      { label: 'Say her name', next: 'd5_hello', add: { heart: 1 } },
+      { label: 'Breathe, the way it was done to you', next: 'd5_breathe', add: { dread: 1 } },
+      { label: 'Hang up before she answers', next: 'd5_hang' },
+    ],
+  },
+  d5_hello: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+    text: '...hello? (A sleepy whisper, very close. She is holding the phone with both hands.) It says 3:07. Who is this? How do you have this number? Is this a prank?',
+    choices: [
+      { label: 'Tell her the truth', next: 'd5_truth', set: 'told_truth', add: { trust: 1 } },
+      { label: 'Say it is a wrong number', next: 'd5_lie', add: { dread: 1 } },
+      { label: 'Say nothing', next: 'd5_breathe', add: { dread: 1 } },
+    ],
+  },
+  d5_breathe: {
+    ch: 10, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'good. you are learning. (Her breathing on the other end, getting faster.) say it. say: you should not have woken up. it is so much lighter once it is in someone else.',
+    choices: [
+      { label: 'Say it', next: 'd5_cruel', add: { dread: 1 } },
+      { label: 'Say her name instead', next: 'd5_hello', add: { heart: 1, resolve: 1 } },
+    ],
+  },
+  d5_cruel: {
+    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'Why would you say that? (A crash: the lamp. Then, small and shaking, not hanging up.) I know that voice. Please. I know that voice. Is it really you?',
+    choices: [
+      { label: 'Tell her the truth', next: 'd5_truth', set: 'told_truth', add: { dread: 1 } },
+      { label: 'Hang up', next: 'd5_hang' },
+    ],
+  },
+  d5_lie: {
+    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'queen',
+    text: 'click. (The line goes dead. Then, before you can breathe, the phone rings. Wren is calling you back.) The screen says WREN, and under it, in handwriting you know from birthday cards: she knows your voice.',
+    choices: [
+      { label: 'Pick up', next: 'd5_truth', set: 'told_truth', add: { heart: 1 } },
+      { label: 'Let it ring', next: 'd5_ring' },
+    ],
+  },
+  d5_ring: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'It rings. And rings. The ringtone slows down, and flattens, and turns into the eleven notes of the choir. Fourteen missed calls. Twenty. On the glass, her face, pressed to the inside: not asking, now. Waiting.',
+    choices: [
+      { label: 'Pick up', next: 'd5_truth', set: 'told_truth', add: { dread: 1 } },
+      { label: 'Let it ring out', next: 'd5_hang' },
+    ],
+  },
+  d5_hang: {
+    ch: 10, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper',
+    text: 'good. it is quiet. (You can feel the chain settle, the way a stone settles.) the book has a new line. wren. and under wren, the blank one, already blinking. someone has to be next.',
+    choices: [
+      { label: 'Call her back', next: 'd5_hello', add: { resolve: 1 } },
+      { label: 'Leave her to the dark', next: 'end_passed' },
+    ],
+  },
+  d5_truth: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen', note: 'wren_call',
+    text: 'You tell her. The phone, the book, the choir, the eye. It takes a long time. She does not hang up. Somewhere in it she starts to cry, and then stops, and then says, very evenly, the way she did when she was nine: okay. Okay. What do I do?',
+    choices: [
+      { label: 'Tell her about the book', next: 'd5_book', add: { resolve: 1 } },
+      { label: 'Tell her to sing with you', next: 'd5_rite', add: { heart: 1 } },
+      { label: 'Ask her to stay on the line till it is light', next: 'd5_dawn', set: 'stayed_line' },
+    ],
+  },
+  d5_book: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true, scare: 'whisper', note: 'new_line',
+    text: 'The contact has grown a line in the handwriting you know. It says Wren, and under it the blank one, selected, blinking. The phone wants a name. It has never once been refused by someone who knew what it was.',
+    choices: [
+      { label: 'Switch on the flashlight', next: 'd5_book', light: 1, req: { noLight: 1 } },
+      { label: 'Read her the names, to wake them', next: 'd5_rite', set: 'read_names', add: { heart: 1 }, bat: 4 },
+      { label: 'Tell her not to look at it', next: 'd5_dawn', add: { resolve: 1 } },
+    ],
+  },
+  d5_rite: {
+    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'gate', song: 'wake', scare: 'whisper',
+    text: 'The 3:07 Wake-Up. She hums it down the line (the eleven notes, a half-step wrong) and you answer on the flute, and the book stirs, and the first number in it starts to ring. Every note you land wakes one more of them. Every note you drop, the room gets a little darker.',
+    songNext: { win: 'd5_rite_win', fail: 'd5_rite_fail', give: 'd5_rite_give' },
+  },
+  d5_rite_win: {
+    ch: 10, speaker: 'WREN', mood: 'dawn', focus: 'queen',
+    text: 'I can hear them. (A hundred phones in a hundred kitchens, ringing at once in the dark.) They are all awake. They are all picking up. Oh, they are so angry. Oh, thank god.',
+    choices: [
+      { label: 'Tell her to hold on until the light', next: 'd5_dawn', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  d5_rite_fail: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'The note goes flat and the line crackles. In the background, Wren\'s room is getting longer: the door further off, the window thinner. "Keep going," she says. "Please keep going. I\'m right here."',
+    choices: [
+      { label: 'Find the note again', next: 'd5_rite', retry: true },
+      { label: 'Tell her it is all right to stop', next: 'd5_rite_give', add: { dread: 1 } },
+    ],
+  },
+  d5_rite_give: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+    text: 'Okay. It is okay. (She is humming the wrong note on purpose, so you can hear her.) I am not going anywhere. You do not have to be good at this. You just have to stay.',
+    choices: [
+      { label: 'Stay on the line', next: 'd5_dawn', add: { resolve: 1, trust: 1 } },
+    ],
+  },
+  d5_dawn: {
+    ch: 10, speaker: 'WREN', mood: 'gate', focus: 'gate',
+    text: 'It is 5:51. The window is grey. She is sitting on the floor with the phone against her ear and the book open on the screen: every name, and hers, and the blank line, still blinking. "You can say what happens now," she says. "I will do whatever you say. I always did."',
+    choices: [
+      { label: 'Have her call the first number in the book', next: 'end_warned', req: { all: ['rite_wake', 'told_truth'], min: { mem: 8 }, maxDread: 4 } },
+      { label: 'Promise to stay on the line, every night', next: 'end_nightline', req: { flag: 'told_truth' } },
+      { label: 'Hang up and let the book have her', next: 'end_passed' },
+    ],
+  },
+  end_warned: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'warned',
+    text: 'She makes the call.', choices: [],
+  },
+  end_nightline: {
+    ch: 10, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', ending: 'nightline',
+    text: 'You stay on the line.', choices: [],
+  },
+  end_passed: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'passed',
+    text: 'Your turn is over.', choices: [],
+  },
+
   // ======================= forced scenes (they interrupt wherever she is) =======================
   blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
@@ -1030,10 +1163,16 @@ ABY.ENDINGS = {
     text: 'You look away. It is such a small thing. The Eye does not mind, not exactly. It only learns, very slowly, what it is to be looked away from, and starts to practise on you: every screen, every window, every dark glass you ever pass. It is always, quietly, watching.' },
   names: { tag: 'DAY FOUR: SAY EVERY NAME, CLOSE THE BOOK', name: 'The Last Name', hint: 'On Day Four, read every name, finish the Drowned Choir\'s song, then close the book. It only closes for someone who has been here many times.', mood: 'dawn',
     text: 'You say all two hundred and fourteen names, and then your own, and then you close the book. It is only a contact, in the end: it deletes like anything else. In the cave the water is gone, and the stones are only stones, and they are quiet. The phone shows 3:07 for one more second. Then, for the first time in four days, it shows the right time.' },
-  caller: { tag: 'DAY FOUR: WRITE THE NEXT NAME', name: 'The Next Caller', hint: 'On Day Four, write a name on the blank line.', mood: 'dark',
+  caller: { tag: 'DAY FOUR: WRITE THE NEXT NAME', name: 'The Next Caller', hint: 'On Day Four, write a name on the blank line.', mood: 'dark', cont: 'd5_wake',
     text: 'Message sent. It is so much lighter, the way it promised. Somewhere across town a phone lights up on a bedside table, 3:07, from a number they do not know, and someone you love sits up in the dark. You were never the one being haunted. You were the next voice in the phone.' },
-  drowned: { tag: 'DAY FOUR: STAY IN THE WATER', name: 'The Drowned Choir', hint: 'On Day Four, stay with the choir under the water.', mood: 'dark',
+  drowned: { tag: 'DAY FOUR: STAY IN THE WATER', name: 'The Drowned Choir', hint: 'On Day Four, stay with the choir under the water.', mood: 'dark', cont: 'd5_wake',
     text: 'The water closes over the screen and it is warm, as they said. You find the tune at once: everyone does, down here. Two hundred and fifteen voices now, mouthing eleven slow notes. The next person who wakes up in the cave will think the stones are singing.' },
+  warned: { tag: 'DAY FIVE: WAKE EVERY NUMBER IN THE BOOK', name: 'The Warning', hint: 'On Day Five, tell Wren the truth, win the 3:07 Wake-Up, then have her call the first number. It only works for someone who has found many endings.', mood: 'dawn',
+    text: 'She makes the call. Two hundred and fourteen phones ring at once in two hundred and fourteen kitchens, in the grey, in daylight, and every one of them is picked up by someone who was ready. The book deletes itself a name at a time. At 6:00 a message comes in from a number you do not know, in handwriting you know from birthday cards: thank you for waking us. At 6:01 the phone, for the first time, is only a phone.' },
+  nightline: { tag: 'DAY FIVE: STAY ON THE LINE', name: 'The Night Line', hint: 'On Day Five, tell Wren the truth and promise to stay on the line.', mood: 'gate',
+    text: 'You promise to stay on the line, and you do. Every night at 3:07 the phone rings, and she picks up, and you talk about nothing: school, her stupid cat, what the stairs sounded like. It is the first time the phone has ever been used to keep someone company. The book never closes. But in all the long years after, nobody else ever has to be the next name.' },
+  passed: { tag: 'DAY FIVE: HANG UP', name: 'Everyone Gets a Turn', hint: 'On Day Five, hang up on Wren and leave her to the book.', mood: 'dark',
+    text: 'You hang up. It is so light. Across the room Wren is looking at a phone that says 3:07, and then at the blank line in the contact that is already selected, and then at the dark corner of her room that is, just now, not entirely empty. She is very good at doing what she is told. She picks up her phone and she thinks of someone she loves.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
@@ -1140,6 +1279,7 @@ ABY.BADGES = [
   { id: 'collector', name: 'Collector', hint: 'Find 5 endings.' },
   { id: 'real_morning', name: 'Real Morning', hint: 'Open the door on Day Two.' },
   { id: 'last_name', name: 'The Last Name', hint: 'Close the book on Day Four.' },
+  { id: 'first_warning', name: 'First Warning', hint: 'Warn Wren on Day Five.' },
   { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
 ];
 ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
@@ -1157,6 +1297,7 @@ ABY.badgesFor = function (found, s) {
   if (n >= 5) out.push('collector');
   if (id === 'daybreak') out.push('real_morning');
   if (id === 'names') out.push('last_name');
+  if (id === 'warned') out.push('first_warning');
   if (n >= ABY.ENDING_IDS.length) out.push('completionist');
   return out;
 };
