@@ -4,16 +4,18 @@
  * its note reaches the light (touch the lane, or A S D / arrow keys). Every hit plays
  * that note of the song, so a good run is the song; a miss is a hole in it. Judging is
  * perfect (+-75 ms) / good (+-150 ms); the Guardian is freed when the run is 60% whole.
+ * A hard rite can ask for a CHORD: a melody entry [note, steps, note2] drops two notes in two lanes at the same instant; tap both
+ * together (within ~0.12 s) for a SLAM. A chart may also set `win` (the share of the song that has to be whole; default 0.6) and `fall` (seconds a note takes to fall; default 1.7, a hard chart is quicker so close notes don't overlap).
  * It draws on its own transparent canvas over the 3D scene (multi-touch aware).
  * ===================================================================== */
 var ABY = window.ABY = window.ABY || {};
 
 ABY.Song = (function () {
   var Sg = { active: false, t: 0, notes: [], stats: null, bot: false, rate: 1, WIN: 0.6, LEAD: 2.2, FALL: 1.7, P: 0.075, G: 0.15 };
-  // the melody: [index into the flute scale, steps after the last note]  (a step is 0.42 s)
+  // the melody: [index into the flute scale, steps after the last note, (optional) a second note struck at the same instant: a chord]  (a step is 0.42 s)
   var MEL0 = [[2, 0], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 1], [3, 1], [5, 1], [7, 1], [5, 2], [3, 1], [2, 1], [3, 1], [5, 1], [7, 1], [9, 1], [8, 2], [7, 1], [5, 1], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2], [2, 2], [0, 3]];
   var MEL, STEP = 0.42, cv, cx, W = 1, H = 1, dpr = 1, lanes = [], cb = null, finishAt = 0, shake = 0, flash = [0, 0, 0], hint = 1, held = {};
-  var COL0 = ['#ff6ec7', '#39e6ff', '#ffd34d'], COL = COL0, STEP0 = 0.42, fxq = [], fxs = [], name = 'SONG OF RECALL', tint = null, redT = 0, doorT = 0, crackT = 0, bloodT = 0, darkT = 0, drips = [];
+  var COL0 = ['#ff6ec7', '#39e6ff', '#ffd34d'], COL = COL0, STEP0 = 0.42, fxq = [], fxs = [], name = 'SONG OF RECALL', tint = null, slamT = 0, slamAt = 0, chordsOn = false, redT = 0, doorT = 0, crackT = 0, bloodT = 0, darkT = 0, drips = [];
 
   function laneOf(idx) { return idx <= 2 ? 0 : idx <= 5 ? 1 : 2; }
 
@@ -42,8 +44,12 @@ ABY.Song = (function () {
     MEL = chart ? chart.mel : MEL0; STEP = chart ? chart.step : STEP0; COL = chart ? chart.lanes : COL0; name = chart ? chart.name : 'SONG OF RECALL'; tint = chart ? chart.tint : null;
     fxq = chart ? chart.fx.map(function (f) { return { t: f[0] * STEP, k: f[1] }; }) : []; fxs = []; redT = doorT = crackT = bloodT = darkT = 0; drips = [];
     Sg.resize(); cb = done; Sg.t = -Sg.LEAD; Sg.notes = []; held = {}; flash = [0, 0, 0]; hint = 1; shake = 0;
-    var t = 0; MEL.forEach(function (m) { t += m[1] * STEP; Sg.notes.push({ t: t, idx: m[0], lane: laneOf(m[0]), s: 0 }); });
-    Sg.last = Sg.notes[Sg.notes.length - 1].t; Sg.stats = { perfect: 0, good: 0, miss: 0, total: Sg.notes.length, acc: 0, streak: 0, best: 0 };
+    Sg.WIN = chart && chart.win || 0.6; Sg.FALL = chart && chart.fall || 1.7; slamT = 0; chordsOn = false;
+    var t = 0, cid = 0; MEL.forEach(function (m) {
+      t += m[1] * STEP; var a = { t: t, idx: m[0], lane: laneOf(m[0]), s: 0 }; Sg.notes.push(a);
+      if (m[2] !== undefined && laneOf(m[2]) !== a.lane) { var b = { t: t, idx: m[2], lane: laneOf(m[2]), s: 0 }; a.pair = b; b.pair = a; a.cid = b.cid = ++cid; Sg.notes.push(b); chordsOn = true; }
+    });
+    Sg.last = Sg.notes[Sg.notes.length - 1].t; Sg.stats = { perfect: 0, good: 0, miss: 0, total: Sg.notes.length, acc: 0, streak: 0, best: 0, slam: 0, chords: cid };
     Sg.active = true; Sg.ending = false; finishAt = Sg.last + 1.4;
     if (ABY.Audio) ABY.Audio.duck(0.45);
   };
@@ -59,6 +65,11 @@ ABY.Song = (function () {
     Sg.stats[n.s === 1 ? 'perfect' : 'good']++; Sg.stats.streak++; Sg.stats.best = Math.max(Sg.stats.best, Sg.stats.streak);
     if (ABY.Audio) { ABY.Audio.flute(ABY.Audio.scale[n.idx], 1.3, n.s === 1 ? 0.2 : 0.15, 0, true); ABY.Audio.buzz(8); }
     if (ABY.Scene) ABY.Scene.burst(lanes[l].x, Sg.hitY, n.s === 1 ? 0xffffff : parseInt(COL[l].slice(1), 16), n.s === 1 ? 22 : 12, 3);
+    var m = n.pair;     // a chord: both halves struck together is a SLAM (a thud, a ring of light, a bonus the page can show)
+    if (m && (m.s === 1 || m.s === 2) && Math.abs(m.hitAt - n.hitAt) <= 0.12 && !n.slammed) {
+      n.slammed = m.slammed = true; Sg.stats.slam++; slamT = 1; slamAt = (lanes[n.lane].x + lanes[m.lane].x) / 2; shake = Math.max(shake, 0.6);
+      if (ABY.Audio) { ABY.Audio.sfx('thud'); ABY.Audio.buzz(24); } if (ABY.Scene) ABY.Scene.burst(slamAt, Sg.hitY, 0xffffff, 40, 5);
+    }
   }
   Sg.laneX = function (l) { return lanes[l].x; };               // (the evaluator taps where a lane is)
   Sg.press = press;                                           // (the evaluator and the bot press lanes through this)
@@ -99,7 +110,7 @@ ABY.Song = (function () {
   Sg.update = function (dt) {
     if (!Sg.active) return; dt = Math.min(dt, 0.05) * Sg.rate; Sg.t += dt; shake *= 0.9;
     for (var i = 0; i < 3; i++) flash[i] *= 0.86;
-    redT *= 0.93; doorT = Math.max(0, doorT - dt * 0.7); crackT *= 0.97; bloodT *= 0.985; darkT *= 0.94;
+    slamT *= 0.9; redT *= 0.93; doorT = Math.max(0, doorT - dt * 0.7); crackT *= 0.97; bloodT *= 0.985; darkT *= 0.94;
     while (fxq.length && Sg.t >= fxq[0].t) haunt(fxq.shift().k);
     for (i = drips.length - 1; i >= 0; i--) { var dp = drips[i]; dp.y += dp.v * dt; dp.v += 260 * dt; if (dp.y > H || bloodT < 0.02) drips.splice(i, 1); }
     for (i = 0; i < Sg.notes.length; i++) {
@@ -130,13 +141,23 @@ ABY.Song = (function () {
       cx.beginPath(); cx.arc(Lx, hy, R, 0, 6.2832); cx.stroke(); cx.restore();
       if (f > 0.05) { cx.fillStyle = col; cx.globalAlpha = f * 0.35; cx.beginPath(); cx.arc(Lx, hy, R * 1.05, 0, 6.2832); cx.fill(); cx.globalAlpha = 1; }
     }
+    // chords: a bar joins the two notes so they read as one thing to smash
+    for (i = 0; i < Sg.notes.length; i++) {
+      var q = Sg.notes[i], pr2 = q.pair;
+      if (!pr2 || pr2.t !== q.t || q.lane > pr2.lane || q.s !== 0 && q.s !== 3 || pr2.s !== 0 && pr2.s !== 3) continue;
+      var pq = 1 - (q.t - Sg.t) / Sg.FALL; if (pq < 0 || pq > 1.25) continue;
+      var yq = top + (hy - top) * pq; cx.save(); cx.globalAlpha = q.s === 3 || pr2.s === 3 ? 0.25 : 0.85; cx.strokeStyle = '#fff'; cx.lineWidth = Math.max(3, R * 0.16);
+      cx.shadowColor = '#fff'; cx.shadowBlur = 14; cx.beginPath(); cx.moveTo(lanes[q.lane].x, yq); cx.lineTo(lanes[pr2.lane].x, yq); cx.stroke(); cx.restore();
+    }
     // notes
     for (i = 0; i < Sg.notes.length; i++) {
       var n = Sg.notes[i], p = 1 - (n.t - Sg.t) / Sg.FALL; if (p < 0 || n.s === 3 && p > 1.25) continue;
       var Lm = lanes[n.lane], y = top + (hy - top) * p, c = COL[n.lane];
       if (n.s === 1 || n.s === 2) { var a = 1 - (Sg.t - n.hitAt) / 0.35; if (a <= 0) continue; cx.globalAlpha = a; cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(Lm.x, hy, R * (1 + (1 - a) * 1.2), 0, 6.2832); cx.globalAlpha = a * 0.5; cx.fill(); cx.globalAlpha = 1; continue; }
       var r = R * (0.55 + 0.45 * Math.min(1, p)); cx.globalAlpha = n.s === 3 ? Math.max(0, 1.25 - p) * 0.5 : 1;
-      cx.save(); cx.shadowColor = c; cx.shadowBlur = 20; cx.fillStyle = n.s === 3 ? '#555' : c; cx.beginPath(); cx.arc(Lm.x, y, r, 0, 6.2832); cx.fill(); cx.restore();
+      cx.save(); cx.shadowColor = c; cx.shadowBlur = 20; cx.fillStyle = n.s === 3 ? '#555' : c; cx.beginPath(); cx.arc(Lm.x, y, r, 0, 6.2832); cx.fill();
+      if (n.pair && n.s === 0) { cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.beginPath(); cx.arc(Lm.x, y, r + 4, 0, 6.2832); cx.stroke(); }
+      cx.restore();
       cx.fillStyle = 'rgba(255,255,255,0.85)'; cx.beginPath(); cx.arc(Lm.x - r * 0.25, y - r * 0.25, r * 0.28, 0, 6.2832); cx.fill(); cx.globalAlpha = 1;
     }
     cx.restore();
@@ -145,7 +166,10 @@ ABY.Song = (function () {
     cx.fillStyle = 'rgba(255,255,255,0.12)'; cx.fillRect(x0, Math.max(10, top - 26), span, 5); cx.fillStyle = '#39e6ff'; cx.fillRect(x0, Math.max(10, top - 26), span * pr, 5);
     cx.textAlign = 'center'; cx.fillStyle = '#fff'; cx.font = '700 ' + Math.max(12, Math.min(16, W * 0.02)) + 'px "Space Grotesk", sans-serif';
     cx.fillText(name + '   ' + Math.round(Sg.score() * 100) + '%   ' + (Sg.stats.streak > 2 ? 'x' + Sg.stats.streak : ''), W / 2, Math.max(10, top - 26) - 8);
-    if (hint > 0 && Sg.t > -Sg.LEAD + 0.4) { cx.globalAlpha = Math.min(1, hint) * (0.6 + 0.4 * Math.sin(performance.now() * 0.006)); cx.fillStyle = '#e8eef8'; cx.font = '600 ' + Math.max(13, Math.min(17, W * 0.022)) + 'px "Inter", sans-serif'; cx.fillText('Tap the lane when a note reaches the light', W / 2, hy + R * 2.05); cx.globalAlpha = 1; }
+    if (slamT > 0.05) { cx.save(); cx.globalAlpha = Math.min(1, slamT * 1.4); cx.textAlign = 'center'; cx.fillStyle = '#fff'; cx.shadowColor = '#39e6ff'; cx.shadowBlur = 24;
+      cx.font = '800 ' + Math.max(26, Math.min(54, W * 0.06)) + 'px "Space Grotesk", sans-serif'; cx.fillText(Sg.stats.slam > 1 && Sg.stats.slam % 5 === 0 ? 'SLAM x' + Sg.stats.slam + '!' : 'SLAM!', slamAt || W / 2, hy - R * 2.2 - (1 - slamT) * 30);
+      cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.globalAlpha = slamT * 0.7; cx.beginPath(); cx.arc(slamAt || W / 2, hy, R * (1.3 + (1 - slamT) * 2.4), 0, 6.2832); cx.stroke(); cx.restore(); }
+    if (hint > 0 && Sg.t > -Sg.LEAD + 0.4) { cx.globalAlpha = Math.min(1, hint) * (0.6 + 0.4 * Math.sin(performance.now() * 0.006)); cx.fillStyle = '#e8eef8'; cx.font = '600 ' + Math.max(13, Math.min(17, W * 0.022)) + 'px "Inter", sans-serif'; cx.fillText(chordsOn ? 'Tap the lane at the light. Two linked notes? Tap both together: SLAM' : 'Tap the lane when a note reaches the light', W / 2, hy + R * 2.05); cx.globalAlpha = 1; }
   };
   return Sg;
 })();

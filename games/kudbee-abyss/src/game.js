@@ -13,11 +13,11 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait' };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait' };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
-  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID' };
-  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'], chorus: ['#ff9ad5', '#ffd34d'], watched: ['#ff4d5e', '#05030c'] };
+  var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren' };
+  var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'], chorus: ['#ff9ad5', '#ffd34d'], watched: ['#ff4d5e', '#05030c'], names: ['#f4f0e0', '#3fd6c0'], caller: ['#9fe870', '#0a1a10'], drowned: ['#3fd6c0', '#03141a'], warned: ['#fff1b0', '#ffc27a'], nightline: ['#ffc27a', '#1a1030'], passed: ['#ff7aa8', '#08040e'] };
   var CREEPS = ['behind you', 'it is 3:07', 'i can hear you breathing', 'don\u2019t look at the screen', 'you left the door open', 'she is not the one texting you', 'count the steps', 'turn around slowly'];
 
   // ---- save ----
@@ -36,12 +36,13 @@
     G.badges = {}; if (d.badges && typeof d.badges === 'object') ABY.BADGE_IDS.forEach(function (id) { if (d.badges[id] === 1) G.badges[id] = 1; });
     var own = function (k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.FACTIONS, k); }; G.faction = own(d.faction) ? d.faction : ''; G.lean = own(d.lean) ? d.lean : ''; G.guided = d.guided === true;
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
+    G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
     G.saved = null;
     if (d.run && typeof d.run === 'object') { var s = ABY.cleanState(d.run); if (s.choices > 0 || s.node !== ABY.START) G.saved = { state: s, log: cleanLog(d.run.log) }; }
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -61,7 +62,7 @@
     ABY.Scene.setTorch(!!s.light); ABY.Scene.setDread(d);
   }
   function contact(sp) {
-    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : '';
+    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : key === 'CHOIR' ? '≈' : key === 'WREN' ? 'W' : '';
     $('mName').textContent = WHO[key]; $('mName').style.color = ABY.SPEAKERS[key].color;
     $('mSub').innerHTML = key === 'GUARDIAN' ? '<span class="live" style="background:var(--ember);box-shadow:0 0 8px var(--ember)"></span>signal unstable' : key === 'EYE' ? '<span class="live" style="background:#ff4d5e;box-shadow:0 0 8px #ff4d5e"></span>it knows you are here' : key === 'NARRATOR' ? 'unknown number' : '<span class="live"></span>online';
   }
@@ -172,7 +173,7 @@
   }
   function songDone(won, st) {
     $('songCv').classList.remove('on'); document.body.classList.remove('song'); P.lockAll(false);
-    var rite = !G.practice && ABY.RITES[ABY.NODES[G.state.node].song], pct = Math.round(st.acc * 100), note = (rite ? rite.name.replace(/\b(\w)(\w*)/g, function (m, a, b) { return a + b.toLowerCase(); }) : 'Song of Recall') + ': ' + pct + '%  ·  ' + st.perfect + ' perfect, ' + st.good + ' good, ' + st.miss + ' missed';
+    var rite = !G.practice && ABY.RITES[ABY.NODES[G.state.node].song], pct = Math.round(st.acc * 100), note = (rite ? rite.name.replace(/\b(\w)(\w*)/g, function (m, a, b) { return a + b.toLowerCase(); }) : 'Song of Recall') + ': ' + pct + '%  ·  ' + st.perfect + ' perfect, ' + st.good + ' good, ' + st.miss + ' missed' + (st.chords ? ', ' + st.slam + '/' + st.chords + ' slams' : '');
     if (pct > G.songBest) { G.songBest = pct; }
     if (won) { ABY.Audio.sfx('song'); ABY.Scene.burst(240, 260, 0xffffff, 70, 5); }
     if (G.practice) { P.show('flute'); $('fTxt').textContent = (won ? 'The song held. ' : 'The song faltered. ') + note.replace(/^[^:]*: /, ''); save(); return; }
@@ -193,7 +194,7 @@
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont && ABY.carry(G.state)); $('shareBtn').textContent = 'Share';
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont && ABY.carry(G.state)); if (E && E.cont) $('memNext').textContent = dayOf(E.cont); $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
   }
   function closeMemory() { $('memory').classList.remove('on'); document.body.classList.remove('finale'); }
@@ -217,10 +218,11 @@
   }
 
   // ---- a journey ----
+  function dayOf(id) { var n = ABY.NODES[id], c = n && ABY.CHAPTERS[n.ch - 1]; return c && /^Day /.test(c.label) ? c.label : 'Day Two'; }   // the act a carried run opens on (its chapter's name)
   function startRun(carry) {
     var day2 = carry && ABY.carry(G.state); G.state = day2 || ABY.newState(foundN()); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; if (day2) day2.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
-    var stamp = (day2 ? 'Day Two \u00B7 ' : 'Today ') + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
+    var stamp = (day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ') + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
     if (P.screen !== 'msg') P.show('msg'); maybeGuide(); world(); var first = G.state.node; wait(700, function () { deliver(first); });
   }
   function rebuild() {                                                     // the saved chat, drawn at once
@@ -308,6 +310,25 @@
     if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
     ks.forEach(function (k) { var n = ABY.NOTES[k], d = document.createElement('div'); d.className = 'nt'; var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = n.title; p.textContent = n.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
   }
+  function renderStore() {
+    var box = $('stList'); box.innerHTML = ''; var n = foundN(), got = 0;
+    ABY.STORE.forEach(function (a) {
+      var ok = n >= a.need, has = G.apps[a.id]; if (has) got++;
+      var row = document.createElement('div'); row.className = 'sti' + (ok ? '' : ' lk');
+      var ic = document.createElement('span'); ic.className = 'ico'; ic.textContent = ok ? a.glyph : '?'; ic.style.background = 'linear-gradient(145deg,' + a.c[0] + ',' + a.c[1] + ')';
+      var tx = document.createElement('div'); tx.className = 'tx'; var b = document.createElement('b'), sm = document.createElement('small');
+      b.textContent = ok ? a.name : 'Locked'; sm.textContent = ok ? a.tag + ' \u2014 ' + a.blurb : 'Find ' + a.need + ' ending' + (a.need === 1 ? '' : 's') + ' to see this listing.'; tx.appendChild(b); tx.appendChild(sm);
+      var g = document.createElement('button'); g.type = 'button'; g.className = 'get' + (ok ? '' : ' lk'); g.textContent = !ok ? 'LOCKED' : has ? 'OPEN' : 'GET'; g.disabled = !ok;
+      g.addEventListener('click', function () { if (!ok) return; if (!G.apps[a.id]) { G.apps[a.id] = 1; save(); ABY.Audio.sfx('ui'); } renderApp(a.id); P.show('appx'); });
+      row.appendChild(ic); row.appendChild(tx); row.appendChild(g); box.appendChild(row);
+    });
+    $('stSub').textContent = got + ' installed \u00b7 ' + ABY.STORE.length + ' listings';
+  }
+  function renderApp(id) {
+    var a = ABY.STORE.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+    $('axName').textContent = a.name; $('axTag').textContent = a.tag; var box = $('axBody'); box.innerHTML = '';
+    a.lore.forEach(function (t) { var d = document.createElement('div'); d.className = 'nt'; var p = document.createElement('p'); p.textContent = t; d.appendChild(p); box.appendChild(d); });
+  }
   function renderFlute() { $('fBest').textContent = G.songBest ? G.songBest + '%' : '—'; }
   function renderSettings() {
     $('togSnd').classList.toggle('on', !ABY.Audio.muted); $('setSnd').setAttribute('aria-pressed', ABY.Audio.muted ? 'false' : 'true');
@@ -323,7 +344,7 @@
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
     if (name === 'home') maybeGuide();
-    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
+    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
     if (name !== 'msg' && G.node && name !== 'lock') { /* the wallpaper keeps the speaker in view */ }
   }
@@ -361,6 +382,7 @@
   $('fPlay').addEventListener('click', function () { startSong(true); });
   $('shareBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('ending', G.shown, 'gallery'); });
   $('shNative').addEventListener('click', function () { shareAct('native'); }); $('shX').addEventListener('click', function () { shareAct('x'); }); $('shFb').addEventListener('click', function () { shareAct('fb'); }); $('shWa').addEventListener('click', function () { shareAct('wa'); }); $('shCopy').addEventListener('click', function () { shareAct('copy'); }); $('shSave').addEventListener('click', function () { shareAct('save'); });
+  $('axBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show('store'); });
   $('shBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show(G.shareFrom || 'home'); });
   $('pShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'pulse'); }); $('gShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'gallery'); });
   $('memNext').addEventListener('click', function () { ABY.Audio.sfx('ui'); closeMemory(); startRun(true); });
@@ -368,7 +390,7 @@
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.badges = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }
@@ -383,6 +405,11 @@
   });
 
   // ---- boot ----
+  function bootScreen() {                                                  // the phone powers on under the studio's name, then the lock screen is already waiting
+    var b = $('boot'), l = $('bLine'), ms = reduced ? 500 : 2200, steps = ['Starting phone', 'Listening for the Abyss', 'Kudbee Nightmares Studio'];
+    b.style.setProperty('--bt', ms + 'ms'); steps.forEach(function (t, i) { setTimeout(function () { l.textContent = t; }, ms * i / steps.length); });
+    setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.classList.add('gone'); }, 700); }, ms);
+  }
   function boot() {
     load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
     ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
@@ -390,7 +417,7 @@
     function ready(gl) {
       if (booted) return; booted = true; if (!gl) stage.classList.add('nogl');
       if (G.saved) { G.state = G.saved.state; G.node = N[G.state.node]; G.log = G.saved.log; } ABY.Scene.setMood('void'); ABY.Scene.setFocus('queen'); world(); P.show('lock');
-      setTimeout(function () { pre.classList.add('done'); }, 250); wake();
+      setTimeout(function () { pre.classList.add('done'); }, 250); bootScreen(); wake();
     }
     var img = new Image(), bgi = new Image(), bgi2 = new Image(), bgi3 = new Image(), bgi4 = new Image(), tried = 0, got = 0;
     function both() { if (++got === 5) ready(ABY.Scene.init($('three-canvas'), img, bgi.naturalWidth ? bgi : null, bgi2.naturalWidth ? bgi2 : null, bgi3.naturalWidth ? bgi3 : null, bgi4.naturalWidth ? bgi4 : null)); }

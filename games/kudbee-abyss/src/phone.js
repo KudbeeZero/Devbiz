@@ -12,7 +12,7 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Phone = (function () {
   var P = { screen: 'lock', hooks: {}, locked: false };
   var $ = function (id) { return document.getElementById(id); };
-  var APPS = ['home2', 'msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
+  var APPS = ['home2', 'msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes', 'store', 'appx'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
   P.orient = 'portrait';
@@ -40,7 +40,7 @@ ABY.Phone = (function () {
     ['lock', 'home'].concat(APPS).forEach(function (id) { $(id).classList.toggle('on', id === name); });
     var dev = $('device'); dev.classList.remove('s-lock', 's-home', 's-app'); dev.classList.add(name === 'lock' ? 's-lock' : name === 'home' || name === 'home2' ? 's-home' : 's-app');
     var pg = $('pager').children; pg[0].classList.toggle('on', name !== 'home2'); pg[1].classList.toggle('on', name === 'home2');
-    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' || name === 'home2' ? 0.1 : name === 'msg' ? 1 : 0.1);
+    if (ABY.Scene) ABY.Scene.setStage(name === 'msg' ? 'chat' : 'wall', name === 'lock' ? 0.95 : name === 'home' || name === 'home2' ? 0.62 : name === 'msg' ? 1 : 0.1);
     if (name === 'msg') P.badge('msg', 0);
     if (P.hooks.onShow) P.hooks.onShow(name, prev);
   };

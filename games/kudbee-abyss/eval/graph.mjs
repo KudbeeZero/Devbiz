@@ -17,7 +17,7 @@ export function graphChecks() {
   rec('story-links', dead.length === 0 && badNotes.length === 0 && N[ABY.START], dead.concat(badNotes).join(', ') || ids.length + ' nodes, every choice leads somewhere, every clue exists');
 
   const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'], SCARES = ['glitch', 'jump', 'whisper', 'eye', 'blackout'], IMGS = ['corrupt', 'stairs', 'city', 'queen', 'eye'];
-  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
+  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
   rec('story-nodes-shaped', odd.length === 0, odd.join(', ') || 'speaker, mood, focus, chapter and text on every node; scares, pictures and endings are known');
 
   // STRUCTURE (proven for every possible state, no walking needed): a gated choice can hide others, so every scene needs at least one choice that
@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done'];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -41,7 +41,7 @@ export function graphChecks() {
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
     return out;
   };
-  const seen = new Map(), reach = new Set(), ends = new Set(), q = [ABY.newState(10)], LIMIT = +process.env.WALK_LIMIT || 400000; let head = 0;
+  const seen = new Map(), reach = new Set(), ends = new Set(), q = [ABY.newState(10)], LIMIT = +process.env.WALK_LIMIT || 3000000; let head = 0;
   while (head < q.length && seen.size < LIMIT) {
     const s = q[head], k = key(s); q[head++] = null; const was = seen.get(k);
     if (was && was.bat <= s.bat) continue;                       // seen at least as drained: nothing new
@@ -91,6 +91,49 @@ export function graphChecks() {
     rec('rite-giveup-resets-tries', t.tries === 0, 'giving up a rite resets the retry count');
   }
   rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && ABY.ENDINGS.loop.cont === 'd3_wake' && N.d3_wake.ch === 8, 'keeper and loop carry into Day Three');
+  { // DAY FOUR: both Day Three endings carry on; the book only closes for a veteran (7+ endings) who read the names and won the choir
+    const toNames = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_names'));
+    const d4 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_watched', flags: { rite_doors: 1 } }));
+    const shore = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_shore' }, o)).some(x => x.c.next === 'end_names');
+    rec('day-four', ABY.ENDINGS.chorus.cont === 'd4_wake' && ABY.ENDINGS.watched.cont === 'd4_wake' && d4 && d4.node === 'd4_wake' && d4.flags.rite_doors === 1 && N.d4_wake.ch === 9
+      && toNames.length > 0 && toNames.every(c => c.req && c.req.min && c.req.min.mem >= 7 && c.req.all.includes('rite_choir'))
+      && shore({ mem: 7, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 6, flags: { rite_choir: 1, read_names: 1 } }) && !shore({ mem: 9, flags: { read_names: 1 } }),
+      'chorus and watched carry into Day Four; closing the book needs 7+ endings found, the names read and the Drowned Choir won');
+  }
+
+  { // the two hard rites: faster than the plain ones, with chords (two notes in two lanes at once), harder to win, optional, and bounded like any rite
+    const lane = i => i <= 2 ? 0 : i <= 5 ? 1 : 2, plain = ['doors', 'blood', 'lull', 'choir', 'wake'], hard = ['bells', 'riff'];
+    const stats = id => { const c = ABY.RITES[id]; let chords = 0, bad = 0, t = 0, close = 0, last = [-9, -9, -9]; for (const m of c.mel) { t += m[1] * c.step; if (m[2] !== undefined) { chords++; if (lane(m[0]) === lane(m[2])) bad++; }
+      for (const i of m[2] !== undefined ? [m[0], m[2]] : [m[0]]) { if (t - last[lane(i)] < 0.2) close++; last[lane(i)] = t; } if (m[1] === 0 && m !== c.mel[0] && m[2] === undefined) bad++; }
+      return { chords, bad, close, len: c.mel.length + chords, secs: t }; };
+    const sh = hard.map(stats), slowest = Math.min(...plain.map(id => ABY.RITES[id].step));
+    const entry = (id, node, flag, o) => ABY.options(Object.assign(ABY.newState(0), { node }, o)).some(x => x.c.next === id);
+    const w = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd4_bells' }), true), f = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd5_riff', tries: ABY.MAX_SONG_TRIES }), false);
+    rec('hard-rites', hard.every((id, i) => ABY.RITES[id].step <= slowest - 0.05 && ABY.RITES[id].win > 0.6 && ABY.RITES[id].win <= 0.8 && sh[i].chords >= 12 && sh[i].bad === 0 && sh[i].close === 0 && sh[i].len > 80)
+      && entry('d4_bells', 'd4_shore', 0, {}) && !entry('d4_bells', 'd4_shore', 0, { flags: { bells_done: 1 } }) && entry('d5_riff', 'd5_dawn', 0, {}) && !entry('d5_riff', 'd5_dawn', 0, { flags: { riff_done: 1 } })
+      && w.node === 'd4_bells_win' && w.flags.rite_bells === 1 && f.node === 'd5_riff_give',
+      'bells ' + sh[0].chords + ' chords / ' + sh[0].len + ' notes / ' + sh[0].secs.toFixed(0) + 's, riff ' + sh[1].chords + ' chords / ' + sh[1].len + ' notes / ' + sh[1].secs.toFixed(0) + 's; each faster than every plain rite (' + slowest + 's), no chord inside one lane, no two notes of a lane closer than 0.2s; each offered once and optional');
+  }
+
+  { // the intro's little crown pays off on Day Four, once, and never traps the shore
+    const sh = (o) => Object.assign(ABY.newState(0), { node: 'd4_shore' }, o);
+    const offer = (o) => ABY.options(sh(o)).some(x => x.c.next === 'd4_crown');
+    const laid = ABY.choose(Object.assign(ABY.newState(0), { node: 'd4_crown', dread: 3 }), 0);
+    const named = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_crown' }, o)).length;
+    rec('d4-little-crown', offer({ flags: { little_crown: 1 } }) && !offer({}) && !offer({ flags: { little_crown: 1, crown_laid: 1 } })
+      && laid && laid.node === 'd4_shore' && laid.flags.crown_laid === 1 && laid.dread === 2 && named({ flags: { read_names: 1 } }) === 3 && named({}) === 2,
+      'taking out the little crown needs it from the first night, can be done once, lowers dread when laid down, and returns to the shore');
+  }
+
+  { // DAY FIVE: both dark Day Four endings carry on; the warning only works for a veteran who won the wake-up and told the truth
+    const toWarned = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_warned'));
+    const d5 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_caller', flags: { rite_choir: 1 } }));
+    const dawn = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd5_dawn' }, o)).some(x => x.c.next === 'end_warned');
+    rec('day-five', ABY.ENDINGS.caller.cont === 'd5_wake' && ABY.ENDINGS.drowned.cont === 'd5_wake' && !ABY.ENDINGS.names.cont && d5 && d5.node === 'd5_wake' && d5.flags.rite_choir === 1 && N.d5_wake.ch === 10
+      && toWarned.length > 0 && toWarned.every(c => c.req && c.req.min && c.req.min.mem >= 8 && c.req.all.includes('rite_wake') && c.req.all.includes('told_truth'))
+      && dawn({ mem: 8, flags: { rite_wake: 1, told_truth: 1 } }) && !dawn({ mem: 7, flags: { rite_wake: 1, told_truth: 1 } }) && !dawn({ mem: 9, flags: { told_truth: 1 } }) && !dawn({ mem: 9, flags: { rite_wake: 1 } }),
+      'caller and drowned carry into Day Five; warning Wren needs 8+ endings found, the wake-up won and the truth told');
+  }
 
   // DAY TWO: the true ending only opens for someone who has found earlier endings (mem), and only the endings with a way on continue
   const toDay = ids.filter(id => N[id].choices && N[id].choices.some(c => c.next === 'end_daybreak')).flatMap(id => N[id].choices.filter(c => c.next === 'end_daybreak'));
@@ -120,6 +163,8 @@ export function graphChecks() {
     && c2.node === ABY.START && c3.node === ABY.START && c4.node === ABY.START && c4.back === '' && c5.node === 'blackout' && c5.back === 'spire' && c6.back === '', 'out-of-range, wrong-type and unknown values dropped; a return point only survives on a forced scene');
   const base = ABY.newState(), after = ABY.choose(base, 0);
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
+  const ST = ABY.STORE, sids = ST.map(a => a.id);
+  rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && Number.isInteger(a.need) && a.need >= 0 && a.need <= ABY.ENDING_IDS.length) && ST.some(a => a.need === 0) && ST.some(a => a.need >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock reachable');
   return R;
 }
 
