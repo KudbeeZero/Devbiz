@@ -506,6 +506,31 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
     'before the pin: ' + before.length + ' choices; after it, "' + after.filter(c => /Two warnings/.test(c))[0] + '" -> the voice behind the door -> back at the door (trust ' + back.trust + '), and it is not offered twice');
   await ctx.close();
 }
+{ // a reply is felt (a ring of light from the thumb, a sound; a frightening one lands dark), and a call that will not take no: declined, it rings
+  // again louder, and the third time it has answered itself
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'calls'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await pg.evaluate(() => { window.__sfx = []; const f = ABY.Audio.sfx; ABY.Audio.sfx = function (n) { window.__sfx.push(n); return f.apply(this, arguments); }; });
+  await at(pg, 'd2_wake', {}); await tapChip(pg, 'Message the Queen');
+  const plain = await pg.evaluate(() => ({ r: document.querySelectorAll('#screen .ripple:not(.dark)').length, cls: document.getElementById('screen').className, sfx: window.__sfx.slice() }));
+  await at(pg, 'd2_photo', {}); await pg.evaluate(() => { window.__sfx = []; }); await tapChip(pg, 'Put the phone down');
+  const dark = await pg.evaluate(() => ({ r: document.querySelectorAll('#screen .ripple.dark').length, cls: document.getElementById('screen').className, sfx: window.__sfx.slice() }));
+  await sleep(900); const gone = await pg.evaluate(() => document.querySelectorAll('#screen .ripple').length);
+  rec('replies-are-felt', plain.r >= 1 && /\bstruck\b/.test(plain.cls) && plain.sfx.includes('pick') && dark.r >= 1 && /struck-dark/.test(dark.cls) && dark.sfx.includes('pickdark') && gone === 0,
+    'a reply: a ring of light and "' + plain.sfx.filter(x => /pick/.test(x))[0] + '"; a frightening one: a red ring, the glass shudders, "' + dark.sfx.filter(x => /pick/.test(x))[0] + '"; the rings clear themselves');
+  await at(pg, 'c3_corvin', {}); await pg.waitForSelector('#call.on[data-ring="1"]', { timeout: 15000 });
+  const r1 = await pg.evaluate(() => ({ who: document.getElementById('callWho').textContent, n: document.querySelectorAll('#callAct .cbtn').length, dread: ABY.game.state.dread }));
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="2"]', { timeout: 15000 });
+  const r2 = await pg.evaluate(() => ({ sub: document.getElementById('callSub').textContent, n: document.querySelectorAll('#callAct .cbtn').length, sfx: window.__sfx.slice() }));
+  await pg.screenshot({ path: join(OUT, 'call-rings-again.png') });
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="3"]', { timeout: 15000 });
+  const r3 = await pg.evaluate(() => ({ btns: [...document.querySelectorAll('#callAct .cbtn')].map(b => b.textContent.replace(/[^A-Za-z]/g, '')), dread: ABY.game.state.dread }));
+  await pg.screenshot({ path: join(OUT, 'call-answers-itself.png') });
+  await pg.locator('#callAct .cbtn').first().click(); await pick(pg, 'Thank him');
+  const done = await pg.evaluate(() => ({ node: ABY.game.state.node, call: document.getElementById('call').classList.contains('on'), thread: document.getElementById('thread').textContent }));
+  rec('calls-will-not-take-no', r1.who === 'Corvin Ash' && r1.n === 2 && r2.n === 2 && /again/.test(r2.sub) && r2.sfx.includes('ring2') && r3.btns.join() === 'Listen' && r3.dread === r1.dread + 2 && /I called/.test(done.thread) && !done.call && ['d3_blood', 'd3_blood_win', 'd3_blood_fail'].includes(done.node),
+    'Corvin Ash calls; declined, it rings again ("' + r2.sub + '", harsher), declined again it answers itself (only "' + r3.btns.join() + '"), dread ' + r1.dread + ' -> ' + r3.dread + '; then on to ' + done.node);
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);

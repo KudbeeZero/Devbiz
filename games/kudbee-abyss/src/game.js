@@ -102,12 +102,14 @@
   }
   // an incoming call: a full-screen ring with the node's two choices as Answer / Decline
   function showCall(n, opts) {
-    var el = $('call'); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
+    var el = $('call'), lv = Math.max(1, Math.min(3, n.call.ring || 1)); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
+    el.setAttribute('data-ring', lv); G.ringLv = lv;                         // how insistent: 2 rings louder and faster, 3 has already answered itself
     var act = $('callAct'); act.innerHTML = '';
     opts.forEach(function (o, k) { var b = document.createElement('button'); b.type = 'button'; b.className = 'cbtn ' + (k === 0 ? 'yes' : 'no'); b.innerHTML = '<i>' + (k === 0 ? '\u260E' : '\u2715') + '</i><span></span>'; b.querySelector('span').textContent = o.c.label; b.addEventListener('click', function (ev) { stopRing(); choose(o.i, ev); }); act.appendChild(b); });
-    el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, 1500);
+    el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, [1500, 1500, 1000, 700][lv]);
+    if (lv > 1) { scare(lv > 2 ? 'jump' : 'glitch'); fx($('call'), 'shudder', 600); }
   }
-  function ring1() { ABY.Audio.sfx('ring'); buzz(200); }
+  function ring1() { var lv = G.ringLv || 1; ABY.Audio.sfx(lv > 1 ? 'ring2' : 'ring'); buzz(lv > 2 ? 420 : lv > 1 ? 300 : 200); }
   function stopRing() { clearInterval(ringT); ringT = 0; $('call').classList.remove('on'); P.lockAll(false); }
   function chip(label, go, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (go ? ' go' : ''); b.textContent = label; b.addEventListener('click', fn); $('replies').appendChild(b); }
 
@@ -136,11 +138,20 @@
 
   function choose(i, ev) {
     if (G.busy || G.delivering) return; var ns = ABY.choose(G.state, i); if (!ns) return; clearTimeout(scareT);
-    var label = G.node.choices[i].label; ABY.Audio.init(); ABY.Audio.sfx('send'); buzz(12);
+    var c = G.node.choices[i], label = c.label, dark = !!(c.add && c.add.dread > 0); ABY.Audio.init(); ABY.Audio.sfx(dark ? 'pickdark' : 'pick'); buzz(dark ? 34 : 14);
     var r = ev && ev.target && ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : null;
     if (r) { var sr = $('screen').getBoundingClientRect(); ABY.Scene.burst(r.left - sr.left + 24, r.top - sr.top + r.height / 2, parseInt(ABY.SPEAKERS[G.node.speaker].color.slice(1), 16), 24, 3.2); }
+    struck(ev, r, dark);
     $('replies').classList.remove('on'); bubble('out', '', label); entry('out', '', label, '');
     G.state = ns; deliver(ns.node);
+  }
+
+  // a reply is felt: a ring of light spreads from the thumb, the glass flexes, and a choice that frightens her lands dark and low (red, a shudder)
+  function struck(ev, r, dark) {
+    var sc = $('screen'), sr = sc.getBoundingClientRect(), x = ev && ev.clientX ? ev.clientX : (r ? r.left + r.width / 2 : sr.left + sr.width / 2), y = ev && ev.clientY ? ev.clientY : (r ? r.top + r.height / 2 : sr.top + sr.height * 0.8);
+    var w = document.createElement('i'); w.className = 'ripple' + (dark ? ' dark' : ''); w.setAttribute('aria-hidden', 'true'); w.style.left = (x - sr.left) + 'px'; w.style.top = (y - sr.top) + 'px'; sc.appendChild(w);
+    setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 800);
+    sc.classList.remove('struck', 'struck-dark'); void sc.offsetWidth; fx(sc, dark ? 'struck-dark' : 'struck', dark ? 520 : 360);
   }
 
   // ---- scares: the phone and the dark do things to her ----

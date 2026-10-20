@@ -14,7 +14,7 @@
  * or give battery (`bat`: positive drains, negative charges), and can be hidden until a rule
  * holds (`req`: { flag, noflag, min:{trust:2}, maxDread, minDread, light, noLight }).
  * A node can scare (`scare`: glitch | jump | whisper | eye | blackout), be dark (`dark`: the
- * flashlight is needed or dread climbs), ring (`call`), show a picture (`img`), file a clue
+ * flashlight is needed or dread climbs), ring (`call`: { from, sub, ring: 1-3 }; an insistent call's Decline is another call, louder), show a picture (`img`), file a clue
  * (`note`), or end (`ending`: an id, or 'auto' = endingFor()). `@back` returns to where a
  * forced scene (the blackout, the hollowing) interrupted.
  * ===================================================================== */
@@ -748,7 +748,7 @@ ABY.NODES = {
     choices: [
       { label: 'Open the thread from YOU', next: 'd2_you', add: { dread: 1 } },
       { label: 'Message the Queen', next: 'd2_queen' },
-      { label: 'Look at the new photo in your gallery', next: 'd2_photo' },
+      { label: 'Look at the new photo in your gallery', next: 'c2_vey' },
     ],
   },
   d2_queen: {
@@ -782,6 +782,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd2_photo', light: 1, req: { noLight: 1 } },
       { label: 'Turn around', next: 'd2_turn' },
       { label: 'Put the phone down and open YOU', next: 'd2_you', add: { dread: 1 } },
+      { label: 'Ask Vey whose hand that is', next: 'c2_vey_hand', req: { flag: 'vey_held' } },
     ],
   },
   d2_turn: {
@@ -944,7 +945,7 @@ ABY.NODES = {
     ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
     text: 'The hall splits three ways. A red corridor, where the walls are wet and the floor is warm. A servants\' stair that smells like Vey\'s hands. And a plain door with a name scratched into it in a soldier\'s neat handwriting.',
     choices: [
-      { label: 'Take the red corridor', next: 'd3_blood', add: { resolve: 1 } },
+      { label: 'Take the red corridor', next: 'c3_corvin', add: { resolve: 1 } },
       { label: 'Follow Vey down the servants\' stair', next: 'd3_vey3', add: { dread: 1 } },
       { label: 'Knock on the plain door', next: 'd3_corvin', req: { flag: 'knew_name' } },
     ],
@@ -1085,7 +1086,7 @@ ABY.NODES = {
     choices: [
       { label: 'Ask her how many', next: 'd4_contact', add: { trust: 1 } },
       { label: 'Tell her it was not kind', next: 'd4_stones', add: { resolve: 1, trust: -1 } },
-      { label: 'Tell her you will go and listen to them', next: 'd4_stones', add: { heart: 1, trust: 1 } },
+      { label: 'Tell her you will go and listen to them', next: 'c4_choir', add: { heart: 1, trust: 1 } },
     ],
   },
   d4_contact: {
@@ -1256,7 +1257,7 @@ ABY.NODES = {
     ],
   },
   d5_lie: {
-    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'queen',
+    ch: 10, speaker: 'WREN', mood: 'dark', focus: 'queen', call: { from: 'Wren', sub: 'calling you back' },
     text: 'click. (The line goes dead. Then, before you can breathe, the phone rings. Wren is calling you back.) The screen says WREN, and under it, in handwriting you know from birthday cards: she knows your voice.',
     choices: [
       { label: 'Pick up', next: 'd5_truth', set: 'told_truth', add: { heart: 1 } },
@@ -1264,7 +1265,7 @@ ABY.NODES = {
     ],
   },
   d5_ring: {
-    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump', call: { from: 'Wren', sub: '20 missed calls', ring: 2 },
     text: 'It rings. And rings. The ringtone slows down, and flattens, and turns into the eleven notes of the choir. Fourteen missed calls. Twenty. On the glass, her face, pressed to the inside: not asking, now. Waiting.',
     choices: [
       { label: 'Pick up', next: 'd5_truth', set: 'told_truth', add: { dread: 1 } },
@@ -1549,7 +1550,7 @@ ABY.NODES = {
     text: '"The seventh night. Everything I ever locked is open tonight: the gate, the door, the water, the book. The book can only be closed from the first page, and only by somebody who is not afraid of who is on it." The flute at her back is humming on its own. "I have never once not been afraid of her."',
     choices: [
       { label: 'Tell her you will do it together', next: 'd7_gather', add: { heart: 1, trust: 1 } },
-      { label: 'Ask about No Caller ID', next: 'd7_eye', add: { resolve: 1 } },
+      { label: 'Ask about No Caller ID', next: 'c7_you', add: { resolve: 1 } },
     ],
   },
   d7_eye: {
@@ -1679,6 +1680,99 @@ ABY.NODES = {
     text: 'Zero percent.', choices: [],
   },
 
+  // ---- calls that have to be picked up: the phone rings in the middle of a day. `call.ring` is how insistent it is (1-3: louder, faster, the glass
+  // cracks). Some will not take no: decline and they ring again, and the third time the phone answers itself ----
+  c2_vey: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'vey', scare: 'whisper', call: { from: 'Vey', sub: '777 777 7777' },
+    text: 'Your thumb is on the gallery when the phone rings. The number is all sevens. You did not give Vey this number. Vey has never needed one.',
+    choices: [
+      { label: 'Answer', next: 'c2_vey_talk', bat: 6 },
+      { label: 'Decline', next: 'd2_photo', add: { dread: 1 } },
+    ],
+  },
+  c2_vey_talk: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'vey',
+    text: 'Don\'t open that photo on your own. Nobody should look at that one alone. Let me stay on the line while you look. I\'ll be ever so quiet. You won\'t even feel me.',
+    choices: [
+      { label: 'Let it stay on the line', next: 'd2_photo', set: 'vey_held', add: { trust: 1, dread: 1 } },
+      { label: 'Hang up and look alone', next: 'd2_photo', add: { resolve: 1 } },
+    ],
+  },
+  c2_vey_hand: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'jump',
+    text: 'Mine. (Very close. Closer than the phone.) I said you wouldn\'t feel me. You didn\'t, did you? Not once, in all the nights. I have such light hands, when I want to.',
+    choices: [
+      { label: 'Ask it to take the hand away', next: 'd2_turn', add: { resolve: 1, dread: -1 } },
+      { label: 'Let it stay', next: 'd2_you', add: { trust: 1, dread: 1 } },
+    ],
+  },
+  c3_corvin: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dusk', focus: 'guardian', scare: 'jump', call: { from: 'Corvin Ash', sub: 'calling from behind a door' },
+    text: 'Halfway to the red corridor, the phone rings. Not a ringtone: an old brass bell, the kind that hangs over a shop door. The caller ID is a name, in small neat handwriting.',
+    choices: [
+      { label: 'Answer', next: 'c3_corvin_talk', bat: 6 },
+      { label: 'Decline', next: 'c3_corvin2', add: { dread: 1 } },
+    ],
+  },
+  c3_corvin2: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dusk', focus: 'guardian', scare: 'glitch', call: { from: 'Corvin Ash', sub: 'calling again', ring: 2 },
+    text: 'It rings again before the first ring has died. Louder. The bell is right behind you now, at the height of a man\'s hand, and a hairline crack runs across the glass.',
+    choices: [
+      { label: 'Answer', next: 'c3_corvin_talk', bat: 6 },
+      { label: 'Decline', next: 'c3_corvin3', add: { dread: 1 } },
+    ],
+  },
+  c3_corvin3: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'guardian', scare: 'jump', call: { from: 'Corvin Ash', sub: 'answered', ring: 3 },
+    text: 'You decline it. The phone answers itself. On the other end someone clears his throat, very politely, the way a soldier does before he says a thing he has been told never to say.',
+    choices: [
+      { label: 'Listen', next: 'c3_corvin_talk', add: { dread: 1 } },
+    ],
+  },
+  c3_corvin_talk: {
+    ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+    text: 'The corridor is warm. That is how it keeps people: not with teeth. With warmth. Keep the song whole, and do not stop to rest, however kind the walls are to you. (A pause.) I am not allowed to call. I am not allowed to do anything but hold the door. I called.',
+    choices: [
+      { label: 'Thank him, and go on', next: 'd3_blood', add: { trust: 1 } },
+    ],
+  },
+  c4_choir: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'whisper', call: { from: 'Everyone Before You', sub: '214 callers' },
+    text: 'Before you reach the cave the phone rings, and keeps ringing, two hundred and fourteen times at once. The screen fills with water from the bottom up.',
+    choices: [
+      { label: 'Answer', next: 'c4_choir_talk', bat: 6, add: { dread: 1 } },
+      { label: 'Decline', next: 'd4_stones', add: { dread: 1 } },
+    ],
+  },
+  c4_choir_talk: {
+    ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'gate', note: 'choir',
+    text: '(Water. Only water, for a long time. Then, very far down in it, two hundred voices singing eleven notes, slowed down until they are words.) we kept your place. we kept your place. we kept your place, love. there is room.',
+    choices: [
+      { label: 'Hang up, and go to them', next: 'd4_stones', add: { heart: 1 } },
+    ],
+  },
+  c7_you: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'jump', call: { from: 'Unknown (you)', sub: 'the first call, again', ring: 2 },
+    text: 'Before she can answer, the phone rings. The caller ID is your own number, exactly as it was on the first night, and the ring is the same ring.',
+    choices: [
+      { label: 'Answer', next: 'c7_you_talk', bat: 6 },
+      { label: 'Decline', next: 'c7_you2', add: { dread: 1 } },
+    ],
+  },
+  c7_you2: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'glitch', call: { from: 'Unknown (you)', sub: 'answered', ring: 3 },
+    text: 'It answers itself. Of course it does. You have heard this call before, from the other end, and you know it will not let you hang up until it is said.',
+    choices: [
+      { label: 'Listen', next: 'c7_you_talk', add: { dread: 1 } },
+    ],
+  },
+  c7_you_talk: {
+    ch: 12, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', scare: 'whisper',
+    text: 'Your own voice, from the first night, a week younger: "Don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him." And then the part that was cut off, the part you have never heard: "It\'s her. It\'s her little girl. Say her name."',
+    choices: [
+      { label: 'Hang up, and answer No Caller ID', next: 'd7_eye', set: 'eye_is_sorrel', add: { resolve: 1 } },
+    ],
+  },
   // ---- the evidence board's scenes: each opens only for a player who pinned the right two clues together in Notes (ABY.LINKS) ----
   ev_door: {
     ch: 7, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', scare: 'whisper',

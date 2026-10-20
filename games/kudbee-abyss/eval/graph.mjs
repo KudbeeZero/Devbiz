@@ -224,6 +224,16 @@ export function graphChecks() {
       L.length + ' deductions, each pairing two real clues and opening a hidden choice that is reached (' + shaped.map(l => l.at).join(', ') + '); a wrong pair costs 2% and 1 dread, never past 1% or the edge; the scenes that return are offered once; a save keeps them; Detective counts five different deductions over any nights');
   }
 
+  { // calls that have to be picked up: every day rings at least once; a call is Answer / Decline (no hidden choices: the call screen shows both);
+    // decline an insistent one and it rings again, louder each time, and the third ring has already answered itself (one choice, nothing to refuse)
+    const calls = ids.filter(id => N[id].call), lv = id => N[id].call.ring || 1, dec = id => (N[id].choices.length === 2 && N[N[id].choices[1].next].call) ? N[id].choices[1].next : null;
+    const shaped = calls.filter(id => { const ch = N[id].choices || []; return ch.length >= 1 && ch.length <= 2 && ch.every(c => !c.req && c.next !== '@back') && lv(id) >= 1 && lv(id) <= 3 && (ch.length === 2 || lv(id) === 3); });
+    const louder = calls.every(id => !dec(id) || lv(dec(id)) > lv(id)), heads = calls.filter(id => dec(id) && !calls.some(p => dec(p) === id));
+    const self = calls.filter(id => N[id].choices.length === 1), selfOk = self.every(id => calls.some(p => dec(p) === id) && lv(id) === 3);
+    const days = [...new Set(calls.map(id => DAY(N[id].ch)))].sort();
+    rec('calls-must-be-answered', calls.length >= 11 && shaped.length === calls.length && louder && heads.length >= 3 && self.length >= 2 && selfOk && days.length === 7 && calls.every(id => reach.has(id)) && N.c4_choir_talk.note === 'choir',
+      calls.length + ' calls over all seven days, each reached; ' + heads.length + ' will not take no (' + heads.join(', ') + '): declined, they ring again louder, and ' + self.length + ' end by answering themselves; the drowned choir finally files its clue');
+  }
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
     const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));
     rec('carry-opens-a-day', bad.length === 0 && ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont).length >= 10, bad.join(', ') || 'every continuing ending opens a node in a chapter named "Day ..."');
