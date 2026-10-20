@@ -52,7 +52,7 @@
 
   // ---- the phone's face follows the story ----
   function world() {
-    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); P.setTime(187 + s.choices * 3 + s.tries * 2); P.setBattery(s.bat);
+    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); var tm = (N[s.node] || {}).time; $('screen').setAttribute('data-time', tm || ''); P.setTime(tm === 'past' ? 68 : tm === 'future' ? 411 : 187 + s.choices * 3 + s.tries * 2);   // inside a slip the clock reads another hour P.setBattery(s.bat);
     P.setSignal(G.node ? G.node.mood : 'void');
     [['sH', '\u2665', s.heart], ['sR', '\u25C6', s.resolve], ['sT', '\u2726', s.trust], ['sD', '\u25C9', s.dread]].forEach(function (a) {
       var el = $(a[0]), v = a[2], was = +el.getAttribute('data-v') || 0; el.textContent = a[1] + v;
@@ -116,6 +116,8 @@
   // deliver a node: typing dots, then its bubbles, then the reply chips
   function deliver(id, fromLog) {
     var n = N[id] || N[ABY.START]; id = N[id] ? id : ABY.START; G.node = n; G.state.node = id; G.delivering = true; G.fast = false;
+    // the Clock: a flashback or flash-forward is announced when she goes in, and the glass settles when she comes out
+    if (!fromLog) { if (n.time && !G.slip) { var ts = n.time === 'past' ? '\u21BA Flashback \u00B7 the clock runs back' : '\u21BB Flash-forward \u00B7 the clock runs ahead'; bubble('stamp', '', ts); entry('stamp', '', ts, id); ABY.Audio.sfx(n.time === 'past' ? 'rewind' : 'forward'); buzz(40); } else if (!n.time && G.slip) { var te = '\u2014 the clock settles \u2014'; bubble('stamp', '', te); entry('stamp', '', te, id); ABY.Audio.sfx('ding'); } } G.slip = n.time || '';
     contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setEye(n.img === 'eye'); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
     if (n.ending) return finale();
     if (n.dark && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
@@ -252,7 +254,7 @@
   }
   function begin(state, stampHead, checkpoint, told) {   // `told`: notes from her past self to point out (her scars)
     G.state = state; if (checkpoint) G.cp = ABY.cleanState(JSON.parse(JSON.stringify(state)));   // every dawn is a checkpoint (a wake starts from the one it had)
-    G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); if (checkpoint) ABY.overnightFor(state).forEach(function (m) { if (m.note && !(told || []).some(function (k) { return k === m.note; })) delete G.seen[m.note]; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+    G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.slip = ''; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); if (checkpoint) ABY.overnightFor(state).forEach(function (m) { if (m.note && !(told || []).some(function (k) { return k === m.note; })) delete G.seen[m.note]; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     if (told && told.length) { noteN = told.length; P.badge('notes', noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: told.length === 1 ? 'In your own handwriting: ' + ABY.NOTES[told[0]].title.replace(/^Note to self: /, '') : 'You left yourself ' + told.length + ' notes', onTap: function () { open('notes'); } }); }
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
     var stamp = stampHead + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
@@ -431,7 +433,7 @@
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
       G.cp = ABY.cleanState(JSON.parse(JSON.stringify(G.state))); G.wakes = ABY.WAKES;   // (the scene it jumps to is its dawn; a test sets ABY.game.wakes to spend them)
-      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
+      clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.slip = ''; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
       if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
     },
     tick: function (dt) { ambient(dt); } };

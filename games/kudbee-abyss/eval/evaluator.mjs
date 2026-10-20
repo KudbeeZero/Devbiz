@@ -435,7 +435,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const nx = await pg.evaluate(() => { const b = document.getElementById('memNext'); return { shown: !b.hidden, t: b.textContent }; });
   await pg.click('#memNext'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const d = await pg.evaluate(() => ({ node: ABY.game.state.node, thread: document.getElementById('thread').textContent, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent) }));
-  rec('day-five-begins', m.name === 'The Next Caller' && nx.shown && nx.t === 'Day Five' && d.node === 'd5_wake' && /Day Five/.test(d.thread) && d.chips.length === 3, '"' + m.name + '" offers ' + nx.t + '; it opens: ' + d.chips.join(' / '));
+  rec('day-five-begins', m.name === 'The Next Caller' && nx.shown && nx.t === 'Day Five' && d.node === 'd5_wake' && /Day Five/.test(d.thread) && d.chips.length === 5, '"' + m.name + '" offers ' + nx.t + '; it opens: ' + d.chips.join(' / '));
   await at(pg, 'd5_truth', { mem: 8, dread: 1, light: 1, flags: { told_truth: 1 } }); await pg.screenshot({ path: join(OUT, 'day5-truth.png') });
   await pick(pg, 'Tell her to sing with you'); await playSong(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const w = await pg.evaluate(() => ({ node: ABY.game.state.node, flag: ABY.game.state.flags.rite_wake }));
@@ -559,6 +559,38 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await tapChip(pg, 'Turn the key'); await pg.waitForFunction(() => ABY.game.state.node === 'd6_dawn', null, { timeout: 15000 });
   const key = await pg.evaluate(() => ({ promised: ABY.game.state.flags.promised_sorrel, node: ABY.game.state.node }));
   rec('little-key-opens-the-low-lock', !before.some(c => /little brass key/.test(c)) && key.promised === 1 && key.node === 'd6_dawn', 'pinning the key to the nursery wall adds "Try the little brass key in the low lock"; turning it frees Sorrel and promises to come back');
+  await ctx.close();
+}
+{ // the Clock: from a day's scene she can turn the clock back (a flashback) or wind it forward (a flash-forward). The glass tints, the clock reads another hour,
+  // a stamp announces it, a sound plays; every choice in it comes back to the scene she left (which does not repeat itself), the slip is gone from the choices,
+  // its clue is filed, and what she saw opens a choice on a later day. The way back survives a reload.
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'clock'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await pg.evaluate(() => { window.__sfx = []; const f = ABY.Audio.sfx; ABY.Audio.sfx = function (n) { window.__sfx.push(n); return f.apply(this, arguments); }; });
+  await at(pg, 'd3_wake', { mem: 3, flags: { doubt: 1 } }); const origin = await chips(pg);
+  await tapChip(pg, 'Turn the clock back'); await pg.waitForFunction(() => ABY.game.state.node === 'fb_locking', null, { timeout: 15000 });
+  for (let i = 0; i < 14 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(160); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await sleep(900);
+  const past = await pg.evaluate(() => ({ time: document.getElementById('screen').getAttribute('data-time'), fx: getComputedStyle(document.getElementById('timefx')).opacity, clock: document.getElementById('clock').textContent, thread: document.getElementById('thread').textContent, sfx: window.__sfx.slice(), chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), save: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).run, banner: document.getElementById('banner').textContent }));
+  await pg.screenshot({ path: join(OUT, 'clock-flashback.png') });
+  await tapChip(pg, 'Watch, and say nothing'); await pg.waitForFunction(() => ABY.game.state.node === 'd3_wake' && !ABY.game.delivering, null, { timeout: 15000 }); await sleep(900);
+  const back = await pg.evaluate(() => ({ time: document.getElementById('screen').getAttribute('data-time'), fx: getComputedStyle(document.getElementById('timefx')).opacity, thread: document.getElementById('thread').textContent, flag: ABY.game.state.flags.tt_locking, notes: ABY.game.state.notes.slice(), back: ABY.game.state.back, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent) }));
+  const wakeText = (t) => (t.match(/practising your face/g) || []).length;
+  rec('clock-turns-back-and-returns', origin.some(c => /Turn the clock back/.test(c)) && origin.some(c => /Wind the clock forward/.test(c)) && past.time === 'past' && past.fx === '1' && past.clock === '1:08' && /Flashback/.test(past.thread) && past.sfx.includes('rewind')
+    && past.chips.length === 3 && past.chips.some(c => /gate needs a lock/.test(c)) && past.save && past.save.node === 'fb_locking' && past.save.back === 'd3_wake'
+    && back.time === '' && back.fx === '0' && /clock settles/.test(back.thread) && back.flag === 1 && back.notes.includes('locking') && back.back === '' && wakeText(back.thread) === 1 && !back.chips.some(c => /Turn the clock back/.test(c)) && back.chips.some(c => /Wind the clock forward/.test(c)),
+    'the clock runs back to ' + past.clock + ' (glass tinted, "' + past.sfx.filter(x => /rewind/.test(x))[0] + '", a stamp); a flashback with ' + past.chips.length + ' choices (one only because she doubted her) is saved with its way back; "Watch" returns to Day Three without repeating it, the clue is filed and the slip is gone');
+  await tapChip(pg, 'Wind the clock forward'); await pg.waitForFunction(() => ABY.game.state.node === 'ff_choir', null, { timeout: 15000 });
+  for (let i = 0; i < 14 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(160); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await sleep(900);
+  const fut = await pg.evaluate(() => ({ time: document.getElementById('screen').getAttribute('data-time'), clock: document.getElementById('clock').textContent, thread: document.getElementById('thread').textContent, sfx: window.__sfx.slice(), dread: ABY.game.state.dread }));
+  await pg.screenshot({ path: join(OUT, 'clock-flashforward.png') });
+  await tapChip(pg, 'Memorise the eleven notes'); await pg.waitForFunction(() => ABY.game.state.node === 'd3_wake' && !ABY.game.delivering, null, { timeout: 15000 });
+  const done = await pg.evaluate(() => ({ flag: ABY.game.state.flags.tt_choir, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), notes: ABY.game.state.notes.slice() }));
+  await at(pg, 'd4_stones', { mem: 3, flags: { tt_choir: 1 } }); const stones = await chips(pg);
+  await at(pg, 'd4_stones', { mem: 3, flags: {} }); const plain = await chips(pg);
+  rec('clock-winds-forward-and-pays-off', fut.time === 'future' && fut.clock === '6:51' && /Flash-forward/.test(fut.thread) && fut.sfx.includes('forward') && fut.dread >= 2 && done.flag === 1 && !done.chips.some(c => /Wind the clock forward/.test(c)) && done.notes.includes('glimpse_choir')
+    && stones.some(c => /own name into the water/.test(c)) && !plain.some(c => /own name into the water/.test(c)),
+    'winding forward shows ' + fut.clock + ' and the Day Four water; having seen it opens "Say your own name into the water" on the night, and not otherwise');
   await ctx.close();
 }
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran

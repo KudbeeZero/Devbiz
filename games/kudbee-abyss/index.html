@@ -204,7 +204,14 @@
   #call[data-ring="2"]::after, #call[data-ring="3"]::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg, transparent 47%, rgba(255,255,255,0.35) 48%, transparent 49%), linear-gradient(32deg, transparent 61%, rgba(255,255,255,0.25) 61.5%, transparent 62.5%); }
   #call[data-ring="3"]::after { background:linear-gradient(115deg, transparent 47%, rgba(255,255,255,0.4) 48%, transparent 49%), linear-gradient(32deg, transparent 61%, rgba(255,255,255,0.3) 61.5%, transparent 62.5%), linear-gradient(160deg, transparent 30%, rgba(255,255,255,0.3) 30.5%, transparent 31.5%), radial-gradient(circle at 62% 38%, rgba(255,255,255,0.18), transparent 12%); }
   #call.shudder { animation:glt .6s steps(2) both; }
-  @media (prefers-reduced-motion: reduce) { #screen.glitch #three-canvas, #screen.glitch #sheet, #screen.jump { animation:none; } #screen.uneasy #dreadv, .torch.hint, #call .cav, .av.eye, #call.shudder, #screen.struck #sheet, #screen.struck-dark #sheet { animation:none; } .ripple { animation-duration:.35s; } #screen.jump::after { animation-duration:.4s; } }
+  /* the Clock: a flashback is warm, grainy and soft at the edges; a flash-forward is cold, scanned and too sharp */
+  #timefx { position:absolute; inset:0; z-index:61; pointer-events:none; opacity:0; transition:opacity .6s ease; }
+  #screen[data-time="past"] #timefx { opacity:1; background:radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(60,28,6,0.55) 100%), linear-gradient(rgba(255,196,120,0.10), rgba(255,196,120,0.10)); mix-blend-mode:multiply; }
+  #screen[data-time="past"] #three-canvas, #screen[data-time="past"] #sheet { filter:sepia(.65) saturate(.85) contrast(1.05); }
+  #screen[data-time="future"] #timefx { opacity:1; background:repeating-linear-gradient(0deg, rgba(120,230,255,0.07) 0 2px, transparent 2px 5px), radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,40,70,0.55) 100%); animation:scan 3s linear infinite; }
+  #screen[data-time="future"] #three-canvas, #screen[data-time="future"] #sheet { filter:hue-rotate(150deg) saturate(1.2) contrast(1.08); }
+  @keyframes scan { to { background-position:0 10px, 0 0; } }
+  @media (prefers-reduced-motion: reduce) { #screen.glitch #three-canvas, #screen.glitch #sheet, #screen.jump { animation:none; } #screen[data-time="future"] #timefx { animation:none; } #screen.uneasy #dreadv, .torch.hint, #call .cav, .av.eye, #call.shudder, #screen.struck #sheet, #screen.struck-dark #sheet { animation:none; } .ripple { animation-duration:.35s; } #screen.jump::after { animation-duration:.4s; } }
   /* rotate the simulated phone (desktop only) */
   #rotBtn { display:none; position:fixed; right:22px; bottom:22px; z-index:5; align-items:center; gap:8px; min-height:44px; padding:0 16px; border-radius:999px; background:rgba(20,14,44,0.7); border:1px solid rgba(196,107,255,0.4); font:700 13px/1 var(--fd); color:#dbe6ff; letter-spacing:0.06em; text-transform:uppercase; backdrop-filter:blur(8px); } #rotBtn:hover { border-color:var(--cyan); }
   @media (hover:hover) and (pointer:fine) and (min-height:700px) and (min-width:520px) { #rotBtn { display:inline-flex; } }
@@ -375,6 +382,7 @@
 
     <section id="call" aria-label="Incoming call"><div class="cw"><div class="cav">&#9673;</div><div id="callWho"></div><div id="callSub"></div></div><div id="callAct"></div></section>
     <div id="blackout" aria-hidden="true"><span>0%</span></div>
+    <div id="timefx" aria-hidden="true"></div>
     <svg id="cracks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><g class="c1"><polyline points="100,8 91,13 86,11 79,19 74,18 69,26"/><polyline points="86,11 88,4"/><polyline points="79,19 83,27 81,33"/></g><g class="c2"><polyline points="0,71 7,68 12,73 19,70 24,77 31,76"/><polyline points="12,73 10,81 14,88"/><polyline points="19,70 22,63"/></g><g class="c3"><polyline points="62,100 60,92 66,86 63,79 69,72 67,64"/><polyline points="66,86 74,89 79,85"/><polyline points="63,79 55,75 50,78"/><polyline points="69,72 77,70"/></g></svg>
     <canvas id="songCv" aria-label="Song of Recall: tap the lanes as the notes reach the light"></canvas>
     <div id="homebar" role="button" aria-label="Home"><i></i></div>
