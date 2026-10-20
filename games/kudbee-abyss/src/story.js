@@ -31,6 +31,8 @@ ABY.CHAPTERS = [
   { n: 8, label: 'Day Three' },
   { n: 9, label: 'Day Four' },
   { n: 10, label: 'Day Five' },
+  { n: 11, label: 'Day Six' },
+  { n: 12, label: 'Day Seven' },
 ];
 
 ABY.SPEAKERS = {
@@ -41,9 +43,19 @@ ABY.SPEAKERS = {
   EYE: { color: '#ff4d5e', focus: 'queen' },
   CHOIR: { color: '#7fe0d0', focus: 'queen' },
   WREN: { color: '#ffc27a', focus: 'queen' },
+  SORREL: { color: '#ff9ab8', focus: 'queen' },
 };
 
 ABY.START = 'awakening';
+// the ten beginnings. A player's first journey always opens on ABY.START; every journey after that is scrambled into one of these
+// (never the one they just had), so the same haze is found from a lift, a bath, a night bus... (each node carries a `teaser` for the lock screen)
+ABY.OPENINGS = ['awakening', 'op_lift', 'op_bath', 'op_bus', 'op_ward', 'op_shore', 'op_party', 'op_lost', 'op_voicemail', 'op_snow'];
+// rnd: a number in [0, 1); found: endings found so far; last: the opening of the journey before. Pure, so the graph test can check it.
+ABY.pickOpening = function (rnd, found, last) {
+  if (!found) return ABY.START;
+  const pool = ABY.OPENINGS.filter(o => o !== last);
+  return pool[Math.min(pool.length - 1, Math.floor((Number(rnd) || 0) * pool.length))];
+};
 ABY.STATS = ['heart', 'resolve', 'trust'];
 ABY.MAX_SONG_TRIES = 3;
 
@@ -83,6 +95,16 @@ ABY.RITES.riff = { name: 'THE 3:07 RIFF', step: 0.25, win: 0.72, fall: 1.0, tint
     [3, 3, 7], [3, 1, 7], [5, 1, 9], [2, 2, 6], [0, 1, 5], [2, 1, 7], [3, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1], [3, 1], [2, 1, 8], [0, 2, 3], [0, 1, 6],
     [6, 2], [7, 1], [9, 1], [7, 1, 2], [6, 1], [5, 1], [3, 1, 8], [2, 1], [3, 1], [5, 1, 9], [7, 2, 0], [5, 1], [3, 1, 6], [2, 2, 5], [0, 1, 3], [0, 3, 7]],
   fx: [[0, 'knock'], [6, 'flash'], [12, 'knock'], [20, 'scream'], [28, 'door'], [36, 'flash'], [44, 'blood'], [52, 'crack'], [60, 'scream'], [68, 'flash'], [76, 'blood'], [84, 'scream'], [92, 'flash']] };
+// the finale: every song so far, in pairs and threes. Not as fast as the riff, but the longest, with the most chords, and it asks for 70%.
+ABY.RITES.seventh = { name: 'THE SEVENTH NIGHT', step: 0.29, win: 0.7, fall: 1.2, tint: '#ff4d5e', lanes: ['#ff6ec7', '#39e6ff', '#ffd34d'],
+  mel: [
+    [2, 0], [3, 1], [5, 1], [3, 1], [2, 1], [0, 2, 5], [2, 1], [3, 1], [5, 1], [7, 1], [5, 2, 0], [3, 1], [2, 1], [3, 1], [5, 1], [7, 1], [9, 1], [8, 2, 3],
+    [2, 3, 6], [2, 2], [3, 1], [2, 2, 7], [0, 2], [2, 1], [3, 1], [5, 2, 9], [3, 1], [2, 1], [3, 2, 0],
+    [0, 3, 3], [0, 1], [0, 1, 3], [2, 2, 5], [0, 1], [2, 1, 5], [3, 2, 6], [2, 1], [0, 1, 3],
+    [5, 3], [3, 1], [5, 1], [7, 1], [5, 2, 1], [3, 1], [2, 1], [3, 2, 7], [5, 1], [7, 1], [9, 1], [7, 1], [5, 2, 2],
+    [3, 2], [5, 1], [7, 1], [5, 1], [3, 1, 0], [2, 2], [3, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1, 2], [6, 2], [5, 1], [3, 1], [5, 1], [6, 1], [7, 1], [9, 1, 3],
+    [5, 3, 0], [5, 1], [3, 1, 6], [5, 2, 1], [7, 1], [5, 1, 0], [3, 2, 9], [2, 1], [3, 1], [5, 1, 1], [7, 2], [8, 1], [9, 1, 2], [7, 2, 0], [5, 1], [3, 1, 8], [2, 2, 5], [0, 2, 3], [0, 4, 7]],
+  fx: [[3, 'whisper'], [10, 'knock'], [18, 'door'], [26, 'blood'], [34, 'flash'], [42, 'drip'], [50, 'crack'], [58, 'scream'], [66, 'door'], [74, 'dark'], [82, 'blood'], [90, 'scream'], [98, 'flash'], [104, 'door']] };
 ABY.RITE_IDS = Object.keys(ABY.RITES);
 ABY.MAX_DREAD = 6;
 ABY.BAT0 = 62;            // the battery she starts with
@@ -105,6 +127,12 @@ ABY.NOTES = {
   wren_call: { title: 'Call log: Wren, 3:07', text: 'Answered, 41 minutes. Wren picked up. She did not hang up. Nobody has ever stayed on the line this long.' },
   new_line: { title: 'The book, tonight', text: 'The contact has grown a line, in the handwriting you know from birthday cards: Wren. Under it, the blank one, selected, blinking. who is next?' },
   door_crack: { title: 'The door in the haze', text: 'It was open a hand\'s width, and the light inside smelled of birthday candles. Someone small was counting down to something, and you were meant to be inside before they reached one.' },
+  bargain: { title: 'What the Queen gave', text: '"Not back. Only kept. Kept safe on the other side of the door, for as long as someone is always holding the phone at 3:07. One night each. One name each."' },
+  first_page: { title: 'The first page', text: 'Crayon, pressed very hard: a door, a crown, a woman with a flute, a phone with the number written backwards. Underneath, in an adult\'s shaking hand: forgive me.' },
+  nursery_wall: { title: 'Photo: the nursery wall', text: 'SHE LEFT THE DOOR OPEN FIRST. SO I WATCH. I WATCH EVERY ONE OF THEM. SOMEBODY HAS TO SEE ME. The letters get bigger all the way down.' },
+  wren_seven: { title: 'Message: Wren, 3:07', text: 'outside. not letting you do the last one on your own. (Sent from the drive. Delivered. Read.)' },
+  ten_doors: { title: 'What starts again', text: '"A lift. A bath. A bus. Ten doors, and every one of them opens onto me. You are always so brave on the seventh night, and then it is 3:07 again."' },
+  seventh: { title: 'The seventh night', text: 'The first page, every name under it, and the blank line, blinking. "Whatever you choose, I will not write another name."' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -112,11 +140,94 @@ ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
   awakening: {
     ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch',
+    teaser: 'You\u2019re awake. Do you hear it? The flute is calling.',
     text: 'Something wakes her. Not a sound: the end of one. 3:07, says the phone in your hand, and somewhere in the haze a door has just stopped closing. She cannot remember her name. She can remember the weight of the flute at her back, and the echo of its song in her blood. Something has already begun to count.',
     choices: [
       { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
       { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
       { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  // ---- the other nine openings: a journey after the first starts in one of these (ABY.OPENINGS), somewhere new, and finds the same haze ----
+  op_lift: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', teaser: 'The lift has stopped. The doors are opening on a floor that is not on the panel.',
+    text: 'The lift stops between floors with a soft, final bump. The light goes amber. The panel shows a floor that is not a number, only a small engraved crown, and the phone in your hand says 3:07. Then the doors slide open on violet haze, and on a woman with a flute at her back, standing very still, as if she has been waiting for the lift for years.',
+    choices: [
+      { label: 'Step out into the haze', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Press every button at once', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Say hello to her', next: 'stones_path', add: { heart: 1 } },
+    ],
+  },
+  op_bath: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', teaser: 'The bath has gone cold. Something under the water is humming.',
+    text: 'You wake in the bath. The water has gone cold and very still, and the phone is balanced on the rim, dry, lit: 3:07. Under the water, where your feet should be, there is no bottom to the tub. Someone far down there is humming eleven slow notes, and a woman with a flute, very small at that distance, is looking up at you.',
+    choices: [
+      { label: 'Climb out, fast', next: 'torch_first', light: 1, add: { dread: 1 } },
+      { label: 'Put your ear to the water', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Reach down to her', next: 'stones_path', add: { heart: 1, trust: 1 } },
+    ],
+  },
+  op_bus: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'glitch', teaser: 'The night bus has missed every stop. The driver will not turn round.',
+    text: 'The night bus. Top deck, front seat, the city going by in long orange smears. You must have slept through your stop. The sign over the driver flips to its next destination: THE GUARDIAN\'S GATE. Then to 3:07. Every other passenger is facing the back of the bus. Every one of them is holding a phone exactly like yours.',
+    choices: [
+      { label: 'Ring the bell to get off', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Look at their screens', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Go downstairs to the driver', next: 'vey_come', add: { trust: 1 } },
+    ],
+  },
+  op_ward: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', teaser: 'Hospital, night ward. The monitor beside you is beeping out a tune.',
+    text: 'A hospital bed. A ward at night, every curtain drawn. The heart monitor beside you is not beeping, quite: it is playing notes, eleven of them, and then waiting. Your phone is on the blanket with a sticky label on it in a nurse\'s hand: PATIENT\'S OWN. DO NOT ANSWER AFTER 3. It is 3:07. Behind the last curtain, someone is playing a flute along with your heart.',
+    choices: [
+      { label: 'Pull back the last curtain', next: 'flute_path', add: { resolve: 1, dread: 1 } },
+      { label: 'Answer the phone anyway', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Listen to the monitor', next: 'stones_path', add: { heart: 1 } },
+    ],
+  },
+  op_shore: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'whisper', teaser: 'A lake at night. Wet footprints go into the water. None come out.',
+    text: 'You are standing on a lakeshore in the dark with wet feet and no memory of the walk here. The phone says 3:07. A line of small bare footprints leads past you into the water, and none come out. Out on the lake, where the reflection of the moon ought to be, there is a woman with a flute, standing on the surface, waiting to see what you do.',
+    choices: [
+      { label: 'Follow the footprints back', next: 'footprints', add: { heart: 1 } },
+      { label: 'Wade out to her', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Switch on the flashlight', next: 'torch_first', light: 1 },
+    ],
+  },
+  op_party: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', teaser: 'A birthday party. Everyone has gone. Someone is still counting down.',
+    text: 'A birthday party, long over. Paper hats on the floor, a cake with four burnt-down candles, every chair pushed back at once, as if everyone left in the same second. From the hall, a child\'s voice, counting down: nine. Eight. Your phone, face up among the plates: 3:07. In the hall mirror, a woman with a flute is standing behind you, with her finger to her lips.',
+    choices: [
+      { label: 'Find the child before she reaches one', next: 'footprints', add: { heart: 1, dread: 1 } },
+      { label: 'Turn round to the woman', next: 'flute_path', add: { trust: 1 } },
+      { label: 'Blow out the candles', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  op_lost: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch', teaser: 'Lost property found a phone with your face as the lock screen.',
+    text: 'A lost-property office, after closing. A box of phones nobody came back for. One of them is buzzing. On its lock screen, a photo of you, asleep, taken from very close. The time on it is 3:07. You have never owned this phone. You put it to your ear and a woman, very far away, plays one long note on a flute, and the office is not there any more.',
+    choices: [
+      { label: 'Follow the note', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Look at the other photos', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Call to whoever is near you', next: 'vey_come', add: { trust: 1 } },
+    ],
+  },
+  op_voicemail: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', teaser: 'One new voicemail. It is your own voice, and it is crying.',
+    text: 'One new voicemail, 3:07. You play it. It is your own voice, out of breath, crying: "If you\'re hearing this you\'ve woken up again. Don\'t follow the flute. No. Follow the flute, but don\'t climb anything. Don\'t trust the little one. Trust the little one. I can\'t remember which. I\'m so sorry, I never remember which." Then a flute, very close to the phone.',
+    choices: [
+      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1, dread: 1 } },
+      { label: 'Ignore yourself', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Call yourself back', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  op_snow: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'glitch', teaser: 'Snow is falling indoors. It is warm, and it is falling up.',
+    text: 'You wake on a staircase in a house you do not know, and it is snowing indoors: warm snow, falling up, toward a broken roof and a violet sky. The phone is at 3:07 and it will not move on. At the top of the stairs, where they should end, they do not. They go on up into the haze, and somebody up there is playing a flute to light the way.',
+    choices: [
+      { label: 'Keep climbing', next: 'spire', add: { resolve: 1, dread: 1 } },
+      { label: 'Go back down', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Light up the snow', next: 'torch_first', light: 1 },
     ],
   },
   unknown_sms: {
@@ -1230,6 +1341,262 @@ ABY.NODES = {
     text: 'Your turn is over.', choices: [],
   },
 
+  // ======================= act six: day six (the first page, and who wrote it) =======================
+  d6_wake: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'Day six. 3:07, and the phone is warm, as if someone was holding it while you slept. The contact Everyone Before You is open on its own and scrolling, slowly, upward: past Wren, past you, past two hundred and fourteen names, to a page you have never seen. The first page. No name on it. One number, and a drawing of a crown no bigger than a bowl.',
+    choices: [
+      { label: 'Look at the first page', next: 'd6_page', add: { resolve: 1 } },
+      { label: 'Ask the Queen whose number it is', next: 'd6_queen', add: { trust: 1 } },
+      { label: 'Call the number', next: 'd6_ring', add: { dread: 1 } },
+    ],
+  },
+  d6_queen: {
+    ch: 11, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+    text: 'She does not answer for a long time. Then: "Sorrel. My daughter. She was four. She left the door open first, and something came in, and something went out, and in the morning the door was shut and she was on the other side of it." A long breath. "I wrote the first name to keep her. I have been writing the next one ever since."',
+    choices: [
+      { label: 'Ask what she gave for it', next: 'd6_story', add: { resolve: 1 } },
+      { label: 'Call Sorrel', next: 'd6_ring', add: { heart: 1 } },
+    ],
+  },
+  d6_story: {
+    ch: 11, speaker: 'QUEEN', mood: 'dark', focus: 'queen', scare: 'whisper', note: 'bargain',
+    text: '"I asked the dark for her back, and it said: not back. Only kept. Kept safe on the other side of the door, for as long as someone is always holding the phone at 3:07. One night each. One name each. Nobody ever told me how long a child stays four." Her voice breaks on it, very quietly. "You must think I am a monster."',
+    choices: [
+      { label: 'Tell her you would have done the same', next: 'd6_ring', add: { heart: 1, trust: 1 } },
+      { label: 'Tell her she did this to all of them', next: 'd6_ring', add: { resolve: 1, dread: 1 }, set: 'blamed_queen' },
+    ],
+  },
+  d6_page: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', dark: true, note: 'first_page',
+    text: 'The first page is not typed. It is drawn, in crayon, very hard, by someone too small to hold a crayon properly: a door, a crown, a stick-woman with a flute, and a phone with the number written on it backwards. Underneath, in an adult\'s handwriting, newer, shaking: forgive me. Your thumb is already on the number.',
+    choices: [
+      { label: 'Call it', next: 'd6_ring', add: { heart: 1 }, set: 'first_page' },
+      { label: 'Delete the first page', next: 'd6_delete', add: { resolve: 1 } },
+      { label: 'Switch on the flashlight', next: 'd6_page', light: 1, req: { noLight: 1 } },
+    ],
+  },
+  d6_delete: {
+    ch: 11, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'you cannot delete the first page. (Every name in the book flickers at once, like a room of candles in a draught.) it is the only page holding up the others. pull it out and all of them fall. all of them. down. where she is.',
+    choices: [
+      { label: 'Call the number instead', next: 'd6_ring', add: { dread: 1 }, set: 'first_page' },
+      { label: 'Close the book and leave the page alone', next: 'd6_dawn', add: { dread: 1 }, set: 'page_unread' },
+    ],
+  },
+  d6_ring: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', call: { from: 'Sorrel', sub: 'calling... 3:07' },
+    text: 'It rings in a room you know. You can hear it: a small bell, a long way off, in a room that smells of birthday candles. It rings for a long time. Something is coming to the phone very slowly, on very short legs.',
+    choices: [
+      { label: 'Wait for her to answer', next: 'd6_sorrel', bat: 6 },
+      { label: 'Hang up before she answers', next: 'd6_hangup', add: { dread: 1 } },
+    ],
+  },
+  d6_hangup: {
+    ch: 11, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'eye',
+    text: 'she was going to answer. (One new message, No Caller ID.) she has been standing by that phone for a very long time. she was so sure it would be her mother.',
+    choices: [
+      { label: 'Call back', next: 'd6_ring', add: { dread: 1 } },
+      { label: 'Put the phone face down until morning', next: 'd6_dawn', add: { dread: 1 }, set: 'page_unread' },
+    ],
+  },
+  d6_sorrel: {
+    ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen',
+    text: 'Hello? (A small voice, very close to the phone, breathing through its mouth.) Is it Mummy? I counted to one. I counted to one lots of times. Is it my turn yet? Mummy said when it\'s my turn I can come out.',
+    choices: [
+      { label: 'Tell her who you are', next: 'd6_who', add: { trust: 1 } },
+      { label: 'Pretend to be her mother', next: 'd6_pretend', add: { dread: 1 } },
+      { label: 'Ask her to open the door', next: 'd6_door', add: { resolve: 1 } },
+    ],
+  },
+  d6_who: {
+    ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen',
+    text: 'You\'re the one with the phone. Everyone has the phone for a bit. It\'s like pass-the-parcel, Mummy says, and when the music stops you have to write a name, and then it\'s their go. (A pause.) Nobody has ever rung me before. They only ever ring the next one.',
+    choices: [
+      { label: 'Ask her where she is', next: 'd6_room', add: { heart: 1 } },
+      { label: 'Ask her to open the door', next: 'd6_door', add: { resolve: 1 } },
+    ],
+  },
+  d6_pretend: {
+    ch: 11, speaker: 'SORREL', mood: 'dark', focus: 'queen', scare: 'jump',
+    text: 'You\'re not Mummy. (The line goes very cold, very fast, the way a room goes cold when a door opens onto winter.) Mummy\'s voice has water in it. Why do grown-ups always lie at three oh seven? The last one lied. I keep the last one in here with me.',
+    choices: [
+      { label: 'Say sorry and tell her the truth', next: 'd6_who', add: { heart: 1 } },
+      { label: 'Keep pretending', next: 'd6_room', add: { dread: 2 } },
+    ],
+  },
+  d6_room: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', dark: true, scare: 'whisper', img: 'stairs',
+    text: 'The phone shows you where she is, the way it has shown you everything: a small room. A cot. Paper hats. A door standing open a hand\'s width onto red light. And writing scratched into the wall above the cot, too high and too big for anyone four years old.',
+    choices: [
+      { label: 'Read the wall', next: 'd6_wall', light: 1, req: { light: 1 }, add: { dread: 1 }, set: 'eye_is_sorrel' },
+      { label: 'Switch on the flashlight', next: 'd6_room', light: 1, req: { noLight: 1 } },
+      { label: 'Go to the door', next: 'd6_door' },
+    ],
+  },
+  d6_wall: {
+    ch: 11, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'eye', img: 'eye', note: 'nursery_wall',
+    text: 'SHE LEFT THE DOOR OPEN FIRST, from the very first night. And under it, newer, the letters getting bigger all the way down the wall, the way handwriting does when the hand gets older and older and is still not allowed out: SO I WATCH. I WATCH EVERY ONE OF THEM. SOMEBODY HAS TO SEE ME. The light through the door is red, and round, and it blinks.',
+    choices: [
+      { label: 'Go to the door', next: 'd6_door', add: { heart: 1 } },
+    ],
+  },
+  d6_door: {
+    ch: 11, speaker: 'SORREL', mood: 'gate', focus: 'gate',
+    text: 'The door\'s open a bit. You can come in if you want. (Very quietly.) But if you come in you have to stay. That\'s the rule. Somebody always has to be in here with me, or I get big, and when I get big everyone has to look at me.',
+    choices: [
+      { label: 'Go in and keep her company', next: 'end_cradle', add: { heart: 1 } },
+      { label: 'Sing her the lullaby through the door', next: 'd6_lull', req: { flag: 'lullaby' }, add: { heart: 1, dread: -1 } },
+      { label: 'Give her the little crown back', next: 'd6_crown', req: { flag: 'little_crown' }, add: { heart: 1, trust: 1 } },
+      { label: 'Tell her you will come back tomorrow', next: 'd6_dawn', add: { trust: 1 }, set: 'promised_sorrel' },
+      { label: 'Shut the door on her', next: 'd6_shut', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  d6_lull: {
+    ch: 11, speaker: 'SORREL', mood: 'dawn', focus: 'queen',
+    text: 'That\'s Mummy\'s song. (She is lying down; you can hear the cot creak.) Mummy sang it wrong on purpose so I\'d know it was her. You sang it wrong too. (A long, slow yawn.) Will you come back? Promise. Promise properly.',
+    choices: [
+      { label: 'Promise properly', next: 'd6_dawn', set: 'promised_sorrel' },
+    ],
+  },
+  d6_crown: {
+    ch: 11, speaker: 'SORREL', mood: 'dawn', focus: 'queen',
+    text: 'My crown! (A small hand, through the gap in the door, very cold, very quick.) I made it with Mummy. It\'s too small for anyone but me. I thought the dark took it. (She is crying and not sad.) Now I\'m the queen in here. The queen gets to say who goes next. I say nobody.',
+    choices: [
+      { label: 'Tell her that is a good rule', next: 'd6_dawn', set: 'promised_sorrel', add: { heart: 1 } },
+    ],
+  },
+  d6_shut: {
+    ch: 11, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'eye',
+    text: '(The voice behind the door is not small any more. It has not been small for a very long time.) i will wait. i am very good at waiting. tomorrow is the seventh night, and on the seventh night nobody is allowed to shut a door.',
+    choices: [
+      { label: 'Wait for morning', next: 'd6_dawn', set: 'door_shut' },
+    ],
+  },
+  d6_dawn: {
+    ch: 11, speaker: 'QUEEN', mood: 'gate', focus: 'gate',
+    text: 'It is 6:00 on the sixth day. The Queen heard all of it; she always does. "Tomorrow is the seventh night," she says. "Seven is when the book is finished, or when it begins again. It has begun again more times than there are names in it." She waits. "Will you come back for the last one?"',
+    choices: [
+      { label: 'Say you will come back', next: 'end_firstpage', add: { resolve: 1 } },
+      { label: 'Go back through the door and stay with Sorrel', next: 'end_cradle', req: { flag: 'promised_sorrel' } },
+    ],
+  },
+  end_firstpage: {
+    ch: 11, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', ending: 'firstpage',
+    text: 'You will come back.', choices: [],
+  },
+  end_cradle: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', ending: 'cradle',
+    text: 'You go in.', choices: [],
+  },
+
+  // ======================= act seven: day seven (the seventh night: the last one) =======================
+  d7_wake: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'glitch',
+    text: 'Day seven. 3:07. Every app on the phone is open at once and every one of them is a message: the Queen, Vey, the Guardian, Wren, Everyone Before You. The last notification is from No Caller ID, and it is only two words, and the phone reads them out loud in a little girl\'s voice: last one.',
+    choices: [
+      { label: 'Open the Queen\'s message', next: 'd7_queen', add: { trust: 1 } },
+      { label: 'Open No Caller ID', next: 'd7_eye', add: { dread: 1 } },
+      { label: 'Call Wren', next: 'd7_wren', req: { flag: 'told_truth' }, add: { heart: 1 } },
+    ],
+  },
+  d7_wren: {
+    ch: 12, speaker: 'WREN', mood: 'dusk', focus: 'queen', note: 'wren_seven',
+    text: 'I know. I know what night it is; I counted. (A car door. Footsteps on gravel.) I\'m outside. I\'m not letting you do the last one on your own. You stayed on the line for me. (She is breathing hard, as if she ran.) Tell me what to do and I\'ll do it.',
+    choices: [
+      { label: 'Ask her to hold the phone with you', next: 'd7_gather', set: 'wren_with', add: { trust: 1, dread: -1 } },
+      { label: 'Tell her to go home where it is safe', next: 'd7_eye', add: { resolve: 1 } },
+    ],
+  },
+  d7_queen: {
+    ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
+    text: '"The seventh night. Everything I ever locked is open tonight: the gate, the door, the water, the book. The book can only be closed from the first page, and only by somebody who is not afraid of who is on it." The flute at her back is humming on its own. "I have never once not been afraid of her."',
+    choices: [
+      { label: 'Tell her you will do it together', next: 'd7_gather', add: { heart: 1, trust: 1 } },
+      { label: 'Ask about No Caller ID', next: 'd7_eye', add: { resolve: 1 } },
+    ],
+  },
+  d7_eye: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'eye', img: 'eye',
+    text: 'last one. (The screen is entirely red, and round, and wet.) then it starts again. it always starts again. you wake up somewhere new with a phone in your hand at 3:07 and you do not remember any of this. a lift. a bath. a bus. ten doors, and every one of them opens onto me.',
+    choices: [
+      { label: 'Say her name: Sorrel', next: 'd7_named', req: { flag: 'eye_is_sorrel' }, add: { heart: 2, dread: -2 }, set: 'named_eye' },
+      { label: 'Ask what starts again', next: 'd7_again', add: { dread: 1 } },
+      { label: 'Block the number', next: 'd7_gather', add: { dread: 1 } },
+    ],
+  },
+  d7_again: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'whisper', note: 'ten_doors',
+    text: 'the beginning. all the beginnings. the haze, and the flute, and a woman who cannot remember her name, and you, holding the phone. it is very kind, forgetting. you have done this before. you have done this so many times. you are always so brave on the seventh night, and then it is 3:07 again.',
+    choices: [
+      { label: 'Not this time', next: 'd7_gather', add: { resolve: 2 }, set: 'knows_loop' },
+      { label: 'How many times?', next: 'd7_gather', add: { dread: 1 }, set: 'knows_loop' },
+    ],
+  },
+  d7_named: {
+    ch: 12, speaker: 'SORREL', mood: 'dawn', focus: 'queen',
+    text: 'Nobody says my name. (The red on the screen blinks, and for a second it is not the Eye at all: it is one small eye, close to a gap in a door, bloodshot from crying.) Nobody has said my name since Mummy shut the door. Say it again. Say it again so I know it\'s still mine.',
+    choices: [
+      { label: 'Say it again', next: 'd7_gather', add: { heart: 1 } },
+    ],
+  },
+  d7_gather: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'whisper', img: 'eye',
+    text: 'Tonight the cave and the red corridor and the shore and Wren\'s bedroom and the nursery are all one room, and everyone is in it. The Guardian, at the door, with his hand on the frame. Vey, very small, at your ankle. The Choir, dripping, along the walls. The Queen with her flute. And in the gap of the door, enormous now, and red, and round, a child\'s eye, watching you raise the phone.',
+    choices: [
+      { label: 'Raise the flute', next: 'd7_rite', add: { resolve: 1 } },
+      { label: 'Give the phone to the Queen', next: 'd7_end', add: { trust: 1, dread: 1 } },
+    ],
+  },
+  d7_rite: {
+    ch: 12, speaker: 'QUEEN', mood: 'throne', focus: 'gate', song: 'seventh', scare: 'eye',
+    text: 'The Seventh Night. Everything you have played is in it: the Song of Recall, the doors, the red corridor, the lullaby, the drowned choir, the bells, the riff, all at once, in pairs and threes, the whole room singing. Strike the chords together and the door holds open. Drop them and it starts, gently, to close on all of you.',
+    songNext: { win: 'd7_rite_win', fail: 'd7_rite_fail', give: 'd7_rite_give' },
+  },
+  d7_rite_win: {
+    ch: 12, speaker: 'CHOIR', mood: 'dawn', focus: 'gate',
+    text: 'the door is open all the way. (Two hundred and fourteen voices, and then two hundred and fifteen, and then one very small one, singing the eleven notes right for the first time.) the first page is lit up. it is waiting for somebody to read it.',
+    choices: [
+      { label: 'Go to the first page', next: 'd7_end', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  d7_rite_fail: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', scare: 'jump',
+    text: 'The chord breaks, and the door swings, slowly, a hand\'s width toward shut. The red behind it gets bigger, the way a pupil does in the dark. The Guardian puts his whole weight on the frame. "Again," he says, through his teeth. "I held it for a hundred years. I can hold it for one more song."',
+    choices: [
+      { label: 'Play it again', next: 'd7_rite', retry: true },
+      { label: 'Let the song go', next: 'd7_rite_give', add: { dread: 1 } },
+    ],
+  },
+  d7_rite_give: {
+    ch: 12, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+    text: '"It is all right." (She takes the flute from you, very gently.) "I never once finished it either. Not in all the beginnings." The door is open a hand\'s width. It has always been open a hand\'s width. "Come. There is still the page."',
+    choices: [
+      { label: 'Go to the first page', next: 'd7_end' },
+    ],
+  },
+  d7_end: {
+    ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'gate', note: 'seventh',
+    text: 'It is nearly six on the seventh day. The book is open at the first page: the crayon door, the crayon crown, the number written backwards. Under it, every name. Under every name, the blank line, blinking, waiting, as it has always waited. "Choose," the Queen says, and she is not asking as a queen. "Whatever you choose, I will not write another name."',
+    choices: [
+      { label: 'Read the first page aloud, say her name, and close the book', next: 'end_seventh', req: { all: ['rite_seventh', 'named_eye', 'told_truth'], min: { mem: 10, heart: 3 }, maxDread: 3 } },
+      { label: 'Take the Queen\'s place, and keep the book shut', next: 'end_throne', add: { resolve: 1 } },
+      { label: 'Let it be 3:07 again', next: 'end_again', add: { dread: 1 } },
+    ],
+  },
+  end_seventh: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'seventh',
+    text: 'You read the first page.', choices: [],
+  },
+  end_throne: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', ending: 'throne',
+    text: 'You take her place.', choices: [],
+  },
+  end_again: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', ending: 'again',
+    text: 'It is 3:07.', choices: [],
+  },
+
   // ======================= forced scenes (they interrupt wherever she is) =======================
   blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'blackout', safe: true,
@@ -1312,10 +1679,20 @@ ABY.ENDINGS = {
     text: 'The water closes over the screen and it is warm, as they said. You find the tune at once: everyone does, down here. Two hundred and fifteen voices now, mouthing eleven slow notes. The next person who wakes up in the cave will think the stones are singing.' },
   warned: { tag: 'DAY FIVE: WAKE EVERY NUMBER IN THE BOOK', name: 'The Warning', hint: 'On Day Five, tell Wren the truth, win the 3:07 Wake-Up, then have her call the first number. It only works for someone who has found many endings.', mood: 'dawn',
     text: 'She makes the call. Two hundred and fourteen phones ring at once in two hundred and fourteen kitchens, in the grey, in daylight, and every one of them is picked up by someone who was ready. The book deletes itself a name at a time. At 6:00 a message comes in from a number you do not know, in handwriting you know from birthday cards: thank you for waking us. At 6:01 the phone, for the first time, is only a phone.' },
-  nightline: { tag: 'DAY FIVE: STAY ON THE LINE', name: 'The Night Line', hint: 'On Day Five, tell Wren the truth and promise to stay on the line.', mood: 'gate',
+  nightline: { tag: 'DAY FIVE: STAY ON THE LINE', name: 'The Night Line', hint: 'On Day Five, tell Wren the truth and promise to stay on the line.', mood: 'gate', cont: 'd6_wake',
     text: 'You promise to stay on the line, and you do. Every night at 3:07 the phone rings, and she picks up, and you talk about nothing: school, her stupid cat, what the stairs sounded like. It is the first time the phone has ever been used to keep someone company. The book never closes. But in all the long years after, nobody else ever has to be the next name.' },
-  passed: { tag: 'DAY FIVE: HANG UP', name: 'Everyone Gets a Turn', hint: 'On Day Five, hang up on Wren and leave her to the book.', mood: 'dark',
+  passed: { tag: 'DAY FIVE: HANG UP', name: 'Everyone Gets a Turn', hint: 'On Day Five, hang up on Wren and leave her to the book.', mood: 'dark', cont: 'd6_wake',
     text: 'You hang up. It is so light. Across the room Wren is looking at a phone that says 3:07, and then at the blank line in the contact that is already selected, and then at the dark corner of her room that is, just now, not entirely empty. She is very good at doing what she is told. She picks up her phone and she thinks of someone she loves.' },
+  firstpage: { tag: 'DAY SIX: FIND THE FIRST PAGE, COME BACK FOR THE LAST', name: 'The First Page', hint: 'On Day Six, find out whose number is on the first page, and promise to come back.', mood: 'gate', cont: 'd7_wake',
+    text: 'You put the phone down at six and it stays down. The first page is still open on it: a crayon door, a crayon crown. Somebody small drew that, and somebody grown wrote forgive me under it, and both of them have been waiting a very long time for the same thing. Tomorrow is the seventh night. You said you would come back. In the gap of a door you cannot see from here, something red and round closes, for the first time in years, and sleeps.' },
+  cradle: { tag: 'DAY SIX: GO IN AND STAY WITH HER', name: 'The Cradle', hint: 'On Day Six, go through the door and keep Sorrel company.', mood: 'dark',
+    text: 'You go in, and the door closes behind you, gently, the way you close a door on someone sleeping. It is warm. There are paper hats. Sorrel is so pleased she cannot speak, and then cannot stop. Outside, the phone lies face up on a bed in an empty room, 3:07, and the first page has a second name on it now, in crayon, pressed very hard: yours. Somebody always has to be in here with her. It may as well be someone who said her name.' },
+  seventh: { tag: 'DAY SEVEN: READ THE FIRST PAGE, SAY HER NAME, CLOSE THE BOOK', name: 'The Seventh Morning', hint: 'On Day Seven, win the Seventh Night, call the Eye by its name and have told Wren the truth, then close the book. It only closes for someone who has found many endings.', mood: 'dawn',
+    text: 'You read the first page out loud, crayon and all, and then you say her name, Sorrel, and the door is only a door, and a small girl in a paper hat walks out of it into her mother\'s arms, and both of them are crying, and neither of them is four any more, or a queen. Then every name, all two hundred and fourteen, and Wren\'s, and yours. Then you close the book. It is 6:00. It is 6:01. The phone, for the first time in seven days, is only a phone, and the next time you wake up, you will not remember any of this, and you will not need to.' },
+  throne: { tag: 'DAY SEVEN: TAKE THE QUEEN\'S PLACE', name: 'The Seventh Queen', hint: 'On Day Seven, take the Queen\'s place and keep the book shut.', mood: 'throne',
+    text: 'You take the flute and the crown of folded wings, and the Queen walks down out of the haze, light, old, toward a door she can finally go through. Nobody else writes a name. Nobody else wakes at 3:07. Only you, on a throne at the bottom of the dark, holding the book shut with both hands, for as long as it takes. It is a very quiet kind of love. Some nights you hear a child laughing on the other side of the door, and it is enough.' },
+  again: { tag: 'DAY SEVEN: LET IT BE 3:07 AGAIN', name: 'Day One, Again', hint: 'On Day Seven, let it begin again.', mood: 'dark',
+    text: 'It is 3:07. Something wakes you. Not a sound: the end of one. You are somewhere you do not remember coming to, a lift, a bath, a night bus, a shore, and the phone in your hand is warm, as if someone was holding it while you slept. You cannot remember your name. You can remember, very faintly, that you have been brave before. There is a message waiting. It will be different this time. It is always different this time.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
@@ -1323,8 +1700,8 @@ ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
 
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-ABY.newState = function (mem) {
-  return { node: ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
+ABY.newState = function (mem, open) {
+  return { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
 };
 
 // what the gate does, given everything she did (the five hidden stats + the flags)
@@ -1423,6 +1800,7 @@ ABY.BADGES = [
   { id: 'real_morning', name: 'Real Morning', hint: 'Open the door on Day Two.' },
   { id: 'last_name', name: 'The Last Name', hint: 'Close the book on Day Four.' },
   { id: 'first_warning', name: 'First Warning', hint: 'Warn Wren on Day Five.' },
+  { id: 'seventh_morning', name: 'Seventh Morning', hint: 'Close the book on Day Seven.' },
   { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
 ];
 ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
@@ -1441,6 +1819,7 @@ ABY.badgesFor = function (found, s) {
   if (id === 'daybreak') out.push('real_morning');
   if (id === 'names') out.push('last_name');
   if (id === 'warned') out.push('first_warning');
+  if (id === 'seventh') out.push('seventh_morning');
   if (n >= ABY.ENDING_IDS.length) out.push('completionist');
   return out;
 };

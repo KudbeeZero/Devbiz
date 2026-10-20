@@ -9,7 +9,7 @@ import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'no
 import { resolve, extname, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-const VER = 7;
+const VER = 8;
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..', '..'), GAME = resolve(HERE, '..');
 const { chromium } = createRequire(resolve(ROOT, 'package.json'))('playwright');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png' };
@@ -18,9 +18,11 @@ await new Promise(r => server.listen(0, r));
 const b = await chromium.launch(existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
 const page = await b.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 await page.route('https://cdnjs.cloudflare.com/**', r => r.abort());          // the cards are 2D: the 3D library is not needed
-await page.route('https://fonts.*/**', r => r.abort());
+// the cards are set in the page's own type (Space Grotesk, from Google Fonts): let it load, but never wait on it for long
+await page.route('https://fonts.*/**', r => r.continue().catch(() => r.abort()));
 await page.goto(`http://localhost:${server.address().port}/games/kudbee-abyss/index.html`);
 await page.waitForFunction(() => window.ABY && ABY.Art && ABY.Art.queen && ABY.Art.queen.complete && ABY.Art.city.complete && ABY.Art.corrupt.complete && ABY.Art.stairs.complete && ABY.Art.eye.complete && ABY.Art.stairs.naturalWidth, null, { timeout: 20000 });
+await page.evaluate(() => Promise.race([Promise.all(['400', '500', '700'].map(w => document.fonts.load(w + ' 40px "Space Grotesk"'))), new Promise(r => setTimeout(r, 8000))]));   // (a canvas only gets a font the page has loaded)
 await page.evaluate(() => document.fonts.ready);
 const cards = await page.evaluate(() => ABY.Share.SLUGS.concat(['']).map(slug => {
   const info = ABY.Share.generic(slug || 'game'), cv = ABY.Share.card(info);

@@ -17,7 +17,7 @@ export function graphChecks() {
   rec('story-links', dead.length === 0 && badNotes.length === 0 && N[ABY.START], dead.concat(badNotes).join(', ') || ids.length + ' nodes, every choice leads somewhere, every clue exists');
 
   const MOODS = ['void', 'spire', 'dusk', 'gate', 'dawn', 'dark', 'throne'], FOC = ['queen', 'guardian', 'vey', 'crystal', 'gate'], SCARES = ['glitch', 'jump', 'whisper', 'eye', 'blackout'], IMGS = ['corrupt', 'stairs', 'city', 'queen', 'eye'];
-  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
+  const odd = ids.filter(id => { const n = N[id]; return !ABY.SPEAKERS[n.speaker] || !MOODS.includes(n.mood) || !FOC.includes(n.focus) || !(n.song || n.ending || (n.choices && n.choices.length)) || !n.text || !ABY.CHAPTERS.some(c => c.n === n.ch) || (n.scare && !SCARES.includes(n.scare)) || (n.img && !IMGS.includes(n.img)) || (n.ending && n.ending !== 'auto' && !ABY.ENDINGS[n.ending]); });
   rec('story-nodes-shaped', odd.length === 0, odd.join(', ') || 'speaker, mood, focus, chapter and text on every node; scares, pictures and endings are known');
 
   // STRUCTURE (proven for every possible state, no walking needed): a gated choice can hide others, so every scene needs at least one choice that
@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh'];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -41,14 +41,43 @@ export function graphChecks() {
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
     return out;
   };
-  const seen = new Map(), reach = new Set(), ends = new Set(), q = [ABY.newState(10)], LIMIT = +process.env.WALK_LIMIT || 3000000; let head = 0;
-  while (head < q.length && seen.size < LIMIT) {
-    const s = q[head], k = key(s); q[head++] = null; const was = seen.get(k);
-    if (was && was.bat <= s.bat) continue;                       // seen at least as drained: nothing new
-    seen.set(k, s); reach.add(s.node);
-    const n = N[s.node]; if (n.ending) ends.add(ABY.endingOf(s));
-    for (const t of succ(s)) q.push(t);
-    if (reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000) break;   // enough witnesses
+  // seven days are too deep for one shallow-first queue: the early days would eat the whole budget. So each day has its own queue (shallow-first
+  // inside it) and the walk takes from them in turn, so every day gets a fair share. A day's states only ever come from real states before them.
+  const DAY = ch => ch <= 5 ? 0 : ch <= 7 ? 1 : ch - 6;            // chapters 1-5 are day one, 6-7 day two, then one chapter a day
+  const seen = new Map(), reach = new Set(), ends = new Set(), LIMIT = +process.env.WALK_LIMIT || 1500000;
+  const walk = (seeds, limit, done, kf = key, local = seen) => {
+    const Q = [], H = []; let n = 0;
+    const push = (t) => { const d = DAY(N[t.node].ch); (Q[d] || (Q[d] = [], H[d] = 0, Q[d])).push(t); };
+    seeds.forEach(push);
+    for (let turn = 0; n < limit; turn++) {
+      let d = -1; for (let i = 0; i < Q.length; i++) { const j = (turn + i) % Q.length; if (Q[j] && H[j] < Q[j].length) { d = j; break; } }
+      if (d < 0) break;
+      const s = Q[d][H[d]], k = kf(s); Q[d][H[d]++] = null; const was = local.get(k);
+      if (was && was.bat <= s.bat) continue;                     // seen at least as drained: nothing new
+      if (!was) n++; local.set(k, s); reach.add(s.node);      // (the limit counts distinct states; a lower-battery copy only replaces one)
+      if (local !== seen && !seen.has(key(s))) seen.set(key(s), s);   // a follow-up walk's states are real states too
+      if (N[s.node].ending) ends.add(ABY.endingOf(s));
+      for (const t of succ(s)) push(t);
+      if (done()) break;
+    }
+  };
+  walk(ABY.OPENINGS.map(o => ABY.newState(10, o)), LIMIT, () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
+  // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
+  // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
+  const need = (r) => r ? [r.flag, ...(r.all || [])].filter(Boolean) : [];
+  const into = id => [...new Set(ids.flatMap(f => (N[f].choices || []).filter(c => c.next === id && c.req)).flatMap(c => need(c.req)))];   // flags it takes to get in
+  const unmet = () => { const out = [];
+    for (const id of ids) if (!reach.has(id)) out.push({ id, flags: into(id) });
+    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && ![...seen.values()].some(x => x.node === id && ABY.okReq(x, c.req))) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], req: c.req });
+    return out; };
+  for (const t of unmet()) {
+    const ok = () => t.req ? [...seen.values()].some(x => x.node === t.id && ABY.okReq(x, t.req)) : reach.has(t.id); if (ok()) continue;
+    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
+    let seeds = near(t.flags); if (!seeds.length) seeds = near(into(t.id));       // nobody holds every flag yet: start from those who can get in, and pick up the rest
+    // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
+    const keep = t.flags;
+    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
+    let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
   rec('story-all-nodes-reachable', ids.every(id => reach.has(id)), ids.filter(id => !reach.has(id)).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
   const missing = ABY.ENDING_IDS.filter(e => !ends.has(e));
@@ -113,6 +142,30 @@ export function graphChecks() {
       && entry('d4_bells', 'd4_shore', 0, {}) && !entry('d4_bells', 'd4_shore', 0, { flags: { bells_done: 1 } }) && entry('d5_riff', 'd5_dawn', 0, {}) && !entry('d5_riff', 'd5_dawn', 0, { flags: { riff_done: 1 } })
       && w.node === 'd4_bells_win' && w.flags.rite_bells === 1 && f.node === 'd5_riff_give',
       'bells ' + sh[0].chords + ' chords / ' + sh[0].len + ' notes / ' + sh[0].secs.toFixed(0) + 's, riff ' + sh[1].chords + ' chords / ' + sh[1].len + ' notes / ' + sh[1].secs.toFixed(0) + 's; each faster than every plain rite (' + slowest + 's), no chord inside one lane, no two notes of a lane closer than 0.2s; each offered once and optional');
+  }
+
+  { // SEVEN DAYS: Day Five carries into Day Six, Day Six into Day Seven, and Day Seven is the end (nothing carries past it)
+    const E = ABY.ENDINGS, dayOfEnd = id => { const n = ids.find(x => N[x].ending === id); return n ? N[n].ch : 0; };
+    const d7 = ABY.ENDING_IDS.filter(id => dayOfEnd(id) === 12), d6 = ABY.ENDING_IDS.filter(id => dayOfEnd(id) === 11);
+    const toSeventh = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_seventh'));
+    const end = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd7_end' }, o)).some(x => x.c.next === 'end_seventh');
+    const vet = { mem: 10, heart: 3, dread: 1, flags: { rite_seventh: 1, named_eye: 1, told_truth: 1 } };
+    rec('seven-days', ABY.CHAPTERS.length === 12 && ABY.CHAPTERS[11].label === 'Day Seven' && E.nightline.cont === 'd6_wake' && E.passed.cont === 'd6_wake' && !E.warned.cont
+      && d6.length === 2 && E.firstpage.cont === 'd7_wake' && !E.cradle.cont && d7.length === 3 && d7.every(id => !E[id].cont)
+      && ABY.ENDING_IDS.every(id => !E[id].cont || N[E[id].cont].ch <= 12) && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_again' })) === null,
+      'Day Five (nightline, passed) -> Day Six (' + d6.join(', ') + ') -> Day Seven (' + d7.join(', ') + '); every Day Seven ending is final');
+    rec('seventh-morning-gated', toSeventh.length === 1 && end(vet) && !end(Object.assign({}, vet, { mem: 9 })) && !end(Object.assign({}, vet, { dread: 4 }))
+      && ['rite_seventh', 'named_eye', 'told_truth'].every(f => !end(Object.assign({}, vet, { flags: Object.assign({}, vet.flags, { [f]: 0 }) }))),
+      'the book closes on Day Seven only for a veteran (10+ endings) who won the Seventh Night, named the Eye, told Wren the truth, and is not too afraid');
+  }
+
+  { // TEN OPENINGS: a first journey always starts at the start; after that it is scrambled, never the same one twice in a row, and every one is fair
+    const O = ABY.OPENINGS, open = id => (N[id].choices || []).filter(c => !c.req);
+    const picks = new Set(), grid = []; for (let i = 0; i < 1000; i++) { const r = i / 1000, last = O[i % O.length], p = ABY.pickOpening(r, 3, last); picks.add(p); grid.push(p !== last); }
+    rec('ten-openings', O.length === 10 && new Set(O).size === 10 && O[0] === ABY.START && O.every(id => N[id] && N[id].ch === 1 && typeof N[id].teaser === 'string' && N[id].teaser.length > 20 && open(id).length >= 2)
+      && O.every(id => ABY.newState(5, id).node === id) && ABY.newState(5, 'end_seventh').node === ABY.START
+      && ABY.pickOpening(0.99, 0, 'op_bus') === ABY.START && picks.size === 10 && grid.every(Boolean) && ABY.pickOpening(0.999999, 4, 'awakening') !== 'awakening',
+      '10 beginnings (' + O.slice(1).join(', ') + '); the first journey opens at ' + ABY.START + ', later ones are scrambled, never twice in a row');
   }
 
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)

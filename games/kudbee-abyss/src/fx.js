@@ -123,6 +123,11 @@ ABY.Audio = (function () {
       case 'warned': [0, 2, 4, 5, 7, 9, 11, 12].forEach(function (s, i) { A.flute(SCALE[s % SCALE.length], 2.6, 0.12, i * 0.22, true); }); A.tone(1318, 0.2, 'sine', 0.05, null, 1.9); A.tone(1568, 0.2, 'sine', 0.05, null, 2.1); break;
       case 'nightline': A.tone(440, 0.5, 'sine', 0.06, null); A.tone(440, 0.5, 'sine', 0.06, null, 0.8); A.flute(SCALE[2], 4, 0.09, 1.6, true); A.tone(82, 4, 'sine', 0.1, 70); break;
       case 'passed': A.tone(1318, 0.1, 'square', 0.04); A.noise(0.4, 0.1, 2200, 200, 1, 0.3); A.tone(55, 4, 'sine', 0.18, 36, 0.5); A.tone(1175, 0.1, 'square', 0.03, null, 1.6); break;
+      case 'firstpage': [2, 3, 5, 3, 2].forEach(function (s, i) { A.flute(SCALE[s] * 2, 2.4, 0.07, i * 0.45, true); }); A.tone(82, 4, 'sine', 0.1, 98); break;
+      case 'cradle': [5, 3, 2, 0].forEach(function (s, i) { A.flute(SCALE[s] * 2, 3, 0.08, i * 0.6, true); }); A.tone(48, 4.5, 'sine', 0.18, 36, 0.8); A.noise(2.4, 0.05, 900, 200, 1, 1.2); break;
+      case 'seventh': [0, 2, 3, 5, 7, 9, 10, 12, 14].forEach(function (s, i) { A.flute(SCALE[s % SCALE.length] * (s >= SCALE.length ? 2 : 1), 3.2, 0.13, i * 0.24, true); }); A.tone(110, 5, 'sine', 0.12, 220); A.tone(165, 5, 'sine', 0.07, 330, 0.4); A.tone(1318, 0.3, 'sine', 0.05, null, 2.6); break;
+      case 'throne': A.tone(55, 4.5, 'sawtooth', 0.08, 41); [0, 3, 5].forEach(function (s, i) { A.flute(SCALE[s], 4, 0.1, i * 0.7, true); }); A.noise(3, 0.04, 600, 200, 1); break;
+      case 'again': A.tone(1318, 0.12, 'square', 0.04); A.tone(1318, 0.12, 'square', 0.04, null, 0.6); A.tone(1318, 0.12, 'square', 0.04, null, 1.2); A.noise(1.8, 0.1, 2600, 200, 1, 1.4); [2, 3, 5].forEach(function (s, i) { A.flute(SCALE[s], 2.2, 0.08, 2.2 + i * 0.3, true); }); break;
       case 'blackout': A.tone(60, 3.5, 'sine', 0.22, 24); A.noise(2.5, 0.12, 300, 60, 0.8); break;
       case 'door': A.tone(95, 1.3, 'sawtooth', 0.06, 210); A.tone(140, 1.1, 'sawtooth', 0.04, 330, 0.1); A.noise(1.3, 0.1, 500, 1800, 5); A.tone(48, 0.5, 'sine', 0.2, 30, 1.1); break;
       case 'crack': A.noise(0.09, 0.5, 6000, 900, 0.8); A.noise(0.05, 0.4, 3000, 400, 1, 0.06); A.tone(180, 0.18, 'square', 0.07, 40); break;
