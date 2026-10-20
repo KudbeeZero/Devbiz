@@ -1651,21 +1651,21 @@ ABY.ENDINGS = {
     text: 'Heart, courage and trust: the gate does not open. It unfolds. Beyond it stretch a thousand more gates, and every one of them is humming her song.' },
   silence: { tag: 'THE GATE OPENS. NOTHING FOLLOWS.', name: 'The Quiet Gate', hint: 'Open the gate without trust.', mood: 'gate', cont: 'd2_wake',
     text: 'The gate opens, and nothing follows. The Guardian is free, but the hum is gone from the air. She walks on alone, the flute silent at her back.' },
-  crown: { tag: 'TAKE THE CROWN FOR YOURSELF', name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne',
+  crown: { tag: 'TAKE THE CROWN FOR YOURSELF', name: 'The Crown of Shadows', hint: 'Take the crown for yourself.', mood: 'throne', fall: true,
     text: 'The crown settles on her brow and the whole void bows. It is a very quiet kind of power. Somewhere far away, a flute falls to the floor.' },
-  hollow: { tag: 'LOCK THE DOOR AGAIN', name: 'The Hollow Queen', hint: 'Let the dread take her, or lock the door again.', mood: 'dark',
+  hollow: { tag: 'LOCK THE DOOR AGAIN', name: 'The Hollow Queen', hint: 'Let the dread take her, or lock the door again.', mood: 'dark', fall: true,
     text: 'The door locks. The key is warm. By morning she can no longer remember which side of it she is standing on, and the Hollows kneel to what they take for a queen.' },
-  eye: { tag: 'ANSWER THE EYE', name: 'The Eye Opens', hint: 'Climb the stairs and answer the Eye.', mood: 'throne',
+  eye: { tag: 'ANSWER THE EYE', name: 'The Eye Opens', hint: 'Climb the stairs and answer the Eye.', mood: 'throne', fall: true,
     text: 'She answers, and the Eye opens all the way. It is not hungry. It is lonely, and now it is looking at everything that ever looked away. The phone goes warm in your hand. Your reflection in the black glass blinks half a second late.' },
   mirror: { tag: 'TAKE HIS PLACE IN THE DARK', name: 'The Other Queen', hint: 'Learn the truth in the vault, and pay for it.', mood: 'dark',
     text: 'She takes his place in the dark, and the door swings shut on the right side. The Guardian climbs into the light, free, weeping. Her thin voice reaches you one last time through the phone: "Hold the line. Someone has to be on this side."' },
-  betrayal: { tag: 'TRUST VEY WHEN YOU SHOULD NOT', name: 'Vey’s Smile', hint: 'Trust Vey after you have seen what Vey is.', mood: 'dark',
+  betrayal: { tag: 'TRUST VEY WHEN YOU SHOULD NOT', name: 'Vey’s Smile', hint: 'Trust Vey after you have seen what Vey is.', mood: 'dark', fall: true,
     text: 'The gate opens and Vey is the first thing through it. It turns, takes one polite step back toward her, and smiles with a mouth much too wide. "Thank you for trusting me," it says in the Queen\'s voice. "It is so hard to wear someone who is paying attention."' },
   daybreak: { tag: 'DAY TWO: SAY THEIR NAMES, OPEN THE DOOR', name: 'Real Morning', hint: 'On Day Two, know the Guardian\'s name and open the door. The door only opens for someone it has seen before.', mood: 'dawn',
     text: 'You say both names together, and the door is only a door. Behind it there is a window, and in the window there is a thin grey line that gets brighter. 3:07 becomes 3:08. Then 6:00. The phone chimes once, like a bell in a village a long way off, and for the first time in a very long time nobody is awake who should not be.' },
   keeper: { tag: 'DAY TWO: HOLD THE DOOR YOURSELF', name: 'The Night Keeper', hint: 'On Day Two, hold the door so she can sleep.', mood: 'throne', cont: 'd3_wake',
     text: 'You hold the door so she can sleep. It is not so heavy, at first. The Guardian lies down in the warm grass and the Queen finally dreams something that is not a flute. On the phone it will always be 3:07, and your name will be the only message on it, and it will say: someone has to be on this side.' },
-  loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark', cont: 'd3_wake',
+  loop: { tag: 'DAY TWO: TURN THE PHONE OFF', name: '3:07 Again', hint: 'On Day Two, turn the phone off, or give it away.', mood: 'dark', fall: true,
     text: 'The phone goes black and then, politely, it turns itself back on. 3:07. A new message from a number you do not know: you should not have woken up. The Queen opens her eyes on the floor of a very familiar room and has no idea who you are, and you cannot be certain, any more, that you do.' },
   chorus: { tag: 'DAY THREE: SING ALL THREE RITES AS ONE', name: 'The Eye Remembered', hint: 'On Day Three, win all three rites, then sing them as one.', mood: 'dawn', cont: 'd4_wake',
     text: 'You sing the doors and the red corridor and the lullaby as one song, and the Eye, which has never been sung to, sings the last line back, a little wrong, perfectly. Every door in the Abyss opens at once, and for the first time anything that was ever watched there is allowed to look away.' },
@@ -1675,7 +1675,7 @@ ABY.ENDINGS = {
     text: 'You say all two hundred and fourteen names, and then your own, and then you close the book. It is only a contact, in the end: it deletes like anything else. In the cave the water is gone, and the stones are only stones, and they are quiet. The phone shows 3:07 for one more second. Then, for the first time in four days, it shows the right time.' },
   caller: { tag: 'DAY FOUR: WRITE THE NEXT NAME', name: 'The Next Caller', hint: 'On Day Four, write a name on the blank line.', mood: 'dark', cont: 'd5_wake',
     text: 'Message sent. It is so much lighter, the way it promised. Somewhere across town a phone lights up on a bedside table, 3:07, from a number they do not know, and someone you love sits up in the dark. You were never the one being haunted. You were the next voice in the phone.' },
-  drowned: { tag: 'DAY FOUR: STAY IN THE WATER', name: 'The Drowned Choir', hint: 'On Day Four, stay with the choir under the water.', mood: 'dark', cont: 'd5_wake',
+  drowned: { tag: 'DAY FOUR: STAY IN THE WATER', name: 'The Drowned Choir', hint: 'On Day Four, stay with the choir under the water.', mood: 'dark', fall: true,
     text: 'The water closes over the screen and it is warm, as they said. You find the tune at once: everyone does, down here. Two hundred and fifteen voices now, mouthing eleven slow notes. The next person who wakes up in the cave will think the stones are singing.' },
   warned: { tag: 'DAY FIVE: WAKE EVERY NUMBER IN THE BOOK', name: 'The Warning', hint: 'On Day Five, tell Wren the truth, win the 3:07 Wake-Up, then have her call the first number. It only works for someone who has found many endings.', mood: 'dawn',
     text: 'She makes the call. Two hundred and fourteen phones ring at once in two hundred and fourteen kitchens, in the grey, in daylight, and every one of them is picked up by someone who was ready. The book deletes itself a name at a time. At 6:00 a message comes in from a number you do not know, in handwriting you know from birthday cards: thank you for waking us. At 6:01 the phone, for the first time, is only a phone.' },
@@ -1685,18 +1685,31 @@ ABY.ENDINGS = {
     text: 'You hang up. It is so light. Across the room Wren is looking at a phone that says 3:07, and then at the blank line in the contact that is already selected, and then at the dark corner of her room that is, just now, not entirely empty. She is very good at doing what she is told. She picks up her phone and she thinks of someone she loves.' },
   firstpage: { tag: 'DAY SIX: FIND THE FIRST PAGE, COME BACK FOR THE LAST', name: 'The First Page', hint: 'On Day Six, find out whose number is on the first page, and promise to come back.', mood: 'gate', cont: 'd7_wake',
     text: 'You put the phone down at six and it stays down. The first page is still open on it: a crayon door, a crayon crown. Somebody small drew that, and somebody grown wrote forgive me under it, and both of them have been waiting a very long time for the same thing. Tomorrow is the seventh night. You said you would come back. In the gap of a door you cannot see from here, something red and round closes, for the first time in years, and sleeps.' },
-  cradle: { tag: 'DAY SIX: GO IN AND STAY WITH HER', name: 'The Cradle', hint: 'On Day Six, go through the door and keep Sorrel company.', mood: 'dark',
+  cradle: { tag: 'DAY SIX: GO IN AND STAY WITH HER', name: 'The Cradle', hint: 'On Day Six, go through the door and keep Sorrel company.', mood: 'dark', fall: true,
     text: 'You go in, and the door closes behind you, gently, the way you close a door on someone sleeping. It is warm. There are paper hats. Sorrel is so pleased she cannot speak, and then cannot stop. Outside, the phone lies face up on a bed in an empty room, 3:07, and the first page has a second name on it now, in crayon, pressed very hard: yours. Somebody always has to be in here with her. It may as well be someone who said her name.' },
   seventh: { tag: 'DAY SEVEN: READ THE FIRST PAGE, SAY HER NAME, CLOSE THE BOOK', name: 'The Seventh Morning', hint: 'On Day Seven, win the Seventh Night, call the Eye by its name and have told Wren the truth, then close the book. It only closes for someone who has found many endings.', mood: 'dawn',
     text: 'You read the first page out loud, crayon and all, and then you say her name, Sorrel, and the door is only a door, and a small girl in a paper hat walks out of it into her mother\'s arms, and both of them are crying, and neither of them is four any more, or a queen. Then every name, all two hundred and fourteen, and Wren\'s, and yours. Then you close the book. It is 6:00. It is 6:01. The phone, for the first time in seven days, is only a phone, and the next time you wake up, you will not remember any of this, and you will not need to.' },
   throne: { tag: 'DAY SEVEN: TAKE THE QUEEN\'S PLACE', name: 'The Seventh Queen', hint: 'On Day Seven, take the Queen\'s place and keep the book shut.', mood: 'throne',
     text: 'You take the flute and the crown of folded wings, and the Queen walks down out of the haze, light, old, toward a door she can finally go through. Nobody else writes a name. Nobody else wakes at 3:07. Only you, on a throne at the bottom of the dark, holding the book shut with both hands, for as long as it takes. It is a very quiet kind of love. Some nights you hear a child laughing on the other side of the door, and it is enough.' },
-  again: { tag: 'DAY SEVEN: LET IT BE 3:07 AGAIN', name: 'Day One, Again', hint: 'On Day Seven, let it begin again.', mood: 'dark',
+  again: { tag: 'DAY SEVEN: LET IT BE 3:07 AGAIN', name: 'Day One, Again', hint: 'On Day Seven, let it begin again.', mood: 'dark', fall: true,
     text: 'It is 3:07. Something wakes you. Not a sound: the end of one. You are somewhere you do not remember coming to, a lift, a bath, a night bus, a shore, and the phone in your hand is warm, as if someone was holding it while you slept. You cannot remember your name. You can remember, very faintly, that you have been brave before. There is a message waiting. It will be different this time. It is always different this time.' },
-  blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark',
+  blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark', fall: true,
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
+
+// ---- falls and checkpoints ----
+// A FALL is an ending where she dies or loses herself (fall: true). It goes in the Gallery like any other, but it never carries on to the next day.
+// Instead the phone keeps a CHECKPOINT: the state at the start of the day (the opening, or the dawn a good ending carried her into), and a journey
+// has ABY.WAKES wakes. Waking from a fall goes back to that dawn and costs a wake and a little dread (the night remembers); with none left, the
+// journey is over and only a new one is possible.
+ABY.WAKES = 3;
+ABY.isFall = function (id) { return !!(ABY.ENDINGS[id] && ABY.ENDINGS[id].fall); };
+// the dawn she wakes at (a copy of the checkpoint), or null when there is no checkpoint or no wake left. `mem` is what she has found by now.
+ABY.wake = function (cp, wakes, mem) {
+  if (!cp || !ABY.NODES[cp.node] || !(wakes > 0)) return null;
+  return Object.assign({}, cp, { flags: Object.assign({}, cp.flags), notes: (cp.notes || []).slice(), mem: Math.max(cp.mem || 0, Number.isInteger(mem) ? mem : 0), dread: Math.min(ABY.MAX_DREAD - 1, (cp.dread || 0) + 1), tries: 0, back: '' });
+};
 
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

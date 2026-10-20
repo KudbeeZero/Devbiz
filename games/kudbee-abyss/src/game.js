@@ -13,7 +13,7 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait' };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren', SORREL: 'Sorrel' };
@@ -38,11 +38,12 @@
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
     G.saved = null;
+    G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
     if (d.run && typeof d.run === 'object') { var s = ABY.cleanState(d.run); if (s.choices > 0 || s.node !== ABY.START) G.saved = { state: s, log: cleanLog(d.run.log) }; }
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -194,7 +195,10 @@
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); $('memNext').hidden = !(ended && E.cont && ABY.carry(G.state)); if (E && E.cont) $('memNext').textContent = dayOf(E.cont); $('shareBtn').textContent = 'Share';
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); var fall = ended && ABY.isFall(id), canWake = fall && G.wakes > 0 && !!G.cp;
+    $('memNext').hidden = !(ended && (canWake || (E.cont && ABY.carry(G.state)))); $('memNext').setAttribute('data-wake', canWake ? '1' : '0');
+    if (canWake) $('memNext').textContent = 'Wake at dawn \u00B7 ' + G.wakes + ' left'; else if (E && E.cont) $('memNext').textContent = dayOf(E.cont);
+    if (fall && !canWake) { $('eKick').textContent = 'The phone will not wake again'; $('memAct').textContent = 'Start over'; } $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
   }
   function closeMemory() { $('memory').classList.remove('on'); document.body.classList.remove('finale'); }
@@ -220,11 +224,20 @@
   // ---- a journey ----
   function dayOf(id) { var n = ABY.NODES[id], c = n && ABY.CHAPTERS[n.ch - 1]; return c ? c.label : 'Day Two'; }   // the act a carried run opens on (its chapter's name)
   function startRun(carry) {
-    var day2 = carry && ABY.carry(G.state), forced = window.__abyOpening, first = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
-    if (!day2) G.lastOpen = first; G.state = day2 || ABY.newState(foundN(), first); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; if (day2) day2.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
+    var day2 = carry && ABY.carry(G.state), forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
+    if (!day2) { G.lastOpen = opening; G.wakes = ABY.WAKES; }                       // a new journey: a new opening, and every wake back
+    begin(day2 || ABY.newState(foundN(), opening), day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true);
+  }
+  function wakeRun() {                                                     // a fall: back to the last dawn, one wake fewer, a little more afraid
+    var s = ABY.wake(G.cp, G.wakes, foundN()); if (!s) return startRun();
+    G.wakes--; begin(s, (dayOf(s.node) === ABY.CHAPTERS[0].label ? 'You wake again' : dayOf(s.node) + ', again') + ' \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') + ' \u00B7 ', false);
+  }
+  function begin(state, stampHead, checkpoint) {
+    G.state = state; if (checkpoint) G.cp = ABY.cleanState(JSON.parse(JSON.stringify(state)));   // every dawn is a checkpoint (a wake starts from the one it had)
+    G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.pending = 0; G.ending = null; G.seen = {}; state.notes.forEach(function (k) { G.seen[k] = 1; }); noteN = 0; P.badge('notes', 0); stopRing(); ABY.Scene.setTorch(false); ABY.Scene.openGate(false); closeMemory(); P.lockAll(false);
     $('thread').innerHTML = ''; $('replies').innerHTML = ''; P.badge('msg', 0);
-    var stamp = (day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ') + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
-    if (P.screen !== 'msg') P.show('msg'); maybeGuide(); world(); var first = G.state.node; wait(700, function () { deliver(first); });
+    var stamp = stampHead + P.fmt(187); bubble('stamp', '', stamp, true); entry('stamp', '', stamp, '');
+    if (P.screen !== 'msg') P.show('msg'); maybeGuide(); world(); var at = G.state.node; save(); wait(700, function () { deliver(at); });
   }
   function rebuild() {                                                     // the saved chat, drawn at once
     $('thread').innerHTML = ''; G.log.forEach(function (e) { if (e.k === 'img') photo(e.t, true); else bubble(e.k, e.who, e.t, true); }); scrollEnd(false);
@@ -361,6 +374,7 @@
     // test hook: be at scene `id` with some stats (the evaluator and the screenshots use it; a player never does)
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
+      G.cp = ABY.cleanState(JSON.parse(JSON.stringify(G.state))); G.wakes = ABY.WAKES;   // (the scene it jumps to is its dawn; a test sets ABY.game.wakes to spend them)
       clearTimeout(delayT); G.run = true; G.started = true; G.saved = null; G.log = []; G.lastCh = 0; G.seen = {}; G.ending = null; closeMemory(); stopRing(); P.lockAll(false); $('thread').innerHTML = ''; $('replies').innerHTML = '';
       if (P.screen !== 'msg') P.show('msg'); world(); deliver(id);
     },
@@ -386,7 +400,7 @@
   $('axBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show('store'); });
   $('shBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show(G.shareFrom || 'home'); });
   $('pShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'pulse'); }); $('gShare').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('progress', null, 'gallery'); });
-  $('memNext').addEventListener('click', function () { ABY.Audio.sfx('ui'); closeMemory(); startRun(true); });
+  $('memNext').addEventListener('click', function () { ABY.Audio.sfx('ui'); closeMemory(); if ($('memNext').getAttribute('data-wake') === '1') wakeRun(); else startRun(true); });
   $('memAct').addEventListener('click', function () { ABY.Audio.sfx('ui'); if ($('memAct').getAttribute('data-ended') === '1') { closeMemory(); startRun(); } else closeMemory(); });
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
