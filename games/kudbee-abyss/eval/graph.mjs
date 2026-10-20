@@ -65,17 +65,20 @@ export function graphChecks() {
   // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
   // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
   const need = (r) => r ? [r.flag, ...(r.all || [])].filter(Boolean) : [];
-  const into = id => [...new Set(ids.flatMap(f => (N[f].choices || []).filter(c => c.next === id && c.req)).flatMap(c => need(c.req)))];   // flags it takes to get in
+  const gates = id => ids.flatMap(f => (N[f].choices || []).filter(c => c.next === id && c.req)).map(c => c.req);
+  const into = id => [...new Set(gates(id).flatMap(need))];   // flags it takes to get in
+  const shut = (reqs) => reqs.map(r => r.noflag).filter(Boolean);   // flags that keep it shut
   const unmet = () => { const out = [];
     for (const id of ids) if (!reach.has(id)) out.push({ id, flags: into(id) });
     for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && ![...seen.values()].some(x => x.node === id && ABY.okReq(x, c.req))) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], req: c.req });
     return out; };
-  for (const t of unmet()) {
+  for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < 4; round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? [...seen.values()].some(x => x.node === t.id && ABY.okReq(x, t.req)) : reach.has(t.id); if (ok()) continue;
-    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
+    const blocked = [...new Set([...shut(gates(t.id)), ...shut(t.req ? [t.req] : [])])];   // flags that keep the target shut: a seed must not hold one
+    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => x.flags[f]) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
     let seeds = near(t.flags); if (!seeds.length) seeds = near(into(t.id));       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
-    const keep = t.flags;
+    const keep = [...new Set([...t.flags, ...blocked])];   // (a flag that shuts the way in must be kept apart too)
     const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
     let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
@@ -119,7 +122,7 @@ export function graphChecks() {
     const t = ABY.songDone(Object.assign(ABY.newState(0), { node: 'd3_hall', tries: ABY.MAX_SONG_TRIES }), false);
     rec('rite-giveup-resets-tries', t.tries === 0, 'giving up a rite resets the retry count');
   }
-  rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && ABY.ENDINGS.loop.cont === 'd3_wake' && N.d3_wake.ch === 8, 'keeper and loop carry into Day Three');
+  rec('day-three', ABY.ENDINGS.keeper.cont === 'd3_wake' && !ABY.ENDINGS.loop.cont && ABY.isFall('loop') && N.d3_wake.ch === 8, 'keeper carries into Day Three; 3:07 Again is a fall, not a way on');
   { // DAY FOUR: both Day Three endings carry on; the book only closes for a veteran (7+ endings) who read the names and won the choir
     const toNames = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_names'));
     const d4 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_watched', flags: { rite_doors: 1 } }));
@@ -168,6 +171,20 @@ export function graphChecks() {
       '10 beginnings (' + O.slice(1).join(', ') + '); the first journey opens at ' + ABY.START + ', later ones are scrambled, never twice in a row');
   }
 
+  { // FALLS AND CHECKPOINTS: a fall never carries on; waking goes back to the last dawn for a wake and a little dread; no wakes, no waking
+    const falls = ABY.ENDING_IDS.filter(ABY.isFall), fallNode = id => ids.find(x => N[x].ending === id);
+    const cp = Object.assign(ABY.newState(3), { node: 'd3_wake', dread: 2, heart: 2, flags: { rite_doors: 1 }, notes: ['eye'] });
+    const w = ABY.wake(cp, 2, 7), top = ABY.wake(Object.assign({}, cp, { dread: ABY.MAX_DREAD }), 1, 0);
+    // every day still has a way on that is not a fall: some ending carries into it, and that ending is not a fall
+    const days = [...new Set(ABY.ENDING_IDS.map(id => ABY.ENDINGS[id].cont).filter(Boolean))];
+    rec('falls-and-wakes', falls.length >= 8 && falls.every(id => !ABY.ENDINGS[id].cont && ABY.carry(Object.assign(ABY.newState(0), { node: fallNode(id) })) === null)
+      && ['loop', 'drowned', 'hollow', 'blackout'].every(ABY.isFall) && !ABY.isFall('keeper') && !ABY.isFall('seventh')
+      && ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].every(d => days.includes(d) && ABY.ENDING_IDS.some(id => ABY.ENDINGS[id].cont === d && !ABY.isFall(id)))
+      && w && w.node === 'd3_wake' && w.dread === 3 && w.mem === 7 && w.heart === 2 && w.flags.rite_doors === 1 && w.flags !== cp.flags && cp.dread === 2
+      && top.dread === ABY.MAX_DREAD - 1 && ABY.wake(cp, 0, 7) === null && ABY.wake(null, 3, 0) === null && ABY.WAKES === 3,
+      falls.length + ' falls (' + falls.join(', ') + ') never carry on; every day keeps a way in that is not a fall; a wake returns to the dawn with +1 dread (never into the hollowing), ' + ABY.WAKES + ' a journey');
+  }
+
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
     const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));
     rec('carry-opens-a-day', bad.length === 0 && ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont).length >= 10, bad.join(', ') || 'every continuing ending opens a node in a chapter named "Day ..."');
@@ -187,10 +204,10 @@ export function graphChecks() {
     const toWarned = ids.flatMap(id => (N[id].choices || []).filter(c => c.next === 'end_warned'));
     const d5 = ABY.carry(Object.assign(ABY.newState(9), { node: 'end_caller', flags: { rite_choir: 1 } }));
     const dawn = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd5_dawn' }, o)).some(x => x.c.next === 'end_warned');
-    rec('day-five', ABY.ENDINGS.caller.cont === 'd5_wake' && ABY.ENDINGS.drowned.cont === 'd5_wake' && !ABY.ENDINGS.names.cont && d5 && d5.node === 'd5_wake' && d5.flags.rite_choir === 1 && N.d5_wake.ch === 10
+    rec('day-five', ABY.ENDINGS.caller.cont === 'd5_wake' && !ABY.ENDINGS.drowned.cont && ABY.isFall('drowned') && !ABY.ENDINGS.names.cont && d5 && d5.node === 'd5_wake' && d5.flags.rite_choir === 1 && N.d5_wake.ch === 10
       && toWarned.length > 0 && toWarned.every(c => c.req && c.req.min && c.req.min.mem >= 8 && c.req.all.includes('rite_wake') && c.req.all.includes('told_truth'))
       && dawn({ mem: 8, flags: { rite_wake: 1, told_truth: 1 } }) && !dawn({ mem: 7, flags: { rite_wake: 1, told_truth: 1 } }) && !dawn({ mem: 9, flags: { told_truth: 1 } }) && !dawn({ mem: 9, flags: { rite_wake: 1 } }),
-      'caller and drowned carry into Day Five; warning Wren needs 8+ endings found, the wake-up won and the truth told');
+      'caller carries into Day Five (drowning is a fall); warning Wren needs 8+ endings found, the wake-up won and the truth told');
   }
 
   // DAY TWO: the true ending only opens for someone who has found earlier endings (mem), and only the endings with a way on continue

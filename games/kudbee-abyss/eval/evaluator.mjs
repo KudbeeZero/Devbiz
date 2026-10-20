@@ -447,6 +447,24 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 3, 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
   await ctx.close();
 }
+{ // falls and checkpoints: 3:07 Again is a fall, not a way on. It wakes her at the last dawn (one wake fewer, a little more afraid); with no wakes left, only a new journey
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'falls'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd2_you', { mem: 2, dread: 1, heart: 2, flags: { knew_name: 1 } }); await tapChip(pg, 'Turn the phone off'); const m = await memoryShown(pg);
+  const card = await pg.evaluate(() => { const b = document.getElementById('memNext'); return { shown: !b.hidden, t: b.textContent, act: document.getElementById('memAct').textContent }; });
+  await pg.screenshot({ path: join(OUT, 'fall-wake-offer.png') });
+  await pg.click('#memNext'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const w = await pg.evaluate(() => { const g = ABY.game, d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); return { node: g.state.node, dread: g.state.dread, heart: g.state.heart, flag: g.state.flags.knew_name, wakes: g.wakes, thread: document.getElementById('thread').textContent, saved: d.wakes, cp: d.cp && d.cp.node, found: !!g.found.loop }; });
+  rec('fall-wakes-at-dawn', m.name === '3:07 Again' && card.shown && card.t === 'Wake at dawn \u00B7 3 left' && w.node === 'd2_you' && w.dread === 2 && w.heart === 2 && w.flag === 1 && w.wakes === 2 && w.saved === 2 && w.cp === 'd2_you' && w.found && /again/.test(w.thread) && /2 wakes left/.test(w.thread),
+    '"' + m.name + '" offers "' + card.t + '"; she wakes at ' + w.node + ' with dread ' + w.dread + ' and ' + w.wakes + ' wakes left (saved), the ending still in the Gallery');
+  await pg.evaluate(() => { ABY.game.wakes = 0; }); await tapChip(pg, 'Turn the phone off'); const m2 = await memoryShown(pg);
+  const last = await pg.evaluate(() => ({ next: !document.getElementById('memNext').hidden, kick: document.getElementById('eKick').textContent, act: document.getElementById('memAct').textContent }));
+  await pg.screenshot({ path: join(OUT, 'fall-no-wakes.png') });
+  await pg.click('#memAct'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const fresh = await pg.evaluate(() => ({ node: ABY.game.state.node, wakes: ABY.game.wakes, cp: ABY.game.cp && ABY.game.cp.node }));
+  rec('fall-without-wakes', m2.name === '3:07 Again' && !last.next && /will not wake again/.test(last.kick) && last.act === 'Start over' && fresh.node === 'awakening' && fresh.wakes === 3 && fresh.cp === 'awakening',
+    'no wakes left: "' + last.kick + '", only "' + last.act + '"; the new journey opens at ' + fresh.node + ' with ' + fresh.wakes + ' wakes');
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);
