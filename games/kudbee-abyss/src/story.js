@@ -193,6 +193,26 @@ ABY.OVERNIGHT = [
   { id: 'n_blamed', at: 'd7_wake', req: { flag: 'blamed_queen' }, who: 'QUEEN', text: 'You said I did this to all of them. You were right. I counted them, every one. All two hundred and fourteen. I know their names, and I have not slept.' },
   { id: 'n_door_shut', at: 'd7_wake', req: { flag: 'door_shut' }, who: 'SORREL', text: 'i heard the door. it is ok. everybody does that. (a long pause.) did you come back?' },
   { id: 'n_page_unread', at: 'd7_wake', req: { flag: 'page_unread' }, who: 'QUEEN', text: 'You did not read the first page. That is all right. I could not either, for a very long time.' },
+  { id: 'n_crown_laid', at: 'd5_wake', req: { flag: 'crown_laid' }, who: 'QUEEN', text: 'You laid the little crown down on the shore. I came and sat beside it all night. I did not ask whose it was. I think I have always known whose it was.' },
+  { id: 'n_bells', at: 'd5_wake', req: { flag: 'bells_done' }, who: 'CHOIR', text: 'the bells. we have never been rung before. we did not know we were that kind of thing, a thing that could be played. thank you. we are still ringing.' },
+  { id: 'n_open_lift', at: 'd2_wake', req: { open: 'op_lift' }, who: 'QUEEN', text: 'You came by the lift. It had a floor on the panel that was only a crown. I did not put it there. I think the phone did.' },
+  { id: 'n_open_bath', at: 'd2_wake', req: { open: 'op_bath' }, who: 'QUEEN', text: 'You came up through the water this time. I heard you before I saw you: someone humming eleven notes, under a bath, very far down.' },
+  { id: 'n_open_bus', at: 'd2_wake', req: { open: 'op_bus' }, who: 'QUEEN', text: 'You came on a night bus that missed every stop. I stood at one of the stops all night, in case you got off.' },
+  { id: 'n_open_ward', at: 'd2_wake', req: { open: 'op_ward' }, who: 'QUEEN', text: 'You came by the night ward, with a monitor beeping my tune. Someone there loves you very much, and is very tired.' },
+  { id: 'n_open_shore', at: 'd2_wake', req: { open: 'op_shore' }, who: 'QUEEN', text: 'You came out of the lake. I counted the footprints going in. I am glad to be counting the ones coming out.' },
+  { id: 'n_open_party', at: 'd2_wake', req: { open: 'op_party' }, who: 'QUEEN', text: 'You came from a party where everyone had gone home. I am sorry. I think I know whose it was.' },
+  { id: 'n_open_lost', at: 'd2_wake', req: { open: 'op_lost' }, who: 'QUEEN', text: 'You came from the lost-property office, with your own face as the lock screen. Nothing is ever really lost, here. Only kept.' },
+  { id: 'n_open_voicemail', at: 'd2_wake', req: { open: 'op_voicemail' }, who: 'QUEEN', text: 'You came in by your own voicemail, crying. I played it to the whole cave, in case it helped. It did not help. Thank you for letting me.' },
+  { id: 'n_open_snow', at: 'd2_wake', req: { open: 'op_snow' }, who: 'QUEEN', text: 'You came in with the snow, falling up. It is still falling up in the cave. The stones like it. They have not been cold in years.' },
+  { id: 'n_door_lift', at: 'd7_wake', req: { open: 'op_lift' }, who: 'EYE', text: 'i was behind the lift too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_bath', at: 'd7_wake', req: { open: 'op_bath' }, who: 'EYE', text: 'i was behind the bath too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_bus', at: 'd7_wake', req: { open: 'op_bus' }, who: 'EYE', text: 'i was behind the night bus too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_ward', at: 'd7_wake', req: { open: 'op_ward' }, who: 'EYE', text: 'i was behind the night ward too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_shore', at: 'd7_wake', req: { open: 'op_shore' }, who: 'EYE', text: 'i was behind the lake too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_party', at: 'd7_wake', req: { open: 'op_party' }, who: 'EYE', text: 'i was behind the party too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_lost', at: 'd7_wake', req: { open: 'op_lost' }, who: 'EYE', text: 'i was behind the lost-property office too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_voicemail', at: 'd7_wake', req: { open: 'op_voicemail' }, who: 'EYE', text: 'i was behind the voicemail too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'n_door_snow', at: 'd7_wake', req: { open: 'op_snow' }, who: 'EYE', text: 'i was behind the snow too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
 ];
 ABY.overnightFor = function (s) { return ABY.OVERNIGHT.filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
@@ -2062,7 +2082,7 @@ ABY.wake = function (cp, wakes, mem, found) {
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 ABY.newState = function (mem, open, scars) {
-  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '' };
+  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START };   // `open`: how this journey began (a message can remember it)
   for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
   return s;
 };
@@ -2086,6 +2106,7 @@ ABY.endingOf = function (s) { const n = ABY.NODES[s.node]; return n && n.ending 
 // does a choice's rule hold?
 ABY.okReq = function (s, r) {
   if (!r) return true;
+  if (r.open && s.open !== r.open) return false;
   if (r.flag && !s.flags[r.flag]) return false;
   if (r.noflag && s.flags[r.noflag]) return false;
   if (r.all) for (const f of r.all) if (!s.flags[f]) return false;
@@ -2108,7 +2129,7 @@ ABY.options = function (s) {
 ABY.choose = function (s, i) {
   const n = ABY.NODES[s.node], c = n && n.choices && n.choices[i];
   if (!c || !ABY.okReq(s, c.req)) return null;
-  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back };
+  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back, open: s.open };
   if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
   else if (ABY.NODES[c.next] && ABY.NODES[c.next].time && !(n && n.time)) o.back = s.node;       // a time slip: remember where she was, every choice in it comes back
   if (!ABY.NODES[o.node]) return null;
@@ -2245,6 +2266,7 @@ ABY.cleanState = function (raw) {
   const ok = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(ABY.NODES, id);
   if (ok(raw.node) && !ABY.NODES[raw.node].ending) s.node = raw.node;
   if (Number.isInteger(raw.mem)) s.mem = clamp(raw.mem, 0, 99);
+  if (ABY.OPENINGS.indexOf(raw.open) >= 0) s.open = raw.open;
   for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = clamp(raw[k], 0, 5);
   if (Number.isInteger(raw.dread)) s.dread = clamp(raw.dread, 0, ABY.MAX_DREAD);
   if (Number.isInteger(raw.bat)) s.bat = clamp(raw.bat, 1, 100);

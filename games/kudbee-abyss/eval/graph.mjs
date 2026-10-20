@@ -239,17 +239,19 @@ export function graphChecks() {
   { // overnight messages: while she sleeps the people she has met write to her. Each is a real voice on a real day, for a flag a choice sets on an
     // EARLIER day (so it is always remembered, never invented), shown only to whoever holds the flag; some file a clue, and a carried day files it too
     const O = ABY.OVERNIGHT, setAt = f => ids.filter(id => (N[id].choices || []).some(c => c.set === f)), day = id => N[id].ch;
-    const bad = O.filter(o => !ABY.SPEAKERS[o.who] || !N[o.at] || !/_wake$/.test(o.at) || !o.text || !o.req || !o.req.flag || (o.note && !ABY.NOTES[o.note])
-      || !setAt(o.req.flag).length || !setAt(o.req.flag).some(id => reach.has(id) && day(id) < day(o.at))).map(o => o.id);
+    const bad = O.filter(o => !ABY.SPEAKERS[o.who] || !N[o.at] || !/_wake$/.test(o.at) || !o.text || !o.req || (!o.req.flag && !ABY.OPENINGS.includes(o.req.open)) || (o.note && !ABY.NOTES[o.note])
+      || (o.req.flag && (!setAt(o.req.flag).length || !setAt(o.req.flag).some(id => reach.has(id) && day(id) < day(o.at))))).map(o => o.id);
     const days = [...new Set(O.map(o => o.at))].sort(), who = new Set(O.map(o => o.who));
-    const holder = (o) => ABY.overnightFor(Object.assign(ABY.newState(0), { node: o.at, flags: { [o.req.flag]: 1 } })).some(x => x.id === o.id);
+    const holder = (o) => ABY.overnightFor(Object.assign(ABY.newState(0, o.req.open), { node: o.at, flags: o.req.flag ? { [o.req.flag]: 1 } : {} })).some(x => x.id === o.id);
+    const later = ABY.OPENINGS.filter(op => op !== ABY.START), way = later.every(op => ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0, op), { node: at })).filter(x => x.req.open).length === 1)) && ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).length === 0);
     const none = ABY.overnightFor(Object.assign(ABY.newState(0), { node: 'd3_wake' })).length === 0;
     const carried = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper', flags: { vey_known: 1 } })), plain = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper' }));
     const landed = ABY._land(Object.assign(ABY.newState(0), { node: 'd5_wake', flags: { refused_next: 1 } }));
     const unread = new Set(ids.flatMap(f => (N[f].choices || []).filter(c => c.set).map(c => c.set))), nowRead = O.filter(o => unread.has(o.req.flag)).length;
     rec('overnight-messages', O.length >= 15 && bad.length === 0 && new Set(O.map(o => o.id)).size === O.length && days.join() === 'd2_wake,d3_wake,d4_wake,d5_wake,d6_wake,d7_wake' && ['QUEEN', 'VEY', 'GUARDIAN', 'EYE', 'WREN', 'SORREL'].every(w => who.has(w))
-      && O.every(holder) && none && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed') && nowRead === O.length,
-      O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
+      && O.every(holder) && none && way && ABY.newState(0, 'op_bath').open === 'op_bath' && ABY.cleanState({ open: 'op_snow' }).open === 'op_snow' && ABY.cleanState({ open: 'nope' }).open === ABY.START
+      && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed'),
+      O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day or for how the journey began (the nine other openings are remembered on Day Two and Day Seven)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
   }
   { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
     // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
