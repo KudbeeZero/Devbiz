@@ -31,7 +31,7 @@ export function graphChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh'];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
   const succ = (s) => {
     const n = N[s.node], out = [];
@@ -61,7 +61,8 @@ export function graphChecks() {
       if (done()) break;
     }
   };
-  walk(ABY.OPENINGS.map(o => ABY.newState(10, o)), LIMIT, () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
+  walk(ABY.OPENINGS.map(o => ABY.newState(10, o, ABY.ENDING_IDS)), LIMIT,   // (a veteran: every fall already suffered, so every scar's way out is walked too)
+    () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
   // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
   // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
   const need = (r) => r ? [r.flag, ...(r.all || [])].filter(Boolean) : [];
@@ -183,6 +184,18 @@ export function graphChecks() {
       && w && w.node === 'd3_wake' && w.dread === 3 && w.mem === 7 && w.heart === 2 && w.flags.rite_doors === 1 && w.flags !== cp.flags && cp.dread === 2
       && top.dread === ABY.MAX_DREAD - 1 && ABY.wake(cp, 0, 7) === null && ABY.wake(null, 3, 0) === null && ABY.WAKES === 3,
       falls.length + ' falls (' + falls.join(', ') + ') never carry on; every day keeps a way in that is not a fall; a wake returns to the dawn with +1 dread (never into the hollowing), ' + ABY.WAKES + ' a journey');
+  }
+
+  { // SCARS: a fall she has suffered marks every later journey (a flag a choice can ask for, a note from her past self); waking brings the new one
+    const falls = ABY.ENDING_IDS.filter(ABY.isFall), st = ABY.newState(3, null, { loop: 1, dawn: 1, drowned: 1 });
+    const gated = falls.filter(id => ids.some(x => (N[x].choices || []).some(c => c.req && c.req.flag === 'scar_' + id)));
+    const cp = ABY.newState(2, null, { loop: 1 }), w = ABY.wake(cp, 3, 4, { loop: 1, drowned: 1, keeper: 1 });
+    const kept = ABY.cleanState(JSON.parse(JSON.stringify(Object.assign({}, st, { flags: Object.assign({}, st.flags, { scar_dawn: 1 }) }))));
+    rec('scars', falls.every(id => ABY.NOTES['scar_' + id]) && st.flags.scar_loop === 1 && st.flags.scar_drowned === 1 && !st.flags.scar_dawn && st.notes.join() === 'scar_loop,scar_drowned'
+      && Object.keys(ABY.newState(0).flags).length === 0 && gated.length >= falls.length - 1
+      && w.flags.scar_drowned === 1 && w.notes.includes('scar_drowned') && !w.flags.scar_keeper && !cp.flags.scar_drowned
+      && kept.flags.scar_loop === 1 && kept.flags.scar_drowned === 1 && !kept.flags.scar_dawn,
+      falls.length + ' falls leave a scar and a note; ' + gated.length + ' of them open a way past themselves next time (' + gated.join(', ') + '); a wake brings the fall just suffered; a save keeps them');
   }
 
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
