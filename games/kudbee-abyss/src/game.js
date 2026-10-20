@@ -52,7 +52,7 @@
 
   // ---- the phone's face follows the story ----
   function world() {
-    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); var tm = (N[s.node] || {}).time; $('screen').setAttribute('data-time', tm || ''); P.setTime(tm === 'past' ? 68 : tm === 'future' ? 411 : 187 + s.choices * 3 + s.tries * 2);   // inside a slip the clock reads another hour P.setBattery(s.bat);
+    var s = G.state, sc = ABY.scarsOf(G.found).length; $('screen').setAttribute('data-scars', sc >= 6 ? 3 : sc >= 3 ? 2 : sc >= 1 ? 1 : 0); var tm = (N[s.node] || {}).time; $('screen').setAttribute('data-time', tm || ''); P.setTime(tm === 'past' ? 68 : tm === 'future' ? 411 : 187 + s.choices * 3 + s.tries * 2); /* inside a slip the clock reads another hour */ P.setBattery(s.bat);
     P.setSignal(G.node ? G.node.mood : 'void');
     [['sH', '\u2665', s.heart], ['sR', '\u25C6', s.resolve], ['sT', '\u2726', s.trust], ['sD', '\u25C9', s.dread]].forEach(function (a) {
       var el = $(a[0]), v = a[2], was = +el.getAttribute('data-v') || 0; el.textContent = a[1] + v;
