@@ -554,7 +554,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await at(pg, 'd3_wake', { mem: 3, flags: {} }); const quiet = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('overnight-silent-without-flags', !/pillow|saying it to myself/.test(quiet) && /day three/i.test(quiet), 'a player without those flags hears nothing from Vey or the Guardian');
   await at(pg, 'd6_door', { mem: 3, notes: ['vey_gift', 'nursery_wall'], flags: {} }); const before = await chips(pg);
-  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300);
+  await pg.evaluate(() => { const st = ABY.game.state; const r = ABY.link(st, 'vey_gift', 'nursery_wall'); delete r.linked; ABY.game.state = r; }); await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(200); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400);
   await tapChip(pg, 'little brass key'); await pg.waitForFunction(() => ABY.game.state.node === 'ev_key', null, { timeout: 15000 });
   await tapChip(pg, 'Turn the key'); await pg.waitForFunction(() => ABY.game.state.node === 'd6_dawn', null, { timeout: 15000 });
   const key = await pg.evaluate(() => ({ promised: ABY.game.state.flags.promised_sorrel, node: ABY.game.state.node }));
