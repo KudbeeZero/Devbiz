@@ -33,6 +33,7 @@
     var d = null; try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object') d = {};
     G.found = {}; if (d.found && typeof d.found === 'object') ABY.ENDING_IDS.forEach(function (id) { if (d.found[id] === 1) G.found[id] = 1; });
+    G.deduced = {}; if (d.deduced && typeof d.deduced === 'object') ABY.LINK_IDS.forEach(function (id) { if (d.deduced[id] === 1) G.deduced[id] = 1; });   // deductions pinned on any night
     G.badges = {}; if (d.badges && typeof d.badges === 'object') ABY.BADGE_IDS.forEach(function (id) { if (d.badges[id] === 1) G.badges[id] = 1; });
     var own = function (k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.FACTIONS, k); }; G.faction = own(d.faction) ? d.faction : ''; G.lean = own(d.lean) ? d.lean : ''; G.guided = d.guided === true;
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
@@ -43,7 +44,7 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -187,7 +188,7 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
-    var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
+    var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
   }
   function badge(id) { return ABY.BADGES.filter(function (b) { return b.id === id; })[0]; }
@@ -320,11 +321,43 @@
     });
     $('pSub').textContent = (active() ? 'Choices made ' + s.choices + ' · ' : '') + 'Endings found ' + foundN() + '/' + ABY.ENDING_IDS.length + (G.songBest ? ' · Song best ' + G.songBest + '%' : '');
   }
-  function renderNotes() {
-    var box = $('noteList'); box.innerHTML = ''; noteN = 0; P.badge('notes', 0); var ks = active() ? G.state.notes : [];
-    $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues';
+  // Notes is also the evidence board: tap two clues to pin them together. The right pair files a deduction that opens a hidden choice later on;
+  // a wrong one costs battery and dread (ABY.link). Clues can only be pinned during a journey, never on an ending or in a rite.
+  var pick = null;
+  function renderNotes(msg) {
+    var box = $('noteList'); box.innerHTML = ''; noteN = 0; P.badge('notes', 0); var ks = active() ? G.state.notes : [], live = canPin();
+    var ded = active() ? ABY.LINKS.filter(function (l) { return G.state.flags['link_' + l.id]; }) : [];
+    if (ks.indexOf(pick) < 0) pick = null;
+    $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues' + (ded.length ? ' · ' + ded.length + (ded.length === 1 ? ' deduction' : ' deductions') : '');
     if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
-    ks.forEach(function (k) { var n = ABY.NOTES[k], d = document.createElement('div'); d.className = 'nt'; var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = n.title; p.textContent = n.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
+    ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
+    var tip = document.createElement('p'); tip.className = 'hint2 pinhint'; tip.id = 'nMsg'; tip.setAttribute('aria-live', 'polite');
+    tip.textContent = msg || (live ? (pick ? 'Now tap the clue it goes with.' : 'Tap two clues that belong together to pin them. A wrong pair costs you.') : 'Clues can be pinned together during a journey.');
+    box.appendChild(tip);
+    ks.forEach(function (k) {
+      var n = ABY.NOTES[k], d = document.createElement(live ? 'button' : 'div'); d.className = 'nt' + (live ? ' pin' : '') + (pick === k ? ' sel' : ''); d.setAttribute('data-note', k);
+      if (live) { d.type = 'button'; d.setAttribute('aria-pressed', pick === k ? 'true' : 'false'); d.addEventListener('click', function () { pinTap(k); }); }
+      var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = n.title; p.textContent = n.text; d.appendChild(h); d.appendChild(p); box.appendChild(d);
+    });
+  }
+  function canPin() { return G.run && G.state && N[G.state.node] && !N[G.state.node].ending && !N[G.state.node].song && !ABY.Song.active; }
+  function pinTap(k) {
+    if (!canPin()) return renderNotes();
+    ABY.Audio.init();
+    if (!pick || pick === k) { pick = pick === k ? null : k; ABY.Audio.sfx('click'); buzz(8); return renderNotes(); }
+    var a = pick; pick = null; var ns = ABY.link(G.state, a, k);
+    if (!ns) { ABY.Audio.sfx('ui'); return renderNotes('Those two are already pinned together.'); }
+    var id = ns.linked; delete ns.linked; G.state = ns;
+    if (id) {
+      var L = ABY.LINKS.filter(function (l) { return l.id === id; })[0]; G.deduced[id] = 1;
+      ABY.Audio.sfx('choice'); buzz(30); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '✦', text: 'Deduction: ' + L.title });
+      renderNotes('They fit. Somewhere later, this will matter.');
+    } else {
+      ABY.Audio.sfx('glitch'); buzz(90); fx($('screen'), 'glitch', 400);
+      renderNotes('They don’t fit. The phone laughs at you, very quietly. (−2% battery, +1 dread)');
+    }
+    world(); save();
+    if (!G.delivering && G.node && !G.node.ending && !G.node.song) showReplies(G.node);   // a deduction can open a choice in the scene she is in
   }
   function renderStore() {
     var box = $('stList'); box.innerHTML = ''; var n = foundN(), got = 0;
@@ -407,7 +440,7 @@
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.deduced = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }

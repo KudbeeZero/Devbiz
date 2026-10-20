@@ -145,6 +145,21 @@ ABY.NOTES = {
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
+// the evidence board: in Notes she can pin two clues together. The right pair files a deduction (flag `link_<id>`) and opens a hidden choice later
+// in the story; a wrong pair costs her (the phone laughs: battery and dread). Pairs hold one early clue and one later one, so a deduction rewards
+// remembering across days. `at` is the scene whose hidden choice the deduction opens (the graph test proves each is reachable and used).
+ABY.LINKS = [
+  { id: 'two_warnings', a: 'recording', b: 'future_call', at: 'd2_door', title: 'Two warnings, one voice', text: 'The recording under the stones and the call from your own number say the same thing in the same voice: hers, and yours. Don’t open the gate. It isn’t him. Whoever is behind that door, it was never the Guardian.' },
+  { id: 'yes_man', a: 'ledger', b: 'captain_name', at: 'd3_corvin', title: 'The man who always said yes', text: 'The ledger and the signature are the same neat hand. Corvin Ash wore the crown because she asked, and held the door because she asked. In all those pages, nobody ever asked him anything else.' },
+  { id: 'many_hands', a: 'vey_photo', b: 'photo_you', at: 'd3_vey3', title: 'The hand on your shoulder', text: 'The hand behind the Queen in the photo and the hand on your shoulder at 3:07 have the same fingers, far too many of them. Vey has been with you since the first night. It has never once let anything fall.' },
+  { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
+  { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
+  { id: 'first_name', a: 'holders', b: 'first_page', at: 'd7_end', title: 'The first name in the book', text: '214 numbers, and above them all the first page: not a name, a crayon door and a crayon crown. The book did not begin with someone holding the phone. It began with a child drawing the way home.' },
+  { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
+];
+ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
+ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => (l.a === a && l.b === b) || (l.a === b && l.b === a))[0] || null; };
+
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
   awakening: {
@@ -863,6 +878,7 @@ ABY.NODES = {
       { label: 'Hold the door yourself, so she can sleep', next: 'end_keeper', req: { min: { resolve: 3 } } },
       { label: 'Say their names together, and open it', next: 'end_daybreak', req: { flag: 'knew_name', min: { trust: 3, mem: 4 }, maxDread: 3 } },
       { label: 'Put the phone in the lock and turn it off', next: 'end_loop' },
+      { label: 'Two warnings, one voice: ask the door who it is', next: 'ev_door', req: { flag: 'link_two_warnings', noflag: 'ev_door' } },
     ],
   },
   end_daybreak: {
@@ -967,6 +983,7 @@ ABY.NODES = {
       { label: 'Take its hand', next: 'd3_table', set: 'vey3_hand', add: { dread: 1 } },
       { label: 'Say: I know what you are', next: 'd3_vey3_names', req: { min: { mem: 2 } } },
       { label: 'Go back to the fork', next: 'd3_fork' },
+      { label: 'Show it both photos: the hand on your shoulder', next: 'ev_vey', req: { flag: 'link_many_hands' } },
     ],
   },
   d3_vey3_names: {
@@ -982,6 +999,7 @@ ABY.NODES = {
     choices: [
       { label: 'Take the lantern', next: 'd3_table', set: 'corvin_lamp', bat: -20 /* negative = recharge, like the crystal */, add: { dread: -1 } },
       { label: 'Ask him to hold the door behind you', next: 'd3_table', set: 'corvin_door', add: { resolve: 1 } },
+      { label: 'Tell him: you always said yes. You can say no', next: 'ev_corvin', req: { flag: 'link_yes_man' } },
     ],
   },
   d3_table: {
@@ -1314,6 +1332,7 @@ ABY.NODES = {
       { label: 'Have her call the first number in the book', next: 'end_warned', req: { all: ['rite_wake', 'told_truth'], min: { mem: 8 }, maxDread: 4 } },
       { label: 'Promise to stay on the line, every night', next: 'end_nightline', req: { flag: 'told_truth' } },
       { label: 'Hang up and let the book have her', next: 'end_passed' },
+      { label: 'Tell her how the book chooses', next: 'ev_line', req: { flag: 'link_who_is_next', noflag: 'ev_line' } },
     ],
   },
   d5_riff: {
@@ -1447,6 +1466,7 @@ ABY.NODES = {
       { label: 'Read the wall', next: 'd6_wall', light: 1, req: { light: 1 }, add: { dread: 1 }, set: 'eye_is_sorrel' },
       { label: 'Switch on the flashlight', next: 'd6_room', light: 1, req: { noLight: 1 } },
       { label: 'Go to the door', next: 'd6_door' },
+      { label: 'Paper hats, birthday candles: ask whose party it is', next: 'ev_party', req: { flag: 'link_birthday' } },
     ],
   },
   d6_wall: {
@@ -1540,6 +1560,7 @@ ABY.NODES = {
       { label: 'Ask what starts again', next: 'd7_again', add: { dread: 1 } },
       { label: 'You let it start again once. Not this time', next: 'd7_gather', add: { resolve: 2, dread: -1 }, set: 'knows_loop', req: { flag: 'scar_again' } },
       { label: 'Block the number', next: 'd7_gather', add: { dread: 1 } },
+      { label: 'Tell her you read her wall. You see her', next: 'ev_watch', req: { flag: 'link_watcher' } },
     ],
   },
   d7_again: {
@@ -1599,6 +1620,7 @@ ABY.NODES = {
       { label: 'Read the first page aloud, say her name, and close the book', next: 'end_seventh', req: { all: ['rite_seventh', 'named_eye', 'told_truth'], min: { mem: 10, heart: 3 }, maxDread: 3 } },
       { label: 'Take the Queen\'s place, and keep the book shut', next: 'end_throne', add: { resolve: 1 } },
       { label: 'Let it be 3:07 again', next: 'end_again', add: { dread: 1 } },
+      { label: 'Show her the first page: it was a way home', next: 'ev_first', req: { flag: 'link_first_name', noflag: 'ev_first' } },
     ],
   },
   end_seventh: {
@@ -1655,6 +1677,57 @@ ABY.NODES = {
   end_blackout: {
     ch: 3, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', ending: 'blackout',
     text: 'Zero percent.', choices: [],
+  },
+
+  // ---- the evidence board's scenes: each opens only for a player who pinned the right two clues together in Notes (ABY.LINKS) ----
+  ev_door: {
+    ch: 7, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', scare: 'whisper',
+    text: 'You hold the two warnings side by side, the stones and your own number, and put your mouth to the keyhole. "Who is it?" The breathing stops. Then, from much lower down than a grown man would stand, a very small voice: "is it morning yet? she said it would be morning soon. she said it a long time ago."',
+    choices: [
+      { label: 'Tell it: nearly. Nearly morning', next: 'd2_door', set: 'ev_door', add: { trust: 1, heart: 1 } },
+    ],
+  },
+  ev_corvin: {
+    ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+    text: '(A long silence behind the iron.) Nobody ever read that far. Yes to the crown. Yes to the door. Yes to every night she asked. (The lantern arm shakes.) No. ...So that is what it sounds like. Take the lamp. And take this, which I never told her: the door has a second lock, low down, at a child\'s height. I was never once allowed to open it.',
+    choices: [
+      { label: 'Take the lamp, and the secret', next: 'd3_table', set: 'corvin_lamp', bat: -20, add: { resolve: 1, trust: 1, dread: -1 } },
+    ],
+  },
+  ev_vey: {
+    ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
+    text: '(It looks at the Queen\'s photo, and at yours, and at the hand that is in both.) Yes. I carry things. I carried her down. I carried the crown up. And I have carried you since the first night, only a little, so you would not fall. (You feel the weight go from your shoulder.) There. Walk on your own now. I will be right behind you. Not touching.',
+    choices: [
+      { label: 'Walk on, on your own', next: 'd3_table', add: { resolve: 1, dread: -1 } },
+    ],
+  },
+  ev_line: {
+    ch: 10, speaker: 'WREN', mood: 'gate', focus: 'gate', scare: 'glitch',
+    text: 'She goes very quiet when you tell her. Whoever stays on the line is next. It does not want the frightened ones. "Then I\'ll hang up," she says, and does not. "I can\'t. You\'re on it." Under the floor, somewhere very far down, the choir stops singing to listen.',
+    choices: [
+      { label: 'Then we both stay. It can\'t choose two', next: 'd5_dawn', set: 'ev_line', add: { trust: 1, resolve: 1 } },
+    ],
+  },
+  ev_party: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
+    text: 'The haze smelled of birthday candles; the bargain kept someone on the other side. Hold the two together and the room is different. The paper hats are not old. Someone puts out a new one every night. On the cot, a cake with four candles, never lit and never stale. It is still her birthday. It has been her birthday for two hundred years, and every name in the book was invited.',
+    choices: [
+      { label: 'Light one candle for her', next: 'd6_door', add: { heart: 2, dread: 1 } },
+    ],
+  },
+  ev_first: {
+    ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'gate',
+    text: '(She looks at the first page for a long time: the crayon door, the crayon crown, the number written backwards.) She drew it the night before. She said: so I can find the way home if I get lost. I thought it was a drawing. I put it at the front of the book to keep it safe. (Very quietly.) It was never the first name. It was a map.',
+    choices: [
+      { label: 'Then read it like a map', next: 'd7_end', set: 'ev_first', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  ev_watch: {
+    ch: 12, speaker: 'SORREL', mood: 'dawn', focus: 'queen', scare: 'eye',
+    text: 'you read it. (The red blinks, slowly.) all of it? the bit at the bottom where the letters are big? nobody reads to the bottom. they look at the eye and they scream and they never read to the bottom. (Smaller now. Much smaller.) Sorrel. you can say it. I want to hear somebody say it while they are looking at me.',
+    choices: [
+      { label: 'Look at her, and say it: Sorrel', next: 'd7_named', set: 'named_eye', add: { heart: 2, dread: -3 } },
+    ],
   },
 };
 
@@ -1818,6 +1891,20 @@ ABY.toggleLight = function (s) {
   return o;
 };
 
+// the evidence board (Notes, not a story choice): pin clues a and b together. Returns the new state, with `linked` = the deduction or null, or null
+// when it can't be done (a clue she doesn't hold, the same clue twice, a pair already pinned, an ending). A wrong pair costs 2 battery and 1 dread,
+// but never kills the phone or tips her into the hollowing from inside Notes (it stops at 1% and at one short of the edge).
+ABY.link = function (s, a, b) {
+  const n = ABY.NODES[s.node];
+  if (!n || n.ending || n.song || a === b || s.notes.indexOf(a) < 0 || s.notes.indexOf(b) < 0) return null;
+  const L = ABY.linkOf(a, b); if (L && s.flags['link_' + L.id]) return null;
+  const o = Object.assign({}, s, { flags: Object.assign({}, s.flags), notes: s.notes.slice() });
+  if (L) o.flags['link_' + L.id] = 1;
+  else { o.bat = Math.max(Math.min(s.bat, 1), s.bat - 2); if (o.dread < ABY.MAX_DREAD - 1) o.dread++; }
+  o.linked = L ? L.id : null;
+  return o;
+};
+
 // Day Two: an ending that has a way on (`cont`) can be carried into the next act. She keeps her stats, flags and clues; the dread eases, the phone is
 // recharged to at least 48 and the flashlight is off. Returns null when the ending is final.
 ABY.carry = function (s) {
@@ -1842,10 +1929,11 @@ ABY.BADGES = [
   { id: 'last_name', name: 'The Last Name', hint: 'Close the book on Day Four.' },
   { id: 'first_warning', name: 'First Warning', hint: 'Warn Wren on Day Five.' },
   { id: 'seventh_morning', name: 'Seventh Morning', hint: 'Close the book on Day Seven.' },
+  { id: 'detective', name: 'Detective', hint: 'Pin five different pairs of clues together in Notes, over any nights.' },
   { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
 ];
 ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
-ABY.badgesFor = function (found, s) {
+ABY.badgesFor = function (found, s, deduced) {   // deduced: { linkId: 1 } pinned on any night (kept on the phone, like `found`)
   const id = ABY.endingOf(s), n = ABY.ENDING_IDS.filter(e => found[e]).length, f = s.flags || {}, out = [];
   if (n >= 1) out.push('first_light');
   if (id === 'blackout') out.push('night_owl');
@@ -1861,6 +1949,7 @@ ABY.badgesFor = function (found, s) {
   if (id === 'names') out.push('last_name');
   if (id === 'warned') out.push('first_warning');
   if (id === 'seventh') out.push('seventh_morning');
+  if (id && ABY.LINK_IDS.filter(l => f['link_' + l] || (deduced && deduced[l] === 1)).length >= 5) out.push('detective');
   if (n >= ABY.ENDING_IDS.length) out.push('completionist');
   return out;
 };
@@ -1916,6 +2005,7 @@ ABY.cleanState = function (raw) {
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
     for (const r of ABY.RITE_IDS) for (const k of ['rite_' + r, 'fail_' + r]) if (raw.flags[k] === 1) s.flags[k] = 1;
     for (const id of ABY.ENDING_IDS) if (ABY.isFall(id) && raw.flags['scar_' + id] === 1) s.flags['scar_' + id] = 1;
+    for (const id of ABY.LINK_IDS) if (raw.flags['link_' + id] === 1) s.flags['link_' + id] = 1;
   }
   if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
   return s;

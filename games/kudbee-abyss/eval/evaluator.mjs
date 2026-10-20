@@ -483,6 +483,29 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
     'three falls in the Gallery: the new journey starts with ' + j.flags + ', ' + j.notes + ' notes ("' + j.banner.trim().slice(0, 60) + '"), and the glass at crack level ' + j.glass);
   await c2.ctx.close();
 }
+{ // the evidence board: in Notes, tap two clues to pin them. A wrong pair costs battery and dread; the right pair files a deduction (kept over nights)
+  // and opens a hidden choice in the scene she is in; that scene returns to the door, and is offered once
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'evidence'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd2_door', { mem: 2, dread: 1, notes: ['recording', 'future_call', 'ledger'] }); const before = await chips(pg);
+  await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin', { timeout: 5000 });
+  const s0 = await pg.evaluate(() => ({ bat: ABY.game.state.bat, dread: ABY.game.state.dread, h: Math.min(...[...document.querySelectorAll('#noteList .nt.pin')].map(e => e.getBoundingClientRect().height)) }));
+  await pg.click('#noteList .nt.pin[data-note="recording"]'); await pg.click('#noteList .nt.pin[data-note="ledger"]'); await sleep(300);
+  const bad = await pg.evaluate(() => ({ bat: ABY.game.state.bat, dread: ABY.game.state.dread, msg: document.getElementById('nMsg').textContent, ded: document.querySelectorAll('#noteList .ded').length }));
+  await pg.click('#noteList .nt.pin[data-note="future_call"]'); const sel = await pg.evaluate(() => { const e = document.querySelector('#noteList .nt.sel'); return e ? e.getAttribute('data-note') + ':' + e.getAttribute('aria-pressed') : ''; });
+  await pg.click('#noteList .nt.pin[data-note="recording"]'); await sleep(300);
+  const good = await pg.evaluate(() => { const d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); return { flag: ABY.game.state.flags.link_two_warnings, bat: ABY.game.state.bat, ded: [...document.querySelectorAll('#noteList .ded h3')].map(h => h.textContent), sub: document.getElementById('nSub').textContent, deduced: d.deduced && d.deduced.two_warnings, run: d.run && d.run.flags.link_two_warnings }; });
+  await pg.screenshot({ path: join(OUT, 'evidence-board.png') });
+  rec('evidence-board-pins', s0.h >= 44 && bad.bat === s0.bat - 2 && bad.dread === s0.dread + 1 && /don’t fit/.test(bad.msg) && bad.ded === 0 && sel === 'future_call:true'
+    && good.flag === 1 && good.bat === bad.bat && good.ded.length === 1 && /Two warnings/.test(good.ded[0]) && /1 deduction/.test(good.sub) && good.deduced === 1 && good.run === 1,
+    'clue cards are ' + Math.round(s0.h) + 'px tall; a wrong pair costs 2% and 1 dread ("' + bad.msg.slice(0, 40) + '..."); the right pair files "' + good.ded[0] + '", saved for this night and every night');
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400); const after = await chips(pg);
+  await pick(pg, 'Two warnings'); await pick(pg, 'nearly');
+  await pg.waitForFunction(() => ABY.game.state.node === 'd2_door' && !ABY.game.delivering, null, { timeout: 15000 }).catch(() => {}); await sleep(300);
+  const back = await pg.evaluate(() => ({ node: ABY.game.state.node, trust: ABY.game.state.trust, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), thread: document.getElementById('thread').textContent }));
+  rec('deduction-opens-a-choice', !before.some(c => /Two warnings/.test(c)) && after.some(c => /Two warnings/.test(c)) && back.node === 'd2_door' && back.trust === 1 && /is it morning yet/.test(back.thread) && !back.chips.some(c => /Two warnings/.test(c)),
+    'before the pin: ' + before.length + ' choices; after it, "' + after.filter(c => /Two warnings/.test(c))[0] + '" -> the voice behind the door -> back at the door (trust ' + back.trust + '), and it is not offered twice');
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);
@@ -549,7 +572,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('badges-earned', got === 'day_two,fearless,first_light,lamplighter,name_keeper,real_morning' && /Badge earned/.test(bn), 'one ending earned: ' + got + ' | banner "' + bn.slice(0, 50) + '"');
   await pg.click('#memAct'); await sleep(500); await pg.evaluate(() => ABY.Phone.show('gallery')); await sleep(500);
   const g = await pg.evaluate(() => ({ tiles: document.querySelectorAll('#tiles .tile').length, found: document.querySelectorAll('#tiles .tile.f').length, on: document.querySelectorAll('#badges .bdg.on').length, all: document.querySelectorAll('#badges .bdg').length, fb: [...document.querySelectorAll('#faction .fbtn')].map(b => b.textContent), lean: [...document.querySelectorAll('#faction .fbtn.lean')].length }));
-  rec('gallery-badges-factions', g.tiles === 26 && g.found === 1 && g.on === 6 && g.all === 15 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
+  rec('gallery-badges-factions', g.tiles === 26 && g.found === 1 && g.on === 6 && g.all === 16 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
   await pg.locator('#faction .fbtn', { hasText: 'Order of the Door' }).click(); await sleep(300);
   const jf = await pg.evaluate(() => ({ f: ABY.game.faction, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).faction, title: document.querySelector('#faction h3').textContent, txt: ABY.Share.moment('progress', '', ABY.game.found, { faction: ABY.game.faction, badges: 6 }) }));
   rec('faction-pledge', jf.f === 'order' && jf.saved === 'order' && /Sworn to The Order of the Door/.test(jf.title) && /Order of the Door \(6 badges\)/.test(jf.txt.text) && /SWORN TO THE ORDER/.test(jf.txt.info.line1), 'pledged and saved: "' + jf.title + '"; the share says "' + jf.txt.text.slice(0, 80) + '..."');

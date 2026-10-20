@@ -32,14 +32,18 @@ export function graphChecks() {
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
+  READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first');   // the evidence board's deductions, and its once-only scenes
   const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
+  // the evidence board costs nothing when the pair is right, so the walk pins every right pair as soon as she holds both clues (notes are not in
+  // the key; the deductions are). A player who never pins anything only sees fewer choices, so this hides no path.
+  const pin = (t) => { for (const L of ABY.LINKS) if (!t.flags['link_' + L.id] && t.notes.includes(L.a) && t.notes.includes(L.b)) { const u = ABY.link(t, L.a, L.b); if (u) { delete u.linked; t = u; } } return t; };
   const succ = (s) => {
     const n = N[s.node], out = [];
     if (n.ending) { const c = ABY.carry(s); if (c) out.push(c); return out; }                  // Day Two: an ending with a way on carries her into act two
     if (n.song) { out.push(ABY.songDone(s, true), ABY.songDone(s, false)); return out; }
     for (const o of ABY.options(s)) { const t = ABY.choose(s, o.i); if (t) out.push(t); }
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
-    return out;
+    return out.map(pin);
   };
   // seven days are too deep for one shallow-first queue: the early days would eat the whole budget. So each day has its own queue (shallow-first
   // inside it) and the walk takes from them in turn, so every day gets a fair share. A day's states only ever come from real states before them.
@@ -65,7 +69,10 @@ export function graphChecks() {
     () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
   // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
   // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
-  const need = (r) => r ? [r.flag, ...(r.all || [])].filter(Boolean) : [];
+  // (a deduction `link_<id>` is not a flag any choice sets: it is pinned from two clues, so the chase asks for those clues instead: 'note:<id>')
+  const LINKED = Object.fromEntries(ABY.LINKS.map(l => ['link_' + l.id, ['note:' + l.a, 'note:' + l.b]]));
+  const has = (x, f) => f.startsWith('note:') ? x.notes.includes(f.slice(5)) : !!x.flags[f];
+  const need = (r) => r ? [r.flag, ...(r.all || [])].filter(Boolean).flatMap(f => LINKED[f] || [f]) : [];
   const gates = id => ids.flatMap(f => (N[f].choices || []).filter(c => c.next === id && c.req)).map(c => c.req);
   const into = id => [...new Set(gates(id).flatMap(need))];   // flags it takes to get in
   const shut = (reqs) => reqs.map(r => r.noflag).filter(Boolean);   // flags that keep it shut
@@ -76,11 +83,12 @@ export function graphChecks() {
   for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < 4; round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? [...seen.values()].some(x => x.node === t.id && ABY.okReq(x, t.req)) : reach.has(t.id); if (ok()) continue;
     const blocked = [...new Set([...shut(gates(t.id)), ...shut(t.req ? [t.req] : [])])];   // flags that keep the target shut: a seed must not hold one
-    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => x.flags[f]) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
+    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
     let seeds = near(t.flags); if (!seeds.length) seeds = near(into(t.id));       // nobody holds every flag yet: start from those who can get in, and pick up the rest
+    if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
     const keep = [...new Set([...t.flags, ...blocked])];   // (a flag that shuts the way in must be kept apart too)
-    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
+    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), s.flags.song || '', s.tries, s.back].join('|');
     let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
   rec('story-all-nodes-reachable', ids.every(id => reach.has(id)), ids.filter(id => !reach.has(id)).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
@@ -198,6 +206,24 @@ export function graphChecks() {
       falls.length + ' falls leave a scar and a note; ' + gated.length + ' of them open a way past themselves next time (' + gated.join(', ') + '); a wake brings the fall just suffered; a save keeps them');
   }
 
+  { // the evidence board: every deduction pairs two real clues, opens a hidden choice at its scene, and that scene is reached; a right pair is free,
+    // a wrong one costs (but never kills the phone or tips her over from inside Notes); a pair pins once; a save keeps the deductions
+    const L = ABY.LINKS, base = Object.assign(ABY.newState(0), { node: 'd2_door', notes: ['recording', 'future_call', 'ledger'], dread: 4, bat: 2 });
+    const right = ABY.link(base, 'future_call', 'recording'), wrong = ABY.link(base, 'recording', 'ledger'), wrong2 = ABY.link(wrong, 'recording', 'ledger');
+    const shaped = L.filter(l => ABY.NOTES[l.a] && ABY.NOTES[l.b] && l.a !== l.b && l.title && l.text && N[l.at] && (N[l.at].choices || []).some(c => c.req && c.req.flag === 'link_' + l.id && N[c.next] && reach.has(c.next)));
+    const once = ['d2_door', 'd5_dawn', 'd7_end'].every(at => (N[at].choices || []).filter(c => c.req && /^link_/.test(c.req.flag || '')).every(c => c.req.noflag && (N[c.next].choices || []).every(d => d.next !== at || d.set === c.req.noflag)));
+    const det = (deduced, flags) => ABY.badgesFor({ dawn: 1 }, Object.assign(ABY.newState(0), { node: 'gate_opens', flags }), deduced).includes('detective');   // five different deductions, over any nights
+    const kept = ABY.cleanState(Object.assign({}, right, { flags: Object.assign({ link_nope: 1 }, right.flags) }));
+    rec('evidence-board', L.length >= 7 && shaped.length === L.length && new Set(L.flatMap(l => [l.a + '+' + l.b])).size === L.length
+      && right.flags.link_two_warnings === 1 && right.linked === 'two_warnings' && right.bat === 2 && right.dread === 4 && ABY.link(right, 'recording', 'future_call') === null
+      && wrong.linked === null && wrong.bat === 1 && wrong.dread === 5 && wrong2.bat === 1 && wrong2.dread === 5 && !Object.keys(wrong.flags).length
+      && ABY.link(base, 'recording', 'recording') === null && ABY.link(base, 'recording', 'eye') === null && ABY.link(Object.assign({}, base, { node: 'end_keeper' }), 'recording', 'future_call') === null
+      && ABY.options(right).some(o => o.c.next === 'ev_door') && !ABY.options(base).some(o => o.c.next === 'ev_door') && once
+      && kept.flags.link_two_warnings === 1 && !kept.flags.link_nope
+      && det({ two_warnings: 1, yes_man: 1, many_hands: 1, birthday: 1 }, { link_watcher: 1 }) && !det({ two_warnings: 1, yes_man: 1, many_hands: 1, birthday: 1 }, {}) && !det({ two_warnings: 1, yes_man: 1, many_hands: 1, birthday: 1 }, { link_two_warnings: 1 }),
+      L.length + ' deductions, each pairing two real clues and opening a hidden choice that is reached (' + shaped.map(l => l.at).join(', ') + '); a wrong pair costs 2% and 1 dread, never past 1% or the edge; the scenes that return are offered once; a save keeps them; Detective counts five different deductions over any nights');
+  }
+
   { // every ending that carries on opens a real "Day" chapter (the day label and the thread stamp read it)
     const bad = ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont && !/^Day /.test((ABY.CHAPTERS[N[ABY.ENDINGS[id].cont].ch - 1] || {}).label || ''));
     rec('carry-opens-a-day', bad.length === 0 && ABY.ENDING_IDS.filter(id => ABY.ENDINGS[id].cont).length >= 10, bad.join(', ') || 'every continuing ending opens a node in a chapter named "Day ..."');
@@ -233,7 +259,8 @@ export function graphChecks() {
   // BADGES and FACTIONS: earned from what she found and how she ended; every badge can be earned; a faction is where her choices lean
   const earned = new Set(), lean = new Set(), sts = [...seen.values()].filter(x => N[x.node].ending);
   const foundAll = Object.fromEntries(ABY.ENDING_IDS.map(e => [e, 1]));
-  for (const x of sts) { ABY.badgesFor(foundAll, x).forEach(b => earned.add(b)); lean.add(ABY.leaning(x)); }
+  const deducedAll = Object.fromEntries(ABY.LINK_IDS.map(l => [l, 1]));
+  for (const x of sts) { ABY.badgesFor(foundAll, x, deducedAll).forEach(b => earned.add(b)); lean.add(ABY.leaning(x)); }
   const lone = ABY.badgesFor({ dawn: 1 }, Object.assign(ABY.newState(), { node: 'gate_opens', dread: 0, bat: 40, trust: 2 }));
   const L = (o) => ABY.leaning(Object.assign(ABY.newState(), o));
   rec('badges-and-factions', ABY.BADGE_IDS.every(b => earned.has(b)) && ABY.BADGE_IDS.length === new Set(ABY.BADGE_IDS).size && lean.size === 3 && lone.join() === 'first_light,fearless,lamplighter' && L({}) === 'choir' && L({ resolve: 3 }) === 'order' && L({ dread: 4 }) === 'court' && L({ flags: { crown: 1 }, dread: 1 }) === 'court' && ABY.rank(0) === 'Initiate' && ABY.rank(3) === 'Adept' && ABY.rank(7) === 'Elder',
