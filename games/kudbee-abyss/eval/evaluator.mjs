@@ -846,6 +846,13 @@ await block('settings', async () => { const c = await open({}, 'settings'); awai
   rec('vibration-off-is-silent', quiet.length === 0, 'with Vibration off nothing fires, not from the story and not from the flute rites (' + quiet.length + ' calls)');
   await c.ctx.close(); }
 
+// Vibration on an iPhone (no navigator.vibrate): a hidden switch control is clicked inside the tap, which ticks on iOS 17.4+; and nothing when Vibration is off
+{ const c = await open({ ctx: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' } }, 'vibration-ios', { pre: 'Object.defineProperty(navigator, "vibrate", { value: undefined, configurable: true });' });
+  await c.pg.evaluate(() => { window.__flips = 0; document.addEventListener('change', e => { if (e.target && e.target.hasAttribute && e.target.hasAttribute('switch')) window.__flips++; }, true); });
+  await c.pg.evaluate(() => { ABY.game.haptics = true; ABY.Audio.hapOn = true; ABY.Audio.buzz(10); ABY.Audio.buzz([30, 60, 30]); }); const on = await c.pg.evaluate(() => ({ flips: window.__flips, sw: document.querySelectorAll('label input[switch]').length }));
+  await c.pg.evaluate(() => { ABY.Audio.hapOn = false; ABY.Audio.buzz(10); }); const off = await c.pg.evaluate(() => window.__flips);
+  rec('vibration-iphone-tick', on.flips === 2 && on.sw === 1 && off === 2, 'without navigator.vibrate a hidden switch is toggled once per buzz (' + on.flips + ' flips, ' + on.sw + ' switch in the page), and not at all when Vibration is off'); await c.ctx.close(); }
+
 // Calm flashes: a scare never strobes, flickers, shakes or goes white; on by default for reduced motion, and a switch in Settings that persists
 await block('calm', async () => { const c = await open({}, 'calm'); const pg = c.pg; await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 8000 });
   const look = () => pg.evaluate(() => { const sc = document.getElementById('screen'), a = getComputedStyle(sc, '::after'); return { calm: document.documentElement.classList.contains('calm'), shake: getComputedStyle(sc).animationName, after: a.animationName, bg: a.backgroundColor, sheet: getComputedStyle(document.getElementById('sheet')).animationName }; });
