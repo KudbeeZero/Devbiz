@@ -698,13 +698,13 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   const { ctx, pg } = await open({}, 'accuse'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd7_gather', { mem: 2, heart: 2, dread: 1 }); const g = await chips(pg); await tapChip(pg, 'Lay out your notes'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const a0 = await chips(pg), n0 = await pg.evaluate(() => ABY.game.state.node);
-  await at(pg, 'd7_accuse', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1 } }); const a1 = await chips(pg); await tapChip(pg, 'The Queen'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd7_accuse', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1 } }); const a1 = await chips(pg); await tapChip(pg, 'locked her own child'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const c1 = await chips(pg), conf = await pg.evaluate(() => ({ node: ABY.game.state.node, name: document.getElementById('mName').textContent, note: ABY.game.state.notes.includes('confession') }));
   await at(pg, 'd7_confess', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1, vey3_hand: 1 } }); const c2 = await chips(pg);
-  await tapChip(pg, 'Give her Vey'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden); await pg.screenshot({ path: join(OUT, 'day7-low-door.png') });
+  await tapChip(pg, 'Give her what Vey'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden); await pg.screenshot({ path: join(OUT, 'day7-low-door.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd7_accuse', { mem: 2, heart: 2, dread: 1 }); await tapChip(pg, 'The Eye'); await tapChip(pg, 'Wait'); const f = await memoryShown(pg);
-  rec('accusation-low-door', g.some(c => /Lay out your notes/.test(c)) && n0 === 'd7_accuse' && a0.length === 4 && !a0.some(c => /Queen/.test(c)) && a1.length === 5 && a1.some(c => /The Queen/.test(c))
+  rec('accusation-low-door', g.some(c => /Lay out your notes/.test(c)) && n0 === 'd7_accuse' && a0.length === 4 && !a0.some(c => /locked her own child/.test(c)) && a1.length === 5 && a1.some(c => /locked her own child/.test(c))
     && conf.node === 'd7_confess' && conf.note && c1.length === 1 && c2.length === 2 && e.name === 'The Low Door' && fin && f.name === 'Day One, Again',
     'the notes open the accusation (' + a0.length + ' suspects without the deduction, ' + a1.length + ' with it); the Queen confesses (' + conf.name + '), and with the key: "' + e.name + '" ends the week; naming the Eye: "' + f.name + '"');
   await ctx.close();
