@@ -154,6 +154,15 @@ ABY.NOTES = {
   glimpse_door: { title: 'Flash-forward: a small door', text: 'A house with no windows. A cot, paper hats, and a door standing open a hand\u2019s width onto red light. The light blinked once, as if it had been waiting a very long time for someone to come up the stairs.' },
   glimpse_seventh: { title: 'Flash-forward: the seventh night', text: 'Everyone in one room: the captain at the door, Vey at your ankle, the choir along the walls, the Queen with her flute. In the gap of the door, enormous and wet with crying, a child\u2019s eye. You open your mouth, and the screen cuts out before you can hear what you say.' },
   glimpse_morning: { title: 'Flash-forward: the morning after', text: 'Real light on a real wall. A phone, switched off, on a kitchen table. A quarter to seven, not 3:07. A kettle, a folded cot, and in the corridor an ordinary door.' },
+  o_lift: { title: 'The lift wall', text: 'Pencil, at the height of a nine-year-old: W. WAS HERE. And a drawing of a lift with 3:07 on the door, taped where you could not have put it. Someone drew you the way in.' },
+  o_bath: { title: 'The duck with the ribbon', text: 'A yellow duck on the bath rim with a ribbon round its neck, and in crayon, very small: for the bath, so you are never lonely down there. Whoever left it knew you would come up through the water.' },
+  o_bus: { title: 'The packed bag', text: 'A child\u2019s schoolbag on the night bus: a torch, a sandwich in foil, a cracked phone at 3:07, and a note in block capitals: IF YOU GET LOST, STAY ON THE BUS. IT ALWAYS GOES HOME EVENTUALLY.' },
+  o_ward: { title: 'The card on the locker', text: 'GET WELL. I WILL ANSWER IF IT RINGS. In handwriting you know from birthday cards, beside a phone labelled DO NOT ANSWER AFTER 3, in a night ward where a girl of fourteen has been holding your hand for a long time.' },
+  o_shore: { title: 'The mittens on a string', text: 'Two hundred and thirteen small footprints go into the lake and none come out. The only things that ever came back were a pair of wellingtons with a duck sticker, and a pair of damp mittens on a string.' },
+  o_party: { title: 'The party that never ended', text: 'Streamers, an uncut cake, a banner with the number smeared away, and a small girl in a paper crown counting down from three. Four candles. Then everyone goes home and the door opens.' },
+  o_lost: { title: 'The ledger: lost property', text: 'A small purple umbrella with a duck handle, found at 3:07 and unclaimed for nine years. Whoever left it said they would come back for it. Somebody always says that.' },
+  o_voicemail: { title: 'The saved voicemails', text: 'One voicemail, 3:07 long, in your own crying voice, and underneath it a child asking whether somebody is there. She has saved two hundred and fourteen more for you. She said you would listen.' },
+  o_snow: { title: 'The snow globe', text: 'A snow globe on a landing where the snow falls up. A tiny figure in a paper crown, pressed against the glass, mouths the same three words over and over. The date scratched on its base is a year that has not happened yet.' },
   choir: { title: 'Recording: the stones, again', text: 'Slowed down, the singing stones are not stones. They are people, very far under water, all mouthing the same eleven notes. One of them is mouthing your name instead.' },
 };
 
@@ -233,81 +242,81 @@ ABY.NODES = {
     ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', teaser: 'The lift has stopped. The doors are opening on a floor that is not on the panel.',
     text: 'The lift stops between floors with a soft, final bump. The light goes amber. The panel shows a floor that is not a number, only a small engraved crown, and the phone in your hand says 3:07. Then the doors slide open on violet haze, and on a woman with a flute at her back, standing very still, as if she has been waiting for the lift for years.',
     choices: [
-      { label: 'Step out into the haze', next: 'flute_path', add: { resolve: 1 } },
-      { label: 'Press every button at once', next: 'unknown_sms', add: { dread: 1 } },
-      { label: 'Say hello to her', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Study the crown on the panel', next: 'op_lift_b', add: { resolve: 1 } },
+      { label: 'Look at the woman with the flute', next: 'op_lift_b', add: { heart: 1 } },
+      { label: 'Check the phone: 3:07', next: 'op_lift_b', add: { dread: 1 } },
     ],
   },
   op_bath: {
     ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', teaser: 'The bath has gone cold. Something under the water is humming.',
     text: 'You wake in the bath. The water has gone cold and very still, and the phone is balanced on the rim, dry, lit: 3:07. Under the water, where your feet should be, there is no bottom to the tub. Someone far down there is humming eleven slow notes, and a woman with a flute, very small at that distance, is looking up at you.',
     choices: [
-      { label: 'Climb out, fast', next: 'torch_first', light: 1, add: { dread: 1 } },
-      { label: 'Put your ear to the water', next: 'choir_1', add: { dread: 1 } },
-      { label: 'Reach down to her', next: 'stones_path', add: { heart: 1, trust: 1 } },
+      { label: 'Look down into the water', next: 'op_bath_b', add: { heart: 1 } },
+      { label: 'Look at the phone on the rim', next: 'op_bath_b', add: { resolve: 1 } },
+      { label: 'Hold your breath, and listen', next: 'op_bath_b', add: { dread: 1 } },
     ],
   },
   op_bus: {
     ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'glitch', teaser: 'The night bus has missed every stop. The driver will not turn round.',
     text: 'The night bus. Top deck, front seat, the city going by in long orange smears. You must have slept through your stop. The sign over the driver flips to its next destination: THE GUARDIAN\'S GATE. Then to 3:07. Every other passenger is facing the back of the bus. Every one of them is holding a phone exactly like yours.',
     choices: [
-      { label: 'Ring the bell to get off', next: 'flute_path', add: { resolve: 1 } },
-      { label: 'Look at their screens', next: 'unknown_sms', add: { dread: 1 } },
-      { label: 'Go downstairs to the driver', next: 'vey_come', add: { trust: 1 } },
+      { label: 'Look at the other passengers', next: 'op_bus_b', add: { dread: 1 } },
+      { label: 'Look out at the city', next: 'op_bus_b', add: { resolve: 1 } },
+      { label: 'Watch the destination sign', next: 'op_bus_b', add: { heart: 1 } },
     ],
   },
   op_ward: {
     ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', teaser: 'Hospital, night ward. The monitor beside you is beeping out a tune.',
     text: 'A hospital bed. A ward at night, every curtain drawn. The heart monitor beside you is not beeping, quite: it is playing notes, eleven of them, and then waiting. Your phone is on the blanket with a sticky label on it in a nurse\'s hand: PATIENT\'S OWN. DO NOT ANSWER AFTER 3. It is 3:07. Behind the last curtain, someone is playing a flute along with your heart.',
     choices: [
-      { label: 'Pull back the last curtain', next: 'flute_path', add: { resolve: 1, dread: 1 } },
-      { label: 'Answer the phone anyway', next: 'unknown_sms', add: { dread: 1 } },
-      { label: 'Listen to the monitor', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Read the label on the phone', next: 'op_ward_b', add: { dread: 1 } },
+      { label: 'Listen to the monitor play', next: 'op_ward_b', add: { heart: 1 } },
+      { label: 'Look at the drawn curtains', next: 'op_ward_b', add: { resolve: 1 } },
     ],
   },
   op_shore: {
     ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'whisper', teaser: 'A lake at night. Wet footprints go into the water. None come out.',
     text: 'You are standing on a lakeshore in the dark with wet feet and no memory of the walk here. The phone says 3:07. A line of small bare footprints leads past you into the water, and none come out. Out on the lake, where the reflection of the moon ought to be, there is a woman with a flute, standing on the surface, waiting to see what you do.',
     choices: [
-      { label: 'Follow the footprints back', next: 'footprints', add: { heart: 1 } },
-      { label: 'Wade out to her', next: 'choir_1', add: { dread: 1 } },
-      { label: 'Switch on the flashlight', next: 'torch_first', light: 1 },
+      { label: 'Look at the footprints', next: 'op_shore_b', add: { heart: 1 } },
+      { label: 'Look at the woman on the water', next: 'op_shore_b', add: { resolve: 1 } },
+      { label: 'Look at your wet feet', next: 'op_shore_b', add: { dread: 1 } },
     ],
   },
   op_party: {
     ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', teaser: 'A birthday party. Everyone has gone. Someone is still counting down.',
     text: 'A birthday party, long over. Paper hats on the floor, a cake with four burnt-down candles, every chair pushed back at once, as if everyone left in the same second. From the hall, a child\'s voice, counting down: nine. Eight. Your phone, face up among the plates: 3:07. In the hall mirror, a woman with a flute is standing behind you, with her finger to her lips.',
     choices: [
-      { label: 'Find the child before she reaches one', next: 'footprints', add: { heart: 1, dread: 1 } },
-      { label: 'Turn round to the woman', next: 'flute_path', add: { trust: 1 } },
-      { label: 'Blow out the candles', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Look at the cake', next: 'op_party_b', add: { heart: 1 } },
+      { label: 'Listen to the counting', next: 'op_party_b', add: { dread: 1 } },
+      { label: 'Look in the hall mirror', next: 'op_party_b', add: { resolve: 1 } },
     ],
   },
   op_lost: {
     ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch', teaser: 'Lost property found a phone with your face as the lock screen.',
     text: 'A lost-property office, after closing. A box of phones nobody came back for. One of them is buzzing. On its lock screen, a photo of you, asleep, taken from very close. The time on it is 3:07. You have never owned this phone. You put it to your ear and a woman, very far away, plays one long note on a flute, and the office is not there any more.',
     choices: [
-      { label: 'Follow the note', next: 'flute_path', add: { resolve: 1 } },
-      { label: 'Look at the other photos', next: 'unknown_sms', add: { dread: 1 } },
-      { label: 'Call to whoever is near you', next: 'vey_come', add: { trust: 1 } },
+      { label: 'Pick up the buzzing phone', next: 'op_lost_b', add: { resolve: 1 } },
+      { label: 'Look at the photo of yourself', next: 'op_lost_b', add: { dread: 1 } },
+      { label: 'Look at the box of phones', next: 'op_lost_b', add: { heart: 1 } },
     ],
   },
   op_voicemail: {
     ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', teaser: 'One new voicemail. It is your own voice, and it is crying.',
     text: 'One new voicemail, 3:07. You play it. It is your own voice, out of breath, crying: "If you\'re hearing this you\'ve woken up again. Don\'t follow the flute. No. Follow the flute, but don\'t climb anything. Don\'t trust the little one. Trust the little one. I can\'t remember which. I\'m so sorry, I never remember which." Then a flute, very close to the phone.',
     choices: [
-      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1, dread: 1 } },
-      { label: 'Ignore yourself', next: 'stones_path', add: { heart: 1 } },
-      { label: 'Call yourself back', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Play it again', next: 'op_voicemail_b', add: { dread: 1 } },
+      { label: 'Listen to the flute', next: 'op_voicemail_b', add: { heart: 1 } },
+      { label: 'Check who it came from', next: 'op_voicemail_b', add: { resolve: 1 } },
     ],
   },
   op_snow: {
     ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'glitch', teaser: 'Snow is falling indoors. It is warm, and it is falling up.',
     text: 'You wake on a staircase in a house you do not know, and it is snowing indoors: warm snow, falling up, toward a broken roof and a violet sky. The phone is at 3:07 and it will not move on. At the top of the stairs, where they should end, they do not. They go on up into the haze, and somebody up there is playing a flute to light the way.',
     choices: [
-      { label: 'Keep climbing', next: 'spire', add: { resolve: 1, dread: 1 } },
-      { label: 'Go back down', next: 'stones_path', add: { heart: 1 } },
-      { label: 'Light up the snow', next: 'torch_first', light: 1 },
+      { label: 'Hold out your hand to the snow', next: 'op_snow_b', add: { heart: 1 } },
+      { label: 'Look at the broken roof', next: 'op_snow_b', add: { resolve: 1 } },
+      { label: 'Look at the phone: 3:07', next: 'op_snow_b', add: { dread: 1 } },
     ],
   },
   unknown_sms: {
@@ -1138,6 +1147,15 @@ ABY.NODES = {
       { label: 'Go back to the singing stones', next: 'd4_stones', add: { resolve: 1 } },
       { label: 'Turn the clock back: the servants\u2019 stair, the night of the lock', next: 'fb_vey_stair', bat: 3, req: { noflag: 'tt_vey' } },
       { label: 'Wind the clock forward: a bedroom, 3:07', next: 'ff_wren', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_wren' } },
+      { label: 'Turn the clock back: how you first came in (the lift)', next: 'ec4_lift', bat: 3, req: { open: 'op_lift', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the bath)', next: 'ec4_bath', bat: 3, req: { open: 'op_bath', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the night bus)', next: 'ec4_bus', bat: 3, req: { open: 'op_bus', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the ward)', next: 'ec4_ward', bat: 3, req: { open: 'op_ward', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the shore)', next: 'ec4_shore', bat: 3, req: { open: 'op_shore', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the party)', next: 'ec4_party', bat: 3, req: { open: 'op_party', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the lost-property office)', next: 'ec4_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the voicemail)', next: 'ec4_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the snow)', next: 'ec4_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo4' } },
     ],
   },
   d4_queen: {
@@ -1352,6 +1370,7 @@ ABY.NODES = {
       { label: 'Tell her about the book', next: 'd5_book', add: { resolve: 1 } },
       { label: 'Tell her to sing with you', next: 'd5_rite', add: { heart: 1 } },
       { label: 'Ask her to stay on the line till it is light', next: 'd5_dawn', set: 'stayed_line' },
+      { label: 'Tell her how you came in, the very first night: it will help her not be afraid', next: 'd5_book', req: { flag: 'tt_echo4' }, add: { heart: 1, trust: 1 } },
     ],
   },
   d5_book: {
@@ -1587,6 +1606,15 @@ ABY.NODES = {
       { label: 'Go back through the door and stay with Sorrel', next: 'end_cradle', req: { flag: 'promised_sorrel' } },
       { label: 'Turn the clock back: a fourth birthday', next: 'fb_birthday', bat: 3, req: { noflag: 'tt_birthday' } },
       { label: 'Wind the clock forward: the seventh night', next: 'ff_seventh', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_seventh' } },
+      { label: 'Turn the clock back: the lift, once more', next: 'ec6_lift', bat: 3, req: { open: 'op_lift', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the bath, once more', next: 'ec6_bath', bat: 3, req: { open: 'op_bath', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the night bus, once more', next: 'ec6_bus', bat: 3, req: { open: 'op_bus', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the ward, once more', next: 'ec6_ward', bat: 3, req: { open: 'op_ward', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the shore, once more', next: 'ec6_shore', bat: 3, req: { open: 'op_shore', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the party, once more', next: 'ec6_party', bat: 3, req: { open: 'op_party', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the lost-property office, once more', next: 'ec6_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the voicemail, once more', next: 'ec6_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the snow, once more', next: 'ec6_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo6' } },
     ],
   },
   end_firstpage: {
@@ -1635,6 +1663,7 @@ ABY.NODES = {
       { label: 'Tell her you read her wall. You see her', next: 'ev_watch', req: { flag: 'link_watcher' } },
       { label: 'Sing her the birthday song she never got to finish', next: 'd7_named', req: { flag: 'tt_birthday' }, set: 'named_eye', add: { heart: 2, dread: -2 } },
       { label: 'You saw this in the clock. Say her name first: Sorrel', next: 'd7_named', req: { flag: 'tt_seventh' }, set: 'named_eye', add: { heart: 1, dread: -1 } },
+      { label: 'Tell her you remember the door you came through. She waited at it too', next: 'd7_named', req: { flag: 'tt_echo6' }, set: 'named_eye', add: { heart: 2, dread: -2 } },
     ],
   },
   d7_again: {
@@ -1939,6 +1968,305 @@ ABY.NODES = {
     choices: [
       { label: 'Hold the picture', next: '@back', set: 'tt_morning', add: { heart: 1, dread: -1 } },
       { label: 'Wren is at the sink, humming the eleven notes, badly', next: '@back', set: 'tt_morning', req: { flag: 'wren_with' }, add: { heart: 2, dread: -1 } },
+    ],
+  },
+  // ---- the beginnings, deeper: each of the nine other openings is a three-scene prologue (op_X -> op_X_b -> op_X_c, then the haze), files its own clue, and
+  // comes back as a flashback (`thread: <opening>`) on Day Four (ec4_*) and Day Six (ec6_*), offered only to a journey that began that way ----
+  op_lift_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
+    text: 'The panel has no numbers now, only the crown. Taped underneath it, where you cannot have put it, is a child\u2019s drawing of a lift: a stick figure inside, and on the door a very large number, 3:07. The woman with the flute has not moved. She is looking at the drawing, not at you, like someone who has seen it before.',
+    choices: [
+      { label: 'Take the drawing', next: 'op_lift_c', add: { heart: 1 } },
+      { label: 'Ask her whose it is', next: 'op_lift_c', add: { trust: 1 } },
+    ],
+  },
+  op_lift_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'o_lift',
+    text: 'Behind the drawing, in pencil, at the height of a nine-year-old: W. WAS HERE. The haze beyond the doors is not violet any longer. It is the colour of a landing with a nightlight. "Go on," says the woman. "She drew it for you." You do not know who she means. You are beginning to.',
+    choices: [
+      { label: 'Step out into the haze', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Press every button at once', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Say hello to her', next: 'stones_path', add: { heart: 1 } },
+    ],
+  },
+  op_bath_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'The water is not cold now, only very still, and it has started to hold your shape: when you lift a hand the water lifts a hand. On the rim, beside the dry phone, someone has left a yellow plastic duck. It is not yours. It is hers, the small one under the water, and it has a ribbon round its neck.',
+    choices: [
+      { label: 'Pick up the duck', next: 'op_bath_c', add: { heart: 1 } },
+      { label: 'Leave it, and listen to the humming', next: 'op_bath_c', add: { resolve: 1 } },
+    ],
+  },
+  op_bath_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', note: 'o_bath',
+    text: 'The humming has words, if you hold still. Not eleven notes: eleven names, one note each. The eleventh is yours. On the ribbon, in very small crayon: for the bath, so you are never lonely down there. Far under, the woman with the flute raises one hand and waves like a child at a window.',
+    choices: [
+      { label: 'Climb out, fast', next: 'torch_first', light: 1, add: { dread: 1 } },
+      { label: 'Put your ear to the water', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Reach down to her', next: 'stones_path', add: { heart: 1, trust: 1 } },
+    ],
+  },
+  op_bus_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen',
+    text: 'Not one of the passengers has moved. But the seat across the aisle, which was empty, has a child\u2019s schoolbag on it now, dinosaur zip, packed very carefully for a trip: a torch, a sandwich in foil, a cracked phone showing 3:07. From the driver\u2019s speaker, without turning, a voice says: "She left it for you. She packs for everyone."',
+    choices: [
+      { label: 'Open the bag', next: 'op_bus_c', add: { heart: 1 } },
+      { label: 'Ask the driver who she is', next: 'op_bus_c', add: { trust: 1 } },
+    ],
+  },
+  op_bus_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', note: 'o_bus',
+    text: 'In the front pocket, a note in a child\u2019s block capitals: IF YOU GET LOST, STAY ON THE BUS. IT ALWAYS GOES HOME EVENTUALLY. The driver says nothing. A stop slides into the window, a stop with no name, and under its shelter a woman with a flute holds up her hand, the way you hail a bus that might not stop.',
+    choices: [
+      { label: 'Ring the bell to get off', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Look at their screens', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Go downstairs to the driver', next: 'vey_come', add: { trust: 1 } },
+    ],
+  },
+  op_ward_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'One curtain is open, and in the chair beside your bed sits a girl of fourteen, asleep with her coat on and her head on the blanket, holding your hand in both of hers. You cannot feel it. You can see the knuckles, white. She has been holding on for a very long time.',
+    choices: [
+      { label: 'Look at her face', next: 'op_ward_c', add: { heart: 1 } },
+      { label: 'Try to squeeze her hand', next: 'op_ward_c', add: { resolve: 1 } },
+    ],
+  },
+  op_ward_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', note: 'o_ward',
+    text: 'On the locker, in her handwriting, a card: GET WELL. I WILL ANSWER IF IT RINGS. Beside it your phone, lit, 3:07, with its label: DO NOT ANSWER AFTER 3. The monitor skips a beat and the haze comes in at the window like fog. The woman with the flute stands at the foot of the bed with a hand on the rail. "She will answer," she says. "That is the whole trouble."',
+    choices: [
+      { label: 'Pull back the last curtain', next: 'flute_path', add: { resolve: 1, dread: 1 } },
+      { label: 'Answer the phone anyway', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Listen to the monitor', next: 'stones_path', add: { heart: 1 } },
+    ],
+  },
+  op_shore_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen',
+    text: 'The footprints are small. Counting them takes a long time, and you lose count at two hundred and thirteen. At the water\u2019s edge a pair of little wellington boots has been put side by side, toes towards the lake, the way a child puts them when she is told to get ready for bed. One has a yellow duck sticker on it.',
+    choices: [
+      { label: 'Pick up the boots', next: 'op_shore_c', add: { heart: 1 } },
+      { label: 'Follow the footprints to the water', next: 'op_shore_c', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  op_shore_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', note: 'o_shore',
+    text: 'The water is warm and perfectly still, and your reflection is looking up at the sky, not at you. The woman with the flute walks in across the surface, completely dry, and hands you something she has been holding: a very small pair of mittens on a string, still damp. "These are the only things that ever came back," she says. "Don\u2019t put them in a drawer."',
+    choices: [
+      { label: 'Follow the footprints back', next: 'footprints', add: { heart: 1 } },
+      { label: 'Wade out to her', next: 'choir_1', add: { dread: 1 } },
+      { label: 'Switch on the flashlight', next: 'torch_first', light: 1 },
+    ],
+  },
+  op_party_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
+    text: 'Streamers, an uncut cake, a banner that says HAPPY and then, where the number should be, only a smear of icing. In the hall the counting has got down to three. In the mirror, beside the woman with her finger to her lips, stands a small girl in a paper crown, counting, whom the room does not seem to see. When she reaches one something is going to happen. She has been on three for a long time.',
+    choices: [
+      { label: 'Sit down on the floor where she is', next: 'op_party_c', add: { heart: 1 } },
+      { label: 'Count with her', next: 'op_party_c', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  op_party_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'o_party',
+    text: 'She does not look round. "Four candles," she says. "I only get four. Then they go home and it is quiet and the door opens and Mummy tells me to wait." The folds of her paper crown are very neat. The woman with the flute has her hand over her mouth. She has been standing there for as long as there has been a party.',
+    choices: [
+      { label: 'Find the child before she reaches one', next: 'footprints', add: { heart: 1, dread: 1 } },
+      { label: 'Turn round to the woman', next: 'flute_path', add: { trust: 1 } },
+      { label: 'Blow out the candles', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  op_lost_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'The office is not there any more. You are in a long lost-property hall, shelves going up into the haze: umbrellas, single gloves, a hundred phones, every one of them lit and every one showing a face you almost know. At the counter, in place of a clerk, the woman with the flute has a ledger open in front of her. "Everything is in the ledger," she says. "That is the point of lost property. It is never lost. It is only waiting to be asked for."',
+    choices: [
+      { label: 'Ask for your own phone', next: 'op_lost_c', add: { heart: 1 } },
+      { label: 'Ask what else is waiting', next: 'op_lost_c', add: { resolve: 1 } },
+    ],
+  },
+  op_lost_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', note: 'o_lost',
+    text: 'Under L, in a hand you know: one small purple umbrella with a duck handle, found at 3:07, unclaimed for nine years. She puts it on the counter. "Whoever left it was in a great hurry to be brave. They said they would come back for it. Somebody always says they will come back for it." Yours is the only phone on the shelves that is not showing a face. It is showing the time.',
+    choices: [
+      { label: 'Follow the note', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Look at the other photos', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Call to whoever is near you', next: 'vey_come', add: { trust: 1 } },
+    ],
+  },
+  op_voicemail_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
+    text: 'The voicemail does not end when your own voice does. Under it, very faint, a second recording has been laid over the first: a child, close to a microphone, saying, "Is somebody there? I can hear you breathing." The length of the message reads 3:07. It is still counting up.',
+    choices: [
+      { label: 'Say: I\u2019m here', next: 'op_voicemail_c', add: { heart: 1 } },
+      { label: 'Stay silent, and listen', next: 'op_voicemail_c', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  op_voicemail_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', note: 'o_voicemail',
+    text: 'The child gets very quiet. Then: "Oh good. It said you would listen. I have been saving all of these for you. I have got a lot." Behind her voice you can hear a great many messages being queued, two hundred and fourteen unplayed voicemails, each three minutes and seven seconds long. The flute is not playing now. It is sitting beside the phone, listening to the first one again.',
+    choices: [
+      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1, dread: 1 } },
+      { label: 'Ignore yourself', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Call yourself back', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
+  op_snow_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen',
+    text: 'On the landing there is a small table, and on it a snow globe, and the snow is coming out of it. In the glass, a tiny staircase, a tiny house, and a tiny figure in a paper crown halfway up the tiny stairs, looking up. The snow in the room falls up. The snow in the globe falls the proper way, as if it were the only thing in the house that knew which way was down.',
+    choices: [
+      { label: 'Pick up the globe', next: 'op_snow_c', add: { heart: 1 } },
+      { label: 'Stand under the snow, and let it fall up past you', next: 'op_snow_c', add: { resolve: 1 } },
+    ],
+  },
+  op_snow_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', note: 'o_snow',
+    text: 'On the base of the globe, scratched in with a key, a date you do not recognise: a year that should not exist yet. The tiny figure in the paper crown mouths three words at you through the glass, again and again, patient. You hold it to your ear like a shell. At the top of the stairs the woman with the flute stands watching the snow go up, and does not say that she is crying.',
+    choices: [
+      { label: 'Keep climbing', next: 'spire', add: { resolve: 1, dread: 1 } },
+      { label: 'Go back down', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Light up the snow', next: 'torch_first', light: 1 },
+    ],
+  },
+  ec4_lift: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_lift',
+    text: 'The lift again, but you are on the haze side of the doors now, and the panel is lit from outside. The woman with the flute is pressing the button to call it. "Every night I call it," she says, "and every night it comes with someone in it, and every night I think: perhaps this is the one who can say no." She looks at the drawing. "You put this back, last time. W. WAS HERE. I have been keeping it dry."',
+    choices: [
+      { label: 'Take the drawing, and keep it', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+      { label: 'Draw the number on it again: 3:07', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+    ],
+  },
+  ec6_lift: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_lift',
+    text: 'The lift opens on the nursery floor. The panel has one more button than it should: not a crown, a small paper hat. A voice, very high and very patient, says from the speaker: "Going up. Please stand clear. Somebody has to ride it with me." It has been waiting since the first night for a passenger who is not afraid of the ride.',
+    choices: [
+      { label: 'Ride it up with her', next: '@back', set: 'tt_echo6', add: { heart: 1, dread: 1 } },
+      { label: 'Press the paper hat', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
+    ],
+  },
+  ec4_bath: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_bath',
+    text: 'The water again, from underneath this time. You are the small thing at the bottom, and the bath is a long way up, a round light. Someone is humming your name into it. A yellow duck floats down past you, ribbon trailing, and you understand it is a message and not a toy: it is how they find you. Hold it, and you can be found.',
+    choices: [
+      { label: 'Hold the duck', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+      { label: 'Let it float up to the light', next: '@back', set: 'tt_echo4', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  ec6_bath: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_bath',
+    text: 'A bath in a house with no windows, filled with warm water and paper hats floating on it like boats. A small hand comes up out of the water for the duck. It does not take it. It only holds the ribbon, and says, very low and very pleased: you came back up for me.',
+    choices: [
+      { label: 'Put the duck in her hand', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
+      { label: 'Hold her hand under the water, gently, and stay', next: '@back', set: 'tt_echo6', add: { heart: 1, dread: 1 } },
+    ],
+  },
+  ec4_bus: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_bus',
+    text: 'The night bus again, and you are at the stop this time, in water to your knees, with your hand up. Two hundred and fourteen faces are looking out of its windows. It slows. It does not stop. It goes round you very carefully, like water round a stone, and as it passes you see a dinosaur schoolbag on every seat, two hundred and fourteen of them, each one packed.',
+    choices: [
+      { label: 'Put your hand up higher', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+      { label: 'Step back, and let them pass', next: '@back', set: 'tt_echo4', add: { heart: 1, dread: 1 } },
+    ],
+  },
+  ec6_bus: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_bus',
+    text: 'The last stop: a shelter on a landing, with a timetable that says only TONIGHT. A very small voice, from inside the bus, from a window you cannot see through: it said it would stop for me. you said it would go home eventually. is it eventually? The driver does not turn round. He is waiting for you to answer for him.',
+    choices: [
+      { label: 'Tell her: yes. It is eventually', next: '@back', set: 'tt_echo6', add: { heart: 2, dread: 1 } },
+      { label: 'Tell her: nearly', next: '@back', set: 'tt_echo6', add: { trust: 1 } },
+    ],
+  },
+  ec4_ward: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_ward',
+    text: 'The ward from the other side of the glass: the girl in the chair, the bed, your own shape under the blanket, and the haze at the window like a face. The monitor is playing the tune very slowly. Someone has to decide whether to stay in the bed or go to the window. The girl says, in her sleep: don\u2019t go. Her voice is the one she had when she was nine.',
+    choices: [
+      { label: 'Stay by the bed', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+      { label: 'Go to the window', next: '@back', set: 'tt_echo4', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  ec6_ward: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_ward',
+    text: 'A ward with no beds, only cots, and paper hats strung from the monitors, and every monitor beeping the same tune. A very small patient in the nearest cot has her hand through the rail and is holding it out to you, the way a child holds out a hand to someone she is sure will not go. I have been ill for such a long time, she says. will you hold it? Her fingers are very hot.',
+    choices: [
+      { label: 'Hold her hand', next: '@back', set: 'tt_echo6', add: { heart: 2, dread: 1 } },
+      { label: 'Hold her hand, and sing the tune', next: '@back', set: 'tt_echo6', add: { heart: 1, resolve: 1, dread: -1 } },
+    ],
+  },
+  ec4_shore: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_shore',
+    text: 'The lake again, and you are in it to your waist, and it is a cave, and the footprints are going the other way: out of the water, up the stairs, one small pair for each of the faces. Someone has been coming back, a few at a time, for a long time, and nobody has been counting. The woman with the flute is counting. Two hundred and fourteen. She looks at you. "Two hundred and fifteen," she says gently, and writes it down.',
+    choices: [
+      { label: 'Let her count you', next: '@back', set: 'tt_echo4', add: { heart: 1, dread: 1 } },
+      { label: 'Take the pencil, and count the other way', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+    ],
+  },
+  ec6_shore: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_shore',
+    text: 'A landing, and a wet footprint on the boards, small, bare, leading to a door that stands a hand\u2019s width open. Another. Another. They come out of the red light one every step, as if someone very small is walking carefully back out of the water and has not yet decided whether she is allowed. Then, from the gap, a whisper: do I have to put my boots on?',
+    choices: [
+      { label: 'Tell her: you do not have to wear anything', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
+      { label: 'Hold out the little boots', next: '@back', set: 'tt_echo6', add: { heart: 1, trust: 1 } },
+    ],
+  },
+  ec4_party: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_party',
+    text: 'The party from the doorway, and now you can see what the girl cannot: the guests are the faces from the water, all two hundred and fourteen, standing very politely along the walls in paper hats, holding presents wrapped in their own hands. They are not guests. They are the kept. They are waiting for the girl to reach one, so they can sing, and then they will all go home. The girl has never reached one.',
+    choices: [
+      { label: 'Sing very quietly, so she doesn\u2019t reach one', next: '@back', set: 'tt_echo4', add: { heart: 1, dread: 1 } },
+      { label: 'Count with her, more slowly', next: '@back', set: 'tt_echo4', add: { resolve: 1, heart: 1 } },
+    ],
+  },
+  ec6_party: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_party',
+    text: 'The party, a last time. Four candles, lit. The girl in the paper crown is looking at you for the first time, and she is much bigger than four: only the crown is. "Make a wish," you say. "I made it a long time ago," she says. "I wished that somebody would stay after the party." Then she blows out the candles, and the light stays on anyway.',
+    choices: [
+      { label: 'Stay after the party', next: '@back', set: 'tt_echo6', add: { heart: 2, dread: 1 } },
+      { label: 'Tell her: I will come back tomorrow', next: '@back', set: 'tt_echo6', add: { trust: 1, heart: 1 } },
+    ],
+  },
+  ec4_lost: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_lost',
+    text: 'The lost-property hall, from the shelf side. You are one of the phones, and a hand is coming to pick you up. Two hundred and fourteen other phones are lit on the shelves around you, and every face on every screen is turned to look at you. They are not lost. They are kept: held on the shelf at 3:07 until someone asks for them. Someone should.',
+    choices: [
+      { label: 'Ask for them, by name, one at a time', next: '@back', set: 'tt_echo4', add: { heart: 1, trust: 1 } },
+      { label: 'Ask what happens when nobody asks', next: '@back', set: 'tt_echo4', add: { resolve: 1, dread: 1 } },
+    ],
+  },
+  ec6_lost: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_lost',
+    text: 'The counter again, and on it a very small coat, with a note pinned to it in a mother\u2019s handwriting: she will want this when it gets cold. DO NOT LOSE IT. It is a four-year-old\u2019s coat, and it has never been collected. The ledger has a column for who is meant to come and a column for who did, and this coat\u2019s second column has been blank for two hundred years.',
+    choices: [
+      { label: 'Sign for the coat', next: '@back', set: 'tt_echo6', add: { heart: 2, dread: 1 } },
+      { label: 'Ask her to write your name in the second column', next: '@back', set: 'tt_echo6', add: { trust: 1, resolve: 1 } },
+    ],
+  },
+  ec4_voicemail: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_voicemail',
+    text: 'A long corridor of speakers, each one playing a voicemail, each in a different voice, all of the same length. Two hundred and fourteen people leaving a message for somebody who has not picked up. You walk the length of it, and every speaker as you pass says your name in the same patient voice, not asking. Only checking that the line is still open.',
+    choices: [
+      { label: 'Pick one up, and answer', next: '@back', set: 'tt_echo4', add: { heart: 1, dread: 1 } },
+      { label: 'Say your name back, to all of them', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+    ],
+  },
+  ec6_voicemail: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_voicemail',
+    text: 'A speaker on a cot: a child\u2019s toy phone, plugged into nothing, its red light blinking. You press play. A very small voice, very close: "Hello? Hello? This is the last one. I wanted to say it properly this time, so I practised. My name is—" The message ends. The next message is empty, three minutes and seven seconds of nothing, and you have the strongest feeling that someone is holding her breath.',
+    choices: [
+      { label: 'Say her name into the empty message', next: '@back', set: 'tt_echo6', add: { heart: 2, dread: -1 } },
+      { label: 'Wait out the three minutes, in silence', next: '@back', set: 'tt_echo6', add: { resolve: 1, heart: 1 } },
+    ],
+  },
+  ec4_snow: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_snow',
+    text: 'The cave, but it is snowing in it, warm, falling up past the faces under the water, who open their mouths to catch it like children. For a moment all two hundred and fourteen are smiling. The woman with the flute stands in the snow with her palm up, and the flakes do not melt on it. "It does this once a year," she says. "The night of my daughter\u2019s birthday. I never know whether to let it."',
+    choices: [
+      { label: 'Hold out your hand, and let it', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+      { label: 'Catch one on your tongue, like a child', next: '@back', set: 'tt_echo4', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  ec6_snow: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'op_snow',
+    text: 'The snow globe, enormous. You are the figure inside the glass, and outside the glass an enormous red eye, patient and wet, is looking in. She is shaking the globe very gently so that the snow will go up and come down again. snow is the only weather, she says. i do it when i am sad. you came up in the snow once. will you stay in it with me while it settles?',
+    choices: [
+      { label: 'Stay, while it settles', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
+      { label: 'Shake the globe from the inside, so she feels it', next: '@back', set: 'tt_echo6', add: { resolve: 1, heart: 1, dread: 1 } },
     ],
   },
   // ---- the evidence board's scenes: each opens only for a player who pinned the right two clues together in Notes (ABY.LINKS) ----
