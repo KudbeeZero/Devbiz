@@ -49,7 +49,7 @@ function walkChecks() {
     if (n.song) { out.push(ABY.songDone(s, true), ABY.songDone(s, false)); return out; }
     for (const o of ABY.options(s)) { const t = ABY.choose(s, o.i); if (t) out.push(t); }
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
-    return out.map(pin);
+    return out.map(t => t.notes.length === s.notes.length ? t : pin(t));   // (no new clue, no new pair: flags are never taken back, so she was already pinned)
   };
   // seven days are too deep for one shallow-first queue: the early days would eat the whole budget. So each day has its own queue (shallow-first
   // inside it) and the walk takes from them in turn, so every day gets a fair share. A day's states only ever come from real states before them.
@@ -86,6 +86,14 @@ function walkChecks() {
   const gates = id => ids.flatMap(f => (N[f].choices || []).filter(c => c.next === id && c.req)).map(c => c.req);
   const into = id => [...new Set(gates(id).flatMap(need))];   // flags it takes to get in
   const shut = (reqs) => reqs.map(r => r.noflag).filter(Boolean);   // flags that keep it shut
+  // how many steps each scene is from a target, following the story's links backwards (rules ignored; Infinity = no way there). An ending leads
+  // on to the next day's wake (the 'auto' ending to any of them), and a time slip leads back to wherever she entered it from.
+  const conts = Object.values(ABY.ENDINGS).map(E => E.cont).filter(Boolean), from = {}, link = (a, b) => (from[b] || (from[b] = [])).push(a);
+  for (const id of ids) {
+    for (const c of N[id].choices || []) { link(id, c.next); if (N[c.next] && N[c.next].time) link(c.next, id); }
+    for (const nx of Object.values(N[id].songNext || {})) link(id, nx);
+    if (N[id].ending) for (const nx of N[id].ending === 'auto' ? conts : [ABY.ENDINGS[N[id].ending] && ABY.ENDINGS[N[id].ending].cont].filter(Boolean)) link(id, nx); }
+  const toward = (target) => { const d = new Map([[target, 0]]), q = [target]; for (let i = 0; i < q.length; i++) for (const p of from[q[i]] || []) if (!d.has(p)) { d.set(p, d.get(q[i]) + 1); q.push(p); } return id => d.has(id) ? d.get(id) : Infinity; };
   const unmet = () => { const out = [];
     for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
     for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
@@ -93,7 +101,12 @@ function walkChecks() {
   for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < (process.env.GRAPH_QUICK ? 0 : 4); round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? standing(t.id, t.req) : reach.has(t.id); if (ok()) continue;
     const blocked = [...new Set([...shut(gates(t.id)), ...shut(t.req ? [t.req] : [])])];   // flags that keep the target shut: a seed must not hold one
-    const near = (fl) => { const hit = []; for (const x of seen.values()) if (!N[x.node].ending && fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)) hit.push(x); return hit.sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000); };   // nearest day first, earliest in it
+    const far = toward(t.id);   // (an ungated scene asks for no flags, so every state qualifies: without this the seeds were the shallowest Day One states, and each chase re-walked the day)
+    const near = (fl) => { const hit = [], day = DAY(N[t.id].ch);   // the closest scenes to the target first (steps in the story graph), then nearest day, earliest in it
+      for (const [id, m] of [...byNode].filter(([id]) => !N[id].ending && DAY(N[id].ch) <= day).sort((p, q) => far(p[0]) - far(q[0]))) {
+        if (hit.length >= 4000 && far(id) > far(hit[hit.length - 1].node)) break;   // (4000 closer seeds are enough)
+        for (const x of m.values()) if (fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f])) hit.push(x); }
+      return hit.sort((p, q) => far(p.node) - far(q.node) || DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000); };
     let seeds = near(t.flags); if (!seeds.length && t.own) seeds = near(t.own); if (!seeds.length) seeds = near(into(t.id));   // (a gated choice: start from whoever holds the flags ITS rule asks for; the other ways into the scene are only one way in)       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
@@ -106,8 +119,8 @@ function walkChecks() {
   rec('story-all-endings', missing.length === 0, 'reachable: ' + [...ends].sort().join(', ') + (missing.length ? ' | MISSING ' + missing.join(', ') : ''));
 
   // the forced scenes: the phone dies, her mind comes apart; both come back to where she was headed when she can fight them
-  const states = [...seen.values()];
-  const black = states.filter(s => s.node === 'blackout'), holl = states.filter(s => s.node === 'hollowing');
+  const at = id => [...(byNode.get(id) || new Map()).values()];   // the kept states standing at a scene
+  const black = at('blackout'), holl = at('hollowing');
   const back = (s, pick) => { for (const o of ABY.options(s)) { const t = ABY.choose(s, o.i); if (t && N[s.node].choices[o.i].next === '@back') return t; } return null; };
   const recovered = black.filter(s => back(s)), saved = holl.filter(s => back(s));
   rec('forced-blackout', black.length > 0 && recovered.length > 0 && recovered.length < black.length && recovered.every(s => back(s).bat > 0), black.length + ' blackout states; ' + recovered.length + ' can recharge and carry on (the crystal, or a spark), the rest end in the dark');
@@ -115,8 +128,8 @@ function walkChecks() {
 
   // hidden choices exist and unlock: some state shows a choice that another does not
   const reqNodes = ids.filter(id => (N[id].choices || []).some(c => c.req));
-  let unlocked = 0, hidden = 0; for (const id of reqNodes) { const here = states.filter(s => s.node === id); if (!here.length) continue; for (let i = 0; i < N[id].choices.length; i++) if (N[id].choices[i].req) { const sees = here.some(s => ABY.okReq(s, N[id].choices[i].req)), hides = here.some(s => !ABY.okReq(s, N[id].choices[i].req)); if (sees) unlocked++; if (hides) hidden++; } }
-  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !c.req.open && !states.some(s => s.node === id && ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
+  let unlocked = 0, hidden = 0; for (const id of reqNodes) { const here = at(id); if (!here.length) continue; for (let i = 0; i < N[id].choices.length; i++) if (N[id].choices[i].req) { const sees = here.some(s => ABY.okReq(s, N[id].choices[i].req)), hides = here.some(s => !ABY.okReq(s, N[id].choices[i].req)); if (sees) unlocked++; if (hides) hidden++; } }
+  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !c.req.open && !at(id).some(s => ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
   rec('hidden-choices', never.length === 0 && hidden > 0, never.join(', ') || unlocked + ' gated choices can be unlocked (and hidden: ' + hidden + ')');
 
   // dark rooms frighten her without the light; the light costs battery; the song cannot be retried for ever
