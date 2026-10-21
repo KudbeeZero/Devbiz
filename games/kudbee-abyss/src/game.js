@@ -135,7 +135,7 @@
     var codas = n.ending && !fromLog ? ABY.codasFor(ABY.endingOf(G.state), G.state) : []; if (n.ending && !codas.length) return finale();
     if (n.dark && !n.ending && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
     if (!fromLog && !n.ending && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
-    // what people said while she slept (ABY.OVERNIGHT) comes first, each from its own contact; then the scene's own text
+    // what people said while she slept (ABY.OVERNIGHT), or a line from someone who remembers an earlier journey (ABY.SECOND_SIGHT), comes first, each from its own contact; then the scene's own text
     var items = (n.ending ? codas : ABY.overnightFor(G.state)).map(function (m) { return { who: m.who, text: m.text, note: m.note || '' }; });
     if (!n.ending) (n.speaker === 'NARRATOR' ? [n.text] : split(n.text)).forEach(function (t, k, all) { items.push({ who: n.speaker, text: t, note: k === all.length - 1 ? n.note || '' : '' }); });
     var done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length, cur = n.speaker;

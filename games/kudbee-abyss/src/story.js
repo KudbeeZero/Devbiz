@@ -283,7 +283,28 @@ ABY.bond = function (s, who) {
   const b = ABY.BONDS[who], f = (s && s.flags) || {};
   return b ? b.up.filter(k => f[k]).length - b.down.filter(k => f[k]).length : 0;
 };
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+// SECOND SIGHT: on a later journey the night remembers the earlier ones. A scene most journeys pass (`at`) opens with one more line, from someone who
+// recognises her, for an ending she has found (`echo_<id>`, `scar_<id>`) or for how many (`min: { mem }`). They add no scenes and no branches: the
+// same night reads differently the second time. A scene she can come back to (a flashlight, a slip, a detour) never carries one, so it is said once.
+ABY.SECOND_SIGHT = [
+  { id: 's_sms', at: 'unknown_sms', req: { min: { mem: 1 } }, who: 'EYE', text: 'you again. you have held this phone before. your thumb goes to the same place on the glass.' },
+  { id: 's_flute', at: 'flute_path', req: { flag: 'echo_song' }, who: 'QUEEN', text: 'The flute knows the way already. It pulls the way it pulled the night you played the whole song. Have we done this before?' },
+  { id: 's_stones', at: 'stones_path', req: { flag: 'scar_drowned' }, who: 'CHOIR', text: 'we know your voice. you were down in the water with us once. you left. nobody leaves.' },
+  { id: 's_choir', at: 'choir_1', req: { flag: 'echo_names' }, who: 'CHOIR', text: 'you said our names once and we went quiet. we are singing again. we are sorry. it is so hard to stop.' },
+  { id: 's_spire', at: 'spire', req: { min: { mem: 3 } }, who: 'NARRATOR', text: 'Near the top of the spire there are scratches at the height of her hand, in tallies of five. Some of them look as if they were made tonight.' },
+  { id: 's_vey', at: 'vey_come', req: { flag: 'scar_betrayal' }, who: 'VEY', text: 'You are looking at my mouth. Someone has told you about my mouth. (A small, hurt pause.) I will keep it closed, then.' },
+  { id: 's_hollows', at: 'hollow_pass', req: { flag: 'scar_hollow' }, who: 'QUEEN', text: 'They are bowing to you. The Hollows have never bowed to anyone but a queen. What did you do, the last time?' },
+  { id: 's_guardian', at: 'g_meet', req: { flag: 'echo_dawn' }, who: 'GUARDIAN', text: '...I know you... the gate... you opened it once, and I felt a draught on my face for the first time in a hundred years...' },
+  { id: 's_reconcile', at: 'reconcile', req: { flag: 'echo_keeper' }, who: 'QUEEN', text: 'Someone holds a door in my dreams so that I can sleep. They have your hands. I thought you should know.' },
+  { id: 's_stairs', at: 'stairs_2', req: { flag: 'scar_eye' }, who: 'EYE', text: 'you came up these stairs once and answered me. this time do not. this time i want to see what you do instead.' },
+  { id: 's_d2queen', at: 'd2_queen', req: { flag: 'scar_loop' }, who: 'QUEEN', text: 'Whatever you do tonight, don’t turn it off. I don’t know why I’m saying that. I dreamt it.' },
+  { id: 's_finale', at: 'd3_finale', req: { flag: 'echo_chorus' }, who: 'EYE', text: 'the last time you stood in this room you sang. i have been practising the last line. i still get it a little wrong.' },
+  { id: 's_shore', at: 'd4_shore', req: { flag: 'echo_caller' }, who: 'CHOIR', text: 'you wrote a name on the line once. we heard who it was. we have kept them warm for you.' },
+  { id: 's_wren', at: 'd5_hello', req: { flag: 'echo_warned' }, who: 'WREN', text: 'this is so weird. i dreamt you would call. you told me to pick up every number in the book. did i?' },
+  { id: 's_sorrel', at: 'd6_sorrel', req: { flag: 'scar_cradle' }, who: 'SORREL', text: 'you came in last time!! you stayed for paper hats. are you coming in again? i saved you the red.' },
+  { id: 's_end', at: 'd7_end', req: { min: { mem: 10 } }, who: 'NARRATOR', text: 'You have stood here many times. The book knows it: it falls open at the first page before anyone touches it.' },
+];
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES, ABY.SECOND_SIGHT).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -2447,6 +2468,61 @@ ABY.NODES = {
     ],
   },
 };
+
+// ---- detours: a side room off a day's road ----
+// A detour is two scenes reached from one scene of its own day (`from`), offered once (`req: { noflag: 'dt_<day>' }`); every way out of its second
+// scene goes back to that scene and sets the flag. It never reaches an ending and never changes the day's shape: it is more of the night, not another
+// night. Each pays a little in stats. The graph test proves the shape (`detours`); add one by adding an entry here.
+ABY.DETOURS = [
+  { id: 'dt_d2', from: 'd2_captain', label: 'Ask him what the door looks like from his side', a: {
+      ch: 6, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+      text: 'From my side it was never a door. It was a wall with a keyhole, low down, at the height of a child. I kept my eye to it for the first ten years. After that I kept my ear to it, because the eye got tired and the ear did not.',
+      choices: [{ label: 'Ask what he heard through it', add: { heart: 1 } }, { label: 'Ask why the keyhole is so low', add: { resolve: 1 } }] },
+    b: { ch: 6, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+      text: 'A crayon. For a hundred years, a crayon going round and round on paper, and somebody humming eleven notes she had not learned yet. I never opened it. I was told to hold it, and holding is not opening. (He is quiet a long time.) Ask me the other thing now. The thing you came for.',
+      choices: [{ label: 'Ask him for his name' }, { label: 'Let him rest a moment longer first', add: { dread: -1 } }] } },
+  { id: 'dt_d3', from: 'd3_fork', label: 'Look closer at the wall between the three ways', a: {
+      ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+      text: 'Between the corridors the wall is papered, and the paper is drawings, hundreds, pinned edge to edge. Every one is a door. Some are coloured in. One is only half finished, the crayon pressed right through where a small hand stopped.',
+      choices: [{ label: 'Trace the unfinished door with a finger', add: { heart: 1 } }, { label: 'Photograph the wall', add: { resolve: 1 } }] },
+    b: { ch: 8, speaker: 'EYE', mood: 'dark', focus: 'gate',
+      text: 'do not touch those. those are mine. (The red behind the paper brightens, then dims, embarrassed.) ...you can look. nobody looks at them. she used to put them on the fridge.',
+      choices: [{ label: 'Tell the Eye they are good', add: { trust: 1 } }, { label: 'Step back to the fork' }] } },
+  { id: 'dt_d4', from: 'd4_queen', label: 'Ask her what the stones sang before the water came', a: {
+      ch: 9, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+      text: 'A song for counting. One for every name, so nobody is skipped. I taught it to a child once, to get her to sleep. She would never let me finish. She said if I got to the end, all the people would have to go home.',
+      choices: [{ label: 'Ask her to sing the first line', add: { heart: 1 } }, { label: 'Ask her who the child was', add: { resolve: 1, dread: 1 } }] },
+    b: { ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'gate',
+      text: 'one. (A hundred voices, very far down, very gently.) two. (The water in the speaker trembles.) three. we will stop there. she never let us get further than three.',
+      choices: [{ label: 'Thank them', add: { dread: -1 } }, { label: 'Ask them to keep counting', add: { resolve: 1, dread: 1 } }] } },
+  { id: 'dt_d5', from: 'd5_book', label: 'Ask Wren to read you her line in the book', a: {
+      ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+      text: 'okay. it says: Wren, 9. Wren, 12. Wren, 15. it\'s me. it\'s my age, every time. (Paper turning.) it skips this year. there\'s a gap where this year should be. is that good? tell me that\'s good.',
+      choices: [{ label: 'Tell her it is good', add: { heart: 1 } }, { label: 'Tell her you don\'t know', add: { trust: 1 } }] },
+    b: { ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+      text: 'ok. (A long breath.) i\'m drawing a line through the gap with my pen so nobody can write in it. it\'s a really thick line. i\'m going over it lots of times.',
+      choices: [{ label: 'Tell her to go over it once more', add: { resolve: 1 } }, { label: 'Tell her that\'s enough now', add: { dread: -1 } }] } },
+  { id: 'dt_d6', from: 'd6_page', label: 'Turn the first page over', a: {
+      ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+      text: 'On the back, in pencil, in a grown-up\'s small handwriting: a shopping list. Milk. Bread. Paper hats. Candles (4). Crayons, red. Underneath, crossed out so hard the paper tore: do not answer the phone.',
+      choices: [{ label: 'Read the crossed-out line again', add: { resolve: 1, dread: 1 } }, { label: 'Fold the page back carefully', add: { heart: 1 } }] },
+    b: { ch: 11, speaker: 'QUEEN', mood: 'dark', focus: 'queen',
+      text: 'Her fourth birthday. I bought everything on that list. The phone rang while the candles were lit, and I answered it, because I always answer. (Silence.) Put the page back. Please. She will want it where she left it.',
+      choices: [{ label: 'Put it back', add: { trust: 1 } }, { label: 'Ask her what the caller said', add: { dread: 1 } }] } },
+  { id: 'dt_d7', from: 'd7_queen', label: 'Ask her what she will do at six', a: {
+      ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
+      text: 'At six? (She laughs, which you have never heard her do.) I have not thought past 3:07 in so long. Tea. I think I would like tea, in a cup that is only a cup, by a window that faces the right way.',
+      choices: [{ label: 'Promise her the window', add: { heart: 1 } }, { label: 'Tell her not to plan yet', add: { resolve: 1 } }] },
+    b: { ch: 12, speaker: 'VEY', mood: 'dark', focus: 'gate',
+      text: 'How sweet. (Vey, from somewhere behind her, polite as a knife.) Tea at six. I will lay the table. I always lay the table. I would set one more place, but on the last night I never know who is going to need it.',
+      choices: [{ label: 'Tell Vey to lay it for everyone', add: { trust: 1 } }, { label: 'Say nothing to Vey', add: { dread: 1 } }] } },
+];
+for (const d of ABY.DETOURS) {
+  const a = d.id + '_a', b = d.id + '_b';
+  ABY.NODES[a] = Object.assign({}, d.a, { detour: d.id, choices: d.a.choices.map(c => Object.assign({}, c, { next: b })) });
+  ABY.NODES[b] = Object.assign({}, d.b, { detour: d.id, choices: d.b.choices.map(c => Object.assign({}, c, { next: d.from, set: d.id })) });
+  ABY.NODES[d.from].choices.push({ label: d.label, next: a, req: { noflag: d.id } });
+}
 
 // ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
