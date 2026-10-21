@@ -75,7 +75,8 @@ function walkChecks() {
     }
   };
   // (the nine other openings go first: the walk merges journeys that differ only in how they began, and the ones it keeps should be the ones with an echo to walk)
-  walk([...ABY.OPENINGS.filter(o => o !== ABY.START), ABY.START].map(o => ABY.newState(10, o, ABY.ENDING_IDS)), LIMIT,   // (a veteran: every fall already suffered, so every scar's way out is walked too)
+  walk([...ABY.OPENINGS.filter(o => o !== ABY.START), ABY.START].map(o => { const st = ABY.newState(10, o, ABY.ENDING_IDS); for (const k of Object.keys(st.flags)) if (/^echo_/.test(k)) delete st.flags[k]; return st; }), LIMIT,   // (echoes only add a voice, so the walk leaves them out: they would fatten every one of millions of states)
+      // (a veteran: every fall already suffered, so every scar's way out is walked too)
     () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
   // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
   // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
@@ -329,6 +330,19 @@ function walkChecks() {
       && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
       && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
       'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees none of them');
+  }
+  { // echoes: every ending that is not a fall is remembered by someone on a later wake, and nothing else reads or sets the flag
+    const E = ABY.ECHOES, good = ABY.ENDING_IDS.filter(id => !ABY.isFall(id)), dayOf = id => +/^d(\d)_wake$/.exec(id)[1];
+    const bad = E.filter(e => !ABY.SPEAKERS[e.who] || !/_wake$/.test(e.at) || !N[e.at] || !e.text || e.req.flag !== 'echo_' + e.id.slice(7) || !good.includes(e.id.slice(7))).map(e => e.id);
+    const found = ABY.ENDING_IDS.reduce((m, id) => (m[id] = 1, m), {}), vet = ABY.newState(0, ABY.START, found), cp = ABY.wake(Object.assign(ABY.newState(0), { node: 'd3_wake' }), 3, 0, found);
+    const heard = at => ABY.overnightFor(Object.assign({}, vet, { node: at })).filter(x => /^n_echo_/.test(x.id)).length;
+    const rookie = ABY.overnightFor(Object.assign(ABY.newState(0), { node: 'd2_wake' })).filter(x => /^n_echo_/.test(x.id)).length;
+    const only = ABY.overnightFor(Object.assign(ABY.newState(0, ABY.START, { dawn: 1, crown: 1 }), { node: 'd2_wake' })).map(x => x.id).filter(x => /^n_echo_/.test(x));
+    const kept = ABY.cleanState(JSON.parse(JSON.stringify(Object.assign({}, vet, { flags: Object.assign({}, vet.flags, { echo_crown: 1, echo_fake: 1 }) }))));
+    rec('echoes', bad.length === 0 && E.length === good.length && good.every(id => E.some(e => e.id === 'n_echo_' + id)) && ABY.echoesOf(found).join() === good.join() && !ABY.echoesOf({ crown: 1 }).length
+      && good.every(id => vet.flags['echo_' + id] === 1) && !ABY.ENDING_IDS.some(id => ABY.isFall(id) && vet.flags['echo_' + id]) && rookie === 0 && only.join() === 'n_echo_dawn' && cp.flags.echo_dawn === 1
+      && ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].every(at => heard(at) >= 2 && heard(at) <= 4) && good.every(id => kept.flags['echo_' + id] === 1) && !kept.flags.echo_crown && !kept.flags.echo_fake,
+      E.length + ' echoes, one per ending that is not a fall, spread over six wakes (' + ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].map(heard).join('/') + '); a new player hears none; a save and a wake keep them');
   }
   { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
     const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));

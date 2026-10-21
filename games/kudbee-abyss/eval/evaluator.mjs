@@ -477,7 +477,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await ctx.close();
   const pre = `try { localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { loop: 1, drowned: 1, hollow: 1, dawn: 1 } })); } catch (e) {}`;
   const c2 = await open(phoneCtx({ w: 844, h: 390 }), 'scars-new', { pre }); await wake(c2.pg); await openMessages(c2.pg); await c2.pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
-  const j = await c2.pg.evaluate(() => ({ flags: Object.keys(ABY.game.state.flags).sort().join(), notes: ABY.game.state.notes.length, glass: document.getElementById('screen').getAttribute('data-scars'), banner: document.getElementById('banner').textContent, cracks: getComputedStyle(document.querySelector('#cracks .c2')).display }));
+  const j = await c2.pg.evaluate(() => ({ flags: Object.keys(ABY.game.state.flags).filter(k => !/^echo_/.test(k)).sort().join(), notes: ABY.game.state.notes.length, glass: document.getElementById('screen').getAttribute('data-scars'), banner: document.getElementById('banner').textContent, cracks: getComputedStyle(document.querySelector('#cracks .c2')).display }));
   await c2.pg.screenshot({ path: join(OUT, 'scars-new-journey.png') });
   rec('scars-carry-into-new-journeys', j.flags === 'scar_drowned,scar_hollow,scar_loop' && j.notes === 3 && j.glass === '2' && j.cracks !== 'none' && /3 notes/.test(j.banner),
     'three falls in the Gallery: the new journey starts with ' + j.flags + ', ' + j.notes + ' notes ("' + j.banner.trim().slice(0, 60) + '"), and the glass at crack level ' + j.glass);
@@ -563,6 +563,8 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await at(pg, 'd2_wake', { mem: 3, open: 'op_bath' }); const bath = await pg.evaluate(() => document.getElementById('thread').textContent);
   await at(pg, 'd2_wake', { mem: 3 }); const first = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && !/You came/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey does not');
+  await at(pg, 'd2_wake', { mem: 3, flags: { echo_dawn: 1, echo_song: 1 } }); const echoed = await pg.evaluate(() => document.getElementById('thread').textContent);
+  rec('echoes-remembered', /You opened the gate once/.test(echoed) && /you sang it back to me/.test(echoed) && !/You opened the gate once|you sang it back/.test(first), 'someone who found The Gate Opens and The Song Remembered hears the Queen and the Eye remember them on Day Two; a player who found neither hears nothing');
   await ctx.close();
 }
 { // the Clock: from a day's scene she can turn the clock back (a flashback) or wind it forward (a flash-forward). The glass tints, the clock reads another hour,
