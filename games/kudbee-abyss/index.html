@@ -151,6 +151,7 @@
   .tile.f::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 38%, var(--g1), transparent 62%), radial-gradient(circle at 50% 38%, transparent 24%, var(--g2) 25%, var(--g2) 29%, transparent 30%); opacity:0.95; } .tile.f { background:linear-gradient(180deg,#120a2c,#0a0620); }
   .ringsL { display:flex; flex-direction:column; gap:12px; margin-top:16px; } .rl { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.06); } .rl b { font:700 15px/1 var(--fd); } .rl small { display:block; margin-top:3px; font-size:12.5px; color:#9fb0cc; line-height:1.35; } .rl .v { margin-left:auto; font:700 20px/1 var(--fd); }
   .big-r { display:block; width:min(220px,60%); margin:6px auto 0; } .big-r circle { fill:none; stroke-linecap:round; transform:rotate(-90deg); transform-origin:50% 50%; transition:stroke-dasharray 1s var(--ease); } .big-r .bg { stroke:rgba(255,255,255,0.09); }
+  .row:disabled { opacity:.4; }
   .row { display:flex; align-items:center; gap:12px; padding:13px 14px; min-height:52px; border-radius:16px; background:rgba(255,255,255,0.06); margin-bottom:10px; width:100%; text-align:left; } .row b { font:600 15px/1.2 var(--fd); } .row small { display:block; font-size:12px; color:#8fa0c0; margin-top:2px; font-weight:400; }
   .tog { margin-left:auto; flex:none; width:50px; height:30px; border-radius:15px; background:rgba(255,255,255,0.18); position:relative; transition:background .25s; } .tog::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:transform .25s var(--ease); } .tog.on { background:#34c759; } .tog.on::after { transform:translateX(20px); }
   .danger b { color:#ff7a7a; } .hint2 { font-size:12px; color:#7d89a6; text-align:center; margin:18px 0 0; line-height:1.5; }
@@ -357,7 +358,8 @@
       <div class="pad">
         <button class="row" id="setSnd" type="button" aria-pressed="false"><b>Sound</b><span class="tog" id="togSnd"></span></button>
         <button class="row" id="setCalm" type="button" aria-pressed="false"><b>Calm flashes<small>No strobing, white flashes or shaking</small></b><span class="tog" id="togCalm"></span></button>
-        <button class="row" id="setHap" type="button" aria-pressed="true"><b>Vibration<small>A tick when a message arrives</small></b><span class="tog on" id="togHap"></span></button>
+        <button class="row" id="setHap" type="button" aria-pressed="true"><b>Vibration<small>A heartbeat as the dread rises, calls that shake the phone, scares</small></b><span class="tog on" id="togHap"></span></button>
+        <button class="row" id="setHapLv" type="button"><b>Vibration strength<small id="hapLvS">Normal</small></b></button>
         <button class="row danger" id="setNew" type="button"><b>Begin a new journey<small id="setNewS">Starts the chat over (your Gallery is kept)</small></b></button>
         <button class="row danger" id="setRes" type="button"><b>Erase the Gallery<small id="setResS">Forgets every ending you found</small></b></button>
         <p class="hint2">Kudbee Abyss &middot; art by Desiree Design</p>

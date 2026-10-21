@@ -144,7 +144,16 @@ ABY.Audio = (function () {
       case 'crown': A.tone(110, 3.2, 'sawtooth', 0.1, 55); A.tone(116, 3.2, 'sawtooth', 0.08, 58); A.tone(55, 3.5, 'sine', 0.14, 36); break;
     }
   };
-  A.buzz = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+  // vibration (Android; iPhone Safari has no navigator.vibrate): a number, or a [on, off, on, ...] pattern in ms, scaled by the player's strength.
+  // Off when the player turned it off: the flute rites call this directly, so the switch lives here and not only in game.js.
+  A.hapOn = true; A.hap = 1;
+  // iPhone Safari (17.4+) ticks when a switch control is toggled by a tap: a hidden one, clicked inside the tap, gives a light tick (a buzz fired later, by a timer, does nothing there)
+  var tickEl = null, IOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent || '');
+  function iosTick() {
+    try { if (!tickEl) { tickEl = document.createElement('label'); tickEl.setAttribute('aria-hidden', 'true'); tickEl.style.cssText = 'position:fixed;left:-99px;top:-99px;width:1px;height:1px;opacity:0;pointer-events:none'; var i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1; tickEl.appendChild(i); document.body.appendChild(tickEl); } tickEl.click(); } catch (e) {}
+  }
+  A.buzz = function (p) { if (!A.hapOn) return; if (IOS && !navigator.vibrate) return iosTick(); try { if (!navigator.vibrate) return; var k = A.hap; navigator.vibrate(Array.isArray(p) ? p.map(function (v, i) { return i % 2 ? v : Math.round(v * k); }) : Math.round(p * k)); } catch (e) {} };
+  A.buzzStop = function () { try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {} };
   A.scale = SCALE;
   return A;
 })();

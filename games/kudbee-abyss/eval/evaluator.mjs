@@ -826,6 +826,33 @@ await block('settings', async () => { const c = await open({}, 'settings'); awai
   await c.pg.click('#setRes'); const armed = await c.pg.evaluate(() => /Tap again/.test(document.getElementById('setResS').textContent)); await c.pg.click('#setRes');
   rec('settings-two-taps', armed, 'a danger button asks for a second tap'); await c.ctx.close(); });
 
+// Vibration: patterns that follow the story, scaled by the strength setting, silent when it is off (the flute rites included)
+await block('vibration', async () => { const c = await open({}, 'vibration', { pre: 'window.__vib = []; navigator.vibrate = function (p) { window.__vib.push(p); return true; };' });
+  const vib = () => c.pg.evaluate(() => window.__vib.slice()), clear = () => c.pg.evaluate(() => { window.__vib.length = 0; });
+  await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); await c.pg.click('[data-app=settings]'); await sleep(400);
+  const lv0 = await c.pg.textContent('#hapLvS');
+  await clear(); await c.pg.evaluate(() => ABY.Audio.buzz([100, 50, 100])); const normal = (await vib()).pop();
+  await c.pg.click('#setHapLv'); await clear(); await c.pg.evaluate(() => ABY.Audio.buzz([100, 50, 100])); const strong = (await vib()).pop(); const lv1 = await c.pg.textContent('#hapLvS');
+  await c.pg.click('#setHapLv'); await clear(); await c.pg.evaluate(() => ABY.Audio.buzz([100, 50, 100])); const light = (await vib()).pop();
+  await c.pg.reload({ waitUntil: 'load' }); await c.pg.waitForFunction(() => document.getElementById('pre').classList.contains('done')); const kept = await c.pg.evaluate(() => ABY.game.hapLv);
+  await c.pg.evaluate(() => { ABY.game.hapLv = 1; });
+  rec('vibration-strength', lv0 === 'Normal' && lv1 === 'Strong' && JSON.stringify(normal) === '[100,50,100]' && JSON.stringify(strong) === '[160,50,160]' && JSON.stringify(light) === '[60,50,60]' && kept === 0, 'Normal ' + JSON.stringify(normal) + ', Strong ' + JSON.stringify(strong) + ', Light ' + JSON.stringify(light) + '; only the buzzes scale, never the gaps; Light survives a reload');
+  await openMessages(c.pg); await clear(); await at(c.pg, 'd5_ring', { dread: 0 }); const ring = (await vib()).filter(Array.isArray);
+  await clear(); await at(c.pg, 'd2_wake', { dread: 4 }); const beat = (await vib()).filter(p => Array.isArray(p) && p.length === 3);
+  await clear(); await at(c.pg, 'end_drowned', {}); await sleep(300); const fall = (await vib()).filter(p => Array.isArray(p) && p.length === 7);
+  rec('vibration-follows-the-story', ring.length > 0 && beat.length > 0 && fall.length > 0, 'a ringing call shakes in a pattern (' + ring.length + '), a message lands as a heartbeat at high dread (' + beat.length + '), a fall ends in a slow fade (' + fall.length + ')');
+  await c.pg.evaluate(() => document.getElementById('setHap').click()); await clear();
+  await c.pg.evaluate(() => { ABY.Audio.buzz([14, 30, 14]); ABY.Audio.buzz(24); }); await at(c.pg, 'd5_ring', { dread: 4 }); const quiet = (await vib()).filter(p => p !== 0);     // (0 only cancels a buzz already running)
+  rec('vibration-off-is-silent', quiet.length === 0, 'with Vibration off nothing fires, not from the story and not from the flute rites (' + quiet.length + ' calls)');
+  await c.ctx.close(); });
+
+// Vibration on an iPhone (no navigator.vibrate): a hidden switch control is clicked inside the tap, which ticks on iOS 17.4+; and nothing when Vibration is off
+await block('vibration-iphone', async () => { const c = await open({ ctx: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' } }, 'vibration-ios', { pre: 'Object.defineProperty(navigator, "vibrate", { value: undefined, configurable: true });' });
+  await c.pg.evaluate(() => { window.__flips = 0; document.addEventListener('change', e => { if (e.target && e.target.hasAttribute && e.target.hasAttribute('switch')) window.__flips++; }, true); });
+  await c.pg.evaluate(() => { ABY.game.haptics = true; ABY.Audio.hapOn = true; ABY.Audio.buzz(10); ABY.Audio.buzz([30, 60, 30]); }); const on = await c.pg.evaluate(() => ({ flips: window.__flips, sw: document.querySelectorAll('label input[switch]').length }));
+  await c.pg.evaluate(() => { ABY.Audio.hapOn = false; ABY.Audio.buzz(10); }); const off = await c.pg.evaluate(() => window.__flips);
+  rec('vibration-iphone-tick', on.flips === 2 && on.sw === 1 && off === 2, 'without navigator.vibrate a hidden switch is toggled once per buzz (' + on.flips + ' flips, ' + on.sw + ' switch in the page), and not at all when Vibration is off'); await c.ctx.close(); });
+
 // Calm flashes: a scare never strobes, flickers, shakes or goes white; on by default for reduced motion, and a switch in Settings that persists
 await block('calm', async () => { const c = await open({}, 'calm'); const pg = c.pg; await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 8000 });
   const look = () => pg.evaluate(() => { const sc = document.getElementById('screen'), a = getComputedStyle(sc, '::after'); return { calm: document.documentElement.classList.contains('calm'), shake: getComputedStyle(sc).animationName, after: a.animationName, bg: a.backgroundColor, sheet: getComputedStyle(document.getElementById('sheet')).animationName }; });

@@ -60,7 +60,7 @@ ABY.Song = (function () {
   function press(l) {
     flash[l] = 1; hint = 0; var n = null;
     for (var i = 0; i < Sg.notes.length; i++) { var o = Sg.notes[i]; if (o.s === 0 && o.lane === l && Math.abs(o.t - Sg.t) <= Sg.G) { n = o; break; } if (o.t - Sg.t > Sg.G) break; }
-    if (!n) { if (ABY.Audio) ABY.Audio.sfx('miss'); return; }
+    if (!n) { if (ABY.Audio) { ABY.Audio.sfx('miss'); ABY.Audio.buzz([14, 30, 14]); } return; }
     var err = Math.abs(n.t - Sg.t); n.s = err <= Sg.P ? 1 : 2; n.hitAt = Sg.t; n.hx = lanes[l].x;
     Sg.stats[n.s === 1 ? 'perfect' : 'good']++; Sg.stats.streak++; Sg.stats.best = Math.max(Sg.stats.best, Sg.stats.streak);
     if (ABY.Audio) { ABY.Audio.flute(ABY.Audio.scale[n.idx], 1.3, n.s === 1 ? 0.2 : 0.15, 0, true); ABY.Audio.buzz(8); }
@@ -68,7 +68,7 @@ ABY.Song = (function () {
     var m = n.pair;     // a chord: both halves struck together is a SLAM (a thud, a ring of light, a bonus the page can show)
     if (m && (m.s === 1 || m.s === 2) && Math.abs(m.hitAt - n.hitAt) <= 0.12 && !n.slammed) {
       n.slammed = m.slammed = true; Sg.stats.slam++; slamT = 1; slamAt = (lanes[n.lane].x + lanes[m.lane].x) / 2; shake = Math.max(shake, 0.6);
-      if (ABY.Audio) { ABY.Audio.sfx('thud'); ABY.Audio.buzz(24); } if (ABY.Scene) ABY.Scene.burst(slamAt, Sg.hitY, 0xffffff, 40, 5);
+      if (ABY.Audio) { ABY.Audio.sfx('thud'); ABY.Audio.buzz([30, 20, 50]); } if (ABY.Scene) ABY.Scene.burst(slamAt, Sg.hitY, 0xffffff, 40, 5);
     }
   }
   Sg.laneX = function (l) { return lanes[l].x; };               // (the evaluator taps where a lane is)
@@ -116,7 +116,7 @@ ABY.Song = (function () {
     for (i = 0; i < Sg.notes.length; i++) {
       var n = Sg.notes[i];
       if (Sg.bot && n.s === 0 && Sg.t >= n.t) press(n.lane);                           // test bot: a perfect player
-      if (n.s === 0 && Sg.t > n.t + Sg.G) { n.s = 3; Sg.stats.miss++; Sg.stats.streak = 0; shake = 1; if (ABY.Audio) { ABY.Audio.sfx('miss'); } if (tint) { redT = Math.max(redT, 0.5); if (Sg.stats.miss % 3 === 0) haunt('crack'); } }
+      if (n.s === 0 && Sg.t > n.t + Sg.G) { n.s = 3; Sg.stats.miss++; Sg.stats.streak = 0; shake = 1; if (ABY.Audio) { ABY.Audio.sfx('miss'); ABY.Audio.buzz([14, 30, 14]); } if (tint) { redT = Math.max(redT, 0.5); if (Sg.stats.miss % 3 === 0) haunt('crack'); } }
     }
     if (Sg.t > finishAt && !Sg.ending) {
       Sg.ending = true; Sg.stats.acc = Sg.score(); var won = Sg.stats.acc >= Sg.WIN, d = cb; Sg.stop(); if (d) d(won, Sg.stats);
