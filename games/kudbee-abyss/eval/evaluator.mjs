@@ -565,6 +565,12 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && !/You came/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey does not');
   await at(pg, 'd2_wake', { mem: 3, flags: { echo_dawn: 1, echo_song: 1 } }); const echoed = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('echoes-remembered', /You opened the gate once/.test(echoed) && /you sang it back to me/.test(echoed) && !/You opened the gate once|you sang it back/.test(first), 'someone who found The Gate Opens and The Song Remembered hears the Queen and the Eye remember them on Day Two; a player who found neither hears nothing');
+  await at(pg, 'd4_shore', { mem: 3, flags: { vey_known: 1, vey_trusted: 1, refused_next: 1 } }); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(300);
+  const bonds = await pg.evaluate(() => [...document.querySelectorAll('#ringsL .bond')].map(r => r.textContent)); await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300);
+  await at(pg, 'd6_door', { mem: 3, flags: { marked: 1, asked_eye: 1, named_eye: 1 } }); const kind = await chips(pg);
+  await at(pg, 'd6_door', { mem: 3, flags: { marked: 1 } }); const few = await chips(pg);
+  rec('bonds-show-and-open-choices', bonds.length === 2 && /Vey.*Warm toward you.*\+2/.test(bonds.join(' ')) && /Eye.*Cold toward you.*-1/.test(bonds.join(' ')) && kind.some(c => /Ask the Eye to look at her/.test(c)) && !few.some(c => /Ask the Eye to look at her/.test(c)),
+    'Pulse lists only the people she has touched (Vey warm +2, the Eye cold -1); a devoted Eye can be asked to look at Sorrel, a stranger cannot');
   await ctx.close();
 }
 { // the Clock: from a day's scene she can turn the clock back (a flashback) or wind it forward (a flash-forward). The glass tints, the clock reads another hour,

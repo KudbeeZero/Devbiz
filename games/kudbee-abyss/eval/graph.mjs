@@ -36,6 +36,7 @@ function walkChecks() {
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
     ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
+  READ.push(...ABY.BOND_FLAGS);   // a bond is counted from these, so the walk keeps states with different bonds apart
   // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
   const READBIT = new Map([...new Set(READ)].map((f, i) => [f, i])), READWORDS = Math.ceil(READBIT.size / 31);
   const readKey = (flags) => { const w = new Array(READWORDS).fill(0); for (const f in flags) { if (!flags[f]) continue; const i = READBIT.get(f); if (i !== undefined) w[(i / 31) | 0] |= 1 << (i % 31); } return w.join('.'); };
@@ -97,7 +98,7 @@ function walkChecks() {
   const toward = (target) => { const d = new Map([[target, 0]]), q = [target]; for (let i = 0; i < q.length; i++) for (const p of from[q[i]] || []) if (!d.has(p)) { d.set(p, d.get(q[i]) + 1); q.push(p); } return id => d.has(id) ? d.get(id) : Infinity; };
   const unmet = () => { const out = [];
     for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
-    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
+    for (const id of ids) for (const c of N[id].choices || []) if (c.req && (need(c.req).length || c.req.bond) && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
     return out; };
   for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < (process.env.GRAPH_QUICK ? 0 : 4); round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? standing(t.id, t.req) : reach.has(t.id); if (ok()) continue;
@@ -106,13 +107,13 @@ function walkChecks() {
     const near = (fl) => { const hit = [], day = DAY(N[t.id].ch);   // the closest scenes to the target first (steps in the story graph), then nearest day, earliest in it
       for (const [id, m] of [...byNode].filter(([id]) => !N[id].ending && DAY(N[id].ch) <= day).sort((p, q) => far(p[0]) - far(q[0]))) {
         if (hit.length >= 4000 && far(id) > far(hit[hit.length - 1].node)) break;   // (4000 closer seeds are enough)
-        for (const x of m.values()) if (fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f])) hit.push(x); }
+        for (const x of m.values()) if (fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && (!t.req || !t.req.bond || ABY.okReq(x, { bond: t.req.bond }))) hit.push(x); }
       return hit.sort((p, q) => far(p.node) - far(q.node) || DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000); };
     let seeds = near(t.flags); if (!seeds.length && t.own) seeds = near(t.own); if (!seeds.length) seeds = near(into(t.id));   // (a gated choice: start from whoever holds the flags ITS rule asks for; the other ways into the scene are only one way in)       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
     const keep = [...new Set([...t.flags, ...blocked])];   // (a flag that shuts the way in must be kept apart too)
-    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), s.flags.song || '', s.tries, s.back].join('|');
+    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), ABY.BOND_IDS.map(w => Math.max(-1, Math.min(3, ABY.bond(s, w)))).join(''), s.flags.song || '', s.tries, s.back].join('|');
     let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
   rec('story-all-nodes-reachable', ids.every(id => reach.has(id) || N[id].thread), ids.filter(id => !reach.has(id) && !N[id].thread).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
@@ -270,7 +271,7 @@ function walkChecks() {
   }
   { // overnight messages: while she sleeps the people she has met write to her. Each is a real voice on a real day, for a flag a choice sets on an
     // EARLIER day (so it is always remembered, never invented), shown only to whoever holds the flag; some file a clue, and a carried day files it too
-    const O = ABY.OVERNIGHT, setAt = f => ids.filter(id => (N[id].choices || []).some(c => c.set === f)), day = id => N[id].ch;
+    const O = ABY.OVERNIGHT.filter(o => !o.req.bond), setAt = f => ids.filter(id => (N[id].choices || []).some(c => c.set === f)), day = id => N[id].ch;
     const bad = O.filter(o => !ABY.SPEAKERS[o.who] || !N[o.at] || !/_wake$/.test(o.at) || !o.text || !o.req || (!o.req.flag && !ABY.OPENINGS.includes(o.req.open)) || (o.note && !ABY.NOTES[o.note])
       || (o.req.flag && (!setAt(o.req.flag).length || !setAt(o.req.flag).some(id => reach.has(id) && day(id) < day(o.at))))).map(o => o.id);
     const days = [...new Set(O.map(o => o.at))].sort(), who = new Set(O.map(o => o.who));
@@ -344,10 +345,26 @@ function walkChecks() {
       && ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].every(at => heard(at) >= 2 && heard(at) <= 4) && good.every(id => kept.flags['echo_' + id] === 1) && !kept.flags.echo_crown && !kept.flags.echo_fake,
       E.length + ' echoes, one per ending that is not a fall, spread over six wakes (' + ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].map(heard).join('/') + '); a new player hears none; a save and a wake keep them');
   }
+  { // the trust ledger: how she treated each of the five is counted from flags her choices already set (no new state), and it is spent on Day Seven
+    // (a warm or cold message, a person to stand with her). Every flag it counts must be set by a choice, and every bond rule must be one a player can meet
+    const setAt = f => ids.filter(id => (N[id].choices || []).some(c => c.set === f)), bonded = ABY.OVERNIGHT.filter(o => o.req.bond);
+    const choices = ids.flatMap(id => (N[id].choices || []).filter(c => c.req && c.req.bond).map(c => ({ id, c })));
+    const rules = bonded.map(o => ({ at: o.at, ...o.req.bond })).concat(choices.map(x => ({ at: x.id, ...x.c.req.bond })));
+    const before = f => setAt(f).some(id => reach.has(id) && N[id].ch < 12), ok = ABY.BOND_IDS.every(w => ABY.BONDS[w].up.every(before) && ABY.BONDS[w].down.every(before));
+    const meet = r => r.min === undefined || ABY.BONDS[r.who].up.length >= r.min, cool = r => r.max === undefined || ABY.BONDS[r.who].down.length > -r.max - 1;
+    const top = Object.fromEntries(ABY.BOND_IDS.map(w => [w, [...seen.values()].reduce((m, st) => Math.max(m, ABY.bond(st, w)), -9)]));
+    const sample = ABY.newState(0), warm = Object.assign({}, sample, { flags: Object.fromEntries(ABY.BONDS.VEY.up.map(f => [f, 1])) }), cold = Object.assign({}, sample, { flags: { refused_vey: 1 } }), mixed = Object.assign({}, sample, { flags: { vey_known: 1, refused_vey: 1 } });
+    const hear = (s, at) => ABY.overnightFor(Object.assign({}, s, { node: at })).map(x => x.id).join();
+    rec('trust-ledger', ok && rules.length >= 8 && rules.every(r => ABY.BOND_IDS.includes(r.who) && meet(r) && cool(r)) && choices.length >= 4
+      && ABY.bond(warm, 'VEY') === 4 && ABY.bond(cold, 'VEY') === -1 && ABY.bond(mixed, 'VEY') === 0 && ABY.bond(null, 'VEY') === 0 && ABY.bond(sample, 'NOBODY') === 0
+      && hear(warm, 'd7_wake').includes('b_vey_warm') && !hear(warm, 'd7_wake').includes('b_vey_cold') && hear(cold, 'd7_wake').includes('b_vey_cold') && !hear(mixed, 'd7_wake').includes('b_vey')
+      && !ABY.options(Object.assign({}, sample, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond) && ABY.options(Object.assign({}, warm, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond && o.c.req.bond.who === 'VEY'),
+      'best reached ' + JSON.stringify(top) + '; ' + ABY.BOND_IDS.length + ' bonds counted from ' + ABY.BOND_FLAGS.length + ' flags a choice already sets; ' + bonded.length + ' Day Seven messages and ' + choices.length + ' people who stand with her, all for a bond a player can reach; a stranger is offered none');
+  }
   { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
     const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));
     const set = [...new Set(ids.flatMap(id => (N[id].choices || []).filter(c => c.set).map(c => c.set)))];
-    const read = new Set(ids.flatMap(id => (N[id].choices || []).flatMap(c => c.req ? [c.req.flag, c.req.noflag, ...(c.req.all || [])] : [])).filter(Boolean).concat(ABY.OVERNIGHT.map(o => o.req.flag)));
+    const read = new Set(ids.flatMap(id => (N[id].choices || []).flatMap(c => c.req ? [c.req.flag, c.req.noflag, ...(c.req.all || [])] : [])).filter(Boolean).concat(ABY.OVERNIGHT.map(o => o.req.flag), ABY.BOND_FLAGS));
     const unread = set.filter(f => !read.has(f) && !new RegExp('\\b' + f + '\\b').test(tail));
     rec('every-flag-is-read', unread.length === 0, unread.join(', ') || set.length + ' flags set by choices, every one read by a gated choice, an ending rule, a badge or an overnight message');
   }
@@ -413,7 +430,7 @@ function walkChecks() {
 // The walk is the slow part and depends only on the story and on this file, so its result is kept: an unchanged story re-checks instantly
 // (GRAPH_FRESH=1 forces a real walk). GRAPH_QUICK=1 walks a small slice and skips the checks that need the whole walk, for a fast look while editing.
 const here = dirname(fileURLToPath(import.meta.url));
-const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'badges-and-factions']);
+const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
 export function graphChecks() {
   if (process.env.GRAPH_QUICK) { process.env.WALK_LIMIT = process.env.WALK_LIMIT || '60000'; return walkChecks().map(r => NEEDS_FULL_WALK.has(r.id) && !r.pass ? { ...r, pass: true, note: 'SKIPPED in quick mode (needs the full walk) | ' + r.note } : r); }
   const sum = createHash('sha256').update(readFileSync(resolve(here, '..', 'src', 'story.js'))).update(readFileSync(fileURLToPath(import.meta.url))).update(String(process.env.WALK_LIMIT || '')).digest('hex');

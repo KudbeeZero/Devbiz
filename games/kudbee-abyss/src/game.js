@@ -349,6 +349,9 @@
       var d = document.createElement('div'); d.className = 'rl'; var l = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small'), val = document.createElement('span');
       b.textContent = r[0]; b.style.color = r[1]; sm.textContent = r[2]; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = r[1]; val.textContent = v[i] + '/' + (i === 3 ? ABY.MAX_DREAD : 5); d.appendChild(l); d.appendChild(val); box.appendChild(d);
     });
+    if (active()) ABY.BOND_IDS.forEach(function (w) {   // how she has treated each of the five (only those she has touched, so nothing is spoiled)
+      var n = ABY.bond(s, w); if (!n) return; var nm = ABY.BONDS[w].name, col = n > 0 ? '#c9b8ff' : '#ff8a9a', d = document.createElement('div'); d.className = 'rl bond'; var l = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small'), val = document.createElement('span');
+      b.textContent = nm.charAt(0).toUpperCase() + nm.slice(1); b.style.color = col; sm.textContent = n >= 3 ? 'Devoted to you' : n === 2 ? 'Warm toward you' : n === 1 ? 'Kind to you' : 'Cold toward you'; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = col; val.textContent = (n > 0 ? '+' : '') + n; d.appendChild(l); d.appendChild(val); box.appendChild(d); });
     $('pSub').textContent = (active() ? 'Choices made ' + s.choices + ' · ' : '') + 'Endings found ' + foundN() + '/' + ABY.ENDING_IDS.length + (G.songBest ? ' · Song best ' + G.songBest + '%' : '');
   }
   // Notes is also the evidence board: tap two clues to pin them together. The right pair files a deduction that opens a hidden choice later on;

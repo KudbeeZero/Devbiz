@@ -223,6 +223,13 @@ ABY.OVERNIGHT = [
   { id: 'n_door_lost', at: 'd7_wake', req: { open: 'op_lost' }, who: 'EYE', text: 'i was behind the lost-property office too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_voicemail', at: 'd7_wake', req: { open: 'op_voicemail' }, who: 'EYE', text: 'i was behind the voicemail too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_snow', at: 'd7_wake', req: { open: 'op_snow' }, who: 'EYE', text: 'i was behind the snow too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
+  { id: 'b_queen_warm', at: 'd7_wake', req: { bond: { who: 'QUEEN', min: 2 } }, who: 'QUEEN', text: 'Every night you did something small and kind, and I kept them all. A whole drawer. Tonight I will not hide anything from you. Not even the first page.' },
+  { id: 'b_vey_warm', at: 'd7_wake', req: { bond: { who: 'VEY', min: 3 } }, who: 'VEY', text: 'I have decided something. When it is time, I am going to be brave, and I am going to be small and brave at your ankle. Just so you know where I will be.' },
+  { id: 'b_vey_cold', at: 'd7_wake', req: { bond: { who: 'VEY', max: -1 } }, who: 'VEY', text: 'I will still be there tonight. At your ankle, as always. You will not have to look at me. You never did.' },
+  { id: 'b_guardian_warm', at: 'd7_wake', req: { bond: { who: 'GUARDIAN', min: 2 } }, who: 'GUARDIAN', text: 'I have stood at that door for longer than I can count. Tonight I will stand at it for you, and I will not look away, whatever comes to it.' },
+  { id: 'b_wren_warm', at: 'd7_wake', req: { bond: { who: 'WREN', min: 2 } }, who: 'WREN', text: 'I am not scared, or I am, but I am coming anyway. You stayed on the line. That is the whole rule, right? You stay.' },
+  { id: 'b_eye_warm', at: 'd7_wake', req: { bond: { who: 'EYE', min: 2 } }, who: 'EYE', text: 'you looked, and you asked, and you kept your word. i have had one night of being seen. tonight i would like to ask for a second.' },
+  { id: 'b_eye_cold', at: 'd7_wake', req: { bond: { who: 'EYE', max: -1 } }, who: 'EYE', text: 'you looked away and you looked away and you looked away. i counted. it is all right. it is what i expected. i would have liked it to be different.' },
 ];
 // ECHOES: the people here remember the endings a player has found (not only the falls, which leave scars): every non-fall ending in the Gallery
 // sets a flag `echo_<id>` at the start of a journey, and its owner says so on a later day's wake. No choice sets these and none reads them, so they
@@ -250,6 +257,21 @@ ABY.ECHOES = [
 ABY.echoesOf = function (found) {
   const has = Array.isArray(found) ? (id => found.indexOf(id) >= 0) : (id => !!(found && found[id]));
   return ABY.ENDING_IDS.filter(id => !ABY.isFall(id) && has(id));
+};
+// the trust ledger: how she has treated each of the five who speak to her, counted from the flags her choices already set (no new state, so a save
+// and the graph walk need nothing extra). A flag in `up` warms the bond, one in `down` cools it; a choice or a message can ask for a warm or cold one.
+ABY.BONDS = {
+  QUEEN: { name: 'the Queen', up: ['heard', 'carried', 'little_crown', 'crown_laid'], down: ['blamed_queen', 'sealed'] },
+  VEY: { name: 'Vey', up: ['vey_known', 'vey_held', 'vey_trusted', 'vey3_hand'], down: ['refused_vey', 'vey_doubt'] },
+  GUARDIAN: { name: 'the Guardian', up: ['freed_name', 'corvin_lamp', 'corvin_door'], down: ['skipped_doors'] },
+  WREN: { name: 'Wren', up: ['stayed_line', 'told_truth', 'riff_done'], down: ['warned'] },
+  EYE: { name: 'the Eye', up: ['marked', 'asked_eye', 'ally', 'promised_sorrel'], down: ['refused_next', 'door_shut'] },
+};
+ABY.BOND_IDS = Object.keys(ABY.BONDS);
+ABY.BOND_FLAGS = [].concat(...ABY.BOND_IDS.map(w => ABY.BONDS[w].up.concat(ABY.BONDS[w].down)));
+ABY.bond = function (s, who) {
+  const b = ABY.BONDS[who], f = (s && s.flags) || {};
+  return b ? b.up.filter(k => f[k]).length - b.down.filter(k => f[k]).length : 0;
 };
 ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
@@ -1274,6 +1296,7 @@ ABY.NODES = {
     choices: [
       { label: 'Take out the little crown', next: 'd4_crown', req: { flag: 'little_crown', noflag: 'crown_laid' } },
       { label: 'Ring the drowned bells', next: 'd4_bells', req: { noflag: 'bells_done' } },
+      { label: 'Ask the Guardian to carry the phone across the water, so you can ring them', next: 'd4_bells', add: { resolve: 1, dread: -1 }, req: { noflag: 'bells_done', bond: { who: 'GUARDIAN', min: 2 } } },
       { label: 'Say every name, then yours, and close the book', next: 'end_names', req: { all: ['rite_choir', 'read_names'], min: { mem: 7 }, maxDread: 4 } },
       { label: 'Write the next name, like she always did', next: 'end_caller' },
       { label: 'Throw the phone into the water', next: 'end_drowned' },
@@ -1444,6 +1467,7 @@ ABY.NODES = {
       { label: 'Play her the riff, loud, to wake the street', next: 'd5_riff', req: { noflag: 'riff_done' } },
       { label: 'Have her call the first number in the book', next: 'end_warned', req: { all: ['rite_wake', 'told_truth'], min: { mem: 8 }, maxDread: 4 } },
       { label: 'Promise to stay on the line, every night', next: 'end_nightline', req: { flag: 'told_truth' } },
+      { label: 'Ask Wren to stay on the line with her too, so she is never alone', next: 'end_nightline', add: { heart: 1 }, req: { bond: { who: 'WREN', min: 2 } } },
       { label: 'Hang up and let the book have her', next: 'end_passed' },
       { label: 'Tell her how the book chooses', next: 'ev_line', req: { flag: 'link_who_is_next', noflag: 'ev_line' } },
     ],
@@ -1601,6 +1625,7 @@ ABY.NODES = {
       { label: 'Sing her the lullaby through the door', next: 'd6_lull', req: { flag: 'lullaby' }, add: { heart: 1, dread: -1 } },
       { label: 'Give her the little crown back', next: 'd6_crown', req: { flag: 'little_crown' }, add: { heart: 1, trust: 1 } },
       { label: 'Tell her you will come back tomorrow', next: 'd6_dawn', add: { trust: 1 }, set: 'promised_sorrel' },
+      { label: 'Ask the Eye to look at her, once, so that someone has seen her', next: 'd6_dawn', add: { heart: 1, dread: -1 }, req: { bond: { who: 'EYE', min: 2 } } },
       { label: 'Shut the door on her', next: 'd6_shut', add: { resolve: 1, dread: 1 } },
       { label: 'Try the little brass key in the low lock', next: 'ev_key', req: { flag: 'link_low_lock' } },
     ],
@@ -1718,6 +1743,10 @@ ABY.NODES = {
       { label: 'Turn the clock back: the very first night', next: 'fb_first', bat: 3, req: { noflag: 'tt_first' } },
       { label: 'Wind the clock forward: the morning after', next: 'ff_morning', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_morning' } },
       { label: 'Let Vey carry the phone for you, just this once', next: 'd7_rite', req: { flag: 'tt_vey' }, add: { trust: 1, dread: -1 } },
+      { label: 'Ask Vey to climb up onto your shoulder, where you can both see', next: 'd7_rite', req: { bond: { who: 'VEY', min: 3 } }, add: { trust: 1, dread: -1 } },
+      { label: 'Ask the Guardian to leave the door and stand beside you', next: 'd7_rite', req: { bond: { who: 'GUARDIAN', min: 2 } }, add: { resolve: 1, dread: -1 } },
+      { label: 'Ask Wren to take the other end of the flute', next: 'd7_rite', req: { bond: { who: 'WREN', min: 2 } }, add: { heart: 1, dread: -1 } },
+      { label: 'Ask the Eye to look at the Queen, just once, and see her', next: 'd7_end', req: { bond: { who: 'EYE', min: 2 } }, add: { heart: 1, trust: 1, dread: -1 } },
       { label: 'Tell the Queen what the clock showed you: a morning. A real one', next: 'd7_end', req: { flag: 'tt_morning' }, add: { trust: 1, heart: 1, dread: -1 } },
       { label: 'Tell the Queen you were in the kitchen on the first night: it was always a map', next: 'd7_end', req: { flag: 'tt_first' }, add: { heart: 1, trust: 1, dread: -1 } },
       { label: 'Lay out your notes. Say who has kept it 3:07 all week', next: 'd7_accuse', req: { noflag: 'board_out' } },
@@ -2520,6 +2549,7 @@ ABY.okReq = function (s, r) {
   if (r.min) for (const k in r.min) if ((s[k] || 0) < r.min[k]) return false;
   if (r.maxDread !== undefined && s.dread > r.maxDread) return false;
   if (r.minDread !== undefined && s.dread < r.minDread) return false;
+  if (r.bond && ((r.bond.min !== undefined && ABY.bond(s, r.bond.who) < r.bond.min) || (r.bond.max !== undefined && ABY.bond(s, r.bond.who) > r.bond.max))) return false;
   if (r.light && !s.light) return false;
   if (r.noLight && s.light) return false;
   return true;
