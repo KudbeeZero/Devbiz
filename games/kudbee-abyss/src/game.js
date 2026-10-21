@@ -355,6 +355,9 @@
     if (active()) ABY.BOND_IDS.forEach(function (w) {   // how she has treated each of the five (only those she has touched, so nothing is spoiled)
       var n = ABY.bond(s, w); if (!n) return; var nm = ABY.BONDS[w].name, col = n > 0 ? '#c9b8ff' : '#ff8a9a', d = document.createElement('div'); d.className = 'rl bond'; var l = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small'), val = document.createElement('span');
       b.textContent = nm.charAt(0).toUpperCase() + nm.slice(1); b.style.color = col; sm.textContent = n >= 3 ? 'Devoted to you' : n === 2 ? 'Warm toward you' : n === 1 ? 'Kind to you' : 'Cold toward you'; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = col; val.textContent = (n > 0 ? '+' : '') + n; d.appendChild(l); d.appendChild(val); box.appendChild(d); });
+    if (active()) ABY.carried(s).forEach(function (o) {   // her pocket: what she picked up and has not spent yet (a cursed one says so)
+      var col = o.cursed ? '#ff4d5e' : '#e8d9a8', d = document.createElement('div'); d.className = 'rl pocket'; var l = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small'), val = document.createElement('span');
+      b.textContent = o.name; b.style.color = col; sm.textContent = o.blurb; l.appendChild(b); l.appendChild(sm); val.className = 'v'; val.style.color = col; val.textContent = o.cursed ? '\u2620' : '\u25C6'; d.appendChild(l); d.appendChild(val); box.appendChild(d); });
     $('pSub').textContent = (active() ? 'Choices made ' + s.choices + ' · ' : '') + 'Endings found ' + foundN() + '/' + ABY.ENDING_IDS.length + (G.songBest ? ' · Song best ' + G.songBest + '%' : '');
   }
   // Notes is also the evidence board: tap two clues to pin them together. The right pair files a deduction that opens a hidden choice later on;

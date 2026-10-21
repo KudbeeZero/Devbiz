@@ -34,6 +34,7 @@ function walkChecks() {
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
+  READ.push(...ABY.OBJECTS.flatMap(o => ['has_' + o.id, 'used_' + o.id]));
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
     ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   READ.push(...ABY.BOND_FLAGS);   // a bond is counted from these, so the walk keeps states with different bonds apart
@@ -331,6 +332,19 @@ function walkChecks() {
       && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
       && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
       'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees none of them');
+  }
+  { // objects: each is picked up once on a scene it loops back to, spent on a later chapter, and its use is remembered the next morning
+    const O = ABY.OBJECTS, rows = O.map(o => {
+      const picks = [], uses = [];
+      for (const id in N) (N[id].choices || []).forEach(c => { if (c.set === 'has_' + o.id) picks.push({ id, c }); if (c.set === 'used_' + o.id) uses.push({ id, c }); });
+      const p = picks[0], u = uses[0], said = ABY.OVERNIGHT.filter(m => m.req && m.req.flag === 'used_' + o.id);
+      const ok = picks.length === 1 && uses.length === 1 && p.c.next === p.id && p.c.req.noflag === 'has_' + o.id && u.c.req.flag === 'has_' + o.id && u.c.req.noflag === 'used_' + o.id
+        && N[u.id].ch > N[p.id].ch && said.length === 1 && /_wake$/.test(said[0].at) && +/^d(\d)/.exec(said[0].at)[1] > +/^d(\d)/.exec(u.id)[1];
+      return { o, ok };
+    });
+    const s0 = ABY.newState(0), got = Object.assign({}, s0, { flags: { has_salt: 1, has_shard: 1, used_shard: 1 } }), clean = ABY.cleanState(JSON.parse(JSON.stringify(got)));
+    rec('objects', O.length === 3 && O.length <= 3 && rows.every(r => r.ok) && ABY.carried(s0).length === 0 && ABY.carried(got).map(o => o.id).join() === 'salt' && clean.flags.has_salt === 1 && clean.flags.used_shard === 1 && !clean.flags.has_fake,
+      O.length + ' objects (' + O.map(o => o.id).join(', ') + '), each picked up once, spent on a later day and remembered the morning after; a save keeps them');
   }
   { // echoes: every ending that is not a fall is remembered by someone on a later wake, and nothing else reads or sets the flag
     const E = ABY.ECHOES, good = ABY.ENDING_IDS.filter(id => !ABY.isFall(id)), dayOf = id => +/^d(\d)_wake$/.exec(id)[1];
