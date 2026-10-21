@@ -98,7 +98,7 @@ function walkChecks() {
   const toward = (target) => { const d = new Map([[target, 0]]), q = [target]; for (let i = 0; i < q.length; i++) for (const p of from[q[i]] || []) if (!d.has(p)) { d.set(p, d.get(q[i]) + 1); q.push(p); } return id => d.has(id) ? d.get(id) : Infinity; };
   const unmet = () => { const out = [];
     for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
-    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
+    for (const id of ids) for (const c of N[id].choices || []) if (c.req && (need(c.req).length || c.req.bond) && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
     return out; };
   for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < (process.env.GRAPH_QUICK ? 0 : 4); round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? standing(t.id, t.req) : reach.has(t.id); if (ok()) continue;
@@ -107,13 +107,13 @@ function walkChecks() {
     const near = (fl) => { const hit = [], day = DAY(N[t.id].ch);   // the closest scenes to the target first (steps in the story graph), then nearest day, earliest in it
       for (const [id, m] of [...byNode].filter(([id]) => !N[id].ending && DAY(N[id].ch) <= day).sort((p, q) => far(p[0]) - far(q[0]))) {
         if (hit.length >= 4000 && far(id) > far(hit[hit.length - 1].node)) break;   // (4000 closer seeds are enough)
-        for (const x of m.values()) if (fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f])) hit.push(x); }
+        for (const x of m.values()) if (fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && (!t.req || !t.req.bond || ABY.okReq(x, { bond: t.req.bond }))) hit.push(x); }
       return hit.sort((p, q) => far(p.node) - far(q.node) || DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000); };
     let seeds = near(t.flags); if (!seeds.length && t.own) seeds = near(t.own); if (!seeds.length) seeds = near(into(t.id));   // (a gated choice: start from whoever holds the flags ITS rule asks for; the other ways into the scene are only one way in)       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
     const keep = [...new Set([...t.flags, ...blocked])];   // (a flag that shuts the way in must be kept apart too)
-    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), s.flags.song || '', s.tries, s.back].join('|');
+    const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), ABY.BOND_IDS.map(w => Math.max(-1, Math.min(3, ABY.bond(s, w)))).join(''), s.flags.song || '', s.tries, s.back].join('|');
     let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
   rec('story-all-nodes-reachable', ids.every(id => reach.has(id) || N[id].thread), ids.filter(id => !reach.has(id) && !N[id].thread).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
