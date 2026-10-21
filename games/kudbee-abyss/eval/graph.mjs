@@ -430,7 +430,7 @@ function walkChecks() {
 // The walk is the slow part and depends only on the story and on this file, so its result is kept: an unchanged story re-checks instantly
 // (GRAPH_FRESH=1 forces a real walk). GRAPH_QUICK=1 walks a small slice and skips the checks that need the whole walk, for a fast look while editing.
 const here = dirname(fileURLToPath(import.meta.url));
-const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'badges-and-factions']);
+const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
 export function graphChecks() {
   if (process.env.GRAPH_QUICK) { process.env.WALK_LIMIT = process.env.WALK_LIMIT || '60000'; return walkChecks().map(r => NEEDS_FULL_WALK.has(r.id) && !r.pass ? { ...r, pass: true, note: 'SKIPPED in quick mode (needs the full walk) | ' + r.note } : r); }
   const sum = createHash('sha256').update(readFileSync(resolve(here, '..', 'src', 'story.js'))).update(readFileSync(fileURLToPath(import.meta.url))).update(String(process.env.WALK_LIMIT || '')).digest('hex');
