@@ -132,6 +132,7 @@ ABY.NOTES = {
   nursery_wall: { title: 'Photo: the nursery wall', text: 'SHE LEFT THE DOOR OPEN FIRST. SO I WATCH. I WATCH EVERY ONE OF THEM. SOMEBODY HAS TO SEE ME. The letters get bigger all the way down.' },
   wren_seven: { title: 'Message: Wren, 3:07', text: 'outside. not letting you do the last one on your own. (Sent from the drive. Delivered. Read.)' },
   ten_doors: { title: 'What starts again', text: '"A lift. A bath. A bus. Ten doors, and every one of them opens onto me. You are always so brave on the seventh night, and then it is 3:07 again."' },
+  confession: { title: 'Who kept it 3:07', text: 'Not the Eye. Not the Guardian. Not Vey. The Queen, on her daughter\'s fourth birthday, with the dark coming up the stairs: she shut the door to keep her, and every name in the book held the phone for her.' },
   seventh: { title: 'The seventh night', text: 'The first page, every name under it, and the blank line, blinking. "Whatever you choose, I will not write another name."' },
   scar_crown: { title: 'Note to self: the crown', text: 'In your handwriting, pressed hard: don\'t put it on. It gets so quiet. You stop hearing the flute and you don\'t even miss it.' },
   scar_hollow: { title: 'Note to self: the key', text: 'Your handwriting, shaking: do not lock the door. The key gets warm. By morning you forget which side you\'re on.' },
@@ -1692,6 +1693,49 @@ ABY.NODES = {
       { label: 'Let Vey carry the phone for you, just this once', next: 'd7_rite', req: { flag: 'tt_vey' }, add: { trust: 1, dread: -1 } },
       { label: 'Tell the Queen what the clock showed you: a morning. A real one', next: 'd7_end', req: { flag: 'tt_morning' }, add: { trust: 1, heart: 1, dread: -1 } },
       { label: 'Tell the Queen you were in the kitchen on the first night: it was always a map', next: 'd7_end', req: { flag: 'tt_first' }, add: { heart: 1, trust: 1, dread: -1 } },
+      { label: 'Lay out your notes. Say who has kept it 3:07 all week', next: 'd7_accuse', req: { noflag: 'board_out' } },
+    ],
+  },
+  // the accusation: the evidence board's payoff. Everyone in the room is a suspect; only the deduction she pinned on Day Six lets her name the
+  // one who did it. A wrong name is a fall (it starts again); the right one is a confession, and with the small key Vey pressed into her hand on the stairs (Day Three), a way out
+  d7_accuse: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'whisper',
+    text: 'You open Notes and hold the phone up so the whole room can see the clues, the pins, the red string between them. It goes very quiet. The Guardian takes his hand off the frame. Vey stops moving at your ankle. The Choir stops dripping. The Queen lowers her flute. In the gap of the door, the red eye goes very wide. Seven nights, and someone in this room has kept it 3:07 the whole time. Everyone is waiting for you to say who.',
+    choices: [
+      { label: 'The Eye. It has watched you every night', next: 'd7_acc_eye', add: { dread: 1 } },
+      { label: 'The Guardian. He held the door shut', next: 'd7_acc_guard', add: { dread: 1 } },
+      { label: 'Vey. It was behind the Queen on the very first night', next: 'd7_acc_vey', add: { dread: 1 } },
+      { label: 'The Queen. She locked her own child away, and called it a door', next: 'd7_confess', req: { flag: 'link_what_she_gave' }, add: { resolve: 1 } },
+      { label: 'Not yet. Put the phone down', next: 'd7_gather', set: 'board_out' },
+    ],
+  },
+  d7_acc_eye: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'jump', img: 'eye',
+    text: 'me. (The red does not blink.) everybody says it is me. every single time. they look at the eye and they say it is the eye, and nobody reads to the bottom of the wall. (Something very small, behind the door, starts to cry, and then stops, as if it has been told to.) all right. if it is me, then it is me. it is 3:07. it is always going to be 3:07.',
+    choices: [
+      { label: 'Wait. That is not what you meant', next: 'end_again', add: { dread: 1 } },
+    ],
+  },
+  d7_acc_guard: {
+    ch: 12, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian', scare: 'glitch',
+    text: '"Yes." (Corvin Ash does not argue. He never has.) "I held the door. I held it because she asked me to, and I would hold it again. Nobody in a hundred years has asked me anything else." He looks at the Queen, and she does not look back. His hand comes off the frame, and without it, very slowly, the door begins to close on all of you.',
+    choices: [
+      { label: 'Hold the door yourself', next: 'end_again', add: { dread: 1 } },
+    ],
+  },
+  d7_acc_vey: {
+    ch: 12, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'glitch',
+    text: 'Vey goes still, which it has never done, not once in seven nights. (Far too many fingers, folding up, one by one.) It was there on the first night. It was there behind her when she shut the door, holding the child so she would not fall. It has never let anything fall. It lets go of your ankle. And for the first time since 3:07 on the first night, there is nothing holding you up.',
+    choices: [
+      { label: 'Reach for it', next: 'end_again', add: { dread: 1 } },
+    ],
+  },
+  d7_confess: {
+    ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'queen', note: 'confession',
+    text: '"Yes." (She does not deny it. She has had seven nights to deny it.) "It was her birthday. The dark was coming up the stairs, and she was four, and she was laughing, and I could not think of anything else to do. I shut her in where it could not reach her, and I made a bargain to keep her there, safe, as long as somebody held the phone. Every name in that book held it for me." The flute slides out of her hands. "I kept it 3:07. I kept it 3:07 so I would never have to open the door and see what I did."',
+    choices: [
+      { label: 'Give her what Vey pressed into your hand on the stairs: a key, very small. Sorrel can open the low lock herself', next: 'end_lowdoor', req: { flag: 'vey3_hand' }, add: { heart: 2, dread: -2 } },
+      { label: 'Tell her to say it to the door, then take her to the first page', next: 'd7_end', add: { heart: 1, trust: 1, dread: -1 } },
     ],
   },
   d7_rite: {
@@ -1742,6 +1786,10 @@ ABY.NODES = {
   end_again: {
     ch: 12, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', ending: 'again',
     text: 'It is 3:07.', choices: [],
+  },
+  end_lowdoor: {
+    ch: 12, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', ending: 'lowdoor',
+    text: 'The key is very small.', choices: [],
   },
 
   // ======================= forced scenes (they interrupt wherever she is) =======================
@@ -2380,6 +2428,8 @@ ABY.ENDINGS = {
     text: 'You take the flute and the crown of folded wings, and the Queen walks down out of the haze, light, old, toward a door she can finally go through. Nobody else writes a name. Nobody else wakes at 3:07. Only you, on a throne at the bottom of the dark, holding the book shut with both hands, for as long as it takes. It is a very quiet kind of love. Some nights you hear a child laughing on the other side of the door, and it is enough.' },
   again: { tag: 'DAY SEVEN: LET IT BE 3:07 AGAIN', name: 'Day One, Again', hint: 'On Day Seven, let it begin again.', mood: 'dark', fall: true,
     text: 'It is 3:07. Something wakes you. Not a sound: the end of one. You are somewhere you do not remember coming to, a lift, a bath, a night bus, a shore, and the phone in your hand is warm, as if someone was holding it while you slept. You cannot remember your name. You can remember, very faintly, that you have been brave before. There is a message waiting. It will be different this time. It is always different this time.' },
+  lowdoor: { tag: 'DAY SEVEN: NAME WHO KEPT IT 3:07, THEN GIVE HER THE KEY', name: 'The Low Door', hint: 'On Day Seven, lay out your notes and name who kept it 3:07. You will need to have pinned who she locked away, and to have let Vey take your hand on the stairs on Day Three.', mood: 'dawn',
+    text: 'The Queen holds the key for a long time. Then she kneels, the way you kneel to a door that only comes up to your waist, and slides it under, and takes her hand away. Nothing happens. Nothing happens for so long that the Choir starts, very softly, to hum. Then, low down, where only a child could reach, the lock turns from the inside. Sorrel opens the door herself. She is four, and she has a crayon in her fist, and she looks at her mother for a long, long time before she decides. She decides. The book closes on its own. Two hundred and fourteen names go quiet, one by one, like lights in a street at morning. Your phone says 6:00, and then 6:01, and it has never once in seven nights said 6:01.' },
   blackout: { tag: 'LET THE BATTERY DIE', name: 'Zero Percent', hint: 'Let the battery die in the dark.', mood: 'dark', fall: true,
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };

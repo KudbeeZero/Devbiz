@@ -33,7 +33,7 @@ function walkChecks() {
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
   // 3 (the highest rule), a flag only if something reads it, the battery in four bands. The state kept for a band is the one with the LOWEST battery.
-  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
+  const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
     ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
@@ -186,12 +186,22 @@ function walkChecks() {
     const end = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd7_end' }, o)).some(x => x.c.next === 'end_seventh');
     const vet = { mem: 10, heart: 3, dread: 1, flags: { rite_seventh: 1, named_eye: 1, told_truth: 1 } };
     rec('seven-days', ABY.CHAPTERS.length === 12 && ABY.CHAPTERS[11].label === 'Day Seven' && E.nightline.cont === 'd6_wake' && E.passed.cont === 'd6_wake' && !E.warned.cont
-      && d6.length === 2 && E.firstpage.cont === 'd7_wake' && !E.cradle.cont && d7.length === 3 && d7.every(id => !E[id].cont)
+      && d6.length === 2 && E.firstpage.cont === 'd7_wake' && !E.cradle.cont && d7.length === 4 && d7.every(id => !E[id].cont)
       && ABY.ENDING_IDS.every(id => !E[id].cont || N[E[id].cont].ch <= 12) && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_again' })) === null,
       'Day Five (nightline, passed) -> Day Six (' + d6.join(', ') + ') -> Day Seven (' + d7.join(', ') + '); every Day Seven ending is final');
     rec('seventh-morning-gated', toSeventh.length === 1 && end(vet) && !end(Object.assign({}, vet, { mem: 9 })) && !end(Object.assign({}, vet, { dread: 4 }))
       && ['rite_seventh', 'named_eye', 'told_truth'].every(f => !end(Object.assign({}, vet, { flags: Object.assign({}, vet.flags, { [f]: 0 }) }))),
       'the book closes on Day Seven only for a veteran (10+ endings) who won the Seventh Night, named the Eye, told Wren the truth, and is not too afraid');
+    // the accusation: every suspect can be named, but only the deduction pinned on Day Six names the right one; a wrong name is a fall, the right
+    // one a confession, and only the small key Vey pressed into her hand on Day Three turns the confession into The Low Door. Offered once a night (putting it away shuts it)
+    const accuse = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd7_accuse' }, o)).map(x => x.c.next), offered = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd7_gather' }, o)).some(x => x.c.next === 'd7_accuse');
+    const wrong = ['d7_acc_eye', 'd7_acc_guard', 'd7_acc_vey'], fallsOf = id => (N[id].choices || []).every(c => N[c.next].ending && ABY.isFall(N[c.next].ending));
+    const low = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd7_confess' }, o)).some(x => x.c.next === 'end_lowdoor');
+    rec('accusation', wrong.every(id => accuse({}).includes(id) && fallsOf(id)) && !accuse({}).includes('d7_confess') && accuse({ flags: { link_what_she_gave: 1 } }).includes('d7_confess')
+      && accuse({}).includes('d7_gather') && offered({}) && !offered({ flags: { board_out: 1 } }) && ABY.choose(Object.assign(ABY.newState(0), { node: 'd7_accuse' }), 4).flags.board_out === 1
+      && !low({}) && low({ flags: { vey3_hand: 1 } }) && (N.d7_confess.choices || []).some(c => !c.req && c.next === 'd7_end')
+      && ids.filter(id => (N[id].choices || []).some(c => c.next === 'end_lowdoor')).join() === 'd7_confess' && !ABY.isFall('lowdoor') && !E.lowdoor.cont,
+      'three wrong suspects (each a fall), the Queen only with "Who she locked away" pinned, and The Low Door only with Vey\'s small key too; putting the notes away closes it for the night');
   }
 
   { // TEN OPENINGS: a first journey always starts at the start; after that it is scrambled, never the same one twice in a row, and every one is fair
