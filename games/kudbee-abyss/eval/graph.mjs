@@ -287,6 +287,21 @@ function walkChecks() {
       && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed'),
       O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day or for how the journey began (the nine other openings are remembered on Day Two and Day Seven)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
   }
+  { // codas: when an ending lands, the people she met text her one last time, for the flags she holds. They change no ending, tile or share card. Each
+    // one's flag must be set by a choice on a reached scene from which the ending can still be reached (following choices, rite results, a slip's return
+    // and a good ending's carry into the next day); the battery can die on any scene, so a blackout coda only needs its flag set on Day One
+    const AUTO = ['dawn', 'song', 'echo', 'silence', 'crown', 'betrayal', 'hollow'], endsAt = id => !N[id].ending ? [] : N[id].ending === 'auto' ? AUTO : [N[id].ending];
+    const into = {}; ids.forEach(id => (N[id].choices || []).forEach(c => { if (N[c.next] && N[c.next].time) (into[c.next] = into[c.next] || []).push(id); }));
+    const out = id => [...new Set([].concat(...(N[id].choices || []).map(c => c.next === '@back' ? (into[id] || []) : N[c.next] ? [c.next] : []), Object.values(N[id].songNext || {}).filter(x => N[x]), endsAt(id).map(e => ABY.ENDINGS[e] && ABY.ENDINGS[e].cont).filter(Boolean)))];
+    const leads = {}, endsFrom = (id) => { if (leads[id]) return leads[id]; const seen = new Set([id]), q = [id], got = new Set(); while (q.length) { const x = q.pop(); endsAt(x).forEach(e => got.add(e)); out(x).forEach(y => { if (!seen.has(y)) { seen.add(y); q.push(y); } }); } return (leads[id] = got); };
+    const can = (f, end) => ids.some(id => reach.has(id) && (N[id].choices || []).some(c => c.set === f && (end === 'blackout' ? DAY(N[id].ch) === 0 : endsFrom(c.next === '@back' || !N[c.next] ? id : c.next).has(end))));
+    const C = ABY.CODAS, bad = C.filter(c => !ABY.ENDINGS[c.end] || !ABY.SPEAKERS[c.who] || c.who === 'NARRATOR' || !c.text || !c.req || !c.req.flag || Object.keys(c.req).length !== 1 || !can(c.req.flag, c.end)).map(c => c.id);
+    const per = ABY.ENDING_IDS.map(e => C.filter(c => c.end === e).length), who = new Set(C.map(c => c.who));
+    const holder = c => ABY.codasFor(c.end, Object.assign(ABY.newState(0), { flags: { [c.req.flag]: 1 } })).some(x => x.id === c.id), none = ABY.ENDING_IDS.every(e => ABY.codasFor(e, ABY.newState(0)).length === 0);
+    const capped = ABY.ENDING_IDS.every(e => ABY.codasFor(e, Object.assign(ABY.newState(0), { flags: Object.fromEntries(C.map(c => [c.req.flag, 1])) })).length === Math.min(ABY.CODA_MAX, C.filter(c => c.end === e).length));
+    rec('codas', bad.length === 0 && Math.min(...per) >= 2 && new Set(C.map(c => c.id)).size === C.length && who.size >= 7 && C.every(holder) && none && capped,
+      C.length + ' codas from ' + who.size + ' voices, at least ' + Math.min(...per) + ' for each of the ' + ABY.ENDING_IDS.length + ' endings, each for a flag set where that ending can still be reached; none for a player who did nothing, at most ' + ABY.CODA_MAX + ' at once' + (bad.length ? ' | BAD ' + bad.join(', ') : ''));
+  }
   { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
     // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
     // choice on a LATER scene of the same or a later day (what she saw matters); each of the five origins offers one of each; the slips file clues
