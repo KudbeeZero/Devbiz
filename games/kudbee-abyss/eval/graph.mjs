@@ -352,13 +352,14 @@ function walkChecks() {
     const rules = bonded.map(o => ({ at: o.at, ...o.req.bond })).concat(choices.map(x => ({ at: x.id, ...x.c.req.bond })));
     const before = f => setAt(f).some(id => reach.has(id) && N[id].ch < 12), ok = ABY.BOND_IDS.every(w => ABY.BONDS[w].up.every(before) && ABY.BONDS[w].down.every(before));
     const meet = r => r.min === undefined || ABY.BONDS[r.who].up.length >= r.min, cool = r => r.max === undefined || ABY.BONDS[r.who].down.length > -r.max - 1;
+    const top = Object.fromEntries(ABY.BOND_IDS.map(w => [w, [...seen.values()].reduce((m, st) => Math.max(m, ABY.bond(st, w)), -9)]));
     const sample = ABY.newState(0), warm = Object.assign({}, sample, { flags: Object.fromEntries(ABY.BONDS.VEY.up.map(f => [f, 1])) }), cold = Object.assign({}, sample, { flags: { refused_vey: 1 } }), mixed = Object.assign({}, sample, { flags: { vey_known: 1, refused_vey: 1 } });
     const hear = (s, at) => ABY.overnightFor(Object.assign({}, s, { node: at })).map(x => x.id).join();
     rec('trust-ledger', ok && rules.length >= 8 && rules.every(r => ABY.BOND_IDS.includes(r.who) && meet(r) && cool(r)) && choices.length >= 4
       && ABY.bond(warm, 'VEY') === 4 && ABY.bond(cold, 'VEY') === -1 && ABY.bond(mixed, 'VEY') === 0 && ABY.bond(null, 'VEY') === 0 && ABY.bond(sample, 'NOBODY') === 0
       && hear(warm, 'd7_wake').includes('b_vey_warm') && !hear(warm, 'd7_wake').includes('b_vey_cold') && hear(cold, 'd7_wake').includes('b_vey_cold') && !hear(mixed, 'd7_wake').includes('b_vey')
       && !ABY.options(Object.assign({}, sample, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond) && ABY.options(Object.assign({}, warm, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond && o.c.req.bond.who === 'VEY'),
-      ABY.BOND_IDS.length + ' bonds counted from ' + ABY.BOND_FLAGS.length + ' flags a choice already sets; ' + bonded.length + ' Day Seven messages and ' + choices.length + ' people who stand with her, all for a bond a player can reach; a stranger is offered none');
+      'best reached ' + JSON.stringify(top) + '; ' + ABY.BOND_IDS.length + ' bonds counted from ' + ABY.BOND_FLAGS.length + ' flags a choice already sets; ' + bonded.length + ' Day Seven messages and ' + choices.length + ' people who stand with her, all for a bond a player can reach; a stranger is offered none');
   }
   { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
     const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));
