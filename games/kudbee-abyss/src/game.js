@@ -94,6 +94,8 @@
   function wait(ms, fn) { clearTimeout(delayT); G.flush = fn; delayT = setTimeout(function () { G.flush = null; fn(); }, G.fast || reduced ? Math.min(ms, 60) : ms); }
   function skip() { if (G.delivering && G.flush) { var f = G.flush; G.flush = null; clearTimeout(delayT); G.fast = true; f(); } }
 
+  function moreChoices(box) { box.classList.toggle('more', box.scrollTop + box.clientHeight < box.scrollHeight - 4); }   // a fade says there are more choices below
+  $('replies').addEventListener('scroll', function () { moreChoices($('replies')); }, { passive: true });
   function showReplies(n) {
     var box = $('replies'); box.innerHTML = ''; box.classList.remove('on');
     var opts = ABY.options(G.state);
@@ -101,7 +103,7 @@
     else if (n.song) chip('\u266A Raise the flute', true, function () { startSong(false); });
     else if (n.call) { showCall(n, opts); }
     else opts.forEach(function (o) { chip(o.c.label, opts.length === 1, function (ev) { choose(o.i, ev); }); });
-    requestAnimationFrame(function () { box.classList.add('on'); scrollEnd(false); });
+    requestAnimationFrame(function () { box.classList.add('on'); scrollEnd(false); box.scrollTop = 0; moreChoices(box); });
     if (G.autoPick != null && G.run && !n.song && !n.call && !n.ending) { var k = G.autoPick; G.autoPick = null; (function go() { if (!G.run || G.state.node !== ABY.START || G.state.choices) return; if (G.busy || G.delivering || !$('guide').hidden) return setTimeout(go, 300); choose(k); })(); }   // a reply sent from the lock screen
     var f = box.querySelector('.chip'); if (f && matchMedia('(pointer:fine)').matches && P.screen === 'msg') f.focus({ preventScroll: true });
   }

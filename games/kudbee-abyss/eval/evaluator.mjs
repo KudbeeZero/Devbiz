@@ -631,6 +631,43 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('new-journey-lets-the-offer-go', n1.node === 'awakening' && n1.pend === null, '"New journey" starts at ' + n1.node + ' and clears the saved offer');
   await ctx.close();
 }
+{ // the beginnings, deeper: a journey that began in the lift plays three scenes of its own (the panel, a drawing taped where it should not be, the wall where "W. WAS HERE"),
+  // files its clue, and then goes on into the haze as it always did; the lift comes back as a flashback on Day Four and again on Day Six, only for that journey, and what
+  // she remembers there is read by Wren on Day Five and by the Eye on Day Seven
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'threads'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'op_lift', { open: 'op_lift' }); const c0 = await chips(pg); await tapChip(pg, 'Study the crown');
+  await pg.waitForFunction(() => ABY.game.state.node === 'op_lift_b', null, { timeout: 15000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const t1 = await pg.evaluate(() => document.getElementById('thread').textContent);
+  await tapChip(pg, 'Take the drawing'); await pg.waitForFunction(() => ABY.game.state.node === 'op_lift_c', null, { timeout: 15000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c3 = await chips(pg);
+  const note = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), banner: document.getElementById('banner').textContent, open: ABY.game.state.open }));
+  await pg.screenshot({ path: join(OUT, 'opening-lift-third-scene.png') });
+  await tapChip(pg, 'Step out into the haze'); const n4 = await pg.evaluate(() => ABY.game.state.node);
+  rec('opening-has-three-scenes-of-its-own', c0.length === 3 && /drawing of a lift/.test(t1) && c3.join('|') === 'Step out into the haze|Press every button at once|Say hello to her' && note.notes.includes('o_lift') && /New clue: The lift wall/.test(note.banner) && note.open === 'op_lift' && n4 === 'flute_path',
+    'the lift journey: "' + c0[0] + '" -> a drawing taped where it should not be -> "W. WAS HERE" (clue "The lift wall") -> the same three ways into the haze (' + n4 + '), and she remembers how she began (' + note.open + ')');
+  await at(pg, 'd4_wake', { open: 'op_lift', mem: 3 });
+  // seven choices on a landscape phone: the list scrolls inside its own box (it used to run off the bottom of the screen), a fade says there are more, and the last one can be reached
+  const sc0 = await pg.evaluate(() => { const r = document.getElementById('replies'), s = document.getElementById('screen').getBoundingClientRect(); return { over: r.scrollHeight > r.clientHeight + 10, more: r.classList.contains('more'), box: Math.round(r.getBoundingClientRect().bottom) <= Math.round(s.bottom), n: r.querySelectorAll('.chip').length }; });
+  await pg.evaluate(() => { document.getElementById('replies').scrollTop = 99999; }); await sleep(250);
+  const sc1 = await pg.evaluate(() => { const r = document.getElementById('replies'), c = [...r.querySelectorAll('.chip')].pop(), cb = c.getBoundingClientRect(), rb = r.getBoundingClientRect(); return { more: r.classList.contains('more'), last: c.textContent, reach: cb.bottom <= rb.bottom + 1 && cb.top >= rb.top - 1 }; });
+  await pg.evaluate(() => { document.getElementById('replies').scrollTop = 0; }); await sleep(150);
+  rec('long-choice-lists-scroll', sc0.n === 7 && sc0.over && sc0.more && sc0.box && !sc1.more && sc1.reach && /first came in/.test(sc1.last), 'with ' + sc0.n + ' choices on an 844x390 phone the list scrolls in its own box and fades while more are below (' + sc0.more + '); scrolled to the end the last one, "' + sc1.last + '", is fully reachable and the fade is gone');
+  const d4 = await chips(pg); await tapChip(pg, 'how you first came in');
+  await pg.waitForFunction(() => ABY.game.state.node === 'ec4_lift', null, { timeout: 15000 });
+  for (let i = 0; i < 14 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(160); }
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await sleep(900);
+  const e4 = await pg.evaluate(() => ({ time: document.getElementById('screen').getAttribute('data-time'), thread: document.getElementById('thread').textContent }));
+  await pg.screenshot({ path: join(OUT, 'opening-lift-echo-day4.png') });
+  await tapChip(pg, 'Take the drawing, and keep it'); await pg.waitForFunction(() => ABY.game.state.node === 'd4_wake' && !ABY.game.delivering, null, { timeout: 15000 });
+  const back = await pg.evaluate(() => ({ flag: ABY.game.state.flags.tt_echo4, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent) }));
+  await at(pg, 'd4_wake', { open: 'op_bath', mem: 3 }); const bath = await chips(pg); await at(pg, 'd4_wake', { mem: 3 }); const first = await chips(pg);
+  await at(pg, 'd5_truth', { mem: 3, flags: { tt_echo4: 1 } }); const truth = await chips(pg); await at(pg, 'd5_truth', { mem: 3 }); const plain = await chips(pg);
+  await at(pg, 'd6_dawn', { open: 'op_lift', mem: 3, flags: { promised_sorrel: 1 } }); const d6 = await chips(pg);
+  await at(pg, 'd7_eye', { mem: 3, flags: { tt_echo6: 1 } }); const eye = await chips(pg);
+  rec('opening-comes-back-on-day-four-and-six', d4.some(c => /how you first came in \(the lift\)/.test(c)) && e4.time === 'past' && /pressing the button to call it/.test(e4.thread) && back.flag === 1 && !back.chips.some(c => /first came in/.test(c))
+    && bath.some(c => /how you first came in \(the bath\)/.test(c)) && !bath.some(c => /the lift/.test(c)) && !first.some(c => /first came in/.test(c))
+    && truth.some(c => /how you came in, the very first night/.test(c)) && !plain.some(c => /how you came in, the very first night/.test(c)) && d6.some(c => /the lift, once more/.test(c)) && eye.some(c => /door you came through/.test(c)),
+    'Day Four offers the lift flashback only to the journey that began there ("' + (d4.filter(c => /first came in/.test(c))[0] || '') + '"; a bath journey is offered the bath, the first journey nothing), it is a warm flashback that returns and is seen once; Wren reads it on Day Five, the lift returns on Day Six, and the Eye on Day Seven reads the door');
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);
@@ -722,7 +759,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   rec('desktop-rotate', !p0.land && Math.abs(p0.r - 0.49) < 0.03 && p1.land && p1.orient === 'landscape' && Math.abs(p1.r - 2.04) < 0.15 && p2.land && !p3.land && Math.abs(p3.r - 0.49) < 0.03, 'portrait ' + p0.r.toFixed(2) + ' -> landscape ' + p1.r.toFixed(2) + ' (kept after a reload) -> the R key turns it back ' + p3.r.toFixed(2));
   await ctx.close();
   ({ ctx, pg } = await open(phoneCtx(PHONES[2]), 'turn')); await wake(pg); await openMessages(pg); await pick(pg, 'Listen to the stones'); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
-  const lay = () => pg.evaluate(() => { const sh = document.getElementById('sheet'), cs = getComputedStyle(sh), vw = innerWidth, vh = innerHeight, bad = [...document.querySelectorAll('#replies .chip')].filter(c => { const r = c.getBoundingClientRect(); return r.right > vw + 1 || r.bottom > vh + 1 || r.left < -1 || r.top < -1; }).length; return { pos: cs.position, node: ABY.game.state.node, chips: document.querySelectorAll('#replies .chip').length, bad, canvasOk: (() => { const c = document.querySelector('#three-canvas canvas'); return !c || Math.abs(c.getBoundingClientRect().width - document.getElementById('screen').getBoundingClientRect().width) < 2; })() }; });
+  const lay = () => pg.evaluate(() => { const sh = document.getElementById('sheet'), cs = getComputedStyle(sh), vw = innerWidth, vh = innerHeight, rp = document.getElementById('replies'), rb = rp.getBoundingClientRect(), scrolls = rp.scrollHeight > rp.clientHeight + 1, bad = [...document.querySelectorAll('#replies .chip')].filter(c => { const r = c.getBoundingClientRect(); return r.right > vw + 1 || r.left < -1 || (!scrolls && (r.bottom > vh + 1 || r.top < -1)); }).length + (rb.bottom > vh + 1 || rb.top < -1 ? 1 : 0); return { pos: cs.position, node: ABY.game.state.node, chips: document.querySelectorAll('#replies .chip').length, bad, canvasOk: (() => { const c = document.querySelector('#three-canvas canvas'); return !c || Math.abs(c.getBoundingClientRect().width - document.getElementById('screen').getBoundingClientRect().width) < 2; })() }; });
   const a0 = await lay(); await pg.setViewportSize({ width: 844, height: 390 }); await sleep(900); const a1 = await lay(); await pg.screenshot({ path: join(OUT, 'phone-turned-landscape.png') });
   await pg.setViewportSize({ width: 390, height: 844 }); await sleep(900); const a2 = await lay();
   rec('phone-turns-mid-game', a0.pos !== 'absolute' && a1.pos === 'absolute' && a2.pos !== 'absolute' && a0.node === a1.node && a1.node === a2.node && a1.chips === a0.chips && a1.bad === 0 && a2.bad === 0 && a1.canvasOk && a2.canvasOk, 'upright -> on its side -> upright mid-chat: same scene (' + a1.node + '), ' + a1.chips + ' replies, none cut off, the 3D follows');

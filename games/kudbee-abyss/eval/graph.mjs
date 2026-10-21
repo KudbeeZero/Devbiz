@@ -67,7 +67,8 @@ export function graphChecks() {
       if (done()) break;
     }
   };
-  walk(ABY.OPENINGS.map(o => ABY.newState(10, o, ABY.ENDING_IDS)), LIMIT,   // (a veteran: every fall already suffered, so every scar's way out is walked too)
+  // (the nine other openings go first: the walk merges journeys that differ only in how they began, and the ones it keeps should be the ones with an echo to walk)
+  walk([...ABY.OPENINGS.filter(o => o !== ABY.START), ABY.START].map(o => ABY.newState(10, o, ABY.ENDING_IDS)), LIMIT,   // (a veteran: every fall already suffered, so every scar's way out is walked too)
     () => reach.size === ids.length && ends.size === ABY.ENDING_IDS.length && seen.size > 60000);
   // a flag taken on day one and read on day six is a long way to carry in a bounded walk. So, for every scene or gated choice still not reached,
   // walk again from REAL states (already reached) that hold the flags it asks for: every state these walks find is reachable from the start.
@@ -79,21 +80,21 @@ export function graphChecks() {
   const into = id => [...new Set(gates(id).flatMap(need))];   // flags it takes to get in
   const shut = (reqs) => reqs.map(r => r.noflag).filter(Boolean);   // flags that keep it shut
   const unmet = () => { const out = [];
-    for (const id of ids) if (!reach.has(id)) out.push({ id, flags: into(id) });
-    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && ![...seen.values()].some(x => x.node === id && ABY.okReq(x, c.req))) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], req: c.req });
+    for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
+    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && ![...seen.values()].some(x => x.node === id && ABY.okReq(x, c.req))) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
     return out; };
   for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < 4; round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
     const ok = () => t.req ? [...seen.values()].some(x => x.node === t.id && ABY.okReq(x, t.req)) : reach.has(t.id); if (ok()) continue;
     const blocked = [...new Set([...shut(gates(t.id)), ...shut(t.req ? [t.req] : [])])];   // flags that keep the target shut: a seed must not hold one
     const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
-    let seeds = near(t.flags); if (!seeds.length) seeds = near(into(t.id));       // nobody holds every flag yet: start from those who can get in, and pick up the rest
+    let seeds = near(t.flags); if (!seeds.length && t.own) seeds = near(t.own); if (!seeds.length) seeds = near(into(t.id));   // (a gated choice: start from whoever holds the flags ITS rule asks for; the other ways into the scene are only one way in)       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
     const keep = [...new Set([...t.flags, ...blocked])];   // (a flag that shuts the way in must be kept apart too)
     const coarse = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, [...keep].filter(f => has(s, f)).join(','), s.flags.song || '', s.tries, s.back].join('|');
     let last = 0; walk(seeds, 400000, () => { if (++last % 5000) return false; return ok(); }, coarse, new Map());
   }
-  rec('story-all-nodes-reachable', ids.every(id => reach.has(id)), ids.filter(id => !reach.has(id)).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
+  rec('story-all-nodes-reachable', ids.every(id => reach.has(id) || N[id].thread), ids.filter(id => !reach.has(id) && !N[id].thread).join(', ') || 'every scene can be reached from the start (' + seen.size + ' states searched)');
   const missing = ABY.ENDING_IDS.filter(e => !ends.has(e));
   rec('story-all-endings', missing.length === 0, 'reachable: ' + [...ends].sort().join(', ') + (missing.length ? ' | MISSING ' + missing.join(', ') : ''));
 
@@ -108,7 +109,7 @@ export function graphChecks() {
   // hidden choices exist and unlock: some state shows a choice that another does not
   const reqNodes = ids.filter(id => (N[id].choices || []).some(c => c.req));
   let unlocked = 0, hidden = 0; for (const id of reqNodes) { const here = states.filter(s => s.node === id); if (!here.length) continue; for (let i = 0; i < N[id].choices.length; i++) if (N[id].choices[i].req) { const sees = here.some(s => ABY.okReq(s, N[id].choices[i].req)), hides = here.some(s => !ABY.okReq(s, N[id].choices[i].req)); if (sees) unlocked++; if (hides) hidden++; } }
-  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !states.some(s => s.node === id && ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
+  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !c.req.open && !states.some(s => s.node === id && ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
   rec('hidden-choices', never.length === 0 && hidden > 0, never.join(', ') || unlocked + ' gated choices can be unlocked (and hidden: ' + hidden + ')');
 
   // dark rooms frighten her without the light; the light costs battery; the song cannot be retried for ever
@@ -256,7 +257,7 @@ export function graphChecks() {
   { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
     // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
     // choice on a LATER scene of the same or a later day (what she saw matters); each of the five origins offers one of each; the slips file clues
-    const slips = ids.filter(id => N[id].time), entries = ids.flatMap(id => (N[id].choices || []).filter(c => N[c.next] && N[c.next].time).map(c => ({ from: id, to: c.next, c })));
+    const slips = ids.filter(id => N[id].time && !N[id].thread), entries = ids.flatMap(id => (N[id].choices || []).filter(c => N[c.next] && N[c.next].time && !N[c.next].thread).map(c => ({ from: id, to: c.next, c })));
     const tt = id => [...new Set(N[id].choices.map(c => c.set))];
     const readers = (f) => ids.filter(id => !N[id].time && (N[id].choices || []).some(c => c.req && (c.req.flag === f || (c.req.all || []).includes(f))));
     const dayOf = id => N[id].ch, shapedSlip = slips.filter(id => ['past', 'future'].includes(N[id].time) && N[id].safe && N[id].choices.length >= 2 && N[id].choices.every(c => c.next === '@back') && tt(id).length === 1 && /^tt_/.test(tt(id)[0])
@@ -272,6 +273,32 @@ export function graphChecks() {
       && inside && inside.node === 'fb_locking' && inside.back === 'd3_wake' && out && out.node === 'd3_wake' && out.back === '' && out.flags.tt_locking === 1 && out.notes.includes('locking') && !again
       && tired && tired.node === 'blackout' && kept.node === 'fb_locking' && kept.back === 'd3_wake' && lost.node === ABY.START,
       slips.length + ' slips (5 flashbacks, 5 flash-forwards) from ' + origins.join(', ') + ': each seen once, each returns where she was, each filing a clue, each read by a later choice; a tired return can still end in the dark; a save keeps the way back');
+  }
+  { // THE BEGINNINGS, DEEPER: each of the nine other openings is a three-scene prologue (react -> the scene that is only its own -> the clue, then the same three ways
+    // into the haze it always had), files its own clue, and returns as a flashback on Day Four and Day Six, offered only to a journey that began that way
+    const others = ABY.OPENINGS.filter(o => o !== ABY.START), key = o => o.slice(3), op = o => N[o], texts = new Set();
+    const chain = others.filter(o => {
+      const b = N[o + '_b'], c = N[o + '_c']; if (!b || !c) return false; texts.add(b.text); texts.add(c.text);
+      return op(o).choices.length >= 3 && op(o).choices.every(x => x.next === o + '_b') && b.choices.length >= 2 && b.choices.every(x => x.next === o + '_c' && !x.req)
+        && b.ch === 1 && c.ch === 1 && c.note && ABY.NOTES[c.note] && /^o_/.test(c.note) && c.choices.length >= 3 && c.choices.every(x => N[x.next] && !/^op_/.test(x.next) && !x.req) && b.text.length > 150 && c.text.length > 150;
+    });
+    const echoes = others.every(o => ['4', '6'].every(d => {
+      const e = N['ec' + d + '_' + key(o)], flag = 'tt_echo' + d, origin = d === '4' ? 'd4_wake' : 'd6_dawn';
+      const into = N[origin].choices.filter(c => c.next === 'ec' + d + '_' + key(o));
+      return e && e.thread === o && e.time === 'past' && e.safe && e.ch === (d === '4' ? 9 : 11) && e.choices.length >= 2 && e.choices.every(c => c.next === '@back' && c.set === flag) && e.text.length > 150
+        && into.length === 1 && into[0].req && into[0].req.open === o && into[0].req.noflag === flag;
+    }));
+    const pay = (node, f) => N[node].choices.some(c => c.req && c.req.flag === f);
+    const seesAt = (node, open, flags) => ABY.options(Object.assign(ABY.newState(0, open), { node, flags: flags || {} })).filter(x => /clock back/.test(x.c.label)).map(x => x.c.next);
+    const own = others.every(o => seesAt('d4_wake', o).filter(n => /^ec4_/.test(n)).join() === 'ec4_' + key(o) && seesAt('d6_dawn', o).filter(n => /^ec6_/.test(n)).join() === 'ec6_' + key(o)
+      && seesAt('d4_wake', o, { tt_echo4: 1 }).every(n => !/^ec4_/.test(n)) && seesAt('d6_dawn', o, { tt_echo6: 1 }).every(n => !/^ec6_/.test(n)));
+    const none = seesAt('d4_wake', ABY.START).every(n => !/^ec/.test(n)) && seesAt('d6_dawn', ABY.START).every(n => !/^ec/.test(n));
+    const go = ABY.choose(Object.assign(ABY.newState(0, 'op_lift'), { node: 'd4_wake' }), N.d4_wake.choices.findIndex(c => c.next === 'ec4_lift')), back = go && ABY.choose(go, 0);
+    const walkIn = (() => { let s = ABY.newState(0, 'op_bath'); for (const want of ['op_bath_b', 'op_bath_c']) { s = ABY.choose(s, 0); if (!s || s.node !== want) return null; } return s; })();
+    rec('opening-threads', chain.length === 9 && texts.size === 18 && echoes && pay('d5_truth', 'tt_echo4') && pay('d7_eye', 'tt_echo6') && own && none
+      && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
+      && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
+      'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees none of them');
   }
   { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
     const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));
