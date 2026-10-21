@@ -694,13 +694,13 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await ctx.close();
 }
 { // the accusation (Day Seven): lay out the notes and name who kept it 3:07. Three wrong names are always there; the Queen only with "Who she locked
-  // away" pinned; the key to the low lock turns her confession into The Low Door. A wrong name is a fall
+  // away" pinned; Vey's small key turns her confession into The Low Door. A wrong name is a fall
   const { ctx, pg } = await open({}, 'accuse'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd7_gather', { mem: 2, heart: 2, dread: 1 }); const g = await chips(pg); await tapChip(pg, 'Lay out your notes'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const a0 = await chips(pg), n0 = await pg.evaluate(() => ABY.game.state.node);
   await at(pg, 'd7_accuse', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1 } }); const a1 = await chips(pg); await tapChip(pg, 'The Queen'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const c1 = await chips(pg), conf = await pg.evaluate(() => ({ node: ABY.game.state.node, name: document.getElementById('mName').textContent, note: ABY.game.state.notes.includes('confession') }));
-  await at(pg, 'd7_confess', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1, link_low_lock: 1 } }); const c2 = await chips(pg);
+  await at(pg, 'd7_confess', { mem: 2, heart: 2, dread: 1, flags: { link_what_she_gave: 1, vey3_hand: 1 } }); const c2 = await chips(pg);
   await tapChip(pg, 'Give her Vey'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden); await pg.screenshot({ path: join(OUT, 'day7-low-door.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd7_accuse', { mem: 2, heart: 2, dread: 1 }); await tapChip(pg, 'The Eye'); await tapChip(pg, 'Wait'); const f = await memoryShown(pg);
