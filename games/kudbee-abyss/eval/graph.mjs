@@ -2,12 +2,13 @@
 // can still reach an ending, all ten endings are reachable, the forced scenes (blackout, hollowing) are reachable and recoverable,
 // hidden choices can be unlocked, and the pure helpers behave. The walk covers the flashlight too (switched by hand at any node).
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 const ABY = createRequire(import.meta.url)(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'));
 
-export function graphChecks() {
+function walkChecks() {
   const R = [], rec = (id, pass, note) => R.push({ id, pass: !!pass, note });
   const N = ABY.NODES, ids = Object.keys(N);
 
@@ -35,7 +36,10 @@ export function graphChecks() {
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
     ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
-  const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, READ.filter(f => s.flags[f]).join(','), s.flags.song || '', s.tries, s.back].join('|');
+  // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
+  const READBIT = new Map([...new Set(READ)].map((f, i) => [f, i])), READWORDS = Math.ceil(READBIT.size / 31);
+  const readKey = (flags) => { const w = new Array(READWORDS).fill(0); for (const f in flags) { if (!flags[f]) continue; const i = READBIT.get(f); if (i !== undefined) w[(i / 31) | 0] |= 1 << (i % 31); } return w.join('.'); };
+  const key = s => [s.node, Math.min(4, s.mem || 0), Math.min(3, s.heart), Math.min(3, s.resolve), Math.min(3, s.trust), s.dread, (s.bat <= 0 ? 0 : s.bat <= 14 ? 1 : s.bat <= 32 ? 2 : 3), s.light, readKey(s.flags), s.flags.song || '', s.tries, s.back].join('|');
   // the evidence board costs nothing when the pair is right, so the walk pins every right pair as soon as she holds both clues (notes are not in
   // the key; the deductions are). A player who never pins anything only sees fewer choices, so this hides no path.
   const pin = (t) => { for (const L of ABY.LINKS) if (!t.flags['link_' + L.id] && t.notes.includes(L.a) && t.notes.includes(L.b)) { const u = ABY.link(t, L.a, L.b); if (u) { delete u.linked; t = u; } } return t; };
@@ -50,7 +54,10 @@ export function graphChecks() {
   // seven days are too deep for one shallow-first queue: the early days would eat the whole budget. So each day has its own queue (shallow-first
   // inside it) and the walk takes from them in turn, so every day gets a fair share. A day's states only ever come from real states before them.
   const DAY = ch => ch <= 5 ? 0 : ch <= 7 ? 1 : ch - 6;            // chapters 1-5 are day one, 6-7 day two, then one chapter a day
-  const seen = new Map(), reach = new Set(), ends = new Set(), LIMIT = +process.env.WALK_LIMIT || 1500000;
+  const seen = new Map(), byNode = new Map(), reach = new Set(), ends = new Set(), LIMIT = +process.env.WALK_LIMIT || 1500000;
+  // (an index of the kept states by scene: a chase asks 'does anyone standing here satisfy this rule?' thousands of times, and scanning every state each time was the slow part)
+  const index = (k, s) => { let m = byNode.get(s.node); if (!m) byNode.set(s.node, m = new Map()); m.set(k, s); };
+  const standing = (id, rule) => { const m = byNode.get(id); if (m) for (const x of m.values()) if (ABY.okReq(x, rule)) return true; return false; };
   const walk = (seeds, limit, done, kf = key, local = seen) => {
     const Q = [], H = []; let n = 0;
     const push = (t) => { const d = DAY(N[t.node].ch); (Q[d] || (Q[d] = [], H[d] = 0, Q[d])).push(t); };
@@ -60,8 +67,8 @@ export function graphChecks() {
       if (d < 0) break;
       const s = Q[d][H[d]], k = kf(s); Q[d][H[d]++] = null; const was = local.get(k);
       if (was && was.bat <= s.bat) continue;                     // seen at least as drained: nothing new
-      if (!was) n++; local.set(k, s); reach.add(s.node);      // (the limit counts distinct states; a lower-battery copy only replaces one)
-      if (local !== seen && !seen.has(key(s))) seen.set(key(s), s);   // a follow-up walk's states are real states too
+      if (!was) n++; local.set(k, s); if (local === seen) index(k, s); reach.add(s.node);      // (the limit counts distinct states; a lower-battery copy only replaces one)
+      if (local !== seen) { const sk = key(s); if (!seen.has(sk)) { seen.set(sk, s); index(sk, s); } }   // a follow-up walk's states are real states too
       if (N[s.node].ending) ends.add(ABY.endingOf(s));
       for (const t of succ(s)) push(t);
       if (done()) break;
@@ -81,12 +88,12 @@ export function graphChecks() {
   const shut = (reqs) => reqs.map(r => r.noflag).filter(Boolean);   // flags that keep it shut
   const unmet = () => { const out = [];
     for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
-    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && ![...seen.values()].some(x => x.node === id && ABY.okReq(x, c.req))) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
+    for (const id of ids) for (const c of N[id].choices || []) if (c.req && need(c.req).length && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
     return out; };
-  for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < 4; round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
-    const ok = () => t.req ? [...seen.values()].some(x => x.node === t.id && ABY.okReq(x, t.req)) : reach.has(t.id); if (ok()) continue;
+  for (let round = 0, todo = unmet(), was = -1; todo.length && todo.length !== was && round < (process.env.GRAPH_QUICK ? 0 : 4); round++, was = todo.length, todo = unmet()) for (const t of todo) {   // (a chase can open the way to the next target, so look again)
+    const ok = () => t.req ? standing(t.id, t.req) : reach.has(t.id); if (ok()) continue;
     const blocked = [...new Set([...shut(gates(t.id)), ...shut(t.req ? [t.req] : [])])];   // flags that keep the target shut: a seed must not hold one
-    const near = (fl) => [...seen.values()].filter(x => !N[x.node].ending && fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)).sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000);   // nearest day first, earliest in it
+    const near = (fl) => { const hit = []; for (const x of seen.values()) if (!N[x.node].ending && fl.every(f => has(x, f)) && !blocked.some(f => x.flags[f]) && DAY(N[x.node].ch) <= DAY(N[t.id].ch)) hit.push(x); return hit.sort((p, q) => DAY(N[q.node].ch) - DAY(N[p.node].ch) || p.choices - q.choices).slice(0, 4000); };   // nearest day first, earliest in it
     let seeds = near(t.flags); if (!seeds.length && t.own) seeds = near(t.own); if (!seeds.length) seeds = near(into(t.id));   // (a gated choice: start from whoever holds the flags ITS rule asks for; the other ways into the scene are only one way in)       // nobody holds every flag yet: start from those who can get in, and pick up the rest
     if (!seeds.length) seeds = [...new Set(t.flags.flatMap(f => near([f])))].slice(0, 4000);   // nor that: start from those who hold any part of it (one clue of a pair)
     // (merged more coarsely than the main walk: only the flags this target asks for are kept apart. Merging only prunes; it never invents a state)
@@ -363,6 +370,20 @@ export function graphChecks() {
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
   const ST = ABY.STORE, sids = ST.map(a => a.id);
   rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && Number.isInteger(a.need) && a.need >= 0 && a.need <= ABY.ENDING_IDS.length) && ST.some(a => a.need === 0) && ST.some(a => a.need >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock reachable');
+  return R;
+}
+
+// The walk is the slow part and depends only on the story and on this file, so its result is kept: an unchanged story re-checks instantly
+// (GRAPH_FRESH=1 forces a real walk). GRAPH_QUICK=1 walks a small slice and skips the checks that need the whole walk, for a fast look while editing.
+const here = dirname(fileURLToPath(import.meta.url));
+const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'badges-and-factions']);
+export function graphChecks() {
+  if (process.env.GRAPH_QUICK) { process.env.WALK_LIMIT = process.env.WALK_LIMIT || '60000'; return walkChecks().map(r => NEEDS_FULL_WALK.has(r.id) && !r.pass ? { ...r, pass: true, note: 'SKIPPED in quick mode (needs the full walk) | ' + r.note } : r); }
+  const sum = createHash('sha256').update(readFileSync(resolve(here, '..', 'src', 'story.js'))).update(readFileSync(fileURLToPath(import.meta.url))).update(String(process.env.WALK_LIMIT || '')).digest('hex');
+  const file = resolve(here, '..', '..', '..', 'node_modules', '.cache', 'abyss-graph.json');
+  if (!process.env.GRAPH_FRESH) { try { const c = JSON.parse(readFileSync(file, 'utf8')); if (c.sum === sum) return c.R; } catch (e) { /* no cache yet */ } }
+  const R = walkChecks();
+  try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, JSON.stringify({ sum, R })); } catch (e) { /* a read-only checkout just walks every time */ }
   return R;
 }
 
