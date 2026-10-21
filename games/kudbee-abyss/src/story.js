@@ -188,6 +188,9 @@ ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => (l.a === a && l.b ==
 // for whoever holds the flag (`req`, like a choice's). They are pure data, so the graph test can prove each one is reachable and its flag is set
 // on an earlier day; a message with a `note` also files that clue. They give the flags nothing else reads a voice.
 ABY.OVERNIGHT = [
+  { id: 'n_obj_salt', at: 'd6_wake', req: { flag: 'used_salt' }, who: 'WREN', text: 'my window is crusted white. mum says it is frost. it is not frost. i am keeping some in a jar, in case.' },
+  { id: 'n_obj_crayon', at: 'd7_wake', req: { flag: 'used_crayon' }, who: 'SORREL', text: 'somebody wrote under my wall. in my colour. it was the first time anybody wrote back. I did not rub it out.' },
+  { id: 'n_obj_shard', at: 'd7_wake', req: { flag: 'used_shard' }, who: 'EYE', text: 'you held the glass up and i saw what i look like. do not do that again. do it again.' },
   { id: 'n_heard', at: 'd2_wake', req: { flag: 'heard' }, who: 'QUEEN', text: 'You heard the recording. I know, because I heard you hear it. I was not going to ask what it said. I know what it said.' },
   { id: 'n_marked', at: 'd2_wake', req: { flag: 'marked' }, who: 'EYE', text: 'you looked at me. nobody looks. i kept the look, in a drawer, and i have taken it out all night.' },
   { id: 'n_carried', at: 'd2_wake', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with it. On the stairs, in the dark, you sat. I have never been able to do that. I wanted you to know that I saw.' },
@@ -254,6 +257,13 @@ ABY.ECHOES = [
   ['throne', 'd7_wake', 'QUEEN', 'You sat in the seventh chair, and it did not hold you. I am told that has never happened. I am not told by whom.'],
   ['lowdoor', 'd7_wake', 'VEY', 'You gave her the key. The little one. I felt it leave my hand and I felt the whole house get lighter. Thank you. I mean it. I have never meant it before.'],
 ].map(([id, at, who, text]) => ({ id: 'n_echo_' + id, at, req: { flag: 'echo_' + id }, who, text }));
+// things she can pick up and spend later: carried while `has_<id>` is set and `used_<id>` is not (at most three exist, so a pocket never overflows)
+ABY.OBJECTS = [
+  { id: 'salt', name: 'Handful of salt', blurb: 'Cold, white, from the stairs. It keeps a line.' },
+  { id: 'crayon', name: 'A child\'s crayon', blurb: 'Still warm. It writes in a colour she will know.' },
+  { id: 'shard', name: 'Sliver of mirror', blurb: 'It shows a different stair. Cursed: what it shows costs you.', cursed: true },
+];
+ABY.carried = function (s) { return ABY.OBJECTS.filter(o => s.flags['has_' + o.id] && !s.flags['used_' + o.id]); };
 ABY.echoesOf = function (found) {
   const has = Array.isArray(found) ? (id => found.indexOf(id) >= 0) : (id => !!(found && found[id]));
   return ABY.ENDING_IDS.filter(id => !ABY.isFall(id) && has(id));
@@ -978,6 +988,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd2_stairs2', light: 1, req: { noLight: 1 } },
       { label: 'Count the steps', next: 'd2_clock', add: { dread: 1 } },
       { label: 'Do not count the steps', next: 'd2_clock', add: { resolve: 1 } },
+      { label: 'Scoop up the white grit on the step: it is salt, and it is cold', next: 'd2_stairs2', set: 'has_salt', req: { noflag: 'has_salt' } },
     ],
   },
   d2_clock: {
@@ -985,6 +996,7 @@ ABY.NODES = {
     text: 'Halfway down, every skull in the wall begins, very quietly, to tell you the time. 3:12. 3:13. They have been waiting so long to be wrong about something. At the bottom, a door. It is not locked. It is held.',
     choices: [
       { label: 'Go to the door', next: 'd2_door' },
+      { label: 'Pick up the sliver of mirror on the step. It is showing a different stair', next: 'd2_clock', set: 'has_shard', req: { noflag: 'has_shard' } },
     ],
   },
   d2_door: {
@@ -1029,6 +1041,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd3_photo', light: 1, req: { noLight: 1 } },
       { label: 'Count the doors on the stairs', next: 'd3_hall', add: { dread: 1 } },
       { label: 'Go down anyway', next: 'd3_hall', add: { resolve: 1 } },
+      { label: 'Pick up the child\'s crayon from the bottom step. It is still warm', next: 'd3_photo', set: 'has_crayon', req: { noflag: 'has_crayon' } },
     ],
   },
   d3_hall: {
@@ -1411,6 +1424,7 @@ ABY.NODES = {
     text: 'good. it is quiet. (You can feel the chain settle, the way a stone settles.) the book has a new line. wren. and under wren, the blank one, already blinking. someone has to be next.',
     choices: [
       { label: 'Call her back', next: 'd5_hello', add: { resolve: 1 } },
+      { label: 'Pour a line of salt along the edge of the screen, so the blank line cannot be written', next: 'd5_hello', set: 'used_salt', add: { resolve: 1, dread: -2 }, req: { flag: 'has_salt', noflag: 'used_salt' } },
       { label: 'Leave her to the dark', next: 'end_passed' },
     ],
   },
@@ -1605,6 +1619,7 @@ ABY.NODES = {
       { label: 'Read the wall', next: 'd6_wall', light: 1, req: { light: 1 }, add: { dread: 1 }, set: 'eye_is_sorrel' },
       { label: 'Switch on the flashlight', next: 'd6_room', light: 1, req: { noLight: 1 } },
       { label: 'Go to the door', next: 'd6_door' },
+      { label: 'Hold the mirror shard up in the dark so she can see herself, once', next: 'd6_door', set: 'used_shard', add: { resolve: 1, dread: 2 }, req: { flag: 'has_shard', noflag: 'used_shard' } },
       { label: 'Paper hats, birthday candles: ask whose party it is', next: 'ev_party', req: { flag: 'link_birthday' } },
       { label: 'Go straight to the door: you have already seen it', next: 'd6_door', req: { flag: 'tt_door' }, add: { resolve: 1 } },
     ],
@@ -1614,6 +1629,7 @@ ABY.NODES = {
     text: 'SHE LEFT THE DOOR OPEN FIRST, from the very first night. And under it, newer, the letters getting bigger all the way down the wall, the way handwriting does when the hand gets older and older and is still not allowed out: SO I WATCH. I WATCH EVERY ONE OF THEM. SOMEBODY HAS TO SEE ME. The light through the door is red, and round, and it blinks.',
     choices: [
       { label: 'Go to the door', next: 'd6_door', add: { heart: 1 } },
+      { label: 'Write under it in her own colour: I SEE YOU', next: 'd6_door', set: 'used_crayon', add: { heart: 1, dread: -1 }, req: { flag: 'has_crayon', noflag: 'used_crayon' } },
     ],
   },
   d6_door: {
