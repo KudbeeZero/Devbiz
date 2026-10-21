@@ -775,6 +775,23 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await c.pg.click('#setRes'); const armed = await c.pg.evaluate(() => /Tap again/.test(document.getElementById('setResS').textContent)); await c.pg.click('#setRes');
   rec('settings-two-taps', armed, 'a danger button asks for a second tap'); await c.ctx.close(); }
 
+// Calm flashes: a scare never strobes, flickers, shakes or goes white; on by default for reduced motion, and a switch in Settings that persists
+{ const c = await open({}, 'calm'); const pg = c.pg; await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 8000 });
+  const look = () => pg.evaluate(() => { const sc = document.getElementById('screen'), a = getComputedStyle(sc, '::after'); return { calm: document.documentElement.classList.contains('calm'), shake: getComputedStyle(sc).animationName, after: a.animationName, bg: a.backgroundColor, sheet: getComputedStyle(document.getElementById('sheet')).animationName }; });
+  await pg.evaluate(() => ABY.debug.scare('jump')); await sleep(60); const off = await look();
+  await pg.evaluate(() => ABY.Phone.show('settings')); await sleep(300); await pg.click('#setCalm'); await sleep(100);
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done')); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 });
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400);
+  await pg.evaluate(() => ABY.debug.scare('jump')); await sleep(60); const jump = await look(); await sleep(800);
+  await pg.evaluate(() => ABY.debug.scare('glitch')); await sleep(60); const glitch = await look(); await sleep(1000);
+  await pg.evaluate(() => ABY.debug.scare('eye')); await sleep(60); const eye = await look();
+  await pg.evaluate(() => ABY.Phone.show('settings')); await sleep(300); const pressed = await pg.evaluate(() => document.getElementById('setCalm').getAttribute('aria-pressed'));
+  await c.ctx.close();
+  const r = await open({ ctx: { reducedMotion: 'reduce' } }, 'calm-reduced'); const byDefault = await r.pg.evaluate(() => document.documentElement.classList.contains('calm')); await r.ctx.close();
+  const white = (bg) => /rgb\(25[0-5], 25[0-5], 25[0-5]/.test(bg);
+  rec('calm-flashes', !off.calm && off.after === 'jumpFlash' && off.shake === 'jumpShake' && jump.calm && pressed === 'true' && jump.shake === 'none' && jump.after === 'calmFade' && !white(jump.bg) && glitch.sheet === 'none' && eye.after === 'calmFade' && byDefault,
+    'off: ' + off.shake + '/' + off.after + '/' + off.bg + ' (calm ' + off.calm + '); Calm flashes (saved across a reload): no shake (' + jump.shake + '), a dark fade (' + jump.after + ', ' + jump.bg + '), no glitch (' + glitch.sheet + '), a slow Eye (' + eye.after + ', pressed ' + pressed + '); on by default with reduced motion: ' + byDefault); }
+
 // ================= phone fit =================
 for (const p of PHONES) {
   ({ ctx, pg } = await open(phoneCtx(p), 'fit-' + p.n)); await wake(pg);
@@ -845,7 +862,11 @@ for (const [name, raw, want] of [
   const chips = await pg.$$eval('#lkNotes .nrep button', bs => bs.map(x => ({ t: x.textContent, h: Math.round(x.getBoundingClientRect().height) })));
   await pg.click('#lkNotes .nrep button >> nth=0');
   await pg.waitForSelector('#guide:not([hidden])', { timeout: 8000 });
-  const steps = await pg.$$eval('#guide li', l => l.length); await pg.click('#gOk');
+  const steps = await pg.$$eval('#guide li', l => l.length);
+  const warn = await pg.evaluate(() => { const w = document.querySelector('#guide .gwarn'), b = document.getElementById('gCalm'), r = b && b.getBoundingClientRect(); return { text: w ? w.textContent : '', h: r ? Math.round(r.height) : 0, before: document.documentElement.classList.contains('calm') }; });
+  await pg.click('#gCalm'); const calmOn = await pg.evaluate(() => ({ cls: document.documentElement.classList.contains('calm'), pressed: document.getElementById('gCalm').getAttribute('aria-pressed'), saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).calm }));
+  rec('photosensitivity-warning', /Photosensitivity warning/.test(warn.text) && /flash/.test(warn.text) && warn.h >= 44 && !warn.before && calmOn.cls && calmOn.pressed === 'true' && calmOn.saved === true, 'the first-run guide warns about flashing lights before the first scare; its Calm flashes switch (' + warn.h + 'px) turns calm on and saves it');
+  await pg.click('#gOk');
   await pg.waitForFunction(() => ABY.game.state.choices >= 1, null, { timeout: 20000 });
   const o = await pg.evaluate(() => ({ node: ABY.game.state.node, out: [...document.querySelectorAll('#thread .m.out')].map(e => e.textContent), guided: ABY.game.guided, hidden: document.getElementById('guide').hidden }));
   rec('lock-reply-starts-level-one', chips.length >= 2 && chips.every(x => x.h >= 43) && o.node !== 'awakening' && o.out.length === 1 && o.out[0] === chips[0].t, chips.length + ' reply chips on the lock note (' + chips.map(x => x.h).join('/') + 'px); tapping "' + chips[0].t + '" -> ' + o.node);

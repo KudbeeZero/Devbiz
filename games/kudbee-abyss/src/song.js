@@ -78,12 +78,12 @@ ABY.Song = (function () {
 
   // one haunting event: its sound, and what it does to the page (a rite only)
   function haunt(k) {
-    var A = ABY.Audio, calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; if (A) A.sfx(k === 'flash' ? 'thud' : k === 'blood' ? 'drip' : k === 'dark' ? 'knock' : k);
+    var A = ABY.Audio, calm = (ABY.game && ABY.game.calm) || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); if (A) A.sfx(k === 'flash' ? 'thud' : k === 'blood' ? 'drip' : k === 'dark' ? 'knock' : k);
     if (k === 'door') { doorT = 1; shake = Math.max(shake, 0.5); } else if (k === 'crack') { crackT = 1; shake = 1; fxs.push({ x: 0.15 + Math.random() * 0.7, s: Math.random() * 6 }); }
     else if (k === 'flash') { redT = 1; } else if (k === 'knock' || k === 'thud') { shake = 0.8; } else if (k === 'scream') { redT = 1; shake = 1; darkT = 0.7; }
     else if (k === 'blood') { bloodT = 1; for (var i = 0; i < 9; i++) drips.push({ x: 0.1 + Math.random() * 0.8, y: -Math.random() * 40, v: 40 + Math.random() * 90, r: 2 + Math.random() * 3 }); }
     else if (k === 'dark') darkT = 1; else if (k === 'drip') { drips.push({ x: 0.2 + Math.random() * 0.6, y: 0, v: 60, r: 3 }); bloodT = Math.max(bloodT, 0.3); }
-    if (calm) { shake = 0; redT = Math.min(redT, 0.25); darkT = Math.min(darkT, 0.25); }   // reduced motion: the sound stays, the flashing and shaking go
+    if (calm) { shake = 0; redT = Math.min(redT, 0.25); darkT = Math.min(darkT, 0.25); }   // calm flashes or reduced motion: the sound stays, the flashing and shaking go
   }
   // the dressing, painted behind the lanes: a door swinging open, a crack across the glass, blood running, a red flash, the dark closing in
   function dress() {
