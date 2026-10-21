@@ -563,6 +563,8 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
   await at(pg, 'd2_wake', { mem: 3, open: 'op_bath' }); const bath = await pg.evaluate(() => document.getElementById('thread').textContent);
   await at(pg, 'd2_wake', { mem: 3 }); const first = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && !/You came/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey does not');
+  await at(pg, 'd2_wake', { mem: 3, flags: { echo_dawn: 1, echo_song: 1 } }); const echoed = await pg.evaluate(() => document.getElementById('thread').textContent);
+  rec('echoes-remembered', /You opened the gate once/.test(echoed) && /you sang it back to me/.test(echoed) && !/You opened the gate once|you sang it back/.test(first), 'someone who found The Gate Opens and The Song Remembered hears the Queen and the Eye remember them on Day Two; a player who found neither hears nothing');
   await ctx.close();
 }
 { // the Clock: from a day's scene she can turn the clock back (a flashback) or wind it forward (a flash-forward). The glass tints, the clock reads another hour,

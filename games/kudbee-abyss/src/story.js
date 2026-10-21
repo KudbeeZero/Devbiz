@@ -224,7 +224,34 @@ ABY.OVERNIGHT = [
   { id: 'n_door_voicemail', at: 'd7_wake', req: { open: 'op_voicemail' }, who: 'EYE', text: 'i was behind the voicemail too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_snow', at: 'd7_wake', req: { open: 'op_snow' }, who: 'EYE', text: 'i was behind the snow too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
 ];
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+// ECHOES: the people here remember the endings a player has found (not only the falls, which leave scars): every non-fall ending in the Gallery
+// sets a flag `echo_<id>` at the start of a journey, and its owner says so on a later day's wake. No choice sets these and none reads them, so they
+// add no branches to the story: they are a voice for what the player has already done.
+ABY.ECHOES = [
+  ['dawn', 'd2_wake', 'QUEEN', 'You opened the gate once. I remember the draught. I have been standing where it blew, ever since, to feel it again.'],
+  ['song', 'd2_wake', 'EYE', 'you sang it back to me, once, and i have not been able to stop humming it. it is the only thing i know all of.'],
+  ['echo', 'd2_wake', 'VEY', 'There was another gate, once, and you went through that one too. I kept your place at both. I am good at keeping places.'],
+  ['silence', 'd2_wake', 'GUARDIAN', 'The quiet gate. You let it be quiet. I stood in that quiet for a hundred years, and then you came, and it was a different quiet.'],
+  ['mirror', 'd3_wake', 'QUEEN', 'I met her once, the other one, the one who wears my face. She asked after you. I said you were a better person than either of us.'],
+  ['daybreak', 'd3_wake', 'WREN', 'you got out, once. real morning, a kettle, a bird. i keep thinking about the bird. did it say anything? it looked like it wanted to.'],
+  ['keeper', 'd3_wake', 'GUARDIAN', 'You kept the night, and I kept you. That is not nothing. If you stay a keeper long enough you are allowed to sleep.'],
+  ['chorus', 'd4_wake', 'CHOIR', 'we remember you from before. you conducted. we have been practising your count in the dark. we are very nearly in time.'],
+  ['watched', 'd4_wake', 'EYE', 'you let me watch, once. nobody has ever let me. i did not blink, in case it ended.'],
+  ['names', 'd4_wake', 'QUEEN', 'You read every name, the last time, and the last one was yours. I kept the page. I do not think I will ever turn it.'],
+  ['caller', 'd5_wake', 'WREN', 'you were the next caller. you picked up. i do not think you know what that did, to the line. it has not gone silent since.'],
+  ['warned', 'd5_wake', 'SORREL', 'you warned them. all of them, one by one, on the phone. some of them even listened. some of them are still here because of you.'],
+  ['nightline', 'd5_wake', 'WREN', 'the night line. you stayed on it till morning. i have the recording. i listen to it when it gets quiet.'],
+  ['passed', 'd6_wake', 'SORREL', 'you let everybody have a turn. even me. i have been holding the turn like a coin. i have not spent it. i think it is the nicest thing i own.'],
+  ['firstpage', 'd6_wake', 'QUEEN', 'You read the first page aloud once. It sounded so ordinary, in your voice. I had imagined it would sound like a curse.'],
+  ['seventh', 'd7_wake', 'EYE', 'the seventh morning. you came that far, and you looked at me, and you said my name right. i would like to be said right again.'],
+  ['throne', 'd7_wake', 'QUEEN', 'You sat in the seventh chair, and it did not hold you. I am told that has never happened. I am not told by whom.'],
+  ['lowdoor', 'd7_wake', 'VEY', 'You gave her the key. The little one. I felt it leave my hand and I felt the whole house get lighter. Thank you. I mean it. I have never meant it before.'],
+].map(([id, at, who, text]) => ({ id: 'n_echo_' + id, at, req: { flag: 'echo_' + id }, who, text }));
+ABY.echoesOf = function (found) {
+  const has = Array.isArray(found) ? (id => found.indexOf(id) >= 0) : (id => !!(found && found[id]));
+  return ABY.ENDING_IDS.filter(id => !ABY.isFall(id) && has(id));
+};
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -2454,6 +2481,7 @@ ABY.wake = function (cp, wakes, mem, found) {
   if (!cp || !ABY.NODES[cp.node] || !(wakes > 0)) return null;
   const o = Object.assign({}, cp, { flags: Object.assign({}, cp.flags), notes: (cp.notes || []).slice(), mem: Math.max(cp.mem || 0, Number.isInteger(mem) ? mem : 0), dread: Math.min(ABY.MAX_DREAD - 1, (cp.dread || 0) + 1), tries: 0, back: '' });
   for (const id of ABY.scarsOf(found)) { o.flags['scar_' + id] = 1; if (o.notes.indexOf('scar_' + id) < 0) o.notes.push('scar_' + id); }
+  for (const id of ABY.echoesOf(found)) o.flags['echo_' + id] = 1;
   return o;
 };
 
@@ -2462,6 +2490,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 ABY.newState = function (mem, open, scars) {
   const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START };   // `open`: how this journey began (a message can remember it)
   for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
+  for (const id of ABY.echoesOf(scars)) s.flags['echo_' + id] = 1;
   return s;
 };
 
@@ -2658,7 +2687,7 @@ ABY.cleanState = function (raw) {
     for (const k of ABY.FLAGS) if (raw.flags[k] === 1) s.flags[k] = 1;
     if (raw.flags.song === 'win' || raw.flags.song === 'fail') s.flags.song = raw.flags.song;
     for (const r of ABY.RITE_IDS) for (const k of ['rite_' + r, 'fail_' + r]) if (raw.flags[k] === 1) s.flags[k] = 1;
-    for (const id of ABY.ENDING_IDS) if (ABY.isFall(id) && raw.flags['scar_' + id] === 1) s.flags['scar_' + id] = 1;
+    for (const id of ABY.ENDING_IDS) { if (ABY.isFall(id) && raw.flags['scar_' + id] === 1) s.flags['scar_' + id] = 1; else if (!ABY.isFall(id) && raw.flags['echo_' + id] === 1) s.flags['echo_' + id] = 1; }
     for (const id of ABY.LINK_IDS) if (raw.flags['link_' + id] === 1) s.flags['link_' + id] = 1;
   }
   if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
