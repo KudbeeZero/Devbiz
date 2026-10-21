@@ -817,6 +817,17 @@ await block('phone-turns', async () => { // the phone turns: on a desktop it can
   await ctx.close();
 });
 
+// Objects: what she picked up shows in Pulse until she spends it, and a pickup / use is offered only when it can be
+await block('objects', async () => { const c = await open({}, 'objects'); const pg = c.pg; await wake(pg); await openMessages(pg);
+  await at(pg, 'd2_stairs2', {}); const offer = (await chips(pg)).some(t => /white grit/.test(t)); await tapChip(pg, 'Scoop up the white grit'); const again = (await chips(pg)).some(t => /white grit/.test(t));
+  await at(pg, 'd5_hang', { flags: Object.assign({}, await pg.evaluate(() => ABY.game.state.flags), { has_shard: 1 }) }); const use = (await chips(pg)).some(t => /line of salt/.test(t));
+  await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500);
+  const rows = await pg.evaluate(() => [...document.querySelectorAll('#ringsL .rl.pocket')].map(r => r.querySelector('b').textContent + '|' + r.querySelector('.v').textContent));
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(300); await tapChip(pg, 'Pour a line of salt'); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(500);
+  const after = await pg.evaluate(() => [...document.querySelectorAll('#ringsL .rl.pocket b')].map(b => b.textContent));
+  rec('objects-carried-and-spent', offer && !again && use && rows.length === 2 && rows.some(r => /salt/.test(r)) && rows.some(r => /mirror.*\u2620/.test(r)) && after.length === 1 && /mirror/.test(after[0]),
+    'the salt is offered once (' + offer + '/' + again + '), the pocket shows ' + rows.join(', ') + ', and spending it on Day Five leaves ' + after.join(', ')); await c.ctx.close(); });
+
 // Settings: sound and vibration persist; the danger buttons need two taps
 await block('settings', async () => { const c = await open({}, 'settings'); await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); await c.pg.click('[data-app=settings]'); await sleep(400);
   await c.pg.click('#setSnd'); await c.pg.click('#setHap'); await sleep(200);
