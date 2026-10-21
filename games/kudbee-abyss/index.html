@@ -23,11 +23,13 @@
 <meta name="twitter:description" content="Kudbee Abyss — a seven-night story told through a haunted phone, with ten different beginnings. Text the Queen, play the Song of Recall on the Echo Flute, and find all twenty-six endings in your Gallery. Art by Desiree Design.">
 <meta name="twitter:image" content="https://devbiz.kudbee.workers.dev/assets/og/abyss.jpg?v=8">
 <meta name="twitter:image:alt" content="Kudbee Abyss: a phone lock screen showing the Queen and a message from an unknown number, with the title The Guardian's Gate and twenty-six endings to find">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
+<link rel="preload" href="../../assets/fonts/inter-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../assets/fonts/space-grotesk-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous" defer id="three" onerror="window.__noThree=1"></script>
 <style>
+  @font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:300 700; font-display:swap; src:url(../../assets/fonts/space-grotesk-variable-latin.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-style:normal; font-weight:100 900; font-display:swap; src:url(../../assets/fonts/inter-variable-latin.woff2) format('woff2'); }
   :root { --cyan:#39e6ff; --violet:#c46bff; --green:#7cffb2; --amber:#ffd34d; --ember:#ff8a5c; --pink:#ff6ec7; --ink:#05031a;
     --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px); --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
     --fd:'Space Grotesk',system-ui,sans-serif; --ease:cubic-bezier(0.22,1,0.36,1); --sbh:30px; }
