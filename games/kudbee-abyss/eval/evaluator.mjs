@@ -597,6 +597,40 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
     'winding forward shows ' + fut.clock + ' and the Day Four water; having seen it opens "Say your own name into the water" on the night, and not otherwise');
   await ctx.close();
 }
+{ // leaving the ending card must not lose what the ending offered: the next day, or a wake at dawn. It survives swiping home, tapping the badge banner, closing the
+  // app (a reload), and shows on the lock screen; only "New journey" / "Start over" lets it go
+  const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'card'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd2_door', { mem: 3, resolve: 3 }); await tapChip(pg, 'Hold the door yourself'); const m1 = await memoryShown(pg);
+  const card = () => pg.evaluate(() => ({ shown: document.getElementById('memory').classList.contains('on'), next: document.getElementById('memNext').hidden ? '' : document.getElementById('memNext').textContent, kick: document.getElementById('eKick').textContent, saved: (() => { const d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); return d.pend ? d.pend.kind + ':' + d.pend.id + ':' + (d.pend.state ? d.pend.state.node : '') : ''; })() }));
+  const c1 = await card();
+  await pg.evaluate(() => ABY.Phone.show('home')); await sleep(400); const gone = await pg.evaluate(() => document.getElementById('memory').classList.contains('on'));
+  const badge = await pg.evaluate(() => (document.querySelector('[data-app="msg"] .badge') || {}).textContent || '');
+  await pg.evaluate(() => ABY.Phone.show('lock')); await sleep(300); const lock = await pg.evaluate(() => document.getElementById('lkNotes').textContent);
+  await pg.evaluate(() => ABY.Phone.show('home')); await pg.click('#icMsg'); await sleep(500); const c2 = await card();
+  rec('ending-card-offer-survives-leaving', m1.name === 'The Night Keeper' && c1.next === 'Day Three' && c1.saved === 'carry:keeper:d3_wake' && !gone && badge === '1' && /Day Three is waiting/.test(lock) && c2.shown && c2.next === 'Day Three' && /waiting/.test(c2.kick),
+    'at "' + m1.name + '" the card offers ' + c1.next + ' and saves it (' + c1.saved + '); leaving the card, the Messages icon wears a badge, the lock screen says "Day Three is waiting", and opening Messages brings the card back with "' + c2.next + '"');
+  await pg.click('#memNext'); await pg.waitForFunction(() => ABY.game.state.node === 'd3_wake', null, { timeout: 15000 });
+  const after = await pg.evaluate(() => ({ node: ABY.game.state.node, thread: document.getElementById('thread').textContent, pend: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).pend }));
+  // the app is closed on the card: reload, and the lock screen still offers it
+  await at(pg, 'd2_door', { mem: 3, resolve: 3 }); await tapChip(pg, 'Hold the door yourself'); await memoryShown(pg); await sleep(300);
+  await pg.reload(); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 }); await wake(pg);
+  const lock2 = await pg.evaluate(() => document.getElementById('lkNotes').textContent); await openMessages(pg); await sleep(500); const c3 = await card();
+  await pg.click('#memNext'); await pg.waitForFunction(() => ABY.game.state.node === 'd3_wake', null, { timeout: 15000 });
+  const d3 = await pg.evaluate(() => ({ thread: document.getElementById('thread').textContent, keptResolve: ABY.game.state.resolve }));
+  rec('ending-card-offer-survives-a-reload', after.node === 'd3_wake' && /Day Three/.test(after.thread) && after.pend === null && /Day Three is waiting/.test(lock2) && c3.shown && c3.next === 'Day Three' && /Day Three/.test(d3.thread) && d3.keptResolve >= 3,
+    'taking it starts Day Three and clears the offer; with the app closed on the card, the reloaded lock screen says "Day Three is waiting" and Messages offers "' + c3.next + '" with her resolve kept (' + d3.keptResolve + ')');
+  // a fall: the wakes are not lost either; and "New journey" is how she lets the offer go
+  await at(pg, 'd2_you', { mem: 2, dread: 1, heart: 2, flags: { knew_name: 1 } }); await tapChip(pg, 'Turn the phone off'); await memoryShown(pg);
+  const f1 = await card(); await pg.evaluate(() => ABY.Phone.show('home')); await sleep(300); await pg.reload(); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 }); await wake(pg);
+  await openMessages(pg); await sleep(500); const f2 = await card(); await pg.click('#memNext'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const f3 = await pg.evaluate(() => ({ node: ABY.game.state.node, wakes: ABY.game.wakes, thread: document.getElementById('thread').textContent }));
+  rec('fall-wakes-survive-leaving-the-card', f1.next === 'Wake at dawn · 3 left' && f1.saved === 'wake:loop:' && f2.shown && f2.next === 'Wake at dawn · 3 left' && f3.node === 'd2_you' && f3.wakes === 2 && /2 wakes left/.test(f3.thread),
+    'after 3:07 Again she leaves the card and the app; Messages offers "' + f2.next + '" and she wakes at ' + f3.node + ' with ' + f3.wakes + ' wakes left');
+  await at(pg, 'd2_door', { mem: 3, resolve: 3 }); await tapChip(pg, 'Hold the door yourself'); await memoryShown(pg); await pg.click('#memAct'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const n1 = await pg.evaluate(() => ({ node: ABY.game.state.node, pend: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).pend }));
+  rec('new-journey-lets-the-offer-go', n1.node === 'awakening' && n1.pend === null, '"New journey" starts at ' + n1.node + ' and clears the saved offer');
+  await ctx.close();
+}
 { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
   const { ctx, pg } = await open({}, 'day67'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await at(pg, 'd5_dawn', { mem: 3, choices: 20, flags: { told_truth: 1 } }); await tapChip(pg, 'Promise to stay on the line'); const m = await memoryShown(pg);

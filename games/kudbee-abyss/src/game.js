@@ -13,7 +13,7 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES, pend: null };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren', SORREL: 'Sorrel' };
@@ -40,11 +40,16 @@
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
     G.saved = null;
     G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
+    // what an ending offered (the next day, or a wake at dawn) outlives the card: she can leave the card, close the app, and still take it
+    G.pend = null; var pd = d.pend; if (pd && typeof pd === 'object' && ABY.ENDINGS[pd.id]) {
+      if (pd.kind === 'carry' && ABY.ENDINGS[pd.id].cont && pd.state) { var cs = ABY.cleanState(pd.state); if (!ABY.NODES[cs.node].ending && cs.node === ABY.ENDINGS[pd.id].cont) G.pend = { kind: 'carry', id: pd.id, state: cs }; }
+      else if (pd.kind === 'wake' && ABY.isFall(pd.id) && G.cp && G.wakes > 0) G.pend = { kind: 'wake', id: pd.id };
+    }
     if (d.run && typeof d.run === 'object') { var s = ABY.cleanState(d.run); if (s.choices > 0 || s.node !== ABY.START) G.saved = { state: s, log: cleanLog(d.run.log) }; }
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
@@ -206,7 +211,7 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
-    var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
+    var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
   }
   function badge(id) { return ABY.BADGES.filter(function (b) { return b.id === id; })[0]; }
@@ -214,8 +219,8 @@
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
-    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); var fall = ended && ABY.isFall(id), canWake = fall && G.wakes > 0 && !!G.cp;
-    $('memNext').hidden = !(ended && (canWake || (E.cont && ABY.carry(G.state)))); $('memNext').setAttribute('data-wake', canWake ? '1' : '0');
+    $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); var fall = ended && ABY.isFall(id), mine = ended && G.pend && G.pend.id === id, canWake = mine && G.pend.kind === 'wake';   // (the offer is the saved one, so it is the same after the card was left)
+    $('memNext').hidden = !mine; $('memNext').setAttribute('data-wake', canWake ? '1' : '0');
     if (canWake) $('memNext').textContent = 'Wake at dawn \u00B7 ' + G.wakes + ' left'; else if (E && E.cont) $('memNext').textContent = dayOf(E.cont);
     if (fall && !canWake) { $('eKick').textContent = 'The phone will not wake again'; $('memAct').textContent = 'Start over'; } $('shareBtn').textContent = 'Share';
     $('memory').classList.add('on');
@@ -243,13 +248,14 @@
   // ---- a journey ----
   function dayOf(id) { var n = ABY.NODES[id], c = n && ABY.CHAPTERS[n.ch - 1]; return c ? c.label : 'Day Two'; }   // the act a carried run opens on (its chapter's name)
   function startRun(carry) {
-    var day2 = carry && ABY.carry(G.state), forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
+    var day2 = carry && G.pend && G.pend.kind === 'carry' ? JSON.parse(JSON.stringify(G.pend.state)) : null, forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
+    G.pend = null;                                                                   // whatever the last ending offered is taken (or let go)
     if (!day2) { G.lastOpen = opening; G.wakes = ABY.WAKES; }                       // a new journey: a new opening, and every wake back
     var st = day2 || ABY.newState(foundN(), opening, G.found);
     begin(st, day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true, day2 ? [] : st.notes.filter(function (k) { return /^scar_/.test(k); }));
   }
   function wakeRun() {                                                     // a fall: back to the last dawn, one wake fewer, a little more afraid
-    var s = ABY.wake(G.cp, G.wakes, foundN(), G.found); if (!s) return startRun();
+    G.pend = null; var s = ABY.wake(G.cp, G.wakes, foundN(), G.found); if (!s) return startRun();
     var had = G.cp.notes || []; G.wakes--; begin(s, (dayOf(s.node) === ABY.CHAPTERS[0].label ? 'You wake again' : dayOf(s.node) + ', again') + ' \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') + ' \u00B7 ', false, s.notes.filter(function (k) { return had.indexOf(k) < 0; }));
   }
   function begin(state, stampHead, checkpoint, told) {   // `told`: notes from her past self to point out (her scars)
@@ -266,6 +272,7 @@
   function openMsgApp() {
     if (G.run && G.started) { scrollEnd(false); return; }
     if (G.saved && !G.run) { resume(); return; }
+    if (G.pend && !G.run) { G.ending = G.pend.id; memory(G.pend.id, G.pend.kind === 'wake' ? 'The phone is waking you' : 'Your journey is waiting', true); return; }   // she left the ending card: the way on is still hers
     startRun();
   }
   function resume() {
@@ -287,6 +294,7 @@
   }
   function renderLock() {
     var list = [], last = null; for (var i = G.log.length - 1; i >= 0; i--) if (G.log[i].k === 'in' || G.log[i].k === 'sys') { last = G.log[i]; break; }
+    if (G.pend && !G.run) list.push({ title: G.pend.kind === 'wake' ? 'The phone is waking you' : dayOf(ABY.ENDINGS[G.pend.id].cont) + ' is waiting', icon: 'ic-msg', glyph: '\u2709', text: G.pend.kind === 'wake' ? 'Wake at dawn \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') : 'The night is over. The next one has already begun.', when: 'now', onTap: function () { open('msg'); } });
     if (active() && last) list.push({ title: WHO[last.who] || 'Unknown', text: last.t, when: 'now', onTap: function () { open('msg'); } });
     else if (!active() && foundN() > 0) list.push({ title: 'Gallery', icon: 'ic-gal', glyph: '❉', text: 'You have found ' + foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories.', when: 'today', onTap: function () { open('gallery'); } });
     else list.push({ title: 'Unknown', text: 'You’re awake. Do you hear it? The flute is calling.', when: 'now', onTap: function () { open('msg'); },
@@ -415,7 +423,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
-    if (name === 'home') maybeGuide();
+    if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
     if (name !== 'msg' && G.node && name !== 'lock') { /* the wallpaper keeps the speaker in view */ }
@@ -463,7 +471,7 @@
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.found = {}; G.deduced = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.found = {}; G.deduced = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }
@@ -484,7 +492,7 @@
     setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.classList.add('gone'); }, 700); }, ms);
   }
   function boot() {
-    load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
+    load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; G.pend = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
     ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
     var pre = $('pre'), booted = false, stage = $('screen');
     function ready(gl) {
