@@ -216,6 +216,15 @@
   #screen[data-time="future"] #three-canvas, #screen[data-time="future"] #artFb, #screen[data-time="future"] #sheet { filter:hue-rotate(-75deg) saturate(1.15) brightness(1.05) contrast(1.06); }
   @keyframes scan { to { background-position:0 10px, 0 0; } }
   @media (prefers-reduced-motion: reduce) { #screen.glitch #three-canvas, #screen.glitch #sheet, #screen.jump { animation:none; } #screen[data-time="future"] #timefx { animation:none; } #screen.uneasy #dreadv, .torch.hint, #call .cav, .av.eye, #call.shudder, #screen.struck #sheet, #screen.struck-dark #sheet { animation:none; } .ripple { animation-duration:.35s; } #screen.jump::after { animation-duration:.4s; } }
+  /* Calm flashes (Settings; on by default with reduced motion): nothing strobes, flickers, shakes or goes white. A jump scare is a short dark-red fade,
+     the Eye a slow one, a blackout fades in and out instead of cutting; the sounds and the story are the same */
+  .calm #screen.glitch #three-canvas, .calm #screen.glitch #sheet, .calm #screen.jump, .calm #screen.flick #status, .calm #screen[data-time="future"] #timefx, .calm #screen.uneasy #dreadv, .calm #call .cav, .calm #call.shudder, .calm #screen.struck #sheet, .calm #screen.struck-dark #sheet, .calm .torch.hint { animation:none; }
+  .calm #screen.glitch .m, .calm #screen.glitch .bar h2, .calm #call[data-ring="3"] #callWho { text-shadow:none; } .calm #call[data-ring="3"] .cav { box-shadow:none; }
+  .calm #screen.jump::after { background:#3a0010; animation:calmFade .7s ease-in-out both; } .calm #screen.eyeflash::after { animation:calmFade 2.6s ease-in-out both; }
+  @keyframes calmFade { 0% { opacity:0; } 35% { opacity:.5; } 100% { opacity:0; } }
+  .calm #blackout { transition:opacity .8s ease; } .calm #flash { transition:opacity .5s ease; }
+  .gwarn { margin:0 0 14px; padding:10px 12px; border-radius:14px; font-size:13px; line-height:1.45; color:#ffe2e6; background:rgba(255,59,92,0.12); border:1px solid rgba(255,77,94,0.45); } .gwarn b { color:#fff; }
+  .gwarn button { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:44px; margin-top:8px; padding:0 4px 0 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:#fff; font:600 13.5px/1.2 var(--fd); cursor:pointer; } .gwarn button:focus-visible { outline:2px solid #39e6ff; outline-offset:2px; }
   /* rotate the simulated phone (desktop only) */
   #rotBtn { display:none; position:fixed; right:22px; bottom:22px; z-index:5; align-items:center; gap:8px; min-height:44px; padding:0 16px; border-radius:999px; background:rgba(20,14,44,0.7); border:1px solid rgba(196,107,255,0.4); font:700 13px/1 var(--fd); color:#dbe6ff; letter-spacing:0.06em; text-transform:uppercase; backdrop-filter:blur(8px); } #rotBtn:hover { border-color:var(--cyan); }
   @media (hover:hover) and (pointer:fine) and (min-height:700px) and (min-width:520px) { #rotBtn { display:inline-flex; } }
@@ -300,6 +309,8 @@
     <section id="guide" role="dialog" aria-modal="true" aria-labelledby="gT" hidden>
       <div class="gcard">
         <h2 id="gT">How to play</h2>
+        <div class="gwarn" role="note"><b>Photosensitivity warning:</b> this game has flashing lights, sudden flashes and a shaking screen.
+          <button type="button" id="gCalm" aria-pressed="false"><span>Calm flashes</span><span class="tog" id="togCalmG"></span></button></div>
         <ol>
           <li><b>Tap a reply</b> to answer. Every choice changes the story.</li>
           <li><b>Watch the rings:</b> heart, resolve, trust&hellip; and dread. Too much dread and she comes apart.</li>
@@ -345,6 +356,7 @@
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Settings</h2></div></div>
       <div class="pad">
         <button class="row" id="setSnd" type="button" aria-pressed="false"><b>Sound</b><span class="tog" id="togSnd"></span></button>
+        <button class="row" id="setCalm" type="button" aria-pressed="false"><b>Calm flashes<small>No strobing, white flashes or shaking</small></b><span class="tog" id="togCalm"></span></button>
         <button class="row" id="setHap" type="button" aria-pressed="true"><b>Vibration<small>A tick when a message arrives</small></b><span class="tog on" id="togHap"></span></button>
         <button class="row danger" id="setNew" type="button"><b>Begin a new journey<small id="setNewS">Starts the chat over (your Gallery is kept)</small></b></button>
         <button class="row danger" id="setRes" type="button"><b>Erase the Gallery<small id="setResS">Forgets every ending you found</small></b></button>

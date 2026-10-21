@@ -37,6 +37,7 @@
     G.badges = {}; if (d.badges && typeof d.badges === 'object') ABY.BADGE_IDS.forEach(function (id) { if (d.badges[id] === 1) G.badges[id] = 1; });
     var own = function (k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.FACTIONS, k); }; G.faction = own(d.faction) ? d.faction : ''; G.lean = own(d.lean) ? d.lean : ''; G.guided = d.guided === true;
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
+    G.calm = typeof d.calm === 'boolean' ? d.calm : reduced; calmed();   // calm flashes: on by default for anyone who asked their device for less motion
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
     G.saved = null;
     G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
@@ -49,10 +50,11 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
+  function calmed() { document.documentElement.classList.toggle('calm', !!G.calm); }
   function buzz(ms) { if (G.haptics) ABY.Audio.buzz(ms); }
 
   // ---- the phone's face follows the story ----
@@ -169,13 +171,13 @@
   }
 
   // ---- scares: the phone and the dark do things to her ----
-  function fx(el, cls, ms) { el.classList.add(cls); setTimeout(function () { el.classList.remove(cls); }, reduced ? Math.min(ms, 500) : ms); }
+  function fx(el, cls, ms) { el.classList.add(cls); setTimeout(function () { el.classList.remove(cls); }, reduced && !G.calm ? Math.min(ms, 500) : ms); }   // (calm effects are slow fades: let them finish)
   function scare(type) {
     var sc = $('screen');
     if (type === 'jump') { ABY.Audio.sfx('jump'); buzz(90); fx(sc, 'jump', 700); ABY.Scene.burst(240, 300, 0xff3050, 40, 5); }
     else if (type === 'glitch') { ABY.Audio.sfx('glitch'); buzz(30); fx(sc, 'glitch', 900); }
     else if (type === 'eye') { ABY.Audio.sfx('eyes'); buzz(60); fx(sc, 'eyeflash', 2600); }
-    else if (type === 'blackout') { ABY.Audio.sfx('blackfx'); buzz(120); var b = $('blackout'); b.classList.add('on'); setTimeout(function () { b.classList.remove('on'); }, reduced ? 500 : 2200); }
+    else if (type === 'blackout') { ABY.Audio.sfx('blackfx'); buzz(120); var b = $('blackout'); b.classList.add('on'); setTimeout(function () { b.classList.remove('on'); }, reduced && !G.calm ? 500 : 2200); }
     else { ABY.Audio.sfx('whisper'); fx(sc, 'flick', 1100); }                     // whisper
   }
   function corrupt(el, text) {                                                    // at high dread her own words are not quite stable
@@ -212,7 +214,7 @@
   function finale() {
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
-    P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
+    P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(30); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced && !G.calm ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
     var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
   }
@@ -311,7 +313,7 @@
     var b = $('h2Badges'); b.innerHTML = ''; ABY.BADGES.forEach(function (x) { var e = document.createElement('span'); e.textContent = G.badges[x.id] ? x.name : '? ' + x.hint; if (!G.badges[x.id]) e.className = 'off'; b.appendChild(e); });
   }
   function maybeGuide() {                                                   // first run only: say what to do, once
-    if (G.guided || foundN() > 0 || !$('guide').hidden || $('memory').classList.contains('on') || ABY.Song.active) return; $('guide').hidden = false; $('gOk').focus({ preventScroll: true });
+    if (G.guided || foundN() > 0 || !$('guide').hidden || $('memory').classList.contains('on') || ABY.Song.active) return; renderSettings(); $('guide').hidden = false; $('gOk').focus({ preventScroll: true });
   }
   function renderGallery() {
     var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0); $('gShare').hidden = foundN() === 0;
@@ -415,6 +417,7 @@
   function renderSettings() {
     $('togSnd').classList.toggle('on', !ABY.Audio.muted); $('setSnd').setAttribute('aria-pressed', ABY.Audio.muted ? 'false' : 'true');
     $('togHap').classList.toggle('on', G.haptics); $('setHap').setAttribute('aria-pressed', G.haptics ? 'true' : 'false');
+    ['setCalm', 'gCalm'].forEach(function (id) { $(id).setAttribute('aria-pressed', G.calm ? 'true' : 'false'); }); $('togCalm').classList.toggle('on', !!G.calm); $('togCalmG').classList.toggle('on', !!G.calm);
   }
   function arm(id, msg, doIt) {                                           // a danger button needs two taps
     var b = $(id), s = b.querySelector('small'), orig = s.getAttribute('data-o') || s.textContent; s.setAttribute('data-o', orig);
@@ -438,7 +441,7 @@
   function wake() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
   function sleep() { cancelAnimationFrame(raf); raf = 0; }
   document.addEventListener('visibilitychange', function () { if (document.hidden) { sleep(); if (ABY.Audio.ctx) ABY.Audio.ctx.suspend(); } else { wake(); if (ABY.Audio.ctx && !ABY.Audio.muted) ABY.Audio.ctx.resume(); } });
-  ABY.debug = { frames: function () { return ABY.Scene.frames; }, running: function () { return !!raf; },
+  ABY.debug = { frames: function () { return ABY.Scene.frames; }, running: function () { return !!raf; }, scare: function (t) { scare(t); },
     // test hook: be at scene `id` with some stats (the evaluator and the screenshots use it; a player never does)
     goto: function (id, patch) {
       G.state = Object.assign(ABY.newState(), patch || {}); G.state.node = id; G.state.flags = Object.assign({}, (patch && patch.flags) || {}); G.state.notes = ((patch && patch.notes) || []).slice();
@@ -471,6 +474,8 @@
   $('memNext').addEventListener('click', function () { ABY.Audio.sfx('ui'); closeMemory(); if ($('memNext').getAttribute('data-wake') === '1') wakeRun(); else startRun(true); });
   $('memAct').addEventListener('click', function () { ABY.Audio.sfx('ui'); if ($('memAct').getAttribute('data-ended') === '1') { closeMemory(); startRun(); } else closeMemory(); });
   $('setSnd').addEventListener('click', function () { ABY.Audio.init(); ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); });
+  function toggleCalm() { G.calm = !G.calm; calmed(); renderSettings(); save(); }
+  $('setCalm').addEventListener('click', toggleCalm); $('gCalm').addEventListener('click', toggleCalm);
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; renderSettings(); save(); if (G.haptics) ABY.Audio.buzz(15); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
   arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.found = {}; G.deduced = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
