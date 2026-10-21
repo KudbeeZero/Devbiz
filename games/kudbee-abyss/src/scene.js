@@ -29,7 +29,19 @@ ABY.Scene = (function () {
   var CHAR = { queen: [0.47, 0.20, 0.60], guardian: [0.17, 0.30, 0.78], vey: [0.80, 0.60, 0.78] };   // art u, v(from the top), how close the camera comes (1 = framing the whole art)
   var tmpC;                                                       // (made in make(): THREE may not have loaded, and the game still runs without the 3D)
 
+  // a far painting stacked behind the city, faded in by the mood: 2 the city corrupted (the red eye), 3 the stairway to the eye (mood 'throne'), 4 the Eye itself
+  // looking out (setEye). Its picture may arrive after the stage is made, so a world can be added at any time; one that is missing leaves the city alone.
+  var WORLD_Z = { 2: -45.5, 3: -45, 4: -44.5 };
+  function addWorld(n, im) {
+    if (!bg || !scene || !im || !im.naturalWidth || (n === 2 && bg2) || (n === 3 && bg3) || (n === 4 && bg4)) return false;
+    var tex = new T.Texture(im); tex.needsUpdate = true;
+    var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, fog: false });
+    var mesh = new T.Mesh(new T.PlaneGeometry(96, 96 * im.naturalHeight / im.naturalWidth), mat); mesh.position.set(0, 1, WORLD_Z[n]); scene.add(mesh);
+    if (n === 2) { bg2Mat = mat; bg2 = mesh; } else if (n === 3) { bg3Mat = mat; bg3 = mesh; } else { bg4Mat = mat; bg4 = mesh; }
+    return true;
+  }
   function make(container, img, bgImg, bgImg2, bgImg3, bgImg4) {
+    T = window.THREE;                                                // (the library loads without blocking the page, so it is read when the stage is made, not when this file runs)
     if (!T) return false;
     tmpC = new T.Color();
     try {
@@ -62,21 +74,8 @@ ABY.Scene = (function () {
     if (bgImg && bgImg.naturalWidth) {
       var bt = new T.Texture(bgImg); bt.needsUpdate = true; bgMat = new T.MeshBasicMaterial({ map: bt, transparent: true, depthWrite: false, fog: false });
       bg = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg.naturalHeight / bgImg.naturalWidth), bgMat); bg.position.set(0, 1, -46); scene.add(bg);
-      // the same city, corrupted (the red eye): the world fades into it whenever the mood goes dark
-      if (bgImg2 && bgImg2.naturalWidth) {
-        var bt2 = new T.Texture(bgImg2); bt2.needsUpdate = true; bg2Mat = new T.MeshBasicMaterial({ map: bt2, transparent: true, opacity: 0, depthWrite: false, fog: false });
-        bg2 = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg2.naturalHeight / bgImg2.naturalWidth), bg2Mat); bg2.position.set(0, 1, -45.5); scene.add(bg2);
-      }
-      // and the stairway to the eye: the world of the crown (mood 'throne')
-      if (bgImg3 && bgImg3.naturalWidth) {
-        var bt3 = new T.Texture(bgImg3); bt3.needsUpdate = true; bg3Mat = new T.MeshBasicMaterial({ map: bt3, transparent: true, opacity: 0, depthWrite: false, fog: false });
-        bg3 = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg3.naturalHeight / bgImg3.naturalWidth), bg3Mat); bg3.position.set(0, 1, -45); scene.add(bg3);
-      }
-      // and the Eye itself, looking out: fades in over everything whenever a scene shows it (setEye)
-      if (bgImg4 && bgImg4.naturalWidth) {
-        var bt4 = new T.Texture(bgImg4); bt4.needsUpdate = true; bg4Mat = new T.MeshBasicMaterial({ map: bt4, transparent: true, opacity: 0, depthWrite: false, fog: false });
-        bg4 = new T.Mesh(new T.PlaneGeometry(96, 96 * bgImg4.naturalHeight / bgImg4.naturalWidth), bg4Mat); bg4.position.set(0, 1, -44.5); scene.add(bg4);
-      }
+      // the other worlds (the corrupted city, the stairway to the eye, the Eye itself) are added by addWorld: at once if their pictures are here, or later when they arrive
+      addWorld(2, bgImg2); addWorld(3, bgImg3); addWorld(4, bgImg4);
     }
 
     // stars
@@ -282,6 +281,7 @@ ABY.Scene = (function () {
   };
 
   S.init = function (container, img, bgImg, bgImg2, bgImg3, bgImg4) { return make(container, img, bgImg, bgImg2, bgImg3, bgImg4); };
+  S.addWorld = function (n, im) { return addWorld(n, im); };
   S.resize = resize;
   S.drawCalls = function () { return renderer ? renderer.info.render.calls : 0; };
   S.camera = function () { return camera ? { x: camera.position.x, y: camera.position.y, z: camera.position.z } : null; };
