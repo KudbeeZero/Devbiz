@@ -206,6 +206,22 @@ if (lineNonce < 0) {
     `Reveal disabled while spinning=${disabled}; seed unchanged by a mid-spin reveal=${r1.hash === h0}`);
 }
 
+{ // a tampered save is data, never markup
+  const pl = '<img src=x onerror="window.__jbPwn=1">';
+  await page.evaluate((x) => localStorage.setItem('kd.jackpot.pf', JSON.stringify({ serverSeed: x, serverSeedHash: x, clientSeed: x, nonce: x,
+    history: [{ nonce: x, clientSeed: x, hash: x, stops: [x], totalBet: x, totalWin: x, bonusWedge: x, revealedSeed: x }] })), pl);
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(300);
+  await page.evaluate(() => window.__jackpotTest.reveal()); await page.waitForTimeout(300);
+  const x = await page.evaluate(() => ({ pwn: !!window.__jbPwn, imgs: document.querySelectorAll('#histBody img, #revealMsg img').length, hash: window.__jackpotTest.state().hash }));
+  rec('tampered-save-is-text', !x.pwn && x.imgs === 0 && /^[0-9a-f]{64}$/.test(x.hash), `handler fired=${x.pwn}, injected <img> nodes=${x.imgs}, seed rebuilt=${/^[0-9a-f]{64}$/.test(x.hash)}`);
+  const keep = await page.evaluate(() => { localStorage.removeItem('kd.jackpot.pf'); return true; });
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  const before = await page.evaluate(() => localStorage.getItem('kd.jackpot.pf'));
+  await page.reload(); await page.evaluate(() => window.__jackpotTest.ready()); await page.waitForTimeout(200);
+  const after = await page.evaluate(() => localStorage.getItem('kd.jackpot.pf'));
+  rec('real-save-passes-through', keep && before === after && before !== null, 'a genuine profile is kept byte-identical across a reload');
+}
+
 const bigNonce = await findNonce('!r.bonusTriggered && r.lineWin + r.scatterPay >= 15 * r.totalBet');
 if (bigNonce >= 0) {
   await playNonce(bigNonce);
