@@ -144,7 +144,11 @@ ABY.Audio = (function () {
       case 'crown': A.tone(110, 3.2, 'sawtooth', 0.1, 55); A.tone(116, 3.2, 'sawtooth', 0.08, 58); A.tone(55, 3.5, 'sine', 0.14, 36); break;
     }
   };
-  A.buzz = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+  // vibration (Android; iPhone Safari has no navigator.vibrate): a number, or a [on, off, on, ...] pattern in ms, scaled by the player's strength.
+  // Off when the player turned it off: the flute rites call this directly, so the switch lives here and not only in game.js.
+  A.hapOn = true; A.hap = 1;
+  A.buzz = function (p) { if (!A.hapOn) return; try { if (!navigator.vibrate) return; var k = A.hap; navigator.vibrate(Array.isArray(p) ? p.map(function (v, i) { return i % 2 ? v : Math.round(v * k); }) : Math.round(p * k)); } catch (e) {} };
+  A.buzzStop = function () { try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {} };
   A.scale = SCALE;
   return A;
 })();
