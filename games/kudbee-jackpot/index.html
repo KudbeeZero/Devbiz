@@ -442,12 +442,43 @@
   var chips = loadJSON('kd.jackpot.chips', 2000);
   var jp = loadJSON('kd.jackpot.pools', Object.assign({}, JP_SEED));
   var pf = loadJSON('kd.jackpot.pf', null);
-  var pendingInit = (async function () {
-    if (!pf) {
-      var seed = randomHex(32);
-      pf = { serverSeed: seed, serverSeedHash: await sha256Hex(seed), clientSeed: randomHex(8), nonce: 0, history: [] };
-      saveJSON('kd.jackpot.pf', pf);
+  // A saved profile is untrusted input: localStorage can hold anything (a hand-edited save,
+  // any other script on this origin). Every field is checked against the shape this game
+  // writes; a legitimate save passes through unchanged, anything else is dropped or rebuilt.
+  var HEX64 = /^[0-9a-f]{64}$/;
+  function cleanText(v) { return typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 32) : ''; }
+  function num(v) { return typeof v === 'number' && isFinite(v) ? v : 0; }
+  function sanitizeProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    var hist = [];
+    if (Array.isArray(p.history)) {
+      p.history.forEach(function (h) {
+        if (!h || typeof h !== 'object') return;
+        hist.push({
+          nonce: num(h.nonce), clientSeed: cleanText(h.clientSeed),
+          hash: typeof h.hash === 'string' && HEX64.test(h.hash) ? h.hash : '',
+          stops: Array.isArray(h.stops) ? h.stops.slice(0, 5).map(num) : [],
+          totalBet: num(h.totalBet), totalWin: num(h.totalWin),
+          bonusWedge: WHEEL.indexOf(h.bonusWedge) >= 0 ? h.bonusWedge : null,
+          revealedSeed: typeof h.revealedSeed === 'string' && HEX64.test(h.revealedSeed) ? h.revealedSeed : null
+        });
+      });
     }
+    return {
+      serverSeed: typeof p.serverSeed === 'string' && HEX64.test(p.serverSeed) ? p.serverSeed : '',
+      serverSeedHash: typeof p.serverSeedHash === 'string' && HEX64.test(p.serverSeedHash) ? p.serverSeedHash : '',
+      clientSeed: cleanText(p.clientSeed), nonce: Math.max(0, Math.floor(num(p.nonce))), history: hist
+    };
+  }
+  var pendingInit = (async function () {
+    var clean = sanitizeProfile(pf);
+    if (!clean) clean = { serverSeed: '', serverSeedHash: '', clientSeed: randomHex(8), nonce: 0, history: [] };
+    if (!clean.serverSeed || !clean.serverSeedHash) {   // missing or tampered: a fresh sealed seed
+      clean.serverSeed = randomHex(32); clean.serverSeedHash = await sha256Hex(clean.serverSeed);
+    }
+    var changed = !pf || JSON.stringify(clean) !== JSON.stringify(pf);
+    pf = clean;
+    if (changed) saveJSON('kd.jackpot.pf', pf);
   })();
   var perLineBet = 10, spinning = false;
 
@@ -462,6 +493,8 @@
   var jpEls = { MINI: $('jpMini'), MINOR: $('jpMinor'), MAJOR: $('jpMajor'), GRAND: $('jpGrand') };
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
+  // Anything that reaches the DOM through innerHTML is data, never markup.
+  function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   // Demo chips only: once the balance can't cover the smallest bet the game would be stuck
   // for good (chips persist), so offer a refill back to the starting stack.
   var START_CHIPS = 2000;
@@ -482,8 +515,8 @@
   }
   function renderHistory() {
     histBody.innerHTML = pf.history.slice(-25).reverse().map(function (h) {
-      return '<tr><td>' + h.nonce + '</td><td>' + h.totalBet + '</td><td>' + (h.totalWin >= 0 ? '+' : '') + fmt(h.totalWin) +
-        '</td><td>' + (h.bonusWedge || '—') + '</td><td class="mono">' + (h.revealedSeed ? 'revealed' : 'sealed') + '</td></tr>';
+      return '<tr><td>' + escHtml(h.nonce) + '</td><td>' + escHtml(h.totalBet) + '</td><td>' + (h.totalWin >= 0 ? '+' : '') + escHtml(fmt(h.totalWin)) +
+        '</td><td>' + escHtml(h.bonusWedge || '—') + '</td><td class="mono">' + (h.revealedSeed ? 'revealed' : 'sealed') + '</td></tr>';
     }).join('');
   }
   var histBody = $('histBody');
@@ -977,7 +1010,7 @@
     pf.serverSeed = newSeed; pf.serverSeedHash = await sha256Hex(newSeed); pf.nonce = 0;
     saveJSON('kd.jackpot.pf', pf);
     var msg = $('revealMsg'); msg.style.display = 'block';
-    msg.innerHTML = 'Revealed seed: <span class="mono">' + revealed + '</span> — verify any round played under it below.';
+    msg.innerHTML = 'Revealed seed: <span class="mono">' + escHtml(revealed) + '</span> — verify any round played under it below.';
     renderFair(); renderHistory();
   });
   $('verifyBtn').addEventListener('click', async function () {
