@@ -172,7 +172,7 @@
   .row:disabled { opacity:.4; }
   .row { display:flex; align-items:center; gap:12px; padding:13px 14px; min-height:52px; border-radius:16px; background:rgba(255,255,255,0.06); margin-bottom:10px; width:100%; text-align:left; } .row b { font:600 15px/1.2 var(--fd); } .row small { display:block; font-size:12px; color:#8fa0c0; margin-top:2px; font-weight:400; }
   .tog { margin-left:auto; flex:none; width:50px; height:30px; border-radius:15px; background:rgba(255,255,255,0.18); position:relative; transition:background .25s; } .tog::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:transform .25s var(--ease); } .tog.on { background:#34c759; } .tog.on::after { transform:translateX(20px); }
-  .danger b { color:#ff7a7a; } .hint2 { font-size:12px; color:#7d89a6; text-align:center; margin:18px 0 0; line-height:1.5; }
+  .danger b { color:#ff7a7a; } .about { margin-top:16px; padding:14px 16px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); } .about h3 { font:700 12px/1 var(--fd); letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); } .about p { margin-top:9px; font-size:13.5px; line-height:1.5; color:#c4cde6; } .about b { color:#fff; } .hint2 { font-size:12px; color:#7d89a6; text-align:center; margin:18px 0 0; line-height:1.5; }
   .bigbtn { display:block; width:100%; min-height:52px; margin-top:14px; padding:13px 24px; border-radius:999px; border:1px solid rgba(57,230,255,0.7); background:linear-gradient(120deg, rgba(57,230,255,0.22), rgba(196,107,255,0.28)); font:700 16px/1 var(--fd); color:#fff; box-shadow:0 12px 40px -12px rgba(57,230,255,0.6); } .bigbtn.ghost { border-color:rgba(196,107,255,0.45); background:rgba(255,255,255,0.06); box-shadow:none; } .bigbtn:active { transform:scale(0.98); }
   .fl { text-align:center; padding-top:8px; } .fl .big { font:700 56px/1 var(--fd); margin-top:10px; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent; } .fl p { color:#b9c6e0; font-size:14px; line-height:1.55; margin-top:10px; }
 
@@ -395,9 +395,23 @@
         <button class="row" id="setHapLv" type="button"><b>Vibration strength<small id="hapLvS">Normal</small></b></button>
         <button class="row danger" id="setNew" type="button"><b>Begin a new journey<small id="setNewS">Starts the chat over (your Gallery is kept)</small></b></button>
         <button class="row danger" id="setRes" type="button"><b>Erase the Gallery<small id="setResS">Forgets every ending you found</small></b></button>
+        <button class="row" id="setInstall" type="button" hidden><b>Add to Home Screen<small>Opens full screen from your real phone's home screen, and plays with no signal</small></b></button>
+        <div class="about">
+          <h3>About</h3>
+          <p><b>Your data stays on this phone.</b> Journeys, endings, deductions and settings are saved here and nowhere else. The game sends nothing anywhere: no account, no ads, no tracking.</p>
+          <p><b>Plays offline</b> once it has opened, from the browser or the home screen.</p>
+        </div>
         <p class="hint2">Kudbee Abyss &middot; art by Desiree Design</p>
       </div>
     </section>
+    <div class="isheet" id="inst" role="dialog" aria-modal="true" aria-labelledby="instH" hidden>
+        <div class="icard"><img src="assets/app/apple-touch-icon.png" alt="" width="64" height="64"><h3 id="instH">Add Abyss to your Home Screen</h3>
+          <ol><li><span class="ik" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Tap <b>Share</b> in Safari's toolbar</span></li>
+            <li><span class="ik" aria-hidden="true">&#43;</span><span>Scroll down, tap <b>Add to Home Screen</b></span></li>
+            <li><span class="ik" aria-hidden="true">&#10003;</span><span>Tap <b>Add</b>. Abyss opens full screen and plays with no signal.</span></li></ol>
+          <p class="inote">The app on your home screen keeps its own memories: your endings here stay in this browser.</p>
+          <button type="button" class="bigbtn" id="instOk">Got it</button></div>
+    </div>
 
     <section class="scr app" id="notes" aria-label="Notes">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Notes</h2><div class="sub" id="nSub">0 clues</div></div></div>
@@ -407,14 +421,6 @@
     <section class="scr app" id="store" aria-label="App Store">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>App Store</h2><div class="sub" id="stSub">Free. Always free.</div></div></div>
       <div class="pad"><div id="stList"></div><p class="hint2">Nothing here costs money. Some of it costs more.</p></div>
-      <div class="isheet" id="inst" role="dialog" aria-modal="true" aria-labelledby="instH" hidden>
-        <div class="icard"><img src="assets/app/apple-touch-icon.png" alt="" width="64" height="64"><h3 id="instH">Add Abyss to your Home Screen</h3>
-          <ol><li><span class="ik" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Tap <b>Share</b> in Safari's toolbar</span></li>
-            <li><span class="ik" aria-hidden="true">&#43;</span><span>Scroll down, tap <b>Add to Home Screen</b></span></li>
-            <li><span class="ik" aria-hidden="true">&#10003;</span><span>Tap <b>Add</b>. Abyss opens full screen and plays with no signal.</span></li></ol>
-          <p class="inote">The app on your home screen keeps its own memories: your endings here stay in this browser.</p>
-          <button type="button" class="bigbtn" id="instOk">Got it</button></div>
-      </div>
     </section>
 
     <section class="scr app" id="appx" aria-label="App">

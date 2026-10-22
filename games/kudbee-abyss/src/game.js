@@ -446,9 +446,14 @@
   var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches), ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   function appSetup() {
     try { if (navigator.serviceWorker && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* no service worker: online only */ }
-    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); bip = e; if (P.screen === 'store') renderStore(); });
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); bip = e; if (P.screen === 'store') renderStore(); if (P.screen === 'settings') renderSettings(); });
     window.addEventListener('appinstalled', function () { bip = null; G.install = 1; save(); if (P.screen === 'store') renderStore(); });
     if (standalone && G.install !== 1) { G.install = 1; save(); }
+  }
+  function installNow() {                                             // the App Store card and the Settings row
+    ABY.Audio.sfx('ui');
+    if (bip) { var e = bip; bip = null; try { e.prompt(); e.userChoice.then(function (c) { if (c && c.outcome === 'accepted') { G.install = 1; save(); } renderStore(); renderSettings(); }, function () {}); } catch (err) { /* a prompt only works once */ } return; }
+    $('inst').hidden = false; $('instOk').focus({ preventScroll: true });
   }
   function canInstall() { return coarse && !standalone && G.install !== 1 && G.visits >= 2 && (!!bip || ios); }
   function installRow(box) {
@@ -459,11 +464,7 @@
     sm.textContent = 'Put this phone on your real one: it opens full screen from your home screen, and it works with no signal.';
     tx.appendChild(b); tx.appendChild(sm);
     var g = document.createElement('button'); g.type = 'button'; g.className = 'get'; g.id = 'stInstall'; g.textContent = 'GET';
-    g.addEventListener('click', function () {
-      ABY.Audio.sfx('ui');
-      if (bip) { var e = bip; bip = null; try { e.prompt(); e.userChoice.then(function (c) { if (c && c.outcome === 'accepted') { G.install = 1; save(); } renderStore(); }, function () {}); } catch (err) { /* a prompt only works once */ } return; }
-      $('inst').hidden = false; $('instOk').focus({ preventScroll: true });
-    });
+    g.addEventListener('click', installNow);
     row.appendChild(ic); row.appendChild(tx); row.appendChild(g); box.appendChild(row);
   }
   function stars(n) { var r = Math.round(n); return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r); }
@@ -488,6 +489,7 @@
   function renderSettings() {
     $('togSnd').classList.toggle('on', !ABY.Audio.muted); $('setSnd').setAttribute('aria-pressed', ABY.Audio.muted ? 'false' : 'true');
     $('hapLvS').textContent = HAPN[G.hapLv]; $('setHapLv').disabled = !G.haptics;
+    $('setInstall').hidden = !canInstall();
     $('togHap').classList.toggle('on', G.haptics); $('setHap').setAttribute('aria-pressed', G.haptics ? 'true' : 'false');
     ['setCalm', 'gCalm'].forEach(function (id) { $(id).setAttribute('aria-pressed', G.calm ? 'true' : 'false'); }); $('togCalm').classList.toggle('on', !!G.calm); $('togCalmG').classList.toggle('on', !!G.calm);
   }
@@ -500,7 +502,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
-    if (name !== 'store') $('inst').hidden = true;
+    $('inst').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
@@ -537,6 +539,7 @@
     if (moved) { $('replies').classList.remove('on'); deliver(ns.node); } else if (!G.delivering && G.node && !G.node.ending) showReplies(G.node);
   });
   $('rotBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); });
+  $('setInstall').addEventListener('click', installNow);
   $('instOk').addEventListener('click', function () { $('inst').hidden = true; ABY.Audio.sfx('click'); });
   $('gOk').addEventListener('click', function () { G.guided = true; $('guide').hidden = true; save(); });
   $('fPlay').addEventListener('click', function () { startSong(true); });

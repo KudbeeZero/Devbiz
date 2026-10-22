@@ -370,7 +370,9 @@ await block('installable', async () => {
   // (second visit on, phones only) whose iPhone sheet shows Safari's three taps
   const c0 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const p0 = await c0.newPage(); p0.on('pageerror', e => errs.push('installable ' + e.message));
-  await p0.route('https://fonts.*/**', r => r.abort());
+  await c0.route('https://fonts.*/**', r => r.abort());
+  // the pinned three.js from the cached copy whose hash matches the page's integrity (a context route also answers the service worker's own fetch)
+  if (THREE_PATH) await c0.route('https://cdnjs.cloudflare.com/**', r => r.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, path: THREE_PATH })); else await c0.route('https://cdnjs.cloudflare.com/**', r => r.abort());
   await p0.addInitScript(`try { localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);
   await p0.goto(URL, { waitUntil: 'load' });
   const man = await p0.evaluate(async () => {
@@ -393,11 +395,12 @@ await block('installable', async () => {
   await c0.setOffline(true);
   const res = await p0.reload({ waitUntil: 'load' }).catch(() => null);
   const off = await p0.waitForFunction(() => document.getElementById('boot').classList.contains('gone') && window.ABY && ABY.Phone && ABY.Phone.screen === 'lock', null, { timeout: 20000 }).then(() => true, () => false);
-  const live = off && await p0.evaluate(async () => { await document.fonts.ready; return { on: navigator.onLine, font: document.fonts.check('16px "Space Grotesk"'), art: [...document.images].length >= 0 }; });
+  const live = off && await p0.evaluate(async () => { await document.fonts.ready; return { on: navigator.onLine, font: document.fonts.check('16px "Space Grotesk"'), gl: !document.getElementById('screen').classList.contains('nogl') && !!window.THREE }; });
+  const three = kept.some(u => /three\.min\.js/.test(u));
   await p0.screenshot({ path: join(OUT, 'offline-lock.png') });
   await c0.close();
-  rec('plays-offline', ctl && kept.length >= 20 && kept.some(u => /space-grotesk/.test(u)) && kept.some(u => /story\.js$/.test(u)) && !!res && res.fromServiceWorker() && off && live.on === false && live.font,
-    'the service worker keeps ' + kept.length + ' files (the 3D library ' + (kept.some(u => /three\.min\.js/.test(u)) ? 'too' : 'not, here: no CDN in this sandbox, so offline is 2D') + '); with the network gone a reload is served by it (' + (res && res.fromServiceWorker()) + '), the fonts load and the phone wakes to its lock screen');
+  rec('plays-offline', ctl && kept.length >= 20 && kept.some(u => /space-grotesk/.test(u)) && kept.some(u => /story\.js$/.test(u)) && !!res && res.fromServiceWorker() && off && live.on === false && live.font && (!THREE_PATH || (three && live.gl)),
+    'the service worker keeps ' + kept.length + ' files (' + (three ? 'the 3D library too, and offline its integrity still checks: the 3D world is up (' + live.gl + ')' : 'no 3D library: no cached copy here, so offline is 2D') + '); with the network gone a reload is served by it (' + (res && res.fromServiceWorker()) + '), the fonts load and the phone wakes to its lock screen');
   // the install card: an iPhone on its second visit sees it at the top of the App Store; GET opens the three taps; a first visit does not
   const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
   const card = async (visits, w, h) => {
@@ -415,12 +418,15 @@ await block('installable', async () => {
       await p.screenshot({ path: join(OUT, 'install-sheet-' + w + 'x' + h + '.png') });
       await p.click('#instOk'); await sleep(200); sheet.closed = await p.evaluate(() => document.getElementById('inst').hidden);
     }
-    await c.close(); return { row, sheet };
+    await p.evaluate(() => ABY.Phone.show('settings')); await sleep(400);
+    const set = await p.evaluate(() => ({ row: !document.getElementById('setInstall').hidden, about: document.querySelector('#settings .about').textContent }));
+    if (set.row) { await p.click('#setInstall'); await sleep(300); set.sheet = await p.evaluate(() => !document.getElementById('inst').hidden); await p.screenshot({ path: join(OUT, 'settings-about-' + w + 'x' + h + '.png') }); }
+    await c.close(); return { row, sheet, set };
   };
   const first = await card(0, 390, 844), second = await card(1, 390, 844), wide = await card(5, 844, 390);
   const ok = s => s && s.open && s.steps.length === 3 && /Share/.test(s.steps[0]) && /Add to Home Screen/.test(s.steps[1]) && s.btn && s.closed;
-  rec('install-card', !first.row.row && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
-    'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes');
+  rec('install-card', !first.row.row && !first.set.row && second.set.row && second.set.sheet && /sends nothing anywhere/.test(second.set.about) && /Plays offline/.test(second.set.about) && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
+    'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes; Settings offers the same, and its About says the game sends nothing anywhere');
 });
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
