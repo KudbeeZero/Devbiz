@@ -379,13 +379,14 @@ await block('installable', async () => {
     const icons = await Promise.all(m.icons.map(async i => ({ want: i.sizes, got: await size(i.src), purpose: i.purpose })));
     const shots = await Promise.all((m.screenshots || []).map(async i => ({ want: i.sizes, got: await size(i.src) })));
     const apple = document.querySelector('link[rel="apple-touch-icon"]'), meta = n => (document.querySelector('meta[name="' + n + '"]') || {}).content;
-    return { id: m.id, name: m.name, short: m.short_name, display: m.display, start: m.start_url, icons, shots, apple: apple ? await size(apple.getAttribute('href')) : 'missing',
+    const launch = await Promise.all([...document.querySelectorAll('link[rel="apple-touch-startup-image"]')].map(async l => { const q = /device-width: (\d+)px\) and \(device-height: (\d+)px\) and \(-webkit-device-pixel-ratio: (\d)/.exec(l.media); return { want: q ? q[1] * q[3] + 'x' + q[2] * q[3] : '?', got: await size(l.getAttribute('href')) }; }));
+    return { id: m.id, name: m.name, short: m.short_name, display: m.display, start: m.start_url, icons, shots, launch, apple: apple ? await size(apple.getAttribute('href')) : 'missing',
       capable: meta('apple-mobile-web-app-capable'), bar: meta('apple-mobile-web-app-status-bar-style'), title: meta('apple-mobile-web-app-title') };
   });
   const sized = a => a.every(i => i.want === i.got);
   rec('app-manifest', man.id === '/games/kudbee-abyss/' && man.name === 'Kudbee Abyss' && man.short === 'Abyss' && man.display === 'standalone' && man.start === './index.html' && sized(man.icons) && man.icons.some(i => i.purpose === 'maskable') && man.icons.some(i => i.got === '512x512')
-    && man.shots.length >= 3 && sized(man.shots) && man.apple === '180x180' && man.capable === 'yes' && man.bar === 'black-translucent' && man.title === 'Abyss',
-    man.name + ' (' + man.short + ', ' + man.display + '): ' + man.icons.map(i => i.got + (i.purpose === 'maskable' ? ' maskable' : '')).join(', ') + ', a ' + man.apple + ' home-screen icon and ' + man.shots.length + ' store screenshots, every one the size it says; full screen from an iPhone home screen');
+    && man.shots.length >= 3 && sized(man.shots) && man.launch.length >= 8 && sized(man.launch) && man.apple === '180x180' && man.capable === 'yes' && man.bar === 'black-translucent' && man.title === 'Abyss',
+    man.name + ' (' + man.short + ', ' + man.display + '): ' + man.icons.map(i => i.got + (i.purpose === 'maskable' ? ' maskable' : '')).join(', ') + ', a ' + man.apple + ' home-screen icon and ' + man.shots.length + ' store screenshots and ' + man.launch.length + ' iPhone launch screens, every one the size it says; full screen from an iPhone home screen');
   // offline: the service worker keeps the game; with no network a reload is served by it and the phone wakes to its lock screen
   const ctl = await p0.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated', null, { timeout: 20000 }).then(() => true, () => false);
   const kept = await p0.evaluate(() => caches.keys().then(ks => caches.open(ks.find(k => k.startsWith('aby-')))).then(c => c.keys()).then(k => k.map(r => r.url)));

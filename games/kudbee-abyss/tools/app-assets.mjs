@@ -67,5 +67,19 @@ const png = (url, name) => writeFileSync(join(OUT, name), Buffer.from(url.split(
   await page.screenshot({ path: join(OUT, 'screen-store.jpg'), type: 'jpeg', quality: 86 });
   await ctx.close();
 }
+// the launch screens: iOS shows a home-screen web app's `apple-touch-startup-image` while it opens (without one it flashes white), so each is
+// the game's own power-on screen without its moving parts, for each current iPhone (portrait CSS size x pixel ratio, the `media` in index.html)
+export const LAUNCH = [[440, 956, 3], [402, 874, 3], [430, 932, 3], [393, 852, 3], [428, 926, 3], [390, 844, 3], [375, 812, 3], [414, 896, 3], [414, 896, 2], [375, 667, 2]];
+for (const [w, h, d] of LAUNCH) {
+  const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: d });
+  await page.goto(BASE + 'manifest.webmanifest');
+  await page.setContent(`<style>@font-face { font-family:'Space Grotesk'; font-weight:300 700; src:url(${BASE}../../assets/fonts/space-grotesk-variable-latin.woff2) format('woff2'); }
+    html,body { margin:0; height:100%; background:#05030c; } body { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; }
+    .m { font-size:40px; color:#9a6bff; text-shadow:0 0 22px #6a2cff; } .n { font:800 22px/1.15 'Space Grotesk', sans-serif; letter-spacing:.22em; text-transform:uppercase; color:#e9e4ff; }
+    .b { width:120px; height:3px; border-radius:2px; background:rgba(255,255,255,0.12); }</style><div class="m">&#9680;</div><div class="n">Kudbee<br>Nightmares<br>Studio</div><div class="b"></div>`);
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: join(OUT, `launch-${w}x${h}@${d}.png` ) });
+  await page.close();
+}
 await browser.close(); server.close();
 console.log('wrote', OUT);
