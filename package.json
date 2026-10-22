@@ -5,6 +5,7 @@
     "aether:eval": "node lab/aether-wing/eval/evaluator.mjs",
     "abyss:eval": "node games/kudbee-abyss/eval/evaluator.mjs",
     "abyss:eval:fast": "node games/kudbee-abyss/eval/parallel.mjs",
+    "abyss:graph": "node --max-old-space-size=8192 games/kudbee-abyss/eval/graph.mjs",
     "games:csp": "node tools/games-csp-check.mjs",
     "voidrunner:eval": "node games/kudbee-voidrunner/eval/evaluator.mjs",
     "birds:engine": "node games/kudbee-angrybirds/eval/engine.mjs",
