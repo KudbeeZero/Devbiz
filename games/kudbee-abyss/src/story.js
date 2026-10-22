@@ -283,7 +283,28 @@ ABY.bond = function (s, who) {
   const b = ABY.BONDS[who], f = (s && s.flags) || {};
   return b ? b.up.filter(k => f[k]).length - b.down.filter(k => f[k]).length : 0;
 };
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+// SECOND SIGHT: on a later journey the night remembers the earlier ones. A scene most journeys pass (`at`) opens with one more line, from someone who
+// recognises her, for an ending she has found (`echo_<id>`, `scar_<id>`) or for how many (`min: { mem }`). They add no scenes and no branches: the
+// same night reads differently the second time. A scene she can come back to (a flashlight, a slip, a detour) never carries one, so it is said once.
+ABY.SECOND_SIGHT = [
+  { id: 's_sms', at: 'unknown_sms', req: { min: { mem: 1 } }, who: 'EYE', text: 'you again. you have held this phone before. your thumb goes to the same place on the glass.' },
+  { id: 's_flute', at: 'flute_path', req: { flag: 'echo_song' }, who: 'QUEEN', text: 'The flute knows the way already. It pulls the way it pulled the night you played the whole song. Have we done this before?' },
+  { id: 's_stones', at: 'stones_path', req: { flag: 'scar_drowned' }, who: 'CHOIR', text: 'we know your voice. you were down in the water with us once. you left. nobody leaves.' },
+  { id: 's_choir', at: 'choir_1', req: { flag: 'echo_names' }, who: 'CHOIR', text: 'you said our names once and we went quiet. we are singing again. we are sorry. it is so hard to stop.' },
+  { id: 's_spire', at: 'spire', req: { min: { mem: 3 } }, who: 'NARRATOR', text: 'Near the top of the spire there are scratches at the height of her hand, in tallies of five. Some of them look as if they were made tonight.' },
+  { id: 's_vey', at: 'vey_come', req: { flag: 'scar_betrayal' }, who: 'VEY', text: 'You are looking at my mouth. Someone has told you about my mouth. (A small, hurt pause.) I will keep it closed, then.' },
+  { id: 's_hollows', at: 'hollow_pass', req: { flag: 'scar_hollow' }, who: 'QUEEN', text: 'They are bowing to you. The Hollows have never bowed to anyone but a queen. What did you do, the last time?' },
+  { id: 's_guardian', at: 'g_meet', req: { flag: 'echo_dawn' }, who: 'GUARDIAN', text: '...I know you... the gate... you opened it once, and I felt a draught on my face for the first time in a hundred years...' },
+  { id: 's_reconcile', at: 'reconcile', req: { flag: 'echo_keeper' }, who: 'QUEEN', text: 'Someone holds a door in my dreams so that I can sleep. They have your hands. I thought you should know.' },
+  { id: 's_stairs', at: 'stairs_2', req: { flag: 'scar_eye' }, who: 'EYE', text: 'you came up these stairs once and answered me. this time do not. this time i want to see what you do instead.' },
+  { id: 's_d2queen', at: 'd2_queen', req: { flag: 'scar_loop' }, who: 'QUEEN', text: 'Whatever you do tonight, don’t turn it off. I don’t know why I’m saying that. I dreamt it.' },
+  { id: 's_finale', at: 'd3_finale', req: { flag: 'echo_chorus' }, who: 'EYE', text: 'the last time you stood in this room you sang. i have been practising the last line. i still get it a little wrong.' },
+  { id: 's_shore', at: 'd4_shore', req: { flag: 'echo_caller' }, who: 'CHOIR', text: 'you wrote a name on the line once. we heard who it was. we have kept them warm for you.' },
+  { id: 's_wren', at: 'd5_hello', req: { flag: 'echo_warned' }, who: 'WREN', text: 'this is so weird. i dreamt you would call. you told me to pick up every number in the book. did i?' },
+  { id: 's_sorrel', at: 'd6_sorrel', req: { flag: 'scar_cradle' }, who: 'SORREL', text: 'you came in last time!! you stayed for paper hats. are you coming in again? i saved you the red.' },
+  { id: 's_end', at: 'd7_end', req: { min: { mem: 10 } }, who: 'NARRATOR', text: 'You have stood here many times. The book knows it: it falls open at the first page before anyone touches it.' },
+];
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES, ABY.SECOND_SIGHT).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -2448,6 +2469,61 @@ ABY.NODES = {
   },
 };
 
+// ---- detours: a side room off a day's road ----
+// A detour is two scenes reached from one scene of its own day (`from`), offered once (`req: { noflag: 'dt_<day>' }`); every way out of its second
+// scene goes back to that scene and sets the flag. It never reaches an ending and never changes the day's shape: it is more of the night, not another
+// night. Each pays a little in stats. The graph test proves the shape (`detours`); add one by adding an entry here.
+ABY.DETOURS = [
+  { id: 'dt_d2', from: 'd2_captain', label: 'Ask him what the door looks like from his side', a: {
+      ch: 6, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian',
+      text: 'From my side it was never a door. It was a wall with a keyhole, low down, at the height of a child. I kept my eye to it for the first ten years. After that I kept my ear to it, because the eye got tired and the ear did not.',
+      choices: [{ label: 'Ask what he heard through it', add: { heart: 1 } }, { label: 'Ask why the keyhole is so low', add: { resolve: 1 } }] },
+    b: { ch: 6, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
+      text: 'A crayon. For a hundred years, a crayon going round and round on paper, and somebody humming eleven notes she had not learned yet. I never opened it. I was told to hold it, and holding is not opening. (He is quiet a long time.) Ask me the other thing now. The thing you came for.',
+      choices: [{ label: 'Ask him for his name' }, { label: 'Let him rest a moment longer first', add: { dread: -1 } }] } },
+  { id: 'dt_d3', from: 'd3_fork', label: 'Look closer at the wall between the three ways', a: {
+      ch: 8, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+      text: 'Between the corridors the wall is papered, and the paper is drawings, hundreds, pinned edge to edge. Every one is a door. Some are coloured in. One is only half finished, the crayon pressed right through where a small hand stopped.',
+      choices: [{ label: 'Trace the unfinished door with a finger', add: { heart: 1 } }, { label: 'Photograph the wall', add: { resolve: 1 } }] },
+    b: { ch: 8, speaker: 'EYE', mood: 'dark', focus: 'gate',
+      text: 'do not touch those. those are mine. (The red behind the paper brightens, then dims, embarrassed.) ...you can look. nobody looks at them. she used to put them on the fridge.',
+      choices: [{ label: 'Tell the Eye they are good', add: { trust: 1 } }, { label: 'Step back to the fork' }] } },
+  { id: 'dt_d4', from: 'd4_queen', label: 'Ask her what the stones sang before the water came', a: {
+      ch: 9, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
+      text: 'A song for counting. One for every name, so nobody is skipped. I taught it to a child once, to get her to sleep. She would never let me finish. She said if I got to the end, all the people would have to go home.',
+      choices: [{ label: 'Ask her to sing the first line', add: { heart: 1 } }, { label: 'Ask her who the child was', add: { resolve: 1, dread: 1 } }] },
+    b: { ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'gate',
+      text: 'one. (A hundred voices, very far down, very gently.) two. (The water in the speaker trembles.) three. we will stop there. she never let us get further than three.',
+      choices: [{ label: 'Thank them', add: { dread: -1 } }, { label: 'Ask them to keep counting', add: { resolve: 1, dread: 1 } }] } },
+  { id: 'dt_d5', from: 'd5_book', label: 'Ask Wren to read you her line in the book', a: {
+      ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+      text: 'okay. it says: Wren, 9. Wren, 12. Wren, 15. it\'s me. it\'s my age, every time. (Paper turning.) it skips this year. there\'s a gap where this year should be. is that good? tell me that\'s good.',
+      choices: [{ label: 'Tell her it is good', add: { heart: 1 } }, { label: 'Tell her you don\'t know', add: { trust: 1 } }] },
+    b: { ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+      text: 'ok. (A long breath.) i\'m drawing a line through the gap with my pen so nobody can write in it. it\'s a really thick line. i\'m going over it lots of times.',
+      choices: [{ label: 'Tell her to go over it once more', add: { resolve: 1 } }, { label: 'Tell her that\'s enough now', add: { dread: -1 } }] } },
+  { id: 'dt_d6', from: 'd6_page', label: 'Turn the first page over', a: {
+      ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'gate',
+      text: 'On the back, in pencil, in a grown-up\'s small handwriting: a shopping list. Milk. Bread. Paper hats. Candles (4). Crayons, red. Underneath, crossed out so hard the paper tore: do not answer the phone.',
+      choices: [{ label: 'Read the crossed-out line again', add: { resolve: 1, dread: 1 } }, { label: 'Fold the page back carefully', add: { heart: 1 } }] },
+    b: { ch: 11, speaker: 'QUEEN', mood: 'dark', focus: 'queen',
+      text: 'Her fourth birthday. I bought everything on that list. The phone rang while the candles were lit, and I answered it, because I always answer. (Silence.) Put the page back. Please. She will want it where she left it.',
+      choices: [{ label: 'Put it back', add: { trust: 1 } }, { label: 'Ask her what the caller said', add: { dread: 1 } }] } },
+  { id: 'dt_d7', from: 'd7_queen', label: 'Ask her what she will do at six', a: {
+      ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
+      text: 'At six? (She laughs, which you have never heard her do.) I have not thought past 3:07 in so long. Tea. I think I would like tea, in a cup that is only a cup, by a window that faces the right way.',
+      choices: [{ label: 'Promise her the window', add: { heart: 1 } }, { label: 'Tell her not to plan yet', add: { resolve: 1 } }] },
+    b: { ch: 12, speaker: 'VEY', mood: 'dark', focus: 'gate',
+      text: 'How sweet. (Vey, from somewhere behind her, polite as a knife.) Tea at six. I will lay the table. I always lay the table. I would set one more place, but on the last night I never know who is going to need it.',
+      choices: [{ label: 'Tell Vey to lay it for everyone', add: { trust: 1 } }, { label: 'Say nothing to Vey', add: { dread: 1 } }] } },
+];
+for (const d of ABY.DETOURS) {
+  const a = d.id + '_a', b = d.id + '_b';
+  ABY.NODES[a] = Object.assign({}, d.a, { detour: d.id, choices: d.a.choices.map(c => Object.assign({}, c, { next: b })) });
+  ABY.NODES[b] = Object.assign({}, d.b, { detour: d.id, choices: d.b.choices.map(c => Object.assign({}, c, { next: d.from, set: d.id })) });
+  ABY.NODES[d.from].choices.push({ label: d.label, next: a, req: { noflag: d.id } });
+}
+
 // ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
   dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn', cont: 'd2_wake',
@@ -2506,6 +2582,85 @@ ABY.ENDINGS = {
     text: 'The screen goes black and stays black. In the glass you can see your own face, lit from beneath by nothing. Somewhere very close, very gently, something starts to knock on the other side of the screen.' },
 };
 ABY.ENDING_IDS = Object.keys(ABY.ENDINGS);
+
+// CODAS: the same ending, closed by what she actually did. When an ending lands, the people she met text her one last time (`who`), for whoever holds
+// the flag (`req`, like a choice's), before the end stamp; at most ABY.CODA_MAX of them, in this order. They change no ending, no Gallery tile and no
+// share card: the ending is still the ending. They are pure data, so the graph test can prove each one's flag is set on a scene that can lead to it.
+ABY.CODA_MAX = 2;
+ABY.CODAS = [
+  { id: 'c_dawn_heard', end: 'dawn', req: { flag: 'heard' }, who: 'QUEEN', text: 'The gate is open and I can feel the draught. I can still hear the recording you played, too. I think I will always hear both.' },
+  { id: 'c_dawn_vey', end: 'dawn', req: { flag: 'vey_trusted' }, who: 'VEY', text: 'You trusted me at the gate. Remember that you did, later, when it costs more.' },
+  { id: 'c_dawn_marked', end: 'dawn', req: { flag: 'marked' }, who: 'EYE', text: 'you walked through and you did not look back at me. that is all right. i looked enough for both of us.' },
+  { id: 'c_song_carried', end: 'song', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with me on the stairs and then you played the whole song. I did not know one person could do both in a night.' },
+  { id: 'c_song_choir', end: 'song', req: { flag: 'choir' }, who: 'CHOIR', text: 'we heard it through the water. every note. we have been trying to hum it back to you all morning.' },
+  { id: 'c_echo_lullaby', end: 'echo', req: { flag: 'lullaby' }, who: 'QUEEN', text: 'That was my lullaby you sang. I had forgotten the second verse. You had not.' },
+  { id: 'c_echo_asked', end: 'echo', req: { flag: 'asked_eye' }, who: 'EYE', text: 'you asked me what i wanted. behind every one of those gates, that is the question i keep hearing.' },
+  { id: 'c_silence_doubt', end: 'silence', req: { flag: 'doubt' }, who: 'VEY', text: 'You trusted no one tonight, and the gate opened anyway. Isn’t that interesting. I am writing it down.' },
+  { id: 'c_silence_ledger', end: 'silence', req: { flag: 'ledger' }, who: 'GUARDIAN', text: 'You found the ledger and still you walked on alone. Read it again, when you have someone to read it to.' },
+  { id: 'c_silence_marked', end: 'silence', req: { flag: 'marked' }, who: 'EYE', text: 'it was so quiet when you left. i did not know a gate could be that quiet. i am practising.' },
+  { id: 'c_crown_heard', end: 'crown', req: { flag: 'heard' }, who: 'QUEEN', text: 'That was my crown. I heard you put it on. It does not come off. I tried, for a very long time.' },
+  { id: 'c_crown_vey', end: 'crown', req: { flag: 'vey_trusted' }, who: 'VEY', text: 'Long live the Queen. I mean it. I always mean it, the first time.' },
+  { id: 'c_hollow_carried', end: 'hollow', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with me on the stairs, and then you locked the door. I keep thinking about the sitting.' },
+  { id: 'c_hollow_truth', end: 'hollow', req: { flag: 'truth' }, who: 'GUARDIAN', text: 'You knew the truth and you turned the key anyway. I am not angry. I know what a key weighs.' },
+  { id: 'c_eye_marked', end: 'eye', req: { flag: 'marked' }, who: 'EYE', text: 'you looked first. i only looked back. now we are both looking, for ever, and it is not lonely at all.' },
+  { id: 'c_eye_asked', end: 'eye', req: { flag: 'asked_eye' }, who: 'EYE', text: 'you asked what i wanted. this. this is what i wanted. thank you thank you thank you' },
+  { id: 'c_eye_choir', end: 'eye', req: { flag: 'choir' }, who: 'CHOIR', text: 'we felt the stairs go still. we will sing for you as well, now. there is room.' },
+  { id: 'c_mirror_truth', end: 'mirror', req: { flag: 'truth' }, who: 'QUEEN', text: 'You learned the truth, and then you paid for it. I am out. I am in the light. I keep looking at my hands.' },
+  { id: 'c_mirror_ledger', end: 'mirror', req: { flag: 'ledger' }, who: 'GUARDIAN', text: 'Your name is in the ledger now, under mine. I crossed mine out. I have left yours. I did not know if I was allowed.' },
+  { id: 'c_mirror_doubt', end: 'mirror', req: { flag: 'vey_doubt' }, who: 'VEY', text: 'You never did trust me. And now you are the one in the dark. I will visit. I visit everyone.' },
+  { id: 'c_betrayal_heard', end: 'betrayal', req: { flag: 'heard' }, who: 'QUEEN', text: 'That was not me at the gate. I want you to know that. It used my voice. I heard it use my voice.' },
+  { id: 'c_betrayal_vey', end: 'betrayal', req: { flag: 'vey_trusted' }, who: 'VEY', text: 'I wore her voice to say thank you. The thank you was mine, though. I want you to have that.' },
+  { id: 'c_daybreak_name', end: 'daybreak', req: { flag: 'freed_name' }, who: 'GUARDIAN', text: 'Morning. I wrote my name on the window and watched it fade, and I did not mind. I know where it is now.' },
+  { id: 'c_daybreak_ally', end: 'daybreak', req: { flag: 'ally' }, who: 'EYE', text: '6:00. i have never seen 6:00. it is grey. it is so grey. thank you.' },
+  { id: 'c_daybreak_vey', end: 'daybreak', req: { flag: 'vey_held' }, who: 'VEY', text: 'Real morning. I have no shadow in it. You held my hand anyway. I will remember which hand.' },
+  { id: 'c_keeper_name', end: 'keeper', req: { flag: 'freed_name' }, who: 'GUARDIAN', text: 'You are holding my door. Lean on it with your shoulder, not your hands. Your hands will want to let go.' },
+  { id: 'c_keeper_vey', end: 'keeper', req: { flag: 'vey_known' }, who: 'VEY', text: 'You said my name, so I know where you are now. I will bring you something to sit on. It is a long shift.' },
+  { id: 'c_keeper_carried', end: 'keeper', req: { flag: 'carried' }, who: 'QUEEN', text: 'You let me sleep. You sat with me on the stairs once, and now you are sitting with the door. I dreamt of grass.' },
+  { id: 'c_loop_name', end: 'loop', req: { flag: 'knew_name' }, who: 'GUARDIAN', text: 'You knew my name. Say it again when the phone comes back on. Please. It always comes back on.' },
+  { id: 'c_loop_refused', end: 'loop', req: { flag: 'refused_vey' }, who: 'VEY', text: 'You switched it off. You switched me off too, once. It is a very human habit, switching things off.' },
+  { id: 'c_chorus_lamp', end: 'chorus', req: { flag: 'corvin_lamp' }, who: 'GUARDIAN', text: 'Every door opened, and your lamp was at the end of each one. I walked through all of them. I took my time.' },
+  { id: 'c_chorus_hand', end: 'chorus', req: { flag: 'vey3_hand' }, who: 'VEY', text: 'You held my hand on the stairs and then you sang. I did not know a hand of mine could end up in a song.' },
+  { id: 'c_chorus_marked', end: 'chorus', req: { flag: 'marked' }, who: 'EYE', text: 'you looked at me on the first night. you sang to me on the third. nobody has done either. now i know what both are for.' },
+  { id: 'c_watched_marked', end: 'watched', req: { flag: 'marked' }, who: 'EYE', text: 'you looked at me once. now you look away. i keep the first one in the drawer and take it out when you are not looking. which is always.' },
+  { id: 'c_watched_asked', end: 'watched', req: { flag: 'asked_eye' }, who: 'EYE', text: 'you asked me what i wanted. i did not know then. i know now. i want you to turn around.' },
+  { id: 'c_watched_skip', end: 'watched', req: { flag: 'skipped_doors' }, who: 'GUARDIAN', text: 'You skipped the doors and then you looked away. I know that habit. I had it for a hundred years.' },
+  { id: 'c_names_read', end: 'names', req: { flag: 'read_names' }, who: 'CHOIR', text: 'you said us. every one. two hundred and fourteen, and then quiet. we did not know quiet could sound like our own names.' },
+  { id: 'c_names_refused', end: 'names', req: { flag: 'refused_next' }, who: 'EYE', text: 'you would not write a name on the line, so the book had nothing left to eat. it closed hungry. good.' },
+  { id: 'c_names_door', end: 'names', req: { flag: 'corvin_door' }, who: 'GUARDIAN', text: 'The book is shut and my door is open. I have not gone through it yet. I wanted to tell you first.' },
+  { id: 'c_caller_read', end: 'caller', req: { flag: 'read_names' }, who: 'CHOIR', text: 'you read us all, and then you wrote one more. we have made room. we always make room.' },
+  { id: 'c_caller_vey', end: 'caller', req: { flag: 'vey_held' }, who: 'VEY', text: 'Who did you write? No. Don’t tell me. I like to find out.' },
+  { id: 'c_drowned_read', end: 'drowned', req: { flag: 'read_names' }, who: 'CHOIR', text: 'you know all our names already. that makes it so much easier. sing now. it is the same tune for everyone.' },
+  { id: 'c_drowned_name', end: 'drowned', req: { flag: 'freed_name' }, who: 'GUARDIAN', text: 'You gave me my name back. Down there they take yours. Hold on to it. Say it under your breath.' },
+  { id: 'c_warned_truth', end: 'warned', req: { flag: 'told_truth' }, who: 'WREN', text: 'everyone picked up. my mum picked up. she said who is this and i said nobody, go back to sleep, and she did. it was 6am. it was normal.' },
+  { id: 'c_warned_salt', end: 'warned', req: { flag: 'used_salt' }, who: 'WREN', text: 'i put the jar of salt on the windowsill anyway. not because of anything. just because it was from you.' },
+  { id: 'c_warned_riff', end: 'warned', req: { flag: 'riff_done' }, who: 'WREN', text: 'i keep playing the riff. i know the whole thing now. i am going to teach it to my cat.' },
+  { id: 'c_nightline_salt', end: 'nightline', req: { flag: 'used_salt' }, who: 'WREN', text: '3:07. hi. it’s me. the salt line is still on the sill. my cat licked it. she is fine. are you there?' },
+  { id: 'c_nightline_riff', end: 'nightline', req: { flag: 'riff_done' }, who: 'WREN', text: 'can we play the riff again tonight. over the phone. you do the low bit.' },
+  { id: 'c_nightline_refused', end: 'nightline', req: { flag: 'refused_next' }, who: 'EYE', text: 'you would not write a name, and now you will not hang up. i do not understand you. i am listening anyway.' },
+  { id: 'c_passed_truth', end: 'passed', req: { flag: 'told_truth' }, who: 'WREN', text: 'you told me the truth and then you hung up. i keep reading the truth part. i keep stopping before the end.' },
+  { id: 'c_passed_salt', end: 'passed', req: { flag: 'used_salt' }, who: 'WREN', text: 'the salt didn’t do anything. or it did, and it wasn’t enough. i’m writing a name. i’m sorry. i’m sorry.' },
+  { id: 'c_firstpage_crayon', end: 'firstpage', req: { flag: 'used_crayon' }, who: 'SORREL', text: 'you wrote under my wall. i drew a door round it so nobody can rub it out.' },
+  { id: 'c_firstpage_sorrel', end: 'firstpage', req: { flag: 'eye_is_sorrel' }, who: 'SORREL', text: 'you know it is me. you know my name now. come back tomorrow. you said.' },
+  { id: 'c_firstpage_promise', end: 'firstpage', req: { flag: 'promised_sorrel' }, who: 'EYE', text: 'you promised. i will not close until you come. i have never had a promise keep me open before.' },
+  { id: 'c_cradle_crayon', end: 'cradle', req: { flag: 'used_crayon' }, who: 'SORREL', text: 'you are in here now!! we can draw together. i saved you the red.' },
+  { id: 'c_cradle_promise', end: 'cradle', req: { flag: 'promised_sorrel' }, who: 'QUEEN', text: 'You promised her you would come back, and then you went in and stayed. That is a better promise than mine ever was.' },
+  { id: 'c_cradle_shard', end: 'cradle', req: { flag: 'used_shard' }, who: 'EYE', text: 'you showed me the mirror and then you came in anyway. you are the only one who has seen what i look like and stayed.' },
+  { id: 'c_seventh_named', end: 'seventh', req: { flag: 'named_eye' }, who: 'SORREL', text: 'you said my name like it was a person’s name. mum says it like that now too.' },
+  { id: 'c_seventh_wren', end: 'seventh', req: { flag: 'wren_with' }, who: 'WREN', text: 'it’s 6:01. i have never been awake at 6:01 and not scared. thank you for letting me come.' },
+  { id: 'c_seventh_board', end: 'seventh', req: { flag: 'board_out' }, who: 'GUARDIAN', text: 'You laid every note out on the floor until it made a picture. I am told it looked like a door.' },
+  { id: 'c_throne_promise', end: 'throne', req: { flag: 'promised_sorrel' }, who: 'SORREL', text: 'you are on mummy’s chair. it is too big for you. i can hear you through the door. goodnight.' },
+  { id: 'c_throne_loop', end: 'throne', req: { flag: 'knows_loop' }, who: 'VEY', text: 'You knew it would loop, and you sat down anyway. That is the bravest stupid thing I have watched in a very long time.' },
+  { id: 'c_throne_truth', end: 'throne', req: { flag: 'told_truth' }, who: 'WREN', text: 'nobody writes my name now. nobody writes any name. the phone rings once a year at 3:07 and nobody is on it. i think it’s you saying you’re fine.' },
+  { id: 'c_again_loop', end: 'again', req: { flag: 'knows_loop' }, who: 'VEY', text: 'You knew it would loop. You let it. I will see you at the beginning. I am always at the beginning.' },
+  { id: 'c_again_salt', end: 'again', req: { flag: 'used_salt' }, who: 'WREN', text: 'there is salt on my windowsill and i don’t know why. do you know why' },
+  { id: 'c_again_named', end: 'again', req: { flag: 'named_eye' }, who: 'EYE', text: 'you said my name, and then you let it all start again. now nobody knows it. say it sooner, next time.' },
+  { id: 'c_lowdoor_crayon', end: 'lowdoor', req: { flag: 'used_crayon' }, who: 'SORREL', text: 'mum read what you wrote under my wall. she read it twice. then she drew a door. hers is wonky.' },
+  { id: 'c_lowdoor_hand', end: 'lowdoor', req: { flag: 'vey3_hand' }, who: 'VEY', text: 'You took my hand on the stairs, four nights ago. I wanted you to know where it led. It led here. I am glad it was my hand.' },
+  { id: 'c_lowdoor_board', end: 'lowdoor', req: { flag: 'board_out' }, who: 'QUEEN', text: 'You laid it all out, and you saw what I did, and you still gave me the key. I do not know what to call that. She calls it fair.' },
+  { id: 'c_blackout_marked', end: 'blackout', req: { flag: 'marked' }, who: 'EYE', text: 'it is dark now. i can see you better in the dark. i always could.' },
+  { id: 'c_blackout_heard', end: 'blackout', req: { flag: 'heard' }, who: 'QUEEN', text: 'Your screen went out. I know what that sounds like from the inside. Knock twice if you can hear me.' },
+];
+ABY.codasFor = function (id, s) { return ABY.CODAS.filter(c => c.end === id && ABY.okReq(s, c.req)).slice(0, ABY.CODA_MAX); };
 
 // ---- falls and checkpoints ----
 // A FALL is an ending where she dies or loses herself (fall: true). It goes in the Gallery like any other, but it never carries on to the next day.

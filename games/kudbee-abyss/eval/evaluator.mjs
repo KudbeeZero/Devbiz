@@ -828,6 +828,31 @@ await block('objects', async () => { const c = await open({}, 'objects'); const 
   rec('objects-carried-and-spent', offer && !again && use && rows.length === 2 && rows.some(r => /salt/.test(r)) && rows.some(r => /mirror.*\u2620/.test(r)) && after.length === 1 && /mirror/.test(after[0]),
     'the salt is offered once (' + offer + '/' + again + '), the pocket shows ' + rows.join(', ') + ', and spending it on Day Five leaves ' + after.join(', ')); await c.ctx.close(); });
 
+// Codas: an ending closes with a last word from the people she met, for what she did, just before the end stamp; the memory card is the ending's own
+await block('codas', async () => { const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'codas'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const last = () => pg.evaluate(() => { return { before: [...document.querySelectorAll('#thread .who')].map(w => w.textContent), text: document.getElementById('thread').textContent, card: document.getElementById('eText').textContent }; });
+  await at(pg, 'd2_door', { mem: 3, resolve: 3, flags: { freed_name: 1, vey_known: 1, carried: 1 } }); await tapChip(pg, 'Hold the door yourself');
+  await pg.waitForFunction(() => /a long shift/.test(document.getElementById('thread').textContent) && !document.body.classList.contains('finale'), null, { timeout: 15000 }); await sleep(300); await pg.screenshot({ path: join(OUT, 'codas-keeper.png') });   // read before the gate takes the screen
+  await memoryShown(pg);
+  const a = await last(); 
+  const want = await pg.evaluate(() => ({ codas: ABY.codasFor('keeper', { flags: { freed_name: 1, vey_known: 1, carried: 1 } }).map(c => c.text), card: ABY.ENDINGS.keeper.text }));
+  await at(pg, 'd2_door', { mem: 3, resolve: 3, flags: {} }); await tapChip(pg, 'Hold the door yourself'); await memoryShown(pg); const b = await last();
+  rec('codas-close-the-ending', want.codas.length === 2 && want.codas.every(t => a.text.includes(t)) && a.before.slice(-2).join() === 'Guardian,Vey' && /Vey[^]*\u2014 end \u2014$/.test(a.text) && !/dreamt of grass/.test(a.text) && a.card === want.card && b.card === want.card && !want.codas.some(t => b.text.includes(t)),
+    'Holding the door after freeing the Guardian and naming Vey ends with ' + a.before.slice(-2).join(' then ') + ', on screen before the gate (the third earned coda waits: two at most), a player who did neither hears nobody, and the memory card is the ending\u2019s own text both times'); await ctx.close(); });
+
+// Detours and second sight: a side room off the day's road, offered once, that brings her back where she was; and a scene that remembers an earlier journey
+await block('detours', async () => { const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'detours'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const node = (id) => pg.waitForFunction((id) => ABY.game.state.node === id && !ABY.game.delivering, id, { timeout: 15000 });
+  await at(pg, 'd3_fork', { flags: {} }); const offer = (await chips(pg)).some(t => /wall between the three ways/.test(t));
+  await tapChip(pg, 'Look closer at the wall'); await node('dt_d3_a'); await tapChip(pg, 'Trace the unfinished door'); await node('dt_d3_b');
+  const eye = await pg.evaluate(() => /put them on the fridge/.test(document.getElementById('thread').textContent)); await pg.screenshot({ path: join(OUT, 'detour-day-three.png') });
+  await tapChip(pg, 'Tell the Eye they are good'); await node('d3_fork'); const back = await chips(pg), st = await pg.evaluate(() => ({ f: ABY.game.state.flags.dt_d3, heart: ABY.game.state.heart }));
+  rec('detours-return-once', offer && eye && st.f === 1 && !back.some(t => /wall between/.test(t)) && back.some(t => /red corridor/.test(t)),
+    'Day Three\u2019s fork offers the wall of drawings; the Eye speaks in it; she comes back to the fork with the side room gone and the three ways still open');
+  await at(pg, 'g_meet', { mem: 1, flags: { echo_dawn: 1 } }); const seen = await pg.evaluate(() => [...document.querySelectorAll('#thread .who')].map(w => w.textContent).join() + '|' + /draught on my face/.test(document.getElementById('thread').textContent));
+  await at(pg, 'g_meet', { mem: 0, flags: {} }); const fresh = await pg.evaluate(() => /draught on my face/.test(document.getElementById('thread').textContent.split('carry the echo').slice(-2)[0] || ''));
+  rec('second-sight-remembers', /\|true$/.test(seen) && !fresh, 'someone who once opened the gate is recognised by the Guardian when they meet again; a first journey is not'); await ctx.close(); });
+
 // Settings: sound and vibration persist; the danger buttons need two taps
 await block('settings', async () => { const c = await open({}, 'settings'); await wake(c.pg); await c.pg.click('#unlock'); await sleep(400); await c.pg.click('[data-app=settings]'); await sleep(400);
   await c.pg.click('#setSnd'); await c.pg.click('#setHap'); await sleep(200);

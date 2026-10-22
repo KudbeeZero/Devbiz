@@ -131,22 +131,24 @@
     // the Clock: a flashback or flash-forward is announced when she goes in, and the glass settles when she comes out
     if (!fromLog) { if (n.time && !G.slip) { var ts = n.time === 'past' ? '\u21BA Flashback \u00B7 the clock runs back' : '\u21BB Flash-forward \u00B7 the clock runs ahead'; bubble('stamp', '', ts); entry('stamp', '', ts, id); ABY.Audio.sfx(n.time === 'past' ? 'rewind' : 'forward'); buzz(40); } else if (!n.time && G.slip) { var te = '\u2014 the clock settles \u2014'; bubble('stamp', '', te); entry('stamp', '', te, id); ABY.Audio.sfx('ding'); } } G.slip = n.time || '';
     contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setEye(n.img === 'eye'); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
-    if (n.ending) return finale();
-    if (n.dark && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
-    if (!fromLog && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
-    // what people said while she slept (ABY.OVERNIGHT) comes first, each from its own contact; then the scene's own text
-    var items = ABY.overnightFor(G.state).map(function (m) { return { who: m.who, text: m.text, note: m.note || '' }; });
-    (n.speaker === 'NARRATOR' ? [n.text] : split(n.text)).forEach(function (t, k, all) { items.push({ who: n.speaker, text: t, note: k === all.length - 1 ? n.note || '' : '' }); });
+    // an ending: the people she met get the last word (ABY.CODAS, for what she did) while the thread is still on screen, then the gate and the card
+    var codas = n.ending && !fromLog ? ABY.codasFor(ABY.endingOf(G.state), G.state) : []; if (n.ending && !codas.length) return finale();
+    if (n.dark && !n.ending && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
+    if (!fromLog && !n.ending && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
+    // what people said while she slept (ABY.OVERNIGHT), or a line from someone who remembers an earlier journey (ABY.SECOND_SIGHT), comes first, each from its own contact; then the scene's own text
+    var items = (n.ending ? codas : ABY.overnightFor(G.state)).map(function (m) { return { who: m.who, text: m.text, note: m.note || '' }; });
+    if (!n.ending) (n.speaker === 'NARRATOR' ? [n.text] : split(n.text)).forEach(function (t, k, all) { items.push({ who: n.speaker, text: t, note: k === all.length - 1 ? n.note || '' : '' }); });
     var done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length, cur = n.speaker;
     $('replies').classList.remove('on');
     (function step(i) {
-      if (i >= items.length) { G.delivering = false; if (G.run) save(); return showReplies(n); }
+      if (i >= items.length) { if (n.ending) return wait(2400, finale);   // a beat to read the last word before the gate takes the screen
+      G.delivering = false; if (G.run) save(); return showReplies(n); }
       var typing = document.createElement('div'); typing.className = 'm typing'; typing.innerHTML = '<i></i><i></i><i></i>'; $('thread').appendChild(typing); scrollEnd(true);
       var it = items[i];
       wait(380 + it.text.length * 9 > 1500 ? 1500 : 380 + it.text.length * 9, function () {
         typing.remove(); var narr = it.who === 'NARRATOR', b = bubble(narr ? 'sys' : 'in', it.who, it.text); entry(narr ? 'sys' : 'in', it.who, it.text, id);
         if (it.who !== cur) { cur = it.who; contact(cur); }
-        if (i === 0 && !fromLog) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, it.text);
+        if (i === 0 && !fromLog && !n.ending) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, it.text);
         if (it.who === 'EYE') ABY.Audio.sfx('creep'); else ABY.Audio.sfx('ding'); buzz(pulse());
         if (it.note && !G.seen[it.note]) { G.seen[it.note] = 1; P.badge('notes', ++noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: 'New clue: ' + ABY.NOTES[it.note].title, onTap: function () { open('notes'); } }); }
         if (P.screen !== 'msg') { G.pending++; P.badge('msg', G.pending); P.banner({ title: WHO[it.who] || 'Unknown', text: it.text, onTap: function () { open('msg'); } }); }
