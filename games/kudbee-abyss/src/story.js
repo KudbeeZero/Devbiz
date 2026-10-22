@@ -171,18 +171,21 @@ ABY.NOTES = {
 // in the story; a wrong pair costs her (the phone laughs: battery and dread). Pairs hold one early clue and one later one, so a deduction rewards
 // remembering across days. `at` is the scene whose hidden choice the deduction opens (the graph test proves each is reachable and used).
 ABY.LINKS = [
-  { id: 'two_warnings', a: 'recording', b: 'future_call', at: 'd2_door', title: 'Two warnings, one voice', text: 'The recording under the stones and the call from your own number say the same thing in the same voice: hers, and yours. Don’t open the gate. It isn’t him. Whoever is behind that door, it was never the Guardian.' },
+  { id: 'two_warnings', a: 'recording', b: 'future_call', at: 'd2_door', alt: ['recording', 'a_hush'], title: 'Two warnings, one voice', text: 'The recording under the stones and the call from your own number say the same thing in the same voice: hers, and yours. Don’t open the gate. It isn’t him. Whoever is behind that door, it was never the Guardian.' },
   { id: 'yes_man', a: 'ledger', b: 'captain_name', at: 'd3_corvin', title: 'The man who always said yes', text: 'The ledger and the signature are the same neat hand. Corvin Ash wore the crown because she asked, and held the door because she asked. In all those pages, nobody ever asked him anything else.' },
   { id: 'many_hands', a: 'vey_photo', b: 'photo_you', at: 'd3_vey3', title: 'The hand on your shoulder', text: 'The hand behind the Queen in the photo and the hand on your shoulder at 3:07 have the same fingers, far too many of them. Vey has been with you since the first night. It has never once let anything fall.' },
   { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
-  { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
+  { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', alt: ['a_party', 'bargain'], title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
   { id: 'first_name', a: 'holders', b: 'first_page', at: 'd7_end', title: 'The first name in the book', text: '214 numbers, and above them all the first page: not a name, a crayon door and a crayon crown. The book did not begin with someone holding the phone. It began with a child drawing the way home.' },
-  { id: 'what_she_gave', a: 'locking', b: 'bargain', at: 'd6_story', title: 'Who she locked away', text: 'A girl in a paper crown, asleep on Vey\u2019s shoulder, on the night of the lock. A bargain that keeps someone safe on the other side, for as long as the phone is held. It was never a monster. The Queen locked her own child away to keep her, and called it a door.' },
-  { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
+  { id: 'what_she_gave', a: 'locking', b: 'bargain', at: 'd6_story', alt: ['a_cast', 'bargain'], title: 'Who she locked away', text: 'A girl in a paper crown, asleep on Vey\u2019s shoulder, on the night of the lock. A bargain that keeps someone safe on the other side, for as long as the phone is held. It was never a monster. The Queen locked her own child away to keep her, and called it a door.' },
+  { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', alt: ['a_smile', 'nursery_wall'], title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
   { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
 ];
 ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
-ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => (l.a === a && l.b === b) || (l.a === b && l.b === a))[0] || null; };
+// `alt` is a second pair for the same deduction, whose one new clue an installed app left her (APP_WHISPERS): the app stands in for a clue her
+// journey may have missed. It opens the same hidden choice as the first pair, so an app adds a way to a deduction, never a new scene or ending.
+const pairIs = (p, a, b) => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a);
+ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => pairIs([l.a, l.b], a, b) || (l.alt && pairIs(l.alt, a, b)))[0] || null; };
 
 // overnight: what the people she has been kind or cruel to say to her while she sleeps. A day's wake scene (`at`) shows these messages before its own,
 // for whoever holds the flag (`req`, like a choice's). They are pure data, so the graph test can prove each one is reachable and its flag is set
@@ -3006,6 +3009,14 @@ ABY.storeReviews = function (m, id) {
 // Day Two to Day Seven. Like an echo it is only a voice: no choice, no ending and no stat reads `app_` flags, so the story's branches and endings are the
 // same with every app installed or none (graph `app-whispers`). A whisper sits on a scene she cannot come back to, or (Lantern) on a dark one with
 // `noLight`, whose only way back is switching the flashlight on. `fx` is how it arrives: `flicker` (the torch stutters), `ring` (an old call), `glitch`.
+// Four of them leave a clue in Notes (`a_<app>`), the other half of a deduction's `alt` pair (ABY.LINKS): the app she chose can open a deduction her
+// journey would otherwise miss. The clue is filed like an overnight message's, so a journey without the app never holds it.
+Object.assign(ABY.NOTES, {
+  a_hush: { title: 'Hush: the muted voicemail', text: 'Hush kept the voicemail it muted. 3:07, from this phone, in a voice that is yours and hers at once: "Don\'t let her open the gate. It isn\'t him." Hush has filed it under: do not play again.' },
+  a_smile: { title: 'Smile Filter: the face behind you', text: 'The filter kept the frame. The face in the dark behind you is smiling, and one of its far too many hands is held out to you with a brass key in it, much too small for any door. The caption it added: for later. very low down.' },
+  a_party: { title: 'Party Hats: the invitation', text: 'An invitation Party Hats saved for you: "Sorrel is turning seven! Come through the door. Bring a candle." The date is today. The date has been today for a very long time.' },
+  a_cast: { title: 'Mirror Cast: what the Queen keeps on her screen', text: 'Before the cast cut out: a night long ago, a girl in a paper crown asleep on Vey\'s shoulder, and the Queen\'s own hand turning a very small key.' },
+});
 ABY.APP_WHISPERS = [
   ['hush', 'd2_vey', 'Hush muted 1 call while you slept. Caller: this phone. Length: 3:07. It left a voicemail anyway.'],
   ['echo', 'd3_corvin', 'Echo Map heard a lantern on an iron arm. It has added a room behind the door. The room is drawn with you already in it.'],
@@ -3019,7 +3030,7 @@ ABY.APP_WHISPERS = [
   ['cast', 'd6_queen', 'Mirror Cast: the Queen’s screen is casting to yours. She has this same message open. She is reading it to you.'],
   ['eye', 'd7_eye', 'The Eye has updated. What’s new: it remembers you. Bug fixes: none. It does not believe in bugs.', null, 'glitch'],
   ['pin', 'd7_named', 'Pinboard: new string between “the Eye” and “a girl behind a door”. They are the same pin.'],
-].map(([app, at, text, more, fx]) => ({ id: 'w_' + app, app, at, req: Object.assign({ flag: 'app_' + app }, more || {}), who: 'APP_' + app.toUpperCase(), text, fx: fx || '' }));
+].map(([app, at, text, more, fx]) => ({ id: 'w_' + app, app, at, req: Object.assign({ flag: 'app_' + app }, more || {}), who: 'APP_' + app.toUpperCase(), text, fx: fx || '', note: ABY.NOTES['a_' + app] ? 'a_' + app : '' }));
 ABY.APP_IDS = ABY.STORE.map(a => a.id);
 // each installed app speaks as itself: its own name and colour in the thread
 for (const a of ABY.STORE) ABY.SPEAKERS['APP_' + a.id.toUpperCase()] = { color: a.c[0], focus: 'queen', app: a.id };

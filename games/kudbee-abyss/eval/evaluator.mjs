@@ -395,6 +395,28 @@ await block('app-store-depth', async () => {
 });
 const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
 const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pg.locator('#replies .chip', { hasText: text }).first().click(); await sleep(300); };
+await block('app-clues', async () => {
+  // an installed app can leave a clue: Mirror Cast speaks on Day Six and files what the Queen keeps on her screen; pinned to her bargain it opens the
+  // deduction a journey without the flashback would miss, and its hidden reply. Without the app the same scenes file nothing new.
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { dawn: 1, cradle: 1 }, apps: { cast: 1 } }));`;
+  ({ ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'app-clues', { pre })); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const settle = async (node) => { for (let i = 0; i < 40 && await pg.evaluate((n) => ABY.game.state.node !== n || ABY.game.delivering, node); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); } await sleep(250); };
+  await at(pg, 'd6_wake', { mem: 3, flags: { app_cast: 1 } }); await tapChip(pg, 'Ask the Queen whose number it is'); await settle('d6_queen');
+  const cast = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), who: [...document.querySelectorAll('#thread .m.in .who')].map(w => w.textContent), banner: document.getElementById('banner').textContent }));
+  await tapChip(pg, 'Ask what she gave for it'); await settle('d6_story');
+  const before = await chips(pg);
+  await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin[data-note="a_cast"]');
+  await pg.screenshot({ path: join(OUT, 'app-clue-notes.png') });
+  await pg.click('#noteList .nt.pin[data-note="a_cast"]'); await pg.click('#noteList .nt.pin[data-note="bargain"]'); await sleep(300);
+  const pinned = await pg.evaluate(() => ({ flag: ABY.game.state.flags.link_what_she_gave === 1, banner: document.getElementById('banner').textContent, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).deduced.what_she_gave === 1 }));
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400); const after = await chips(pg);
+  await at(pg, 'd6_wake', { mem: 3, flags: {} }); await tapChip(pg, 'Ask the Queen whose number it is'); await settle('d6_queen');
+  const bare = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), cast: [...document.querySelectorAll('#thread .m.in .who')].some(w => w.textContent === 'Mirror Cast') }));
+  await ctx.close();
+  const reply = c => /know who she locked away/.test(c);
+  rec('apps-leave-clues', cast.notes.includes('a_cast') && cast.who.includes('Mirror Cast') && /New clue: Mirror Cast/.test(cast.banner) && !before.some(reply) && pinned.flag && /Deduction: Who she locked away/.test(pinned.banner) && pinned.saved && after.some(reply) && !bare.notes.includes('a_cast') && !bare.cast,
+    'with Mirror Cast installed Day Six files "' + (cast.notes.includes('a_cast') ? 'Mirror Cast: what the Queen keeps on her screen' : '?') + '" (banner); pinned to her bargain it deduces "Who she locked away" and adds the reply "' + (after.find(reply) || '?').slice(0, 44) + '…"; without the app, no clue and no voice');
+});
 await block('horror', async () => {
   let { ctx, pg } = await open({}, 'horror'); await wake(pg); await openMessages(pg);
   // the first scare: the unknown number glitches the screen, the contact turns red, dread rises
