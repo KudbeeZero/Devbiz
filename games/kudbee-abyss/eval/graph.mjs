@@ -335,7 +335,7 @@ function walkChecks() {
     const quiet = W.every(x => !ABY.overnightFor(Object.assign(ABY.newState(0), { node: x.at })).some(o => o.id === x.id));
     const heard = W.every(x => ABY.overnightFor(Object.assign(ABY.newState(0, undefined, {}, [x.app]), { node: x.at })).some(o => o.id === x.id));
     // the same seeded journeys with every app installed and with none: identical choices, scenes and endings, day after day
-    let rs = 7; const rnd = () => (rs = (rs * 1103515245 + 12345) % 2147483648) / 2147483648, strip = st => { const f = Object.assign({}, st.flags); for (const k in f) if (/^app_/.test(k)) delete f[k]; return JSON.stringify(Object.assign({}, st, { flags: f })); };
+    let rs = 7; const rnd = () => (rs = (rs * 1103515245 + 12345) % 2147483648) / 2147483648, strip = st => { const f = Object.assign({}, st.flags); for (const k in f) if (/^app_/.test(k)) delete f[k]; return JSON.stringify(Object.assign({}, st, { flags: f, notes: st.notes.filter(k => !/^a_/.test(k)) })); };   // (an app's clue is only a note until she pins it: app-clues)
     let runs = 0, diverged = 0, ends = new Set(), spoke = new Set();
     const dawns = ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].filter(id => N[id]);
     for (let r = 0; r < 600 + dawns.length * 150; r++) {   // from every opening, then from every later dawn (a random journey rarely lives that long)
@@ -351,6 +351,35 @@ function walkChecks() {
     const days = new Set(W.map(x => DAY(N[x.at].ch)));
     rec('app-whispers', W.length === ABY.STORE.length && new Set(W.map(x => x.app)).size === W.length && new Set(W.map(x => x.at)).size === W.length && bad.length === 0 && reads.length === 0 && quiet && heard && diverged === 0 && spoke.size >= 6 && days.size === 6 && W.some(x => x.fx === 'flicker' && x.req.noLight) && W.some(x => x.fx === 'ring'),
       W.length + ' installed apps each speak once on Day Two to Day Seven (' + W.filter(x => x.fx).map(x => x.app + ': ' + x.fx).join(', ') + '); no choice reads an app; ' + runs + ' seeded journeys replayed with every app and with none: ' + diverged + ' diverged (' + ends.size + ' endings reached, ' + spoke.size + ' of the apps heard on the way)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + (reads.length ? ' | READ BY ' + reads.join(', ') : ''));
+  }
+  { // app clues: four installed apps also leave a clue, the other half of a deduction's second pair (`alt` in ABY.LINKS). The app stands in for a clue
+    // her journey missed, so it opens a deduction that already exists (its hidden choice is proven by evidence-board): no new scene, choice or ending.
+    // Proved from REAL reached states standing where the app speaks WITHOUT the clue it replaces: install the app there, search forward, and the
+    // deduction's hidden choice is offered at its scene while she still has never held the original clue.
+    const C = ABY.APP_WHISPERS.filter(w => w.note), AL = ABY.LINKS.filter(l => l.alt), pairOf = w => AL.filter(l => l.alt.includes(w.note))[0];
+    const halves = w => { const L = pairOf(w), keep = L.alt.filter(k => k !== w.note)[0]; return { L, keep, lost: [L.a, L.b].filter(k => k !== keep)[0] }; };
+    const shaped = C.filter(w => { const n = ABY.NOTES[w.note]; if (!pairOf(w) || !n || !n.title || !n.text || w.note !== 'a_' + w.app) return false; const { L, keep, lost } = halves(w);
+      return [L.a, L.b].includes(keep) && lost !== w.note && ids.every(id => N[id].note !== w.note) && ABY.OVERNIGHT.every(o => o.note !== w.note) && ABY.linkOf(w.note, keep) === L && ABY.linkOf(w.note, lost) === null; });
+    const opened = [], shut = [];
+    for (const w of C.filter(x => pairOf(x))) {
+      const { L, keep, lost } = halves(w), m = byNode.get(w.at), seeds = m ? [...m.values()].filter(x => !x.notes.includes(lost) && !x.flags['link_' + L.id]) : [];
+      // the app installed on the way in: arriving here, its whisper files the clue (as `_land` does). The search is steered by `toward` (first to the scene
+      // that files the clue it pairs with, then to the deduction's scene); steering only orders it, so whatever it finds is a real journey
+      const toKeep = toward(ids.filter(id => N[id].note === keep)[0] || L.at), toAt = toward(L.at), far = s => s.notes.includes(keep) ? toAt(s.node) : toKeep(s.node) + 1000;
+      const B = [], vis = new Set(), put = s => { const d = far(s); if (d < Infinity) (B[d] || (B[d] = [])).push(s); };
+      seeds.map(x => Object.assign({}, x, { flags: Object.assign({}, x.flags, { ['app_' + w.app]: 1 }), notes: x.notes.concat(w.note) })).forEach(put);
+      let found = false;
+      for (let n = 0; n < 200000 && !found; n++) {
+        const d = B.findIndex(b => b && b.length); if (d < 0) break; let s = B[d].pop();
+        if (!s.flags['link_' + L.id] && s.notes.includes(keep)) { const u = ABY.link(s, w.note, keep); if (u) { delete u.linked; s = u; } }
+        const k = key(s) + '|' + s.notes.includes(keep); if (vis.has(k)) continue; vis.add(k);
+        if (s.node === L.at && !s.notes.includes(lost) && ABY.options(s).some(o => (N[s.node].choices[o.i].req || {}).flag === 'link_' + L.id)) found = true;
+        for (const t of succ(s)) if (!t.notes.includes(lost)) put(t);
+      }
+      (found ? opened : shut).push(w.app + ' -> ' + L.id + (found ? '' : ' (' + seeds.length + ' seeds)'));
+    }
+    rec('app-clues', C.length >= 4 && AL.length === C.length && shaped.length === C.length && opened.length === C.length,
+      C.length + ' installed apps leave a clue that stands in for one her journey missed (' + opened.join(', ') + '): from real states without the original clue, the deduction\'s hidden choice opens; no new scene or ending' + (shut.length ? ' | NOT OPENED ' + shut.join(', ') : '') + (shaped.length < C.length ? ' | BAD ' + C.filter(w => !shaped.includes(w)).map(w => w.app).join(', ') : ''));
   }
   { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
     // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
