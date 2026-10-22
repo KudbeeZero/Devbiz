@@ -475,7 +475,24 @@ function walkChecks() {
   const base = ABY.newState(), after = ABY.choose(base, 0);
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
   const ST = ABY.STORE, sids = ST.map(a => a.id);
-  rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && Number.isInteger(a.need) && a.need >= 0 && a.need <= ABY.ENDING_IDS.length) && ST.some(a => a.need === 0) && ST.some(a => a.need >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock reachable');
+  const keyOk = k => k && Object.keys(k).length === 1 && ABY.STORE_KEYS.includes(Object.keys(k)[0]) && ('found' in k ? Number.isInteger(k.found) && k.found >= 0 && k.found <= ABY.ENDING_IDS.length : 'end' in k ? ABY.ENDING_IDS.includes(k.end) : ABY.LINK_IDS.includes(k.link));
+  rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && keyOk(a.key) && ('found' in a.key || a.hint)) && ST.some(a => a.key.found === 0) && ST.some(a => a.key.found >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock a real ending count, ending or deduction (and a hint when it is not a count)');
+  // the App Store's depth: listings opened by one ending (a fall too) or one deduction, and pages whose reviews know what she has done
+  const bad = [];
+  for (const a of ST) {
+    if (!Array.isArray(a.reviews) || a.reviews.length < 2) bad.push(a.id + ': fewer than two reviews');
+    else {
+      if (!a.reviews.some(r => !r.key)) bad.push(a.id + ': no review anyone who opens it can read');
+      for (const r of a.reviews) { if (!r.who || !r.text || !Number.isInteger(r.stars) || r.stars < 1 || r.stars > 5) bad.push(a.id + ': incomplete review'); if (r.key && !keyOk(r.key)) bad.push(a.id + ': review key ' + JSON.stringify(r.key)); if (r.key && JSON.stringify(r.key) === JSON.stringify(a.key)) bad.push(a.id + ': a review sealed by the listing\'s own key'); }
+    }
+  }
+  const all = { found: Object.fromEntries(ABY.ENDING_IDS.map(id => [id, 1])), deduced: Object.fromEntries(ABY.LINK_IDS.map(id => [id, 1])) };
+  if (ABY.storeOpen(all).length !== ST.length) bad.push('a listing never opens');
+  if (ST.some(a => ABY.storeReviews(all, a.id).sealed)) bad.push('a review never opens');
+  if (ABY.storeOpen({ found: {}, deduced: {} }).join() !== ST.filter(a => a.key.found === 0).map(a => a.id).join()) bad.push('a new phone opens more than the free listings');
+  const byEnd = ST.filter(a => 'end' in a.key), byLink = ST.filter(a => 'link' in a.key);
+  rec('store-depth', !bad.length && byEnd.some(a => ABY.isFall(a.key.end)) && byEnd.some(a => !ABY.isFall(a.key.end)) && byLink.length >= 1 && ST.every(a => a.reviews.some(r => r.key) || 'found' in a.key === false),
+    bad.length ? bad.slice(0, 4).join('; ') : ST.length + ' listings (' + byEnd.length + ' opened by an ending, ' + byLink.length + ' by a deduction), ' + ST.reduce((t, a) => t + a.reviews.length, 0) + ' reviews (' + ST.reduce((t, a) => t + a.reviews.filter(r => r.key).length, 0) + ' only for someone who was there); all of it opens');
   return R;
 }
 
