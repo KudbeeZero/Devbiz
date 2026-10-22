@@ -84,7 +84,7 @@ await block('share-meta', async () => {
 });
 
 // ---- a static server (a folder URL serves its index.html) ----
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const srv = http.createServer((q, r) => {
   let p = join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html');
   if (!p.startsWith(ROOT) || !existsSync(p)) { r.writeHead(404); return r.end(); }
@@ -100,7 +100,7 @@ const NOISE = /Failed to load resource|ERR_|net::|fonts\.g|GL Driver Message|GPU
 const errs = [];
 let ctx, pg;                                            // the blocks that drive one page from line to line share these
 async function open(opts = {}, tag = '', { cdn = true, pre, keepBoot } = {}) {
-  const ctx = await browser.newContext(Object.assign({ viewport: { width: 960, height: 600 } }, opts.ctx || {}));
+  const ctx = await browser.newContext(Object.assign({ viewport: { width: 960, height: 600 }, serviceWorkers: 'block' }, opts.ctx || {}));   // (routes cannot see what a service worker fetches; the offline check has its own context)
   const pg = await ctx.newPage();
   pg.on('pageerror', e => errs.push(tag + ' ' + e.message)); pg.on('console', x => { if (x.type() === 'error' && !NOISE.test(x.text())) errs.push(tag + ' ' + x.text().slice(0, 140)); });
   await pg.route('https://fonts.*/**', r => r.abort());
@@ -363,6 +363,63 @@ await block('app-whispers', async () => {
   await ctx.close();
   rec('apps-reach-the-night', journey.lantern && !journey.redial && lit.said === 1 && lit.fl >= 1 && /Lantern switched itself on/.test(lit.text) && again === 1 && none === 0 && mid.now && mid.dawn && mid.saved,
     'a new journey starts with Lantern (installed) and not Redial; on the dark contact list Lantern speaks as itself ("' + lit.text.replace(/^Lantern/, '').slice(0, 40) + '…") and the torch stutters; switching the light on does not repeat it; without it, silence; Redial installed mid-journey reaches this day and its dawn');
+});
+await block('installable', async () => {
+  // Abyss is an app on a REAL phone too: a manifest with its icons and store screenshots (all real files of the stated size), the tags an iPhone
+  // reads, a service worker that keeps the game so a reload with no network still opens it, and an install card in the phone's own App Store
+  // (second visit on, phones only) whose iPhone sheet shows Safari's three taps
+  const c0 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const p0 = await c0.newPage(); p0.on('pageerror', e => errs.push('installable ' + e.message));
+  await p0.route('https://fonts.*/**', r => r.abort());
+  await p0.addInitScript(`try { localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);
+  await p0.goto(URL, { waitUntil: 'load' });
+  const man = await p0.evaluate(async () => {
+    const link = document.querySelector('link[rel="manifest"]'), m = await (await fetch(link.href)).json(), base = new URL(link.href);
+    const size = src => new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth + 'x' + i.naturalHeight); i.onerror = () => r('missing'); i.src = new URL(src, base).href; });
+    const icons = await Promise.all(m.icons.map(async i => ({ want: i.sizes, got: await size(i.src), purpose: i.purpose })));
+    const shots = await Promise.all((m.screenshots || []).map(async i => ({ want: i.sizes, got: await size(i.src) })));
+    const apple = document.querySelector('link[rel="apple-touch-icon"]'), meta = n => (document.querySelector('meta[name="' + n + '"]') || {}).content;
+    return { id: m.id, name: m.name, short: m.short_name, display: m.display, start: m.start_url, icons, shots, apple: apple ? await size(apple.getAttribute('href')) : 'missing',
+      capable: meta('apple-mobile-web-app-capable'), bar: meta('apple-mobile-web-app-status-bar-style'), title: meta('apple-mobile-web-app-title') };
+  });
+  const sized = a => a.every(i => i.want === i.got);
+  rec('app-manifest', man.id === '/games/kudbee-abyss/' && man.name === 'Kudbee Abyss' && man.short === 'Abyss' && man.display === 'standalone' && man.start === './index.html' && sized(man.icons) && man.icons.some(i => i.purpose === 'maskable') && man.icons.some(i => i.got === '512x512')
+    && man.shots.length >= 3 && sized(man.shots) && man.apple === '180x180' && man.capable === 'yes' && man.bar === 'black-translucent' && man.title === 'Abyss',
+    man.name + ' (' + man.short + ', ' + man.display + '): ' + man.icons.map(i => i.got + (i.purpose === 'maskable' ? ' maskable' : '')).join(', ') + ', a ' + man.apple + ' home-screen icon and ' + man.shots.length + ' store screenshots, every one the size it says; full screen from an iPhone home screen');
+  // offline: the service worker keeps the game; with no network a reload is served by it and the phone wakes to its lock screen
+  const ctl = await p0.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated', null, { timeout: 20000 }).then(() => true, () => false);
+  const kept = await p0.evaluate(() => caches.keys().then(ks => caches.open(ks.find(k => k.startsWith('aby-')))).then(c => c.keys()).then(k => k.map(r => r.url)));
+  await c0.setOffline(true);
+  const res = await p0.reload({ waitUntil: 'load' }).catch(() => null);
+  const off = await p0.waitForFunction(() => document.getElementById('boot').classList.contains('gone') && window.ABY && ABY.Phone && ABY.Phone.screen === 'lock', null, { timeout: 20000 }).then(() => true, () => false);
+  const live = off && await p0.evaluate(async () => { await document.fonts.ready; return { on: navigator.onLine, font: document.fonts.check('16px "Space Grotesk"'), art: [...document.images].length >= 0 }; });
+  await p0.screenshot({ path: join(OUT, 'offline-lock.png') });
+  await c0.close();
+  rec('plays-offline', ctl && kept.length >= 20 && kept.some(u => /space-grotesk/.test(u)) && kept.some(u => /story\.js$/.test(u)) && !!res && res.fromServiceWorker() && off && live.on === false && live.font,
+    'the service worker keeps ' + kept.length + ' files (the 3D library ' + (kept.some(u => /three\.min\.js/.test(u)) ? 'too' : 'not, here: no CDN in this sandbox, so offline is 2D') + '); with the network gone a reload is served by it (' + (res && res.fromServiceWorker()) + '), the fonts load and the phone wakes to its lock screen');
+  // the install card: an iPhone on its second visit sees it at the top of the App Store; GET opens the three taps; a first visit does not
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const card = async (visits, w, h) => {
+    const c = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, userAgent: IPHONE, serviceWorkers: 'block' });
+    const p = await c.newPage(); p.on('pageerror', e => errs.push('install-card ' + e.message));
+    await p.route('https://**', r => r.abort());
+    await p.addInitScript(`localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, visits: ${visits} }));`);
+    await p.goto(URL, { waitUntil: 'load' }); await p.waitForFunction(() => document.getElementById('boot').classList.contains('gone') && window.ABY && ABY.Phone && ABY.Phone.screen === 'lock', null, { timeout: 20000 });
+    await p.evaluate(() => ABY.Phone.show('store')); await sleep(500);
+    const row = await p.evaluate(() => ({ row: !!document.querySelector('#stList .sti.real'), first: (document.querySelector('#stList .sti') || {}).getAttribute && document.querySelector('#stList .sti').getAttribute('data-id') }));
+    let sheet = null;
+    if (row.row) {
+      await p.click('#stInstall'); await sleep(300);
+      sheet = await p.evaluate(() => { const s = document.getElementById('inst'), b = document.getElementById('instOk').getBoundingClientRect(); return { open: !s.hidden, steps: [...s.querySelectorAll('li')].map(l => l.textContent), btn: b.bottom <= innerHeight && b.height >= 40 }; });
+      await p.screenshot({ path: join(OUT, 'install-sheet-' + w + 'x' + h + '.png') });
+      await p.click('#instOk'); await sleep(200); sheet.closed = await p.evaluate(() => document.getElementById('inst').hidden);
+    }
+    await c.close(); return { row, sheet };
+  };
+  const first = await card(0, 390, 844), second = await card(1, 390, 844), wide = await card(5, 844, 390);
+  const ok = s => s && s.open && s.steps.length === 3 && /Share/.test(s.steps[0]) && /Add to Home Screen/.test(s.steps[1]) && s.btn && s.closed;
+  rec('install-card', !first.row.row && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
+    'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes');
 });
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
