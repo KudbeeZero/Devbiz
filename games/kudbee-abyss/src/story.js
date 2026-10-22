@@ -264,6 +264,10 @@ ABY.OBJECTS = [
   { id: 'shard', name: 'Sliver of mirror', blurb: 'It shows a different stair. Cursed: what it shows costs you.', cursed: true },
 ];
 ABY.carried = function (s) { return ABY.OBJECTS.filter(o => s.flags['has_' + o.id] && !s.flags['used_' + o.id]); };
+ABY.appsOf = function (apps) {   // the installed apps that reach into a journey (`apps`: { id: 1 } from the phone, or a list)
+  const has = Array.isArray(apps) ? (id => apps.indexOf(id) >= 0) : (id => !!(apps && apps[id] === 1));
+  return (ABY.STORE || []).map(a => a.id).filter(has);
+};
 ABY.echoesOf = function (found) {
   const has = Array.isArray(found) ? (id => found.indexOf(id) >= 0) : (id => !!(found && found[id]));
   return ABY.ENDING_IDS.filter(id => !ABY.isFall(id) && has(id));
@@ -304,7 +308,7 @@ ABY.SECOND_SIGHT = [
   { id: 's_sorrel', at: 'd6_sorrel', req: { flag: 'scar_cradle' }, who: 'SORREL', text: 'you came in last time!! you stayed for paper hats. are you coming in again? i saved you the red.' },
   { id: 's_end', at: 'd7_end', req: { min: { mem: 10 } }, who: 'NARRATOR', text: 'You have stood here many times. The book knows it: it falls open at the first page before anyone touches it.' },
 ];
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES, ABY.SECOND_SIGHT).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES, ABY.SECOND_SIGHT, ABY.APP_WHISPERS || []).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -2687,10 +2691,11 @@ ABY.wake = function (cp, wakes, mem, found) {
 
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-ABY.newState = function (mem, open, scars) {
+ABY.newState = function (mem, open, scars, apps) {
   const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START };   // `open`: how this journey began (a message can remember it)
   for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
   for (const id of ABY.echoesOf(scars)) s.flags['echo_' + id] = 1;
+  for (const id of ABY.appsOf(apps)) s.flags['app_' + id] = 1;
   return s;
 };
 
@@ -2890,6 +2895,7 @@ ABY.cleanState = function (raw) {
     for (const r of ABY.RITE_IDS) for (const k of ['rite_' + r, 'fail_' + r]) if (raw.flags[k] === 1) s.flags[k] = 1;
     for (const id of ABY.ENDING_IDS) { if (ABY.isFall(id) && raw.flags['scar_' + id] === 1) s.flags['scar_' + id] = 1; else if (!ABY.isFall(id) && raw.flags['echo_' + id] === 1) s.flags['echo_' + id] = 1; }
     for (const id of ABY.LINK_IDS) if (raw.flags['link_' + id] === 1) s.flags['link_' + id] = 1;
+    for (const id of ABY.STORE.map(a => a.id)) if (raw.flags['app_' + id] === 1) s.flags['app_' + id] = 1;
   }
   if (Array.isArray(raw.notes)) for (const k of raw.notes) if (typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.NOTES, k) && s.notes.indexOf(k) < 0) s.notes.push(k);
   return s;
@@ -2995,5 +3001,27 @@ ABY.storeReviews = function (m, id) {
   const shown = a.reviews.filter(r => ABY.storeHas(m, r.key));
   return { shown, sealed: a.reviews.length - shown.length };
 };
+// APP WHISPERS: an app she installed (kept on the phone, `G.apps`) reaches into a later day. A journey starts with `app_<id>` for each installed app
+// (`ABY.newState(..., apps)`, and an app installed mid-journey is added to the day she is in); the app then speaks once, as itself, on one scene of
+// Day Two to Day Seven. Like an echo it is only a voice: no choice, no ending and no stat reads `app_` flags, so the story's branches and endings are the
+// same with every app installed or none (graph `app-whispers`). A whisper sits on a scene she cannot come back to, or (Lantern) on a dark one with
+// `noLight`, whose only way back is switching the flashlight on. `fx` is how it arrives: `flicker` (the torch stutters), `ring` (an old call), `glitch`.
+ABY.APP_WHISPERS = [
+  ['hush', 'd2_vey', 'Hush muted 1 call while you slept. Caller: this phone. Length: 3:07. It left a voicemail anyway.'],
+  ['echo', 'd3_corvin', 'Echo Map heard a lantern on an iron arm. It has added a room behind the door. The room is drawn with you already in it.'],
+  ['smile', 'd3_vey3', 'Smile Filter: 1 face found in the dark behind you. Applying smile. It was already smiling.'],
+  ['lantern', 'd4_contact', 'Lantern switched itself on. Low light detected. Someone is reading over your shoulder.', { noLight: 1 }, 'flicker'],
+  ['ledger', 'd4_bottom', 'Ledger of Names: 1 entry added under yours. Name: (blank). Handwriting: yours.'],
+  ['tide', 'd4_delete', 'Tide Tables: the water is rising in your contacts. Next high tide: now.'],
+  ['redial', 'd5_hang', 'Redial is calling back the last number you hung up on: Wren. It is ringing on her side. She is not picking up. She is listening.', null, 'ring'],
+  ['saver', 'd5_breathe', 'Battery Saver closed 1 app to save power: your voice. Her breathing is still running in the background.'],
+  ['party', 'd6_who', 'Party Hats: Sorrel’s party is now. Guests: 214. Seats left: 1. Your hat: red.'],
+  ['cast', 'd6_queen', 'Mirror Cast: the Queen’s screen is casting to yours. She has this same message open. She is reading it to you.'],
+  ['eye', 'd7_eye', 'The Eye has updated. What’s new: it remembers you. Bug fixes: none. It does not believe in bugs.', null, 'glitch'],
+  ['pin', 'd7_named', 'Pinboard: new string between “the Eye” and “a girl behind a door”. They are the same pin.'],
+].map(([app, at, text, more, fx]) => ({ id: 'w_' + app, app, at, req: Object.assign({ flag: 'app_' + app }, more || {}), who: 'APP_' + app.toUpperCase(), text, fx: fx || '' }));
+ABY.APP_IDS = ABY.STORE.map(a => a.id);
+// each installed app speaks as itself: its own name and colour in the thread
+for (const a of ABY.STORE) ABY.SPEAKERS['APP_' + a.id.toUpperCase()] = { color: a.c[0], focus: 'queen', app: a.id };
 
 if (typeof module !== 'undefined') module.exports = ABY;

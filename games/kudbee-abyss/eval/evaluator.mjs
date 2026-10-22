@@ -338,6 +338,32 @@ await block('app-store', async () => {
   await ctx.close();
 });
 
+await block('app-whispers', async () => {
+  // an installed app reaches into a later day: a new journey starts with it, Lantern speaks as itself on a dark scene (the torch stutters) once,
+  // a phone without it hears nothing, and an app installed mid-journey reaches the day she is in
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { dawn: 1, nightline: 1 }, apps: { lantern: 1 } }));`;
+  ({ ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'whispers', { pre })); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const journey = await pg.evaluate(() => ({ lantern: ABY.game.state.flags.app_lantern === 1, redial: !!ABY.game.state.flags.app_redial }));
+  await pg.evaluate(() => { window.__fl = 0; new MutationObserver(() => { if (document.getElementById('screen').classList.contains('flicker')) window.__fl++; }).observe(document.getElementById('screen'), { attributes: true, attributeFilter: ['class'] }); });
+  await at(pg, 'd4_contact', { flags: { app_lantern: 1 } });
+  const lit = await pg.evaluate(() => ({ said: [...document.querySelectorAll('#thread .m.in .who')].filter(w => w.textContent === 'Lantern').length, fl: window.__fl, text: ([...document.querySelectorAll('#thread .m.in')].find(m => /Lantern switched itself on/.test(m.textContent)) || {}).textContent || '' }));
+  await pick(pg, 'Switch on the flashlight');
+  await pg.waitForFunction(() => !ABY.game.delivering && ABY.game.state.light === 1, null, { timeout: 15000 }); await sleep(300);
+  const again = await pg.evaluate(() => [...document.querySelectorAll('#thread .m.in .who')].filter(w => w.textContent === 'Lantern').length);
+  await at(pg, 'd4_contact', {});
+  const none = await pg.evaluate(() => [...document.querySelectorAll('#thread .m.in .who')].filter(w => w.textContent === 'Lantern').length);
+  // the dark hint is not one of the scene's messages: a dark scene still delivers all of its own (the hint used to swallow the first, half the Eye's on d3_table)
+  await at(pg, 'd3_table', {});
+  const dark = await pg.evaluate(() => { const t = [...document.querySelectorAll('#thread .m')].map(m => m.textContent).join(' '), w = ABY.NODES.d3_table.text; return { hint: /too dark/.test(t), first: t.includes(w.slice(0, 40)), last: t.includes(w.slice(-16)) }; });
+  rec('dark-scene-keeps-its-text', dark.hint && dark.first && dark.last, 'arriving at a dark scene without the light: the hint, then every one of the scene\'s own messages (first and last of the Eye\'s on d3_table)');
+  // install Redial now (Night Line found opens it): the day she is in carries it, and so does her dawn
+  await pg.evaluate(() => ABY.Phone.show('store')); await pg.locator('#stList .sti[data-id="redial"] .get').click();
+  await pg.waitForFunction(() => document.getElementById('axName').textContent === 'Redial');
+  const mid = await pg.evaluate(() => ({ now: ABY.game.state.flags.app_redial === 1, dawn: ABY.game.cp.flags.app_redial === 1, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).cp.flags.app_redial === 1 }));
+  await ctx.close();
+  rec('apps-reach-the-night', journey.lantern && !journey.redial && lit.said === 1 && lit.fl >= 1 && /Lantern switched itself on/.test(lit.text) && again === 1 && none === 0 && mid.now && mid.dawn && mid.saved,
+    'a new journey starts with Lantern (installed) and not Redial; on the dark contact list Lantern speaks as itself ("' + lit.text.replace(/^Lantern/, '').slice(0, 40) + '…") and the torch stutters; switching the light on does not repeat it; without it, silence; Redial installed mid-journey reaches this day and its dawn');
+});
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
   const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1 }, deduced: { two_warnings: 1 }, stSeen: { lantern: 1 } }));`;

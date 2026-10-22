@@ -325,6 +325,33 @@ function walkChecks() {
     rec('second-sight', S.length >= 12 && bad.length === 0 && first && later && days.size === 7 && new Set(S.map(x => x.at)).size === S.length,
       S.length + ' lines over all seven days from someone who remembers an earlier journey, each on a reached scene said once; a first journey hears none' + (bad.length ? ' | BAD ' + bad.join(', ') : ''));
   }
+  { // app whispers: an installed app speaks once, as itself, on a later day. It is only a voice: nothing in the story reads `app_` flags, so a journey with
+    // every app installed takes the same choices, the same scenes and the same endings as one with none (proved by replaying seeded journeys both ways)
+    const W = ABY.APP_WHISPERS, back = new Set(ids.filter(id => (N[id].choices || []).some(c => c.next === id || (N[c.next] && N[c.next].time)))), dtFrom = new Set(ABY.DETOURS.map(d => d.from)), ss = new Set(ABY.SECOND_SIGHT.map(x => x.at));
+    const darkOnce = (x) => x.req.noLight && N[x.at].dark && (N[x.at].choices || []).every(c => c.next !== x.at || c.light === 1) && !(N[x.at].choices || []).some(c => N[c.next] && N[c.next].time);
+    const bad = W.filter(x => { const n = N[x.at]; return !n || !reach.has(x.at) || DAY(n.ch) < 1 || n.ending || n.call || n.time || n.detour || /_wake$/.test(x.at) || dtFrom.has(x.at) || ss.has(x.at) || (back.has(x.at) && !darkOnce(x))
+      || !ABY.APP_IDS.includes(x.app) || x.req.flag !== 'app_' + x.app || Object.keys(x.req).some(k => k !== 'flag' && k !== 'noLight') || !ABY.SPEAKERS[x.who] || ABY.SPEAKERS[x.who].app !== x.app || !x.text || !['', 'flicker', 'ring', 'glitch'].includes(x.fx); }).map(x => x.id);
+    const reads = []; for (const id of ids) for (const c of N[id].choices || []) if (/app_/.test(JSON.stringify(c.req || {}) + (c.set || '') + JSON.stringify(c.add || {}))) reads.push(id);
+    const quiet = W.every(x => !ABY.overnightFor(Object.assign(ABY.newState(0), { node: x.at })).some(o => o.id === x.id));
+    const heard = W.every(x => ABY.overnightFor(Object.assign(ABY.newState(0, undefined, {}, [x.app]), { node: x.at })).some(o => o.id === x.id));
+    // the same seeded journeys with every app installed and with none: identical choices, scenes and endings, day after day
+    let rs = 7; const rnd = () => (rs = (rs * 1103515245 + 12345) % 2147483648) / 2147483648, strip = st => { const f = Object.assign({}, st.flags); for (const k in f) if (/^app_/.test(k)) delete f[k]; return JSON.stringify(Object.assign({}, st, { flags: f })); };
+    let runs = 0, diverged = 0, ends = new Set(), spoke = new Set();
+    const dawns = ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'].filter(id => N[id]);
+    for (let r = 0; r < 600 + dawns.length * 150; r++) {   // from every opening, then from every later dawn (a random journey rarely lives that long)
+      const op = ABY.OPENINGS[r % ABY.OPENINGS.length], mem = r % 11, at = r < 600 ? null : dawns[(r - 600) % dawns.length];
+      let a = ABY.newState(mem, op, {}), b = ABY.newState(mem, op, {}, ABY.APP_IDS); if (at) { a = Object.assign(a, { node: at }); b = Object.assign(b, { node: at }); }
+      for (let step = 0; step < 900; step++) {
+        const oa = ABY.options(a).map(o => o.i).join(), ob = ABY.options(b).map(o => o.i).join(); if (oa !== ob || strip(a) !== strip(b)) { diverged++; break; } for (const o of ABY.overnightFor(b)) if (/^w_/.test(o.id)) spoke.add(o.id);
+        if (N[a.node].ending) { const e = ABY.endingOf(a); ends.add(e); if (e !== ABY.endingOf(b)) { diverged++; break; } const ca = ABY.carry(a), cb = ABY.carry(b); if (!ca || !cb) { if (!!ca !== !!cb) diverged++; break; } a = ca; b = cb; continue; }
+        const opts = ABY.options(a); if (!opts.length) break; const pick = opts[Math.floor(rnd() * opts.length)].i; a = ABY.choose(a, pick); b = ABY.choose(b, pick); if (!a || !b) { if (!!a !== !!b) diverged++; break; }
+      }
+      runs++;
+    }
+    const days = new Set(W.map(x => DAY(N[x.at].ch)));
+    rec('app-whispers', W.length === ABY.STORE.length && new Set(W.map(x => x.app)).size === W.length && new Set(W.map(x => x.at)).size === W.length && bad.length === 0 && reads.length === 0 && quiet && heard && diverged === 0 && spoke.size >= 6 && days.size === 6 && W.some(x => x.fx === 'flicker' && x.req.noLight) && W.some(x => x.fx === 'ring'),
+      W.length + ' installed apps each speak once on Day Two to Day Seven (' + W.filter(x => x.fx).map(x => x.app + ': ' + x.fx).join(', ') + '); no choice reads an app; ' + runs + ' seeded journeys replayed with every app and with none: ' + diverged + ' diverged (' + ends.size + ' endings reached, ' + spoke.size + ' of the apps heard on the way)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + (reads.length ? ' | READ BY ' + reads.join(', ') : ''));
+  }
   { // time slips: the Clock turns back (a flashback) or forward (a flash-forward) and always returns. A slip is a safe scene entered from exactly one scene of its
     // own day, never from another slip; every choice in it returns to where she was and sets its own `tt_` flag (so it is seen once); a slip's flag is read by a
     // choice on a LATER scene of the same or a later day (what she saw matters); each of the five origins offers one of each; the slips file clues
