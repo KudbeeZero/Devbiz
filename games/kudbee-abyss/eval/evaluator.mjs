@@ -546,10 +546,13 @@ await block('felt-replies-and-calls', async () => { // a reply is felt (a ring o
   // again louder, and the third time it has answered itself
   const { ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'calls'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   await pg.evaluate(() => { window.__sfx = []; const f = ABY.Audio.sfx; ABY.Audio.sfx = function (n) { window.__sfx.push(n); return f.apply(this, arguments); }; });
-  await at(pg, 'd2_wake', {}); await tapChip(pg, 'Message the Queen');
-  const plain = await pg.evaluate(() => ({ r: document.querySelectorAll('#screen .ripple:not(.dark)').length, cls: document.getElementById('screen').className, sfx: window.__sfx.slice() }));
-  await at(pg, 'd2_photo', {}); await pg.evaluate(() => { window.__sfx = []; }); await tapChip(pg, 'Put the phone down');
-  const dark = await pg.evaluate(() => ({ r: document.querySelectorAll('#screen .ripple.dark').length, cls: document.getElementById('screen').className, sfx: window.__sfx.slice() }));
+  // record the flash and the rings as they happen (they last 360-800ms, so a look after the tap can miss them on a busy machine)
+  await pg.evaluate(() => { const sc = document.getElementById('screen'); window.__felt = { cls: [], rings: [] }; new MutationObserver(ms => ms.forEach(m => { if (m.type === 'attributes') window.__felt.cls.push(sc.className); m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('ripple')) window.__felt.rings.push(n.className); }); })).observe(sc, { attributes: true, attributeFilter: ['class'], childList: true }); });
+  const felt = () => pg.evaluate(() => { const f = window.__felt, o = { r: f.rings.slice(), cls: f.cls.join(' '), sfx: window.__sfx.slice() }; f.cls.length = 0; f.rings.length = 0; return o; });
+  await at(pg, 'd2_wake', {}); await felt(); await tapChip(pg, 'Message the Queen');
+  const p0 = await felt(), plain = { r: p0.r.filter(c => !/dark/.test(c)).length, cls: p0.cls, sfx: p0.sfx };
+  await at(pg, 'd2_photo', {}); await pg.evaluate(() => { window.__sfx = []; }); await felt(); await tapChip(pg, 'Put the phone down');
+  const d0 = await felt(), dark = { r: d0.r.filter(c => /dark/.test(c)).length, cls: d0.cls, sfx: d0.sfx };
   await sleep(900); const gone = await pg.evaluate(() => document.querySelectorAll('#screen .ripple').length);
   rec('replies-are-felt', plain.r >= 1 && /\bstruck\b/.test(plain.cls) && plain.sfx.includes('pick') && dark.r >= 1 && /struck-dark/.test(dark.cls) && dark.sfx.includes('pickdark') && gone === 0,
     'a reply: a ring of light and "' + plain.sfx.filter(x => /pick/.test(x))[0] + '"; a frightening one: a red ring, the glass shudders, "' + dark.sfx.filter(x => /pick/.test(x))[0] + '"; the rings clear themselves');
