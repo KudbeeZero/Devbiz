@@ -17,6 +17,8 @@
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren', SORREL: 'Sorrel' };
+  ABY.STORE.forEach(function (a) { WHO['APP_' + a.id.toUpperCase()] = a.name; });
+  var DARK_HINT = 'It is too dark to see. Switch on the flashlight (the torch button above).';   // not one of the scene's messages, so `deliver` never counts it as delivered   // an installed app speaks as itself (ABY.APP_WHISPERS)
   var ECOL = { dawn: ['#ffd34d', '#ff9a5c'], song: ['#39e6ff', '#ff6ec7'], echo: ['#c46bff', '#7cffb2'], silence: ['#8890a8', '#4a5268'], crown: ['#ff2040', '#6a0010'], hollow: ['#8a2be2', '#2a0044'], eye: ['#ff4d5e', '#4a0010'], mirror: ['#9fb0cc', '#26324a'], betrayal: ['#7cffb2', '#06301a'], blackout: ['#6a6a7a', '#101018'], daybreak: ['#fff1b0', '#ffd34d'], keeper: ['#8aa0ff', '#1a1a3a'], loop: ['#30ff90', '#101020'], chorus: ['#ff9ad5', '#ffd34d'], watched: ['#ff4d5e', '#05030c'], names: ['#f4f0e0', '#3fd6c0'], caller: ['#9fe870', '#0a1a10'], drowned: ['#3fd6c0', '#03141a'], warned: ['#fff1b0', '#ffc27a'], nightline: ['#ffc27a', '#1a1030'], passed: ['#ff7aa8', '#08040e'], firstpage: ['#ffb8d0', '#3a1030'], cradle: ['#ff9ab8', '#1a0610'], seventh: ['#fff6d8', '#ffb86b'], lowdoor: ['#ffe9c4', '#ff9ec7'], throne: ['#c46bff', '#1a0030'], again: ['#39e6ff', '#05030c'] };
   var CREEPS = ['behind you', 'it is 3:07', 'i can hear you breathing', 'don\u2019t look at the screen', 'you left the door open', 'she is not the one texting you', 'count the steps', 'turn around slowly'];
 
@@ -82,9 +84,10 @@
     ABY.Scene.setTorch(!!s.light); ABY.Scene.setDread(d);
   }
   function contact(sp) {
-    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'); av.className = 'av ' + key.toLowerCase(); av.textContent = key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : key === 'CHOIR' ? '≈' : key === 'WREN' ? 'W' : key === 'SORREL' ? 'S' : '';
+    var key = (ABY.SPEAKERS[sp] ? sp : 'NARRATOR'), av = $('mAv'), app = ABY.SPEAKERS[key].app && ABY.STORE.filter(function (a) { return a.id === ABY.SPEAKERS[key].app; })[0]; av.className = 'av ' + (app ? 'app' : key.toLowerCase()); av.style.background = app ? 'linear-gradient(145deg,' + app.c[0] + ',' + app.c[1] + ')' : ''; av.textContent = app ? app.glyph : key === 'NARRATOR' ? '✦' : key === 'EYE' ? '◉' : key === 'CHOIR' ? '≈' : key === 'WREN' ? 'W' : key === 'SORREL' ? 'S' : '';
     $('mName').textContent = WHO[key]; $('mName').style.color = ABY.SPEAKERS[key].color;
     $('mSub').innerHTML = key === 'GUARDIAN' ? '<span class="live" style="background:var(--ember);box-shadow:0 0 8px var(--ember)"></span>signal unstable' : key === 'EYE' ? '<span class="live" style="background:#ff4d5e;box-shadow:0 0 8px #ff4d5e"></span>it knows you are here' : key === 'NARRATOR' ? 'unknown number' : '<span class="live"></span>online';
+    if (app) $('mSub').textContent = 'installed app \u00b7 ' + app.tag;
   }
 
   // ---- the chat ----
@@ -141,12 +144,12 @@
     contact(n.speaker); ABY.Scene.setMood(n.mood); ABY.Scene.setEye(n.img === 'eye'); ABY.Scene.setFocus(n.focus); ABY.Audio.pad(n.mood); world();
     // an ending: the people she met get the last word (ABY.CODAS, for what she did) while the thread is still on screen, then the gate and the card
     var codas = n.ending && !fromLog ? ABY.codasFor(ABY.endingOf(G.state), G.state) : []; if (n.ending && !codas.length) return finale();
-    if (n.dark && !n.ending && !G.state.light && !fromLog) { var hint = 'It is too dark to see. Switch on the flashlight (the torch button above).'; bubble('sys', '', hint); entry('sys', '', hint, id); }
+    if (n.dark && !n.ending && !G.state.light && !fromLog) { bubble('sys', '', DARK_HINT); entry('sys', '', DARK_HINT, id); }
     if (!fromLog && !n.ending && n.ch > 1 && G.lastCh !== n.ch) { var st = 'Chapter ' + n.ch + ' · ' + ABY.CHAPTERS[n.ch - 1].label; bubble('stamp', '', st); entry('stamp', '', st, id); ABY.Audio.sfx('chapter'); } G.lastCh = n.ch;
     // what people said while she slept (ABY.OVERNIGHT), or a line from someone who remembers an earlier journey (ABY.SECOND_SIGHT), comes first, each from its own contact; then the scene's own text
-    var items = (n.ending ? codas : ABY.overnightFor(G.state)).map(function (m) { return { who: m.who, text: m.text, note: m.note || '' }; });
+    var items = (n.ending ? codas : ABY.overnightFor(G.state)).map(function (m) { return { who: m.who, text: m.text, note: m.note || '', fx: m.fx || '' }; });
     if (!n.ending) (n.speaker === 'NARRATOR' ? [n.text] : split(n.text)).forEach(function (t, k, all) { items.push({ who: n.speaker, text: t, note: k === all.length - 1 ? n.note || '' : '' }); });
-    var done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp'; }).length, cur = n.speaker;
+    var done = G.log.filter(function (e) { return e.n === id && e.k !== 'stamp' && e.t !== DARK_HINT; }).length, cur = n.speaker;
     $('replies').classList.remove('on');
     (function step(i) {
       if (i >= items.length) { if (n.ending) return wait(2400, finale);   // a beat to read the last word before the gate takes the screen
@@ -157,7 +160,9 @@
         typing.remove(); var narr = it.who === 'NARRATOR', b = bubble(narr ? 'sys' : 'in', it.who, it.text); entry(narr ? 'sys' : 'in', it.who, it.text, id);
         if (it.who !== cur) { cur = it.who; contact(cur); }
         if (i === 0 && !fromLog && !n.ending) { if (n.scare) scare(n.scare); if (n.img) { photo(n.img); entry('img', '', n.img, id); } } if (G.state.dread >= 4) corrupt(b, it.text);
-        if (it.who === 'EYE') ABY.Audio.sfx('creep'); else ABY.Audio.sfx('ding'); buzz(pulse());
+        if (it.fx === 'flicker') { fx($('screen'), 'flicker', 1400); ABY.Audio.sfx('click'); buzz([10, 60, 10, 60, 10]); }   // an installed app arrives as itself: the torch stutters, an old call rings, the glass glitches
+        else if (it.fx === 'ring') { ABY.Audio.sfx('ring'); buzz([200, 120, 200]); } else if (it.fx === 'glitch') { fx($('screen'), 'glitch', 400); ABY.Audio.sfx('glitch'); buzz(pulse()); }
+        else if (it.who === 'EYE') { ABY.Audio.sfx('creep'); buzz(pulse()); } else { ABY.Audio.sfx('ding'); buzz(pulse()); }
         if (it.note && !G.seen[it.note]) { G.seen[it.note] = 1; P.badge('notes', ++noteN); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '\u270E', text: 'New clue: ' + ABY.NOTES[it.note].title, onTap: function () { open('notes'); } }); }
         if (P.screen !== 'msg') { G.pending++; P.badge('msg', G.pending); P.banner({ title: WHO[it.who] || 'Unknown', text: it.text, onTap: function () { open('msg'); } }); }
         step(i + 1);
@@ -270,7 +275,7 @@
     var day2 = carry && G.pend && G.pend.kind === 'carry' ? JSON.parse(JSON.stringify(G.pend.state)) : null, forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
     G.pend = null;                                                                   // whatever the last ending offered is taken (or let go)
     if (!day2) { G.lastOpen = opening; G.wakes = ABY.WAKES; }                       // a new journey: a new opening, and every wake back
-    var st = day2 || ABY.newState(foundN(), opening, G.found);
+    var st = day2 || ABY.newState(foundN(), opening, G.found, G.apps);
     begin(st, day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true, day2 ? [] : st.notes.filter(function (k) { return /^scar_/.test(k); }));
   }
   function wakeRun() {                                                     // a fall: back to the last dawn, one wake fewer, a little more afraid
@@ -426,7 +431,7 @@
       sm.textContent = ok ? a.tag + ' — ' + a.blurb : 'found' in a.key ? 'Find ' + a.key.found + ' ending' + (a.key.found === 1 ? '' : 's') + ' to see this listing.' : '“' + a.hint + '”';
       tx.appendChild(b); tx.appendChild(sm);
       var g = document.createElement('button'); g.type = 'button'; g.className = 'get' + (ok ? '' : ' lk'); g.textContent = !ok ? 'LOCKED' : has ? 'OPEN' : 'GET'; g.disabled = !ok;
-      g.addEventListener('click', function () { if (!ok) return; if (!G.apps[a.id]) { G.apps[a.id] = 1; save(); ABY.Audio.sfx('ui'); } renderApp(a.id); P.show('appx'); });
+      g.addEventListener('click', function () { if (!ok) return; if (!G.apps[a.id]) { G.apps[a.id] = 1; [G.state, G.cp].forEach(function (s) { if (s && s.flags) s.flags['app_' + a.id] = 1; }); save(); ABY.Audio.sfx('ui'); } renderApp(a.id); P.show('appx'); });
       row.appendChild(ic); row.appendChild(tx); row.appendChild(g); box.appendChild(row);
     });
     var open = ABY.storeOpen(m); open.forEach(function (id) { G.stSeen[id] = 1; }); if (fresh.length) save(); P.badge('store', 0);   // seen now: the NEW tags stay until she leaves
