@@ -2897,13 +2897,103 @@ ABY.cleanState = function (raw) {
 // every flag the story can set (a save may only carry these); the rite flags are set by songDone, not by a choice
 ABY.FLAGS = (function () { const f = {}; for (const id in ABY.NODES) for (const c of (ABY.NODES[id].choices || [])) if (c.set) f[c.set] = 1; return Object.keys(f); })();
 
-// the phone's App Store: a fictional shop, nothing is bought; each listing is free, unlocks by endings found, and opens a page of lore
+// the phone's App Store: a fictional shop, nothing is bought. A listing opens by how many endings she has found (`key: { found }`), by one ending
+// (`{ end }`, a fall too) or by one deduction pinned in Notes (`{ link }`); a locked one shows only its `hint`. Its page is lore plus reviews, and a
+// review with its own `key` is only readable once she has earned it, so the page knows what she has done. All of it reads the Gallery and the pinned
+// deductions (kept on the phone, like `found`), never a journey's state: the App Store adds nothing to the story or to the graph walk.
 ABY.STORE = [
-  { id: 'lantern', name: 'Lantern', glyph: '\u2600', c: ['#ffe27a', '#e07a10'], tag: 'Light for dark rooms', need: 0, blurb: 'A torch that remembers where you have been. Tap it twice before you go in.', lore: ['Installed by 4 people in your building.', 'It never asks for a permission. It knows which ones you would grant.', 'Review: "It lit the hall. Then it lit the thing in the hall."'] },
-  { id: 'hush', name: 'Hush', glyph: '\u263E', c: ['#8fa0ff', '#3a2a8a'], tag: 'Silence, on demand', need: 1, blurb: 'Mutes every call, every ring. Not the one that is already inside.', lore: ['Muting keeps the sound out. It does not keep the caller out.', 'Review: "Slept eight hours. Woke with my phone open to a voicemail I did not record."'] },
-  { id: 'echo', name: 'Echo Map', glyph: '\u25CE', c: ['#39e6ff', '#0a5a7a'], tag: 'Draws rooms by sound', need: 2, blurb: 'Listens, then draws. Some rooms on the map are newer than the building.', lore: ['The map has one more door than the floor plan.', 'Review: "Accurate until the third stair. Then it just says COME DOWN."'] },
-  { id: 'ledger', name: 'Ledger of Names', glyph: '\u2020', c: ['#ff8a8a', '#7a1020'], tag: 'Who stayed, who left', need: 3, blurb: 'Lists everyone who held this phone before you. The list is longer than you think.', lore: ['Your name is already on it, in your own handwriting.', 'It is sorted by who answered the last call.'] },
-  { id: 'eye', name: 'The Eye', glyph: '\u25C9', c: ['#ff4d5e', '#3a0008'], tag: 'It is watching you back', need: 5, blurb: 'Not an app. It installed itself. This listing is only here so you can find it.', lore: ['There is no uninstall.', 'It rates you five stars. It rates everyone five stars.'] }
+  { id: 'lantern', name: 'Lantern', glyph: '☀', c: ['#ffe27a', '#e07a10'], tag: 'Light for dark rooms', key: { found: 0 }, blurb: 'A torch that remembers where you have been. Tap it twice before you go in.',
+    lore: ['Installed by 4 people in your building.', 'It never asks for a permission. It knows which ones you would grant.'],
+    reviews: [
+      { who: 'nightshift_ana', stars: 5, text: 'It lit the hall. Then it lit the thing in the hall.' },
+      { who: 'm.okafor', stars: 4, text: 'Bright, reliable, a little warm in the hand. Warmer than a phone should be.' },
+      { who: 'you', stars: 1, text: 'It was on when the battery hit zero. It stayed on. I could see everything.', key: { end: 'blackout' } },
+      { who: 'g.', stars: 5, text: '...I have stood in the dark for a hundred years... the gate was the first light... this is the second...', key: { end: 'dawn' } }] },
+  { id: 'hush', name: 'Hush', glyph: '☾', c: ['#8fa0ff', '#3a2a8a'], tag: 'Silence, on demand', key: { found: 1 }, blurb: 'Mutes every call, every ring. Not the one that is already inside.',
+    lore: ['Muting keeps the sound out. It does not keep the caller out.'],
+    reviews: [
+      { who: 'lightsleeper', stars: 2, text: 'Slept eight hours. Woke with my phone open to a voicemail I did not record.' },
+      { who: 'quietgate', stars: 5, text: 'Perfect for when the gate opens and nothing follows. Very restful. Very, very restful.', key: { end: 'silence' } },
+      { who: 'unknown', stars: 3, text: 'It is 3:07. It is always 3:07 on this app. I turned it off and on. It is 3:07.', key: { end: 'loop' } }] },
+  { id: 'echo', name: 'Echo Map', glyph: '◎', c: ['#39e6ff', '#0a5a7a'], tag: 'Draws rooms by sound', key: { found: 2 }, blurb: 'Listens, then draws. Some rooms on the map are newer than the building.',
+    lore: ['The map has one more door than the floor plan.'],
+    reviews: [
+      { who: 'stairwell_dan', stars: 3, text: 'Accurate until the third stair. Then it just says COME DOWN.' },
+      { who: 'vey', stars: 5, text: 'It drew two gates. I have stood at both. I keep places. It keeps maps. We understand each other.', key: { end: 'echo' } },
+      { who: 'choir', stars: 4, text: 'it drew the water. it drew us under the water. it drew one more of us than there used to be.', key: { end: 'drowned' } }] },
+  { id: 'ledger', name: 'Ledger of Names', glyph: '†', c: ['#ff8a8a', '#7a1020'], tag: 'Who stayed, who left', key: { found: 3 }, blurb: 'Lists everyone who held this phone before you. The list is longer than you think.',
+    lore: ['Your name is already on it, in your own handwriting.', 'It is sorted by who answered the last call.'],
+    reviews: [
+      { who: 'archivist', stars: 4, text: 'Thorough. Too thorough. It has my grandmother on it, and she never owned a phone.' },
+      { who: 'the queen', stars: 5, text: 'You read every name, once. The ledger has not changed since. I check it every night.', key: { end: 'names' } },
+      { who: 'wren', stars: 4, text: 'there is a name at the bottom that is not written yet. the cursor blinks there. it blinks like it is waiting for you.', key: { end: 'caller' } },
+      { who: 'the queen', stars: 5, text: 'The first page is not a name. It is a crayon door. I know whose hand drew it. I had it on a fridge, in a kitchen I can no longer find.', key: { link: 'first_name' } },
+      { who: 'corvin ash', stars: 5, text: '...every page, the same hand... mine... she asked, and I said yes... you are the first to ask me anything else...', key: { link: 'yes_man' } }] },
+  { id: 'eye', name: 'The Eye', glyph: '◉', c: ['#ff4d5e', '#3a0008'], tag: 'It is watching you back', key: { found: 5 }, blurb: 'Not an app. It installed itself. This listing is only here so you can find it.',
+    lore: ['There is no uninstall.', 'It rates you five stars. It rates everyone five stars.'],
+    reviews: [
+      { who: 'eye', stars: 5, text: 'five stars. five stars. five stars. five stars. five stars.' },
+      { who: 'eye', stars: 5, text: 'you answered me once on the stairs. you are my favourite review.', key: { end: 'eye' } },
+      { who: 'eye', stars: 5, text: 'you looked away. i did not mind. i liked watching you not look.', key: { end: 'watched' } },
+      { who: 'eye', stars: 5, text: 'you worked out what i am. nobody has. please do not uninstall me. there is no uninstall. please anyway.', key: { link: 'watcher' } }] },
+  { id: 'tide', name: 'Tide Tables', glyph: '≈', c: ['#5ad1c8', '#0b3a52'], tag: 'High water, low water, the hour between', key: { end: 'drowned' }, hint: 'Stay in the water a little too long.', blurb: 'Tells you when the water rises. In the stairwell, it rises at 3:07.',
+    lore: ['Low tide is when you can hear the singing. High tide is when you can sing along.', 'The table has a column for your name. The water is in it.'],
+    reviews: [
+      { who: 'choir', stars: 5, text: 'we use it to know when to sing. we are always in time now. we are always under.' },
+      { who: 'sailor_jo', stars: 1, text: 'Lives nowhere near the sea. Phone is wet every morning.' },
+      { who: 'choir', stars: 5, text: 'you came back and said our names. the tide went out for a whole night. we were dry. it was strange. thank you.', key: { end: 'names' } }] },
+  { id: 'redial', name: 'Redial', glyph: '☎', c: ['#7CFFb2', '#11573a'], tag: 'Call back anyone, ever', key: { end: 'nightline' }, hint: 'Stay on the line until morning.', blurb: 'Calls back the last number. Also the ones before that. All of them, if you let it.',
+    lore: ['Recent calls go back further than you have owned the phone.', 'One of the numbers is this phone. It is engaged.'],
+    reviews: [
+      { who: 'wren', stars: 5, text: 'i called the night line back, the morning after. you picked up. you sounded so tired. you were so kind.' },
+      { who: 'unknown', stars: 4, text: 'Called a number from 1987. A kid answered. She said it was her birthday.', key: { end: 'cradle' } },
+      { who: 'sorrel', stars: 5, text: 'you warned everybody!! i got your call!! i didnt pick up but i KNEW it was you', key: { end: 'warned' } }] },
+  { id: 'party', name: 'Party Hats', glyph: '❂', c: ['#ff9ad5', '#7a1a5a'], tag: 'Plan the perfect birthday', key: { end: 'cradle' }, hint: 'Go in, and stay for the paper hats.', blurb: 'Invitations, cake, paper hats. The party is already planned. You are on the list.',
+    lore: ['Every invitation is for the same date. The date does not change.', 'There is a seat saved for you. It is the red hat.'],
+    reviews: [
+      { who: 'sorrel', stars: 5, text: 'BEST PARTY. you stayed!!! nobody stays. can it be my birthday again tomorrow? it is. it is always.' },
+      { who: 'a parent', stars: 2, text: 'Planned a party for my son. The app keeps inviting a girl called Sorrel. We do not know a Sorrel.' },
+      { who: 'sorrel', stars: 5, text: 'you gave her the key. the little one. the door is open now. i can go home after cake. i might stay for one more slice.', key: { end: 'lowdoor' } }] },
+  { id: 'smile', name: 'Smile Filter', glyph: '☺', c: ['#ffd34d', '#7a5200'], tag: 'Your best face, every photo', key: { end: 'betrayal' }, hint: 'Trust someone after you have seen their mouth.', blurb: 'Gives everyone a lovely smile. It cannot be turned off. Some faces it improves.',
+    lore: ['It found a face in your gallery you did not take.', 'Every smile it makes is the same smile.'],
+    reviews: [
+      { who: 'vey', stars: 5, text: 'Finally, an app that understands me.' },
+      { who: 'k_photos', stars: 1, text: 'Turned it on for a selfie. Now everybody in my contacts has the same teeth.' },
+      { who: 'vey', stars: 4, text: 'You worked out whose hand it was, in every photo, behind you. I took the filter off for one of them. It is the only photo of me without it.', key: { link: 'many_hands' } }] },
+  { id: 'cast', name: 'Mirror Cast', glyph: '⦿', c: ['#c9d4ff', '#2b2f5e'], tag: 'Stream your screen to any glass', key: { end: 'mirror' }, hint: 'Take his place in the dark.', blurb: 'Casts to any mirror in range. The mirror casts back.',
+    lore: ['Two devices found: this one, and you.', 'The mirror on the stairs is always available.'],
+    reviews: [
+      { who: 'the other queen', stars: 5, text: 'I can see your room from mine. You keep it nicer than I do. I am taking notes.' },
+      { who: 'r.lake', stars: 2, text: 'Cast to my bathroom mirror. It is still casting. I unplugged the phone.' },
+      { who: 'the queen', stars: 3, text: 'She wears my face better than I do. I have asked her to stop. She smiles. I smile. We smile.', key: { end: 'throne' } }] },
+  { id: 'saver', name: 'Battery Saver', glyph: '⚡', c: ['#b9ff6b', '#2c5200'], tag: 'Squeeze out the last 1%', key: { end: 'blackout' }, hint: 'Let it die in the dark.', blurb: 'Saves your battery by turning off what you do not need. It decides what you do not need.',
+    lore: ['It turned off the torch. It turned off the screen. It is deciding about you.', 'At 0%, the phone still has 3 minutes and 7 seconds of something.'],
+    reviews: [
+      { who: 'you', stars: 1, text: 'It saved 1%. I was in the dark at the time. It did not save me.' },
+      { who: 'the guardian', stars: 4, text: '...in the dark, a phone is the brightest thing... you held it up... I could see your face for a moment... I keep that moment...', key: { end: 'keeper' } }] },
+  { id: 'pin', name: 'Pinboard', glyph: '⌖', c: ['#ffe9a8', '#6b4a10'], tag: 'Red string, sold separately', key: { link: 'two_warnings' }, hint: 'Pin two warnings together in Notes.', blurb: 'For people who connect things. It has already connected some of yours.',
+    lore: ['There is a pin in the board already. It is through a photo of this phone.', 'The red string goes off the edge of the board. It goes downstairs.'],
+    reviews: [
+      { who: 'detective_m', stars: 5, text: 'Solved a case with it. Then it solved me.' },
+      { who: 'you', stars: 5, text: 'Pinned the two warnings together. Same voice on both. Mine. I do not remember recording either.' },
+      { who: 'the queen', stars: 4, text: 'You found who I locked away. I did not want it on a board. I am glad it is somewhere.', key: { link: 'what_she_gave' } }] },
 ];
+ABY.STORE_KEYS = ['found', 'end', 'link'];
+// does what she has done (`m`: { found: { endingId: 1 }, deduced: { linkId: 1 } }, both kept on the phone) open this key?
+ABY.storeHas = function (m, key) {
+  const f = (m && m.found) || {}, d = (m && m.deduced) || {};
+  if (!key) return true;
+  if ('found' in key) return ABY.ENDING_IDS.filter(id => f[id]).length >= key.found;
+  if ('end' in key) return !!f[key.end];
+  if ('link' in key) return !!d[key.link];
+  return false;
+};
+ABY.storeOpen = function (m) { return ABY.STORE.filter(a => ABY.storeHas(m, a.key)).map(a => a.id); };
+// the reviews she may read on a listing, and how many are still sealed
+ABY.storeReviews = function (m, id) {
+  const a = ABY.STORE.filter(x => x.id === id)[0]; if (!a) return { shown: [], sealed: 0 };
+  const shown = a.reviews.filter(r => ABY.storeHas(m, r.key));
+  return { shown, sealed: a.reviews.length - shown.length };
+};
 
 if (typeof module !== 'undefined') module.exports = ABY;

@@ -13,7 +13,7 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, hapLv: 1, badges: {}, apps: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES, pend: null };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, hapLv: 1, badges: {}, apps: {}, stSeen: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES, pend: null };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren', SORREL: 'Sorrel' };
@@ -39,6 +39,7 @@
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.hapLv = d.hapLv === 0 || d.hapLv === 2 ? d.hapLv : 1; syncHap(); G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
     G.calm = typeof d.calm === 'boolean' ? d.calm : reduced; calmed();   // calm flashes: on by default for anyone who asked their device for less motion
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
+    G.stSeen = {}; if (d.stSeen && typeof d.stSeen === 'object') ABY.STORE.forEach(function (a) { if (d.stSeen[a.id] === 1) G.stSeen[a.id] = 1; }); else ABY.storeOpen(storeMeta()).forEach(function (id) { G.stSeen[id] = 1; });   // a save from before the store kept track: what is open now is not news
     G.saved = null;
     G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
     // what an ending offered (the next day, or a wake at dawn) outlives the card: she can leave the card, close the app, and still take it
@@ -50,9 +51,16 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
+  function storeMeta() { return { found: G.found, deduced: G.deduced || {} }; }
+  function storeNews() { var fresh = ABY.storeOpen(storeMeta()).filter(function (id) { return !G.stSeen[id]; }); P.badge('store', fresh.length); return fresh; }
+  function storeAlert(before) {                                              // a listing an ending or a deduction just opened: a badge, and a banner naming it
+    var now = ABY.storeOpen(storeMeta()).filter(function (id) { return before.indexOf(id) < 0 && !G.stSeen[id]; }); storeNews(); if (!now.length) return;
+    var a = ABY.STORE.filter(function (x) { return x.id === now[0]; })[0];
+    setTimeout(function () { if (!G.stSeen[a.id]) P.banner({ title: 'App Store', icon: 'ic-store', glyph: '\u25A0', text: now.length === 1 ? 'New listing: ' + a.name + ' \u2014 ' + a.tag : now.length + ' new listings, starting with ' + a.name, onTap: function () { open('store'); } }); }, 4600);   // after the banner the ending or deduction raised has had its say
+  }
   function foundN() { return ABY.ENDING_IDS.filter(function (id) { return G.found[id]; }).length; }
   function calmed() { document.documentElement.classList.toggle('calm', !!G.calm); }
   var HAPS = [0.6, 1, 1.6], HAPN = ['Light', 'Normal', 'Strong'];
@@ -220,7 +228,9 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(ABY.isFall(id) ? [90, 60, 70, 90, 50, 120, 30] : [30, 60, 30, 60, 60]); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced && !G.calm ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
+    var stB = ABY.storeOpen(storeMeta());
     var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
+    storeAlert(stB);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
   }
   function badge(id) { return ABY.BADGES.filter(function (b) { return b.id === id; })[0]; }
@@ -395,9 +405,9 @@
     if (!ns) { ABY.Audio.sfx('ui'); return renderNotes('Those two are already pinned together.'); }
     var id = ns.linked; delete ns.linked; G.state = ns;
     if (id) {
-      var L = ABY.LINKS.filter(function (l) { return l.id === id; })[0]; G.deduced[id] = 1;
+      var L = ABY.LINKS.filter(function (l) { return l.id === id; })[0], stB = ABY.storeOpen(storeMeta()); G.deduced[id] = 1;
       ABY.Audio.sfx('choice'); buzz(30); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '✦', text: 'Deduction: ' + L.title });
-      renderNotes('They fit. Somewhere later, this will matter.');
+      renderNotes('They fit. Somewhere later, this will matter.'); storeAlert(stB);
     } else {
       ABY.Audio.sfx('glitch'); buzz([60, 50, 60]); fx($('screen'), 'glitch', 400);
       renderNotes('They don’t fit. The phone laughs at you, very quietly. (−2% battery, +1 dread)');
@@ -406,23 +416,39 @@
     if (!G.delivering && G.node && !G.node.ending && !G.node.song) showReplies(G.node);   // a deduction can open a choice in the scene she is in
   }
   function renderStore() {
-    var box = $('stList'); box.innerHTML = ''; var n = foundN(), got = 0;
+    var box = $('stList'); box.innerHTML = ''; var m = storeMeta(), got = 0, fresh = storeNews();
     ABY.STORE.forEach(function (a) {
-      var ok = n >= a.need, has = G.apps[a.id]; if (has) got++;
-      var row = document.createElement('div'); row.className = 'sti' + (ok ? '' : ' lk');
+      var ok = ABY.storeHas(m, a.key), has = G.apps[a.id], isNew = fresh.indexOf(a.id) >= 0; if (has) got++;
+      var row = document.createElement('div'); row.className = 'sti' + (ok ? '' : ' lk'); row.setAttribute('data-id', a.id);
       var ic = document.createElement('span'); ic.className = 'ico'; ic.textContent = ok ? a.glyph : '?'; ic.style.background = 'linear-gradient(145deg,' + a.c[0] + ',' + a.c[1] + ')';
       var tx = document.createElement('div'); tx.className = 'tx'; var b = document.createElement('b'), sm = document.createElement('small');
-      b.textContent = ok ? a.name : 'Locked'; sm.textContent = ok ? a.tag + ' \u2014 ' + a.blurb : 'Find ' + a.need + ' ending' + (a.need === 1 ? '' : 's') + ' to see this listing.'; tx.appendChild(b); tx.appendChild(sm);
+      b.textContent = ok ? a.name : 'Locked'; if (isNew) { var nw = document.createElement('span'); nw.className = 'new'; nw.textContent = 'NEW'; b.appendChild(nw); }
+      sm.textContent = ok ? a.tag + ' — ' + a.blurb : 'found' in a.key ? 'Find ' + a.key.found + ' ending' + (a.key.found === 1 ? '' : 's') + ' to see this listing.' : '“' + a.hint + '”';
+      tx.appendChild(b); tx.appendChild(sm);
       var g = document.createElement('button'); g.type = 'button'; g.className = 'get' + (ok ? '' : ' lk'); g.textContent = !ok ? 'LOCKED' : has ? 'OPEN' : 'GET'; g.disabled = !ok;
       g.addEventListener('click', function () { if (!ok) return; if (!G.apps[a.id]) { G.apps[a.id] = 1; save(); ABY.Audio.sfx('ui'); } renderApp(a.id); P.show('appx'); });
       row.appendChild(ic); row.appendChild(tx); row.appendChild(g); box.appendChild(row);
     });
-    $('stSub').textContent = got + ' installed \u00b7 ' + ABY.STORE.length + ' listings';
+    var open = ABY.storeOpen(m); open.forEach(function (id) { G.stSeen[id] = 1; }); if (fresh.length) save(); P.badge('store', 0);   // seen now: the NEW tags stay until she leaves
+    $('stSub').textContent = got + ' installed · ' + open.length + ' of ' + ABY.STORE.length + ' listings';
   }
+  function stars(n) { var r = Math.round(n); return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r); }
   function renderApp(id) {
     var a = ABY.STORE.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+    var rv = ABY.storeReviews(storeMeta(), id), avg = rv.shown.reduce(function (t, r) { return t + r.stars; }, 0) / Math.max(1, rv.shown.length);
     $('axName').textContent = a.name; $('axTag').textContent = a.tag; var box = $('axBody'); box.innerHTML = '';
-    a.lore.forEach(function (t) { var d = document.createElement('div'); d.className = 'nt'; var p = document.createElement('p'); p.textContent = t; d.appendChild(p); box.appendChild(d); });
+    function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+    var hero = el('div', 'axh'), ic = el('span', 'ico', a.glyph); ic.style.background = 'linear-gradient(145deg,' + a.c[0] + ',' + a.c[1] + ')';
+    var ht = el('div', 'tx'); ht.appendChild(el('b', '', a.name)); ht.appendChild(el('small', 'rate', stars(avg) + ' ' + avg.toFixed(1) + ' · ' + rv.shown.length + ' review' + (rv.shown.length === 1 ? '' : 's'))); ht.appendChild(el('small', '', 'Free · v3.07 · ' + (G.apps[id] ? 'Installed' : 'Not installed')));
+    hero.appendChild(ic); hero.appendChild(ht); box.appendChild(hero);
+    var bl = el('div', 'nt'); bl.appendChild(el('p', '', a.blurb)); box.appendChild(bl);
+    a.lore.forEach(function (t) { var d = el('div', 'nt'); d.appendChild(el('p', '', t)); box.appendChild(d); });
+    box.appendChild(el('h3', 'axr', 'Reviews'));
+    rv.shown.forEach(function (r) {
+      var d = el('div', 'rv' + (r.key ? ' k' : '')), top = el('div', 'rvt'); top.appendChild(el('span', 'st', stars(r.stars))); top.appendChild(el('b', '', r.who)); if (r.key) top.appendChild(el('i', '', 'because you were there'));
+      d.appendChild(top); d.appendChild(el('p', '', r.text)); box.appendChild(d);
+    });
+    if (rv.sealed) box.appendChild(el('p', 'hint2 sealed', rv.sealed === 1 ? '1 more review is here. It is not written for you yet.' : rv.sealed + ' more reviews are here. They are not written for you yet.'));
   }
   function renderFlute() { $('fBest').textContent = G.songBest ? G.songBest + '%' : '—'; }
   function renderSettings() {
@@ -512,7 +538,7 @@
     setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.classList.add('gone'); }, 700); }, ms);
   }
   function boot() {
-    load(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; G.pend = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
+    load(); storeNews(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; G.pend = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
     ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
     var pre = $('pre'), booted = false, stage = $('screen');
     function ready(gl) {

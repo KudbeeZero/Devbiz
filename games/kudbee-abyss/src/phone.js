@@ -12,7 +12,7 @@ var ABY = window.ABY = window.ABY || {};
 ABY.Phone = (function () {
   var P = { screen: 'lock', hooks: {}, locked: false };
   var $ = function (id) { return document.getElementById(id); };
-  var APPS = ['home2', 'msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes', 'store', 'appx'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0 };
+  var APPS = ['home2', 'msg', 'flute', 'gallery', 'pulse', 'settings', 'share', 'notes', 'store', 'appx'], bannerT = 0, badges = { msg: 0, gallery: 0, notes: 0, store: 0 };
   var DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var SIGNAL = { void: 1, spire: 3, dusk: 2, gate: 4, dawn: 4, dark: 0, throne: 0 };
   P.orient = 'portrait';
@@ -28,7 +28,7 @@ ABY.Phone = (function () {
   P.setDate = function (txt) { $('lkDate').textContent = txt; };
 
   P.badge = function (app, n) {
-    badges[app] = n; var host = app === 'msg' ? $('icMsg') : app === 'gallery' ? $('icGal') : app === 'notes' ? $('icNotes') : null; if (!host) return;
+    badges[app] = n; var host = app === 'msg' ? $('icMsg') : app === 'gallery' ? $('icGal') : app === 'notes' ? $('icNotes') : app === 'store' ? $('icStore') : null; if (!host) return;
     var b = host.querySelector('.badge'); if (!n) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('span'); b.className = 'badge'; host.appendChild(b); } b.textContent = n > 9 ? '9+' : String(n);
   };

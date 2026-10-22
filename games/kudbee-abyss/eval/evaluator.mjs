@@ -337,6 +337,36 @@ await block('app-store', async () => {
   rec('app-store', st.icon && st.rows >= 4 && st.locked === st.rows - 2 && bb && bb.height >= 43.5 && after.appx && after.name === 'Lantern' && after.saved && after.saved.lantern === 1 && back.store && back.open[0] === 'OPEN', st.rows + ' listings (' + st.locked + ' locked), GET installs "' + after.name + '" and it is saved, back returns to the store, GET button ' + (bb ? bb.height : 0) + 'px');
   await ctx.close();
 });
+
+await block('app-store-depth', async () => {
+  // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1 }, deduced: { two_warnings: 1 }, stSeen: { lantern: 1 } }));`;
+  ({ ctx, pg } = await open({}, 'store-depth', { pre })); await wake(pg);
+  const before = await pg.evaluate(() => { const b = document.querySelector('#icStore .badge'); return b ? b.textContent : ''; });
+  await pg.evaluate(() => ABY.Phone.show('store'));
+  await pg.waitForFunction(() => document.querySelectorAll('#stList .sti').length === ABY.STORE.length);
+  const list = await pg.evaluate(() => {
+    const row = id => document.querySelector('#stList .sti[data-id="' + id + '"]');
+    return { badge: !!document.querySelector('#icStore .badge'), tide: !row('tide').classList.contains('lk') && !!row('tide').querySelector('.new'), pin: !row('pin').classList.contains('lk'),
+      smile: row('smile').classList.contains('lk') && /^“.+”$/.test(row('smile').querySelector('small').textContent), ledger: row('ledger').classList.contains('lk') && /Find 3 endings/.test(row('ledger').querySelector('small').textContent),
+      lanternNew: !!row('lantern').querySelector('.new'), seen: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).stSeen };
+  });
+  await pg.locator('#stList .sti[data-id="tide"] .get').click();
+  await pg.waitForFunction(() => document.getElementById('appx').classList.contains('on') && document.getElementById('axName').textContent === 'Tide Tables');
+  const tide = await pg.evaluate(() => ({ rv: document.querySelectorAll('#axBody .rv').length, k: document.querySelectorAll('#axBody .rv.k').length, sealed: !!document.querySelector('#axBody .sealed'), rate: document.querySelector('#axBody .rate').textContent }));
+  await pg.click('#axBack'); await pg.waitForFunction(() => document.getElementById('store').classList.contains('on'));
+  await pg.locator('#stList .sti[data-id="lantern"] .get').click();
+  await pg.waitForFunction(() => document.getElementById('axName').textContent === 'Lantern');
+  const lant = await pg.evaluate(() => ({ rv: document.querySelectorAll('#axBody .rv').length, k: document.querySelectorAll('#axBody .rv.k').length, sealed: (document.querySelector('#axBody .sealed') || {}).textContent || '' }));
+  await ctx.close();
+  // a save from before the store kept track of what was seen: nothing already open is announced
+  ({ ctx, pg } = await open({}, 'store-old', { pre: `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1, song: 1 } }));` })); await wake(pg);
+  const old = await pg.evaluate(() => !document.querySelector('#icStore .badge'));
+  await ctx.close();
+  rec('store-listings-know-you', before === '4' && !list.badge && list.tide && list.pin && list.smile && list.ledger && !list.lanternNew && list.seen.tide === 1 && list.seen.pin === 1
+    && tide.rv === 3 && tide.k === 1 && !tide.sealed && /3 reviews/.test(tide.rate) && lant.rv === 2 && lant.k === 0 && /^2 more reviews/.test(lant.sealed) && old,
+    'badge ' + before + ' for 4 new listings (Tide Tables by a fall, Pinboard by a deduction), cleared once seen; a locked one shows its riddle; Tide Tables shows ' + tide.rv + ' reviews (' + tide.k + ' because she was there), Lantern ' + lant.rv + ' and "' + lant.sealed.slice(0, 22) + '…"; an old save announces nothing');
+});
 const chips = (pg) => pg.evaluate(() => [...document.querySelectorAll('#replies .chip')].map(c => c.textContent));
 const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pg.locator('#replies .chip', { hasText: text }).first().click(); await sleep(300); };
 await block('horror', async () => {
@@ -529,11 +559,12 @@ await block('evidence-board', async () => { // the evidence board: in Notes, tap
   const bad = await pg.evaluate(() => ({ bat: ABY.game.state.bat, dread: ABY.game.state.dread, msg: document.getElementById('nMsg').textContent, ded: document.querySelectorAll('#noteList .ded').length }));
   await pg.click('#noteList .nt.pin[data-note="future_call"]'); const sel = await pg.evaluate(() => { const e = document.querySelector('#noteList .nt.sel'); return e ? e.getAttribute('data-note') + ':' + e.getAttribute('aria-pressed') : ''; });
   await pg.click('#noteList .nt.pin[data-note="recording"]'); await sleep(300);
-  const good = await pg.evaluate(() => { const d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); return { flag: ABY.game.state.flags.link_two_warnings, bat: ABY.game.state.bat, ded: [...document.querySelectorAll('#noteList .ded h3')].map(h => h.textContent), sub: document.getElementById('nSub').textContent, deduced: d.deduced && d.deduced.two_warnings, run: d.run && d.run.flags.link_two_warnings }; });
+  const good = await pg.evaluate(() => { const d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); return { flag: ABY.game.state.flags.link_two_warnings, bat: ABY.game.state.bat, ded: [...document.querySelectorAll('#noteList .ded h3')].map(h => h.textContent), sub: document.getElementById('nSub').textContent, deduced: d.deduced && d.deduced.two_warnings, run: d.run && d.run.flags.link_two_warnings, store: (document.querySelector('#icStore .badge') || {}).textContent || '', bn: document.getElementById('banner').textContent }; });
   await pg.screenshot({ path: join(OUT, 'evidence-board.png') });
   rec('evidence-board-pins', s0.h >= 44 && bad.bat === s0.bat - 2 && bad.dread === s0.dread + 1 && /don’t fit/.test(bad.msg) && bad.ded === 0 && sel === 'future_call:true'
-    && good.flag === 1 && good.bat === bad.bat && good.ded.length === 1 && /Two warnings/.test(good.ded[0]) && /1 deduction/.test(good.sub) && good.deduced === 1 && good.run === 1,
-    'clue cards are ' + Math.round(s0.h) + 'px tall; a wrong pair costs 2% and 1 dread ("' + bad.msg.slice(0, 40) + '..."); the right pair files "' + good.ded[0] + '", saved for this night and every night');
+    && good.flag === 1 && good.bat === bad.bat && good.ded.length === 1 && /Two warnings/.test(good.ded[0]) && /1 deduction/.test(good.sub) && good.deduced === 1 && good.run === 1 && good.store === '1' && /Deduction/.test(good.bn),
+    'clue cards are ' + Math.round(s0.h) + 'px tall; a wrong pair costs 2% and 1 dread ("' + bad.msg.slice(0, 40) + '..."); the right pair files "' + good.ded[0] + '", saved for this night and every night, and opens a listing in the App Store (badge ' + good.store + ')');
+  await pg.waitForFunction(() => /New listing: Pinboard/.test(document.getElementById('banner').textContent), null, { timeout: 8000 }).then(() => rec('store-banner-waits', true, 'the deduction\'s banner shows first; then "' + 'New listing: Pinboard' + '"'), () => rec('store-banner-waits', false, 'no App Store banner after the deduction'));
   await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400); const after = await chips(pg);
   await pick(pg, 'Two warnings'); await pick(pg, 'nearly');
   await pg.waitForFunction(() => ABY.game.state.node === 'd2_door' && !ABY.game.delivering, null, { timeout: 15000 }).catch(() => {}); await sleep(300);
