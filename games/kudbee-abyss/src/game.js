@@ -455,6 +455,23 @@
     if (bip) { var e = bip; bip = null; try { e.prompt(); e.userChoice.then(function (c) { if (c && c.outcome === 'accepted') { G.install = 1; save(); } renderStore(); renderSettings(); }, function () {}); } catch (err) { /* a prompt only works once */ } return; }
     $('inst').hidden = false; $('instOk').focus({ preventScroll: true });
   }
+  // What's New (Settings): the releases a player would have seen, newest first, from what actually shipped. Add one with each player-facing change.
+  var RELEASES = [
+    { v: '2.3', d: '22 Oct 2026', n: ['Add Abyss to your Home Screen: it opens full screen and plays with no signal', 'Settings: About (your data stays on this phone) and What\'s New'] },
+    { v: '2.2', d: '22 Oct 2026', n: ['The App Store grows: twelve listings, opened by what you have done, with reviews that remember you', 'Installed apps reach into the night: each speaks once, on a later day', 'Four apps leave a clue that can open a deduction your journey missed'] },
+    { v: '2.1', d: '21 Oct 2026', n: ['Salt, a crayon and a cursed mirror: picked up early, spent days later', 'Codas, detours and second sight: the story remembers your other journeys', 'Bonds: how you treat the five who speak to you opens and closes choices', 'Day Seven: the accusation, and a new ending', 'Haptics: a heartbeat as dread rises, calls that shake the phone', 'A photosensitivity warning and a Calm flashes setting'] },
+    { v: '2.0', d: '20 Oct 2026', n: ['Seven nights, and ten different ways to begin', 'Falls and checkpoints: wake at the last dawn, or start over', 'Scars: every fall marks every later journey', 'The evidence board: pin clues together in Notes', 'The Clock, overnight messages, and calls you have to answer'] },
+    { v: '1.2', d: '19 Oct 2026', n: ['Day Two and Day Three', 'Rhythm rites on the Echo Flute', 'Reply from the lock screen'] },
+    { v: '1.0', d: '21 Sep 2026', n: ['Kudbee Abyss: a story told through a haunted phone'] },
+  ];
+  function renderNews() {
+    var box = $('newsList'); box.innerHTML = '';
+    RELEASES.forEach(function (r) {
+      var d = document.createElement('section'); d.className = 'nrel'; var h = document.createElement('h4'), s = document.createElement('small'), u = document.createElement('ul');
+      h.textContent = 'Version ' + r.v; s.textContent = r.d; h.appendChild(s); r.n.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; u.appendChild(li); });
+      d.appendChild(h); d.appendChild(u); box.appendChild(d);
+    });
+  }
   function canInstall() { return coarse && !standalone && G.install !== 1 && G.visits >= 2 && (!!bip || ios); }
   function installRow(box) {
     var row = document.createElement('div'); row.className = 'sti real'; row.setAttribute('data-id', 'abyss');
@@ -489,7 +506,7 @@
   function renderSettings() {
     $('togSnd').classList.toggle('on', !ABY.Audio.muted); $('setSnd').setAttribute('aria-pressed', ABY.Audio.muted ? 'false' : 'true');
     $('hapLvS').textContent = HAPN[G.hapLv]; $('setHapLv').disabled = !G.haptics;
-    $('setInstall').hidden = !canInstall();
+    $('setInstall').hidden = !canInstall(); $('setVer').textContent = 'Version ' + RELEASES[0].v + ' · ' + RELEASES[0].d;
     $('togHap').classList.toggle('on', G.haptics); $('setHap').setAttribute('aria-pressed', G.haptics ? 'true' : 'false');
     ['setCalm', 'gCalm'].forEach(function (id) { $(id).setAttribute('aria-pressed', G.calm ? 'true' : 'false'); }); $('togCalm').classList.toggle('on', !!G.calm); $('togCalmG').classList.toggle('on', !!G.calm);
   }
@@ -502,7 +519,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
-    $('inst').hidden = true;
+    $('inst').hidden = true; $('news').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
@@ -540,6 +557,8 @@
   });
   $('rotBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); });
   $('setInstall').addEventListener('click', installNow);
+  $('setNews').addEventListener('click', function () { renderNews(); $('news').hidden = false; ABY.Audio.sfx('ui'); $('newsOk').focus({ preventScroll: true }); });
+  $('newsOk').addEventListener('click', function () { $('news').hidden = true; ABY.Audio.sfx('click'); });
   $('instOk').addEventListener('click', function () { $('inst').hidden = true; ABY.Audio.sfx('click'); });
   $('gOk').addEventListener('click', function () { G.guided = true; $('guide').hidden = true; save(); });
   $('fPlay').addEventListener('click', function () { startSong(true); });

@@ -420,11 +420,17 @@ await block('installable', async () => {
     }
     await p.evaluate(() => ABY.Phone.show('settings')); await sleep(400);
     const set = await p.evaluate(() => ({ row: !document.getElementById('setInstall').hidden, about: document.querySelector('#settings .about').textContent }));
-    if (set.row) { await p.click('#setInstall'); await sleep(300); set.sheet = await p.evaluate(() => !document.getElementById('inst').hidden); await p.screenshot({ path: join(OUT, 'settings-about-' + w + 'x' + h + '.png') }); }
+    if (set.row) { await p.click('#setInstall'); await sleep(300); set.sheet = await p.evaluate(() => !document.getElementById('inst').hidden); await p.screenshot({ path: join(OUT, 'settings-about-' + w + 'x' + h + '.png') }); await p.click('#instOk'); await sleep(200); }
+    // What's New: the version in About, and the releases in a sheet whose Done stays on screen however long the list
+    set.ver = await p.evaluate(() => document.getElementById('setVer').textContent); await p.click('#setNews'); await sleep(300);
+    set.news = await p.evaluate(() => { const b = document.getElementById('newsOk').getBoundingClientRect(); return { open: !document.getElementById('news').hidden, rel: document.querySelectorAll('#newsList .nrel').length, first: (document.querySelector('#newsList .nrel h4') || {}).textContent || '', done: b.top >= 0 && b.bottom <= innerHeight && b.height >= 40 }; });
+    await p.screenshot({ path: join(OUT, 'whats-new-' + w + 'x' + h + '.png') }); await p.click('#newsOk'); await sleep(200); set.news.closed = await p.evaluate(() => document.getElementById('news').hidden);
     await c.close(); return { row, sheet, set };
   };
   const first = await card(0, 390, 844), second = await card(1, 390, 844), wide = await card(5, 844, 390);
   const ok = s => s && s.open && s.steps.length === 3 && /Share/.test(s.steps[0]) && /Add to Home Screen/.test(s.steps[1]) && s.btn && s.closed;
+  const news = s => s.set.news.open && s.set.news.rel >= 5 && s.set.news.done && s.set.news.closed && s.set.ver.startsWith(s.set.news.first.replace(/\d+ \w+ \d{4}$/, '').trim());
+  rec('whats-new', news(first) && news(wide), 'Settings shows "' + first.set.ver + '"; What\'s New lists ' + first.set.news.rel + ' releases, newest first ("' + first.set.news.first + '"), and its Done stays on screen upright and on its side');
   rec('install-card', !first.row.row && !first.set.row && second.set.row && second.set.sheet && /sends nothing anywhere/.test(second.set.about) && /Plays offline/.test(second.set.about) && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
     'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes; Settings offers the same, and its About says the game sends nothing anywhere');
 });
