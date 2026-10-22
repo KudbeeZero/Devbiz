@@ -53,6 +53,7 @@ Routing rule of thumb: *permanent rule* → CLAUDE.md · *in-flight state* → B
 
 Append-only. Newest first. Each entry: the trigger → the reflex.
 
+- **2026-10-22** — **Don't re-check what hasn't changed (owner: "you don't have to do wasteful things like recheck the main. You just checked it all and nothing has changed"):** after merging a PR whose branch was verified up to date with `main`, I started the 4.5-minute fast eval on `main` again; the merge commit held exactly the tested code. A check is evidence about specific code; if that code and its base are unchanged since the last pass, the pass still stands. Before running any gate, ask what changed since it last passed: nothing → cite the earlier run instead. Re-run only when code changed, the base moved (another PR landed first), or the last run failed. The same applies at the start of a task: a `main` verified earlier this session with no new commits needs no fresh run.
 - **2026-10-21** — **A gate that outlives the container is not a gate (Abyss, owner: "How do we speed up this process by 50%?"):** the 25-minute `npm run abyss:eval` died silently twice mid-run because this cloud container is recycled when the session idles (`uptime` showed 4 min), taking background jobs with it; a merge waited an hour on runs that never finished. Split the rubric into named blocks and run them in parallel (`npm run abyss:eval:fast`, 4 processes, ~4.5 min, small enough to run in the foreground) and run single blocks while building (`ONLY=name`). Before trusting a background log that stopped growing, check `uptime` and whether the process still exists.
 - **2026-10-20** — **Time travel is a return address, not a rewind (Abyss Clock, owner: "days should be interacting... flashbacks... travel in time both forward and backwards... all of the scenes get tied in"):** a flashback or flash-forward is an ordinary scene that remembers where she came from (`back`, set when a choice enters a node with `time`) and whose every choice returns there, so the day never branches or loops and the graph can prove it (a slip counts as finishable because its origin is). Guard each slip with a flag set on all its returns and `noflag` on its entry, or it can be farmed. A payoff must come on a scene she can reach AFTER the slip: three of mine were placed on scenes that precede it (`d7_queen` before `d7_gather`), caught only by the walk's `hidden-choices`; put a gate where the flag already exists. Place each slip where its gate flags are already set (a Day Six slip reads a Day Six flag, so it lives on the dawn, not the wake). Turn an audit into a standing check (`every-flag-is-read`) so a choice that does nothing can never ship again.
 - **2026-10-20** — **Give unread flags a voice, and file their clues everywhere a day can begin (Abyss overnight messages, owner: "taking this deeper like we talked about"):** an audit found 25 flags a choice sets that nothing reads. Pay them off as data (`ABY.OVERNIGHT`: a wake scene, a flag, a speaker, a line, optionally a clue) instead of branching the story, and prove each one is for a flag set on an *earlier* day (the graph's `overnight-messages`). A day can begin by `choose`, by `ABY.carry` or by a wake, and only `choose` lands through `_land`: anything filed on arrival must be filed in `carry` too, or the carried-in player silently misses it. A scene whose lines come from several speakers must switch the contact header back after the last of them. The notes fix on the same branch (a sticky tray) came from screenshotting a *full* list on a phone: a UI that is fine with three items is a different UI with fourteen.
@@ -219,10 +220,18 @@ never execute. The gate is now **local verification only**:
   local lint/typecheck/test commands and confirm they pass before declaring a base
   sound. Default Devbiz gate from repo root: **`npm run verify`** (pinball 24/24 +
   leaderboard unit tests). Do not build on a base you haven't verified locally.
+  A base you already verified this session, with no commits on it since, is verified:
+  do not run it again.
 - **Before claiming a branch is mergeable:** merge/rebase `main` into the working
   branch first, then confirm the branch's own local checks pass.
-- **After any push to, or merge/ff into, `main`:** re-run local verification and
-  confirm `main` is still sane before declaring the merge done.
+- **After any push to, or merge/ff into, `main`:** re-run local verification only when
+  `main` now holds code you have not checked. If the branch was verified up to date with
+  `main` (`main` was its base, nothing else landed in between), the merge brings in exactly
+  the tested code: the branch's run *is* the check on `main`. Say so ("verified on the
+  branch, up to date with main") and do not re-run it.
+- **No wasteful checking (owner, 2026-10-22):** never re-run a check whose inputs have not
+  changed since it last passed. Run a gate when code changed, a base moved, or the last
+  run failed, not by ritual.
 - Owner approval is still required to merge (§11 / PR_FLOW §5).
 - **Use precise language** (§7): say "local passed, no CI configured" — never claim
   "CI green" or "expected green." Expected green is not green.

@@ -92,6 +92,8 @@ Use precise language:
 
 Expected green is not green.
 
+Don't re-run a check on unchanged code: a pass holds until the code or its base changes. A branch verified up to date with `main` needs no second run on `main` after it merges; say "verified on the branch, up to date with main".
+
 ## 8. Manual Check Rule
 
 If a PR requires browser, wallet, payment, screen capture, API key, or deployment
