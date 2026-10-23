@@ -516,6 +516,31 @@ await block('feel', async () => {
   rec('touch-targets-and-feel', !a.small.length && !b.small.length && !a.silent.length && !b.silent.length && a.seen > 20 && b.seen > 20 && names.join() === 'Normal,Loud,Quiet,Normal' && vols.join() === '100,130,50,100' && saved === 2 && after.label === 'Loud' && after.vol === 130 && off,
     'every control on ' + SCREENS.length + ' screens is a 44px target and answers a tap (landscape ' + a.seen + ' checked, portrait ' + b.seen + ')' + (a.small.concat(b.small).length ? '; SMALL ' + a.small.concat(b.small).slice(0, 4).join(' | ') : '') + (a.silent.concat(b.silent).length ? '; SILENT ' + a.silent.concat(b.silent).slice(0, 4).join(' | ') : '') + '; sound level ' + names.join('>') + ' (' + vols.join('/') + '), saved ' + saved + ', after reload ' + after.label + ', disabled while muted: ' + off);
 });
+await block('graphics', async () => {
+  // the frame-time governor: a slow phone steps the 3D down a tier (and keeps it), a fast one never does, a stall is ignored; the Graphics setting is Auto / Full / Lite and survives a reload
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'graphics'); await wake(pg);
+  const gov = await pg.evaluate(() => {
+    const P = ABY.Perf, out = {}; const run = (ms, n) => { let last = -1; for (let i = 0; i < n; i++) { const r = P.step(ms); if (r >= 0) last = r; } return last; };
+    P.reset(0, true); out.fast = run(16.7, 600) === -1 && P.tier === 0;
+    P.reset(0, true); out.stall = run(900, 600) === -1 && P.tier === 0;
+    P.reset(0, true); out.slow1 = run(40, 400) >= 1 && P.tier >= 1;
+    P.reset(0, true); run(40, 3000); out.floor = P.tier === 2;
+    P.reset(0, false); out.fixed = run(40, 600) === -1 && P.tier === 0;
+    P.reset(0, true); run(16.7, 100); out.loadSkipped = run(40, 30) === -1;
+    return out;
+  });
+  await pg.evaluate(() => ABY.Phone.show('settings')); await pg.waitForTimeout(300);
+  const lab = () => pg.evaluate(() => ({ t: document.getElementById('gfxS').textContent, tier: ABY.Perf.tier, auto: ABY.Perf.auto }));
+  const seq = [await lab()]; for (let i = 0; i < 3; i++) { await pg.locator('#setGfx').click(); seq.push(await lab()); }
+  await pg.locator('#setGfx').click(); await pg.locator('#setGfx').click(); await pg.waitForTimeout(100);    // -> Lite
+  const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('kudbee.abyss.v2')).gfx);
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone')); await pg.evaluate(() => ABY.Phone.show('settings'));
+  const after = await lab();
+  await ctx.close();
+  const names = seq.map(x => x.t).join();
+  rec('graphics-tiers', Object.values(gov).every(Boolean) && names === 'Auto,Full,Lite,Auto' && seq[1].tier === 0 && !seq[1].auto && seq[2].tier === 1 && seq[3].auto && saved === 2 && after.t === 'Lite' && after.tier === 1 && !after.auto,
+    'Auto steps a slow phone down and stays down, ignores stalls and load; Full/Lite are fixed; ' + names + ' saved ' + saved + ' -> ' + after.t + (Object.values(gov).every(Boolean) ? '' : '; GOV ' + JSON.stringify(gov)));
+});
 await block('store-shots', async () => {
   // the store-style screenshot set (tools/store-shots.mjs): six real JPEGs at the App Store's 6.9" size, 1320x2868, each a screen of the phone under a caption;
   // the game never loads them, so this is the only thing that notices one went missing or was re-rendered at the wrong size
