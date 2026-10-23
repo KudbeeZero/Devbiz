@@ -28,7 +28,7 @@ function walkChecks() {
   const noWay = ids.filter(id => !N[id].ending && !N[id].song && open(id).length === 0);
   rec('story-no-dead-ends', noWay.length === 0, noWay.join(', ') || 'every scene has at least one choice that is always available');
   const sure = new Set(ids.filter(id => N[id].ending));
-  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back' || (N[id].thread === 'confide' && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
+  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back' || (/^(confide|holders)$/.test(N[id].thread || '') && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
   rec('story-always-finishable', ids.every(id => sure.has(id)), ids.filter(id => !sure.has(id)).join(', ') || 'from every scene the always-available choices reach an ending (' + sure.size + '/' + ids.length + ')');
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
@@ -36,7 +36,7 @@ function walkChecks() {
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.OBJECTS.flatMap(o => ['has_' + o.id, 'used_' + o.id]));
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
-    ...ids.filter(id => N[id].time && N[id].thread !== 'confide').flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
+    ...ids.filter(id => N[id].time && !/^(confide|holders)$/.test(N[id].thread || '')).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   READ.push(...ABY.BOND_FLAGS);   // a bond is counted from these, so the walk keeps states with different bonds apart
   // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
   const READBIT = new Map([...new Set(READ)].map((f, i) => [f, i])), READWORDS = Math.ceil(READBIT.size / 31);
@@ -445,6 +445,23 @@ function walkChecks() {
     });
     rec('confidences', C.length === 10 && shaped.length === 10 && tallies.size === 5 && rows.length === 5 && rows.every(Boolean),
       '5 warm-bond confidences (' + C.length + ' scenes) from Day Three to Day Seven: each offered once and only to a player whose bond with that person is warm, each costs nothing (no battery, no light, no stat) and leaves every stat, the battery, the light, the clues and the way back exactly as it found them (only its own once-only flag is new), so no gate, rite or ending moves' + (rows.every(Boolean) ? '' : ' | BAD ' + PAIRS.filter((p, i) => !rows[i]).map(p => p[0]).join(', ')));
+  }
+  { // holders: Day Four's contact list is a book of five earlier holders (a hub and two scenes each) that costs nothing and returns where she left, so no gate, rite or ending moves
+    const H = ids.filter(id => N[id].thread === 'holders'), KEYS = ['maren', 'nurse', 'paper', 'widow', 'radio'], hub = N.hold_hub;
+    const free = c => c.bat === 0 && !c.add && !c.light && !c.song && !c.note && !c.give && !c.take && !c.obj && !c.cont;
+    const shaped = H.every(id => N[id].time === 'past' && N[id].safe && !N[id].note && !N[id].dark && N[id].choices.every(free) && (id === 'hold_hub' || N[id].text.length > 250)
+      && (/_a$/.test(id) ? N[id].choices.every(c => c.next === id.replace(/_a$/, '_b') && !c.set) : /_b$/.test(id) ? N[id].choices.every(c => c.next === '@back' && /^tt_hold_/.test(c.set)) : true));
+    const base = Object.assign(ABY.newState(0), { node: 'd4_wake', bat: 40, heart: 2, resolve: 2, trust: 2, dread: 1, flags: { freed_name: 1 } });
+    const enter = ABY.choose(base, N.d4_wake.choices.findIndex(c => c.next === 'hold_hub'));
+    const offers = s => ABY.options(s).map(x => x.c.next);
+    const readOne = (s, k) => { let t = ABY.choose(s, N[s.node].choices.findIndex(c => c.next === 'hold_' + k + '_a')); t = t && ABY.choose(t, 0); return t && ABY.choose(t, 0); };
+    const same = (a, b) => ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem'].every(f => a[f] === b[f]) && a.notes.join() === b.notes.join();
+    let cur = enter, ok = !!(enter && enter.node === 'hold_hub' && enter.back === 'd4_wake' && offers(enter).length === 6), n = 0;
+    for (const k of KEYS) { const after = ok && readOne(cur, k); if (!after || after.node !== 'hold_hub' && after.node !== 'd4_wake') { ok = false; break; } n++; cur = after.node === 'd4_wake' ? ABY.choose(after, N.d4_wake.choices.findIndex(c => c.next === 'hold_hub')) : after; }
+    const seen = cur && cur.node === 'hold_hub' ? offers(cur) : [];
+    const closed = enter && ABY.choose(enter, 5), reread = cur && cur.node === 'hold_hub' && offers(cur).join() === '@back';
+    rec('holders', H.length === 11 && shaped && n === 5 && ok && reread && closed && closed.node === 'd4_wake' && same(closed, base) && closed.back === '' && Object.keys(closed.flags).join() === 'freed_name' && cur && same(cur, base) && Object.keys(cur.flags).filter(f => !base.flags[f]).sort().join() === KEYS.map(k => 'tt_hold_' + k).sort().join() && N.d4_wake.choices.filter(c => c.next === 'hold_hub').length === 1 && !N.d4_wake.choices.find(c => c.next === 'hold_hub').req,
+      'five earlier holders (' + H.length + ' scenes: a hub and two each) in the Day Four contact book (opened from the Day Four wake): each read once, then gone from the list; reading or closing costs no battery, stat, light or clue and returns to the Day Four wake with only its own flag new, so no gate, rite or ending moves' + (reread ? '' : ' | after all five the book offers: ' + seen.join(',')));
   }
   { // objects: each is picked up once on a scene it loops back to, spent on a later chapter, and its use is remembered the next morning
     const O = ABY.OBJECTS, rows = O.map(o => {

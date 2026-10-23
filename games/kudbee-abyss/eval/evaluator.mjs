@@ -964,7 +964,7 @@ await block('openings-deep', async () => { // the beginnings, deeper: a journey 
   await pg.evaluate(() => { document.getElementById('replies').scrollTop = 99999; }); await sleep(250);
   const sc1 = await pg.evaluate(() => { const r = document.getElementById('replies'), c = [...r.querySelectorAll('.chip')].pop(), cb = c.getBoundingClientRect(), rb = r.getBoundingClientRect(); return { more: r.classList.contains('more'), last: c.textContent, reach: cb.bottom <= rb.bottom + 1 && cb.top >= rb.top - 1 }; });
   await pg.evaluate(() => { document.getElementById('replies').scrollTop = 0; }); await sleep(150);
-  rec('long-choice-lists-scroll', sc0.n === 7 && sc0.over && sc0.more && sc0.box && !sc1.more && sc1.reach && /first came in/.test(sc1.last), 'with ' + sc0.n + ' choices on an 844x390 phone the list scrolls in its own box and fades while more are below (' + sc0.more + '); scrolled to the end the last one, "' + sc1.last + '", is fully reachable and the fade is gone');
+  rec('long-choice-lists-scroll', sc0.n === 8 && sc0.over && sc0.more && sc0.box && !sc1.more && sc1.reach && /first came in/.test(sc1.last), 'with ' + sc0.n + ' choices on an 844x390 phone the list scrolls in its own box and fades while more are below (' + sc0.more + '); scrolled to the end the last one, "' + sc1.last + '", is fully reachable and the fade is gone');
   const d4 = await chips(pg); await tapChip(pg, 'how you first came in');
   await pg.waitForFunction(() => ABY.game.state.node === 'ec4_lift', null, { timeout: 15000 });
   for (let i = 0; i < 14 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(160); }
