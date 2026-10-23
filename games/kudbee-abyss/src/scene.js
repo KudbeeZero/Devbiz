@@ -9,6 +9,23 @@
  * ===================================================================== */
 var ABY = window.ABY = window.ABY || {};
 
+// The frame-time governor: 0 = full, 1 = lite, 2 = minimal. A weak GPU (an older iPhone) is found by how long its frames take, never by a model name:
+// when a window of frames averages slower than ~38 fps the tier steps down one (never back up in a session, so it cannot flap). Pure: it takes milliseconds, returns the tier.
+ABY.Perf = (function () {
+  var P = { tier: 0, auto: true, SLOW: 26, WIN: 60, SKIP: 90, n: 0, sum: 0, seen: 0 };
+  P.reset = function (tier, auto) { P.tier = tier || 0; P.auto = auto !== false; P.n = 0; P.sum = 0; P.seen = 0; };
+  P.step = function (ms) {                                    // -> the new tier when it just dropped, else -1
+    if (!P.auto || P.tier >= 2 || !(ms > 0) || ms > 250) return -1;       // (a gap over a quarter second is a hidden tab or a stall, not the GPU)
+    if (P.seen++ < P.SKIP) return -1;                           // (the first frames carry the page loading)
+    P.sum += ms;
+    if (++P.n < P.WIN) return -1;
+    var slow = P.sum / P.n > P.SLOW; P.n = 0; P.sum = 0;
+    if (!slow) return -1;
+    P.seen = P.SKIP - 30; return ++P.tier;                       // (half a second to settle at the new tier before it is judged)
+  };
+  return P;
+})();
+
 ABY.Scene = (function () {
   var T = window.THREE;
   var S = { ready: false, frames: 0, mood: 'void', focus: 'queen', stage: 'chat', dim: 1, dimT: 1, dark: 0, throne: 0, eye: 0, eyeT: 0, torch: 0, torchT: 0, dread: 0, reduced: false, layout: { land: false, d0: 12 } };
@@ -49,7 +66,7 @@ ABY.Scene = (function () {
       renderer = new T.WebGLRenderer({ antialias: !coarse, powerPreference: 'high-performance' });
     } catch (e) { return false; }
     S.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    S.applyQuality(true);
     container.appendChild(renderer.domElement);
     scene = new T.Scene(); scene.background = new T.Color(0x05031a); scene.fog = new T.FogExp2(0x0a0420, 0.02);
     camera = new T.PerspectiveCamera(46, 1, 0.1, 120);
@@ -149,9 +166,23 @@ ABY.Scene = (function () {
     sparks = new T.Points(spg, new T.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false }));
     sparks.frustumCulled = false; S.sp = { n: SN, v: new Float32Array(SN * 3), life: new Float32Array(SN), pos: spp, col: spc, i: 0 }; scene.add(sparks);
 
-    S.ready = true; resize(); S.setMood('void', true); S.setFocus('queen', true);
+    S.ready = true; S.applyQuality(true); resize(); S.setMood('void', true); S.setFocus('queen', true);
     return true;
   }
+
+  // quality tiers: 0 full; 1 lite (pixel ratio 1.25, half the shards, no motes); 2 minimal (pixel ratio 1, no shards, every other frame)
+  var PR = [2, 1.25, 1];
+  S.quality = 0;
+  S.applyQuality = function (noResize) {
+    var q = S.quality = Math.max(0, Math.min(2, S.quality | 0));
+    if (!renderer) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, PR[q]));
+    if (shards) { shards.count = q === 0 ? S.shardData.length : q === 1 ? S.shardData.length >> 1 : 0; shards.visible = shards.count > 0; }
+    if (motes) motes.visible = q === 0;
+    if (!noResize) resize();
+  };
+  S.setQuality = function (q) { S.quality = q; S.applyQuality(); };
+  S.onTier = null;                                              // (the game listens: it saves the tier the phone settled on)
 
   function resize() {
     if (!renderer) return;
@@ -218,7 +249,9 @@ ABY.Scene = (function () {
   var m4 = null, q = null, e = null, v3 = null, sc = null, lastT = 0;
   S.render = function (now) {
     if (!S.ready) return;
-    var t = now * 0.001, dt = Math.min(0.05, lastT ? t - lastT : 0.016); lastT = t;
+    var t = now * 0.001, raw = lastT ? t - lastT : 0.016, dt = Math.min(0.05, raw); lastT = t;
+    var nt = ABY.Perf.step(raw * 1000); if (nt > S.quality) { S.setQuality(nt); if (S.onTier) S.onTier(nt); }
+    if (S.quality === 2 && (S.frames & 1)) { S.frames++; return; }          // (minimal: every other frame, a steady 30 on a 60 Hz screen)
     var rm = S.reduced ? 0 : 1, ease = 1 - Math.pow(0.001, dt * 0.9), M = S.moodT;
 
     // mood: fog, lights, tint, shard glow
@@ -266,7 +299,7 @@ ABY.Scene = (function () {
     }
     shards.instanceMatrix.needsUpdate = true;
     S.stars.rotation.y = t * 0.006 * rm; S.neb.position.x = Math.sin(t * 0.03) * 0.5 * rm;
-    if (rm) { var mp = motes.geometry.attributes.position; for (i = 0; i < mp.count; i++) { mp.setX(i, mp.getX(i) + Math.sin(t * 0.5 + i) * 0.0025); mp.setY(i, mp.getY(i) + Math.cos(t * 0.4 + i * 0.5) * 0.0025 + 0.0006); if (mp.getY(i) > 7) mp.setY(i, -7); } mp.needsUpdate = true; }
+    if (rm && motes.visible) { var mp = motes.geometry.attributes.position; for (i = 0; i < mp.count; i++) { mp.setX(i, mp.getX(i) + Math.sin(t * 0.5 + i) * 0.0025); mp.setY(i, mp.getY(i) + Math.cos(t * 0.4 + i * 0.5) * 0.0025 + 0.0006); if (mp.getY(i) > 7) mp.setY(i, -7); } mp.needsUpdate = true; }
 
     // sparks
     var P = S.sp, any = false;
