@@ -27,13 +27,15 @@ ABY.Audio = (function () {
     var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     try { A.ctx = new C(); } catch (e) { return; }
     var c = A.ctx, comp = c.createDynamicsCompressor();
-    master = c.createGain(); master.gain.value = A.muted ? 0 : 0.8; master.connect(comp); comp.connect(c.destination);
+    master = c.createGain(); master.gain.value = A.muted ? 0 : 0.8 * A.vol; master.connect(comp); comp.connect(c.destination);
     dry = c.createGain(); dry.connect(master);
     var conv = c.createConvolver(); conv.buffer = impulse(c, 2.8); wet = c.createGain(); wet.gain.value = 0.55; wet.connect(conv); conv.connect(master);
     padBus = c.createGain(); padBus.gain.value = 0.5; padBus.connect(dry); padBus.connect(wet);
     A.started = true;
   };
-  A.setMuted = function (m) { A.muted = !!m; if (master) master.gain.setTargetAtTime(A.muted ? 0 : 0.8, A.ctx.currentTime, 0.05); };
+  A.vol = 1;                                                                                  // the player's sound level (a multiplier on the master gain)
+  A.setMuted = function (m) { A.muted = !!m; if (master) master.gain.setTargetAtTime(A.muted ? 0 : 0.8 * A.vol, A.ctx.currentTime, 0.05); };
+  A.setVol = function (v) { A.vol = v; if (master && !A.muted) master.gain.setTargetAtTime(0.8 * A.vol, A.ctx.currentTime, 0.05); };
   A.duck = function (v) { duck = v; if (padBus) padBus.gain.setTargetAtTime(0.5 * v, A.ctx.currentTime, 0.4); };
 
   // one note of the flute: a soft sine with a little triangle, vibrato and a breath of noise
