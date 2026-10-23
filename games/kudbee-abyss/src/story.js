@@ -167,6 +167,7 @@ ABY.NOTES = {
   glimpse_door: { title: 'Flash-forward: a small door', text: 'A house with no windows. A cot, paper hats, and a door standing open a hand\u2019s width onto red light. The light blinked once, as if it had been waiting a very long time for someone to come up the stairs.' },
   glimpse_seventh: { title: 'Flash-forward: the seventh night', text: 'Everyone in one room: the captain at the door, Vey at your ankle, the choir along the walls, the Queen with her flute. In the gap of the door, enormous and wet with crying, a child\u2019s eye. You open your mouth, and the screen cuts out before you can hear what you say.' },
   glimpse_morning: { title: 'Flash-forward: the morning after', text: 'Real light on a real wall. A phone, switched off, on a kitchen table. A quarter to seven, not 3:07. A kettle, a folded cot, and in the corridor an ordinary door.' },
+  o_awake: { title: 'The count', text: 'DO NOT LET THEM COUNT YOU, in your own handwriting, under the flute strap. A photo of a small hand in yours that you do not remember taking. And on the back of your hand, in biro: 1.' },
   o_lift: { title: 'The lift wall', text: 'Pencil, at the height of a nine-year-old: W. WAS HERE. And a drawing of a lift with 3:07 on the door, taped where you could not have put it. Someone drew you the way in.' },
   o_bath: { title: 'The duck with the ribbon', text: 'A yellow duck on the bath rim with a ribbon round its neck, and in crayon, very small: for the bath, so you are never lonely down there. Whoever left it knew you would come up through the water.' },
   o_bus: { title: 'The packed bag', text: 'A child\u2019s schoolbag on the night bus: a torch, a sandwich in foil, a cracked phone at 3:07, and a note in block capitals: IF YOU GET LOST, STAY ON THE BUS. IT ALWAYS GOES HOME EVENTUALLY.' },
@@ -366,9 +367,9 @@ ABY.NODES = {
     teaser: 'You\u2019re awake. Do you hear it? The flute is calling.',
     text: 'Something wakes her. Not a sound: the end of one. 3:07, says the phone in your hand, and somewhere in the haze a door has just stopped closing. She cannot remember her name. She can remember the weight of the flute at her back, and the echo of its song in her blood. Something has already begun to count.',
     choices: [
-      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
-      { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
-      { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Feel for the flute at your back', next: 'awakening_b', add: { resolve: 1 } },
+      { label: 'Listen for the door that stopped closing', next: 'awakening_b', add: { heart: 1 } },
+      { label: 'Look at the phone: 3:07', next: 'awakening_b', add: { dread: 1 } },
     ],
   },
   // ---- the other nine openings: a journey after the first starts in one of these (ABY.OPENINGS), somewhere new, and finds the same haze ----
@@ -2383,6 +2384,23 @@ ABY.NODES = {
   },
   // ---- the beginnings, deeper: each of the nine other openings is a three-scene prologue (op_X -> op_X_b -> op_X_c, then the haze), files its own clue, and
   // comes back as a flashback (`thread: <opening>`) on Day Four (ec4_*) and Day Six (ec6_*), offered only to a journey that began that way ----
+  awakening_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'The flute is real. It is warm, as if someone has only just put it down. Tucked under its strap is a slip of paper in handwriting you know better than your own name, which you still do not have: DO NOT LET THEM COUNT YOU. And when the phone wakes, the picture on it is one you do not remember taking. A hand, small, holding yours, from the height of your own eyes. Whoever took it was looking down at them, and smiling.',
+    choices: [
+      { label: 'Read the note again, slowly', next: 'awakening_c', add: { resolve: 1 } },
+      { label: 'Look at the small hand', next: 'awakening_c', add: { heart: 1 } },
+    ],
+  },
+  awakening_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', note: 'o_awake',
+    text: 'Behind you the haze settles, and for a moment you can feel where it has been told to leave a gap: three ways, narrow as a held breath. On the back of your hand, in the same biro, a single number has appeared, and it is not 3:07. It is 1. You are not the first one counted, you think. You may only be the first to wake up. The flute hums. The stones murmur. The phone lights, without being touched.',
+    choices: [
+      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
   op_lift_b: {
     ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
     text: 'The panel has no numbers now, only the crown. Taped underneath it, where you cannot have put it, is a child\u2019s drawing of a lift: a stick figure inside, and on the door a very large number, 3:07. The woman with the flute has not moved. She is looking at the drawing, not at you, like someone who has seen it before.',

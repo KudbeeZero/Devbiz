@@ -128,6 +128,11 @@ async function pick(pg, text) {                         // wait for the reply ch
   await pg.waitForFunction(() => ABY.game.delivering || document.querySelector('#replies.on .chip'), null, { timeout: 15000 });
   for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  // the first scene is a three-scene prologue now: a flow that means "the first scene's three ways" reads through it first (a flow that asks for a prologue line gets it)
+  const PRO = ['Feel for the flute at your back', 'Read the note again, slowly'];
+  if (!PRO.some(t => text.indexOf(t) === 0 || t.indexOf(text) === 0)) {
+    for (const t of PRO) { if (await pg.locator('#replies .chip', { hasText: t }).count()) { await pg.locator('#replies .chip', { hasText: t }).first().click(); await sleep(250); await pg.waitForFunction(() => ABY.game.delivering || document.querySelector('#replies.on .chip'), null, { timeout: 15000 }); for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); } await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); } }
+  }
   await pg.locator('#replies .chip', { hasText: text }).first().click();
   await sleep(250);
 }
@@ -176,7 +181,7 @@ await block('desktop', async () => {
   rec('chat-typing-and-bubbles', sawTyping && m0.bubbles >= 1 && m0.chips === 3, 'typing dots shown first: ' + sawTyping + ', ' + m0.bubbles + ' message bubble(s), ' + m0.chips + ' quick replies');
   await pick(pg, 'Listen to the stones'); await pick(pg, 'Ask Vey to guide me'); await pg.waitForSelector('#replies.on .chip');
   const m1 = await pg.evaluate(() => ({ outs: [...document.querySelectorAll('#thread .m.out')].map(e => e.textContent), clock: document.getElementById('clock').textContent, bat: parseInt(document.getElementById('batN').textContent), av: document.getElementById('mAv').className, name: document.getElementById('mName').textContent, bars: document.querySelectorAll('#sig i.on').length, pips: document.getElementById('sT').textContent }));
-  rec('chat-reply-bubbles', m1.outs.join('|') === 'Listen to the stones|Ask Vey to guide me', 'her replies appear as outgoing bubbles: ' + m1.outs.join(' / '));
+  rec('chat-reply-bubbles', m1.outs.join('|') === 'Feel for the flute at your back|Read the note again, slowly|Listen to the stones|Ask Vey to guide me', 'her replies appear as outgoing bubbles, prologue first: ' + m1.outs.join(' / '));
   rec('contact-follows-speaker', /vey/.test(m1.av) && m1.name === 'Vey', 'the chat header turned into ' + m1.name + ' (' + m1.av + ')');
   rec('status-bar-answers-story', m1.clock !== m0.clock && m1.bat < m0.bat && m1.bars === 2 && m1.pips === '✦1', 'clock ' + m0.clock + ' -> ' + m1.clock + ', battery ' + m0.bat + '% -> ' + m1.bat + '%, signal ' + m1.bars + '/4, trust ' + m1.pips);
   if (THREE_PATH) {
@@ -629,7 +634,7 @@ await block('horror', async () => {
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pick(pg, 'Keep the light on');
   const t2 = await pg.evaluate(() => ({ bat: ABY.game.state.bat })); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
   await pg.click('#torchBtn'); await sleep(200); const t3 = await pg.evaluate(() => ({ on: document.getElementById('torchBtn').classList.contains('on'), bat: ABY.game.state.bat }));
-  rec('flashlight-costs-battery', t1.on && t1.light === 1 && t1.torch === 1 && t1.bat === ABYS.BAT0 - 2 && t2.bat === t1.bat - 1 - ABYS.TORCH && !t3.on && t3.bat === t2.bat - ABYS.TORCH_TOGGLE, 'torch on (' + t1.bat + '%), the next choice cost ' + (t1.bat - t2.bat) + ' (1 + ' + ABYS.TORCH + '), switching it off cost ' + (t2.bat - t3.bat));
+  rec('flashlight-costs-battery', t1.on && t1.light === 1 && t1.torch === 1 && t1.bat === ABYS.BAT0 - 4 && t2.bat === t1.bat - 1 - ABYS.TORCH && !t3.on && t3.bat === t2.bat - ABYS.TORCH_TOGGLE, 'torch on (' + t1.bat + '%), the next choice cost ' + (t1.bat - t2.bat) + ' (1 + ' + ABYS.TORCH + '), switching it off cost ' + (t2.bat - t3.bat));
   // a dark room: she is scared without the light, and a choice needs it
   await at(pg, 'pillar_door', {}); const d0 = await chips(pg), hint = await pg.evaluate(() => ({ torchHint: document.getElementById('torchBtn').classList.contains('hint'), says: [...document.querySelectorAll('#thread .m.sys')].some(e => /too dark/i.test(e.textContent)) }));
   await pg.click('#torchBtn'); await sleep(300); const d1 = await chips(pg);

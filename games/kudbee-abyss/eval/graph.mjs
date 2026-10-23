@@ -402,6 +402,13 @@ function walkChecks() {
       && tired && tired.node === 'blackout' && kept.node === 'fb_locking' && kept.back === 'd3_wake' && lost.node === ABY.START,
       slips.length + ' slips (5 flashbacks, 5 flash-forwards) from ' + origins.join(', ') + ': each seen once, each returns where she was, each filing a clue, each read by a later choice; a tired return can still end in the dark; a save keeps the way back');
   }
+  { // THE FIRST SCENE, DEEPER: awakening (the opening every first journey gets) is a three-scene prologue too, then the same three ways into the haze it always had
+    const a = N.awakening, b = N.awakening_b, c = N.awakening_c;
+    const exits = c && c.choices.map(x => x.next).join();
+    rec('first-scene-prologue', a && b && c && a.choices.length === 3 && a.choices.every(x => x.next === 'awakening_b' && !x.req) && b.choices.length === 2 && b.choices.every(x => x.next === 'awakening_c' && !x.req)
+      && c.note === 'o_awake' && ABY.NOTES.o_awake && exits === 'flute_path,stones_path,unknown_sms' && b.text.length > 150 && c.text.length > 150 && a.ch === 1 && b.ch === 1 && c.ch === 1,
+      'the first scene is a three-scene prologue (awakening -> awakening_b -> awakening_c, filing the clue o_awake) that ends in the same three ways it always had: ' + exits);
+  }
   { // THE BEGINNINGS, DEEPER: each of the nine other openings is a three-scene prologue (react -> the scene that is only its own -> the clue, then the same three ways
     // into the haze it always had), files its own clue, and returns as a flashback on Day Four and Day Six, offered only to a journey that began that way
     const others = ABY.OPENINGS.filter(o => o !== ABY.START), key = o => o.slice(3), op = o => N[o], texts = new Set();
@@ -572,7 +579,7 @@ function walkChecks() {
   const c2 = ABY.cleanState({ node: '__proto__' }), c3 = ABY.cleanState('nope'), c4 = ABY.cleanState({ node: 'constructor', back: 'constructor' }), c5 = ABY.cleanState({ node: 'blackout', back: 'spire', bat: 3 }), c6 = ABY.cleanState({ node: 'spire', back: 'g_meet' });
   rec('save-cleaned', c1.node === ABY.START && c1.heart === 5 && c1.resolve === 0 && c1.trust === 0 && c1.dread === ABY.MAX_DREAD && c1.bat === 1 && c1.light === 0 && !c1.flags.crown && c1.flags.ledger === 1 && c1.flags.song === 'win' && !('evil' in c1.flags) && c1.tries === ABY.MAX_SONG_TRIES && c1.choices === 999 && c1.notes.join() === 'ledger' && c1.back === ''
     && c2.node === ABY.START && c3.node === ABY.START && c4.node === ABY.START && c4.back === '' && c5.node === 'blackout' && c5.back === 'spire' && c6.back === '', 'out-of-range, wrong-type and unknown values dropped; a return point only survives on a forced scene');
-  const base = ABY.newState(), after = ABY.choose(base, 0);
+  const base = Object.assign(ABY.newState(), { node: 'awakening_c' }), after = ABY.choose(base, 0);
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
   const ST = ABY.STORE, sids = ST.map(a => a.id);
   const keyOk = k => k && Object.keys(k).length === 1 && ABY.STORE_KEYS.includes(Object.keys(k)[0]) && ('found' in k ? Number.isInteger(k.found) && k.found >= 0 && k.found <= ABY.ENDING_IDS.length : 'end' in k ? ABY.ENDING_IDS.includes(k.end) : 'helped' in k ? ABY.CLUE_APPS.includes(k.helped) : ABY.LINK_IDS.includes(k.link));
