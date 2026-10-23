@@ -13,7 +13,7 @@
   'use strict';
   var ABY = window.ABY, N = ABY.NODES, P = ABY.Phone, $ = function (id) { return document.getElementById(id); };
   var KEY = 'kudbee.abyss.v2', URL = 'https://devbiz.kudbee.workers.dev/games/kudbee-abyss/';
-  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, hapLv: 1, badges: {}, apps: {}, stSeen: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES, pend: null };
+  var G = ABY.game = { state: ABY.newState(), found: {}, run: false, log: [], saved: null, node: null, busy: false, delivering: false, fast: false, pending: 0, songBest: 0, haptics: true, hapLv: 1, badges: {}, apps: {}, stSeen: {}, faction: '', lean: '', ending: null, practice: false, seen: {}, orient: 'portrait', cp: null, wakes: ABY.WAKES, pend: null, epi: null, epiSeen: false };
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var raf = 0, last = 0, endTimer = 0, delayT = 0, shareTimer = 0, armT = {}, scareT = 0, ringT = 0, ambT = 0, noteN = 0;
   var WHO = { NARRATOR: 'Unknown', QUEEN: 'Queen', GUARDIAN: 'Guardian', VEY: 'Vey', EYE: 'No Caller ID', CHOIR: 'Everyone Before You', WREN: 'Wren', SORREL: 'Sorrel' };
@@ -44,6 +44,7 @@
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
     G.visits = Math.max(0, Math.min(1e6, d.visits | 0)); G.install = d.install === 1 ? 1 : 0;   // (the install card shows from the second visit; 1 = installed)
     G.stSeen = {}; if (d.stSeen && typeof d.stSeen === 'object') ABY.STORE.forEach(function (a) { if (d.stSeen[a.id] === 1) G.stSeen[a.id] = 1; }); else ABY.storeOpen(storeMeta()).forEach(function (id) { G.stSeen[id] = 1; });   // a save from before the store kept track: what is open now is not news
+    G.epi = ABY.cleanSnap(d.epi); G.epiSeen = d.epiSeen === true;   // how she treated the five, kept when she wins the seventh night; the epilogue it earns
     G.saved = null;
     G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
     // what an ending offered (the next day, or a wake at dawn) outlives the card: she can leave the card, close the app, and still take it
@@ -55,7 +56,7 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, helped: G.helped, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, visits: G.visits, install: G.install, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, helped: G.helped, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, visits: G.visits, install: G.install, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend, epi: G.epi, epiSeen: G.epiSeen })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function storeMeta() { var h = {}; for (var k in G.helped || {}) h[G.helped[k]] = 1; return { found: G.found, deduced: G.deduced || {}, helped: h }; }
@@ -237,7 +238,7 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(ABY.isFall(id) ? [90, 60, 70, 90, 50, 120, 30] : [30, 60, 30, 60, 60]); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced && !G.calm ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
-    var stB = ABY.storeOpen(storeMeta()); G.credit = credits(G.state);
+    var stB = ABY.storeOpen(storeMeta()); G.credit = credits(G.state); if (id === 'seventh') { G.epi = ABY.bondSnap(G.state); G.epiSeen = false; }
     var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     storeAlert(stB);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
@@ -324,6 +325,7 @@
   function renderLock() {
     var list = [], last = null; for (var i = G.log.length - 1; i >= 0; i--) if (G.log[i].k === 'in' || G.log[i].k === 'sys') { last = G.log[i]; break; }
     if (G.pend && !G.run) list.push({ title: G.pend.kind === 'wake' ? 'The phone is waking you' : dayOf(ABY.ENDINGS[G.pend.id].cont) + ' is waiting', icon: 'ic-msg', glyph: '\u2709', text: G.pend.kind === 'wake' ? 'Wake at dawn \u00B7 ' + G.wakes + (G.wakes === 1 ? ' wake left' : ' wakes left') : 'The night is over. The next one has already begun.', when: 'now', onTap: function () { open('msg'); } });
+    if (G.epi && !G.epiSeen && !G.run && !G.pend) list.push({ title: 'A week later', icon: 'ic-msg', glyph: '\u2709', text: 'Five messages, all unread.', when: 'today', onTap: function () { openEpi(); } });
     if (active() && last) list.push({ title: WHO[last.who] || 'Unknown', text: last.t, when: 'now', onTap: function () { open('msg'); } });
     else if (!active() && foundN() > 0) list.push({ title: 'Gallery', icon: 'ic-gal', glyph: '❉', text: 'You have found ' + foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories.', when: 'today', onTap: function () { open('gallery'); } });
     else list.push({ title: 'Unknown', text: 'You’re awake. Do you hear it? The flute is calling.', when: 'now', onTap: function () { open('msg'); },
@@ -341,7 +343,7 @@
     if (G.guided || foundN() > 0 || !$('guide').hidden || $('memory').classList.contains('on') || ABY.Song.active) return; renderSettings(); $('guide').hidden = false; $('gOk').focus({ preventScroll: true });
   }
   function renderGallery() {
-    var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0); $('gShare').hidden = foundN() === 0;
+    var box = $('tiles'); box.innerHTML = ''; $('gSub').textContent = foundN() + ' of ' + ABY.ENDING_IDS.length + ' memories'; P.badge('gallery', 0); $('gShare').hidden = foundN() === 0; $('gEpi').hidden = !G.epi;
     ABY.ENDING_IDS.forEach(function (id) {
       var E = ABY.ENDINGS[id], f = G.found[id], b = document.createElement('button'); b.type = 'button'; b.className = 'tile ' + (f ? 'f' : 'locked');
       if (f) { b.style.setProperty('--g1', ECOL[id][0] + '88'); b.style.setProperty('--g2', ECOL[id][1]); }
@@ -471,6 +473,15 @@
     { v: '1.2', d: '19 Oct 2026', n: ['Day Two and Day Three', 'Rhythm rites on the Echo Flute', 'Reply from the lock screen'] },
     { v: '1.0', d: '21 Sep 2026', n: ['Kudbee Abyss: a story told through a haunted phone'] },
   ];
+  function openEpi() {
+    var box = $('epiList'); box.innerHTML = '';
+    ABY.epilogueFor(G.epi).forEach(function (m) {
+      var d = document.createElement('section'); d.className = 'nrel'; var h = document.createElement('h4'), u = document.createElement('ul'), li = document.createElement('li');
+      h.textContent = WHO[m.who]; li.textContent = m.text; u.appendChild(li); d.appendChild(h); d.appendChild(u); box.appendChild(d);
+    });
+    $('epi').hidden = false; ABY.Audio.sfx('ui'); $('epiOk').focus({ preventScroll: true });
+    if (!G.epiSeen) { G.epiSeen = true; save(); renderLock(); }
+  }
   function renderNews() {
     var box = $('newsList'); box.innerHTML = '';
     RELEASES.forEach(function (r) {
@@ -526,7 +537,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
-    $('inst').hidden = true; $('news').hidden = true;
+    $('inst').hidden = true; $('news').hidden = true; $('epi').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
@@ -565,6 +576,8 @@
   $('rotBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); });
   $('setInstall').addEventListener('click', installNow);
   $('setNews').addEventListener('click', function () { renderNews(); $('news').hidden = false; ABY.Audio.sfx('ui'); $('newsOk').focus({ preventScroll: true }); });
+  $('gEpi').addEventListener('click', function () { openEpi(); });
+  $('epiOk').addEventListener('click', function () { $('epi').hidden = true; ABY.Audio.sfx('click'); });
   $('newsOk').addEventListener('click', function () { $('news').hidden = true; ABY.Audio.sfx('click'); });
   $('instOk').addEventListener('click', function () { $('inst').hidden = true; ABY.Audio.sfx('click'); });
   $('gOk').addEventListener('click', function () { G.guided = true; $('guide').hidden = true; save(); });
@@ -582,7 +595,7 @@
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; syncHap(); renderSettings(); save(); buzz(15); });
   $('setHapLv').addEventListener('click', function () { G.hapLv = (G.hapLv + 1) % 3; renderSettings(); save(); buzz([40, 50, 40]); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.found = {}; G.deduced = {}; G.helped = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.epi = null; G.epiSeen = false; G.found = {}; G.deduced = {}; G.helped = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }

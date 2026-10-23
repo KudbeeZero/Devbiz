@@ -290,6 +290,37 @@ ABY.bond = function (s, who) {
   const b = ABY.BONDS[who], f = (s && s.flags) || {};
   return b ? b.up.filter(k => f[k]).length - b.down.filter(k => f[k]).length : 0;
 };
+
+// EPILOGUE, "A week later": when she wins the seventh night, how she treated the five people who held the phone with her is kept (`ABY.bondSnap`, a
+// number each) and, the next time she opens the phone, each of them writes once more, in the words her bond with them earned (warm / mid / cold).
+// Pure data and a pure picker: it changes no scene and no ending, so the graph walk never has to see it (its check only proves every person has all three).
+ABY.EPI_LINES = {
+  QUEEN: {
+    warm: 'I have the window open. Every morning I play the second verse to the street, and a woman on the corner has started humming it back. You did that.',
+    mid: 'I play again now, a little. Not the whole song. Enough that the house knows someone is home.',
+    cold: 'I still play, but only when the door is shut. You were right about some things. I wish you had been kinder about them.' },
+  VEY: {
+    warm: 'I have filed you under a heading that did not exist before: “kept her word”. It is a short list. It is yours alone.',
+    mid: 'Your name is in the book, in my handwriting, spelled correctly. That is more than most of them get.',
+    cold: 'I wrote down every time you did not believe me. I read it back once. I find I cannot decide who it makes look worse.' },
+  GUARDIAN: {
+    warm: 'The gate stands open now and I sleep in the doorway, which my knees resent. Come by. There is a lamp lit with your name on it.',
+    mid: 'Doors still need keeping. But I look up, now, when someone passes. That is new.',
+    cold: 'I kept the gate. You walked through as though I were part of it. I would like, someday, to be asked my name.' },
+  WREN: {
+    warm: 'it is 6:01 again and i am awake and i am not scared. i put your number in my phone under “the one who stayed”.',
+    mid: 'i sleep with the light on less. mum noticed. i told her it was because of a friend.',
+    cold: 'i still keep the phone face down. i am not angry. i just never found out if you would have stayed.' },
+  EYE: {
+    warm: 'somebody looked at me today. on purpose. the girl across the street waved at the window and i waved back with the whole sky.',
+    mid: 'i watch less. i listen more. it turns out the quiet has a shape and the shape is you not being gone.',
+    cold: 'you looked at me and then you looked away. i have replayed it so many times it has gone smooth, like a stone in a pocket.' },
+};
+ABY.EPI_BANDS = ['warm', 'mid', 'cold'];
+ABY.epiBand = n => n >= 2 ? 'warm' : n <= -1 ? 'cold' : 'mid';
+ABY.bondSnap = s => { const o = {}; ABY.BOND_IDS.forEach(w => { o[w] = Math.max(-2, Math.min(4, ABY.bond(s, w))); }); return o; };
+ABY.cleanSnap = d => { if (!d || typeof d !== 'object') return null; const o = {}; ABY.BOND_IDS.forEach(w => { o[w] = Number.isInteger(d[w]) ? Math.max(-2, Math.min(4, d[w])) : 0; }); return o; };
+ABY.epilogueFor = snap => ABY.BOND_IDS.map(w => { const band = ABY.epiBand(snap && snap[w] | 0); return { who: w, band, text: ABY.EPI_LINES[w][band] }; });
 // SECOND SIGHT: on a later journey the night remembers the earlier ones. A scene most journeys pass (`at`) opens with one more line, from someone who
 // recognises her, for an ending she has found (`echo_<id>`, `scar_<id>`) or for how many (`min: { mem }`). They add no scenes and no branches: the
 // same night reads differently the second time. A scene she can come back to (a flashlight, a slip, a detour) never carries one, so it is said once.

@@ -380,7 +380,7 @@
 
     <section class="scr app" id="gallery" aria-label="Gallery">
       <div class="bar"><button class="back" data-home type="button" aria-label="Back to home">&#8249;</button><div class="grow"><h2>Gallery</h2><div class="sub" id="gSub">Memories</div></div></div>
-      <div class="pad"><div class="tiles" id="tiles"></div><div class="fac" id="faction"></div><h3 class="sec">Badges <small id="bSub"></small></h3><div class="badges" id="badges"></div><button class="bigbtn ghost" id="gShare" type="button">Share my progress</button><p class="hint2">Every ending is saved here as a memory.<br>Find all thirteen.</p></div>
+      <div class="pad"><div class="tiles" id="tiles"></div><div class="fac" id="faction"></div><h3 class="sec">Badges <small id="bSub"></small></h3><div class="badges" id="badges"></div><button class="bigbtn ghost" id="gEpi" type="button" hidden>A week later</button><button class="bigbtn ghost" id="gShare" type="button">Share my progress</button><p class="hint2">Every ending is saved here as a memory.<br>Find all thirteen.</p></div>
     </section>
 
     <section class="scr app" id="pulse" aria-label="Pulse">
@@ -407,6 +407,9 @@
         <p class="hint2">Kudbee Abyss &middot; art by Desiree Design</p>
       </div>
     </section>
+    <div class="isheet" id="epi" role="dialog" aria-modal="true" aria-labelledby="epiH" hidden>
+      <div class="icard ncard"><h3 id="epiH">A week later</h3><div id="epiList"></div><button type="button" class="bigbtn" id="epiOk">Close</button></div>
+    </div>
     <div class="isheet" id="news" role="dialog" aria-modal="true" aria-labelledby="newsH" hidden>
       <div class="icard ncard"><h3 id="newsH">What's New</h3><div id="newsList"></div><button type="button" class="bigbtn" id="newsOk">Done</button></div>
     </div>

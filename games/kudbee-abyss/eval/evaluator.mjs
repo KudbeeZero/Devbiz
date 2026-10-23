@@ -434,6 +434,36 @@ await block('installable', async () => {
   rec('install-card', !first.row.row && !first.set.row && second.set.row && second.set.sheet && /sends nothing anywhere/.test(second.set.about) && /Plays offline/.test(second.set.about) && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
     'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes; Settings offers the same, and its About says the game sends nothing anywhere');
 });
+await block('epilogue', async () => {
+  // "A week later": winning the seventh night keeps how she treated the five people (G.epi); the next time the phone is opened a lock-screen note brings
+  // five messages in the words each bond earned, read once (epiSeen) and reread from the Gallery; nobody who has not won the seventh night sees it
+  const snap = '{ QUEEN: 0, VEY: 4, GUARDIAN: -2, WREN: 2, EYE: -1 }';
+  const pre = `if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { seventh: 1 }, epi: ${snap} })); }`;   // (only the first load: a reload must see what the page saved)
+  ({ ctx, pg } = await open(phoneCtx(PHONES[2]), 'epilogue', { pre })); await wake(pg);
+  const lk = await pg.evaluate(() => [...document.querySelectorAll('#lkNotes .note')].map(n => n.textContent));
+  const note = lk.some(t => /A week later/.test(t) && /Five messages/.test(t));
+  await pg.locator('#lkNotes .note', { hasText: 'A week later' }).click(); await pg.waitForFunction(() => !document.getElementById('epi').hidden);
+  const sheet = await pg.evaluate(() => [...document.querySelectorAll('#epiList .nrel')].map(s => s.textContent));
+  const right = sheet.length === 5 && /Vey.*kept her word/.test(sheet.find(t => /^Vey/.test(t))) && /Guardian.*asked my name/.test(sheet.find(t => /^Guardian/.test(t))) && /Wren.*not scared/.test(sheet.find(t => /^Wren/.test(t))) && /Queen.*play again/.test(sheet.find(t => /^Queen/.test(t))) && /No Caller ID.*looked away/.test(sheet.find(t => /^No Caller ID/.test(t)));
+  await pg.screenshot({ path: join(OUT, 'epilogue-portrait.png') });
+  await pg.setViewportSize({ width: 844, height: 390 }); await sleep(300);
+  const reach = await pg.evaluate(() => { const b = document.getElementById('epiOk'); b.scrollIntoView({ block: 'end' }); const r = b.getBoundingClientRect(); return r.bottom <= innerHeight + 1 && r.height >= 44; });
+  await pg.setViewportSize({ width: 390, height: 844 }); await sleep(200);
+  await pg.locator('#epiOk').click();
+  const seen = await pg.evaluate(() => JSON.parse(localStorage.getItem('kudbee.abyss.v2')).epiSeen === true && document.getElementById('epi').hidden);
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone')); await wake(pg);
+  const gone = await pg.evaluate(() => !/A week later/.test(document.getElementById('lkNotes').textContent));
+  await pg.evaluate(() => ABY.Phone.show('gallery')); await pg.waitForTimeout(300);
+  const btn = await pg.evaluate(() => !document.getElementById('gEpi').hidden);
+  await pg.locator('#gEpi').click(); const again = await pg.evaluate(() => document.querySelectorAll('#epiList .nrel').length);
+  await ctx.close();
+  // a hostile save is cleaned (a bad number is clamped or zeroed, a bad flag is false)
+  ({ ctx, pg } = await open({}, 'epilogue-win', { pre: `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, epi: { QUEEN: 'x', VEY: 99 }, epiSeen: 'yes' }));` })); await wake(pg);
+  const clean = await pg.evaluate(() => ({ vey: ABY.game.epi && ABY.game.epi.VEY, queen: ABY.game.epi && ABY.game.epi.QUEEN, seen: ABY.game.epiSeen }));
+  await ctx.close();
+  rec('epilogue', note && right && reach && seen && gone && btn && again === 5 && clean.vey === 4 && clean.queen === 0 && clean.seen === false,
+    'the lock screen offers "A week later" once; five messages in each bond\'s tone (Vey warm, Guardian cold...); read once, then only from the Gallery (' + again + ' messages); a hostile save is cleaned (Vey ' + clean.vey + ', Queen ' + clean.queen + ')');
+});
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
   const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1 }, deduced: { two_warnings: 1 }, stSeen: { lantern: 1 } }));`;
