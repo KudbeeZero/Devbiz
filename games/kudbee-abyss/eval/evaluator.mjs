@@ -516,6 +516,17 @@ await block('feel', async () => {
   rec('touch-targets-and-feel', !a.small.length && !b.small.length && !a.silent.length && !b.silent.length && a.seen > 20 && b.seen > 20 && names.join() === 'Normal,Loud,Quiet,Normal' && vols.join() === '100,130,50,100' && saved === 2 && after.label === 'Loud' && after.vol === 130 && off,
     'every control on ' + SCREENS.length + ' screens is a 44px target and answers a tap (landscape ' + a.seen + ' checked, portrait ' + b.seen + ')' + (a.small.concat(b.small).length ? '; SMALL ' + a.small.concat(b.small).slice(0, 4).join(' | ') : '') + (a.silent.concat(b.silent).length ? '; SILENT ' + a.silent.concat(b.silent).slice(0, 4).join(' | ') : '') + '; sound level ' + names.join('>') + ' (' + vols.join('/') + '), saved ' + saved + ', after reload ' + after.label + ', disabled while muted: ' + off);
 });
+await block('store-shots', async () => {
+  // the store-style screenshot set (tools/store-shots.mjs): six real JPEGs at the App Store's 6.9" size, 1320x2868, each a screen of the phone under a caption;
+  // the game never loads them, so this is the only thing that notices one went missing or was re-rendered at the wrong size
+  const names = ['01-lock', '02-thread', '03-notes', '04-store', '05-gallery', '06-epilogue'], bad = [];
+  for (const n of names) {
+    const p = join(HERE, '..', 'assets', 'store', n + '.jpg'); let b; try { b = readFileSync(p); } catch (e) { bad.push(n + ' missing'); continue; }
+    let i = 2, w = 0, h = 0; while (i < b.length) { if (b[i] !== 0xFF) { i++; continue; } const m = b[i + 1]; if (m >= 0xC0 && m <= 0xC3) { h = b.readUInt16BE(i + 5); w = b.readUInt16BE(i + 7); break; } i += 2 + b.readUInt16BE(i + 2); }
+    if (b[0] !== 0xFF || b[1] !== 0xD8 || w !== 1320 || h !== 2868 || b.length < 100000 || b.length > 3e6) bad.push(n + ' ' + w + 'x' + h + ' ' + b.length + 'B');
+  }
+  rec('store-shots', !bad.length, names.length + ' captioned screenshots, each a JPEG of 1320x2868 and under 3 MB' + (bad.length ? '; BAD ' + bad.join(' | ') : ''));
+});
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
   const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1 }, deduced: { two_warnings: 1 }, stSeen: { lantern: 1 } }));`;
