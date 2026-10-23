@@ -778,7 +778,7 @@ ABY.NODES = {
   },
   g_ledger: {
     ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
-    text: '...that is my hand. That is... I wrote that. She asked, and I said yes. I wore it. For a thousand years I held the door shut, and I never once asked what was behind it.',
+    text: '...that is my hand. That is... I wrote that. She asked, and I said yes. I wore it. For a hundred years I held the door shut, and I never once asked what was behind it.',
     choices: [
       { label: 'Tell him it is over', next: 'reconcile', add: { heart: 2 }, set: 'truth' },
       { label: 'Ask what was behind the door', next: 'descent_door', add: { dread: 1 }, set: 'truth' },
@@ -1920,7 +1920,7 @@ ABY.NODES = {
   },
   d7_rite: {
     ch: 12, speaker: 'QUEEN', mood: 'throne', focus: 'gate', song: 'seventh', scare: 'eye',
-    text: 'The Seventh Night. Everything you have played is in it: the Song of Recall, the doors, the red corridor, the lullaby, the drowned choir, the bells, the riff, all at once, in pairs and threes, the whole room singing. Strike the chords together and the door holds open. Drop them and it starts, gently, to close on all of you.',
+    text: 'The Seventh Night. Everything you have played is in it: the Song of Recall, the doors, the red corridor, the lullaby, the drowned choir, the bells, the riff, the music box, all at once, in pairs and threes, the whole room singing. Strike the chords together and the door holds open. Drop them and it starts, gently, to close on all of you.',
     songNext: { win: 'd7_rite_win', fail: 'd7_rite_fail', give: 'd7_rite_give' },
   },
   d7_rite_win: {
@@ -2711,7 +2711,7 @@ ABY.NODES = {
   },
   ev_party: {
     ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
-    text: 'The haze smelled of birthday candles; the bargain kept someone on the other side. Hold the two together and the room is different. The paper hats are not old. Someone puts out a new one every night. On the cot, a cake with four candles, never lit and never stale. It is still her birthday. It has been her birthday for two hundred years, and every name in the book was invited.',
+    text: 'The haze smells of birthday candles, and the bargain keeps someone on the other side. Hold the two together and the room is different. The paper hats are not old. Someone puts out a new one every night. On the cot, a cake with four candles, never lit and never stale. It is still her birthday. It has been her birthday for two hundred years, and every name in the book was invited.',
     choices: [
       { label: 'Light one candle for her', next: 'd6_door', add: { heart: 2, dread: 1 } },
     ],
@@ -2732,7 +2732,7 @@ ABY.NODES = {
   },
   ev_watch: {
     ch: 12, speaker: 'SORREL', mood: 'dawn', focus: 'queen', scare: 'eye',
-    text: 'you read it. (The red blinks, slowly.) all of it? the bit at the bottom where the letters are big? nobody reads to the bottom. they look at the eye and they scream and they never read to the bottom. (Smaller now. Much smaller.) Sorrel. you can say it. I want to hear somebody say it while they are looking at me.',
+    text: 'you read it. (The red blinks, slowly.) all of it? the bit at the bottom where the letters are big? nobody reads to the bottom. they look at the eye and they scream and they never read to the bottom. (Smaller now. Much smaller.) Sorrel. you can say it. i want to hear somebody say it while they are looking at me.',
     choices: [
       { label: 'Look at her, and say it: Sorrel', next: 'd7_named', set: 'named_eye', add: { heart: 2, dread: -3 } },
     ],
@@ -3283,7 +3283,7 @@ ABY.storeReviews = function (m, id) {
 Object.assign(ABY.NOTES, {
   a_hush: { title: 'Hush: the muted voicemail', text: 'Hush kept the voicemail it muted. 3:07, from this phone, in a voice that is yours and hers at once: "Don\'t let her open the gate. It isn\'t him." Hush has filed it under: do not play again.' },
   a_smile: { title: 'Smile Filter: the face behind you', text: 'The filter kept the frame. The face in the dark behind you is smiling, and one of its far too many hands is held out to you with a brass key in it, much too small for any door. The caption it added: for later. very low down.' },
-  a_party: { title: 'Party Hats: the invitation', text: 'An invitation Party Hats saved for you: "Sorrel is turning seven! Come through the door. Bring a candle." The date is today. The date has been today for a very long time.' },
+  a_party: { title: 'Party Hats: the invitation', text: 'An invitation Party Hats saved for you: "Sorrel is turning four! Come through the door. Bring a candle." The date is today. The date has been today for a very long time.' },
   a_cast: { title: 'Mirror Cast: what the Queen keeps on her screen', text: 'Before the cast cut out: a night long ago, a girl in a paper crown asleep on Vey\'s shoulder, and the Queen\'s own hand turning a very small key.' },
 });
 ABY.APP_WHISPERS = [
