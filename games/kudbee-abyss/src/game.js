@@ -534,7 +534,7 @@
   }
   function arm(id, msg, doIt) {                                           // a danger button needs two taps
     var b = $(id), s = b.querySelector('small'), orig = s.getAttribute('data-o') || s.textContent; s.setAttribute('data-o', orig);
-    b.addEventListener('click', function () { if (armT[id]) { clearTimeout(armT[id]); armT[id] = 0; s.textContent = orig; doIt(); } else { s.textContent = msg; armT[id] = setTimeout(function () { armT[id] = 0; s.textContent = orig; }, 3200); } });
+    b.addEventListener('click', function () { if (armT[id]) { clearTimeout(armT[id]); armT[id] = 0; s.textContent = orig; doIt(); } else { ABY.Audio.sfx('ui'); s.textContent = msg; armT[id] = setTimeout(function () { armT[id] = 0; s.textContent = orig; }, 3200); } });
   }
 
     function open(app) { P.show(app); }
