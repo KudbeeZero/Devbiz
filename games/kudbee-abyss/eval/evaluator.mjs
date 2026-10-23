@@ -468,7 +468,7 @@ const tapChip = async (pg, text) => { await pg.waitForSelector('#replies.on .chi
 await block('app-clues', async () => {
   // an installed app can leave a clue: Mirror Cast speaks on Day Six and files what the Queen keeps on her screen; pinned to her bargain it opens the
   // deduction a journey without the flashback would miss, and its hidden reply. Without the app the same scenes file nothing new.
-  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { dawn: 1, cradle: 1 }, apps: { cast: 1 } }));`;
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { dawn: 1, cradle: 1, mirror: 1 }, apps: { cast: 1 } }));`;
   ({ ctx, pg } = await open(phoneCtx({ w: 844, h: 390 }), 'app-clues', { pre })); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
   const settle = async (node) => { for (let i = 0; i < 40 && await pg.evaluate((n) => ABY.game.state.node !== n || ABY.game.delivering, node); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); } await sleep(250); };
   await at(pg, 'd6_wake', { mem: 3, flags: { app_cast: 1 } }); await tapChip(pg, 'Ask the Queen whose number it is'); await settle('d6_queen');
@@ -478,14 +478,24 @@ await block('app-clues', async () => {
   await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin[data-note="a_cast"]');
   await pg.screenshot({ path: join(OUT, 'app-clue-notes.png') });
   await pg.click('#noteList .nt.pin[data-note="a_cast"]'); await pg.click('#noteList .nt.pin[data-note="bargain"]'); await sleep(300);
-  const pinned = await pg.evaluate(() => ({ flag: ABY.game.state.flags.link_what_she_gave === 1, banner: document.getElementById('banner').textContent, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).deduced.what_she_gave === 1 }));
+  const pinned = await pg.evaluate(() => ({ flag: ABY.game.state.flags.link_what_she_gave === 1, banner: document.getElementById('banner').textContent, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).deduced.what_she_gave === 1,
+    cred: (document.querySelector('#noteList .nt.ded[data-ded="what_she_gave"] .cred') || {}).textContent || '', msg: document.getElementById('nMsg').textContent, helped: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).helped }));
+  await pg.screenshot({ path: join(OUT, 'app-credit-notes.png') });
   await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400); const after = await chips(pg);
+  // the credit: Mirror Cast's page now has a review only for someone it helped, and the ending card of this journey names it
+  await pg.evaluate(() => ABY.Phone.show('store')); await pg.locator('#stList .sti[data-id="cast"] .get').click(); await pg.waitForFunction(() => document.getElementById('axName').textContent === 'Mirror Cast');
+  const review = await pg.evaluate(() => [...document.querySelectorAll('#axBody .rv')].map(r => r.textContent).join(' | ')); await pg.click('#axBack');
+  await pg.evaluate(() => ABY.Phone.show('msg')); await at(pg, 'end_passed', { mem: 3, flags: { link_what_she_gave: 1 }, notes: ['a_cast', 'bargain'] }); await memoryShown(pg);
+  const card = await pg.evaluate(() => ({ shown: !document.getElementById('eCredit').hidden, text: document.getElementById('eCredit').textContent }));
+  await pg.screenshot({ path: join(OUT, 'app-credit-card.png') });
   await at(pg, 'd6_wake', { mem: 3, flags: {} }); await tapChip(pg, 'Ask the Queen whose number it is'); await settle('d6_queen');
   const bare = await pg.evaluate(() => ({ notes: ABY.game.state.notes.slice(), cast: [...document.querySelectorAll('#thread .m.in .who')].some(w => w.textContent === 'Mirror Cast') }));
   await ctx.close();
   const reply = c => /know who she locked away/.test(c);
   rec('apps-leave-clues', cast.notes.includes('a_cast') && cast.who.includes('Mirror Cast') && /New clue: Mirror Cast/.test(cast.banner) && !before.some(reply) && pinned.flag && /Deduction: Who she locked away/.test(pinned.banner) && pinned.saved && after.some(reply) && !bare.notes.includes('a_cast') && !bare.cast,
     'with Mirror Cast installed Day Six files "' + (cast.notes.includes('a_cast') ? 'Mirror Cast: what the Queen keeps on her screen' : '?') + '" (banner); pinned to her bargain it deduces "Who she locked away" and adds the reply "' + (after.find(reply) || '?').slice(0, 44) + '…"; without the app, no clue and no voice');
+  rec('apps-get-the-credit', /Mirror Cast showed you this/.test(pinned.cred) && /Mirror Cast saw it first/.test(pinned.msg) && pinned.helped && pinned.helped.what_she_gave === 'cast' && /It showed you my screen/.test(review) && card.shown && /Mirror Cast helped you see it: Who she locked away/.test(card.text),
+    'the deduction in Notes says "' + pinned.cred + '" and the save remembers it; Mirror Cast\'s page opens a review only for someone it helped; the ending card says "' + card.text + '"');
 });
 await block('horror', async () => {
   let { ctx, pg } = await open({}, 'horror'); await wake(pg); await openMessages(pg);

@@ -2921,6 +2921,7 @@ ABY.STORE = [
   { id: 'hush', name: 'Hush', glyph: '☾', c: ['#8fa0ff', '#3a2a8a'], tag: 'Silence, on demand', key: { found: 1 }, blurb: 'Mutes every call, every ring. Not the one that is already inside.',
     lore: ['Muting keeps the sound out. It does not keep the caller out.'],
     reviews: [
+      { who: 'you', stars: 5, text: 'It played me a voicemail I never let it play. Two warnings, one voice. I have stopped muting it.', key: { helped: 'hush' } },
       { who: 'lightsleeper', stars: 2, text: 'Slept eight hours. Woke with my phone open to a voicemail I did not record.' },
       { who: 'quietgate', stars: 5, text: 'Perfect for when the gate opens and nothing follows. Very restful. Very, very restful.', key: { end: 'silence' } },
       { who: 'unknown', stars: 3, text: 'It is 3:07. It is always 3:07 on this app. I turned it off and on. It is 3:07.', key: { end: 'loop' } }] },
@@ -2960,18 +2961,21 @@ ABY.STORE = [
   { id: 'party', name: 'Party Hats', glyph: '❂', c: ['#ff9ad5', '#7a1a5a'], tag: 'Plan the perfect birthday', key: { end: 'cradle' }, hint: 'Go in, and stay for the paper hats.', blurb: 'Invitations, cake, paper hats. The party is already planned. You are on the list.',
     lore: ['Every invitation is for the same date. The date does not change.', 'There is a seat saved for you. It is the red hat.'],
     reviews: [
+      { who: 'sorrel', stars: 5, text: 'you came! you brought the invitation! nobody ever brings the invitation.', key: { helped: 'party' } },
       { who: 'sorrel', stars: 5, text: 'BEST PARTY. you stayed!!! nobody stays. can it be my birthday again tomorrow? it is. it is always.' },
       { who: 'a parent', stars: 2, text: 'Planned a party for my son. The app keeps inviting a girl called Sorrel. We do not know a Sorrel.' },
       { who: 'sorrel', stars: 5, text: 'you gave her the key. the little one. the door is open now. i can go home after cake. i might stay for one more slice.', key: { end: 'lowdoor' } }] },
   { id: 'smile', name: 'Smile Filter', glyph: '☺', c: ['#ffd34d', '#7a5200'], tag: 'Your best face, every photo', key: { end: 'betrayal' }, hint: 'Trust someone after you have seen their mouth.', blurb: 'Gives everyone a lovely smile. It cannot be turned off. Some faces it improves.',
     lore: ['It found a face in your gallery you did not take.', 'Every smile it makes is the same smile.'],
     reviews: [
+      { who: 'you', stars: 5, text: 'It found a hand in the dark holding out a key. The key fit. Five stars, and I have deleted it twice.', key: { helped: 'smile' } },
       { who: 'vey', stars: 5, text: 'Finally, an app that understands me.' },
       { who: 'k_photos', stars: 1, text: 'Turned it on for a selfie. Now everybody in my contacts has the same teeth.' },
       { who: 'vey', stars: 4, text: 'You worked out whose hand it was, in every photo, behind you. I took the filter off for one of them. It is the only photo of me without it.', key: { link: 'many_hands' } }] },
   { id: 'cast', name: 'Mirror Cast', glyph: '⦿', c: ['#c9d4ff', '#2b2f5e'], tag: 'Stream your screen to any glass', key: { end: 'mirror' }, hint: 'Take his place in the dark.', blurb: 'Casts to any mirror in range. The mirror casts back.',
     lore: ['Two devices found: this one, and you.', 'The mirror on the stairs is always available.'],
     reviews: [
+      { who: 'the queen', stars: 5, text: 'It showed you my screen. I keep that night open on it. I did not know anyone could see it.', key: { helped: 'cast' } },
       { who: 'the other queen', stars: 5, text: 'I can see your room from mine. You keep it nicer than I do. I am taking notes.' },
       { who: 'r.lake', stars: 2, text: 'Cast to my bathroom mirror. It is still casting. I unplugged the phone.' },
       { who: 'the queen', stars: 3, text: 'She wears my face better than I do. I have asked her to stop. She smiles. I smile. We smile.', key: { end: 'throne' } }] },
@@ -2987,14 +2991,16 @@ ABY.STORE = [
       { who: 'you', stars: 5, text: 'Pinned the two warnings together. Same voice on both. Mine. I do not remember recording either.' },
       { who: 'the queen', stars: 4, text: 'You found who I locked away. I did not want it on a board. I am glad it is somewhere.', key: { link: 'what_she_gave' } }] },
 ];
-ABY.STORE_KEYS = ['found', 'end', 'link'];
-// does what she has done (`m`: { found: { endingId: 1 }, deduced: { linkId: 1 } }, both kept on the phone) open this key?
+ABY.STORE_KEYS = ['found', 'end', 'link', 'helped'];
+// does what she has done (`m`: { found: { endingId: 1 }, deduced: { linkId: 1 }, helped: { appId: 1 } }, all kept on the phone) open this key?
+// (`helped`: an installed app's clue was one of the two she pinned into a deduction, ABY.helpedBy)
 ABY.storeHas = function (m, key) {
-  const f = (m && m.found) || {}, d = (m && m.deduced) || {};
+  const f = (m && m.found) || {}, d = (m && m.deduced) || {}, h = (m && m.helped) || {};
   if (!key) return true;
   if ('found' in key) return ABY.ENDING_IDS.filter(id => f[id]).length >= key.found;
   if ('end' in key) return !!f[key.end];
   if ('link' in key) return !!d[key.link];
+  if ('helped' in key) return !!h[key.helped];
   return false;
 };
 ABY.storeOpen = function (m) { return ABY.STORE.filter(a => ABY.storeHas(m, a.key)).map(a => a.id); };
@@ -3032,6 +3038,11 @@ ABY.APP_WHISPERS = [
   ['pin', 'd7_named', 'Pinboard: new string between “the Eye” and “a girl behind a door”. They are the same pin.'],
 ].map(([app, at, text, more, fx]) => ({ id: 'w_' + app, app, at, req: Object.assign({ flag: 'app_' + app }, more || {}), who: 'APP_' + app.toUpperCase(), text, fx: fx || '', note: ABY.NOTES['a_' + app] ? 'a_' + app : '' }));
 ABY.APP_IDS = ABY.STORE.map(a => a.id);
+// which app left this clue ('' for a clue the story files), and which app (if any) helped her pin clues a and b into a deduction. The credit is
+// only shown (Notes, the ending card, a review on the app's page): nothing in the story reads it.
+ABY.clueApp = function (note) { const w = ABY.APP_WHISPERS.filter(x => x.note && x.note === note)[0]; return w ? w.app : ''; };
+ABY.helpedBy = function (a, b) { return ABY.linkOf(a, b) ? ABY.clueApp(a) || ABY.clueApp(b) : ''; };
+ABY.CLUE_APPS = ABY.APP_WHISPERS.filter(x => x.note).map(x => x.app);
 // each installed app speaks as itself: its own name and colour in the thread
 for (const a of ABY.STORE) ABY.SPEAKERS['APP_' + a.id.toUpperCase()] = { color: a.c[0], focus: 'queen', app: a.id };
 
