@@ -437,6 +437,13 @@ function walkChecks() {
       return { o, ok };
     });
     const s0 = ABY.newState(0), got = Object.assign({}, s0, { flags: { has_salt: 1, has_shard: 1, used_shard: 1 } }), clean = ABY.cleanState(JSON.parse(JSON.stringify(got)));
+    {   // the epilogue: all five people write in all three tones, a warm bond gets the warm one, and a hostile or missing snapshot never throws
+      const E = ABY.EPI_LINES, full = ABY.BOND_IDS.every(w => ABY.EPI_BANDS.every(b => typeof E[w][b] === 'string' && E[w][b].length > 40)), distinct = new Set(ABY.BOND_IDS.flatMap(w => ABY.EPI_BANDS.map(b => E[w][b]))).size === 15;
+      const warmS = { flags: Object.fromEntries(ABY.BONDS.VEY.up.map(f => [f, 1])) }, snap = ABY.bondSnap(warmS), ep = ABY.epilogueFor(snap);
+      rec('epilogue', full && distinct && ep.length === 5 && ep.find(m => m.who === 'VEY').band === 'warm' && ep.find(m => m.who === 'QUEEN').band === 'mid' && ABY.epilogueFor({ QUEEN: -2 }).find(m => m.who === 'QUEEN').band === 'cold'
+        && ABY.epilogueFor(null).length === 5 && ABY.cleanSnap('x') === null && ABY.cleanSnap({ QUEEN: 99, VEY: 'a' }).QUEEN === 4 && ABY.cleanSnap({ VEY: 'a' }).VEY === 0,
+        '5 people x 3 tones = 15 distinct messages; a warm Vey bond gets the warm one, a cold Queen the cold one, and a hostile or missing snapshot is cleaned');
+    }
     rec('objects', O.length === 3 && O.length <= 3 && rows.every(r => r.ok) && ABY.carried(s0).length === 0 && ABY.carried(got).map(o => o.id).join() === 'salt' && clean.flags.has_salt === 1 && clean.flags.used_shard === 1 && !clean.flags.has_fake,
       O.length + ' objects (' + O.map(o => o.id).join(', ') + '), each picked up once, spent on a later day and remembered the morning after; a save keeps them');
   }
