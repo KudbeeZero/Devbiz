@@ -428,12 +428,12 @@ function walkChecks() {
       'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees none of them');
   }
   { // confidences: five warm-bond memories (two scenes each) that only listen: nothing they touch can reach a gate, a rite or an ending
-    const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_wake', 'WREN', 'wren', { told_truth: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];
+    const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_dawn', 'WREN', 'wren', { riff_done: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];
     const inert = c => c.bat === 0 && !c.add && !c.light && !c.req && !c.song && !c.note && !c.give && !c.take && !c.obj && !c.cont, tallies = new Set(C.flatMap(id => N[id].choices.map(c => c.set).filter(Boolean)));
     const shaped = C.filter(id => N[id].time === 'past' && N[id].safe && !N[id].note && !N[id].dark && N[id].text.length > 250 && N[id].choices.length >= 2 && N[id].choices.every(c => inert(c) && (/_a$/.test(id) ? c.next === id.replace(/_a$/, '_b') && !c.set : c.next === '@back' && /^tt_conf_/.test(c.set))));
     const rows = PAIRS.map(([at, who, k, fl]) => {
       const into = N[at].choices.filter(c => c.next === 'cf_' + k + '_a'), c = into[0];
-      const room = at === 'd6_dawn' || at === 'd7_gather' || /^d\d_wake$/.test(at);
+      const room = at === 'd6_dawn' || at === 'd7_gather' || /^d\d_(wake|dawn)$/.test(at);
       const base = Object.assign(ABY.newState(0), { node: at, flags: Object.assign({}, fl), bat: 40, heart: 2, resolve: 2, trust: 2, dread: 1 });
       const cold = Object.assign({}, base, { flags: {} }), mid = ABY.choose(base, N[at].choices.indexOf(c));
       let s = mid, steps = 0; while (s && s.node !== at && steps++ < 4) s = ABY.choose(s, 0);

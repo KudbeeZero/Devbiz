@@ -1430,7 +1430,6 @@ ABY.NODES = {
     ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day five. 3:07. (You are not in the cave any more. You are the voice in a phone on a bedside table, and next to it someone is sitting up in the dark, one hand already out for the screen.) 1 new contact: Wren.',
     choices: [
-      { label: 'Stay on the line with Wren, and listen', next: 'cf_wren_a', bat: 0, req: { bond: { who: 'WREN', min: 1 }, noflag: 'tt_conf_wren' } },
       { label: 'Say her name', next: 'd5_hello', add: { heart: 1 } },
       { label: 'Breathe, the way it was done to you', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Hang up before she answers', next: 'd5_hang' },
@@ -1540,6 +1539,7 @@ ABY.NODES = {
     ch: 10, speaker: 'WREN', mood: 'gate', focus: 'gate',
     text: 'It is 5:51. The window is grey. She is sitting on the floor with the phone against her ear and the book open on the screen: every name, and hers, and the blank line, still blinking. "You can say what happens now," she says. "I will do whatever you say. I always did."',
     choices: [
+      { label: 'Stay on the line with Wren, and listen', next: 'cf_wren_a', bat: 0, req: { bond: { who: 'WREN', min: 1 }, noflag: 'tt_conf_wren' } },
       { label: 'Play her the riff, loud, to wake the street', next: 'd5_riff', req: { noflag: 'riff_done' } },
       { label: 'Have her call the first number in the book', next: 'end_warned', req: { all: ['rite_wake', 'told_truth'], min: { mem: 8 }, maxDread: 4 } },
       { label: 'Promise to stay on the line, every night', next: 'end_nightline', req: { flag: 'told_truth' } },
