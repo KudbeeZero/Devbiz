@@ -36,6 +36,7 @@
     if (!d || typeof d !== 'object') d = {};
     G.found = {}; if (d.found && typeof d.found === 'object') ABY.ENDING_IDS.forEach(function (id) { if (d.found[id] === 1) G.found[id] = 1; });
     G.deduced = {}; if (d.deduced && typeof d.deduced === 'object') ABY.LINK_IDS.forEach(function (id) { if (d.deduced[id] === 1) G.deduced[id] = 1; });   // deductions pinned on any night
+    G.helped = {}; if (d.helped && typeof d.helped === 'object') ABY.LINK_IDS.forEach(function (id) { if (ABY.CLUE_APPS.indexOf(d.helped[id]) >= 0) G.helped[id] = d.helped[id]; });   // which app's clue went into a deduction (credit only)
     G.badges = {}; if (d.badges && typeof d.badges === 'object') ABY.BADGE_IDS.forEach(function (id) { if (d.badges[id] === 1) G.badges[id] = 1; });
     var own = function (k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(ABY.FACTIONS, k); }; G.faction = own(d.faction) ? d.faction : ''; G.lean = own(d.lean) ? d.lean : ''; G.guided = d.guided === true;
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.hapLv = d.hapLv === 0 || d.hapLv === 2 ? d.hapLv : 1; syncHap(); G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
@@ -53,10 +54,12 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, helped: G.helped, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
-  function storeMeta() { return { found: G.found, deduced: G.deduced || {} }; }
+  function storeMeta() { var h = {}; for (var k in G.helped || {}) h[G.helped[k]] = 1; return { found: G.found, deduced: G.deduced || {}, helped: h }; }
+  // the apps whose clue went into a deduction she holds now (each was pinned with its clue on this journey), for the credit in Notes and on the ending card
+  function credits(s) { return ABY.LINKS.filter(function (l) { var a = (G.helped || {})[l.id]; return a && s && s.flags['link_' + l.id] && s.notes.indexOf('a_' + a) >= 0; }).map(function (l) { return { link: l, app: ABY.STORE.filter(function (x) { return x.id === G.helped[l.id]; })[0] }; }); }
   function storeNews() { var fresh = ABY.storeOpen(storeMeta()).filter(function (id) { return !G.stSeen[id]; }); P.badge('store', fresh.length); return fresh; }
   function storeAlert(before) {                                              // a listing an ending or a deduction just opened: a badge, and a banner naming it
     var now = ABY.storeOpen(storeMeta()).filter(function (id) { return before.indexOf(id) < 0 && !G.stSeen[id]; }); storeNews(); if (!now.length) return;
@@ -233,7 +236,7 @@
     var id = ABY.endingOf(G.state), E = ABY.ENDINGS[id]; G.ending = id; G.delivering = false; stopRing();
     P.lockAll(true); document.body.classList.add('finale'); ABY.Scene.setStage('chat', 1); ABY.Scene.setGate(id); ABY.Scene.setMood(E.mood); ABY.Scene.setFocus('gate'); ABY.Scene.openGate(true);
     P.setSignal(E.mood); ABY.Audio.sfx(id); buzz(ABY.isFall(id) ? [90, 60, 70, 90, 50, 120, 30] : [30, 60, 30, 60, 60]); if (id === 'blackout') { $('blackout').classList.add('on'); setTimeout(function () { $('blackout').classList.remove('on'); }, reduced && !G.calm ? 400 : 2400); } ABY.Scene.burst(240, 300, 0xffd34d, 60, 4.5);
-    var stB = ABY.storeOpen(storeMeta());
+    var stB = ABY.storeOpen(storeMeta()); G.credit = credits(G.state);
     var first = !G.found[id]; G.found[id] = 1; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     storeAlert(stB);
     clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
@@ -242,6 +245,7 @@
   function memory(id, kicker, ended) {
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
+    var cr = ended ? G.credit || [] : []; $('eCredit').hidden = !cr.length; $('eCredit').textContent = cr.map(function (c) { return c.app.name + ' helped you see it: ' + c.link.title + '.'; }).join(' ');   // the apps that helped on this journey (credit only)
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
     $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); var fall = ended && ABY.isFall(id), mine = ended && G.pend && G.pend.id === id, canWake = mine && G.pend.kind === 'wake';   // (the offer is the saved one, so it is the same after the card was left)
     $('memNext').hidden = !mine; $('memNext').setAttribute('data-wake', canWake ? '1' : '0');
@@ -394,7 +398,10 @@
     tray.appendChild(tt);
     if (pick) { var x = document.createElement('button'); x.type = 'button'; x.className = 'pincancel'; x.id = 'nCancel'; x.textContent = 'Cancel'; x.addEventListener('click', function () { pick = null; ABY.Audio.sfx('click'); renderNotes(); }); tray.appendChild(x); }
     box.appendChild(tray);
-    ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p); box.appendChild(d); });
+    var cr = credits(G.state);
+    ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p);
+      cr.filter(function (c) { return c.link === l; }).forEach(function (c) { var m = document.createElement('small'); m.className = 'cred'; m.style.color = c.app.c[0]; m.textContent = c.app.glyph + ' ' + c.app.name + ' showed you this'; d.appendChild(m); });
+      box.appendChild(d); });
     ks.forEach(function (k) {
       var n = ABY.NOTES[k], d = document.createElement(live ? 'button' : 'div'); d.className = 'nt' + (live ? ' pin' : '') + (pick === k ? ' sel' : ''); d.setAttribute('data-note', k);
       if (live) { d.type = 'button'; d.setAttribute('aria-pressed', pick === k ? 'true' : 'false'); d.addEventListener('click', function () { pinTap(k); }); }
@@ -406,13 +413,13 @@
     if (!canPin()) return renderNotes();
     ABY.Audio.init();
     if (!pick || pick === k) { pick = pick === k ? null : k; ABY.Audio.sfx('click'); buzz(8); return renderNotes(); }
-    var a = pick; pick = null; var ns = ABY.link(G.state, a, k);
+    var a = pick; pick = null; var ns = ABY.link(G.state, a, k), app = ABY.helpedBy(a, k);
     if (!ns) { ABY.Audio.sfx('ui'); return renderNotes('Those two are already pinned together.'); }
     var id = ns.linked; delete ns.linked; G.state = ns;
     if (id) {
-      var L = ABY.LINKS.filter(function (l) { return l.id === id; })[0], stB = ABY.storeOpen(storeMeta()); G.deduced[id] = 1;
+      var L = ABY.LINKS.filter(function (l) { return l.id === id; })[0], stB = ABY.storeOpen(storeMeta()); G.deduced[id] = 1; if (app) G.helped[id] = app;
       ABY.Audio.sfx('choice'); buzz(30); P.banner({ title: 'Notes', icon: 'ic-notes', glyph: '✦', text: 'Deduction: ' + L.title });
-      renderNotes('They fit. Somewhere later, this will matter.'); storeAlert(stB);
+      renderNotes(app ? 'They fit. ' + ABY.STORE.filter(function (x) { return x.id === app; })[0].name + ' saw it first. Somewhere later, this will matter.' : 'They fit. Somewhere later, this will matter.'); storeAlert(stB);
     } else {
       ABY.Audio.sfx('glitch'); buzz([60, 50, 60]); fx($('screen'), 'glitch', 400);
       renderNotes('They don’t fit. The phone laughs at you, very quietly. (−2% battery, +1 dread)');
@@ -522,7 +529,7 @@
   $('setHap').addEventListener('click', function () { G.haptics = !G.haptics; syncHap(); renderSettings(); save(); buzz(15); });
   $('setHapLv').addEventListener('click', function () { G.hapLv = (G.hapLv + 1) % 3; renderSettings(); save(); buzz([40, 50, 40]); });
   arm('setNew', 'Tap again to erase this chat', function () { G.saved = null; G.run = false; G.log = []; save(); startRun(); });
-  arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.found = {}; G.deduced = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
+  arm('setRes', 'Tap again to erase every memory', function () { G.pend = null; G.found = {}; G.deduced = {}; G.helped = {}; G.badges = {}; G.apps = {}; G.faction = ''; G.lean = ''; save(); renderGallery(); P.badge('gallery', 0); });
   window.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase(); if (e.repeat) return;
     if (k === 'm') { ABY.Audio.setMuted(!ABY.Audio.muted); renderSettings(); save(); return; }

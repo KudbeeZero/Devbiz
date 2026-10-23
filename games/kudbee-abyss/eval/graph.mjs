@@ -531,7 +531,7 @@ function walkChecks() {
   const base = ABY.newState(), after = ABY.choose(base, 0);
   rec('choose-pure', base.resolve === 0 && after.resolve === 1 && after.node === 'flute_path' && ABY.choose(base, 9) === null && ABY.choose(Object.assign(ABY.newState(), { node: 'g_meet' }), 3) === null && base.notes.length === 0, 'a choice returns a new state; a bad or hidden choice is refused');
   const ST = ABY.STORE, sids = ST.map(a => a.id);
-  const keyOk = k => k && Object.keys(k).length === 1 && ABY.STORE_KEYS.includes(Object.keys(k)[0]) && ('found' in k ? Number.isInteger(k.found) && k.found >= 0 && k.found <= ABY.ENDING_IDS.length : 'end' in k ? ABY.ENDING_IDS.includes(k.end) : ABY.LINK_IDS.includes(k.link));
+  const keyOk = k => k && Object.keys(k).length === 1 && ABY.STORE_KEYS.includes(Object.keys(k)[0]) && ('found' in k ? Number.isInteger(k.found) && k.found >= 0 && k.found <= ABY.ENDING_IDS.length : 'end' in k ? ABY.ENDING_IDS.includes(k.end) : 'helped' in k ? ABY.CLUE_APPS.includes(k.helped) : ABY.LINK_IDS.includes(k.link));
   rec('store-data', ST.length >= 4 && new Set(sids).size === sids.length && ST.every(a => a.name && a.glyph && a.tag && a.blurb && a.lore.length && a.c.length === 2 && keyOk(a.key) && ('found' in a.key || a.hint)) && ST.some(a => a.key.found === 0) && ST.some(a => a.key.found >= 3), 'unique ids, every listing complete, a free first app and a late one, each unlock a real ending count, ending or deduction (and a hint when it is not a count)');
   // the App Store's depth: listings opened by one ending (a fall too) or one deduction, and pages whose reviews know what she has done
   const bad = [];
@@ -542,13 +542,21 @@ function walkChecks() {
       for (const r of a.reviews) { if (!r.who || !r.text || !Number.isInteger(r.stars) || r.stars < 1 || r.stars > 5) bad.push(a.id + ': incomplete review'); if (r.key && !keyOk(r.key)) bad.push(a.id + ': review key ' + JSON.stringify(r.key)); if (r.key && JSON.stringify(r.key) === JSON.stringify(a.key)) bad.push(a.id + ': a review sealed by the listing\'s own key'); }
     }
   }
-  const all = { found: Object.fromEntries(ABY.ENDING_IDS.map(id => [id, 1])), deduced: Object.fromEntries(ABY.LINK_IDS.map(id => [id, 1])) };
+  const all = { found: Object.fromEntries(ABY.ENDING_IDS.map(id => [id, 1])), deduced: Object.fromEntries(ABY.LINK_IDS.map(id => [id, 1])), helped: Object.fromEntries(ABY.CLUE_APPS.map(id => [id, 1])) };
   if (ABY.storeOpen(all).length !== ST.length) bad.push('a listing never opens');
   if (ST.some(a => ABY.storeReviews(all, a.id).sealed)) bad.push('a review never opens');
   if (ABY.storeOpen({ found: {}, deduced: {} }).join() !== ST.filter(a => a.key.found === 0).map(a => a.id).join()) bad.push('a new phone opens more than the free listings');
   const byEnd = ST.filter(a => 'end' in a.key), byLink = ST.filter(a => 'link' in a.key);
   rec('store-depth', !bad.length && byEnd.some(a => ABY.isFall(a.key.end)) && byEnd.some(a => !ABY.isFall(a.key.end)) && byLink.length >= 1 && ST.every(a => a.reviews.some(r => r.key) || 'found' in a.key === false),
     bad.length ? bad.slice(0, 4).join('; ') : ST.length + ' listings (' + byEnd.length + ' opened by an ending, ' + byLink.length + ' by a deduction), ' + ST.reduce((t, a) => t + a.reviews.length, 0) + ' reviews (' + ST.reduce((t, a) => t + a.reviews.filter(r => r.key).length, 0) + ' only for someone who was there); all of it opens');
+  { // the credit for an app's clue: only a pair holding an app's clue credits it (never the story's own pairs, never a wrong pair); each of those apps has a
+    // review sealed until it helped her; and the credit is shown, never read: no scene, choice or overnight message mentions it
+    const AL = ABY.LINKS.filter(l => l.alt), right = AL.every(l => { const app = ABY.clueApp(l.alt.filter(k => /^a_/.test(k))[0]); return app && ABY.helpedBy(l.alt[0], l.alt[1]) === app && ABY.helpedBy(l.alt[1], l.alt[0]) === app; });
+    const plain = ABY.LINKS.every(l => ABY.helpedBy(l.a, l.b) === '') && ABY.helpedBy('a_cast', 'recording') === '' && ABY.clueApp('bargain') === '';
+    const sealed = ABY.CLUE_APPS.every(app => { const a = ST.filter(x => x.id === app)[0], r = a.reviews.filter(x => x.key && x.key.helped === app); return r.length === 1 && !ABY.storeReviews({ found: {}, deduced: {} }, app).shown.includes(r[0]) && ABY.storeReviews({ helped: { [app]: 1 } }, app).shown.includes(r[0]); });
+    const unread = !/"helped"|CLUE_APPS|clueApp/.test(JSON.stringify(ABY.NODES) + JSON.stringify(ABY.OVERNIGHT) + JSON.stringify(ABY.APP_WHISPERS));
+    rec('app-credit', AL.length === ABY.CLUE_APPS.length && right && plain && sealed && unread, ABY.CLUE_APPS.length + ' apps are credited only for a deduction pinned with their own clue; each has a review that opens only once it has helped her; the story never reads the credit');
+  }
   return R;
 }
 
