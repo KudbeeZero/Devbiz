@@ -28,7 +28,7 @@ function walkChecks() {
   const noWay = ids.filter(id => !N[id].ending && !N[id].song && open(id).length === 0);
   rec('story-no-dead-ends', noWay.length === 0, noWay.join(', ') || 'every scene has at least one choice that is always available');
   const sure = new Set(ids.filter(id => N[id].ending));
-  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back') : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
+  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back' || (N[id].thread === 'confide' && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
   rec('story-always-finishable', ids.every(id => sure.has(id)), ids.filter(id => !sure.has(id)).join(', ') || 'from every scene the always-available choices reach an ending (' + sure.size + '/' + ids.length + ')');
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
@@ -36,7 +36,7 @@ function walkChecks() {
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.OBJECTS.flatMap(o => ['has_' + o.id, 'used_' + o.id]));
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
-    ...ids.filter(id => N[id].time).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
+    ...ids.filter(id => N[id].time && N[id].thread !== 'confide').flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   READ.push(...ABY.BOND_FLAGS);   // a bond is counted from these, so the walk keeps states with different bonds apart
   // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
   const READBIT = new Map([...new Set(READ)].map((f, i) => [f, i])), READWORDS = Math.ceil(READBIT.size / 31);
@@ -429,7 +429,7 @@ function walkChecks() {
   }
   { // confidences: five warm-bond memories (two scenes each) that only listen: nothing they touch can reach a gate, a rite or an ending
     const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_wake', 'WREN', 'wren', { told_truth: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];
-    const inert = c => !c.add && !c.bat && !c.light && !c.req && !c.song && !c.note && !c.give && !c.take && !c.obj && !c.cont, tallies = new Set(C.flatMap(id => N[id].choices.map(c => c.set).filter(Boolean)));
+    const inert = c => c.bat === 0 && !c.add && !c.light && !c.req && !c.song && !c.note && !c.give && !c.take && !c.obj && !c.cont, tallies = new Set(C.flatMap(id => N[id].choices.map(c => c.set).filter(Boolean)));
     const shaped = C.filter(id => N[id].time === 'past' && N[id].safe && !N[id].note && !N[id].dark && N[id].text.length > 250 && N[id].choices.length >= 2 && N[id].choices.every(c => inert(c) && (/_a$/.test(id) ? c.next === id.replace(/_a$/, '_b') && !c.set : c.next === '@back' && /^tt_conf_/.test(c.set))));
     const rows = PAIRS.map(([at, who, k, fl]) => {
       const into = N[at].choices.filter(c => c.next === 'cf_' + k + '_a'), c = into[0];
@@ -440,10 +440,10 @@ function walkChecks() {
       const same = s && s.node === at && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem'].every(f => s[f] === base[f]) && s.notes.join() === base.notes.join() && s.back === '' && Object.keys(s.flags).filter(f => !base.flags[f]).join() === 'tt_conf_' + k;
       const gone = s && !ABY.options(s).some(x => x.c.next === 'cf_' + k + '_a');
       const hidden = !ABY.options(cold).some(x => x.c.next === 'cf_' + k + '_a');
-      return into.length === 1 && c.req && c.req.bond && c.req.bond.who === who && c.req.bond.min === 1 && c.req.noflag === 'tt_conf_' + k && inert(Object.assign({}, c, { req: null })) && N[at].ch === N['cf_' + k + '_a'].ch && mid && mid.node === 'cf_' + k + '_a' && mid.back === at && same && gone && hidden;
+      return into.length === 1 && c.req && c.req.bond && c.req.bond.who === who && c.req.bond.min === 1 && c.req.noflag === 'tt_conf_' + k && inert(Object.assign({}, c, { req: null })) && !c.add && N[at].ch === N['cf_' + k + '_a'].ch && mid && mid.node === 'cf_' + k + '_a' && mid.back === at && same && gone && hidden;
     });
     rec('confidences', C.length === 10 && shaped.length === 10 && tallies.size === 5 && rows.length === 5 && rows.every(Boolean),
-      '5 warm-bond confidences (' + C.length + ' scenes) from Day Three to Day Seven: each offered once and only to a player whose bond with that person is warm, each leaves every stat, the battery, the light, the clues and the way back exactly as it found them (only its own once-only flag is new), so no gate, rite or ending moves' + (rows.every(Boolean) ? '' : ' | BAD ' + PAIRS.filter((p, i) => !rows[i]).map(p => p[0]).join(', ')));
+      '5 warm-bond confidences (' + C.length + ' scenes) from Day Three to Day Seven: each offered once and only to a player whose bond with that person is warm, each costs nothing (no battery, no light, no stat) and leaves every stat, the battery, the light, the clues and the way back exactly as it found them (only its own once-only flag is new), so no gate, rite or ending moves' + (rows.every(Boolean) ? '' : ' | BAD ' + PAIRS.filter((p, i) => !rows[i]).map(p => p[0]).join(', ')));
   }
   { // objects: each is picked up once on a scene it loops back to, spent on a later chapter, and its use is remembered the next morning
     const O = ABY.OBJECTS, rows = O.map(o => {
