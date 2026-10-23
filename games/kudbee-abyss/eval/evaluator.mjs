@@ -434,6 +434,58 @@ await block('installable', async () => {
   rec('install-card', !first.row.row && !first.set.row && second.set.row && second.set.sheet && /sends nothing anywhere/.test(second.set.about) && /Plays offline/.test(second.set.about) && second.row.row && second.row.first === 'abyss' && ok(second.sheet) && wide.row.row && ok(wide.sheet),
     'an iPhone\'s first visit shows no card; from the second, "Kudbee Abyss · YOUR PHONE" tops the App Store and GET opens the three taps (' + (second.sheet ? second.sheet.steps.map(t => t.split(/[ ,.]/).slice(0, 3).join(' ')).join(' / ') : '?') + '), whose button fits on screen upright and on its side, and closes; Settings offers the same, and its About says the game sends nothing anywhere');
 });
+await block('feel', async () => {
+  // The phone is a tactile thing: every control a thumb can reach is a proper target (44px, bar the home swipe strip) on a portrait and a landscape phone,
+  // every tap on the home screen, lock screen and every app answers with a sound or a buzz (nothing silent), and the Sound level setting really moves
+  // the master gain, survives a reload and is dead while sound is off
+  const SCREENS = ['lock', 'home', 'notes', 'pulse', 'store', 'settings', 'gallery', 'flute'];
+  const audit = {};
+  for (const ph of [PHONES[0], PHONES[2]]) {
+    const { ctx, pg } = await open(phoneCtx(ph), 'feel-' + ph.n);
+    await wake(pg);
+    await pg.evaluate(() => { window.__feel = 0; ['sfx', 'buzz'].forEach(k => { const o = ABY.Audio[k]; ABY.Audio[k] = function (n) { if (!(k === 'sfx' && n === 'tick')) window.__feel++; return o.apply(this, arguments); }; }); });
+    const small = [], silent = []; let seen = 0;
+    for (const sc of SCREENS) {
+      await pg.evaluate(n => ABY.Phone.show(n), sc); await pg.waitForTimeout(350);
+      const list = await pg.evaluate(() => {
+        const dev = document.getElementById('device').getBoundingClientRect(), id = ABY.Phone.screen, out = []; let i = 0;
+        document.querySelectorAll('#' + id + ' button, #' + id + ' [role=button], #' + id + ' .app, #homebar').forEach(e => {
+          const r = e.getBoundingClientRect(), cs = getComputedStyle(e); if (!r.width || !r.height || cs.visibility === 'hidden' || cs.display === 'none' || r.bottom > dev.bottom || r.top < dev.top || e.disabled) return;
+          e.setAttribute('data-feel', i); out.push({ i, name: (e.id || e.className || e.tagName) + '', w: Math.round(r.width), h: Math.round(r.height) }); i++;
+        });
+        return out;
+      });
+      for (const e of list) {
+        seen++;
+        if (e.name !== 'homebar' && (e.w < 44 || e.h < 44)) small.push(ph.n + ' ' + sc + ' ' + e.name + ' ' + e.w + 'x' + e.h);
+        await pg.evaluate(n => ABY.Phone.show(n), sc); await pg.waitForTimeout(120);
+        const el = await pg.$('[data-feel="' + e.i + '"]'); if (!el) continue;
+        await pg.evaluate(() => { window.__feel = 0; });
+        try { await el.tap({ timeout: 800 }); } catch (x) { continue; }
+        await pg.waitForTimeout(120);
+        if (e.name !== 'homebar' && !(await pg.evaluate(() => window.__feel))) silent.push(ph.n + ' ' + sc + ' ' + e.name);
+      }
+    }
+    audit[ph.n] = { seen, small, silent }; await ctx.close();
+  }
+  // the Sound level setting
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'feel-sound'); await wake(pg);
+  await pg.evaluate(() => { ABY.Audio.init(); ABY.Phone.show('settings'); }); await pg.waitForTimeout(300);
+  const gain = () => pg.evaluate(() => Math.round(ABY.Audio.vol * 100));
+  const row = await pg.evaluate(() => document.getElementById('sndLvS').textContent);
+  const names = [row]; const vols = [await gain()];
+  for (let i = 0; i < 3; i++) { await pg.locator('#setSndLv').click(); names.push(await pg.evaluate(() => document.getElementById('sndLvS').textContent)); vols.push(await gain()); }
+  await pg.locator('#setSndLv').click(); await pg.waitForTimeout(100);   // -> Loud
+  const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('kudbee.abyss.v2')).sndLv);
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone')); await pg.evaluate(() => ABY.Phone.show('settings'));
+  const after = await pg.evaluate(() => ({ label: document.getElementById('sndLvS').textContent, vol: Math.round(ABY.Audio.vol * 100) }));
+  await pg.locator('#setSnd').click();
+  const off = await pg.evaluate(() => document.getElementById('setSndLv').disabled);
+  await ctx.close();
+  const a = audit[PHONES[0].n], b = audit[PHONES[2].n];
+  rec('touch-targets-and-feel', !a.small.length && !b.small.length && !a.silent.length && !b.silent.length && a.seen > 20 && b.seen > 20 && names.join() === 'Normal,Loud,Quiet,Normal' && vols.join() === '100,130,50,100' && saved === 2 && after.label === 'Loud' && after.vol === 130 && off,
+    'every control on ' + SCREENS.length + ' screens is a 44px target and answers a tap (landscape ' + a.seen + ' checked, portrait ' + b.seen + ')' + (a.small.concat(b.small).length ? '; SMALL ' + a.small.concat(b.small).slice(0, 4).join(' | ') : '') + (a.silent.concat(b.silent).length ? '; SILENT ' + a.silent.concat(b.silent).slice(0, 4).join(' | ') : '') + '; sound level ' + names.join('>') + ' (' + vols.join('/') + '), saved ' + saved + ', after reload ' + after.label + ', disabled while muted: ' + off);
+});
 await block('app-store-depth', async () => {
   // listings opened by one ending or deduction (a NEW tag and a badge on the icon), pages whose reviews know what she has done, and old saves stay quiet
   const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, found: { drowned: 1, names: 1 }, deduced: { two_warnings: 1 }, stSeen: { lantern: 1 } }));`;
