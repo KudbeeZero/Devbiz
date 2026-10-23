@@ -509,8 +509,9 @@ function walkChecks() {
     rec('trust-ledger', ok && rules.length >= 8 && rules.every(r => ABY.BOND_IDS.includes(r.who) && meet(r) && cool(r)) && choices.length >= 4
       && ABY.bond(warm, 'VEY') === 4 && ABY.bond(cold, 'VEY') === -1 && ABY.bond(mixed, 'VEY') === 0 && ABY.bond(null, 'VEY') === 0 && ABY.bond(sample, 'NOBODY') === 0
       && hear(warm, 'd7_wake').includes('b_vey_warm') && !hear(warm, 'd7_wake').includes('b_vey_cold') && hear(cold, 'd7_wake').includes('b_vey_cold') && !hear(mixed, 'd7_wake').includes('b_vey')
+      && ABY.BOND_IDS.every(w => bonded.some(o => o.at === 'd7_wake' && o.req.bond.who === w && o.req.bond.max === -1)) && ['b_queen_cold', 'b_guardian_cold', 'b_wren_cold'].every(id => hear(Object.assign({}, sample, { flags: { blamed_queen: 1, skipped_doors: 1, warned: 1, refused_vey: 1, refused_next: 1 } }), 'd7_wake').includes(id)) && !hear(sample, 'd7_wake').includes('_cold')
       && !ABY.options(Object.assign({}, sample, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond) && ABY.options(Object.assign({}, warm, { node: 'd7_gather' })).some(o => o.c.req && o.c.req.bond && o.c.req.bond.who === 'VEY'),
-      'best reached ' + JSON.stringify(top) + '; ' + ABY.BOND_IDS.length + ' bonds counted from ' + ABY.BOND_FLAGS.length + ' flags a choice already sets; ' + bonded.length + ' Day Seven messages and ' + choices.length + ' people who stand with her, all for a bond a player can reach; a stranger is offered none');
+      'best reached ' + JSON.stringify(top) + '; ' + ABY.BOND_IDS.length + ' bonds counted from ' + ABY.BOND_FLAGS.length + ' flags a choice already sets; ' + bonded.length + ' Day Seven messages (every person has a cold one as well as a warm one) and ' + choices.length + ' people who stand with her, all for a bond a player can reach; a stranger is offered none');
   }
   { // no choice does nothing: every flag a choice sets is read by something (a gated choice, an ending rule, a badge, an overnight message)
     const code = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'story.js'), 'utf8'), tail = code.slice(code.indexOf('ABY.endingFor'));
