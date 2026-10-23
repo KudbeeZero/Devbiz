@@ -1086,6 +1086,7 @@ ABY.NODES = {
     ch: 8, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day three. i have been practising your face. come down: i have set a table, and lit the doors. there are three rooms between us, and every one of them wants a song.',
     choices: [
+      { label: 'Let the Guardian tell you what he has never told anyone', next: 'cf_corvin_a', req: { bond: { who: 'GUARDIAN', min: 1 }, noflag: 'tt_conf_corvin' } },
       { label: 'Open the photo it sent', next: 'd3_photo', add: { dread: 1 } },
       { label: 'Switch on the flashlight', next: 'd3_wake', light: 1, req: { noLight: 1 } },
       { label: 'Go down to the first door', next: 'd3_hall' },
@@ -1263,6 +1264,7 @@ ABY.NODES = {
     ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day four. (The phone is wet. There is water behind the glass, and in the water, faces, pressed up against the screen from the inside.) 1 new contact: Everyone Before You.',
     choices: [
+      { label: 'Sit with Vey on the servants\u2019 stair, a while', next: 'cf_vey_a', req: { bond: { who: 'VEY', min: 1 }, noflag: 'tt_conf_vey' } },
       { label: 'Open the contact', next: 'd4_contact', add: { dread: 1 } },
       { label: 'Ask the Queen about the faces', next: 'd4_queen' },
       { label: 'Switch on the flashlight', next: 'd4_wake', light: 1, req: { noLight: 1 } },
@@ -1428,6 +1430,7 @@ ABY.NODES = {
     ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day five. 3:07. (You are not in the cave any more. You are the voice in a phone on a bedside table, and next to it someone is sitting up in the dark, one hand already out for the screen.) 1 new contact: Wren.',
     choices: [
+      { label: 'Stay on the line with Wren, and listen', next: 'cf_wren_a', req: { bond: { who: 'WREN', min: 1 }, noflag: 'tt_conf_wren' } },
       { label: 'Say her name', next: 'd5_hello', add: { heart: 1 } },
       { label: 'Breathe, the way it was done to you', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Hang up before she answers', next: 'd5_hang' },
@@ -1730,6 +1733,7 @@ ABY.NODES = {
     ch: 11, speaker: 'QUEEN', mood: 'gate', focus: 'gate',
     text: 'It is 6:00 on the sixth day. The Queen heard all of it; she always does. "Tomorrow is the seventh night," she says. "Seven is when the book is finished, or when it begins again. It has begun again more times than there are names in it." She waits. "Will you come back for the last one?"',
     choices: [
+      { label: 'Ask the Queen what she has not said', next: 'cf_queen_a', req: { bond: { who: 'QUEEN', min: 1 }, noflag: 'tt_conf_queen' } },
       { label: 'Say you will come back', next: 'end_firstpage', add: { resolve: 1 } },
       { label: 'Go back through the door and stay with Sorrel', next: 'end_cradle', req: { flag: 'promised_sorrel' } },
       { label: 'Turn the clock back: a fourth birthday', next: 'fb_birthday', bat: 3, req: { noflag: 'tt_birthday' } },
@@ -1813,6 +1817,7 @@ ABY.NODES = {
     ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'whisper', img: 'eye',
     text: 'Tonight the cave and the red corridor and the shore and Wren\'s bedroom and the nursery are all one room, and everyone is in it. The Guardian, at the door, with his hand on the frame. Vey, very small, at your ankle. The Choir, dripping, along the walls. The Queen with her flute. And in the gap of the door, enormous now, and red, and round, a child\'s eye, watching you raise the phone.',
     choices: [
+      { label: 'Ask the Eye what it saw first', next: 'cf_eye_a', req: { bond: { who: 'EYE', min: 1 }, noflag: 'tt_conf_eye' } },
       { label: 'Raise the flute', next: 'd7_rite', add: { resolve: 1 } },
       { label: 'Give the phone to the Queen', next: 'd7_end', add: { trust: 1, dread: 1 } },
       { label: 'Turn the clock back: the very first night', next: 'fb_first', bat: 3, req: { noflag: 'tt_first' } },
@@ -2057,6 +2062,94 @@ ABY.NODES = {
     text: 'Your own voice, from the first night, a week younger: "Don\'t let her open the gate. She doesn\'t know what she locked behind it. It isn\'t him. It was never him." And then the part that was cut off, the part you have never heard: "It\'s her. It\'s her little girl. Say her name."',
     choices: [
       { label: 'Hang up, and answer No Caller ID', next: 'd7_eye', set: 'eye_is_sorrel', add: { resolve: 1 } },
+    ],
+  },
+  // ---- confidences: a person who trusts her tells her one thing more. Five two-scene memories, one for each day from Three to Seven, offered only to a player whose bond with
+  // that person is warm (`req.bond`). They are listening, not choosing: no stat, no light, no battery, no clue, no flag but their own once-only guard, and they return to the scene she
+  // left, so no gate, rite or ending is touched (graph check `confidences`). ----
+  cf_corvin_a: {
+    ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian', time: 'past', safe: true, thread: 'confide',
+    text: 'The iron goes quiet. "I kept a ledger on that stair," says Corvin Ash. "Not of enemies. Of the nights I did not sleep: one mark for each, scratched in the underside of the rail. When the Queen asked me to guard a door, I said yes before I knew what was behind it, because she asked it in a voice I had not heard her use since she was small enough to ride my shoulders."',
+    choices: [
+      { label: 'Ask how many marks there are now', next: 'cf_corvin_b' },
+      { label: 'Say nothing, and let him go on', next: 'cf_corvin_b' },
+    ],
+  },
+  cf_corvin_b: {
+    ch: 8, speaker: 'GUARDIAN', mood: 'dusk', focus: 'guardian', time: 'past', safe: true, thread: 'confide',
+    text: '"I stopped counting at nine hundred. The point of a ledger is that someone could settle it, and no one can. So I changed what the marks mean." He turns his gauntlet over; inside the wrist, scratched small, a single tally. "This is the night you spoke to me as if I were a man and not a wall. One mark. I mean to keep it."',
+    choices: [
+      { label: 'Tell him he was never a wall', next: '@back', set: 'tt_conf_corvin' },
+      { label: 'Ask him to keep it safe', next: '@back', set: 'tt_conf_corvin' },
+      { label: 'Just nod, and let the iron settle', next: '@back', set: 'tt_conf_corvin' },
+    ],
+  },
+  cf_vey_a: {
+    ch: 9, speaker: 'VEY', mood: 'dusk', focus: 'vey', time: 'past', safe: true, thread: 'confide',
+    text: 'Vey sits on the servants’ stair with its two hands in its lap, and for once they are not busy. "I was not made to be carried," it says. "I was made to carry. I am told that is not a thing a person should have to say out loud. But the paper crown was very light, and it was the first thing I had ever been given to hold that was not a tray."',
+    choices: [
+      { label: 'Sit beside it on the stair', next: 'cf_vey_b' },
+      { label: 'Ask what it did with the tray', next: 'cf_vey_b' },
+    ],
+  },
+  cf_vey_b: {
+    ch: 9, speaker: 'VEY', mood: 'dusk', focus: 'vey', time: 'past', safe: true, thread: 'confide',
+    text: '"I put it down," says Vey. "I had never put anything down in front of anyone. It was so strange that I stood there with my hands empty, and she laughed. Not at me. With the strange. And I thought: so this is what a hand is for, besides carrying." It holds them up to the lamp and turns them over, slowly, like new.',
+    choices: [
+      { label: 'Tell it they are good hands', next: '@back', set: 'tt_conf_vey' },
+      { label: 'Hold one of them, for a moment', next: '@back', set: 'tt_conf_vey' },
+      { label: 'Laugh with it, quietly', next: '@back', set: 'tt_conf_vey' },
+    ],
+  },
+  cf_wren_a: {
+    ch: 10, speaker: 'WREN', mood: 'void', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: 'Wren’s voice comes through with the line crackling and the television on low behind it. "I want to tell you something stupid, because you stayed on. When I pick up at 3:07 I am not being brave. I have a rule. If I count to seven before the phone stops ringing, I am allowed to be scared. Most nights I have only got to five."',
+    choices: [
+      { label: 'Count with her, out loud', next: 'cf_wren_b' },
+      { label: 'Tell her five is a lot', next: 'cf_wren_b' },
+    ],
+  },
+  cf_wren_b: {
+    ch: 10, speaker: 'WREN', mood: 'void', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: '"Tonight I got to seven. I do not think it is the ringing that changed." A pause, and the sound of her pulling a blanket round her. "It is nice to have someone to be scared at. You do not have to say anything. I just wanted somebody else in the room who knew what the number was."',
+    choices: [
+      { label: '“Seven. I know what it was.”', next: '@back', set: 'tt_conf_wren' },
+      { label: 'Stay on the line until she hangs up', next: '@back', set: 'tt_conf_wren' },
+      { label: 'Tell her you are scared too', next: '@back', set: 'tt_conf_wren' },
+    ],
+  },
+  cf_queen_a: {
+    ch: 11, speaker: 'QUEEN', mood: 'gate', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: 'The Queen holds the flute in both hands as if it were the one she wants to apologise to. "I have told this to no one, because everyone who might forgive it has already been asked to carry too much. The night of the lock, I did not choose between my daughter and the world. I chose between two ways of losing her, and I picked the one where she was still breathing."',
+    choices: [
+      { label: 'Tell her you understand', next: 'cf_queen_b' },
+      { label: 'Ask whether she would choose it again', next: 'cf_queen_b' },
+    ],
+  },
+  cf_queen_b: {
+    ch: 11, speaker: 'QUEEN', mood: 'gate', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: '"Every morning I ask myself that," she says. "Every morning the answer is yes, and every morning I am ashamed that it is yes. I do not need you to say it was right. I needed one person to know that I knew it might not have been." She sets the flute down on her knee. For the first time in six days, she lets it be silent.',
+    choices: [
+      { label: 'Sit with her in the silence', next: '@back', set: 'tt_conf_queen' },
+      { label: 'Say: you did not do it alone, not tonight', next: '@back', set: 'tt_conf_queen' },
+      { label: 'Take her hand, and say nothing', next: '@back', set: 'tt_conf_queen' },
+    ],
+  },
+  cf_eye_a: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: 'the red goes soft at the edges, the way a drawing goes when someone has rubbed it with a thumb. i want to tell you what the first thing i ever saw was. it was not the door. it was a hand on the other side of it, flat against the wood, the way you put your hand on a sleeping animal to feel it breathe. it was warm. i did not have a word for warm.',
+    choices: [
+      { label: 'Ask whose hand it was', next: 'cf_eye_b' },
+      { label: 'Say nothing, and listen', next: 'cf_eye_b' },
+    ],
+  },
+  cf_eye_b: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', time: 'past', safe: true, thread: 'confide',
+    text: 'i have thought about it for nine hundred nights. i think it was hers. i think she never knew i could feel it. i have been so angry at the door for so long, and i think the door was only the thing between a hand and a hand. do not tell her. no. tell her. i do not know. you decide. you are the first person i have let decide something small.',
+    choices: [
+      { label: 'Tell it you will keep it safe', next: '@back', set: 'tt_conf_eye' },
+      { label: 'Tell it the hand was real', next: '@back', set: 'tt_conf_eye' },
+      { label: 'Put your own hand flat against the glass', next: '@back', set: 'tt_conf_eye' },
     ],
   },
   // ---- time slips: the Clock. From a day's scene the player can turn the clock back (a flashback) or wind it forward (a flash-forward). A slip is a `safe` scene
