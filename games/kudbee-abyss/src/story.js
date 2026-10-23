@@ -1264,6 +1264,7 @@ ABY.NODES = {
     ch: 9, speaker: 'CHOIR', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day four. (The phone is wet. There is water behind the glass, and in the water, faces, pressed up against the screen from the inside.) 1 new contact: Everyone Before You.',
     choices: [
+      { label: 'Open the new contact, Everyone Before You, and read one of them', next: 'hold_hub', bat: 0 },
       { label: 'Sit with Vey on the servants\u2019 stair, a while', next: 'cf_vey_a', bat: 0, req: { bond: { who: 'VEY', min: 1 }, noflag: 'tt_conf_vey' } },
       { label: 'Open the contact', next: 'd4_contact', add: { dread: 1 } },
       { label: 'Ask the Queen about the faces', next: 'd4_queen' },
@@ -2150,6 +2151,101 @@ ABY.NODES = {
       { label: 'Tell it you will keep it safe', next: '@back', set: 'tt_conf_eye', bat: 0 },
       { label: 'Tell it the hand was real', next: '@back', set: 'tt_conf_eye', bat: 0 },
       { label: 'Put your own hand flat against the glass', next: '@back', set: 'tt_conf_eye', bat: 0 },
+    ],
+  },
+  // ---- everyone before you: the contact list on Day Four is a book, and any entry can be opened. A hub lists the five holders she has not yet read; each is a two-scene memory of someone
+  // who held this phone at 3:07 before her. They are history, not choices: free, no stat, no clue, no gate, one once-only flag each, and every way out returns to the contact list she
+  // came from (graph check `holders`). ----
+  hold_hub: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'The list opens like a book. Every number has a few lines under it in a hand that changes from page to page: where they were, what they picked up, how long they held it. Most are only a date. A few have been read so often the paper has gone soft.',
+    choices: [
+      { label: 'Maren, the lighthouse keeper', next: 'hold_maren_a', bat: 0, req: { noflag: 'tt_hold_maren' } },
+      { label: 'Ines, who worked nights on the children’s ward', next: 'hold_nurse_a', bat: 0, req: { noflag: 'tt_hold_nurse' } },
+      { label: 'Teddy, who delivered the morning papers', next: 'hold_paper_a', bat: 0, req: { noflag: 'tt_hold_paper' } },
+      { label: 'Mrs Okafor, who answered every call', next: 'hold_widow_a', bat: 0, req: { noflag: 'tt_hold_widow' } },
+      { label: 'Dov, who recorded all of it', next: 'hold_radio_a', bat: 0, req: { noflag: 'tt_hold_radio' } },
+      { label: 'Close the book', next: '@back', bat: 0 },
+    ],
+  },
+  hold_maren_a: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'Maren kept the light on a rock where nothing else lived. She was holding the phone when the first call came, the way you hold a rope in a gale, and she thought it was the coastguard. "Say again," she said, three times, into the static. The voice said the same eleven notes back to her, and the beam swung out over the water and, for once, lit nothing but rain.',
+    choices: [
+      { label: 'Read on', next: 'hold_maren_b', bat: 0 },
+      { label: 'Read her line again', next: 'hold_maren_b', bat: 0 },
+    ],
+  },
+  hold_maren_b: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'She kept it a winter. In the book there is one entry in her hand, pressed hard: "It does not want the boats. It wants to be answered. I answered. I have never been so frightened, or so useful." Under it, someone else, much later, in a different pen: "She left the lamp burning when she went down the stair. The relief keeper said it had never once gone out."',
+    choices: [
+      { label: 'Close the book gently', next: '@back', set: 'tt_hold_maren', bat: 0 },
+      { label: 'Touch the pressed-in letters', next: '@back', set: 'tt_hold_maren', bat: 0 },
+    ],
+  },
+  hold_nurse_a: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'Ines was on the ward at 3:07, the hour the children woke. When the phone rang in her pocket she did what the ward had taught her and went to the one who was crying. She held the screen to the child’s ear, because a child will listen to anything if it is warm, and the phone, which had never in its life been warm, was warm.',
+    choices: [
+      { label: 'Read on', next: 'hold_nurse_b', bat: 0 },
+      { label: 'Ask who the child was', next: 'hold_nurse_b', bat: 0 },
+    ],
+  },
+  hold_nurse_b: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'The child slept. Ines wrote it down, as she wrote everything: "Held it to her till the notes stopped. She said it sounded like her mother humming in another room. I did not tell her whose mother." The next line is in the same hand, shakier: "I am handing it on before I get fond of it. Whoever you are, it is not a thing, it is a person who is lonely. Be kind."',
+    choices: [
+      { label: 'Keep that line in mind', next: '@back', set: 'tt_hold_nurse', bat: 0 },
+      { label: 'Say thank you, to the page', next: '@back', set: 'tt_hold_nurse', bat: 0 },
+    ],
+  },
+  hold_paper_a: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'Teddy was fifteen, and found it on a bench at the end of his round, face up and ringing. He thought someone had lost it, so he picked up to say so. "Wrong number," he told the voice, very politely, "I think you want the person who dropped it." And the voice, which had been very patient for a very long time, said: "No. I think I want you."',
+    choices: [
+      { label: 'Read on', next: 'hold_paper_b', bat: 0 },
+      { label: 'Wince', next: 'hold_paper_b', bat: 0 },
+    ],
+  },
+  hold_paper_b: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'He ran. That is the whole entry, in a boy’s capitals: HE RAN. And under it, a year on, in neater writing: "I still do my round past the bench. I leave a paper there. The phone is not there but the paper is always gone by morning. I think I owed somebody a kinder answer." There is a small drawing of a newspaper, folded the way he used to fold them, for throwing.',
+    choices: [
+      { label: 'Tell him it is all right', next: '@back', set: 'tt_hold_paper', bat: 0 },
+      { label: 'Smile at the drawing', next: '@back', set: 'tt_hold_paper', bat: 0 },
+    ],
+  },
+  hold_widow_a: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'Mrs Okafor answered every call for eleven years, because she had spent a lifetime being the person who answered. She had a chair by the hall table and a flask of tea and a notepad. She wrote down what each voice said, in case it mattered. Most nights it was nothing. Some nights it was somebody’s name, and she wrote that down with a small, solemn tick.',
+    choices: [
+      { label: 'Read on', next: 'hold_widow_b', bat: 0 },
+      { label: 'Count the ticks', next: 'hold_widow_b', bat: 0 },
+    ],
+  },
+  hold_widow_b: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'There are four thousand and some ticks. The last page is a list of every name she was ever given, and at the bottom, underlined: "I do not know what any of it was for. But nobody was left on the line, and that is not nothing." Her own name is at the very end, written by someone else, with a tick beside it. They did the same for her.',
+    choices: [
+      { label: 'Add a tick of your own', next: '@back', set: 'tt_hold_widow', bat: 0 },
+      { label: 'Read her name aloud', next: '@back', set: 'tt_hold_widow', bat: 0 },
+    ],
+  },
+  hold_radio_a: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'Dov did not believe in it. He was an engineer, and he put a recorder on the line and a spectrum analyser behind it and sat up with a flask and a certainty. For nine nights it was static. On the tenth, the analyser drew a shape that was not a waveform. It was a doorway, drawn in light, in the exact proportions of the one on his own landing.',
+    choices: [
+      { label: 'Read on', next: 'hold_radio_b', bat: 0 },
+      { label: 'Look at the sketch of the doorway', next: 'hold_radio_b', bat: 0 },
+    ],
+  },
+  hold_radio_b: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'holders',
+    text: 'He kept the recording and never played it. His entry is the shortest in the book: "I know what it is now. I am not going to explain it to anyone, because they would try to fix it. It is not broken. Something is trying to say a very small thing, as carefully as it can, and the only fault in the line is that nobody has ever stayed long enough to hear the end."',
+    choices: [
+      { label: 'Stay a moment longer on the page', next: '@back', set: 'tt_hold_radio', bat: 0 },
+      { label: 'Tell the book you will stay', next: '@back', set: 'tt_hold_radio', bat: 0 },
     ],
   },
   // ---- time slips: the Clock. From a day's scene the player can turn the clock back (a flashback) or wind it forward (a flash-forward). A slip is a `safe` scene
