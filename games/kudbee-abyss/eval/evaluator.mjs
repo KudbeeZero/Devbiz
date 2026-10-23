@@ -744,10 +744,10 @@ await block('day-five', async () => { // Day Five: a dark Day Four ending carrie
   const w = await pg.evaluate(() => ({ node: ABY.game.state.node, flag: ABY.game.state.flags.rite_wake }));
   await tapChip(pg, 'Tell her to hold on until the light'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c1 = await chips(pg);
   await tapChip(pg, 'Have her call the first number'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden);
-  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 4 && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
+  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 5 && c1.some(c => /Stay on the line with Wren/.test(c)) && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd5_dawn', { mem: 2, flags: { rite_wake: 1, told_truth: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c0 = await chips(pg);
-  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 3, 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
+  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 4 && c0.some(c => /Stay on the line with Wren/.test(c)), 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
   await ctx.close();
 });
 await block('falls-and-wakes', async () => { // falls and checkpoints: 3:07 Again is a fall, not a way on. It wakes her at the last dawn (one wake fewer, a little more afraid); with no wakes left, only a new journey
