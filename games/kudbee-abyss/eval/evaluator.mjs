@@ -1057,6 +1057,17 @@ await block('hard-rites', async () => { // the two hard rites: chords. A perfect
   rec('chord-slam-needs-both-together', h.slow === 0 && h.together === 1 && h.hits === 4 && h.chords >= 24, 'struck 0.14s apart: ' + h.slow + ' slams; together: ' + h.together + ' (' + h.hits + ' notes hit)');
   await ctx.close();
 });
+await block('hard-rite-box', async () => { // the third hard rite: Sorrel's music box. A perfect player slams every chord and wins; it is offered once; the walk home is the same scene
+  const { ctx, pg } = await open({}, 'musicbox'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await at(pg, 'd6_sorrel', { mem: 9, dread: 3, flags: { rite_wake: 1, riff_done: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  const before = await chips(pg); await tapChip(pg, 'music-box waltz'); await pick(pg, 'Raise the flute'); await pg.waitForFunction(() => ABY.Song.active, null, { timeout: 5000 }); await pg.evaluate(() => { ABY.Song.bot = true; }); await sleep(6500); await pg.screenshot({ path: join(OUT, 'day6-box-mid.png') }); await pg.waitForFunction(() => !ABY.Song.active, null, { timeout: 60000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const b = await pg.evaluate(() => { const s = ABY.Song.stats, g = ABY.game.state; return { node: g.node, flag: g.flags.rite_box, slam: s.slam, chords: s.chords, acc: s.acc, total: s.total }; });
+  await tapChip(pg, 'her turn to choose'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const after = await chips(pg);
+  const sd = await pg.evaluate(() => ({ node: ABY.game.state.node, dread: ABY.game.state.dread, done: ABY.game.state.flags.box_done }));
+  rec('hard-rite-box', before.some(x => /music-box waltz/.test(x)) && b.node === 'd6_box_win' && b.flag === 1 && b.chords >= 12 && b.slam === b.chords && b.acc === 1 && sd.node === 'd6_sorrel' && sd.dread === 2 && sd.done === 1 && !after.some(x => /music-box waltz/.test(x)),
+    'the bot lands ' + b.slam + '/' + b.chords + ' slams of ' + b.total + ' notes and wins; dread 3 -> ' + sd.dread + '; the waltz is offered once: ' + after.join(' / ')); await pg.screenshot({ path: join(OUT, 'day6-box-won.png') });
+  await ctx.close();
+});
 await block('badges-and-factions', async () => { // badges and factions are the player's own; a shared link starts from the beginning
   const { ctx, pg } = await open({}, 'badges'); await wake(pg); await openMessages(pg);
   await at(pg, 'd2_door', { trust: 3, mem: 4, dread: 0, flags: { knew_name: 1 }, choices: 12 }); await tapChip(pg, 'Say their names together, and open it'); await memoryShown(pg);

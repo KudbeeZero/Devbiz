@@ -95,6 +95,18 @@ ABY.RITES.riff = { name: 'THE 3:07 RIFF', step: 0.25, win: 0.72, fall: 1.0, tint
     [3, 3, 7], [3, 1, 7], [5, 1, 9], [2, 2, 6], [0, 1, 5], [2, 1, 7], [3, 1], [5, 1], [7, 1], [9, 1], [7, 1], [5, 1], [3, 1], [2, 1, 8], [0, 2, 3], [0, 1, 6],
     [6, 2], [7, 1], [9, 1], [7, 1, 2], [6, 1], [5, 1], [3, 1, 8], [2, 1], [3, 1], [5, 1, 9], [7, 2, 0], [5, 1], [3, 1, 6], [2, 2, 5], [0, 1, 3], [0, 3, 7]],
   fx: [[0, 'knock'], [6, 'flash'], [12, 'knock'], [20, 'scream'], [28, 'door'], [36, 'flash'], [44, 'blood'], [52, 'crack'], [60, 'scream'], [68, 'flash'], [76, 'blood'], [84, 'scream'], [92, 'flash']] };
+// the third hard rite (optional, Day Six): a waltz. A chord lands on every first beat, two light notes follow, and the whole thing is longer than the riff. It is a music box
+// that has been wound for a child who is still counting to one.
+ABY.RITES.box = { name: 'THE MUSIC BOX', step: 0.26, win: 0.68, fall: 1.05, tint: '#ffd6a5', lanes: ['#ffd6a5', '#ff9ab8', '#a8e6ff'],
+  mel: [
+    [0, 1, 7], [3, 1], [5, 1], [1, 1, 8], [5, 1], [3, 1], [2, 1, 6], [3, 1], [4, 1], [0, 1, 7], [2, 1], [0, 1],
+    [3, 1, 9], [5, 1], [7, 1], [4, 1, 9], [7, 1], [5, 1], [2, 1, 8], [5, 1], [6, 1], [1, 1, 7], [4, 1], [2, 1],
+    [0, 1, 6], [2, 1], [3, 1], [1, 1, 7], [3, 1], [5, 1], [2, 1, 8], [5, 1], [7, 1], [4, 1, 9], [7, 1], [8, 1],
+    [5, 1, 0], [7, 1], [9, 1], [4, 1, 1], [6, 1], [8, 1], [3, 1, 9], [5, 1], [4, 1], [2, 1, 8], [4, 1], [3, 1],
+    [1, 1, 7], [3, 1], [2, 1], [0, 1, 6], [2, 1], [4, 1], [2, 1, 9], [5, 1], [7, 1], [3, 1, 8], [5, 1], [6, 1],
+    [2, 1, 7], [4, 1], [5, 1], [1, 1, 6], [3, 1], [2, 1], [0, 1, 9], [2, 1], [4, 1], [2, 1, 7], [5, 1], [3, 1],
+    [0, 1, 7], [0, 3, 6]],
+  fx: [[3, 'whisper'], [12, 'knock'], [21, 'flash'], [30, 'drip'], [39, 'door'], [48, 'crack'], [57, 'flash'], [66, 'scream']] };
 // the finale: every song so far, in pairs and threes. Not as fast as the riff, but the longest, with the most chords, and it asks for 70%.
 ABY.RITES.seventh = { name: 'THE SEVENTH NIGHT', step: 0.29, win: 0.7, fall: 1.2, tint: '#ff4d5e', lanes: ['#ff6ec7', '#39e6ff', '#ffd34d'],
   mel: [
@@ -1656,6 +1668,34 @@ ABY.NODES = {
       { label: 'Tell her who you are', next: 'd6_who', add: { trust: 1 } },
       { label: 'Pretend to be her mother', next: 'd6_pretend', add: { dread: 1 } },
       { label: 'Ask her to open the door', next: 'd6_door', add: { resolve: 1 } },
+      { label: 'Play her the music-box waltz, the one with two hands', next: 'd6_box', req: { noflag: 'box_done' } },
+    ],
+  },
+  d6_box: {
+    ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen', song: 'box', scare: 'whisper',
+    text: 'Behind her voice, very small and very slow, a music box has started to wind. It is playing in threes: one low and one high together on the first beat, then two light steps, like a child going down the stairs holding both rails. "Can you do the one with two hands?" Sorrel says. "Mummy always does the one with two hands."',
+    songNext: { win: 'd6_box_win', fail: 'd6_box_fail', give: 'd6_box_give' },
+  },
+  d6_box_win: {
+    ch: 11, speaker: 'SORREL', mood: 'dawn', focus: 'queen',
+    text: 'The last chord closes like a lid, softly. There is a long, delighted quiet, and then the sound of a very small person turning in a circle on a wooden floor with her arms out. "You did the two hands," she says, to someone who is not there to be told. "You did it all the way to the end."',
+    choices: [
+      { label: 'Tell her it is her turn to choose the next one', next: 'd6_sorrel', add: { heart: 1, dread: -1 }, set: 'box_done' },
+    ],
+  },
+  d6_box_fail: {
+    ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen', scare: 'whisper',
+    text: 'The two notes come apart, one low and one high, and the music box catches on the gap and winds back to the start with a tiny, patient click. "That is all right," says Sorrel, in a voice she has borrowed from somebody grown. "It does that. You just go back to the top and you do it again."',
+    choices: [
+      { label: 'Start the waltz again', next: 'd6_box', retry: true },
+      { label: 'Tell her you will hum it instead', next: 'd6_box_give', add: { dread: 1 } },
+    ],
+  },
+  d6_box_give: {
+    ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen',
+    text: 'You hum it, off the beat and flat, and she hums it back to you, off the beat and flat in exactly the same places. "That one is better," she decides. "That one is ours." The music box runs down by itself, slowly, and she lets it.',
+    choices: [
+      { label: 'Go back to what she was saying', next: 'd6_sorrel', add: { dread: 1 }, set: 'box_done' },
     ],
   },
   d6_who: {
