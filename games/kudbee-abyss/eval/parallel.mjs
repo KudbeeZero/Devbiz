@@ -1,7 +1,7 @@
 // Kudbee Abyss - the whole rubric, run as several evaluator processes at once. From the repo root: `npm run abyss:eval:fast`.
 // Every block of evaluator.mjs runs exactly once; blocks are dealt to SHARDS processes (default 4, or one per core), longest first, by how long each took on the
 // last run (node_modules/.cache/abyss-eval-times.json; a new block counts as 30s). Each process has its own browser and server.
-// The graph walk is one block, so only one process ever walks the story (two walks at once can run out of memory).
+// The graph walk is one block, so only one process ever walks the story (two walks at once can run out of memory); each process gets an 8 GB heap ceiling, as `npm run abyss:graph` does.
 // ONLY=a,b narrows it to those blocks. Exit code 0 only when every check passed in every process.
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -23,7 +23,7 @@ for (const n of names.slice().sort((a, b) => cost(b) - cost(a))) { const s = sha
 const t0 = Date.now(), lines = [], times = {};
 const run = (s, i) => new Promise(done => {
   const tf = join(CACHE, 'abyss-eval-times.' + i + '.json'); rmSync(tf, { force: true });
-  const p = spawn(process.execPath, [join(HERE, 'evaluator.mjs')], { env: Object.assign({}, process.env, { ONLY: s.names.join(','), EVAL_TIMES: tf }), stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = spawn(process.execPath, ['--max-old-space-size=8192', join(HERE, 'evaluator.mjs')], { env: Object.assign({}, process.env, { ONLY: s.names.join(','), EVAL_TIMES: tf }), stdio: ['ignore', 'pipe', 'pipe'] });
   let buf = '';
   const out = (d) => { buf += d; let k; while ((k = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, k); buf = buf.slice(k + 1); if (/^(PASS|FAIL|SKIP) /.test(l)) { lines.push(l); console.log('[' + (i + 1) + '] ' + l); } else if (/Error|error/.test(l)) console.log('[' + (i + 1) + '] ' + l); } };
   p.stdout.on('data', out); p.stderr.on('data', out);

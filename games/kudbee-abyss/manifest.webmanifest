@@ -1,0 +1,24 @@
+{
+  "id": "/games/kudbee-abyss/",
+  "name": "Kudbee Abyss",
+  "short_name": "Abyss",
+  "description": "A seven-night horror story told through a haunted phone. Text the Queen, answer the calls you should not, pin clues together and find all twenty-seven endings. Plays offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "any",
+  "background_color": "#05031a",
+  "theme_color": "#05031a",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "assets/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/app/screen-lock.jpg", "sizes": "780x1688", "type": "image/jpeg", "form_factor": "narrow", "label": "It is 3:07. Your phone has a message from someone who should not have your number" },
+    { "src": "assets/app/screen-thread.jpg", "sizes": "780x1688", "type": "image/jpeg", "form_factor": "narrow", "label": "Seven nights, told in texts and calls: every reply you choose changes who survives" },
+    { "src": "assets/app/screen-store.jpg", "sizes": "780x1688", "type": "image/jpeg", "form_factor": "narrow", "label": "An App Store on a cursed phone: what you install follows you into the night" }
+  ]
+}

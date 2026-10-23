@@ -42,6 +42,7 @@
     ABY.Audio.muted = d.muted === true; G.haptics = d.haptics !== false; G.hapLv = d.hapLv === 0 || d.hapLv === 2 ? d.hapLv : 1; syncHap(); G.songBest = Number.isInteger(d.songBest) ? Math.max(0, Math.min(100, d.songBest)) : 0; G.orient = d.orient === 'landscape' ? 'landscape' : 'portrait';
     G.calm = typeof d.calm === 'boolean' ? d.calm : reduced; calmed();   // calm flashes: on by default for anyone who asked their device for less motion
     G.lastOpen = ABY.OPENINGS.indexOf(d.lastOpen) >= 0 ? d.lastOpen : ''; G.apps = {}; if (d.apps && typeof d.apps === 'object') ABY.STORE.forEach(function (a) { if (d.apps[a.id] === 1) G.apps[a.id] = 1; });
+    G.visits = Math.max(0, Math.min(1e6, d.visits | 0)); G.install = d.install === 1 ? 1 : 0;   // (the install card shows from the second visit; 1 = installed)
     G.stSeen = {}; if (d.stSeen && typeof d.stSeen === 'object') ABY.STORE.forEach(function (a) { if (d.stSeen[a.id] === 1) G.stSeen[a.id] = 1; }); else ABY.storeOpen(storeMeta()).forEach(function (id) { G.stSeen[id] = 1; });   // a save from before the store kept track: what is open now is not news
     G.saved = null;
     G.cp = d.cp && typeof d.cp === 'object' ? ABY.cleanState(d.cp) : null; G.wakes = Number.isInteger(d.wakes) ? Math.max(0, Math.min(ABY.WAKES, d.wakes)) : ABY.WAKES;   // the last dawn, and the wakes left
@@ -54,7 +55,7 @@
   }
   function save() {
     var run = null; if (G.run) { run = Object.assign({}, G.state); run.log = G.log; }
-    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, helped: G.helped, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ run: run, found: G.found, deduced: G.deduced, helped: G.helped, badges: G.badges, faction: G.faction, lean: G.lean, muted: ABY.Audio.muted, haptics: G.haptics, hapLv: G.hapLv, calm: G.calm, songBest: G.songBest, orient: G.orient, guided: G.guided, apps: G.apps, stSeen: G.stSeen, visits: G.visits, install: G.install, lastOpen: G.lastOpen, cp: G.cp, wakes: G.wakes, pend: G.pend })); } catch (e) { /* private window or full: the game still plays */ }
   }
   function active() { return G.run || !!G.saved; }
   function storeMeta() { var h = {}; for (var k in G.helped || {}) h[G.helped[k]] = 1; return { found: G.found, deduced: G.deduced || {}, helped: h }; }
@@ -428,7 +429,7 @@
     if (!G.delivering && G.node && !G.node.ending && !G.node.song) showReplies(G.node);   // a deduction can open a choice in the scene she is in
   }
   function renderStore() {
-    var box = $('stList'); box.innerHTML = ''; var m = storeMeta(), got = 0, fresh = storeNews();
+    var box = $('stList'); box.innerHTML = ''; var m = storeMeta(), got = 0, fresh = storeNews(); if (canInstall()) installRow(box);
     ABY.STORE.forEach(function (a) {
       var ok = ABY.storeHas(m, a.key), has = G.apps[a.id], isNew = fresh.indexOf(a.id) >= 0; if (has) got++;
       var row = document.createElement('div'); row.className = 'sti' + (ok ? '' : ' lk'); row.setAttribute('data-id', a.id);
@@ -443,6 +444,52 @@
     });
     var open = ABY.storeOpen(m); open.forEach(function (id) { G.stSeen[id] = 1; }); if (fresh.length) save(); P.badge('store', 0);   // seen now: the NEW tags stay until she leaves
     $('stSub').textContent = got + ' installed · ' + open.length + ' of ' + ABY.STORE.length + ' listings';
+  }
+  // ---- the app on her REAL phone: offline + install ----
+  // sw.js keeps a copy of the game so it opens with no signal. Android Chrome offers an install prompt (kept for the card); iPhone Safari has none,
+  // so the card opens a sheet with Safari's three taps. The card sits at the top of the phone's own App Store: phones only, from the second visit,
+  // never inside the installed app or once it is installed.
+  var bip = null, standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches));
+  var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches), ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  function appSetup() {
+    try { if (navigator.serviceWorker && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* no service worker: online only */ }
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); bip = e; if (P.screen === 'store') renderStore(); if (P.screen === 'settings') renderSettings(); });
+    window.addEventListener('appinstalled', function () { bip = null; G.install = 1; save(); if (P.screen === 'store') renderStore(); });
+    if (standalone && G.install !== 1) { G.install = 1; save(); }
+  }
+  function installNow() {                                             // the App Store card and the Settings row
+    ABY.Audio.sfx('ui');
+    if (bip) { var e = bip; bip = null; try { e.prompt(); e.userChoice.then(function (c) { if (c && c.outcome === 'accepted') { G.install = 1; save(); } renderStore(); renderSettings(); }, function () {}); } catch (err) { /* a prompt only works once */ } return; }
+    $('inst').hidden = false; $('instOk').focus({ preventScroll: true });
+  }
+  // What's New (Settings): the releases a player would have seen, newest first, from what actually shipped. Add one with each player-facing change.
+  var RELEASES = [
+    { v: '2.3', d: '22 Oct 2026', n: ['Add Abyss to your Home Screen: it opens full screen and plays with no signal', 'Settings: About (your data stays on this phone) and What\'s New', 'When an app\'s clue opens a deduction, Notes, the ending card and the app\'s own page give it the credit'] },
+    { v: '2.2', d: '22 Oct 2026', n: ['The App Store grows: twelve listings, opened by what you have done, with reviews that remember you', 'Installed apps reach into the night: each speaks once, on a later day', 'Four apps leave a clue that can open a deduction your journey missed'] },
+    { v: '2.1', d: '21 Oct 2026', n: ['Salt, a crayon and a cursed mirror: picked up early, spent days later', 'Codas, detours and second sight: the story remembers your other journeys', 'Bonds: how you treat the five who speak to you opens and closes choices', 'Day Seven: the accusation, and a new ending', 'Haptics: a heartbeat as dread rises, calls that shake the phone', 'A photosensitivity warning and a Calm flashes setting'] },
+    { v: '2.0', d: '20 Oct 2026', n: ['Seven nights, and ten different ways to begin', 'Falls and checkpoints: wake at the last dawn, or start over', 'Scars: every fall marks every later journey', 'The evidence board: pin clues together in Notes', 'The Clock, overnight messages, and calls you have to answer'] },
+    { v: '1.2', d: '19 Oct 2026', n: ['Day Two and Day Three', 'Rhythm rites on the Echo Flute', 'Reply from the lock screen'] },
+    { v: '1.0', d: '21 Sep 2026', n: ['Kudbee Abyss: a story told through a haunted phone'] },
+  ];
+  function renderNews() {
+    var box = $('newsList'); box.innerHTML = '';
+    RELEASES.forEach(function (r) {
+      var d = document.createElement('section'); d.className = 'nrel'; var h = document.createElement('h4'), s = document.createElement('small'), u = document.createElement('ul');
+      h.textContent = 'Version ' + r.v; s.textContent = r.d; h.appendChild(s); r.n.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; u.appendChild(li); });
+      d.appendChild(h); d.appendChild(u); box.appendChild(d);
+    });
+  }
+  function canInstall() { return coarse && !standalone && G.install !== 1 && G.visits >= 2 && (!!bip || ios); }
+  function installRow(box) {
+    var row = document.createElement('div'); row.className = 'sti real'; row.setAttribute('data-id', 'abyss');
+    var ic = document.createElement('img'); ic.className = 'ico'; ic.src = 'assets/app/apple-touch-icon.png'; ic.alt = '';
+    var tx = document.createElement('div'); tx.className = 'tx'; var b = document.createElement('b'), sm = document.createElement('small');
+    b.textContent = 'Kudbee Abyss'; var nw = document.createElement('span'); nw.className = 'new'; nw.textContent = 'YOUR PHONE'; b.appendChild(nw);
+    sm.textContent = 'Put this phone on your real one: it opens full screen from your home screen, and it works with no signal.';
+    tx.appendChild(b); tx.appendChild(sm);
+    var g = document.createElement('button'); g.type = 'button'; g.className = 'get'; g.id = 'stInstall'; g.textContent = 'GET';
+    g.addEventListener('click', installNow);
+    row.appendChild(ic); row.appendChild(tx); row.appendChild(g); box.appendChild(row);
   }
   function stars(n) { var r = Math.round(n); return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r); }
   function renderApp(id) {
@@ -466,6 +513,7 @@
   function renderSettings() {
     $('togSnd').classList.toggle('on', !ABY.Audio.muted); $('setSnd').setAttribute('aria-pressed', ABY.Audio.muted ? 'false' : 'true');
     $('hapLvS').textContent = HAPN[G.hapLv]; $('setHapLv').disabled = !G.haptics;
+    $('setInstall').hidden = !canInstall(); $('setVer').textContent = 'Version ' + RELEASES[0].v + ' · ' + RELEASES[0].d;
     $('togHap').classList.toggle('on', G.haptics); $('setHap').setAttribute('aria-pressed', G.haptics ? 'true' : 'false');
     ['setCalm', 'gCalm'].forEach(function (id) { $(id).setAttribute('aria-pressed', G.calm ? 'true' : 'false'); }); $('togCalm').classList.toggle('on', !!G.calm); $('togCalmG').classList.toggle('on', !!G.calm);
   }
@@ -478,6 +526,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
+    $('inst').hidden = true; $('news').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
@@ -514,6 +563,10 @@
     if (moved) { $('replies').classList.remove('on'); deliver(ns.node); } else if (!G.delivering && G.node && !G.node.ending) showReplies(G.node);
   });
   $('rotBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.setOrient(G.orient === 'landscape' ? 'portrait' : 'landscape'); G.orient = P.orient; save(); });
+  $('setInstall').addEventListener('click', installNow);
+  $('setNews').addEventListener('click', function () { renderNews(); $('news').hidden = false; ABY.Audio.sfx('ui'); $('newsOk').focus({ preventScroll: true }); });
+  $('newsOk').addEventListener('click', function () { $('news').hidden = true; ABY.Audio.sfx('click'); });
+  $('instOk').addEventListener('click', function () { $('inst').hidden = true; ABY.Audio.sfx('click'); });
   $('gOk').addEventListener('click', function () { G.guided = true; $('guide').hidden = true; save(); });
   $('fPlay').addEventListener('click', function () { startSong(true); });
   $('shareBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('ending', G.shown, 'gallery'); });
@@ -550,7 +603,7 @@
     setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.classList.add('gone'); }, 700); }, ms);
   }
   function boot() {
-    load(); storeNews(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; G.pend = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
+    load(); G.visits++; save(); appSetup(); storeNews(); if (/[?&]fresh=1(&|$)/.test(location.search)) { G.saved = null; G.pend = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* a shared link starts a clean journey: the old one stays on the phone until she plays */ } }
     ABY.Song.init($('songCv')); P.init({ onShow: onShow }); P.setOrient(G.orient);
     var pre = $('pre'), booted = false, stage = $('screen');
     function ready(gl) {
