@@ -137,6 +137,7 @@
   function showReplies(n) {
     var box = $('replies'); box.innerHTML = ''; box.classList.remove('on');
     var opts = ABY.options(G.state);
+    if (n.beat && G.run && window.__abySkipBeats && opts.length) { setTimeout(function () { choose(opts[0].i); }, 0); return; }   // tests only: walk through a beat (a pure pass-through) to the scene they mean
     if (!G.run) { chip('Begin a new journey', true, function () { startRun(); }); }
     else if (n.song) chip('\u266A Raise the flute', true, function () { startSong(false); });
     else if (n.call) { showCall(n, opts); }
