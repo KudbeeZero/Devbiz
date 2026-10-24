@@ -261,6 +261,25 @@ function walkChecks() {
       L.length + ' deductions, each pairing two real clues and opening a hidden choice that is reached (' + shaped.map(l => l.at).join(', ') + '); a wrong pair costs 2% and 1 dread, never past 1% or the edge; the scenes that return are offered once; a save keeps them; Detective counts five different deductions over any nights');
   }
 
+  { // the long pairs: a deduction whose two clues are first filed at least two days apart, opening a scene on or after the later one's day. The
+    // scene is offered once and every way out of it returns to the scene it was opened from, adding no clue: more of the night, not another way through
+    const LL = ABY.LINKS.filter(l => l.long), wake = id => (/^d(\d)_wake$/.exec(id) || [])[1] - 1;
+    const filed = k => ids.filter(id => N[id].note === k || (N[id].choices || []).some(c => c.note === k)).map(id => DAY(N[id].ch)).concat(ABY.OVERNIGHT.filter(o => o.note === k).map(o => wake(o.at)));
+    const first = k => Math.min(...filed(k)), gaps = [];
+    const shaped = LL.filter(l => {
+      const ways = (N[l.at].choices || []).filter(c => c.req && c.req.flag === 'link_' + l.id), c = ways[0], ev = c && N[c.next];
+      if (ways.length !== 1 || !ev || !c.req.noflag || ev.note || ev.ending || ev.song || !ev.choices.every(d => d.next === l.at && d.set === c.req.noflag && !d.note && !d.req)) return false;
+      const gap = first(l.b) - first(l.a); gaps.push(l.id + ' ' + (first(l.a) + 1) + '>' + (first(l.b) + 1));
+      if (gap < 2 || DAY(N[l.at].ch) < first(l.b) || DAY(ev.ch) !== DAY(N[l.at].ch)) return false;
+      const st = Object.assign(ABY.newState(0), { node: l.at, mem: 9, notes: [l.a, l.b, N[l.at].note].filter(Boolean) }), u = ABY.link(st, l.a, l.b);
+      const k = N[l.at].choices.indexOf(c), has = t => ABY.options(t).some(o => o.i === k), i = u && ABY.options(u).filter(o => o.i === k)[0], v = i && ABY.choose(u, i.i), w = v && ABY.choose(v, 0);
+      return u && u.linked === l.id && !has(st) && v && v.node === c.next && w && w.node === l.at && !has(w) && w.notes.length === u.notes.length;
+    });
+    const days = new Set(LL.map(l => DAY(N[l.at].ch))), unreached = LL.filter(l => !(N[l.at].choices || []).some(c => c.req && c.req.flag === 'link_' + l.id && reach.has(c.next)));
+    rec('long-pairs', LL.length >= 6 && shaped.length === LL.length && days.size >= 5 && !unreached.length,
+      LL.length + ' deductions join a clue to one first found two or more days later (' + gaps.join(', ') + '), opening scenes on ' + days.size + ' days; each is offered once, after both clues, and returns to the scene it was opened from with no new clue' + (shaped.length < LL.length ? ' | BAD ' + LL.filter(l => !shaped.includes(l)).map(l => l.id).join(', ') : '') + (unreached.length ? ' | UNREACHED ' + unreached.map(l => l.id).join(', ') : ''));
+  }
+
   { // calls that have to be picked up: every day rings at least once; a call is Answer / Decline (no hidden choices: the call screen shows both);
     // decline an insistent one and it rings again, louder each time, and the third ring has already answered itself (one choice, nothing to refuse)
     const calls = ids.filter(id => N[id].call), lv = id => N[id].call.ring || 1, dec = id => (N[id].choices.length === 2 && N[N[id].choices[1].next].call) ? N[id].choices[1].next : null;
@@ -713,7 +732,7 @@ function walkChecks() {
 // The walk is the slow part and depends only on the story and on this file, so its result is kept: an unchanged story re-checks instantly
 // (GRAPH_FRESH=1 forces a real walk). GRAPH_QUICK=1 walks a small slice and skips the checks that need the whole walk, for a fast look while editing.
 const here = dirname(fileURLToPath(import.meta.url));
-const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
+const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'long-pairs', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
 export function graphChecks() {
   if (process.env.GRAPH_QUICK) { process.env.WALK_LIMIT = process.env.WALK_LIMIT || '60000'; return walkChecks().map(r => NEEDS_FULL_WALK.has(r.id) && !r.pass ? { ...r, pass: true, note: 'SKIPPED in quick mode (needs the full walk) | ' + r.note } : r); }
   const sum = createHash('sha256').update(readFileSync(resolve(here, '..', 'src', 'story.js'))).update(readFileSync(fileURLToPath(import.meta.url))).update(String(process.env.WALK_LIMIT || '')).digest('hex');
