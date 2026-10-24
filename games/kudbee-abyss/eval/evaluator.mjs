@@ -1316,6 +1316,23 @@ await block('robustness', async () => {
     rec('reduced-motion', o.red && o.bubbles >= 1, 'messages arrive without the typing delay, scene sway off'); await c.ctx.close(); }
 });
 
+// ================= more calls through the week =================
+await block('ring-detours-ui', async () => {
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'ringdetour'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd5_hang', {}); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const entry = pg.locator('#replies .chip', { hasText: 'The phone is ringing: Corvin Ash' }); const offered = await entry.count();
+  await entry.first().click(); await pg.waitForSelector('#call.on[data-ring="1"]', { timeout: 15000 });
+  const r1 = await pg.evaluate(() => ({ who: document.getElementById('callWho').textContent, n: document.querySelectorAll('#callAct .cbtn').length }));
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="2"]', { timeout: 15000 });
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="3"]', { timeout: 15000 });
+  const r3 = await pg.evaluate(() => document.querySelectorAll('#callAct .cbtn').length);
+  await pg.locator('#callAct .cbtn').first().click(); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await pg.locator('#replies .chip', { hasText: 'Put the phone down' }).first().click(); await pg.waitForFunction(() => ABY.game.state.node === 'd5_hang' && ABY.game.state.flags.rg_done_corvin5 === 1, null, { timeout: 15000 });
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const after = await pg.locator('#replies .chip', { hasText: 'The phone is ringing' }).count();
+  rec('ring-detour-plays', offered === 1 && r1.who === 'Corvin Ash' && r1.n === 2 && r3 === 1 && after === 0, 'the call is offered once on the scene (' + offered + '), rings as ' + r1.who + ', rings louder when declined, answers itself on the third, and puts her back on the same scene with no second offer (' + after + ')');
+  await ctx.close();
+});
+
 rec('no-console-errors', errs.length === 0, errs.slice(0, 2).join(' | ').slice(0, 220) || 'no page errors or console errors in any run');
 await browser.close(); srv.close();
 if (process.env.EVAL_TIMES) writeFileSync(process.env.EVAL_TIMES, JSON.stringify(TIMES));
