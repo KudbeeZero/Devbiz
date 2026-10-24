@@ -280,6 +280,20 @@ function walkChecks() {
       LL.length + ' deductions join a clue to one first found two or more days later (' + gaps.join(', ') + '), opening scenes on ' + days.size + ' days; each is offered once, after both clues, and returns to the scene it was opened from with no new clue' + (shaped.length < LL.length ? ' | BAD ' + LL.filter(l => !shaped.includes(l)).map(l => l.id).join(', ') : '') + (unreached.length ? ' | UNREACHED ' + unreached.map(l => l.id).join(', ') : ''));
   }
 
+  { // last time: a new journey remembers how the one before it ended. One message per ending, from a real speaker, waiting on whichever opening she
+    // wakes in (also after the "who were you" scene hands her over); a first journey hears none, a carried day hears none, no choice reads `last`
+    // (so no path, battery or ending can differ), and a save keeps it
+    const LT = ABY.LAST_TIME, ids2 = LT.map(l => l.req.last), lt = st => ABY.overnightFor(st).filter(o => /^l_/.test(o.id)).map(o => o.id).join();
+    const shaped = LT.filter(l => l.at === '@open' && ABY.SPEAKERS[l.who] && l.who !== 'NARRATOR' && l.text && !l.note && l.id === 'l_' + l.req.last && Object.keys(l.req).length === 1);
+    const heard = ABY.OPENINGS.every(op => ABY.ENDING_IDS.every(e => lt(ABY.newState(1, op, {}, {}, e)) === 'l_' + e) && lt(ABY.newState(1, op, {}, {})) === '');
+    const hero = ABY.HERO_IDS.every(h => { const t = ABY.heroStart(ABY.newState(2, 'op_bus', {}, {}, 'cradle'), h), u = t && ABY.choose(t, 0); return lt(t) === '' && u && u.node === 'op_bus' && lt(u) === 'l_cradle'; });
+    const elsewhere = ids.filter(id => !ABY.OPENINGS.includes(id)).every(id => lt(Object.assign(ABY.newState(1, 'op_lift', {}, {}, 'dawn'), { node: id })) === '');
+    const read = ids.filter(id => (N[id].choices || []).some(c => c.req && 'last' in c.req)), carried = ABY.carry(Object.assign(ABY.newState(1, ABY.START, {}, {}, 'dawn'), { node: 'gate_opens' }));
+    const kept = ABY.cleanState({ node: 'op_bus', last: 'seventh' }).last === 'seventh' && ABY.cleanState({ node: 'op_bus', last: 'nope' }).last === '' && ABY.newState(1, 'op_bus', {}, {}, '<b>').last === '';
+    rec('last-time', LT.length === ABY.ENDING_IDS.length && new Set(ids2).size === ids2.length && ABY.ENDING_IDS.every(e => ids2.includes(e)) && shaped.length === LT.length && heard && hero && elsewhere && !read.length && carried && carried.last === 'dawn' && lt(carried) === '' && kept,
+      LT.length + ' lines, one for each ending, from ' + new Set(LT.map(l => l.who)).size + ' voices; heard on all ' + ABY.OPENINGS.length + ' openings (after the "who were you" scene too) and nowhere else; a first journey hears none; no choice reads it; a save keeps it' + (shaped.length < LT.length ? ' | BAD ' + LT.filter(l => !shaped.includes(l)).map(l => l.id).join(', ') : '') + (read.length ? ' | READ BY ' + read.join(', ') : ''));
+  }
+
   { // calls that have to be picked up: every day rings at least once; a call is Answer / Decline (no hidden choices: the call screen shows both);
     // decline an insistent one and it rings again, louder each time, and the third ring has already answered itself (one choice, nothing to refuse)
     const calls = ids.filter(id => N[id].call), lv = id => N[id].call.ring || 1, dec = id => (N[id].choices.length === 2 && N[N[id].choices[1].next].call) ? N[id].choices[1].next : null;
