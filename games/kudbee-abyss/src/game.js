@@ -100,7 +100,20 @@
   }
 
   // ---- the chat ----
-  function scrollEnd(soft) { var t = $('thread'); t.style.scrollBehavior = soft && !reduced ? 'smooth' : 'auto'; t.scrollTop = t.scrollHeight; }
+  function scrollEnd(soft) {                                              // soft = a new message arrives: follow it only if she is reading the end, otherwise leave her place and offer the jump
+    var t = $('thread'), away = t.scrollHeight - t.scrollTop - t.clientHeight;
+    if (soft && away > 160 && t.scrollHeight > t.clientHeight + 40) { threadState(true); return; }
+    t.style.scrollBehavior = soft && !reduced ? 'smooth' : 'auto'; t.scrollTop = t.scrollHeight;
+  }
+  function threadState(fresh) {                                           // the fade at the top, the jump-to-latest button, the slim bar while moving
+    var t = $('thread'), b = $('toLatest'), away = t.scrollHeight - t.scrollTop - t.clientHeight;
+    t.classList.toggle('up', t.scrollTop > 8);
+    b.classList.toggle('on', away > 120); if (fresh && away > 120) b.classList.add('fresh'); if (away <= 120) b.classList.remove('fresh');
+  }
+  function movingBar(el) { el.classList.add('scrolling'); clearTimeout(el._sT); el._sT = setTimeout(function () { el.classList.remove('scrolling'); }, 900); }
+  $('thread').addEventListener('scroll', function () { threadState(false); movingBar($('thread')); }, { passive: true });
+  $('replies').addEventListener('scroll', function () { movingBar($('replies')); }, { passive: true });
+  $('toLatest').addEventListener('click', function () { try { ABY.Audio.sfx('ui'); } catch (e) {} var t = $('thread'); t.style.scrollBehavior = reduced ? 'auto' : 'smooth'; t.scrollTop = t.scrollHeight; $('toLatest').classList.remove('fresh'); });
   function bubble(kind, who, text, quiet) {
     var th = $('thread'), el = document.createElement('div'); el.className = 'm ' + kind; if (quiet) el.style.animation = 'none';
     if (kind === 'in' && who) { var w = document.createElement('span'); w.className = 'who'; w.textContent = WHO[who] || who; w.style.color = ABY.SPEAKERS[who] ? ABY.SPEAKERS[who].color : '#fff'; el.appendChild(w); }
