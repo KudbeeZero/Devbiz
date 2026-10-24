@@ -470,13 +470,13 @@ function walkChecks() {
   { // WHO YOU WERE: three people the player can be (ABY.HEROES). A choice of who, never of what: the "before" scene plays first and goes back to the opening
     // she was waking in, each flashback is offered once from one scene on Day Two, Four and Six (never one that speaks a once-only line) and returns there, every choice is free, sets
     // only its own tt_hero flag and adds nothing, and the overnight lines only talk. So a journey as anyone is the same journey, stat for stat
-    const HS = ABY.HERO_IDS, DAYS = [[2, 'd2_you', 6], [4, 'd4_type', 9], [6, 'd6_story', 11]], quiet = c => c.free && !c.add && c.light === undefined && !c.retry;
+    const HS = ABY.HERO_IDS, DAYS = [[2, 'd2_you', 6], [4, 'd4_type', 9], [6, 'd6_story', 11]], WAKES = ['d2_wake', 'd3_wake', 'd4_wake', 'd5_wake', 'd6_wake', 'd7_wake'], quiet = c => c.free && !c.add && c.light === undefined && !c.retry;
     const shaped = HS.filter(h => { const i = N['hero_' + h];
       return ABY.HEROES.some(x => x.id === h && x.name && x.tag && x.blurb) && i && i.safe && i.thread === 'hero' && !i.time && i.ch === 1 && i.note === 'h_' + h && ABY.NOTES['h_' + h] && i.text.length > 300 && i.choices.length >= 2 && i.choices.every(c => c.next === '@back' && quiet(c) && !c.set && !c.req)
         && DAYS.every(([d, at, ch]) => { const f = N['hb' + d + '_' + h], into = N[at].choices.filter(c => c.next === 'hb' + d + '_' + h);
           return f && f.safe && f.thread === 'hero' && f.time === 'past' && f.ch === ch && !f.note && f.text.length > 300 && f.choices.length >= 2 && f.choices.every(c => c.next === '@back' && quiet(c) && c.set === 'tt_hero' + d && !c.req)
             && into.length === 1 && quiet(into[0]) && !into[0].set && into[0].req.hero === h && into[0].req.noflag === 'tt_hero' + d && !N[at].dark; })
-        && ['d3_wake', 'd5_wake', 'd7_wake'].every(at => ABY.HERO_LINES.filter(m => m.at === at && m.req.hero === h && ABY.SPEAKERS[m.who] && m.text.length > 100 && !m.note).length === 1); });
+        && WAKES.every(at => ABY.HERO_LINES.filter(m => m.at === at && m.req.hero === h && ABY.SPEAKERS[m.who] && m.text.length > 100 && (at === 'd4_wake' ? m.note === 'hc_' + h : !m.note)).length === 1); });
     const texts = new Set(HS.flatMap(h => ['hero_' + h, 'hb2_' + h, 'hb4_' + h, 'hb6_' + h].map(id => N[id] && N[id].text)).concat(ABY.HERO_LINES.map(m => m.text)));
     const STAT = ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem', 'open'], same = (a, b) => STAT.every(f => a[f] === b[f]);
     const start = HS.every(h => ABY.OPENINGS.every(op => { const base = ABY.newState(3, op), a = ABY.heroStart(base, h), b = a && ABY.choose(a, 0), d = ABY._land(Object.assign({}, base, { flags: {}, notes: base.notes.slice(), choices: 1 }));
@@ -485,11 +485,34 @@ function walkChecks() {
     const trip = HS.every(h => DAYS.every(([d, at]) => [0, 1].every(light => { const s = Object.assign(ABY.newState(2), { node: at, hero: h, bat: 30, light, heart: 2, trust: 1, dread: 2 }), i = N[at].choices.findIndex(c => c.next === 'hb' + d + '_' + h), a = ABY.choose(s, i), b = a && ABY.choose(a, 1), base = ABY._land(Object.assign({}, s, { flags: {}, notes: [] }));
       return a && a.node === 'hb' + d + '_' + h && b && b.node === at && b.hero === h && same(b, base) && Object.keys(b.flags).join() === 'tt_hero' + d && !ABY.options(b).some(o => /^hb/.test(o.c.next)) && HS.filter(x => x !== h).every(x => !ABY.options(s).some(o => o.c.next === 'hb' + d + '_' + x)); })))
       && DAYS.every(([, at]) => !ABY.options(Object.assign(ABY.newState(0), { node: at })).some(o => /^hb/.test(o.c.next)));
-    const lines = HS.every(h => ['d3_wake', 'd5_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at, hero: h })).filter(m => /^h_/.test(m.id)).length === 1))
-      && ['d3_wake', 'd5_wake', 'd7_wake'].every(at => !ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).some(m => /^h_/.test(m.id)));
+    const lines = HS.every(h => WAKES.every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at, hero: h })).filter(m => /^h_/.test(m.id)).length === 1))
+      && WAKES.every(at => !ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).some(m => /^h_/.test(m.id)));
+    // one reply a day in their own words: `as` changes what she says, never the choice (ABY.labelOf is display only), and only for that person
+    const AS = ids.flatMap(id => (N[id].choices || []).filter(c => c.as).map(c => ({ id, c })));
+    const said = AS.every(({ id, c }) => !N[id].call && !N[id].beat && !N[id].song && Object.keys(c.as).sort().join() === HS.slice().sort().join() && new Set(HS.map(h => c.as[h])).size === HS.length
+      && HS.every(h => c.as[h].length > c.label.length && c.as[h] !== c.label && ABY.labelOf(c, { hero: h }) === c.as[h]) && ABY.labelOf(c, { hero: '' }) === c.label && ABY.labelOf(c, null) === c.label);
+    const replyDays = new Set(AS.map(x => DAY(N[x.id].ch)));
+    // a clue only that person is given (Day Four, with the overnight line), the third pair of a deduction that already exists: it stands in for the clue
+    // her journey may have missed, on a later scene, so it opens a hidden choice the evidence board already proves; nobody else can ever hold it
+    const filed = (k) => ids.filter(id => N[id].note === k || (N[id].choices || []).some(c => c.note === k)), dayOf = k => Math.min(...filed(k).map(id => DAY(N[id].ch)));
+    const clued = HS.filter(h => { const L = ABY.LINKS.filter(l => l.hero && l.hero[0] === h), l = L[0]; if (L.length !== 1) return false; const [, k, keep] = l.hero, lost = [l.a, l.b].filter(x => x !== keep)[0];
+      const st = Object.assign(ABY.newState(0), { node: l.at, hero: h, notes: [k, keep] }), u = ABY.link(st, k, keep);
+      return k === 'hc_' + h && ABY.NOTES[k] && [l.a, l.b].includes(keep) && lost && filed(k).length === 0 && ABY.OVERNIGHT.concat(ABY.APP_WHISPERS || []).every(o => o.note !== k) && ABY.HERO_LINES.filter(m => m.note === k).length === 1
+        && ABY.linkOf(k, keep) === l && ABY.linkOf(keep, k) === l && ABY.linkOf(k, lost) === null && ABY.helpedBy(k, keep) === '' && dayOf(keep) >= 3 && DAY(N[l.at].ch) >= dayOf(keep)
+        && u && u.linked === l.id && u.bat === st.bat && u.dread === st.dread && (N[l.at].choices || []).some(c => c.req && c.req.flag === 'link_' + l.id) && ABY.options(u).some(c => c.c.req && c.c.req.flag === 'link_' + l.id); });
+    const intoD4 = Object.keys(ABY.ENDINGS).filter(e => ABY.ENDINGS[e].cont === 'd4_wake')[0], carried = h => { const end = ids.filter(id => N[id].ending === intoD4)[0]; return end ? ABY.carry(Object.assign(ABY.newState(0), { node: end, hero: h })) : null; };
+    const arrives = !!intoD4 && HS.every(h => { const c = carried(h); return c && c.node === 'd4_wake' && c.notes.includes('hc_' + h) && HS.filter(x => x !== h).every(x => !c.notes.includes('hc_' + x)); }) && !carried('').notes.some(n => /^hc_/.test(n));
+    // a last message on every ending, one for each kind (a fall, an ending that carries on, a final one), always after the others and only for that person
+    const kind = e => ABY.ENDINGS[e].fall ? 'fall' : ABY.ENDINGS[e].cont ? 'cont' : 'end', all = Object.assign(ABY.newState(0), { flags: Object.fromEntries(ABY.CODAS.map(c => [c.req.flag, 1])) });
+    const closes = ABY.HERO_CODAS.length === HS.length * 3 && new Set(ABY.HERO_CODAS.map(c => c.text)).size === ABY.HERO_CODAS.length && ABY.HERO_CODAS.every(c => ABY.SPEAKERS[c.who] && c.text.length > 100)
+      && ABY.ENDING_IDS.every(e => HS.every(h => { const s = Object.assign({}, all, { hero: h }), got = ABY.codasFor(e, s), mine = got[got.length - 1], rest = ABY.codasFor(e, all);
+        return mine && mine.hero === h && mine.kind === kind(e) && got.length === rest.length + 1 && rest.every((c, i) => got[i] === c) && !rest.some(c => c.hero); }));
     const kept = ABY.cleanState({ hero: 'ellis', node: 'd2_wake' }).hero === 'ellis' && ABY.cleanState({ hero: 'nobody' }).hero === '' && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper', hero: 'rowan' })).hero === 'rowan'
       && ABY.wake(Object.assign(ABY.newState(0), { hero: 'jude' }), 2, 0).hero === 'jude' && ABY.choose(Object.assign(ABY.newState(0), { hero: 'jude' }), 0).hero === 'jude';
-    rec('heroes', HS.length === 3 && shaped.length === 3 && texts.size === 21 && start && trip && lines && kept, HS.length + ' people to be (' + ABY.HEROES.map(h => h.name + ', ' + h.tag.toLowerCase()).join('; ') + '), ' + shaped.length + ' shaped: a "before" scene that returns to every one of the ten openings, a flashback each on Day Two, Four and Six, and three overnight lines by name (' + texts.size + ' distinct texts); every choice free, nothing moves a stat, the person is kept through a save, a carry and a wake');
+    rec('heroes', HS.length === 3 && shaped.length === 3 && texts.size === 30 && start && trip && lines && kept && AS.length >= 7 && said && replyDays.size === 7 && clued.length === 3 && ABY.LINKS.filter(l => l.hero).length === HS.length && arrives && closes,
+      HS.length + ' people to be (' + ABY.HEROES.map(h => h.name + ', ' + h.tag.toLowerCase()).join('; ') + '), ' + shaped.length + ' shaped: a "before" scene that returns to every one of the ten openings, a flashback each on Day Two, Four and Six, an overnight line by name on all six wakes (' + texts.size + ' distinct texts); '
+      + AS.length + ' replies said in their own words across ' + replyDays.size + ' days; ' + clued.length + ' clues only one of them holds, each a third pair for a deduction (' + ABY.LINKS.filter(l => l.hero).map(l => l.hero[0] + ': ' + l.id).join(', ') + '), filed on the Day Four wake' + (arrives ? '' : ' (NOT ON CARRY)') + '; '
+      + ABY.HERO_CODAS.length + ' last messages, one for every ending as each of them' + (closes ? '' : ' (CODAS WRONG)') + '; every choice free, nothing moves a stat, the person is kept through a save, a carry and a wake');
   }
   { // confidences: five warm-bond memories (two scenes each) that only listen: nothing they touch can reach a gate, a rite or an ending
     const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_dawn', 'WREN', 'wren', { riff_done: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];

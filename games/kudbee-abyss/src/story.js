@@ -128,6 +128,9 @@ ABY.NOTES = {
   h_rowan: { title: 'Before: Rowan', text: 'You were Rowan. A landing, a moon nightlight, a little sister who walked in her sleep. You always turned her round. You always counted her back.' },
   h_ellis: { title: 'Before: Ellis', text: 'You were Ellis. A front room above a launderette, Thursdays at four, a borrowed flute held together with tape. You taught Wren eleven notes. You never asked who had taught you.' },
   h_jude: { title: 'Before: Jude', text: 'You were Jude. Twelve years of nights on a children\'s ward. Every nurse knows the minute the monitors blink. Wren held your hand at 3:07 and told you not to answer it.' },
+  hc_rowan: { title: 'What Wren did at the bottom of the stairs', text: 'Every time she walked in her sleep, Wren knelt at the bottom stair and turned something tiny in the air, low down, like a key in a lock only a child could reach. You always turned her round before it opened.' },
+  hc_ellis: { title: 'The twelfth note', text: 'In pencil, under the last bar of Wren\'s first song, in a hand that is not yours: "the twelfth note is for the one nobody sings to." You have never played it. You never knew who it was for.' },
+  hc_jude: { title: 'The night log, 3:07', text: 'Your own handwriting, twelve years of it: "3:07. Monitors blinked. Bed nine on the phone again, would not hang up." Every night a different bed. Always the ones who would not hang up.' },
   recording: { title: 'Recording: the stones', text: 'Under the choir, very faint, a voice you know: hers. "DON\'T OPEN THE GATE. I LOCKED HIM IN SO YOU\'D NEVER—" The file ends there.' },
   ledger: { title: 'The captain\'s ledger', text: '"She asked me to wear the crown of shadows. \'Only for a night,\' she said. \'Only to hold the door.\' I said yes. I always said yes."' },
   vey_photo: { title: 'Photo: Vey', text: 'The Queen, the pillar, and behind her, close enough to touch her hair: Vey, standing on two legs, with far too many hands.' },
@@ -190,18 +193,19 @@ ABY.LINKS = [
   { id: 'two_warnings', a: 'recording', b: 'future_call', at: 'd2_door', alt: ['recording', 'a_hush'], title: 'Two warnings, one voice', text: 'The recording under the stones and the call from your own number say the same thing in the same voice: hers, and yours. Don’t open the gate. It isn’t him. Whoever is behind that door, it was never the Guardian.' },
   { id: 'yes_man', a: 'ledger', b: 'captain_name', at: 'd3_corvin', title: 'The man who always said yes', text: 'The ledger and the signature are the same neat hand. Corvin Ash wore the crown because she asked, and held the door because she asked. In all those pages, nobody ever asked him anything else.' },
   { id: 'many_hands', a: 'vey_photo', b: 'photo_you', at: 'd3_vey3', title: 'The hand on your shoulder', text: 'The hand behind the Queen in the photo and the hand on your shoulder at 3:07 have the same fingers, far too many of them. Vey has been with you since the first night. It has never once let anything fall.' },
-  { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
+  { id: 'who_is_next', a: 'next_line', b: 'wren_call', at: 'd5_dawn', hero: ['jude', 'hc_jude', 'wren_call'], title: 'How the book chooses', text: 'The blank line asks who is next. The call log says Wren stayed on for 41 minutes. The book does not take the frightened ones. It takes the ones who will not hang up.' },
   { id: 'birthday', a: 'door_crack', b: 'bargain', at: 'd6_room', alt: ['a_party', 'bargain'], title: 'Still her birthday', text: 'The door in the haze smelled of birthday candles. The Queen’s bargain keeps someone safe on the other side, for as long as the phone is held. Whoever is in there is still at their party. It has never once ended.' },
   { id: 'first_name', a: 'holders', b: 'first_page', at: 'd7_end', title: 'The first name in the book', text: '214 numbers, and above them all the first page: not a name, a crayon door and a crayon crown. The book did not begin with someone holding the phone. It began with a child drawing the way home.' },
   { id: 'what_she_gave', a: 'locking', b: 'bargain', at: 'd6_story', alt: ['a_cast', 'bargain'], title: 'Who she locked away', text: 'A girl in a paper crown, asleep on Vey\u2019s shoulder, on the night of the lock. A bargain that keeps someone safe on the other side, for as long as the phone is held. It was never a monster. The Queen locked her own child away to keep her, and called it a door.' },
-  { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', alt: ['a_smile', 'nursery_wall'], title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
-  { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
+  { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', alt: ['a_smile', 'nursery_wall'], hero: ['rowan', 'hc_rowan', 'nursery_wall'], title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
+  { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', hero: ['ellis', 'hc_ellis', 'nursery_wall'], title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
 ];
 ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
 // `alt` is a second pair for the same deduction, whose one new clue an installed app left her (APP_WHISPERS): the app stands in for a clue her
 // journey may have missed. It opens the same hidden choice as the first pair, so an app adds a way to a deduction, never a new scene or ending.
+// `hero` is [who, clue, partner]: a third pair whose clue only that person is given (on the Day Four wake, ABY.HERO_LINES), standing in the same way.
 const pairIs = (p, a, b) => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a);
-ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => pairIs([l.a, l.b], a, b) || (l.alt && pairIs(l.alt, a, b)))[0] || null; };
+ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => pairIs([l.a, l.b], a, b) || (l.alt && pairIs(l.alt, a, b)) || (l.hero && pairIs(l.hero.slice(1), a, b)))[0] || null; };
 
 // overnight: what the people she has been kind or cruel to say to her while she sleeps. A day's wake scene (`at`) shows these messages before its own,
 // for whoever holds the flag (`req`, like a choice's). They are pure data, so the graph test can prove each one is reachable and its flag is set
@@ -347,7 +351,9 @@ ABY.epilogueFor = snap => ABY.BOND_IDS.map(w => { const band = ABY.epiBand(snap 
 // same night reads differently the second time. A scene she can come back to (a flashlight, a slip, a detour) never carries one, so it is said once.
 // ---- who you were (the player picks one when a journey begins): three people who knew Wren before. A choice of who, not of what: nothing here can move
 // an ending. Each has a "before" scene that plays first (`hero_<id>`, then `@back` to the opening), a flashback on Day Two, Four and Six (`hb<d>_<id>`, offered
-// once from the Queen's scene with `req: { hero, noflag }`, free, every choice `@back`), and three overnight lines that call her by name (ABY.HERO_LINES) ----
+// once from one scene with `req: { hero, noflag }`, free, every choice `@back`), an overnight line by name on every wake from Day Two to Day Seven (ABY.HERO_LINES;
+// Day Four's files a clue only that person holds, the third pair of a deduction that already exists: `hero` in ABY.LINKS), one reply a day said in their
+// own words (a choice's `as`: the words change, never the choice, see ABY.labelOf) and a last message on every ending (ABY.HERO_CODAS) ----
 ABY.HEROES = [
   { id: 'rowan', name: 'Rowan', tag: 'The older sibling', blurb: 'Shared a landing with Wren for nine years and walked her back to bed every time she sleepwalked. Still counts to forty in the dark.' },
   { id: 'ellis', name: 'Ellis', tag: 'The music teacher', blurb: 'Taught Wren her first eleven notes on a borrowed flute, in a front room above a launderette. Has never once played the last note of a song.' },
@@ -355,17 +361,28 @@ ABY.HEROES = [
 ];
 ABY.HERO_IDS = ABY.HEROES.map(h => h.id);
 ABY.HERO_LINES = [
+  { id: 'h_rowan_d2', at: 'd2_wake', req: { hero: 'rowan' }, who: 'GUARDIAN', text: '...Rowan... I heard you counting at the gate... forty, and then one, and then forty again... the old captains counted like that, to stay awake on the door... I thought you should know... it works...' },
+  { id: 'h_rowan_d4', at: 'd4_wake', req: { hero: 'rowan' }, who: 'CHOIR', note: 'hc_rowan', text: 'we watched a child walk in her sleep once. down a landing, down twelve stairs. at the bottom she always knelt and turned something very small in the air, low down, like a key in a lock only she could reach. you always turned her round before it opened. we wrote it down for you.' },
+  { id: 'h_rowan_d6', at: 'd6_wake', req: { hero: 'rowan' }, who: 'EYE', text: 'rowan. you turn people round. you turned her round a hundred times. nobody ever turned me round. i went all the way to the bottom and nobody came to fetch me. would you have. do not answer. i know you would.' },
   { id: 'h_rowan_d3', at: 'd3_wake', req: { hero: 'rowan' }, who: 'VEY', text: 'Rowan. That is your name. I found it written inside your wrist while you slept, very small, in a child\'s handwriting: ROWAN COUNTS. You do, you know. You count in your sleep. You got to forty last night and started again.' },
   { id: 'h_rowan_d5', at: 'd5_wake', req: { hero: 'rowan' }, who: 'WREN', text: 'Rowan? I dreamed you walked me back again. Twelve steps. You counted them, and I counted with you, and there was a thirteenth voice. I am not asleep now. I am sitting on the landing with the light on. Please ring.' },
   { id: 'h_rowan_d7', at: 'd7_wake', req: { hero: 'rowan' }, who: 'QUEEN', text: 'Rowan. You turned your sister round on the stairs a hundred times so that she would never reach the bottom. I know what is at the bottom. Thank you. Tonight, if I ask you to turn me round, do it.' },
+  { id: 'h_ellis_d2', at: 'd2_wake', req: { hero: 'ellis' }, who: 'GUARDIAN', text: '...Ellis... you hummed at the gate when you thought nobody could hear... a teacher\'s hum, the note you give before a child plays... the gate heard it... it has been humming it back all night...' },
+  { id: 'h_ellis_d4', at: 'd4_wake', req: { hero: 'ellis' }, who: 'CHOIR', note: 'hc_ellis', text: 'you never play the last note. we know why now. on the old music there is a twelfth note, in pencil, very faint: for the one nobody sings to. somebody wrote it for a child who was never sung to. we wrote it down for you.' },
+  { id: 'h_ellis_d6', at: 'd6_wake', req: { hero: 'ellis' }, who: 'EYE', text: 'ellis. you teach them eleven and you never teach the twelfth. i listened at your window on thursdays. nine years. you never knew there was a child at the window. there was. i know all eleven.' },
   { id: 'h_ellis_d3', at: 'd3_wake', req: { hero: 'ellis' }, who: 'VEY', text: 'Ellis. That is your name. I heard the stones say it while you slept. They say it the way you say a teacher\'s name, carefully, in case it is the wrong one. They want to know if you will teach them the twelfth note. I told them you do not know it.' },
   { id: 'h_ellis_d5', at: 'd5_wake', req: { hero: 'ellis' }, who: 'WREN', text: 'Ellis, I found my flute. The taped one. I have not played it in nine years and last night it was on my pillow, warm. I did not play it. I promise I did not play it. Somebody in the garden is waiting for me to.' },
   { id: 'h_ellis_d7', at: 'd7_wake', req: { hero: 'ellis' }, who: 'QUEEN', text: 'Ellis. That flute was my daughter\'s first. I left it for whoever could play the eleven and stop. You stopped. Every time, you stopped. I have waited a very long time to hear someone stop.' },
+  { id: 'h_jude_d2', at: 'd2_wake', req: { hero: 'jude' }, who: 'GUARDIAN', text: '...Jude... you checked the hinges of my gate before you went through, the way you would check a drip... nobody has ever checked on the gate... it does not know what to do with the feeling...' },
+  { id: 'h_jude_d4', at: 'd4_wake', req: { hero: 'jude' }, who: 'CHOIR', note: 'hc_jude', text: 'the ward kept a book too. you wrote in it every night. 3:07, monitors blinked, bed nine on the phone again, would not hang up. a different bed every night. always the ones who would not hang up. we wrote it down for you.' },
+  { id: 'h_jude_d6', at: 'd6_wake', req: { hero: 'jude' }, who: 'EYE', text: 'jude. you sat with bed nine at 3:07 every night. i was in bed ten. there was no bed ten. you said goodnight to it anyway, every night, on your way past. i heard every one.' },
   { id: 'h_jude_d3', at: 'd3_wake', req: { hero: 'jude' }, who: 'VEY', text: 'Jude. That is your name. You said it in your sleep, very quietly, the way you would say it to a frightened child: I am Jude, I am here all night. I sat by you the whole time. I did not know anyone had ever said that to anyone down here.' },
   { id: 'h_jude_d5', at: 'd5_wake', req: { hero: 'jude' }, who: 'WREN', text: 'Jude? I looked you up. The ward says you left. The ward says there is no nurse called Jude and never was. I have still got the bracelet with your writing on it. Please tell me you are real.' },
   { id: 'h_jude_d7', at: 'd7_wake', req: { hero: 'jude' }, who: 'QUEEN', text: 'Jude. The boy in bed nine helped me look for her for a long time. He was very brave. He asked me to tell the nurse he was sorry he stopped waving. I have been carrying that message all week. I did not know how to say it.' },
 ];
 // a journey begins as someone: the "before" scene plays first and returns to the opening she was going to wake in (pure)
+// the words she says a reply in: a choice may carry `as: { <hero>: words }`, the same reply as that person would put it (display only, never the choice)
+ABY.labelOf = function (c, s) { return (c.as && s && s.hero && c.as[s.hero]) || c.label; };
 ABY.heroStart = function (s, id) { if (ABY.HERO_IDS.indexOf(id) < 0 || !s || s.hero) return s; const o = Object.assign({}, s, { hero: id, back: s.node, node: 'hero_' + id, flags: Object.assign({}, s.flags), notes: s.notes.slice() }); if (o.notes.indexOf('h_' + id) < 0) o.notes.push('h_' + id); return o; };
 ABY.SECOND_SIGHT = [
   { id: 's_sms', at: 'unknown_sms', req: { min: { mem: 1 } }, who: 'EYE', text: 'you again. you have held this phone before. your thumb goes to the same place on the glass.' },
@@ -790,7 +807,7 @@ ABY.NODES = {
     ch: 3, speaker: 'GUARDIAN', mood: 'dark', focus: 'guardian',
     text: '...you... carry the echo... my lady... the corruption... it burns... but the song remembers what I have forgotten.',
     choices: [
-      { label: 'Embrace the Guardian', next: 'reconcile', add: { trust: 1 } },
+      { label: 'Embrace the Guardian', next: 'reconcile', add: { trust: 1 }, as: { rowan: 'Hold him the way you held her on the stairs, and count him back', ellis: 'Embrace him, and hum the first note so he knows you mean no harm', jude: 'Hold him steady, the way you hold a child through a fever' } },
       { label: 'Play the flute', next: 'song_intro', add: { heart: 1 } },
       { label: 'Stand your ground', next: 'standoff', add: { resolve: 1 } },
       { label: 'Read him the ledger', next: 'g_ledger', req: { flag: 'ledger' } },
@@ -983,7 +1000,7 @@ ABY.NODES = {
     ch: 6, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
     text: 'Is that you? I woke and the gate was open and I couldn\'t remember closing it. Vey says there is a way out. Vey says it a lot. How long have I been asleep?',
     choices: [
-      { label: 'Believe her', next: 'd2_vey', add: { trust: 1 } },
+      { label: 'Believe her', next: 'd2_vey', add: { trust: 1 }, as: { rowan: 'Believe her: you know what waking somewhere strange feels like', ellis: 'Believe her, and tell her gently that it was a long rest', jude: 'Believe her, and say what you say to everyone who wakes on the ward: you were asleep, you are safe, I stayed' } },
       { label: 'Ask what she did with the time', next: 'd2_time', add: { dread: 1 } },
       { label: 'Tell her what the ledger said', next: 'd2_ledger_back', req: { flag: 'ledger' } },
     ],
@@ -1221,7 +1238,7 @@ ABY.NODES = {
     ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
     text: 'The stair is not shorter, only quieter. I can carry you. I can carry the phone. I can carry what is on the phone, which is more than you know. Come. I have never once let anything fall.',
     choices: [
-      { label: 'Take its hand', next: 'd3_table', set: 'vey3_hand', add: { dread: 1 } },
+      { label: 'Take its hand', next: 'd3_table', set: 'vey3_hand', add: { dread: 1 }, as: { rowan: 'Take its hand, and count the steps out loud for both of you', ellis: 'Take its hand, the way you take a nervous pupil\'s', jude: 'Take its hand. Out of habit, feel for a pulse. There isn\'t one' } },
       { label: 'Say: I know what you are', next: 'd3_vey3_names', req: { min: { mem: 2 } } },
       { label: 'Go back to the fork', next: 'd3_fork' },
       { label: 'Show it both photos: the hand on your shoulder', next: 'ev_vey', req: { flag: 'link_many_hands' } },
@@ -1339,7 +1356,7 @@ ABY.NODES = {
     ch: 9, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
     text: 'The stones always sang. I told myself it was the cave. (A long pause, three dots that come and go.) It was never the cave. Everyone who held this phone and would not open the gate, I... put them somewhere quiet. I thought it was kind.',
     choices: [
-      { label: 'Ask her how many', next: 'd4_contact', add: { trust: 1 } },
+      { label: 'Ask her how many', next: 'd4_contact', add: { trust: 1 }, as: { rowan: 'Ask her how many, and make her count them out loud', ellis: 'Ask her how many, softly, the way you ask how long since someone last played', jude: 'Ask her how many, the way you ask the night sister for the numbers' } },
       { label: 'Tell her it was not kind', next: 'd4_stones', add: { resolve: 1, trust: -1 } },
       { label: 'Tell her you will go and listen to them', next: 'c4_choir', add: { heart: 1, trust: 1 } },
     ],
@@ -1500,7 +1517,7 @@ ABY.NODES = {
     ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
     text: '...hello? (A sleepy whisper, very close. She is holding the phone with both hands.) It says 3:07. Who is this? How do you have this number? Is this a prank?',
     choices: [
-      { label: 'Tell her the truth', next: 'bt_d5_where', set: 'told_truth', add: { trust: 1 } },
+      { label: 'Tell her the truth', next: 'bt_d5_where', set: 'told_truth', add: { trust: 1 }, as: { rowan: 'Tell her the truth: it\'s Rowan. I\'m on the landing too', ellis: 'Tell her the truth: it\'s Ellis, from Thursdays at four', jude: 'Tell her the truth: it\'s Jude, from the ward. You told me not to answer, and I did' } },
       { label: 'Say it is a wrong number', next: 'd5_lie', add: { dread: 1 } },
       { label: 'Say nothing', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Remind her: I held your hand on the landing when you were nine', next: 'd5_truth', req: { flag: 'tt_nine' }, set: 'told_truth', add: { heart: 1, trust: 1 } },
@@ -1716,7 +1733,7 @@ ABY.NODES = {
     ch: 11, speaker: 'SORREL', mood: 'dusk', focus: 'queen',
     text: 'Hello? (A small voice, very close to the phone, breathing through its mouth.) Is it Mummy? I counted to one. I counted to one lots of times. Is it my turn yet? Mummy said when it\'s my turn I can come out.',
     choices: [
-      { label: 'Tell her who you are', next: 'bt_d6_parcel', add: { trust: 1 } },
+      { label: 'Tell her who you are', next: 'bt_d6_parcel', add: { trust: 1 }, as: { rowan: 'Tell her who you are: Rowan, who always comes to fetch the little ones', ellis: 'Tell her who you are: Ellis, who teaches songs to children', jude: 'Tell her who you are: Jude, the nurse who stays all night' } },
       { label: 'Pretend to be her mother', next: 'd6_pretend', add: { dread: 1 } },
       { label: 'Ask her to open the door', next: 'd6_door', add: { resolve: 1 } },
       { label: 'Play her the music-box waltz, the one with two hands', next: 'd6_box', req: { noflag: 'box_done' } },
@@ -1874,7 +1891,7 @@ ABY.NODES = {
     ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'queen',
     text: '"The seventh night. Everything I ever locked is open tonight: the gate, the door, the water, the book. The book can only be closed from the first page, and only by somebody who is not afraid of who is on it." The flute at her back is humming on its own. "I have never once not been afraid of her."',
     choices: [
-      { label: 'Tell her you will do it together', next: 'd7_gather', add: { heart: 1, trust: 1 } },
+      { label: 'Tell her you will do it together', next: 'd7_gather', add: { heart: 1, trust: 1 }, as: { rowan: 'Tell her you will do it together: you will count, and she will not reach the bottom', ellis: 'Tell her you will do it together: you will play the eleven, and she will play the twelfth', jude: 'Tell her you will do it together. Nobody works the last night shift alone' } },
       { label: 'Ask about No Caller ID', next: 'c7_you', add: { resolve: 1 } },
       { label: 'The phone is ringing: Unknown (you), the first night', next: 'rg_you7', bat: 0, req: { noflag: 'rg_done_you7' } },
     ],
@@ -3903,7 +3920,20 @@ ABY.CODAS = [
   { id: 'c_blackout_marked', end: 'blackout', req: { flag: 'marked' }, who: 'EYE', text: 'it is dark now. i can see you better in the dark. i always could.' },
   { id: 'c_blackout_heard', end: 'blackout', req: { flag: 'heard' }, who: 'QUEEN', text: 'Your screen went out. I know what that sounds like from the inside. Knock twice if you can hear me.' },
 ];
-ABY.codasFor = function (id, s) { return ABY.CODAS.filter(c => c.end === id && ABY.okReq(s, c.req)).slice(0, ABY.CODA_MAX); };
+// and whoever she was hears from Wren last: one line for a fall, one for an ending that carries on, one for an ending that is final (always after the others)
+ABY.HERO_CODAS = [
+  { id: 'hc_rowan_fall', hero: 'rowan', kind: 'fall', who: 'WREN', text: 'Rowan? Your phone went dead at 3:07, so I sat on the landing and counted to forty. Then I counted again. I am going to keep counting until you pick up. That is the rule. You made the rule.' },
+  { id: 'hc_rowan_cont', hero: 'rowan', kind: 'cont', who: 'WREN', text: 'I slept right through. First night in nine years nobody had to turn me round. Was that you? It was you. Go to bed, Rowan. You can stop counting for one night.' },
+  { id: 'hc_rowan_end', hero: 'rowan', kind: 'end', who: 'WREN', text: 'It is quiet on the landing. Whatever you did down there, the stairs stopped creaking at six. I walked down all twelve and there was only the doormat. Rowan, you can stop counting now.' },
+  { id: 'hc_ellis_fall', hero: 'ellis', kind: 'fall', who: 'WREN', text: 'Ellis? The flute is on my pillow again and it is cold this time. I played eleven notes into the phone and stopped, the way you taught me. Please play the twelfth back. Please play anything.' },
+  { id: 'hc_ellis_cont', hero: 'ellis', kind: 'cont', who: 'WREN', text: 'Somebody was humming under my window all night. Your hum, the one before a lesson. I did not open the curtain. I just let it be Thursday for a while.' },
+  { id: 'hc_ellis_end', hero: 'ellis', kind: 'end', who: 'WREN', text: 'I got the taped flute out this morning and played all the way to the end of the song, the last note too, for the first time ever. It was not scary. It was only a note. Thank you, Ellis.' },
+  { id: 'hc_jude_fall', hero: 'jude', kind: 'fall', who: 'WREN', text: 'Jude, the monitors on the ward blinked at 3:07 and the night sister said your name and nobody answered. I am holding the bracelet. I am not hanging up. You taught me that.' },
+  { id: 'hc_jude_cont', hero: 'jude', kind: 'cont', who: 'WREN', text: 'I slept through 3:07 and woke at six and nobody was holding my hand, and that was all right, because somebody had been. Go home, Jude. Your shift is over.' },
+  { id: 'hc_jude_end', hero: 'jude', kind: 'end', who: 'WREN', text: 'The ward rang. Bed nine is empty: the boy went home this morning, waving all the way down the corridor. They said to tell the nurse. So I am telling the nurse.' },
+];
+ABY.heroCoda = function (id, s) { const E = ABY.ENDINGS[id], k = !E ? '' : E.fall ? 'fall' : E.cont ? 'cont' : 'end'; return ABY.HERO_CODAS.filter(c => s && c.hero === s.hero && c.kind === k)[0] || null; };
+ABY.codasFor = function (id, s) { const h = ABY.heroCoda(id, s); return ABY.CODAS.filter(c => c.end === id && ABY.okReq(s, c.req)).slice(0, ABY.CODA_MAX).concat(h ? [h] : []); };
 
 // ---- falls and checkpoints ----
 // A FALL is an ending where she dies or loses herself (fall: true). It goes in the Gallery like any other, but it never carries on to the next day.
