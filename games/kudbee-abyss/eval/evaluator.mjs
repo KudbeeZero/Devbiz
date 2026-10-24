@@ -1436,6 +1436,25 @@ await block('side-roads-ui', async () => {
   await ctx.close();
 });
 
+await block('long-pairs-ui', async () => {
+  // a long pair: a clue from the first night pinned to one found on the fifth opens a reply on Day Six; Sorrel answers it, the door comes back, once
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'long-pair'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd6_door', { mem: 2, notes: ['door_crack', 'glimpse_door'] }); const before = await chips(pg);
+  await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#noteList .nt.pin[data-note="glimpse_door"]', { timeout: 5000 });
+  await pg.click('#noteList .nt.pin[data-note="door_crack"]'); await pg.click('#noteList .nt.pin[data-note="glimpse_door"]'); await sleep(300);
+  const pin = await pg.evaluate(() => ({ flag: ABY.game.state.flags.link_hands_width, ded: [...document.querySelectorAll('#noteList .ded h3')].map(h => h.textContent), heart: ABY.game.state.heart }));
+  await pg.screenshot({ path: join(OUT, 'long-pair-notes.png') });
+  await pg.evaluate(() => ABY.Phone.show('msg')); await sleep(400); const after = await chips(pg);
+  await tapChip(pg, 'open a hand'); await pg.waitForFunction(() => ABY.game.state.node === 'ev_gap' && !ABY.game.delivering, null, { timeout: 15000 });
+  await pg.screenshot({ path: join(OUT, 'long-pair-scene.png') }); await tapChip(pg, 'Put your hand in the gap');
+  await pg.waitForFunction(() => ABY.game.state.node === 'd6_door' && !ABY.game.delivering, null, { timeout: 15000 }); await sleep(300);
+  const back = await pg.evaluate(() => ({ heart: ABY.game.state.heart, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), thread: document.getElementById('thread').textContent }));
+  rec('long-pairs-ui', pin.flag === 1 && pin.ded.some(t => /A hand.s width/.test(t)) && !before.some(t => /hand.s width/.test(t)) && after.some(t => /hand.s width since the first night/.test(t))
+      && /how far mummy opened it/.test(back.thread) && back.heart === pin.heart + 1 && !back.chips.some(t => /hand.s width/.test(t)) && back.chips.length === before.length,
+    'the first night\'s door and the fifth night\'s glimpse pin into "' + pin.ded[0] + '"; Day Six offers "' + (after.filter(t => /hand.s width/.test(t))[0] || '') + '" (' + before.length + ' -> ' + after.length + ' replies); Sorrel answers, heart +1, and the door comes back with it gone');
+  await ctx.close();
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];

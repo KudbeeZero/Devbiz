@@ -199,6 +199,14 @@ ABY.LINKS = [
   { id: 'what_she_gave', a: 'locking', b: 'bargain', at: 'd6_story', alt: ['a_cast', 'bargain'], title: 'Who she locked away', text: 'A girl in a paper crown, asleep on Vey\u2019s shoulder, on the night of the lock. A bargain that keeps someone safe on the other side, for as long as the phone is held. It was never a monster. The Queen locked her own child away to keep her, and called it a door.' },
   { id: 'low_lock', a: 'vey_gift', b: 'nursery_wall', at: 'd6_door', alt: ['a_smile', 'nursery_wall'], hero: ['rowan', 'hc_rowan', 'nursery_wall'], title: 'The key to the low lock', text: 'Vey left a key too small for any door in the building. The nursery door has a lock very low down, where only a child could reach it, and the letters on the wall get bigger all the way to the floor. The key was never meant for you. It was meant for her, to let herself out.' },
   { id: 'watcher', a: 'eye', b: 'nursery_wall', at: 'd7_eye', hero: ['ellis', 'hc_ellis', 'nursery_wall'], title: 'What the Eye is', text: '“Nobody ever sings to me.” SOMEBODY HAS TO SEE ME. The same wish, once in a voice and once on a wall. The Eye is not a thing that watches. It is a child nobody ever looked at.' },
+  // the long pairs: each joins a clue from an early night to one found two or three nights later (the graph's `long-pairs` proves the gap), and
+  // opens a short scene, offered once, that returns to the scene it was opened from: more of the night, never another way through it
+  { id: 'the_steps', long: true, a: 'voicemail', b: 'eye_stairs', at: 'd3_table', title: 'Count the steps', text: 'On the first night a voicemail played itself: count the steps, do not count the steps. Two nights later, a photo of a staircase lit one step at a time from below, taken from where you stand. It was never counting you down. It was counting how close you let it come.' },
+  { id: 'your_name', long: true, a: 'recording', b: 'glimpse_choir', at: 'd4_shore', title: 'The one who stopped singing', text: 'The recording under the stones on the first night: her voice, warning you. The flash-forward on the third: two hundred and fourteen faces under the water mouthing eleven notes, and the nearest one mouthing your name. They are the same voice. The one who stopped singing is the one who warned you.' },
+  { id: 'carried', long: true, a: 'vey_photo', b: 'vey_stair', at: 'd5_truth', title: 'Too many hands', text: 'The first night\'s photo: Vey behind the Queen, close enough to touch her hair, with far too many hands. The flashback on the servants\' stair: Vey with only two, carrying a sleeping child down to the door. It grew the rest afterwards, one at a time.' },
+  { id: 'hands_width', long: true, a: 'door_crack', b: 'glimpse_door', at: 'd6_door', title: 'A hand\'s width', text: 'The first night, a door in the haze open a hand\'s width while someone small counted down. The fifth, a flash-forward of a house with no windows and a door open a hand\'s width onto red light. The same door, open the same amount. In all that time nobody has closed it, and nobody has opened it any wider.' },
+  { id: 'a_welcome', long: true, a: 'eye_stairs', b: 'eye_noticed', at: 'd7_eye', title: 'Lit like a welcome', text: 'The stairs in the photo light up one step at a time, from where you are standing. Two nights later the Eye writes that nobody ever refused a name before. It was not lighting the way to swallow you. It was lighting the way for a guest, and you were the first one who did not run.' },
+  { id: 'who_picks_up', long: true, a: 'glimpse_hand', b: 'wren_seven', at: 'd7_wren', title: 'The hand under the blankets', text: 'A flash-forward on the fourth night: a hand coming out of the blankets towards a phone, someone told never to pick up. Three nights later, from the drive: not letting you do the last one on your own. It was never a stranger\'s hand. It was Wren\'s, and she was always going to pick up.' },
 ];
 ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
 // `alt` is a second pair for the same deduction, whose one new clue an installed app left her (APP_WHISPERS): the app stands in for a clue her
@@ -1268,6 +1276,7 @@ ABY.NODES = {
       { label: 'Sing to it', next: 'd3_lull', add: { heart: 1 } },
       { label: 'Look it in the eye and say nothing', next: 'd3_stare', req: { maxDread: 4 } },
       { label: 'Turn the phone face down', next: 'end_watched' },
+      { label: 'Count the steps out loud, the way the voicemail said not to', next: 'ev_steps', req: { flag: 'link_the_steps', noflag: 'ev_steps' } },
     ],
   },
   d3_stare: {
@@ -1449,6 +1458,7 @@ ABY.NODES = {
       { label: 'Say every name, then yours, and close the book', next: 'end_names', req: { all: ['rite_choir', 'read_names'], min: { mem: 7 }, maxDread: 4 } },
       { label: 'Write the next name, like she always did', next: 'end_caller' },
       { label: 'Throw the phone into the water', next: 'end_drowned' },
+      { label: 'Play the old recording to the face that stopped singing', next: 'ev_face', req: { flag: 'link_your_name', noflag: 'ev_face' } },
     ],
   },
   d4_crown: {
@@ -1574,6 +1584,7 @@ ABY.NODES = {
       { label: 'Ask her to stay on the line till it is light', next: 'bt_d5_night', set: 'stayed_line' },
       { label: 'Tell her how you came in, the very first night: it will help her not be afraid', next: 'd5_book', req: { flag: 'tt_echo4' }, add: { heart: 1, trust: 1 } },
       { label: 'The phone is ringing: Vey, from the book', next: 'rg_vey5', bat: 0, req: { noflag: 'rg_done_vey5' } },
+      { label: 'Ask Vey how many hands it had on the servants\' stair', next: 'ev_carry', req: { flag: 'link_carried', noflag: 'ev_carry' } },
     ],
   },
   d5_book: {
@@ -1816,6 +1827,7 @@ ABY.NODES = {
       { label: 'Ask the Eye to look at her, once, so that someone has seen her', next: 'd6_dawn', add: { heart: 1, dread: -1 }, req: { bond: { who: 'EYE', min: 2 } } },
       { label: 'Shut the door on her', next: 'd6_shut', add: { resolve: 1, dread: 1 } },
       { label: 'Try the little brass key in the low lock', next: 'ev_key', req: { flag: 'link_low_lock' } },
+      { label: 'It has been open a hand\'s width since the first night. Ask her why', next: 'ev_gap', req: { flag: 'link_hands_width', noflag: 'ev_gap' } },
     ],
   },
   d6_lull: {
@@ -1885,6 +1897,7 @@ ABY.NODES = {
     choices: [
       { label: 'Ask her to hold the phone with you', next: 'd7_gather', set: 'wren_with', add: { trust: 1, dread: -1 } },
       { label: 'Tell her to go home where it is safe', next: 'd7_eye', add: { resolve: 1 } },
+      { label: 'Tell her you saw her hand, three nights ago, reaching for the phone', next: 'ev_hand', req: { flag: 'link_who_picks_up', noflag: 'ev_hand' } },
     ],
   },
   d7_queen: {
@@ -1908,6 +1921,7 @@ ABY.NODES = {
       { label: 'Sing her the birthday song she never got to finish', next: 'd7_named', req: { flag: 'tt_birthday' }, set: 'named_eye', add: { heart: 2, dread: -2 } },
       { label: 'You saw this in the clock. Say her name first: Sorrel', next: 'd7_named', req: { flag: 'tt_seventh' }, set: 'named_eye', add: { heart: 1, dread: -1 } },
       { label: 'Tell her you remember the door you came through. She waited at it too', next: 'd7_named', req: { flag: 'tt_echo6' }, set: 'named_eye', add: { heart: 2, dread: -2 } },
+      { label: 'Tell her you saw the stairs light up. Walk up them like a guest', next: 'ev_guest', req: { flag: 'link_a_welcome', noflag: 'ev_guest' } },
     ],
   },
   d7_again: {
@@ -3725,6 +3739,48 @@ ABY.NODES = {
     text: 'you read it. (The red blinks, slowly.) all of it? the bit at the bottom where the letters are big? nobody reads to the bottom. they look at the eye and they scream and they never read to the bottom. (Smaller now. Much smaller.) Sorrel. you can say it. i want to hear somebody say it while they are looking at me.',
     choices: [
       { label: 'Look at her, and say it: Sorrel', next: 'd7_named', set: 'named_eye', add: { heart: 2, dread: -3 } },
+    ],
+  },
+  ev_steps: {
+    ch: 8, speaker: 'EYE', mood: 'throne', focus: 'queen', scare: 'eye',
+    text: 'You play the voicemail with the photo of the stairs beside it, and this time you count. Every number the voice says, one more step in the photo lights. Eleven. Twelve. Thirteen. It stops at thirteen. (The Eye above the table, very close.) there. now you know how many there are. now you can stop coming up them. (In the photo, the steps go dark from the bottom up.)',
+    choices: [
+      { label: 'Stop counting', next: 'd3_table', set: 'ev_steps', add: { dread: -1 } },
+    ],
+  },
+  ev_face: {
+    ch: 9, speaker: 'NARRATOR', mood: 'gate', focus: 'queen', scare: 'whisper',
+    text: 'You hold the phone out over the water with the old recording playing. Two hundred and fourteen faces keep to their eleven notes. The nearest one stops, and listens to her own voice coming out of your speaker, and for a moment you see who she was: the woman with the flute, very young, before she was anybody\'s Queen. She mouths your name once more, slowly, the way you teach a word to a child. Then she lets the water close over her.',
+    choices: [
+      { label: 'Say her warning back to her', next: 'd4_shore', set: 'ev_face', add: { heart: 1 } },
+    ],
+  },
+  ev_carry: {
+    ch: 10, speaker: 'VEY', mood: 'dark', focus: 'vey', scare: 'whisper',
+    text: '(It counts its hands for you, slowly, the way a child counts on its fingers.) Two, on the stair. Then one for her. One for the captain. One for the woman with the radio, and the nurse, and the boy with the paper round. Two hundred and fourteen. (The last hand is very small and very new.) This one I grew last night. I have not decided who it is for. I hope it is not for Wren.',
+    choices: [
+      { label: 'Ask it to keep that one empty', next: 'd5_truth', set: 'ev_carry', add: { trust: 1 } },
+    ],
+  },
+  ev_gap: {
+    ch: 11, speaker: 'SORREL', mood: 'gate', focus: 'gate', scare: 'whisper',
+    text: 'you saw it on the first night. (The red in the gap shifts, as if someone small has leaned closer.) a hand\'s width. that is how far mummy opened it to say goodnight, and then she went to get the phone, and she never came back to open it the rest of the way. (Very quietly.) you can\'t either. i know. just put your hand in the gap. so i know where it is.',
+    choices: [
+      { label: 'Put your hand in the gap', next: 'd6_door', set: 'ev_gap', add: { heart: 1 } },
+    ],
+  },
+  ev_guest: {
+    ch: 12, speaker: 'SORREL', mood: 'dark', focus: 'queen', scare: 'eye',
+    text: 'i lit them for you. every step. (The red softens, embarrassed.) i lit them for the others too, but they all came up screaming. you would not write a name, so i thought: maybe this one will walk up properly. like a visitor. like somebody coming to a party. (A pause.) you can stand there. you don\'t have to sit down. nobody has ever just stood there.',
+    choices: [
+      { label: 'Stand there with her, a while', next: 'd7_eye', set: 'ev_guest', add: { heart: 1, dread: -1 } },
+    ],
+  },
+  ev_hand: {
+    ch: 12, speaker: 'WREN', mood: 'dusk', focus: 'queen',
+    text: 'i saw it too. the hand. it was on my phone on tuesday, a photo of my own bedroom, and i deleted it because it was my bedroom. (Gravel, and her breathing.) mum always said never pick up after three. i picked up anyway. i always will. that\'s the thing about me. you knew that before i did.',
+    choices: [
+      { label: 'Tell her you are glad she did', next: 'd7_wren', set: 'ev_hand', add: { trust: 1 } },
     ],
   },
 };
