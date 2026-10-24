@@ -1420,6 +1420,22 @@ await block('heroes-voice', async () => {
   await ctx.close();
 });
 
+await block('side-roads-ui', async () => {
+  // a side road is the same reply said the long way: Sorrel's room, one thing at a time, then the room itself, with exactly the heart the plain reply gives
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'side-road'); await wake(pg); await openMessages(pg);
+  const st = () => pg.evaluate(() => ({ node: ABY.game.state.node, heart: ABY.game.state.heart, bat: ABY.game.state.bat, text: document.getElementById('thread').textContent }));
+  await at(pg, 'd6_who', { mem: 2, bat: 40 }); const offered = await chips(pg); await tapChip(pg, 'one thing at a time');
+  const seen = [];
+  for (let k = 0; k < 3; k++) { await pg.waitForFunction(() => /^sr6_/.test(ABY.game.state.node) && !ABY.game.delivering, null, { timeout: 15000 }); seen.push((await st()).node); if (k === 1) await pg.screenshot({ path: join(OUT, 'side-road-sr6.png') }); const c = await chips(pg); await tapChip(pg, c[k % 2]); }
+  await pg.waitForFunction(() => ABY.game.state.node === 'd6_room' && !ABY.game.delivering, null, { timeout: 15000 }); const road = await st();
+  await at(pg, 'd6_who', { mem: 2, bat: 40 }); await tapChip(pg, 'Ask her where she is');
+  await pg.waitForFunction(() => ABY.game.state.node === 'd6_room' && !ABY.game.delivering, null, { timeout: 15000 }); const plain = await st();
+  rec('side-roads-ui', offered.some(t => /one thing at a time/.test(t)) && offered.some(t => t === 'Ask her where she is') && seen.join() === 'sr6_a,sr6_b,sr6_c' && /tent on it/.test(road.text) && /four for ages/.test(road.text)
+      && road.heart === plain.heart && road.bat === plain.bat,
+    'Sorrel’s room the long way: ' + seen.join(' -> ') + ' -> d6_room, arriving with heart ' + road.heart + ' and battery ' + road.bat + ', the same as the plain reply (' + plain.heart + ', ' + plain.bat + ')');
+  await ctx.close();
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];
