@@ -278,7 +278,7 @@ function walkChecks() {
       || (o.req.flag && (!setAt(o.req.flag).length || !setAt(o.req.flag).some(id => reach.has(id) && day(id) < day(o.at))))).map(o => o.id);
     const days = [...new Set(O.map(o => o.at))].sort(), who = new Set(O.map(o => o.who));
     const holder = (o) => ABY.overnightFor(Object.assign(ABY.newState(0, o.req.open), { node: o.at, flags: o.req.flag ? { [o.req.flag]: 1 } : {} })).some(x => x.id === o.id);
-    const later = ABY.OPENINGS.filter(op => op !== ABY.START), way = later.every(op => ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0, op), { node: at })).filter(x => x.req.open).length === 1)) && ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).length === 0);
+    const later = ABY.OPENINGS, way = later.every(op => ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0, op), { node: at })).filter(x => x.req.open).length === 1)) && ['d2_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).every(x => x.req.open === ABY.START));
     const none = ABY.overnightFor(Object.assign(ABY.newState(0), { node: 'd3_wake' })).length === 0;
     const carried = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper', flags: { vey_known: 1 } })), plain = ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper' }));
     const landed = ABY._land(Object.assign(ABY.newState(0), { node: 'd5_wake', flags: { refused_next: 1 } }));
@@ -286,7 +286,7 @@ function walkChecks() {
     rec('overnight-messages', O.length >= 15 && bad.length === 0 && new Set(O.map(o => o.id)).size === O.length && days.join() === 'd2_wake,d3_wake,d4_wake,d5_wake,d6_wake,d7_wake' && ['QUEEN', 'VEY', 'GUARDIAN', 'EYE', 'WREN', 'SORREL'].every(w => who.has(w))
       && O.every(holder) && none && way && ABY.newState(0, 'op_bath').open === 'op_bath' && ABY.cleanState({ open: 'op_snow' }).open === 'op_snow' && ABY.cleanState({ open: 'nope' }).open === ABY.START
       && carried && carried.notes.includes('vey_gift') && !plain.notes.includes('vey_gift') && landed.notes.includes('eye_noticed'),
-      O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day or for how the journey began (the nine other openings are remembered on Day Two and Day Seven)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
+      O.length + ' overnight messages over six mornings from ' + who.size + ' voices, each for a flag set on an earlier day or for how the journey began (all ten openings are remembered on Day Two and Day Seven)' + (bad.length ? ' | BAD ' + bad.join(', ') : '') + '; only those who hold the flag hear them; a carried day files its clue');
   }
   { // codas: when an ending lands, the people she met text her one last time, for the flags she holds. They change no ending, tile or share card. Each
     // one's flag must be set by a choice on a reached scene from which the ending can still be reached (following choices, rite results, a slip's return
@@ -424,7 +424,7 @@ function walkChecks() {
     const a = N.awakening, b = N.awakening_b, c = N.awakening_c;
     const exits = c && c.choices.map(x => x.next).join();
     rec('first-scene-prologue', a && b && c && a.choices.length === 3 && a.choices.every(x => x.next === 'awakening_b' && !x.req) && b.choices.filter(x => x.next === 'awakening_c' && !x.req).length === 2 && b.choices.length === 3 && b.choices.some(x => x.next === 'rg_home1')
-      && c.note === 'o_awake' && ABY.NOTES.o_awake && exits === 'flute_path,stones_path,unknown_sms' && b.text.length > 150 && c.text.length > 150 && a.ch === 1 && b.ch === 1 && c.ch === 1,
+      && c.note === 'o_awake' && ABY.NOTES.o_awake && [['4', 'd4_wake', 9], ['6', 'd6_dawn', 11]].every(([d, at, ch]) => { const e = N['ec' + d + '_awake'], into = N[at].choices.filter(x => x.next === 'ec' + d + '_awake'); return e && e.thread === 'awakening' && e.time === 'past' && e.safe && e.ch === ch && e.choices.length >= 2 && e.choices.every(x => x.next === '@back' && x.set === 'tt_echo' + d) && e.text.length > 150 && into.length === 1 && into[0].req.open === 'awakening' && into[0].req.noflag === 'tt_echo' + d; }) && exits === 'flute_path,stones_path,unknown_sms' && b.text.length > 150 && c.text.length > 150 && a.ch === 1 && b.ch === 1 && c.ch === 1,
       'the first scene is a three-scene prologue (awakening -> awakening_b -> awakening_c, filing the clue o_awake) that ends in the same three ways it always had: ' + exits);
   }
   { // THE BEGINNINGS, DEEPER: each of the nine other openings is a three-scene prologue (react -> the scene that is only its own -> the clue, then the same three ways
@@ -445,13 +445,13 @@ function walkChecks() {
     const seesAt = (node, open, flags) => ABY.options(Object.assign(ABY.newState(0, open), { node, flags: flags || {} })).filter(x => /clock back/.test(x.c.label)).map(x => x.c.next);
     const own = others.every(o => seesAt('d4_wake', o).filter(n => /^ec4_/.test(n)).join() === 'ec4_' + key(o) && seesAt('d6_dawn', o).filter(n => /^ec6_/.test(n)).join() === 'ec6_' + key(o)
       && seesAt('d4_wake', o, { tt_echo4: 1 }).every(n => !/^ec4_/.test(n)) && seesAt('d6_dawn', o, { tt_echo6: 1 }).every(n => !/^ec6_/.test(n)));
-    const none = seesAt('d4_wake', ABY.START).every(n => !/^ec/.test(n)) && seesAt('d6_dawn', ABY.START).every(n => !/^ec/.test(n));
+    const none = seesAt('d4_wake', ABY.START).every(n => !/^ec/.test(n) || n === 'ec4_awake') && seesAt('d6_dawn', ABY.START).every(n => !/^ec/.test(n) || n === 'ec6_awake');   // the first opening sees only its own
     const go = ABY.choose(Object.assign(ABY.newState(0, 'op_lift'), { node: 'd4_wake' }), N.d4_wake.choices.findIndex(c => c.next === 'ec4_lift')), back = go && ABY.choose(go, 0);
     const walkIn = (() => { let s = ABY.newState(0, 'op_bath'); for (const want of ['op_bath_b', 'op_bath_c']) { s = ABY.choose(s, 0); if (!s || s.node !== want) return null; } return s; })();
     rec('opening-threads', chain.length === 9 && texts.size === 18 && echoes && pay('d5_truth', 'tt_echo4') && pay('d7_eye', 'tt_echo6') && own && none
       && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
       && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
-      'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees none of them');
+      'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees only its own (the haze)');
   }
   { // confidences: five warm-bond memories (two scenes each) that only listen: nothing they touch can reach a gate, a rite or an ending
     const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_dawn', 'WREN', 'wren', { riff_done: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];

@@ -874,7 +874,7 @@ await block('overnight', async () => { // overnight messages: a day that carries
   rec('little-key-opens-the-low-lock', !before.some(c => /little brass key/.test(c)) && key.promised === 1 && key.node === 'd6_dawn', 'pinning the key to the nursery wall adds "Try the little brass key in the low lock"; turning it frees Sorrel and promises to come back');
   await at(pg, 'd2_wake', { mem: 3, open: 'op_bath' }); const bath = await pg.evaluate(() => document.getElementById('thread').textContent);
   await at(pg, 'd2_wake', { mem: 3 }); const first = await pg.evaluate(() => document.getElementById('thread').textContent);
-  rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && !/You came/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey does not');
+  rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && /You came the first way/.test(first) && !/water this time/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey hears about the haze instead');
   await at(pg, 'd2_wake', { mem: 3, flags: { echo_dawn: 1, echo_song: 1 } }); const echoed = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('echoes-remembered', /You opened the gate once/.test(echoed) && /you sang it back to me/.test(echoed) && !/You opened the gate once|you sang it back/.test(first), 'someone who found The Gate Opens and The Song Remembered hears the Queen and the Eye remember them on Day Two; a player who found neither hears nothing');
   await at(pg, 'd4_shore', { mem: 3, flags: { vey_known: 1, vey_trusted: 1, refused_next: 1 } }); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(300);
@@ -983,9 +983,9 @@ await block('openings-deep', async () => { // the beginnings, deeper: a journey 
   await at(pg, 'd6_dawn', { open: 'op_lift', mem: 3, flags: { promised_sorrel: 1 } }); const d6 = await chips(pg);
   await at(pg, 'd7_eye', { mem: 3, flags: { tt_echo6: 1 } }); const eye = await chips(pg);
   rec('opening-comes-back-on-day-four-and-six', d4.some(c => /how you first came in \(the lift\)/.test(c)) && e4.time === 'past' && /pressing the button to call it/.test(e4.thread) && back.flag === 1 && !back.chips.some(c => /first came in/.test(c))
-    && bath.some(c => /how you first came in \(the bath\)/.test(c)) && !bath.some(c => /the lift/.test(c)) && !first.some(c => /first came in/.test(c))
+    && bath.some(c => /how you first came in \(the bath\)/.test(c)) && !bath.some(c => /the lift/.test(c)) && first.some(c => /how you first came in \(the haze\)/.test(c)) && !first.some(c => /the lift|the bath/.test(c))
     && truth.some(c => /how you came in, the very first night/.test(c)) && !plain.some(c => /how you came in, the very first night/.test(c)) && d6.some(c => /the lift, once more/.test(c)) && eye.some(c => /door you came through/.test(c)),
-    'Day Four offers the lift flashback only to the journey that began there ("' + (d4.filter(c => /first came in/.test(c))[0] || '') + '"; a bath journey is offered the bath, the first journey nothing), it is a warm flashback that returns and is seen once; Wren reads it on Day Five, the lift returns on Day Six, and the Eye on Day Seven reads the door');
+    'Day Four offers the lift flashback only to the journey that began there ("' + (d4.filter(c => /first came in/.test(c))[0] || '') + '"; a bath journey is offered the bath, the first journey only its own, the haze), it is a warm flashback that returns and is seen once; Wren reads it on Day Five, the lift returns on Day Six, and the Eye on Day Seven reads the door');
   await ctx.close();
 });
 await block('days-six-seven', async () => { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran

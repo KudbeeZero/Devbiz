@@ -224,6 +224,7 @@ ABY.OVERNIGHT = [
   { id: 'n_page_unread', at: 'd7_wake', req: { flag: 'page_unread' }, who: 'QUEEN', text: 'You did not read the first page. That is all right. I could not either, for a very long time.' },
   { id: 'n_crown_laid', at: 'd5_wake', req: { flag: 'crown_laid' }, who: 'QUEEN', text: 'You laid the little crown down on the shore. I came and sat beside it all night. I did not ask whose it was. I think I have always known whose it was.' },
   { id: 'n_bells', at: 'd5_wake', req: { flag: 'bells_done' }, who: 'CHOIR', text: 'the bells. we have never been rung before. we did not know we were that kind of thing, a thing that could be played. thank you. we are still ringing.' },
+  { id: 'n_open_awake', at: 'd2_wake', req: { open: 'awakening' }, who: 'QUEEN', text: 'You came the first way: the haze, the flute, a woman who could not remember her name. That was me. I have been rehearsing what to say if you ever came back to the beginning. I have only got as far as: thank you for not hanging up.' },
   { id: 'n_open_lift', at: 'd2_wake', req: { open: 'op_lift' }, who: 'QUEEN', text: 'You came by the lift. It had a floor on the panel that was only a crown. I did not put it there. I think the phone did.' },
   { id: 'n_open_bath', at: 'd2_wake', req: { open: 'op_bath' }, who: 'QUEEN', text: 'You came up through the water this time. I heard you before I saw you: someone humming eleven notes, under a bath, very far down.' },
   { id: 'n_open_bus', at: 'd2_wake', req: { open: 'op_bus' }, who: 'QUEEN', text: 'You came on a night bus that missed every stop. I stood at one of the stops all night, in case you got off.' },
@@ -233,6 +234,7 @@ ABY.OVERNIGHT = [
   { id: 'n_open_lost', at: 'd2_wake', req: { open: 'op_lost' }, who: 'QUEEN', text: 'You came from the lost-property office, with your own face as the lock screen. Nothing is ever really lost, here. Only kept.' },
   { id: 'n_open_voicemail', at: 'd2_wake', req: { open: 'op_voicemail' }, who: 'QUEEN', text: 'You came in by your own voicemail, crying. I played it to the whole cave, in case it helped. It did not help. Thank you for letting me.' },
   { id: 'n_open_snow', at: 'd2_wake', req: { open: 'op_snow' }, who: 'QUEEN', text: 'You came in with the snow, falling up. It is still falling up in the cave. The stones like it. They have not been cold in years.' },
+  { id: 'n_door_awake', at: 'd7_wake', req: { open: 'awakening' }, who: 'EYE', text: 'i was behind the haze too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_lift', at: 'd7_wake', req: { open: 'op_lift' }, who: 'EYE', text: 'i was behind the lift too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_bath', at: 'd7_wake', req: { open: 'op_bath' }, who: 'EYE', text: 'i was behind the bath too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_bus', at: 'd7_wake', req: { open: 'op_bus' }, who: 'EYE', text: 'i was behind the night bus too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
@@ -1299,6 +1301,7 @@ ABY.NODES = {
       { label: 'Turn the clock back: how you first came in (the lost-property office)', next: 'ec4_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo4' } },
       { label: 'Turn the clock back: how you first came in (the voicemail)', next: 'ec4_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo4' } },
       { label: 'Turn the clock back: how you first came in (the snow)', next: 'ec4_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the haze)', next: 'ec4_awake', bat: 3, req: { open: 'awakening', noflag: 'tt_echo4' } },
     ],
   },
   d4_queen: {
@@ -1797,6 +1800,7 @@ ABY.NODES = {
       { label: 'Turn the clock back: the lost-property office, once more', next: 'ec6_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo6' } },
       { label: 'Turn the clock back: the voicemail, once more', next: 'ec6_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo6' } },
       { label: 'Turn the clock back: the snow, once more', next: 'ec6_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the haze, once more', next: 'ec6_awake', bat: 3, req: { open: 'awakening', noflag: 'tt_echo6' } },
     ],
   },
   end_firstpage: {
@@ -2826,6 +2830,22 @@ ABY.NODES = {
       { label: 'Keep climbing', next: 'spire', add: { resolve: 1, dread: 1 } },
       { label: 'Go back down', next: 'stones_path', add: { heart: 1 } },
       { label: 'Light up the snow', next: 'torch_first', light: 1 },
+    ],
+  },
+  ec4_awake: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'awakening',
+    text: 'The first minute again, but you are standing a little outside it, and for once you can see her. A woman asleep sitting up in the violet haze, the flute at her back, a phone lit in her hand: 3:07. On the inside of her wrist, in biro, a number: 1. She looks like someone who has been waiting a very long time to be woken by a kind voice. There is a slip of paper under the flute strap that has not been written yet. \u201cYou can add to it,\u201d says something behind you, not unkindly. \u201cYou always do.\u201d',
+    choices: [
+      { label: 'Write under it: THEN COUNT THEM BACK', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+      { label: 'Lay your hand over the number', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+    ],
+  },
+  ec6_awake: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'awakening',
+    text: 'The first minute, once more, from the other end of the week. The same haze, the same woman asleep sitting up, but the biro on her wrist is not a 1 now. It is the number you have reached, and it is not one you can say aloud. She opens her eyes. \u201cYou came back to be here when I woke,\u201d she says. \u201cNobody ever has. They are always asleep at the beginning.\u201d She looks at the phone in her hand, and then, for a long moment, at you.',
+    choices: [
+      { label: 'Tell her: you are not the first one counted', next: '@back', set: 'tt_echo6', add: { heart: 1, dread: 1 } },
+      { label: 'Hold the phone out to her, lit, and stay', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
     ],
   },
   ec4_lift: {
