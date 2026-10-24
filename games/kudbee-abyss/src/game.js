@@ -141,7 +141,7 @@
     if (!G.run) { chip('Begin a new journey', true, function () { startRun(); }); }
     else if (n.song) chip('\u266A Raise the flute', true, function () { startSong(false); });
     else if (n.call) { showCall(n, opts); }
-    else opts.forEach(function (o) { chip(o.c.label, opts.length === 1, function (ev) { choose(o.i, ev); }); });
+    else opts.forEach(function (o) { chip(ABY.labelOf(o.c, G.state), opts.length === 1, function (ev) { choose(o.i, ev); }); });
     requestAnimationFrame(function () { box.classList.add('on'); scrollEnd(false); box.scrollTop = 0; moreChoices(box); });
     if (G.autoPick != null && G.run && G.state.node === ABY.START && !n.song && !n.call && !n.ending) { var k = G.autoPick; G.autoPick = null; (function go() { if (!G.run || G.state.node !== ABY.START || G.state.choices) return; if (G.busy || G.delivering || !$('guide').hidden) return setTimeout(go, 300); choose(k); })(); }   // a reply sent from the lock screen
     var f = box.querySelector('.chip'); if (f && matchMedia('(pointer:fine)').matches && P.screen === 'msg') f.focus({ preventScroll: true });
@@ -151,7 +151,7 @@
     var el = $('call'), lv = Math.max(1, Math.min(3, n.call.ring || 1)); $('callWho').textContent = n.call.from; $('callSub').textContent = n.call.sub || 'incoming call';
     el.setAttribute('data-ring', lv); G.ringLv = lv;                         // how insistent: 2 rings louder and faster, 3 has already answered itself
     var act = $('callAct'); act.innerHTML = '';
-    opts.forEach(function (o, k) { var b = document.createElement('button'); b.type = 'button'; b.className = 'cbtn ' + (k === 0 ? 'yes' : 'no'); b.innerHTML = '<i>' + (k === 0 ? '\u260E' : '\u2715') + '</i><span></span>'; b.querySelector('span').textContent = o.c.label; b.addEventListener('click', function (ev) { stopRing(); choose(o.i, ev); }); act.appendChild(b); });
+    opts.forEach(function (o, k) { var b = document.createElement('button'); b.type = 'button'; b.className = 'cbtn ' + (k === 0 ? 'yes' : 'no'); b.innerHTML = '<i>' + (k === 0 ? '\u260E' : '\u2715') + '</i><span></span>'; b.querySelector('span').textContent = ABY.labelOf(o.c, G.state); b.addEventListener('click', function (ev) { stopRing(); choose(o.i, ev); }); act.appendChild(b); });
     el.classList.add('on'); P.lockAll(true); ring1(); clearInterval(ringT); ringT = setInterval(ring1, [1500, 1500, 1000, 700][lv]);
     if (lv > 1) { scare(lv > 2 ? 'jump' : 'glitch'); fx($('call'), 'shudder', 600); }
   }
@@ -195,7 +195,7 @@
 
   function choose(i, ev) {
     if (G.busy || G.delivering) return; var ns = ABY.choose(G.state, i); if (!ns) return; clearTimeout(scareT);
-    var c = G.node.choices[i], label = c.label, dark = !!(c.add && c.add.dread > 0); ABY.Audio.init(); ABY.Audio.sfx(dark ? 'pickdark' : 'pick'); buzz(dark ? [34, 40, 22] : 14);
+    var c = G.node.choices[i], label = ABY.labelOf(c, G.state), dark = !!(c.add && c.add.dread > 0); ABY.Audio.init(); ABY.Audio.sfx(dark ? 'pickdark' : 'pick'); buzz(dark ? [34, 40, 22] : 14);
     var r = ev && ev.target && ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : null;
     if (r) { var sr = $('screen').getBoundingClientRect(); ABY.Scene.burst(r.left - sr.left + 24, r.top - sr.top + r.height / 2, parseInt(ABY.SPEAKERS[G.node.speaker].color.slice(1), 16), 24, 3.2); }
     struck(ev, r, dark);

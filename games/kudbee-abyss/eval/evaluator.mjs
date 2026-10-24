@@ -1397,6 +1397,29 @@ await block('heroes-ui', async () => {
   await ctx.close();
 });
 
+await block('heroes-voice', async () => {
+  // who she was is in her own mouth: one reply a day in that person's words (the same reply: same scene next, same stats), a clue only they are given,
+  // and Wren's last message after an ending
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'hero-voice'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd6_sorrel', { mem: 2 }); const plain = await chips(pg); await at(pg, 'd6_sorrel', { hero: 'jude', mem: 2 }); const hers = await chips(pg);
+  const t0 = await pg.evaluate(() => ABY.game.state.trust); await tapChip(pg, 'Jude, the nurse who stays all night');
+  await pg.waitForFunction(() => ABY.game.state.node !== 'd6_sorrel' && !ABY.game.delivering, null, { timeout: 15000 });
+  const said = await pg.evaluate(() => ({ out: [...document.querySelectorAll('#thread .out')].map(b => b.textContent).join(' | '), trust: ABY.game.state.trust, node: ABY.game.state.node }));
+  await at(pg, 'd6_sorrel', { mem: 2 }); const t1 = await pg.evaluate(() => ABY.game.state.trust); await tapChip(pg, 'Tell her who you are');
+  await pg.waitForFunction(() => ABY.game.state.node !== 'd6_sorrel' && !ABY.game.delivering, null, { timeout: 15000 }); const same = await pg.evaluate(() => ({ trust: ABY.game.state.trust, node: ABY.game.state.node }));
+  // Day Four's wake: the Choir writes it down for Rowan, and the clue is hers to pin
+  await at(pg, 'd4_wake', { hero: 'rowan', mem: 2 }); const wake4 = await pg.evaluate(() => document.getElementById('thread').textContent);
+  // an ending as Jude: Wren writes last, before the end stamp
+  await at(pg, 'd2_door', { hero: 'jude', mem: 3, resolve: 3, flags: {} }); await tapChip(pg, 'Hold the door yourself'); await memoryShown(pg);
+  const end = await pg.evaluate(() => ({ who: [...document.querySelectorAll('#thread .who')].map(w => w.textContent).pop(), text: document.getElementById('thread').textContent, want: ABY.heroCoda('keeper', { hero: 'jude' }).text }));
+  await pg.screenshot({ path: join(OUT, 'heroes-voice-ending.png') });
+  rec('heroes-voice', plain.includes('Tell her who you are') && !plain.some(t => /Jude/.test(t)) && hers.some(t => /Jude, the nurse who stays all night/.test(t)) && !hers.includes('Tell her who you are')
+      && /Jude, the nurse who stays all night/.test(said.out) && said.trust === t0 + 1 && same.trust === t1 + 1 && said.node === same.node
+      && /we wrote it down for you/.test(wake4) && /Your shift is over/.test(end.text) && end.text.includes(end.want) && /^Wren/i.test(end.who || '') && /Your shift is over[^]*— end —$/.test(end.text),
+    'Sorrel hears "' + (hers.filter(t => /Jude/.test(t))[0] || '?') + '" from Jude (and the plain words from no one), the same reply: trust +1 both ways, on to ' + said.node + '; on Day Four the Choir writes Rowan’s clue down; Jude’s ending closes with ' + (end.who || '?') + ': "' + end.want.slice(0, 40) + '…"');
+  await ctx.close();
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];
