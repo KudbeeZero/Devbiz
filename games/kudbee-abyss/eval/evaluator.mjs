@@ -107,6 +107,7 @@ async function open(opts = {}, tag = '', { cdn = true, pre, keepBoot } = {}) {
   if (cdn && THREE_PATH) await pg.route('https://cdnjs.cloudflare.com/**', r => r.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, path: THREE_PATH }));
   else await pg.route('https://cdnjs.cloudflare.com/**', r => r.abort());
   if (!opts.guide) await pg.addInitScript(`try { if (!localStorage.getItem('kudbee.abyss.v2')) localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);   // the first-run guide has its own check; every other flow starts past it
+  if (!opts.beats) await pg.addInitScript('window.__abySkipBeats = true;');   // beats are pure pass-throughs: flows walk through them to the scene they mean; the beats block plays them
   if (!opts.scramble) await pg.addInitScript('window.__abyOpening = "awakening";');   // flows that pick replies by name start at the first opening; the scramble has its own check
   if (pre) await pg.addInitScript(pre);
   await pg.goto(URL, { waitUntil: 'load' });
@@ -128,6 +129,11 @@ async function pick(pg, text) {                         // wait for the reply ch
   await pg.waitForFunction(() => ABY.game.delivering || document.querySelector('#replies.on .chip'), null, { timeout: 15000 });
   for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); }
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
+  // the first scene is a three-scene prologue now: a flow that means "the first scene's three ways" reads through it first (a flow that asks for a prologue line gets it)
+  const PRO = ['Feel for the flute at your back', 'Read the note again, slowly'];
+  if (!PRO.some(t => text.indexOf(t) === 0 || t.indexOf(text) === 0)) {
+    for (const t of PRO) { if (await pg.locator('#replies .chip', { hasText: t }).count()) { await pg.locator('#replies .chip', { hasText: t }).first().click(); await sleep(250); await pg.waitForFunction(() => ABY.game.delivering || document.querySelector('#replies.on .chip'), null, { timeout: 15000 }); for (let i = 0; i < 6 && await pg.evaluate(() => ABY.game.delivering); i++) { await pg.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))); await sleep(150); } await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); } }
+  }
   await pg.locator('#replies .chip', { hasText: text }).first().click();
   await sleep(250);
 }
@@ -176,7 +182,7 @@ await block('desktop', async () => {
   rec('chat-typing-and-bubbles', sawTyping && m0.bubbles >= 1 && m0.chips === 3, 'typing dots shown first: ' + sawTyping + ', ' + m0.bubbles + ' message bubble(s), ' + m0.chips + ' quick replies');
   await pick(pg, 'Listen to the stones'); await pick(pg, 'Ask Vey to guide me'); await pg.waitForSelector('#replies.on .chip');
   const m1 = await pg.evaluate(() => ({ outs: [...document.querySelectorAll('#thread .m.out')].map(e => e.textContent), clock: document.getElementById('clock').textContent, bat: parseInt(document.getElementById('batN').textContent), av: document.getElementById('mAv').className, name: document.getElementById('mName').textContent, bars: document.querySelectorAll('#sig i.on').length, pips: document.getElementById('sT').textContent }));
-  rec('chat-reply-bubbles', m1.outs.join('|') === 'Listen to the stones|Ask Vey to guide me', 'her replies appear as outgoing bubbles: ' + m1.outs.join(' / '));
+  rec('chat-reply-bubbles', m1.outs.join('|') === 'Feel for the flute at your back|Read the note again, slowly|Listen to the stones|Ask Vey to guide me', 'her replies appear as outgoing bubbles, prologue first: ' + m1.outs.join(' / '));
   rec('contact-follows-speaker', /vey/.test(m1.av) && m1.name === 'Vey', 'the chat header turned into ' + m1.name + ' (' + m1.av + ')');
   rec('status-bar-answers-story', m1.clock !== m0.clock && m1.bat < m0.bat && m1.bars === 2 && m1.pips === '✦1', 'clock ' + m0.clock + ' -> ' + m1.clock + ', battery ' + m0.bat + '% -> ' + m1.bat + '%, signal ' + m1.bars + '/4, trust ' + m1.pips);
   if (THREE_PATH) {
@@ -629,7 +635,7 @@ await block('horror', async () => {
   await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); await pick(pg, 'Keep the light on');
   const t2 = await pg.evaluate(() => ({ bat: ABY.game.state.bat })); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 });
   await pg.click('#torchBtn'); await sleep(200); const t3 = await pg.evaluate(() => ({ on: document.getElementById('torchBtn').classList.contains('on'), bat: ABY.game.state.bat }));
-  rec('flashlight-costs-battery', t1.on && t1.light === 1 && t1.torch === 1 && t1.bat === ABYS.BAT0 - 2 && t2.bat === t1.bat - 1 - ABYS.TORCH && !t3.on && t3.bat === t2.bat - ABYS.TORCH_TOGGLE, 'torch on (' + t1.bat + '%), the next choice cost ' + (t1.bat - t2.bat) + ' (1 + ' + ABYS.TORCH + '), switching it off cost ' + (t2.bat - t3.bat));
+  rec('flashlight-costs-battery', t1.on && t1.light === 1 && t1.torch === 1 && t1.bat === ABYS.BAT0 - 4 && t2.bat === t1.bat - 1 - ABYS.TORCH && !t3.on && t3.bat === t2.bat - ABYS.TORCH_TOGGLE, 'torch on (' + t1.bat + '%), the next choice cost ' + (t1.bat - t2.bat) + ' (1 + ' + ABYS.TORCH + '), switching it off cost ' + (t2.bat - t3.bat));
   // a dark room: she is scared without the light, and a choice needs it
   await at(pg, 'pillar_door', {}); const d0 = await chips(pg), hint = await pg.evaluate(() => ({ torchHint: document.getElementById('torchBtn').classList.contains('hint'), says: [...document.querySelectorAll('#thread .m.sys')].some(e => /too dark/i.test(e.textContent)) }));
   await pg.click('#torchBtn'); await sleep(300); const d1 = await chips(pg);
@@ -869,7 +875,7 @@ await block('overnight', async () => { // overnight messages: a day that carries
   rec('little-key-opens-the-low-lock', !before.some(c => /little brass key/.test(c)) && key.promised === 1 && key.node === 'd6_dawn', 'pinning the key to the nursery wall adds "Try the little brass key in the low lock"; turning it frees Sorrel and promises to come back');
   await at(pg, 'd2_wake', { mem: 3, open: 'op_bath' }); const bath = await pg.evaluate(() => document.getElementById('thread').textContent);
   await at(pg, 'd2_wake', { mem: 3 }); const first = await pg.evaluate(() => document.getElementById('thread').textContent);
-  rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && !/You came/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey does not');
+  rec('overnight-remembers-the-way-in', /You came up through the water this time/.test(bath) && /You came the first way/.test(first) && !/water this time/.test(first), 'a journey that began in the bath hears about it on Day Two; the first journey hears about the haze instead');
   await at(pg, 'd2_wake', { mem: 3, flags: { echo_dawn: 1, echo_song: 1 } }); const echoed = await pg.evaluate(() => document.getElementById('thread').textContent);
   rec('echoes-remembered', /You opened the gate once/.test(echoed) && /you sang it back to me/.test(echoed) && !/You opened the gate once|you sang it back/.test(first), 'someone who found The Gate Opens and The Song Remembered hears the Queen and the Eye remember them on Day Two; a player who found neither hears nothing');
   await at(pg, 'd4_shore', { mem: 3, flags: { vey_known: 1, vey_trusted: 1, refused_next: 1 } }); await pg.evaluate(() => ABY.Phone.show('pulse')); await sleep(300);
@@ -978,9 +984,9 @@ await block('openings-deep', async () => { // the beginnings, deeper: a journey 
   await at(pg, 'd6_dawn', { open: 'op_lift', mem: 3, flags: { promised_sorrel: 1 } }); const d6 = await chips(pg);
   await at(pg, 'd7_eye', { mem: 3, flags: { tt_echo6: 1 } }); const eye = await chips(pg);
   rec('opening-comes-back-on-day-four-and-six', d4.some(c => /how you first came in \(the lift\)/.test(c)) && e4.time === 'past' && /pressing the button to call it/.test(e4.thread) && back.flag === 1 && !back.chips.some(c => /first came in/.test(c))
-    && bath.some(c => /how you first came in \(the bath\)/.test(c)) && !bath.some(c => /the lift/.test(c)) && !first.some(c => /first came in/.test(c))
+    && bath.some(c => /how you first came in \(the bath\)/.test(c)) && !bath.some(c => /the lift/.test(c)) && first.some(c => /how you first came in \(the haze\)/.test(c)) && !first.some(c => /the lift|the bath/.test(c))
     && truth.some(c => /how you came in, the very first night/.test(c)) && !plain.some(c => /how you came in, the very first night/.test(c)) && d6.some(c => /the lift, once more/.test(c)) && eye.some(c => /door you came through/.test(c)),
-    'Day Four offers the lift flashback only to the journey that began there ("' + (d4.filter(c => /first came in/.test(c))[0] || '') + '"; a bath journey is offered the bath, the first journey nothing), it is a warm flashback that returns and is seen once; Wren reads it on Day Five, the lift returns on Day Six, and the Eye on Day Seven reads the door');
+    'Day Four offers the lift flashback only to the journey that began there ("' + (d4.filter(c => /first came in/.test(c))[0] || '') + '"; a bath journey is offered the bath, the first journey only its own, the haze), it is a warm flashback that returns and is seen once; Wren reads it on Day Five, the lift returns on Day Six, and the Eye on Day Seven reads the door');
   await ctx.close();
 });
 await block('days-six-seven', async () => { // Days Six and Seven: Day Five carries on, Day Six finds the first page (and Sorrel), and the book closes on the seventh morning only for a veteran
@@ -1309,6 +1315,37 @@ await block('robustness', async () => {
   { const c = await open({ ctx: { reducedMotion: 'reduce' } }, 'reduced'); await wake(c.pg); await openMessages(c.pg); await c.pg.waitForSelector('#replies.on .chip', { timeout: 6000 });
     const o = await c.pg.evaluate(() => ({ red: ABY.Scene.reduced || !ABY.Scene.ready, bubbles: document.querySelectorAll('#thread .m.sys').length }));
     rec('reduced-motion', o.red && o.bubbles >= 1, 'messages arrive without the typing delay, scene sway off'); await c.ctx.close(); }
+});
+
+// ================= the road, longer: beats =================
+await block('beats', async () => {
+  const { ctx, pg } = await open(Object.assign(phoneCtx(PHONES[0]), { beats: true }), 'beats'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd5_wake', { mem: 3 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const bat0 = await pg.evaluate(() => ABY.game.state.bat);
+  await pg.locator('#replies .chip', { hasText: 'Say her name' }).first().click();
+  await pg.waitForFunction(() => ABY.game.state.node === 'bt_d5_bedroom', null, { timeout: 15000 }); await pick(pg, 'Speak first');
+  await pg.waitForFunction(() => ABY.game.state.node === 'd5_hello', null, { timeout: 15000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const o = await pg.evaluate(() => ({ bat: ABY.game.state.bat, thread: document.getElementById('thread').textContent }));
+  rec('beat-plays', /cheap kind that let the street light in/.test(o.thread) && /Speak first/.test(o.thread) && /sleepy whisper/.test(o.thread) && o.bat === bat0 - 1,
+    'a beat on the way to Wren: its text arrives, its one reply is sent, and she lands where the old link went (battery ' + bat0 + ' -> ' + o.bat + ': only the original choice cost anything)');
+  await ctx.close();
+});
+
+// ================= more calls through the week =================
+await block('ring-detours-ui', async () => {
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'ringdetour'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd5_hang', {}); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const entry = pg.locator('#replies .chip', { hasText: 'The phone is ringing: Corvin Ash' }); const offered = await entry.count();
+  await entry.first().click(); await pg.waitForSelector('#call.on[data-ring="1"]', { timeout: 15000 });
+  const r1 = await pg.evaluate(() => ({ who: document.getElementById('callWho').textContent, n: document.querySelectorAll('#callAct .cbtn').length }));
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="2"]', { timeout: 15000 });
+  await pg.locator('#callAct .cbtn.no').click(); await pg.waitForSelector('#call.on[data-ring="3"]', { timeout: 15000 });
+  const r3 = await pg.evaluate(() => document.querySelectorAll('#callAct .cbtn').length);
+  await pg.locator('#callAct .cbtn').first().click(); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await pg.locator('#replies .chip', { hasText: 'Put the phone down' }).first().click(); await pg.waitForFunction(() => ABY.game.state.node === 'd5_hang' && ABY.game.state.flags.rg_done_corvin5 === 1, null, { timeout: 15000 });
+  await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const after = await pg.locator('#replies .chip', { hasText: 'The phone is ringing' }).count();
+  rec('ring-detour-plays', offered === 1 && r1.who === 'Corvin Ash' && r1.n === 2 && r3 === 1 && after === 0, 'the call is offered once on the scene (' + offered + '), rings as ' + r1.who + ', rings louder when declined, answers itself on the third, and puts her back on the same scene with no second offer (' + after + ')');
+  await ctx.close();
 });
 
 rec('no-console-errors', errs.length === 0, errs.slice(0, 2).join(' | ').slice(0, 220) || 'no page errors or console errors in any run');

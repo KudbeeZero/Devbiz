@@ -167,6 +167,7 @@ ABY.NOTES = {
   glimpse_door: { title: 'Flash-forward: a small door', text: 'A house with no windows. A cot, paper hats, and a door standing open a hand\u2019s width onto red light. The light blinked once, as if it had been waiting a very long time for someone to come up the stairs.' },
   glimpse_seventh: { title: 'Flash-forward: the seventh night', text: 'Everyone in one room: the captain at the door, Vey at your ankle, the choir along the walls, the Queen with her flute. In the gap of the door, enormous and wet with crying, a child\u2019s eye. You open your mouth, and the screen cuts out before you can hear what you say.' },
   glimpse_morning: { title: 'Flash-forward: the morning after', text: 'Real light on a real wall. A phone, switched off, on a kitchen table. A quarter to seven, not 3:07. A kettle, a folded cot, and in the corridor an ordinary door.' },
+  o_awake: { title: 'The count', text: 'DO NOT LET THEM COUNT YOU, in your own handwriting, under the flute strap. A photo of a small hand in yours that you do not remember taking. And on the back of your hand, in biro: 1.' },
   o_lift: { title: 'The lift wall', text: 'Pencil, at the height of a nine-year-old: W. WAS HERE. And a drawing of a lift with 3:07 on the door, taped where you could not have put it. Someone drew you the way in.' },
   o_bath: { title: 'The duck with the ribbon', text: 'A yellow duck on the bath rim with a ribbon round its neck, and in crayon, very small: for the bath, so you are never lonely down there. Whoever left it knew you would come up through the water.' },
   o_bus: { title: 'The packed bag', text: 'A child\u2019s schoolbag on the night bus: a torch, a sandwich in foil, a cracked phone at 3:07, and a note in block capitals: IF YOU GET LOST, STAY ON THE BUS. IT ALWAYS GOES HOME EVENTUALLY.' },
@@ -223,6 +224,7 @@ ABY.OVERNIGHT = [
   { id: 'n_page_unread', at: 'd7_wake', req: { flag: 'page_unread' }, who: 'QUEEN', text: 'You did not read the first page. That is all right. I could not either, for a very long time.' },
   { id: 'n_crown_laid', at: 'd5_wake', req: { flag: 'crown_laid' }, who: 'QUEEN', text: 'You laid the little crown down on the shore. I came and sat beside it all night. I did not ask whose it was. I think I have always known whose it was.' },
   { id: 'n_bells', at: 'd5_wake', req: { flag: 'bells_done' }, who: 'CHOIR', text: 'the bells. we have never been rung before. we did not know we were that kind of thing, a thing that could be played. thank you. we are still ringing.' },
+  { id: 'n_open_awake', at: 'd2_wake', req: { open: 'awakening' }, who: 'QUEEN', text: 'You came the first way: the haze, the flute, a woman who could not remember her name. That was me. I have been rehearsing what to say if you ever came back to the beginning. I have only got as far as: thank you for not hanging up.' },
   { id: 'n_open_lift', at: 'd2_wake', req: { open: 'op_lift' }, who: 'QUEEN', text: 'You came by the lift. It had a floor on the panel that was only a crown. I did not put it there. I think the phone did.' },
   { id: 'n_open_bath', at: 'd2_wake', req: { open: 'op_bath' }, who: 'QUEEN', text: 'You came up through the water this time. I heard you before I saw you: someone humming eleven notes, under a bath, very far down.' },
   { id: 'n_open_bus', at: 'd2_wake', req: { open: 'op_bus' }, who: 'QUEEN', text: 'You came on a night bus that missed every stop. I stood at one of the stops all night, in case you got off.' },
@@ -232,6 +234,7 @@ ABY.OVERNIGHT = [
   { id: 'n_open_lost', at: 'd2_wake', req: { open: 'op_lost' }, who: 'QUEEN', text: 'You came from the lost-property office, with your own face as the lock screen. Nothing is ever really lost, here. Only kept.' },
   { id: 'n_open_voicemail', at: 'd2_wake', req: { open: 'op_voicemail' }, who: 'QUEEN', text: 'You came in by your own voicemail, crying. I played it to the whole cave, in case it helped. It did not help. Thank you for letting me.' },
   { id: 'n_open_snow', at: 'd2_wake', req: { open: 'op_snow' }, who: 'QUEEN', text: 'You came in with the snow, falling up. It is still falling up in the cave. The stones like it. They have not been cold in years.' },
+  { id: 'n_door_awake', at: 'd7_wake', req: { open: 'awakening' }, who: 'EYE', text: 'i was behind the haze too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_lift', at: 'd7_wake', req: { open: 'op_lift' }, who: 'EYE', text: 'i was behind the lift too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_bath', at: 'd7_wake', req: { open: 'op_bath' }, who: 'EYE', text: 'i was behind the bath too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
   { id: 'n_door_bus', at: 'd7_wake', req: { open: 'op_bus' }, who: 'EYE', text: 'i was behind the night bus too. ten doors, and every one of them opens onto me. you chose this one first, and you keep coming back through it. nobody ever told you it was a door.' },
@@ -366,9 +369,9 @@ ABY.NODES = {
     teaser: 'You\u2019re awake. Do you hear it? The flute is calling.',
     text: 'Something wakes her. Not a sound: the end of one. 3:07, says the phone in your hand, and somewhere in the haze a door has just stopped closing. She cannot remember her name. She can remember the weight of the flute at her back, and the echo of its song in her blood. Something has already begun to count.',
     choices: [
-      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
-      { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
-      { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+      { label: 'Feel for the flute at your back', next: 'awakening_b', add: { resolve: 1 } },
+      { label: 'Listen for the door that stopped closing', next: 'awakening_b', add: { heart: 1 } },
+      { label: 'Look at the phone: 3:07', next: 'awakening_b', add: { dread: 1 } },
     ],
   },
   // ---- the other nine openings: a journey after the first starts in one of these (ABY.OPENINGS), somewhere new, and finds the same haze ----
@@ -457,7 +460,7 @@ ABY.NODES = {
     ch: 1, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'i can see you holding it. it is 3:07. it is always 3:07 here. you should not have woken up.',
     choices: [
-      { label: 'Who is this?', next: 'unknown_who' },
+      { label: 'Who is this?', next: 'bt_d1_typing' },
       { label: 'Switch on the flashlight', next: 'torch_first', light: 1 },
       { label: 'Ignore it and follow the flute', next: 'flute_path', add: { resolve: 1 } },
     ],
@@ -497,7 +500,7 @@ ABY.NODES = {
     ch: 1, speaker: 'QUEEN', mood: 'void', focus: 'queen',
     text: 'The flute hums louder. It wants to take me somewhere. I can feel a path in the violet haze: not a road, but a resonance only I can hear.',
     choices: [
-      { label: 'Climb the broken spire', next: 'spire', add: { resolve: 1 } },
+      { label: 'Climb the broken spire', next: 'bt_d1_spire', add: { resolve: 1 } },
       { label: 'Call to the small creature', next: 'vey_come', add: { trust: 1 } },
       { label: 'Play the flute at the dark', next: 'choir_1', add: { dread: 1 } },
       { label: 'Follow the wet footprints', next: 'footprints', add: { heart: 1 } },
@@ -752,7 +755,7 @@ ABY.NODES = {
     ch: 3, speaker: 'NARRATOR', mood: 'dawn', focus: 'crystal',
     text: 'She offers the flute to the spire. The crystal accepts, and the melody becomes a bridge of light between them.',
     choices: [
-      { label: 'Walk through the light', next: 'reconcile', add: { heart: 1, trust: 1 } },
+      { label: 'Walk through the light', next: 'bt_d1_bridge', add: { heart: 1, trust: 1 } },
     ],
   },
 
@@ -946,7 +949,7 @@ ABY.NODES = {
     text: 'Day Two. The gate is open and nothing came through it, and the phone is still warm in your hand. The clock says 3:07. It said 3:07 yesterday. A new name sits at the top of your messages: YOU.',
     choices: [
       { label: 'Open the thread from YOU', next: 'd2_you', add: { dread: 1 } },
-      { label: 'Message the Queen', next: 'd2_queen' },
+      { label: 'Message the Queen', next: 'bt_d2_delivered' },
       { label: 'Look at the new photo in your gallery', next: 'c2_vey' },
     ],
   },
@@ -995,7 +998,7 @@ ABY.NODES = {
     ch: 6, speaker: 'EYE', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'this is your number. i am what you left on the other side of the gate. you opened it with trust or with a song or with nothing at all and it does not matter which. i only needed it open.',
     choices: [
-      { label: 'What do you want?', next: 'd2_want' },
+      { label: 'What do you want?', next: 'bt_d2_red' },
       { label: 'Play it a lullaby', next: 'd2_lull', req: { flag: 'lullaby' } },
       { label: 'Turn the phone off', next: 'end_loop' },
       { label: 'Leave it on. You know it only turns itself back on', next: 'd2_want', add: { resolve: 1 }, req: { flag: 'scar_loop' } },
@@ -1014,6 +1017,7 @@ ABY.NODES = {
     text: 'you sang to me. nobody ever sings to me. i will not be a door for you tonight. i will be a light. carry me down and i will keep the dark from stepping on your heels.',
     choices: [
       { label: 'Carry it down', next: 'd2_stairs2', set: 'ally', add: { heart: 1, dread: -1 } },
+      { label: 'The phone is ringing: Vey', next: 'rg_vey2', bat: 0, req: { noflag: 'rg_done_vey2' } },
     ],
   },
   d2_vey: {
@@ -1060,8 +1064,8 @@ ABY.NODES = {
     text: 'The stairs are back, and this time they go down. Each step is a minute. For the first time since you woke, the clock in your status bar is counting up. It is 3:08. It is 3:09. Every step the dark is a little warmer, like the inside of a mouth.',
     choices: [
       { label: 'Switch on the flashlight', next: 'd2_stairs2', light: 1, req: { noLight: 1 } },
-      { label: 'Count the steps', next: 'd2_clock', add: { dread: 1 } },
-      { label: 'Do not count the steps', next: 'd2_clock', add: { resolve: 1 } },
+      { label: 'Count the steps', next: 'bt_d2_landing', add: { dread: 1 } },
+      { label: 'Do not count the steps', next: 'bt_d2_landing', add: { resolve: 1 } },
       { label: 'Scoop up the white grit on the step: it is salt, and it is cold', next: 'd2_stairs2', set: 'has_salt', req: { noflag: 'has_salt' } },
     ],
   },
@@ -1128,7 +1132,7 @@ ABY.NODES = {
     ch: 8, speaker: 'QUEEN', mood: 'dusk', focus: 'queen',
     text: 'Every door you played open stayed open, and not one of them had anything behind it but the next room. I have not heard my own song in so long. It sounds like someone I used to be.',
     choices: [
-      { label: 'Step through', next: 'd3_fork', add: { heart: 1 } },
+      { label: 'Step through', next: 'bt_d3_hall', add: { heart: 1 } },
     ],
   },
   d3_doors_fail: {
@@ -1151,7 +1155,7 @@ ABY.NODES = {
     text: 'The hall splits three ways. A red corridor, where the walls are wet and the floor is warm. A servants\' stair that smells like Vey\'s hands. And a plain door with a name scratched into it in a soldier\'s neat handwriting.',
     choices: [
       { label: 'Take the red corridor', next: 'c3_corvin', add: { resolve: 1 } },
-      { label: 'Follow Vey down the servants\' stair', next: 'd3_vey3', add: { dread: 1 } },
+      { label: 'Follow Vey down the servants\' stair', next: 'bt_d3_servants', add: { dread: 1 } },
       { label: 'Knock on the plain door', next: 'd3_corvin', req: { flag: 'knew_name' } },
     ],
   },
@@ -1223,6 +1227,7 @@ ABY.NODES = {
     text: 'It blinks first. Nobody has ever made it blink. It looks, for one second, very afraid, and very glad. "You did not look away," it says. "Why does that feel like being sung to?"',
     choices: [
       { label: 'Say: sit down, I will teach you one', next: 'd3_lull', add: { resolve: 1, dread: 1 } },
+      { label: 'The phone is ringing: HOME, again', next: 'rg_home3', bat: 0, req: { noflag: 'rg_done_home3' } },
     ],
   },
   d3_lull: {
@@ -1234,7 +1239,7 @@ ABY.NODES = {
     ch: 8, speaker: 'EYE', mood: 'dawn', focus: 'queen',
     text: 'again. play it again. no, do not play it again, i would only want it again. (Something very large lowers its head to the table, and the red light goes out of the room by degrees, like a child finally falling asleep.)',
     choices: [
-      { label: 'Sit with it', next: 'd3_finale', add: { heart: 1, dread: -1 } },
+      { label: 'Sit with it', next: 'bt_d3_quiet', add: { heart: 1, dread: -1 } },
     ],
   },
   d3_lull_fail: {
@@ -1282,7 +1287,7 @@ ABY.NODES = {
       { label: 'Open the new contact, Everyone Before You, and read one of them', next: 'hold_hub', bat: 0 },
       { label: 'Sit with Vey on the servants\u2019 stair, a while', next: 'cf_vey_a', bat: 0, req: { bond: { who: 'VEY', min: 1 }, noflag: 'tt_conf_vey' } },
       { label: 'Open the contact', next: 'd4_contact', add: { dread: 1 } },
-      { label: 'Ask the Queen about the faces', next: 'd4_queen' },
+      { label: 'Ask the Queen about the faces', next: 'bt_d4_faces' },
       { label: 'Switch on the flashlight', next: 'd4_wake', light: 1, req: { noLight: 1 } },
       { label: 'Go back to the singing stones', next: 'd4_stones', add: { resolve: 1 } },
       { label: 'Turn the clock back: the servants\u2019 stair, the night of the lock', next: 'fb_vey_stair', bat: 3, req: { noflag: 'tt_vey' } },
@@ -1296,6 +1301,7 @@ ABY.NODES = {
       { label: 'Turn the clock back: how you first came in (the lost-property office)', next: 'ec4_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo4' } },
       { label: 'Turn the clock back: how you first came in (the voicemail)', next: 'ec4_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo4' } },
       { label: 'Turn the clock back: how you first came in (the snow)', next: 'ec4_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo4' } },
+      { label: 'Turn the clock back: how you first came in (the haze)', next: 'ec4_awake', bat: 3, req: { open: 'awakening', noflag: 'tt_echo4' } },
     ],
   },
   d4_queen: {
@@ -1314,7 +1320,7 @@ ABY.NODES = {
       { label: 'Switch on the flashlight', next: 'd4_contact', light: 1, req: { noLight: 1 } },
       { label: 'Read every name out loud', next: 'd4_stones', set: 'read_names', add: { heart: 1 }, bat: 4 },
       { label: 'Scroll past your own name', next: 'd4_bottom', add: { dread: 1 } },
-      { label: 'Delete the contact', next: 'd4_delete' },
+      { label: 'Delete the contact', next: 'bt_d4_sure' },
     ],
   },
   d4_delete: {
@@ -1323,6 +1329,7 @@ ABY.NODES = {
     choices: [
       { label: 'Stop deleting it', next: 'd4_stones', add: { dread: 1 } },
       { label: 'Open it again', next: 'd4_contact', add: { dread: 1 } },
+      { label: 'The phone is ringing: No Caller ID', next: 'rg_eye4', bat: 0, req: { noflag: 'rg_done_eye4' } },
     ],
   },
   d4_bottom: {
@@ -1360,7 +1367,7 @@ ABY.NODES = {
     ch: 9, speaker: 'CHOIR', mood: 'dawn', focus: 'queen',
     text: 'we remember the end now. (The water goes down, step by step, and they come up with it: wet hair, open eyes, two hundred and fourteen people blinking at a ceiling.) we were waiting for someone to finish it. nobody ever finishes it.',
     choices: [
-      { label: 'Ask them their names', next: 'd4_shore', add: { heart: 1, dread: -1 } },
+      { label: 'Ask them their names', next: 'bt_d4_names', add: { heart: 1, dread: -1 } },
     ],
   },
   d4_choir_fail: {
@@ -1446,7 +1453,7 @@ ABY.NODES = {
     ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch',
     text: 'day five. 3:07. (You are not in the cave any more. You are the voice in a phone on a bedside table, and next to it someone is sitting up in the dark, one hand already out for the screen.) 1 new contact: Wren.',
     choices: [
-      { label: 'Say her name', next: 'd5_hello', add: { heart: 1 } },
+      { label: 'Say her name', next: 'bt_d5_bedroom', add: { heart: 1 } },
       { label: 'Breathe, the way it was done to you', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Hang up before she answers', next: 'd5_hang' },
       { label: 'Turn the clock back: the night you took the phone', next: 'fb_nine', bat: 3, req: { noflag: 'tt_nine' } },
@@ -1458,7 +1465,7 @@ ABY.NODES = {
     ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen',
     text: '...hello? (A sleepy whisper, very close. She is holding the phone with both hands.) It says 3:07. Who is this? How do you have this number? Is this a prank?',
     choices: [
-      { label: 'Tell her the truth', next: 'd5_truth', set: 'told_truth', add: { trust: 1 } },
+      { label: 'Tell her the truth', next: 'bt_d5_where', set: 'told_truth', add: { trust: 1 } },
       { label: 'Say it is a wrong number', next: 'd5_lie', add: { dread: 1 } },
       { label: 'Say nothing', next: 'd5_breathe', add: { dread: 1 } },
       { label: 'Remind her: I held your hand on the landing when you were nine', next: 'd5_truth', req: { flag: 'tt_nine' }, set: 'told_truth', add: { heart: 1, trust: 1 } },
@@ -1503,6 +1510,7 @@ ABY.NODES = {
       { label: 'Call her back', next: 'd5_hello', add: { resolve: 1 } },
       { label: 'Pour a line of salt along the edge of the screen, so the blank line cannot be written', next: 'd5_hello', set: 'used_salt', add: { resolve: 1, dread: -2 }, req: { flag: 'has_salt', noflag: 'used_salt' } },
       { label: 'Leave her to the dark', next: 'end_passed' },
+      { label: 'The phone is ringing: Corvin Ash', next: 'rg_corvin5', bat: 0, req: { noflag: 'rg_done_corvin5' } },
     ],
   },
   d5_truth: {
@@ -1511,7 +1519,7 @@ ABY.NODES = {
     choices: [
       { label: 'Tell her about the book', next: 'd5_book', add: { resolve: 1 } },
       { label: 'Tell her to sing with you', next: 'd5_rite', add: { heart: 1 } },
-      { label: 'Ask her to stay on the line till it is light', next: 'd5_dawn', set: 'stayed_line' },
+      { label: 'Ask her to stay on the line till it is light', next: 'bt_d5_night', set: 'stayed_line' },
       { label: 'Tell her how you came in, the very first night: it will help her not be afraid', next: 'd5_book', req: { flag: 'tt_echo4' }, add: { heart: 1, trust: 1 } },
     ],
   },
@@ -1610,7 +1618,7 @@ ABY.NODES = {
     text: 'Day six. 3:07, and the phone is warm, as if someone was holding it while you slept. The contact Everyone Before You is open on its own and scrolling, slowly, upward: past Wren, past you, past two hundred and fourteen names, to a page you have never seen. The first page. No name on it. One number, and a drawing of a crown no bigger than a bowl.',
     choices: [
       { label: 'Look at the first page', next: 'd6_page', add: { resolve: 1 } },
-      { label: 'Ask the Queen whose number it is', next: 'd6_queen', add: { trust: 1 } },
+      { label: 'Ask the Queen whose number it is', next: 'bt_d6_page', add: { trust: 1 } },
       { label: 'Call the number', next: 'd6_ring', add: { dread: 1 } },
     ],
   },
@@ -1662,7 +1670,7 @@ ABY.NODES = {
     text: 'she was going to answer. (One new message, No Caller ID.) she has been standing by that phone for a very long time. she was so sure it would be her mother.',
     choices: [
       { label: 'Call back', next: 'd6_ring', add: { dread: 1 } },
-      { label: 'Put the phone face down until morning', next: 'd6_dawn', add: { dread: 1 }, set: 'page_unread' },
+      { label: 'Put the phone face down until morning', next: 'bt_d6_facedown', add: { dread: 1 }, set: 'page_unread' },
     ],
   },
   d6_sorrel: {
@@ -1736,6 +1744,7 @@ ABY.NODES = {
     choices: [
       { label: 'Go to the door', next: 'd6_door', add: { heart: 1 } },
       { label: 'Write under it in her own colour: I SEE YOU', next: 'd6_door', set: 'used_crayon', add: { heart: 1, dread: -1 }, req: { flag: 'has_crayon', noflag: 'used_crayon' } },
+      { label: 'The phone is ringing: The Queen', next: 'rg_queen6', bat: 0, req: { noflag: 'rg_done_queen6' } },
     ],
   },
   d6_door: {
@@ -1746,7 +1755,7 @@ ABY.NODES = {
       { label: 'You stayed in this room once. Promise to come back instead', next: 'd6_dawn', set: 'promised_sorrel', add: { heart: 1, trust: 1 }, req: { flag: 'scar_cradle' } },
       { label: 'Sing her the lullaby through the door', next: 'd6_lull', req: { flag: 'lullaby' }, add: { heart: 1, dread: -1 } },
       { label: 'Give her the little crown back', next: 'd6_crown', req: { flag: 'little_crown' }, add: { heart: 1, trust: 1 } },
-      { label: 'Tell her you will come back tomorrow', next: 'd6_dawn', add: { trust: 1 }, set: 'promised_sorrel' },
+      { label: 'Tell her you will come back tomorrow', next: 'bt_d6_promise', add: { trust: 1 }, set: 'promised_sorrel' },
       { label: 'Ask the Eye to look at her, once, so that someone has seen her', next: 'd6_dawn', add: { heart: 1, dread: -1 }, req: { bond: { who: 'EYE', min: 2 } } },
       { label: 'Shut the door on her', next: 'd6_shut', add: { resolve: 1, dread: 1 } },
       { label: 'Try the little brass key in the low lock', next: 'ev_key', req: { flag: 'link_low_lock' } },
@@ -1791,6 +1800,7 @@ ABY.NODES = {
       { label: 'Turn the clock back: the lost-property office, once more', next: 'ec6_lost', bat: 3, req: { open: 'op_lost', noflag: 'tt_echo6' } },
       { label: 'Turn the clock back: the voicemail, once more', next: 'ec6_voicemail', bat: 3, req: { open: 'op_voicemail', noflag: 'tt_echo6' } },
       { label: 'Turn the clock back: the snow, once more', next: 'ec6_snow', bat: 3, req: { open: 'op_snow', noflag: 'tt_echo6' } },
+      { label: 'Turn the clock back: the haze, once more', next: 'ec6_awake', bat: 3, req: { open: 'awakening', noflag: 'tt_echo6' } },
     ],
   },
   end_firstpage: {
@@ -1807,8 +1817,8 @@ ABY.NODES = {
     ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'gate', scare: 'glitch',
     text: 'Day seven. 3:07. Every app on the phone is open at once and every one of them is a message: the Queen, Vey, the Guardian, Wren, Everyone Before You. The last notification is from No Caller ID, and it is only two words, and the phone reads them out loud in a little girl\'s voice: last one.',
     choices: [
-      { label: 'Open the Queen\'s message', next: 'd7_queen', add: { trust: 1 } },
-      { label: 'Open No Caller ID', next: 'd7_eye', add: { dread: 1 } },
+      { label: 'Open the Queen\'s message', next: 'bt_d7_flute', add: { trust: 1 } },
+      { label: 'Open No Caller ID', next: 'bt_d7_red', add: { dread: 1 } },
       { label: 'Call Wren', next: 'd7_wren', req: { flag: 'told_truth' }, add: { heart: 1 } },
     ],
   },
@@ -1848,6 +1858,7 @@ ABY.NODES = {
     choices: [
       { label: 'Not this time', next: 'd7_gather', add: { resolve: 2 }, set: 'knows_loop' },
       { label: 'How many times?', next: 'd7_gather', add: { dread: 1 }, set: 'knows_loop' },
+      { label: 'The phone is ringing: The Queen, the last night', next: 'rg_queen7', bat: 0, req: { noflag: 'rg_done_queen7' } },
     ],
   },
   d7_named: {
@@ -1863,7 +1874,7 @@ ABY.NODES = {
     choices: [
       { label: 'Ask the Eye what it saw first', next: 'cf_eye_a', bat: 0, req: { bond: { who: 'EYE', min: 1 }, noflag: 'tt_conf_eye' } },
       { label: 'Raise the flute', next: 'd7_rite', add: { resolve: 1 } },
-      { label: 'Give the phone to the Queen', next: 'd7_end', add: { trust: 1, dread: 1 } },
+      { label: 'Give the phone to the Queen', next: 'bt_d7_hands', add: { trust: 1, dread: 1 } },
       { label: 'Turn the clock back: the very first night', next: 'fb_first', bat: 3, req: { noflag: 'tt_first' } },
       { label: 'Wind the clock forward: the morning after', next: 'ff_morning', bat: 3, add: { dread: 1 }, req: { noflag: 'tt_morning' } },
       { label: 'Let Vey carry the phone for you, just this once', next: 'd7_rite', req: { flag: 'tt_vey' }, add: { trust: 1, dread: -1 } },
@@ -2383,6 +2394,447 @@ ABY.NODES = {
   },
   // ---- the beginnings, deeper: each of the nine other openings is a three-scene prologue (op_X -> op_X_b -> op_X_c, then the haze), files its own clue, and
   // comes back as a flashback (`thread: <opening>`) on Day Four (ec4_*) and Day Six (ec6_*), offered only to a journey that began that way ----
+  // ---- more calls through the week (each chain is an OPTIONAL detour from one scene: ring, ring louder, then it answers itself; every end returns to the scene she left, sets rg_done_<k>, costs nothing and changes no stat, so no ending moves) ----
+  rg_home1: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', call: { from: 'HOME', sub: 'calling from 3:07' },
+    text: 'The screen says HOME. There is no home in your contacts; there is only this, lit, ringing a tune you almost know.',
+    choices: [
+      { label: 'Answer', next: 'rg_home1_a', bat: 0 },
+      { label: 'Decline', next: 'rg_home1_2', bat: 0 },
+    ],
+  },
+  rg_home1_2: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch', call: { from: 'HOME', sub: 'calling again', ring: 2 },
+    text: 'HOME again. The ring is a little faster, like someone running up a stair to get to the phone first.',
+    choices: [
+      { label: 'Answer', next: 'rg_home1_a', bat: 0 },
+      { label: 'Decline', next: 'rg_home1_3', bat: 0 },
+    ],
+  },
+  rg_home1_3: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'jump', call: { from: 'HOME', sub: 'answered', ring: 3 },
+    text: 'The phone picks itself up. Nobody asked it to.',
+    choices: [
+      { label: 'Listen', next: 'rg_home1_b', bat: 0 },
+    ],
+  },
+  rg_home1_a: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'A very small voice, very close to the receiver, counting. “...four... five... six...” It stops. It breathes. “Seven,” it says. “Is that you? You are very hard to find. I am going to count to the end, and then I am going to come and look. Ready or not.” The line stays open. Under the dial tone the numbers are still going, quietly, on past seven.',
+    choices: [
+      { label: 'Hang up softly', next: 'awakening_b', bat: 0, set: 'rg_done_home1' },
+      { label: 'Whisper: I am here', next: 'awakening_b', bat: 0, set: 'rg_done_home1' },
+    ],
+  },
+  rg_home1_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'No one is on the line, but the line is counting. Slowly, patiently, in a very small voice that is not trying to frighten you. “...six... seven...” Then, close, like a hand on your sleeve: “I always find the ones who stay still.” The call ends itself with a click like a door pulled to, not shut.',
+    choices: [
+      { label: 'Put the phone down', next: 'awakening_b', bat: 0, set: 'rg_done_home1' },
+    ],
+  },
+  rg_vey2: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', call: { from: 'Vey', sub: '777 777 7777' },
+    text: 'The tune is the one you hummed to the Eye. The caller ID is a row of sevens.',
+    choices: [
+      { label: 'Answer', next: 'rg_vey2_a', bat: 0 },
+      { label: 'Decline', next: 'rg_vey2_2', bat: 0 },
+    ],
+  },
+  rg_vey2_2: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch', call: { from: 'Vey', sub: '777 777 7777, again', ring: 2 },
+    text: 'The sevens again, louder, as if a very small paw were pressing every key it could reach.',
+    choices: [
+      { label: 'Answer', next: 'rg_vey2_a', bat: 0 },
+      { label: 'Decline', next: 'rg_vey2_3', bat: 0 },
+    ],
+  },
+  rg_vey2_3: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', call: { from: 'Vey', sub: 'answered by a paw', ring: 3 },
+    text: 'The phone is put through without being asked. Something small is holding it the wrong way up.',
+    choices: [
+      { label: 'Listen', next: 'rg_vey2_b', bat: 0 },
+    ],
+  },
+  rg_vey2_a: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'queen',
+    text: 'It is Vey, whispering from somewhere with an echo. “I found a button. It is under the stair that is not there. I did not press it. I wanted you to know I did not press it. If I stop talking, it is because I have stopped being brave, not because I have pressed it.” A long, careful silence, and the tick of claws on brass. “Still here,” says Vey. “Still not pressing.”',
+    choices: [
+      { label: 'Tell Vey you are proud of them', next: 'd2_lull', bat: 0, set: 'rg_done_vey2' },
+      { label: 'Tell Vey to come back to the light', next: 'd2_lull', bat: 0, set: 'rg_done_vey2' },
+    ],
+  },
+  rg_vey2_b: {
+    ch: 6, speaker: 'VEY', mood: 'dark', focus: 'queen',
+    text: 'The phone has put you through, and what you hear is only walking: small, careful steps on brass, going down, and a voice that is nearly a whisper, counting stairs it does not trust. “Forty. Forty-one. Forty-one. Forty-one.” Then, brightly, to nobody: “That is the one I keep coming back to.” A click.',
+    choices: [
+      { label: 'Put the phone down', next: 'd2_lull', bat: 0, set: 'rg_done_vey2' },
+    ],
+  },
+  rg_home3: {
+    ch: 8, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'whisper', call: { from: 'HOME', sub: 'calling from 3:07' },
+    text: 'HOME. Again. The caller ID has not changed, but the phone is warmer than it was.',
+    choices: [
+      { label: 'Answer', next: 'rg_home3_a', bat: 0 },
+      { label: 'Decline', next: 'rg_home3_2', bat: 0 },
+    ],
+  },
+  rg_home3_2: {
+    ch: 8, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'glitch', call: { from: 'HOME', sub: 'calling again', ring: 2 },
+    text: 'HOME again, impatient now, the way a child is impatient who has been told to wait in the next room.',
+    choices: [
+      { label: 'Answer', next: 'rg_home3_a', bat: 0 },
+      { label: 'Decline', next: 'rg_home3_3', bat: 0 },
+    ],
+  },
+  rg_home3_3: {
+    ch: 8, speaker: 'NARRATOR', mood: 'void', focus: 'queen', scare: 'jump', call: { from: 'HOME', sub: 'answered', ring: 3 },
+    text: 'The phone answers itself, quickly, before you can think of a reason not to let it.',
+    choices: [
+      { label: 'Listen', next: 'rg_home3_b', bat: 0 },
+    ],
+  },
+  rg_home3_a: {
+    ch: 8, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: '“Forty doors,” says the small voice, pleased and out of breath. “I have looked behind thirty-nine. The fortieth has a person in it who is not hiding. They are only waiting to be found. I think it is you. Can I tell you something? I do not want to find you yet. When I find you the game is over, and then I have to go home.” A pause. “Where is home, do you think?”',
+    choices: [
+      { label: 'Tell it you will be found when it is ready', next: 'd3_stare', bat: 0, set: 'rg_done_home3' },
+      { label: 'Ask what it will do when it is home', next: 'd3_stare', bat: 0, set: 'rg_done_home3' },
+    ],
+  },
+  rg_home3_b: {
+    ch: 8, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'The line answers itself. Behind a small voice, doors, one after another, each opened and shut with great care, like someone who has been told not to wake anyone. “Thirty-eight. Thirty-nine.” The voice drops. “Forty is the one I am not allowed to open.” The door does not creak. It simply is not there any more, and the call ends.',
+    choices: [
+      { label: 'Put the phone down', next: 'd3_stare', bat: 0, set: 'rg_done_home3' },
+    ],
+  },
+  rg_eye4: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', call: { from: 'No Caller ID', sub: 'no caller id' },
+    text: 'No Caller ID. It has never rung before; it has only ever written.',
+    choices: [
+      { label: 'Answer', next: 'rg_eye4_a', bat: 0 },
+      { label: 'Decline', next: 'rg_eye4_2', bat: 0 },
+    ],
+  },
+  rg_eye4_2: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch', call: { from: 'No Caller ID', sub: 'no caller id, again', ring: 2 },
+    text: 'It rings again, and the ring has a hum in it, like a fridge in an empty house.',
+    choices: [
+      { label: 'Answer', next: 'rg_eye4_a', bat: 0 },
+      { label: 'Decline', next: 'rg_eye4_3', bat: 0 },
+    ],
+  },
+  rg_eye4_3: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', call: { from: 'No Caller ID', sub: 'answered', ring: 3 },
+    text: 'The phone answers for you, the way someone answers who has been practising the word.',
+    choices: [
+      { label: 'Listen', next: 'rg_eye4_b', bat: 0 },
+    ],
+  },
+  rg_eye4_a: {
+    ch: 9, speaker: 'EYE', mood: 'dark', focus: 'queen',
+    text: 'i only called to hear you say hello. nobody says hello. they say who is this, or please, or no. (A pause with a hum in it.) say it once and i will let you go. i will not even keep it. i will only hold it for a while, to see what it weighs.',
+    choices: [
+      { label: 'Say hello', next: 'd4_delete', bat: 0, set: 'rg_done_eye4' },
+      { label: 'Say nothing, and stay on the line', next: 'd4_delete', bat: 0, set: 'rg_done_eye4' },
+    ],
+  },
+  rg_eye4_b: {
+    ch: 9, speaker: 'EYE', mood: 'dark', focus: 'queen',
+    text: 'it answered itself, because you were slow, and the eye is sorry, in the way a very large thing is sorry: all at once, and without knowing where to put it. “hello,” it says, to nobody, trying the word. “hello.” “hello.” Each one a little less like a threat than the one before.',
+    choices: [
+      { label: 'Put the phone down', next: 'd4_delete', bat: 0, set: 'rg_done_eye4' },
+    ],
+  },
+  rg_corvin5: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'whisper', call: { from: 'Corvin Ash', sub: 'calling from the bell tower' },
+    text: 'Corvin Ash. The Guardian. The line is full of wind and, a long way under the wind, a rope.',
+    choices: [
+      { label: 'Answer', next: 'rg_corvin5_a', bat: 0 },
+      { label: 'Decline', next: 'rg_corvin5_2', bat: 0 },
+    ],
+  },
+  rg_corvin5_2: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'glitch', call: { from: 'Corvin Ash', sub: 'calling again', ring: 2 },
+    text: 'Corvin Ash again. The wind has stopped. That is worse.',
+    choices: [
+      { label: 'Answer', next: 'rg_corvin5_a', bat: 0 },
+      { label: 'Decline', next: 'rg_corvin5_3', bat: 0 },
+    ],
+  },
+  rg_corvin5_3: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', scare: 'jump', call: { from: 'Corvin Ash', sub: 'answered', ring: 3 },
+    text: 'The phone picks up. No one speaks. A rope creaks, patiently, a very long way up.',
+    choices: [
+      { label: 'Listen', next: 'rg_corvin5_b', bat: 0 },
+    ],
+  },
+  rg_corvin5_a: {
+    ch: 10, speaker: 'GUARDIAN', mood: 'dusk', focus: 'queen',
+    text: 'The Guardian, out of breath, a long way up. “I have found the bell rope. It is very old and it is still warm. Whatever you do tonight, do not ring it, and do not let her ring it. I rang it once. I rang it for her sake, to wake the house, and the house woke, and it has not stopped waking since.” A rope creaks. “It wants to be pulled. I am telling you so that one of us knows.”',
+    choices: [
+      { label: 'Promise him you will not ring it', next: 'd5_hang', bat: 0, set: 'rg_done_corvin5' },
+      { label: 'Ask what the house would do if it were rung', next: 'd5_hang', bat: 0, set: 'rg_done_corvin5' },
+    ],
+  },
+  rg_corvin5_b: {
+    ch: 10, speaker: 'GUARDIAN', mood: 'dusk', focus: 'queen',
+    text: 'No one speaks. A rope creaks, and creaks, and a great slow bell begins: a single stroke, and then the call is cut as if a hand had closed over the phone. The silence after it is the exact shape of the bell.',
+    choices: [
+      { label: 'Put the phone down', next: 'd5_hang', bat: 0, set: 'rg_done_corvin5' },
+    ],
+  },
+  rg_queen6: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'whisper', call: { from: 'The Queen', sub: 'calling from behind a door' },
+    text: 'The Queen, calling from somewhere with no windows. She never calls without knowing what she will say.',
+    choices: [
+      { label: 'Answer', next: 'rg_queen6_a', bat: 0 },
+      { label: 'Decline', next: 'rg_queen6_2', bat: 0 },
+    ],
+  },
+  rg_queen6_2: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'glitch', call: { from: 'The Queen', sub: 'calling again', ring: 2 },
+    text: 'The Queen again. She does not know what she will say. It is the first time.',
+    choices: [
+      { label: 'Answer', next: 'rg_queen6_a', bat: 0 },
+      { label: 'Decline', next: 'rg_queen6_3', bat: 0 },
+    ],
+  },
+  rg_queen6_3: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', scare: 'jump', call: { from: 'The Queen', sub: 'answered', ring: 3 },
+    text: 'The phone answers itself, and what you hear first is a person sitting down on stone.',
+    choices: [
+      { label: 'Listen', next: 'rg_queen6_b', bat: 0 },
+    ],
+  },
+  rg_queen6_a: {
+    ch: 11, speaker: 'QUEEN', mood: 'dark', focus: 'queen',
+    text: '“Read it to me,” says the Queen, very quietly. “The wall. I never saw it. They told me it said her name, and I never went to look, because if it said her name I would have to believe it. Read me what she wrote. All of it. Slowly. I will not interrupt.” You hear her settle, the way you settle to be told a story.',
+    choices: [
+      { label: 'Read it to her, line by line', next: 'd6_wall', bat: 0, set: 'rg_done_queen6' },
+      { label: 'Tell her to come and read it herself', next: 'd6_wall', bat: 0, set: 'rg_done_queen6' },
+    ],
+  },
+  rg_queen6_b: {
+    ch: 11, speaker: 'QUEEN', mood: 'dark', focus: 'queen',
+    text: 'The Queen is already speaking, to nobody, to the wall she cannot see. “She left the door open first. I know. I know she did. I was the one who closed it.” It is not an accusation. It is the sound of a true thing being said aloud for the first time, to hear what it sounds like. The call ends. The wall is a little warmer.',
+    choices: [
+      { label: 'Put the phone down', next: 'd6_wall', bat: 0, set: 'rg_done_queen6' },
+    ],
+  },
+  rg_queen7: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'whisper', call: { from: 'The Queen', sub: 'calling on the last night' },
+    text: 'The Queen, on the seventh night. She has never rung twice in a night. She is counting something under her breath.',
+    choices: [
+      { label: 'Answer', next: 'rg_queen7_a', bat: 0 },
+      { label: 'Decline', next: 'rg_queen7_2', bat: 0 },
+    ],
+  },
+  rg_queen7_2: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'glitch', call: { from: 'The Queen', sub: 'calling again', ring: 2 },
+    text: 'The Queen again, and the counting is out loud now.',
+    choices: [
+      { label: 'Answer', next: 'rg_queen7_a', bat: 0 },
+      { label: 'Decline', next: 'rg_queen7_3', bat: 0 },
+    ],
+  },
+  rg_queen7_3: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', scare: 'jump', call: { from: 'The Queen', sub: 'answered', ring: 3 },
+    text: 'The phone answers, and the counting does not stop to say hello.',
+    choices: [
+      { label: 'Listen', next: 'rg_queen7_b', bat: 0 },
+    ],
+  },
+  rg_queen7_a: {
+    ch: 12, speaker: 'QUEEN', mood: 'throne', focus: 'queen',
+    text: '“Seven nights,” says the Queen. “I have counted you out loud every night, so that no one else could. One. Two. Three. If they hear my voice at the end of the number they will think the number is mine, and leave you out of the sum. I do not know who told you not to be counted. I hope you listened to them. I have been trying all week to be worth the sentence.” She breathes. “Four.”',
+    choices: [
+      { label: 'Count with her', next: 'd7_again', bat: 0, set: 'rg_done_queen7' },
+      { label: 'Tell her you are not afraid of the sum', next: 'd7_again', bat: 0, set: 'rg_done_queen7' },
+    ],
+  },
+  rg_queen7_b: {
+    ch: 12, speaker: 'QUEEN', mood: 'throne', focus: 'queen',
+    text: 'The Queen is counting aloud, steadily, the way you count to keep a child from the dark. “Five. Six.” She does not know you are listening. “Seven.” A pause long enough for a whole week. “And one more, for luck, that is not in the sum.” Click.',
+    choices: [
+      { label: 'Put the phone down', next: 'd7_again', bat: 0, set: 'rg_done_queen7' },
+    ],
+  },
+  // ---- the road, longer: beats on the most-travelled links of every day. A beat is a pure pass-through (`beat: true`, `safe`): its choices are
+  // free (no battery, not even the flashlight's), set nothing, add nothing, and all go where the original choice went, so no ending can move ----
+  bt_d1_spire: {
+    ch: 2, speaker: 'NARRATOR', mood: 'spire', focus: 'crystal', beat: true, safe: true,
+    text: 'The path the flute hears is not a path. It is a held note, and she walks along it. The haze thins as it climbs. Below, very small and very far, the stones keep their own time, and somewhere between them a door that has just stopped closing goes on not quite closing. The spire leans out of the violet like a finger raised for silence. Its stair is broken in the middle, the way a stair is broken when something heavy came down it once, in a hurry.',
+    choices: [
+      { label: 'Climb on', next: 'spire', bat: 0, free: true },
+      { label: 'Tell her to watch the broken step', next: 'spire', bat: 0, free: true },
+    ],
+  },
+  bt_d1_bridge: {
+    ch: 3, speaker: 'NARRATOR', mood: 'dawn', focus: 'guardian', beat: true, safe: true,
+    text: 'The bridge of light holds. It hums under her the way a wire hums in wind, and every step she takes plays a note she did not choose. Halfway across she stops, because the notes have begun to make a tune, and the tune is one she knows from before she knew anything: a lullaby, slowed down until it is almost a march. At the far end, someone in armour is standing very still, the way a man stands who has been told to wait and has not been told for how long.',
+    choices: [
+      { label: 'Keep walking', next: 'reconcile', bat: 0, free: true },
+      { label: 'Let her listen to the tune a moment longer', next: 'reconcile', bat: 0, free: true },
+    ],
+  },
+  bt_d1_typing: {
+    ch: 1, speaker: 'EYE', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: '(Three dots. They come and go. They come and go for a long time, as if whoever is typing keeps starting and deleting the same word.) (The screen dims by itself, a notch at a time, to save power you did not ask it to save.) (Then the dots stop, and for a whole second there is nothing, and you understand that the nothing is it, deciding how much to tell you.)',
+    choices: [
+      { label: 'Wait for it', next: 'unknown_who', bat: 0, free: true },
+    ],
+  },
+  bt_d2_landing: {
+    ch: 7, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', beat: true, safe: true,
+    text: 'A landing. Someone has left a chair here, a kitchen chair, facing the wall, and a cup on the floor beside it with a skin on the tea. On the wall in front of the chair, at sitting height, a calendar, every day crossed off in the same patient pencil, every day the same date. The status bar reads 3:11. You do not remember the minutes between. The stair goes on down, and the warm air comes up it, and on the next step something has written, very small: NOT FAR NOW.',
+    choices: [
+      { label: 'Go on down', next: 'd2_clock', bat: 0, free: true },
+      { label: 'Look at the date on the calendar, then go on', next: 'd2_clock', bat: 0, free: true },
+    ],
+  },
+  bt_d2_delivered: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', beat: true, safe: true,
+    text: 'You write: are you there? It says Delivered. It says Delivered for a long time. Above the thread her contact photo loads one stripe at a time, from the top: violet, then hair, then the very edge of an eye, and stops there, half a face, as if the phone is not sure it should show you the rest. Then the stripe of the mouth, and the word under her name changes from offline to typing.',
+    choices: [
+      { label: 'Wait for her', next: 'd2_queen', bat: 0, free: true },
+    ],
+  },
+  bt_d2_red: {
+    ch: 6, speaker: 'EYE', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: '(The answer does not come as words at first. The screen goes red from the edges in, slowly, the way a face goes red, and the phone gets warm, and then warmer, like a hand that has been holding another hand too long.) (In the red, very faint, the shape of a window, and behind the window something the colour of the sky before it decides what to be.) (Then the red withdraws, and leaves words.)',
+    choices: [
+      { label: 'Read them', next: 'd2_want', bat: 0, free: true },
+    ],
+  },
+  bt_d3_hall: {
+    ch: 8, speaker: 'QUEEN', mood: 'dusk', focus: 'gate', beat: true, safe: true,
+    text: '“Listen.” The last door is still swinging. “That is the house breathing out. It has been holding its breath since the night I shut the first one.” She walks ahead of you, one hand on the wallpaper, and the wallpaper is warm. “I used to know every room in here by the sound it made when you opened it. This one creaked like a ship. This one sighed. This one,” she stops, “this one I never opened. I just walked past it, every day, for years. Do not let me walk past it now.”',
+    choices: [
+      { label: 'Walk on with her', next: 'd3_fork', bat: 0, free: true },
+      { label: 'Promise her you will not', next: 'd3_fork', bat: 0, free: true },
+    ],
+  },
+  bt_d3_servants: {
+    ch: 8, speaker: 'VEY', mood: 'dark', focus: 'vey', beat: true, safe: true,
+    text: 'Wait. Wait. (A small hand, very cold, on the edge of the screen.) Before we go down, you have to know the rule. On the servants\' stair you do not look at the portraits. Not because they move. They do not move. That is the problem. They have been looking at the same place on the stair for so long that if you look at them you will turn and look at it too, and then you will see what they see, and then you will be a portrait. Ready? Eyes on me.',
+    choices: [
+      { label: 'Eyes on Vey', next: 'd3_vey3', bat: 0, free: true },
+    ],
+  },
+  bt_d3_quiet: {
+    ch: 8, speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', beat: true, safe: true,
+    text: 'Quiet. Real quiet, the kind you only hear in a house after a party, when the last guest has gone and nobody has started on the glasses yet. The phone\'s light is the only light. In it you can see the table, the one chair, the plate laid for one, and on the plate, folded very small, a paper hat. Nobody put it there while you were watching. It was always there. You were not watching the plate.',
+    choices: [
+      { label: 'Stay a while', next: 'd3_finale', bat: 0, free: true },
+    ],
+  },
+  bt_d4_names: {
+    ch: 9, speaker: 'CHOIR', mood: 'dawn', focus: 'queen', beat: true, safe: true,
+    text: 'anna. anna price. tomasz. bea, it was always bea, never beatrice. old mr. holloway from the bakery. a boy called kit who held the phone for one minute and threw it in the river and it came back up into his hand dry. (They go on. They go on for a long time, and the phone shows every name as it is said, and none of them are on it twice.) we did not know we still had them. you asked. nobody asks the water.',
+    choices: [
+      { label: 'Listen to all of them', next: 'd4_shore', bat: 0, free: true },
+      { label: 'Say each name back to them', next: 'd4_shore', bat: 0, free: true },
+    ],
+  },
+  bt_d4_faces: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: 'You hold the phone away from you, at arm\'s length, the way you hold a thing that might be hot. The faces in the water behind the glass turn to follow it. One of them, a man with a bakery cap, lifts a hand and lays it flat against the inside of the screen, and where his palm presses, the glass fogs, as if he were breathing. You open the Queen\'s thread. Your thumb leaves a print beside his hand.',
+    choices: [
+      { label: 'Type to the Queen', next: 'd4_queen', bat: 0, free: true },
+    ],
+  },
+  bt_d4_sure: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: 'Delete contact? The phone asks it the way phones ask it, politely, in grey. Then it asks again, under the first: Delete 214 people? Then a third time, smaller, in a font you have not seen on this phone before, round and careful, like handwriting on a birthday card: Are you sure? They were waiting for someone to call.',
+    choices: [
+      { label: 'Delete', next: 'd4_delete', bat: 0, free: true },
+    ],
+  },
+  bt_d5_bedroom: {
+    ch: 10, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: 'The bedroom is small and the curtains are the cheap kind that let the street light in as a long yellow bar across the duvet. A glass of water. A hairband. A charger cable that does not reach the bed, so the phone has been lying on the table, not charging, at 3%, then 2%, and now, suddenly, at 3:07, at 100%. She is staring at it. She has the face of someone who has been told her whole life not to answer numbers she does not know, and is about to.',
+    choices: [
+      { label: 'Speak first', next: 'd5_hello', bat: 0, free: true },
+    ],
+  },
+  bt_d5_where: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'queen', beat: true, safe: true,
+    text: 'Wait. Wait, hang on, I need the light on for this. (A click. A lamp. The duvet rustling.) Okay. Okay, go. No, wait. (A pause.) Is it bad? You can just tell me if it\'s bad. When I was little my gran used to say if it\'s bad say it fast, like a plaster. Say it fast.',
+    choices: [
+      { label: 'Say it fast', next: 'd5_truth', bat: 0, free: true },
+      { label: 'Say it slowly, so she can hold on to it', next: 'd5_truth', bat: 0, free: true },
+    ],
+  },
+  bt_d5_night: {
+    ch: 10, speaker: 'WREN', mood: 'dusk', focus: 'gate', beat: true, safe: true,
+    text: '(She stays. 4:12: she goes to the kitchen and you hear the kettle, and she tells you about her job, which she hates, and her flat, which she likes. 4:40: she tells you she used to sleepwalk, as a girl, out onto the landing, and someone was always there to walk her back. 5:15: she goes quiet, and you think she has fallen asleep, and then she says, very clearly, into the dark: I can hear the stones. Is that normal? Is that what you can hear?)',
+    choices: [
+      { label: 'Tell her it is', next: 'd5_dawn', bat: 0, free: true },
+      { label: 'Tell her to keep listening', next: 'd5_dawn', bat: 0, free: true },
+    ],
+  },
+  bt_d6_page: {
+    ch: 11, speaker: 'QUEEN', mood: 'dusk', focus: 'queen', beat: true, safe: true,
+    text: '“I saw it.” She has been typing and deleting. You can tell; the dots have been coming and going for an hour. “I saw the page scroll. I have not looked at that page since I wrote on it. I did not think a page could be afraid. It is. You can see it trembling, at the edge, like a hand that has been holding something up for too long.” The dots again. “Ask me. If you ask, I will have to.”',
+    choices: [
+      { label: 'Ask her', next: 'd6_queen', bat: 0, free: true },
+    ],
+  },
+  bt_d6_facedown: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dark', focus: 'gate', beat: true, safe: true,
+    text: 'Face down, the phone is only a warm black rectangle on a table that is not there. You can feel it through the glass: little vibrations, every few minutes, all night, like someone at a door, knocking very softly so as not to wake anyone. Around four the knocking stops. Around five something on the other side of the glass sings two lines of a song you almost know, and gets the second line wrong, on purpose, the way a mother does.',
+    choices: [
+      { label: 'Wait for morning', next: 'd6_dawn', bat: 0, free: true },
+    ],
+  },
+  bt_d6_promise: {
+    ch: 11, speaker: 'SORREL', mood: 'gate', focus: 'gate', beat: true, safe: true,
+    text: 'Tomorrow is a long time. (The cot creaks.) Mummy used to say tomorrow and then it was tomorrow and she said it again. Say it properly. Say: cross my heart. (You say it.) And hope to die? (A pause.) No. You don\'t have to say that bit. Nobody has to say that bit. I\'ll leave the door like this. Not open. Not shut. Just like this, so you can see it from the stairs.',
+    choices: [
+      { label: 'Leave the door just like that', next: 'd6_dawn', bat: 0, free: true },
+    ],
+  },
+  bt_d7_red: {
+    ch: 12, speaker: 'EYE', mood: 'dark', focus: 'queen', beat: true, safe: true,
+    text: '(You open it, and it does not open. The screen fills with a single red dot, very small, in the middle, like the light on a thing that is recording. The dot grows. It does not grow quickly. It grows the way a pupil grows in the dark, a little and then a little more, until it is the whole screen, and you understand that you are not looking at it. It is letting you see that it is looking at you.)',
+    choices: [
+      { label: 'Look back', next: 'd7_eye', bat: 0, free: true },
+    ],
+  },
+  bt_d7_flute: {
+    ch: 12, speaker: 'NARRATOR', mood: 'throne', focus: 'queen', beat: true, safe: true,
+    text: 'Her message is a voice note. Forty seconds. For the first twenty there is only breathing, and the flute at her back humming its one long note, and wind, and under the wind a great many people, very far off, all being quiet together. Then she clears her throat, the way people do before they say a thing they have practised.',
+    choices: [
+      { label: 'Keep listening', next: 'd7_queen', bat: 0, free: true },
+    ],
+  },
+  bt_d7_hands: {
+    ch: 12, speaker: 'QUEEN', mood: 'gate', focus: 'gate', beat: true, safe: true,
+    text: 'She takes it with both hands, the way you take a bird. Her thumbs are cold. She looks at the screen for a long time, at her own thread, at every message you sent her this week, scrolling up through seven nights to the first one, which only says: are you there? “Yes,” she says, out loud, to it, a week late. Then she turns the phone round so that you, inside it, can see the room.',
+    choices: [
+      { label: 'Look', next: 'd7_end', bat: 0, free: true },
+    ],
+  },
+  awakening_b: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen',
+    text: 'The flute is real. It is warm, as if someone has only just put it down. Tucked under its strap is a slip of paper in handwriting you know better than your own name, which you still do not have: DO NOT LET THEM COUNT YOU. And when the phone wakes, the picture on it is one you do not remember taking. A hand, small, holding yours, from the height of your own eyes. Whoever took it was looking down at them, and smiling.',
+    choices: [
+      { label: 'Read the note again, slowly', next: 'awakening_c', add: { resolve: 1 } },
+      { label: 'Look at the small hand', next: 'awakening_c', add: { heart: 1 } },
+      { label: 'The phone is ringing: HOME', next: 'rg_home1', bat: 0, req: { noflag: 'rg_done_home1' } },
+    ],
+  },
+  awakening_c: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', note: 'o_awake',
+    text: 'Behind you the haze settles, and for a moment you can feel where it has been told to leave a gap: three ways, narrow as a held breath. On the back of your hand, in the same biro, a single number has appeared, and it is not 3:07. It is 1. You are not the first one counted, you think. You may only be the first to wake up. The flute hums. The stones murmur. The phone lights, without being touched.',
+    choices: [
+      { label: 'Follow the flute', next: 'flute_path', add: { resolve: 1 } },
+      { label: 'Listen to the stones', next: 'stones_path', add: { heart: 1 } },
+      { label: 'Check your phone', next: 'unknown_sms', add: { dread: 1 } },
+    ],
+  },
   op_lift_b: {
     ch: 1, speaker: 'NARRATOR', mood: 'dark', focus: 'queen',
     text: 'The panel has no numbers now, only the crown. Taped underneath it, where you cannot have put it, is a child\u2019s drawing of a lift: a stick figure inside, and on the door a very large number, 3:07. The woman with the flute has not moved. She is looking at the drawing, not at you, like someone who has seen it before.',
@@ -2534,6 +2986,22 @@ ABY.NODES = {
       { label: 'Keep climbing', next: 'spire', add: { resolve: 1, dread: 1 } },
       { label: 'Go back down', next: 'stones_path', add: { heart: 1 } },
       { label: 'Light up the snow', next: 'torch_first', light: 1 },
+    ],
+  },
+  ec4_awake: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'awakening',
+    text: 'The first minute again, but you are standing a little outside it, and for once you can see her. A woman asleep sitting up in the violet haze, the flute at her back, a phone lit in her hand: 3:07. On the inside of her wrist, in biro, a number: 1. She looks like someone who has been waiting a very long time to be woken by a kind voice. There is a slip of paper under the flute strap that has not been written yet. \u201cYou can add to it,\u201d says something behind you, not unkindly. \u201cYou always do.\u201d',
+    choices: [
+      { label: 'Write under it: THEN COUNT THEM BACK', next: '@back', set: 'tt_echo4', add: { resolve: 1 } },
+      { label: 'Lay your hand over the number', next: '@back', set: 'tt_echo4', add: { heart: 1 } },
+    ],
+  },
+  ec6_awake: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', time: 'past', safe: true, thread: 'awakening',
+    text: 'The first minute, once more, from the other end of the week. The same haze, the same woman asleep sitting up, but the biro on her wrist is not a 1 now. It is the number you have reached, and it is not one you can say aloud. She opens her eyes. \u201cYou came back to be here when I woke,\u201d she says. \u201cNobody ever has. They are always asleep at the beginning.\u201d She looks at the phone in her hand, and then, for a long moment, at you.',
+    choices: [
+      { label: 'Tell her: you are not the first one counted', next: '@back', set: 'tt_echo6', add: { heart: 1, dread: 1 } },
+      { label: 'Hold the phone out to her, lit, and stay', next: '@back', set: 'tt_echo6', add: { heart: 2 } },
     ],
   },
   ec4_lift: {
@@ -3016,7 +3484,7 @@ ABY.choose = function (s, i) {
   if (c.set) o.flags[c.set] = 1;
   if (c.retry) o.tries++;
   if (c.light !== undefined) o.light = c.light ? 1 : 0;
-  o.bat -= (c.bat !== undefined ? c.bat : 1) + (s.light ? ABY.TORCH : 0);
+  if (!c.free) o.bat -= (c.bat !== undefined ? c.bat : 1) + (s.light ? ABY.TORCH : 0);   // a `free` choice (a beat's way on) costs nothing, not even the flashlight's
   return ABY._land(o);
 };
 
