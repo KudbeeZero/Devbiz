@@ -49,7 +49,7 @@ function walkChecks() {
     const n = N[s.node], out = [];
     if (n.ending) { const c = ABY.carry(s); if (c) out.push(c); return out; }                  // Day Two: an ending with a way on carries her into act two
     if (n.song) { out.push(ABY.songDone(s, true), ABY.songDone(s, false)); return out; }
-    for (const o of ABY.options(s)) { let t = ABY.choose(s, o.i); if (t && N[t.node].beat) { reach.add(t.node); t = ABY.choose(t, 0); } if (t) out.push(t); }   // a beat is a proven pass-through (check `beats`): step through it, so it costs the walk no states
+    for (const o of ABY.options(s)) { let t = ABY.choose(s, o.i); while (t && (N[t.node].beat || N[t.node].road)) { reach.add(t.node); t = ABY.choose(t, 0); } if (t) out.push(t); }   // a beat or a side road is a proven pass-through (checks `beats`, `side-roads`): step through it, so it costs the walk no statees
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
     return out.map(t => t.notes.length === s.notes.length ? t : pin(t));   // (no new clue, no new pair: flags are never taken back, so she was already pinned)
   };
@@ -466,6 +466,26 @@ function walkChecks() {
       && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
       && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
       'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees only its own (the haze)');
+  }
+  { // SIDE ROADS: a reply said the long way round. Three scenes beside one reply of a day (its twin): the way in costs exactly what the reply costs,
+    // every choice inside is free and does nothing, and every way out arrives where the reply goes; so from any state, any path through the road leaves
+    // her exactly where the reply does (flashlight on or off). One a day from Day Two to Day Seven; Day Seven's is a second way to the last page
+    const RD = ABY.ROADS, inert = c => c.free && c.bat === 0 && !c.add && !c.set && !c.req && c.light === undefined && !c.retry && !c.note && !c.song;
+    const shaped = RD.filter(r => { const from = N[r.from], twin = from && from.choices.filter(c => c.label === r.twin), way = from && from.choices.filter(c => c.next === r.id + '_a'), sc = ['a', 'b', 'c'].map(k => N[r.id + '_' + k]);
+      if (!twin || twin.length !== 1 || way.length !== 1 || sc.some(n => !n)) return false; const t = twin[0], w = way[0], strip = c => JSON.stringify(Object.assign({}, c, { label: '', next: '', as: undefined }));
+      return strip(w) === strip(t) && !t.req && w.label.length > t.label.length && N[t.next] && !N[t.next].road && !N[t.next].beat && DAY(N[t.next].ch) === DAY(from.ch)
+        && sc.every((n, k) => n.road === r.id && n.safe && !n.dark && !n.note && !n.ending && !n.call && !n.song && !n.time && !n.img && !n.scare && n.ch === from.ch && ABY.SPEAKERS[n.speaker] && n.text.length > 200 && n.choices.length === 2
+          && new Set(n.choices.map(c => c.label)).size === 2 && n.choices.every(c => inert(c) && c.next === (k < 2 ? r.id + '_' + 'abc'[k + 1] : t.next)))
+        && ids.filter(id => (N[id].choices || []).some(c => c.next === r.id + '_a')).join() === r.from; });
+    const same = RD.every(r => { const from = N[r.from], i = from.choices.findIndex(c => c.label === r.twin), j = from.choices.findIndex(c => c.next === r.id + '_a');
+      return [0, 1].every(light => { const s = Object.assign(ABY.newState(0), { node: r.from, bat: 40, light, heart: 2, resolve: 2, trust: 2, dread: 1, flags: { knew_name: 1, wren_with: 1, promised_sorrel: 1, tt_nine: 1 } }), d = ABY.choose(s, i);
+        // every one of the 8 paths through the road (two choices in each of three scenes)
+        return d && [0, 1, 2, 3, 4, 5, 6, 7].every(p => { let a = ABY.choose(s, j); for (let k = 0; k < 3 && a; k++) a = ABY.choose(a, (p >> k) & 1);
+          return a && a.node === d.node && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem', 'back'].every(f => a[f] === d[f]) && JSON.stringify(a.flags) === JSON.stringify(d.flags) && a.notes.join() === d.notes.join(); }); }); });
+    const days = new Set(RD.map(r => DAY(N[r.from].ch))), texts = new Set(RD.flatMap(r => ['a', 'b', 'c'].map(k => N[r.id + '_' + k].text)));
+    const last = RD.some(r => N[N[r.id + '_c'].choices[0].next] && r.from === 'd7_rite_win' && N[r.id + '_c'].choices[0].next === 'd7_end');
+    rec('side-roads', RD.length === 6 && shaped.length === RD.length && same && days.size === 6 && !days.has(0) && texts.size === 18 && last && RD.every(r => ['a', 'b', 'c'].every(k => reach.has(r.id + '_' + k))),
+      RD.length + ' side roads (' + RD.map(r => r.from + ' -> ' + N[r.id + '_c'].choices[0].next).join(', ') + '), ' + shaped.length + ' shaped, ' + texts.size + ' new scenes over ' + days.size + ' days, each reached: the way in is a copy of its reply, and all 8 paths through leave her exactly where the reply does, flashlight on or off; Day Seven\u2019s is a second way to the last page');
   }
   { // WHO YOU WERE: three people the player can be (ABY.HEROES). A choice of who, never of what: the "before" scene plays first and goes back to the opening
     // she was waking in, each flashback is offered once from one scene on Day Two, Four and Six (never one that speaks a once-only line) and returns there, every choice is free, sets

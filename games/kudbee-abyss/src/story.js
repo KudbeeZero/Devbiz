@@ -3784,6 +3784,70 @@ for (const d of ABY.DETOURS) {
   ABY.NODES[d.from].choices.push({ label: d.label, next: a, req: { noflag: d.id } });
 }
 
+// ---- side roads: a longer way to the same place ----
+// A road is three scenes offered beside one of a day's replies (`twin`, a choice of `from` matched by its label): the way in is a copy of that reply
+// (the same cost, stats, flag and light; only its words and where it goes differ), every choice inside is free and does nothing, and the third
+// scene goes where the reply goes. So taking the road is the reply said the long way round: it adds reading and never a state (graph `side-roads`
+// proves it against the reply itself, flashlight on and off, and the walk steps through a road as it does a beat). Day Seven's is the second way
+// into the last page. Add one by adding an entry here.
+ABY.ROADS = [
+  { id: 'sr2', from: 'd2_queen', twin: 'Believe her', label: 'Believe her, and help her count the hours she lost', scenes: [
+    { speaker: 'QUEEN', mood: 'dusk', focus: 'queen', text: 'Then help me. (A photo arrives: a long room of clocks, every one of them stopped at a different minute.) These are mine. One for every night I slept through. I wound them all before I lay down, so that I would know how long. Not one of them kept going. Which one do I believe?',
+      choices: ['Believe the earliest one', 'Believe none of them'] },
+    { speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', text: 'You read them out to her, one by one. 3:07. 3:07. 3:07. Every clock in the room, whatever its hands said a moment ago, says 3:07 when you look at it, and goes back when you look away. The Queen laughs, once, the way people laugh at bad news from a doctor. "So I have been asleep for a minute," she says. "A very long minute."',
+      choices: ['Tell her a minute is not so long', 'Tell her you will keep count for her'] },
+    { speaker: 'QUEEN', mood: 'dusk', focus: 'queen', text: 'Then keep it. (The clocks start, all of them at once, a sound like rain on a roof.) Vey will be waiting; Vey is always waiting. I want you to know that I believed you first. Whatever it tells you about me, I believed you before I believed it.',
+      choices: ['Go and find Vey', 'Let her lead the way'] },
+  ] },
+  { id: 'sr3', from: 'd3_wake', twin: 'Go down to the first door', label: 'Go down the long way, past the portraits', scenes: [
+    { speaker: 'NARRATOR', mood: 'dark', focus: 'queen', text: 'The long way is a gallery: portraits on both walls in heavy frames, of people holding phones. A girl on a night bus. A man in a lift. A woman in a bath, holding the phone up out of the water. Each of them has the screen turned towards the painter, and on every screen, very small, is a red dot.',
+      choices: ['Look closer at the last portrait', 'Keep your eyes on the floor'] },
+    { speaker: 'EYE', mood: 'dark', focus: 'queen', text: 'do you like them. i painted them. not with paint. (The last frame is empty. The brass plate under it has your name on it, engraved a little crooked, as if the engraver was nervous.) i have not started yours. i wanted to see your face first. it is harder than i thought. faces move.',
+      choices: ['Tell it to leave the frame empty', 'Ask it who the girl on the bus was'] },
+    { speaker: 'VEY', mood: 'dark', focus: 'vey', text: 'Don\'t stand there. It is rude to be looked at for so long. (Vey is at your ankle, tugging your sleeve with one of its hands.) The doors are this way. They are much worse than the gallery and much better than standing in it. Come along. I have never once let anyone get painted.',
+      choices: ['Follow Vey to the doors', 'Take one last look back'] },
+  ] },
+  { id: 'sr4', from: 'd4_queen', twin: 'Tell her it was not kind', label: 'Tell her it was not kind, and go and see them yourself, along the shore', scenes: [
+    { speaker: 'NARRATOR', mood: 'dark', focus: 'queen', text: 'The shore is made of phones. Old ones and new ones, a pager, a handset on a curly cord: thousands of them, washed up and stacked like pebbles, screens down. Every time a wave comes in, some of them light up underneath and buzz against the others, and then go out.',
+      choices: ['Turn one over', 'Walk where the phones are dark'] },
+    { speaker: 'CHOIR', mood: 'dark', focus: 'queen', text: 'that one was ours. (On the cracked screen: a photo of a dog in a garden, the time, 3:07, and forty-one missed calls from Mum.) we all kept them. you can not put it down, after. even down here you keep checking it. there might be a message.',
+      choices: ['Put it back, screen down', 'Tell them you will read the messages to them'] },
+    { speaker: 'NARRATOR', mood: 'dark', focus: 'queen', text: 'The stones are ahead now, knee-deep in the flood, every face turned towards you. Behind you, all along the shore, the phones have begun to light up one after another, not ringing, only lit, the way a crowd holds up its screens at a concert, all the way back to where you came in.',
+      choices: ['Wade out to the stones', 'Raise a hand to them first'] },
+  ] },
+  { id: 'sr5', from: 'd5_truth', twin: 'Tell her about the book', label: 'Tell her about the book, from the first page you ever saw', scenes: [
+    { speaker: 'WREN', mood: 'dusk', focus: 'queen', text: 'Wait. Wait, I\'m getting a pen. (A drawer, a lot of rattling, a pen that does not work and then one that does.) Okay. Say it slowly. I\'m writing it on my arm, because if I write it on paper I\'ll lose the paper, and I am not losing this.',
+      choices: ['Start with the crayon door', 'Start with the singing stones'] },
+    { speaker: 'WREN', mood: 'dusk', focus: 'queen', text: '(You can hear the pen moving on her skin.) A door. A crown. Two hundred and fourteen numbers. A blank line. (She stops.) It\'s going on its own. The pen. I\'m not pressing and it\'s still writing. It\'s writing the same number over and over, and the number is mine.',
+      choices: ['Tell her to drop the pen', 'Tell her to keep hold of it and read it to you'] },
+    { speaker: 'WREN', mood: 'dusk', focus: 'queen', text: 'It stopped. (A long breath.) My whole arm is my number, backwards, all the way up to the elbow, like a sleeve. I\'m not scared. That\'s the weird bit. It looks like a list, like somebody counting. Show me the book. Whatever it is, I want to see it with you.',
+      choices: ['Open the book', 'Hold it up so she can see it too'] },
+  ] },
+  { id: 'sr6', from: 'd6_who', twin: 'Ask her where she is', label: 'Ask her to tell you about her room, one thing at a time', scenes: [
+    { speaker: 'SORREL', mood: 'dusk', focus: 'queen', text: 'One thing? Okay. (Thinking, loudly.) A bed with a tent on it. The tent is a sheet. Under the sheet is where I keep the torch, but the torch went flat a long time ago, so I keep it for when it isn\'t flat. That\'s one thing. Is that one thing or is that three?',
+      choices: ['Tell her that was three, and they were good ones', 'Ask her for one more'] },
+    { speaker: 'SORREL', mood: 'dusk', focus: 'queen', text: 'A window with the curtains shut. I\'m not allowed to open them, because outside it\'s still the party, Mummy says, and if I see the party I\'ll want to go back to it and then I\'ll have to start again. (A small pause.) I can hear it. Somebody is always singing happy birthday, but they never get to the end.',
+      choices: ['Ask her whose birthday it is', 'Hum the end of the song for her'] },
+    { speaker: 'SORREL', mood: 'dusk', focus: 'queen', text: 'Mine. It\'s always mine. (Very quietly, as if she has been told not to say it.) I\'ve been four for ages. Do you want to see? I\'ll put the phone on the pillow so it can look round. Don\'t look at the door, though. The door is the last thing, and you said one thing at a time.',
+      choices: ['Look round the room', 'Promise not to look at the door yet'] },
+  ] },
+  { id: 'sr7', from: 'd7_rite_win', twin: 'Go to the first page', label: 'Go to the first page the long way, through every room of the week', scenes: [
+    { speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', text: 'The way to the first page goes back through the week. The gate, propped open with a stone. The stairs, every step counted, the numbers chalked on the risers in your own handwriting. The Hall of Doors, every one of them open and every one of them empty, the way a house is empty on the morning after a party.',
+      choices: ['Touch the gate as you pass', 'Read the numbers on the stairs'] },
+    { speaker: 'NARRATOR', mood: 'dawn', focus: 'gate', text: 'The shore, and the phones on it, every screen lit and quiet. Wren\'s bedroom, the lamp mended, a pen lying on the duvet. The nursery, the door open, the crayon on the wall: a door, a crown, and under them, newer, in a careful grown-up hand, every name you said out loud this week, spelled right.',
+      choices: ['Find your own name on the wall', 'Leave the nursery as it is'] },
+    { speaker: 'QUEEN', mood: 'dawn', focus: 'gate', text: 'There you are. (She is waiting by the book, the flute under her arm.) You came the long way. Good. I wanted you to see it before the end: none of it is locked any more. Not the gate, not the doors, not the water. Only this. Come and stand by me. It is nearly six.',
+      choices: ['Stand by her', 'Take her hand'] },
+  ] },
+];
+for (const r of ABY.ROADS) {
+  const from = ABY.NODES[r.from], twin = from.choices.filter(c => c.label === r.twin)[0], ch = from.ch, id = k => r.id + '_' + 'abc'[k];
+  r.scenes.forEach((sc, k) => { ABY.NODES[id(k)] = { ch, speaker: sc.speaker, mood: sc.mood, focus: sc.focus, road: r.id, safe: true, text: sc.text,
+    choices: sc.choices.map(label => ({ label, next: k < r.scenes.length - 1 ? id(k + 1) : twin.next, bat: 0, free: true })) }; });
+  const way = Object.assign({}, twin, { label: r.label, next: id(0) }); delete way.as;   // the reply itself, said the long way: same cost, same stats, same flag
+  from.choices.push(way);
+}
+
 // ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
   dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn', cont: 'd2_wake',
