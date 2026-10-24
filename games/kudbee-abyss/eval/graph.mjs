@@ -410,13 +410,15 @@ function walkChecks() {
         && N[t] && !N[t].beat && DAY(N[t].ch) === DAY(n.ch) && src.length === 1 && DAY(N[src[0]].ch) === DAY(n.ch); });
     const same = B.every(id => { const src = into(id)[0], t = N[id].choices[0].next; return [0, 1].every(light => { const s = Object.assign(ABY.newState(0), { node: src, bat: 40, light, heart: 2, resolve: 2, trust: 2, dread: 1, flags: { knew_name: 1, wren_with: 1, promised_sorrel: 1, tt_nine: 1, scar_cradle: 1, scar_loop: 1 } });
       const i = N[src].choices.findIndex(c => c.next === id), a = ABY.choose(s, i), b = a && ABY.choose(a, 0);
-      return a && b && b.node === t && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem'].every(f => b[f] === a[f]) && JSON.stringify(b.flags) === JSON.stringify(a.flags) && b.notes.filter(x => x !== N[t].note).join() === a.notes.join(); }); });
+      const c = N[src].choices[i]; c.next = t; const d = ABY.choose(s, i); c.next = id;   // the old link, taken directly: landing on the scene (a dark room, a clue) is the same either way
+      return a && b && d && b.node === t && d.node === t && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem', 'back'].every(f => b[f] === d[f]) && JSON.stringify(b.flags) === JSON.stringify(d.flags) && b.notes.join() === d.notes.join(); }); });
     const days = new Set(B.map(id => DAY(N[id].ch)));
-    rec('beats', B.length >= 21 && shaped.length === B.length && same && days.size === 7 && B.every(id => reach.has(id)), B.length + ' beats on the most-travelled links of all ' + days.size + ' days (' + shaped.length + ' shaped), each reached, each a free pass-through that leaves her exactly where the old link did, with the flashlight on or off');
+    rec('beats', B.length >= 35 && shaped.length === B.length && same && days.size === 7 && B.every(id => reach.has(id)), B.length + ' beats on the most-travelled links of all ' + days.size + ' days (' + shaped.length + ' shaped), each reached, each a free pass-through that leaves her exactly where the old link did, with the flashlight on or off');
   }
-  { // MORE CALLS THROUGH THE WEEK: seven optional chains, one per day (the first on the first scene). Each is offered once from one scene (a choice that costs nothing),
+  { // MORE CALLS THROUGH THE WEEK: fourteen optional chains, two per day (the first on the first scene), no two on one scene. Each is offered once from one scene (a choice that costs nothing),
     // rings, rings louder if declined, and finally answers itself; every end returns to the scene she left and sets rg_done_<k>, so nothing about the story changes
-    const K = ['home1', 'vey2', 'home3', 'eye4', 'corvin5', 'queen6', 'queen7'], O = { home1: 'awakening_b', vey2: 'd2_lull', home3: 'd3_stare', eye4: 'd4_delete', corvin5: 'd5_hang', queen6: 'd6_wall', queen7: 'd7_again' };
+    const O = { home1: 'awakening_b', vey2: 'd2_lull', home3: 'd3_stare', eye4: 'd4_delete', corvin5: 'd5_hang', queen6: 'd6_wall', queen7: 'd7_again',   // the first ring
+      you1: 'stones_path', queen2: 'd2_turn', corvin3: 'd3_fork', before4: 'd4_bottom', vey5: 'd5_truth', wren6: 'd6_who', you7: 'd7_queen' }, K = Object.keys(O);   // the second ring
     const inert = c => c.bat === 0 && !c.add && !c.light && !c.note && !c.song && !c.req;
     const shaped = K.filter(k => {
       const r1 = N['rg_' + k], r2 = N['rg_' + k + '_2'], r3 = N['rg_' + k + '_3'], a = N['rg_' + k + '_a'], b = N['rg_' + k + '_b'], o = N[O[k]], day = DAY(o.ch);
@@ -427,10 +429,10 @@ function walkChecks() {
         && [r1, r2, r3].every(n => n.choices.every(inert)) && a.choices.length === 2 && b.choices.length === 1 && [a, b].every(n => n.text.length > 200 && n.choices.every(c => c.next === O[k] && c.bat === 0 && c.set === 'rg_done_' + k && !c.add && !c.req))
         && entry.length === 1 && entry[0].bat === 0 && !entry[0].add && entry[0].req && entry[0].req.noflag === 'rg_done_' + k;
     });
-    const days = new Set(K.map(k => DAY(N[O[k]].ch))), start = k => Object.assign(ABY.newState(0), { node: O[k], bat: 40 });
+    const days = new Set(K.map(k => DAY(N[O[k]].ch))), perDay = [0, 1, 2, 3, 4, 5, 6].every(d => K.filter(k => DAY(N[O[k]].ch) === d).length === 2), apart = new Set(Object.values(O)).size === K.length, start = k => Object.assign(ABY.newState(0), { node: O[k], bat: 40 });
     const run = k => { let s = start(k); const i = s.node && N[O[k]].choices.findIndex(c => c.next === 'rg_' + k); s = ABY.choose(s, i); s = ABY.choose(s, 1); s = ABY.choose(s, 1); s = ABY.choose(s, 0); return s && ABY.choose(s, 0); };   // enter, decline, decline, it answers itself, put the phone down
     const same = K.every(k => { const base = start(k), e = run(k); return e && e.node === O[k] && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem'].every(f => e[f] === base[f]) && e.notes.filter(n => n !== N[O[k]].note).join() === base.notes.join() && e.flags['rg_done_' + k] === 1 && Object.keys(e.flags).length === 1 && !ABY.options(e).some(o => o.c.next === 'rg_' + k) && ABY.options(e).length === ABY.options(base).length - 1; });
-    rec('ring-detours', shaped.length === 7 && days.size === 7 && same, shaped.length + ' of 7 call chains (' + K.map(k => N['rg_' + k].call.from).join(', ') + ') on ' + days.size + ' different days, each offered once for free, ringing louder and then answering itself; every end returns to the scene she left and moves no stat');
+    rec('ring-detours', shaped.length === 14 && days.size === 7 && perDay && apart && same, shaped.length + ' of 14 call chains (' + K.map(k => N['rg_' + k].call.from).join(', ') + ') on ' + days.size + ' days, two a day on different scenes, each offered once for free, ringing louder and then answering itself; every end returns to the scene she left and moves no stat');
   }
   { // THE FIRST SCENE, DEEPER: awakening (the opening every first journey gets) is a three-scene prologue too, then the same three ways into the haze it always had
     const a = N.awakening, b = N.awakening_b, c = N.awakening_c;
