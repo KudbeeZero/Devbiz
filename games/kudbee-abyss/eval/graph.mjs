@@ -28,7 +28,7 @@ function walkChecks() {
   const noWay = ids.filter(id => !N[id].ending && !N[id].song && open(id).length === 0);
   rec('story-no-dead-ends', noWay.length === 0, noWay.join(', ') || 'every scene has at least one choice that is always available');
   const sure = new Set(ids.filter(id => N[id].ending));
-  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : N[id].time ? open(id).some(c => c.next === '@back' || (/^(confide|holders)$/.test(N[id].thread || '') && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
+  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : /^hero_/.test(id) ? ABY.OPENINGS.every(o => sure.has(o)) : N[id].time ? open(id).some(c => c.next === '@back' || (/^(confide|holders)$/.test(N[id].thread || '') && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
   rec('story-always-finishable', ids.every(id => sure.has(id)), ids.filter(id => !sure.has(id)).join(', ') || 'from every scene the always-available choices reach an ending (' + sure.size + '/' + ids.length + ')');
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
@@ -132,7 +132,7 @@ function walkChecks() {
   // hidden choices exist and unlock: some state shows a choice that another does not
   const reqNodes = ids.filter(id => (N[id].choices || []).some(c => c.req));
   let unlocked = 0, hidden = 0; for (const id of reqNodes) { const here = at(id); if (!here.length) continue; for (let i = 0; i < N[id].choices.length; i++) if (N[id].choices[i].req) { const sees = here.some(s => ABY.okReq(s, N[id].choices[i].req)), hides = here.some(s => !ABY.okReq(s, N[id].choices[i].req)); if (sees) unlocked++; if (hides) hidden++; } }
-  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !c.req.open && !/^rg_done_/.test(c.req.noflag || '') && !at(id).some(s => ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
+  const never = []; for (const id of reqNodes) for (const c of N[id].choices) if (c.req && !c.req.open && !c.req.hero && !/^rg_done_/.test(c.req.noflag || '') && !at(id).some(s => ABY.okReq(s, c.req))) never.push(id + ':' + c.label);
   rec('hidden-choices', never.length === 0 && hidden > 0, never.join(', ') || unlocked + ' gated choices can be unlocked (and hidden: ' + hidden + ')');
 
   // dark rooms frighten her without the light; the light costs battery; the song cannot be retried for ever
@@ -466,6 +466,30 @@ function walkChecks() {
       && go && go.node === 'ec4_lift' && go.back === 'd4_wake' && back && back.node === 'd4_wake' && back.flags.tt_echo4 === 1 && back.open === 'op_lift'
       && walkIn && walkIn.node === 'op_bath_c' && walkIn.notes.includes('o_bath') && walkIn.open === 'op_bath' && walkIn.choices === 2,
       'nine three-scene prologues (' + chain.length + ' of 9 chained, 18 scenes of their own, each filing its clue), each returning as a flashback on Day Four and Day Six for the journey that began that way (' + others.length * 2 + ' echoes), read by Wren\u2019s Day Five and the Eye on Day Seven; the first journey sees only its own (the haze)');
+  }
+  { // WHO YOU WERE: three people the player can be (ABY.HEROES). A choice of who, never of what: the "before" scene plays first and goes back to the opening
+    // she was waking in, each flashback is offered once from one scene on Day Two, Four and Six (never one that speaks a once-only line) and returns there, every choice is free, sets
+    // only its own tt_hero flag and adds nothing, and the overnight lines only talk. So a journey as anyone is the same journey, stat for stat
+    const HS = ABY.HERO_IDS, DAYS = [[2, 'd2_you', 6], [4, 'd4_type', 9], [6, 'd6_story', 11]], quiet = c => c.free && !c.add && c.light === undefined && !c.retry;
+    const shaped = HS.filter(h => { const i = N['hero_' + h];
+      return ABY.HEROES.some(x => x.id === h && x.name && x.tag && x.blurb) && i && i.safe && i.thread === 'hero' && !i.time && i.ch === 1 && i.note === 'h_' + h && ABY.NOTES['h_' + h] && i.text.length > 300 && i.choices.length >= 2 && i.choices.every(c => c.next === '@back' && quiet(c) && !c.set && !c.req)
+        && DAYS.every(([d, at, ch]) => { const f = N['hb' + d + '_' + h], into = N[at].choices.filter(c => c.next === 'hb' + d + '_' + h);
+          return f && f.safe && f.thread === 'hero' && f.time === 'past' && f.ch === ch && !f.note && f.text.length > 300 && f.choices.length >= 2 && f.choices.every(c => c.next === '@back' && quiet(c) && c.set === 'tt_hero' + d && !c.req)
+            && into.length === 1 && quiet(into[0]) && !into[0].set && into[0].req.hero === h && into[0].req.noflag === 'tt_hero' + d && !N[at].dark; })
+        && ['d3_wake', 'd5_wake', 'd7_wake'].every(at => ABY.HERO_LINES.filter(m => m.at === at && m.req.hero === h && ABY.SPEAKERS[m.who] && m.text.length > 100 && !m.note).length === 1); });
+    const texts = new Set(HS.flatMap(h => ['hero_' + h, 'hb2_' + h, 'hb4_' + h, 'hb6_' + h].map(id => N[id] && N[id].text)).concat(ABY.HERO_LINES.map(m => m.text)));
+    const STAT = ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem', 'open'], same = (a, b) => STAT.every(f => a[f] === b[f]);
+    const start = HS.every(h => ABY.OPENINGS.every(op => { const base = ABY.newState(3, op), a = ABY.heroStart(base, h), b = a && ABY.choose(a, 0), d = ABY._land(Object.assign({}, base, { flags: {}, notes: base.notes.slice(), choices: 1 }));
+      return a.node === 'hero_' + h && a.back === op && b && b.node === op && b.hero === h && same(b, d) && JSON.stringify(b.flags) === JSON.stringify(d.flags) && b.notes.filter(n => n !== 'h_' + h).join() === d.notes.join() && b.notes.includes('h_' + h); }))
+      && ABY.heroStart(ABY.newState(0), 'nobody').node === ABY.START && ABY.heroStart(ABY.heroStart(ABY.newState(0), 'jude'), 'rowan').hero === 'jude';
+    const trip = HS.every(h => DAYS.every(([d, at]) => [0, 1].every(light => { const s = Object.assign(ABY.newState(2), { node: at, hero: h, bat: 30, light, heart: 2, trust: 1, dread: 2 }), i = N[at].choices.findIndex(c => c.next === 'hb' + d + '_' + h), a = ABY.choose(s, i), b = a && ABY.choose(a, 1), base = ABY._land(Object.assign({}, s, { flags: {}, notes: [] }));
+      return a && a.node === 'hb' + d + '_' + h && b && b.node === at && b.hero === h && same(b, base) && Object.keys(b.flags).join() === 'tt_hero' + d && !ABY.options(b).some(o => /^hb/.test(o.c.next)) && HS.filter(x => x !== h).every(x => !ABY.options(s).some(o => o.c.next === 'hb' + d + '_' + x)); })))
+      && DAYS.every(([, at]) => !ABY.options(Object.assign(ABY.newState(0), { node: at })).some(o => /^hb/.test(o.c.next)));
+    const lines = HS.every(h => ['d3_wake', 'd5_wake', 'd7_wake'].every(at => ABY.overnightFor(Object.assign(ABY.newState(0), { node: at, hero: h })).filter(m => /^h_/.test(m.id)).length === 1))
+      && ['d3_wake', 'd5_wake', 'd7_wake'].every(at => !ABY.overnightFor(Object.assign(ABY.newState(0), { node: at })).some(m => /^h_/.test(m.id)));
+    const kept = ABY.cleanState({ hero: 'ellis', node: 'd2_wake' }).hero === 'ellis' && ABY.cleanState({ hero: 'nobody' }).hero === '' && ABY.carry(Object.assign(ABY.newState(0), { node: 'end_keeper', hero: 'rowan' })).hero === 'rowan'
+      && ABY.wake(Object.assign(ABY.newState(0), { hero: 'jude' }), 2, 0).hero === 'jude' && ABY.choose(Object.assign(ABY.newState(0), { hero: 'jude' }), 0).hero === 'jude';
+    rec('heroes', HS.length === 3 && shaped.length === 3 && texts.size === 21 && start && trip && lines && kept, HS.length + ' people to be (' + ABY.HEROES.map(h => h.name + ', ' + h.tag.toLowerCase()).join('; ') + '), ' + shaped.length + ' shaped: a "before" scene that returns to every one of the ten openings, a flashback each on Day Two, Four and Six, and three overnight lines by name (' + texts.size + ' distinct texts); every choice free, nothing moves a stat, the person is kept through a save, a carry and a wake');
   }
   { // confidences: five warm-bond memories (two scenes each) that only listen: nothing they touch can reach a gate, a rite or an ending
     const C = ids.filter(id => N[id].thread === 'confide'), PAIRS = [['d3_wake', 'GUARDIAN', 'corvin', { freed_name: 1 }], ['d4_wake', 'VEY', 'vey', { vey_known: 1 }], ['d5_dawn', 'WREN', 'wren', { riff_done: 1 }], ['d6_dawn', 'QUEEN', 'queen', { heard: 1 }], ['d7_gather', 'EYE', 'eye', { asked_eye: 1 }]];

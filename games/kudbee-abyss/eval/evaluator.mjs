@@ -108,7 +108,8 @@ async function open(opts = {}, tag = '', { cdn = true, pre, keepBoot } = {}) {
   else await pg.route('https://cdnjs.cloudflare.com/**', r => r.abort());
   if (!opts.guide) await pg.addInitScript(`try { if (!localStorage.getItem('kudbee.abyss.v2')) localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);   // the first-run guide has its own check; every other flow starts past it
   if (!opts.beats) await pg.addInitScript('window.__abySkipBeats = true;');   // beats are pure pass-throughs: flows walk through them to the scene they mean; the beats block plays them
-  if (!opts.scramble) await pg.addInitScript('window.__abyOpening = "awakening";');   // flows that pick replies by name start at the first opening; the scramble has its own check
+  if (!opts.scramble) await pg.addInitScript('window.__abyOpening = "awakening";');
+  if (!opts.hero) await pg.addInitScript('window.__abyHero = "";');   // flows that pick replies by name begin as no one in particular; choosing who you were has its own check   // flows that pick replies by name start at the first opening; the scramble has its own check
   if (pre) await pg.addInitScript(pre);
   await pg.goto(URL, { waitUntil: 'load' });
   await pg.waitForFunction(() => document.getElementById('pre').classList.contains('done'), null, { timeout: 15000 });
@@ -1363,6 +1364,36 @@ await block('ring-detours-ui', async () => {
   await pg.locator('#replies .chip', { hasText: 'Put the phone down' }).first().click(); await pg.waitForFunction(() => ABY.game.state.node === 'd5_hang' && ABY.game.state.flags.rg_done_corvin5 === 1, null, { timeout: 15000 });
   await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const after = await pg.locator('#replies .chip', { hasText: 'The phone is ringing' }).count();
   rec('ring-detour-plays', offered === 1 && r1.who === 'Corvin Ash' && r1.n === 2 && r3 === 1 && after === 0, 'the call is offered once on the scene (' + offered + '), rings as ' + r1.who + ', rings louder when declined, answers itself on the third, and puts her back on the same scene with no second offer (' + after + ')');
+  await ctx.close();
+});
+
+// ================= who you were =================
+await block('heroes-ui', async () => {
+  const shots = [];
+  for (const ph of [PHONES[2], PHONES[0]]) {
+    const { ctx, pg } = await open(Object.assign(phoneCtx(ph), { hero: true }), 'hero-' + ph.n); await wake(pg); await openMessages(pg);
+    await pg.waitForSelector('#who:not([hidden]) .hcard', { timeout: 15000 });
+    const cards = await pg.$$eval('#who .hcard', bs => bs.map(b => { const r = b.getBoundingClientRect(), v = document.getElementById('device').getBoundingClientRect(); return { id: b.dataset.hero, h: Math.round(r.height), w: Math.round(r.width), inside: r.top >= v.top - 1 && r.bottom <= v.bottom + 1 && r.left >= v.left - 1 && r.right <= v.right + 1, name: b.querySelector('b').textContent }; }));
+    await pg.screenshot({ path: join(OUT, 'heroes-' + ph.n + '.png') });
+    const run0 = await pg.evaluate(() => ABY.game.run);
+    await pg.locator('#who .hcard[data-hero="jude"]').click(); await pg.waitForFunction(() => ABY.game.run && ABY.game.state.node === 'hero_jude', null, { timeout: 15000 });
+    await pick(pg, 'Remember her hand'); await pg.waitForFunction(() => ABY.game.state.node === 'awakening' && !ABY.game.delivering, null, { timeout: 15000 });
+    const o = await pg.evaluate(() => ({ hero: ABY.game.state.hero, notes: ABY.game.state.notes, bat: ABY.game.state.bat, thread: document.getElementById('thread').textContent, hidden: document.getElementById('who').hidden }));
+    shots.push({ ph: ph.n, cards, run0, o });
+    await ctx.close();
+  }
+  const ok = shots.every(x => x.cards.length === 3 && x.cards.every(c => c.h >= 44 && c.inside) && !x.run0 && x.o.hidden && x.o.hero === 'jude' && x.o.notes.includes('h_jude') && x.o.bat === 62 && /you were Jude/.test(x.o.thread) && /Something wakes her/.test(x.o.thread));
+  rec('heroes-pick', ok, shots.map(x => x.ph + ': ' + x.cards.map(c => c.name + ' ' + c.w + 'x' + c.h + (c.inside ? '' : ' OFF-SCREEN')).join(', ')).join(' | ') + '; picking Jude plays her "before" scene, files her note, then the first scene, battery untouched');
+  // later in the week she is remembered by name, and her flashback is there for her only
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'hero-week'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd4_type', { hero: 'jude', mem: 2 }); const mine = await chips(pg); await at(pg, 'd4_type', { hero: 'rowan', mem: 2 }); const his = await chips(pg); await at(pg, 'd4_type', { mem: 2 }); const none = await chips(pg);
+  await at(pg, 'd4_type', { hero: 'jude', mem: 2, bat: 30 }); await pg.locator('#replies .chip', { hasText: 'who you were (Jude)' }).first().click();
+  await pg.waitForFunction(() => ABY.game.state.node === 'hb4_jude', null, { timeout: 15000 }); const slip = await pg.evaluate(() => document.getElementById('screen').dataset.time);
+  await pick(pg, 'Remember his name'); await pg.waitForFunction(() => ABY.game.state.node === 'd4_type' && !ABY.game.delivering, null, { timeout: 15000 });
+  const back = await pg.evaluate(() => ({ bat: ABY.game.state.bat, f: ABY.game.state.flags.tt_hero4 })); const after = await chips(pg);
+  await at(pg, 'd5_wake', { hero: 'ellis', mem: 2 }); const wrenSays = await pg.evaluate(() => document.getElementById('thread').textContent);
+  rec('heroes-remembered', mine.some(t => /who you were \(Jude\)/.test(t)) && !his.some(t => /Jude/.test(t)) && his.some(t => /\(Rowan\)/.test(t)) && !none.some(t => /who you were/.test(t)) && slip === 'past' && back.bat === 30 && back.f === 1 && !after.some(t => /who you were/.test(t)) && /Ellis, I found my flute/.test(wrenSays),
+    'Day Four offers Jude her own flashback (and Rowan his, and no one none); it plays in the past, costs nothing, comes back to the same scene once; on Day Five Wren writes to Ellis by name');
   await ctx.close();
 });
 

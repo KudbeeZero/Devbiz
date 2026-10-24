@@ -125,6 +125,9 @@ ABY.TORCH_TOGGLE = 2;     // and switching it on or off
 
 // the clues she can find (they show in the Notes app, and some unlock choices)
 ABY.NOTES = {
+  h_rowan: { title: 'Before: Rowan', text: 'You were Rowan. A landing, a moon nightlight, a little sister who walked in her sleep. You always turned her round. You always counted her back.' },
+  h_ellis: { title: 'Before: Ellis', text: 'You were Ellis. A front room above a launderette, Thursdays at four, a borrowed flute held together with tape. You taught Wren eleven notes. You never asked who had taught you.' },
+  h_jude: { title: 'Before: Jude', text: 'You were Jude. Twelve years of nights on a children\'s ward. Every nurse knows the minute the monitors blink. Wren held your hand at 3:07 and told you not to answer it.' },
   recording: { title: 'Recording: the stones', text: 'Under the choir, very faint, a voice you know: hers. "DON\'T OPEN THE GATE. I LOCKED HIM IN SO YOU\'D NEVER—" The file ends there.' },
   ledger: { title: 'The captain\'s ledger', text: '"She asked me to wear the crown of shadows. \'Only for a night,\' she said. \'Only to hold the door.\' I said yes. I always said yes."' },
   vey_photo: { title: 'Photo: Vey', text: 'The Queen, the pillar, and behind her, close enough to touch her hair: Vey, standing on two legs, with far too many hands.' },
@@ -342,6 +345,28 @@ ABY.epilogueFor = snap => ABY.BOND_IDS.map(w => { const band = ABY.epiBand(snap 
 // SECOND SIGHT: on a later journey the night remembers the earlier ones. A scene most journeys pass (`at`) opens with one more line, from someone who
 // recognises her, for an ending she has found (`echo_<id>`, `scar_<id>`) or for how many (`min: { mem }`). They add no scenes and no branches: the
 // same night reads differently the second time. A scene she can come back to (a flashlight, a slip, a detour) never carries one, so it is said once.
+// ---- who you were (the player picks one when a journey begins): three people who knew Wren before. A choice of who, not of what: nothing here can move
+// an ending. Each has a "before" scene that plays first (`hero_<id>`, then `@back` to the opening), a flashback on Day Two, Four and Six (`hb<d>_<id>`, offered
+// once from the Queen's scene with `req: { hero, noflag }`, free, every choice `@back`), and three overnight lines that call her by name (ABY.HERO_LINES) ----
+ABY.HEROES = [
+  { id: 'rowan', name: 'Rowan', tag: 'The older sibling', blurb: 'Shared a landing with Wren for nine years and walked her back to bed every time she sleepwalked. Still counts to forty in the dark.' },
+  { id: 'ellis', name: 'Ellis', tag: 'The music teacher', blurb: 'Taught Wren her first eleven notes on a borrowed flute, in a front room above a launderette. Has never once played the last note of a song.' },
+  { id: 'jude', name: 'Jude', tag: 'The night nurse', blurb: 'Twelve years of night shifts on a children\'s ward. Knows what 3:07 means. Sat up with Wren the night her fever broke, and has not slept properly since.' },
+];
+ABY.HERO_IDS = ABY.HEROES.map(h => h.id);
+ABY.HERO_LINES = [
+  { id: 'h_rowan_d3', at: 'd3_wake', req: { hero: 'rowan' }, who: 'VEY', text: 'Rowan. That is your name. I found it written inside your wrist while you slept, very small, in a child\'s handwriting: ROWAN COUNTS. You do, you know. You count in your sleep. You got to forty last night and started again.' },
+  { id: 'h_rowan_d5', at: 'd5_wake', req: { hero: 'rowan' }, who: 'WREN', text: 'Rowan? I dreamed you walked me back again. Twelve steps. You counted them, and I counted with you, and there was a thirteenth voice. I am not asleep now. I am sitting on the landing with the light on. Please ring.' },
+  { id: 'h_rowan_d7', at: 'd7_wake', req: { hero: 'rowan' }, who: 'QUEEN', text: 'Rowan. You turned your sister round on the stairs a hundred times so that she would never reach the bottom. I know what is at the bottom. Thank you. Tonight, if I ask you to turn me round, do it.' },
+  { id: 'h_ellis_d3', at: 'd3_wake', req: { hero: 'ellis' }, who: 'VEY', text: 'Ellis. That is your name. I heard the stones say it while you slept. They say it the way you say a teacher\'s name, carefully, in case it is the wrong one. They want to know if you will teach them the twelfth note. I told them you do not know it.' },
+  { id: 'h_ellis_d5', at: 'd5_wake', req: { hero: 'ellis' }, who: 'WREN', text: 'Ellis, I found my flute. The taped one. I have not played it in nine years and last night it was on my pillow, warm. I did not play it. I promise I did not play it. Somebody in the garden is waiting for me to.' },
+  { id: 'h_ellis_d7', at: 'd7_wake', req: { hero: 'ellis' }, who: 'QUEEN', text: 'Ellis. That flute was my daughter\'s first. I left it for whoever could play the eleven and stop. You stopped. Every time, you stopped. I have waited a very long time to hear someone stop.' },
+  { id: 'h_jude_d3', at: 'd3_wake', req: { hero: 'jude' }, who: 'VEY', text: 'Jude. That is your name. You said it in your sleep, very quietly, the way you would say it to a frightened child: I am Jude, I am here all night. I sat by you the whole time. I did not know anyone had ever said that to anyone down here.' },
+  { id: 'h_jude_d5', at: 'd5_wake', req: { hero: 'jude' }, who: 'WREN', text: 'Jude? I looked you up. The ward says you left. The ward says there is no nurse called Jude and never was. I have still got the bracelet with your writing on it. Please tell me you are real.' },
+  { id: 'h_jude_d7', at: 'd7_wake', req: { hero: 'jude' }, who: 'QUEEN', text: 'Jude. The boy in bed nine helped me look for her for a long time. He was very brave. He asked me to tell the nurse he was sorry he stopped waving. I have been carrying that message all week. I did not know how to say it.' },
+];
+// a journey begins as someone: the "before" scene plays first and returns to the opening she was going to wake in (pure)
+ABY.heroStart = function (s, id) { if (ABY.HERO_IDS.indexOf(id) < 0 || !s || s.hero) return s; const o = Object.assign({}, s, { hero: id, back: s.node, node: 'hero_' + id, flags: Object.assign({}, s.flags), notes: s.notes.slice() }); if (o.notes.indexOf('h_' + id) < 0) o.notes.push('h_' + id); return o; };
 ABY.SECOND_SIGHT = [
   { id: 's_sms', at: 'unknown_sms', req: { min: { mem: 1 } }, who: 'EYE', text: 'you again. you have held this phone before. your thumb goes to the same place on the glass.' },
   { id: 's_flute', at: 'flute_path', req: { flag: 'echo_song' }, who: 'QUEEN', text: 'The flute knows the way already. It pulls the way it pulled the night you played the whole song. Have we done this before?' },
@@ -360,7 +385,7 @@ ABY.SECOND_SIGHT = [
   { id: 's_sorrel', at: 'd6_sorrel', req: { flag: 'scar_cradle' }, who: 'SORREL', text: 'you came in last time!! you stayed for paper hats. are you coming in again? i saved you the red.' },
   { id: 's_end', at: 'd7_end', req: { min: { mem: 10 } }, who: 'NARRATOR', text: 'You have stood here many times. The book knows it: it falls open at the first page before anyone touches it.' },
 ];
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.ECHOES, ABY.SECOND_SIGHT, ABY.APP_WHISPERS || []).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.HERO_LINES, ABY.ECHOES, ABY.SECOND_SIGHT, ABY.APP_WHISPERS || []).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -1004,6 +1029,9 @@ ABY.NODES = {
       { label: 'Play it a lullaby', next: 'd2_lull', req: { flag: 'lullaby' } },
       { label: 'Turn the phone off', next: 'end_loop' },
       { label: 'Leave it on. You know it only turns itself back on', next: 'd2_want', add: { resolve: 1 }, req: { flag: 'scar_loop' } },
+      { label: 'Turn the clock back: who you were (Rowan)', next: 'hb2_rowan', bat: 0, free: true, req: { hero: 'rowan', noflag: 'tt_hero2' } },
+      { label: 'Turn the clock back: who you were (Ellis)', next: 'hb2_ellis', bat: 0, free: true, req: { hero: 'ellis', noflag: 'tt_hero2' } },
+      { label: 'Turn the clock back: who you were (Jude)', next: 'hb2_jude', bat: 0, free: true, req: { hero: 'jude', noflag: 'tt_hero2' } },
     ],
   },
   d2_want: {
@@ -1350,6 +1378,9 @@ ABY.NODES = {
     choices: [
       { label: 'Press send', next: 'end_caller' },
       { label: 'Delete it, one letter at a time', next: 'd4_stones', set: 'refused_next', add: { resolve: 1, dread: 1 } },
+      { label: 'Turn the clock back: who you were (Rowan)', next: 'hb4_rowan', bat: 0, free: true, req: { hero: 'rowan', noflag: 'tt_hero4' } },
+      { label: 'Turn the clock back: who you were (Ellis)', next: 'hb4_ellis', bat: 0, free: true, req: { hero: 'ellis', noflag: 'tt_hero4' } },
+      { label: 'Turn the clock back: who you were (Jude)', next: 'hb4_jude', bat: 0, free: true, req: { hero: 'jude', noflag: 'tt_hero4' } },
     ],
   },
   d4_stones: {
@@ -1643,6 +1674,9 @@ ABY.NODES = {
       { label: 'Tell her she did this to all of them', next: 'd6_ring', add: { resolve: 1, dread: 1 }, set: 'blamed_queen' },
       { label: 'Tell her you were there the night of the lock: you saw the key shake in her hand', next: 'd6_ring', req: { flag: 'tt_locking' }, add: { heart: 2, trust: 1 } },
       { label: 'Tell her you know who she locked away: a girl in a paper crown', next: 'd6_ring', req: { flag: 'link_what_she_gave' }, add: { heart: 2, trust: 2, dread: 1 } },
+      { label: 'Turn the clock back: who you were (Rowan)', next: 'hb6_rowan', bat: 0, free: true, req: { hero: 'rowan', noflag: 'tt_hero6' } },
+      { label: 'Turn the clock back: who you were (Ellis)', next: 'hb6_ellis', bat: 0, free: true, req: { hero: 'ellis', noflag: 'tt_hero6' } },
+      { label: 'Turn the clock back: who you were (Jude)', next: 'hb6_jude', bat: 0, free: true, req: { hero: 'jude', noflag: 'tt_hero6' } },
     ],
   },
   d6_page: {
@@ -3522,6 +3556,103 @@ ABY.NODES = {
       { label: 'Shake the globe from the inside, so she feels it', next: '@back', set: 'tt_echo6', add: { resolve: 1, heart: 1, dread: 1 } },
     ],
   },
+  // ---- who you were: each person's "before" scene and three flashbacks (see ABY.HEROES) ----
+  hero_rowan: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', safe: true, thread: 'hero', note: 'h_rowan',
+    text: 'Before. Before you were a voice in a phone, you were Rowan, and you had a little sister, and a landing between your two rooms with a nightlight shaped like a moon. Wren sleepwalked. Most nights at about three you would hear the boards, and get up, and find her at the top of the stairs holding the banister with both hands, talking to someone at the bottom you could never see. You never woke her. You only turned her round, very gently, and walked her back, counting the steps out loud so she would know where she was. You are still counting, somewhere, when the phone rings.',
+    choices: [
+      { label: 'Remember the moon nightlight', next: '@back', bat: 0, free: true },
+      { label: 'Remember counting her back to bed', next: '@back', bat: 0, free: true },
+    ],
+  },
+  hb2_rowan: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. Hide and seek, the summer Wren was six. You are It. You stand in the hall with your face to the wallpaper and count to forty, loudly, the way she likes, and at thirty-nine you hear her laugh from a room you did not know the house had. When you open your eyes the hall is longer. There are more doors in it than there should be, and behind one of them, very pleased, a small voice is counting with you: forty. Forty. Forty.',
+    choices: [
+      { label: 'Go and find her', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+      { label: 'Call out that the game is over', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+    ],
+  },
+  hb4_rowan: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. The night the phone in the hall first rang after three. You were fourteen, and you answered it, because nobody else was awake, and a woman asked very politely for your sister. You said she was asleep. The woman said: then I will wait. You stood in the dark hall holding the receiver for an hour, until it was light, so that she would not have to wait for anyone else. In the morning there was a number on the back of your hand in biro, and it would not wash off.',
+    choices: [
+      { label: 'Hold on to the receiver', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+      { label: 'Put it down, gently', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+    ],
+  },
+  hb6_rowan: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. The last time you walked her back. She was nine, in dinosaur pyjamas, and this time she was not talking to the bottom of the stairs. She was listening to it. “She says it is her turn,” Wren told you, wide awake inside her sleep. “She says she has been four for ever so long.” You turned her round. You counted her back. Twelve steps, the same as always, and on the thirteenth you heard, from the dark at the bottom, someone small begin to count them too.',
+    choices: [
+      { label: 'Count louder', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+      { label: 'Pick her up and carry her', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+    ],
+  },
+  hero_ellis: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', safe: true, thread: 'hero', note: 'h_ellis',
+    text: 'Before. Before you were a voice in a phone, you were Ellis, and you taught music in a front room above a launderette, and every Thursday at four a small girl called Wren came up the stairs with a borrowed flute in a box held together with tape. You taught her the eleven notes first. You taught everyone the eleven notes first, though you could never have said where you learned them. She played them back to you perfectly the very first week, and then said, quite calmly, that someone under the floor had been humming them to her for years.',
+    choices: [
+      { label: 'Remember the eleven notes', next: '@back', bat: 0, free: true },
+      { label: 'Remember what she said about the floor', next: '@back', bat: 0, free: true },
+    ],
+  },
+  hb2_ellis: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. A Thursday, raining. Wren is late, and you play the eleven notes alone to fill the room, and somewhere under the floorboards, under the launderette, under the street, something you cannot see sings the twelfth. You stop. The room is very quiet. The machines downstairs have all stopped too, mid-spin, as if listening. You have never played the twelfth note. You have never known what it was. Now you know what it sounds like, and you wish you did not.',
+    choices: [
+      { label: 'Play the eleven again, to cover it', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+      { label: 'Put the flute down and listen', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+    ],
+  },
+  hb4_ellis: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. Your last lesson with Wren. She is ten, and she has brought you a card: a drawing of a flute, a drawing of you, and underneath, in round careful letters, THANK YOU FOR THE NOTES. Then she asks if she can stop. Not because she does not love it. Because when she plays at night, people come into the garden to listen, standing in the rain, and there are more of them every week, and none of them have faces she knows.',
+    choices: [
+      { label: 'Tell her she can stop', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+      { label: 'Ask her how many there are now', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+    ],
+  },
+  hb6_ellis: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. The night you found your own flute. Not Wren\'s: yours. Wrapped in a nursery blanket at the back of a cupboard in a house you were clearing for a stranger, with a luggage label on it in a woman\'s handwriting: for whoever can play the eleven, and stop. You played it in the empty house to see if it worked. It worked. The stair creaked behind you, very lightly, the way a stair creaks under someone four years old who has been told to stay in bed.',
+    choices: [
+      { label: 'Keep playing', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+      { label: 'Stop on the eleventh note', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+    ],
+  },
+  hero_jude: {
+    ch: 1, speaker: 'NARRATOR', mood: 'void', focus: 'queen', safe: true, thread: 'hero', note: 'h_jude',
+    text: 'Before. Before you were a voice in a phone, you were Jude, and you worked nights on a children\'s ward for twelve years, and every nurse on nights knows about 3:07. It is the minute the monitors all blink at once, for no reason anyone has found. It is the minute the children who cannot sleep sit up and look at the door. One winter you sat up with a girl called Wren while her fever broke, and at 3:07 she held your hand very hard and said: do not answer it. At the nurses\' station, very quietly, the phone had begun to ring.',
+    choices: [
+      { label: 'Remember her hand', next: '@back', bat: 0, free: true },
+      { label: 'Remember the phone at the station', next: '@back', bat: 0, free: true },
+    ],
+  },
+  hb2_jude: {
+    ch: 6, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. Your first night shift, years before Wren. A senior nurse walks you round with a torch and shows you everything: the drugs trolley, the fire doors, the sink that runs hot, and, last, a phone on the wall of the nurses\' station with a strip of tape across it that says DO NOT ANSWER AFTER 3. “Why?” you ask. She thinks about it for a long time. “Because it is never for you,” she says. “It is always for one of them. And they always want to go.”',
+    choices: [
+      { label: 'Ask her who calls', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+      { label: 'Promise you never will', next: '@back', bat: 0, set: 'tt_hero2', free: true },
+    ],
+  },
+  hb4_jude: {
+    ch: 9, speaker: 'NARRATOR', mood: 'dark', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. Bed nine, a boy of seven who never slept. Every night at 3:07 he sat up and waved at the door, and every night you asked who he was waving to, and every night he said: the lady with the flute, she is looking for her little girl, she asks me if I have seen her. On his last night he did not wave. He said: I told her I would help her look. In the morning the bed was made, and the chart said discharged, in handwriting nobody on the ward could name.',
+    choices: [
+      { label: 'Remember his name', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+      { label: 'Remember the handwriting', next: '@back', bat: 0, set: 'tt_hero4', free: true },
+    ],
+  },
+  hb6_jude: {
+    ch: 11, speaker: 'NARRATOR', mood: 'dusk', focus: 'queen', safe: true, thread: 'hero', time: 'past',
+    text: 'Flashback. The night it rang for you. Wren was long since well and gone home, and you were alone at the station, and the taped-up phone rang at 3:07, and for once there was nobody else for it to be for. You answered it. A small voice, very polite, asked if this was the hospital. It said it had been four for a very long time and it was not well. It asked if a nurse could come. You said, without thinking, the thing you always say: of course. Where are you, love? And the line said: here.',
+    choices: [
+      { label: 'Ask her where here is', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+      { label: 'Tell her you are coming', next: '@back', bat: 0, set: 'tt_hero6', free: true },
+    ],
+  },
   // ---- the evidence board's scenes: each opens only for a player who pinned the right two clues together in Notes (ABY.LINKS) ----
   ev_door: {
     ch: 7, speaker: 'NARRATOR', mood: 'gate', focus: 'gate', scare: 'whisper',
@@ -3800,7 +3931,7 @@ ABY.wake = function (cp, wakes, mem, found) {
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 ABY.newState = function (mem, open, scars, apps) {
-  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START };   // `open`: how this journey began (a message can remember it)
+  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, hero: '' };   // `open`: how this journey began (a message can remember it)
   for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
   for (const id of ABY.echoesOf(scars)) s.flags['echo_' + id] = 1;
   for (const id of ABY.appsOf(apps)) s.flags['app_' + id] = 1;
@@ -3827,6 +3958,7 @@ ABY.endingOf = function (s) { const n = ABY.NODES[s.node]; return n && n.ending 
 ABY.okReq = function (s, r) {
   if (!r) return true;
   if (r.open && s.open !== r.open) return false;
+  if (r.hero && s.hero !== r.hero) return false;
   if (r.flag && !s.flags[r.flag]) return false;
   if (r.noflag && s.flags[r.noflag]) return false;
   if (r.all) for (const f of r.all) if (!s.flags[f]) return false;
@@ -3850,7 +3982,7 @@ ABY.options = function (s) {
 ABY.choose = function (s, i) {
   const n = ABY.NODES[s.node], c = n && n.choices && n.choices[i];
   if (!c || !ABY.okReq(s, c.req)) return null;
-  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back, open: s.open };
+  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back, open: s.open, hero: s.hero || '' };
   if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
   else if (ABY.NODES[c.next] && ABY.NODES[c.next].time && !(n && n.time)) o.back = s.node;       // a time slip: remember where she was, every choice in it comes back
   if (!ABY.NODES[o.node]) return null;
@@ -3988,6 +4120,7 @@ ABY.cleanState = function (raw) {
   if (ok(raw.node) && !ABY.NODES[raw.node].ending) s.node = raw.node;
   if (Number.isInteger(raw.mem)) s.mem = clamp(raw.mem, 0, 99);
   if (ABY.OPENINGS.indexOf(raw.open) >= 0) s.open = raw.open;
+  if (ABY.HERO_IDS.indexOf(raw.hero) >= 0) s.hero = raw.hero;
   for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = clamp(raw[k], 0, 5);
   if (Number.isInteger(raw.dread)) s.dread = clamp(raw.dread, 0, ABY.MAX_DREAD);
   if (Number.isInteger(raw.bat)) s.bat = clamp(raw.bat, 1, 100);
