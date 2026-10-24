@@ -143,7 +143,7 @@
     else if (n.call) { showCall(n, opts); }
     else opts.forEach(function (o) { chip(o.c.label, opts.length === 1, function (ev) { choose(o.i, ev); }); });
     requestAnimationFrame(function () { box.classList.add('on'); scrollEnd(false); box.scrollTop = 0; moreChoices(box); });
-    if (G.autoPick != null && G.run && !n.song && !n.call && !n.ending) { var k = G.autoPick; G.autoPick = null; (function go() { if (!G.run || G.state.node !== ABY.START || G.state.choices) return; if (G.busy || G.delivering || !$('guide').hidden) return setTimeout(go, 300); choose(k); })(); }   // a reply sent from the lock screen
+    if (G.autoPick != null && G.run && G.state.node === ABY.START && !n.song && !n.call && !n.ending) { var k = G.autoPick; G.autoPick = null; (function go() { if (!G.run || G.state.node !== ABY.START || G.state.choices) return; if (G.busy || G.delivering || !$('guide').hidden) return setTimeout(go, 300); choose(k); })(); }   // a reply sent from the lock screen
     var f = box.querySelector('.chip'); if (f && matchMedia('(pointer:fine)').matches && P.screen === 'msg') f.focus({ preventScroll: true });
   }
   // an incoming call: a full-screen ring with the node's two choices as Answer / Decline
@@ -299,8 +299,20 @@
     var day2 = carry && G.pend && G.pend.kind === 'carry' ? JSON.parse(JSON.stringify(G.pend.state)) : null, forced = window.__abyOpening, opening = ABY.OPENINGS.indexOf(forced) >= 0 ? forced : ABY.pickOpening(Math.random(), foundN(), G.lastOpen);   // (a test may pin the opening)
     G.pend = null;                                                                   // whatever the last ending offered is taken (or let go)
     if (!day2) { G.lastOpen = opening; G.wakes = ABY.WAKES; }                       // a new journey: a new opening, and every wake back
-    var st = day2 || ABY.newState(foundN(), opening, G.found, G.apps);
-    begin(st, day2 ? dayOf(day2.node) + ' \u00B7 ' : 'Today ', true, day2 ? [] : st.notes.filter(function (k) { return /^scar_/.test(k); }));
+    var st = day2 || ABY.newState(foundN(), opening, G.found, G.apps), scars = day2 ? [] : st.notes.filter(function (k) { return /^scar_/.test(k); });
+    if (day2) return begin(st, dayOf(day2.node) + ' \u00B7 ', true, scars);
+    if (typeof window.__abyHero === 'string') return begin(ABY.heroStart(st, window.__abyHero), 'Today ', true, scars);   // (a test may pin who she is, or no one)
+    pickHero(function (id) { begin(ABY.heroStart(st, id), 'Today ', true, scars); });   // a new journey: first, who you were
+  }
+  function pickHero(then) {                                              // the "who were you?" sheet: three people who knew Wren; a choice of who, never of how the week ends
+    var box = $('whoList'); box.innerHTML = '';
+    ABY.HEROES.forEach(function (h) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'hcard'; b.setAttribute('data-hero', h.id);
+      var t = document.createElement('b'), g = document.createElement('small'), p = document.createElement('span'); t.textContent = h.name; g.textContent = h.tag; p.textContent = h.blurb;
+      b.appendChild(t); b.appendChild(g); b.appendChild(p); box.appendChild(b);
+      b.addEventListener('click', function () { if ($('who').hidden) return; $('who').hidden = true; ABY.Audio.sfx('click'); buzz(12); then(h.id); });
+    });
+    $('who').hidden = false; ABY.Audio.sfx('ui'); var f = box.querySelector('.hcard'); if (f && matchMedia('(pointer:fine)').matches) f.focus({ preventScroll: true });
   }
   function wakeRun() {                                                     // a fall: back to the last dawn, one wake fewer, a little more afraid
     G.pend = null; var s = ABY.wake(G.cp, G.wakes, foundN(), G.found); if (!s) return startRun();
@@ -555,7 +567,7 @@
   function onShow(name) {
     if (name !== 'msg') closeMemory(); else G.pending = 0;
     if (name !== 'msg') G.autoPick = null;
-    $('inst').hidden = true; $('news').hidden = true; $('epi').hidden = true;
+    $('inst').hidden = true; $('news').hidden = true; $('epi').hidden = true; $('who').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
     if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
