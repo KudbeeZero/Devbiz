@@ -1366,6 +1366,19 @@ await block('ring-detours-ui', async () => {
   await ctx.close();
 });
 
+// ================= portrait: the story keeps a window =================
+await block('portrait-room', async () => {
+  const out = [];
+  for (const [w, h] of [[390, 664], [375, 560]]) {   // an iPhone in Safari with its bars showing, and a small one
+    const { ctx, pg } = await open({ ctx: { viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } }, 'room-' + w); await wake(pg); await openMessages(pg);
+    await at(pg, 'stones_path', { heart: 2 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await sleep(400);
+    const m = await pg.evaluate(() => { const H = id => document.getElementById(id).getBoundingClientRect().height, rp = document.getElementById('replies'); return { dev: H('device'), thread: H('thread'), chips: rp.querySelectorAll('.chip').length, scrolls: rp.scrollHeight > rp.clientHeight + 4, more: rp.classList.contains('more'), chipH: Math.min(...[...rp.querySelectorAll('.chip')].map(c => c.getBoundingClientRect().height)) }; });
+    if (w === 390) await pg.screenshot({ path: join(OUT, 'portrait-room-390x664.png') });
+    out.push(Object.assign({ w, h }, m)); await ctx.close();
+  }
+  rec('portrait-story-keeps-room', out.every(m => m.thread >= m.dev * 0.24 && m.chips >= 5 && m.chipH >= 44 && (!m.scrolls || m.more)), out.map(m => m.w + 'x' + m.h + ': text ' + Math.round(m.thread) + 'px of ' + Math.round(m.dev) + ', ' + m.chips + ' choices' + (m.scrolls ? ' (scroll, faded)' : '')).join(' | ') + ': a long list of choices scrolls instead of squeezing the story to one line');
+});
+
 rec('no-console-errors', errs.length === 0, errs.slice(0, 2).join(' | ').slice(0, 220) || 'no page errors or console errors in any run');
 await browser.close(); srv.close();
 if (process.env.EVAL_TIMES) writeFileSync(process.env.EVAL_TIMES, JSON.stringify(TIMES));
