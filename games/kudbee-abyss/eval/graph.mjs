@@ -49,7 +49,7 @@ function walkChecks() {
     const n = N[s.node], out = [];
     if (n.ending) { const c = ABY.carry(s); if (c) out.push(c); return out; }                  // Day Two: an ending with a way on carries her into act two
     if (n.song) { out.push(ABY.songDone(s, true), ABY.songDone(s, false)); return out; }
-    for (const o of ABY.options(s)) { const t = ABY.choose(s, o.i); if (t) out.push(t); }
+    for (const o of ABY.options(s)) { let t = ABY.choose(s, o.i); if (t && N[t.node].beat) { reach.add(t.node); t = ABY.choose(t, 0); } if (t) out.push(t); }   // a beat is a proven pass-through (check `beats`): step through it, so it costs the walk no states
     const l = ABY.toggleLight(s); if (l !== s) out.push(l);
     return out.map(t => t.notes.length === s.notes.length ? t : pin(t));   // (no new clue, no new pair: flags are never taken back, so she was already pinned)
   };
@@ -401,6 +401,18 @@ function walkChecks() {
       && inside && inside.node === 'fb_locking' && inside.back === 'd3_wake' && out && out.node === 'd3_wake' && out.back === '' && out.flags.tt_locking === 1 && out.notes.includes('locking') && !again
       && tired && tired.node === 'blackout' && kept.node === 'fb_locking' && kept.back === 'd3_wake' && lost.node === ABY.START,
       slips.length + ' slips (5 flashbacks, 5 flash-forwards) from ' + origins.join(', ') + ': each seen once, each returns where she was, each filing a clue, each read by a later choice; a tired return can still end in the dark; a save keeps the way back');
+  }
+  { // THE ROAD, LONGER: beats on the most-travelled links of every day. A beat is a pure pass-through: all its choices are free and go to one scene,
+    // set and add nothing, and it is entered from exactly one scene; walking through it leaves her exactly where the old link did (light on or off)
+    const B = ids.filter(id => N[id].beat), into = id => ids.filter(x => (N[x].choices || []).some(c => c.next === id));
+    const shaped = B.filter(id => { const n = N[id], t = n.choices[0] && n.choices[0].next, src = into(id);
+      return n.safe && !n.dark && !n.note && !n.ending && !n.call && !n.song && !n.time && !n.img && n.text.length > 200 && n.choices.length >= 1 && n.choices.every(c => c.next === t && c.free && !c.add && !c.set && !c.req && c.light === undefined && !c.retry)
+        && N[t] && !N[t].beat && DAY(N[t].ch) === DAY(n.ch) && src.length === 1 && DAY(N[src[0]].ch) === DAY(n.ch); });
+    const same = B.every(id => { const src = into(id)[0], t = N[id].choices[0].next; return [0, 1].every(light => { const s = Object.assign(ABY.newState(0), { node: src, bat: 40, light, heart: 2, resolve: 2, trust: 2, dread: 1, flags: { knew_name: 1, wren_with: 1, promised_sorrel: 1, tt_nine: 1, scar_cradle: 1, scar_loop: 1 } });
+      const i = N[src].choices.findIndex(c => c.next === id), a = ABY.choose(s, i), b = a && ABY.choose(a, 0);
+      return a && b && b.node === t && ['heart', 'resolve', 'trust', 'dread', 'bat', 'light', 'mem'].every(f => b[f] === a[f]) && JSON.stringify(b.flags) === JSON.stringify(a.flags) && b.notes.filter(x => x !== N[t].note).join() === a.notes.join(); }); });
+    const days = new Set(B.map(id => DAY(N[id].ch)));
+    rec('beats', B.length >= 21 && shaped.length === B.length && same && days.size === 7 && B.every(id => reach.has(id)), B.length + ' beats on the most-travelled links of all ' + days.size + ' days (' + shaped.length + ' shaped), each reached, each a free pass-through that leaves her exactly where the old link did, with the flashlight on or off');
   }
   { // MORE CALLS THROUGH THE WEEK: seven optional chains, one per day (the first on the first scene). Each is offered once from one scene (a choice that costs nothing),
     // rings, rings louder if declined, and finally answers itself; every end returns to the scene she left and sets rg_done_<k>, so nothing about the story changes

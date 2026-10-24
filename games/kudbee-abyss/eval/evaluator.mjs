@@ -107,6 +107,7 @@ async function open(opts = {}, tag = '', { cdn = true, pre, keepBoot } = {}) {
   if (cdn && THREE_PATH) await pg.route('https://cdnjs.cloudflare.com/**', r => r.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, path: THREE_PATH }));
   else await pg.route('https://cdnjs.cloudflare.com/**', r => r.abort());
   if (!opts.guide) await pg.addInitScript(`try { if (!localStorage.getItem('kudbee.abyss.v2')) localStorage.setItem('kudbee.abyss.v2', '{"guided":true}'); } catch (e) {}`);   // the first-run guide has its own check; every other flow starts past it
+  if (!opts.beats) await pg.addInitScript('window.__abySkipBeats = true;');   // beats are pure pass-throughs: flows walk through them to the scene they mean; the beats block plays them
   if (!opts.scramble) await pg.addInitScript('window.__abyOpening = "awakening";');   // flows that pick replies by name start at the first opening; the scramble has its own check
   if (pre) await pg.addInitScript(pre);
   await pg.goto(URL, { waitUntil: 'load' });
@@ -1314,6 +1315,20 @@ await block('robustness', async () => {
   { const c = await open({ ctx: { reducedMotion: 'reduce' } }, 'reduced'); await wake(c.pg); await openMessages(c.pg); await c.pg.waitForSelector('#replies.on .chip', { timeout: 6000 });
     const o = await c.pg.evaluate(() => ({ red: ABY.Scene.reduced || !ABY.Scene.ready, bubbles: document.querySelectorAll('#thread .m.sys').length }));
     rec('reduced-motion', o.red && o.bubbles >= 1, 'messages arrive without the typing delay, scene sway off'); await c.ctx.close(); }
+});
+
+// ================= the road, longer: beats =================
+await block('beats', async () => {
+  const { ctx, pg } = await open(Object.assign(phoneCtx(PHONES[0]), { beats: true }), 'beats'); await wake(pg); await openMessages(pg);
+  await at(pg, 'd5_wake', { mem: 3 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const bat0 = await pg.evaluate(() => ABY.game.state.bat);
+  await pg.locator('#replies .chip', { hasText: 'Say her name' }).first().click();
+  await pg.waitForFunction(() => ABY.game.state.node === 'bt_d5_bedroom', null, { timeout: 15000 }); await pick(pg, 'Speak first');
+  await pg.waitForFunction(() => ABY.game.state.node === 'd5_hello', null, { timeout: 15000 }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const o = await pg.evaluate(() => ({ bat: ABY.game.state.bat, thread: document.getElementById('thread').textContent }));
+  rec('beat-plays', /cheap kind that let the street light in/.test(o.thread) && /Speak first/.test(o.thread) && /sleepy whisper/.test(o.thread) && o.bat === bat0 - 1,
+    'a beat on the way to Wren: its text arrives, its one reply is sent, and she lands where the old link went (battery ' + bat0 + ' -> ' + o.bat + ': only the original choice cost anything)');
+  await ctx.close();
 });
 
 // ================= more calls through the week =================
