@@ -410,7 +410,39 @@ ABY.SECOND_SIGHT = [
   { id: 's_sorrel', at: 'd6_sorrel', req: { flag: 'scar_cradle' }, who: 'SORREL', text: 'you came in last time!! you stayed for paper hats. are you coming in again? i saved you the red.' },
   { id: 's_end', at: 'd7_end', req: { min: { mem: 10 } }, who: 'NARRATOR', text: 'You have stood here many times. The book knows it: it falls open at the first page before anyone touches it.' },
 ];
-ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.HERO_LINES, ABY.ECHOES, ABY.SECOND_SIGHT, ABY.APP_WHISPERS || []).filter(o => o.at === s.node && ABY.okReq(s, o.req)); };
+// LAST TIME: a new journey remembers how the one before it ended (`last` in the state, kept on the phone like `found`). Waiting on the scene she wakes
+// in (`at: '@open'`: whichever opening she began in) is one message about that ending, from the person it touched most. Like the echoes it is only a
+// voice: it files no clue, no choice reads `last`, and a first journey hears nothing. The graph's `last-time` proves all of that; add none for a day.
+ABY.LAST_TIME = [
+  ['dawn', 'QUEEN', 'Last time you opened the gate and walked on. You did not look back. I looked back for both of us, all night.'],
+  ['song', 'EYE', 'last time you played the whole song through. i have hummed it ever since you left. it is still 3:07, so i suppose you never really left.'],
+  ['echo', 'VEY', 'Last time you went through a gate that kept unfolding. I counted the gates behind you until I ran out of hands. Welcome back to the first one.'],
+  ['silence', 'GUARDIAN', 'Last time the gate opened and nothing followed. It was so quiet afterwards. I never thanked you. I am thanking you now, before you forget again.'],
+  ['crown', 'QUEEN', 'Last time the crown went on your head and you stopped hearing my flute. Please. Not tonight. Leave it where it lies.'],
+  ['hollow', 'VEY', 'Last time you locked the door and kept the key. I waited outside until morning, and you could not tell which side I was on. Neither could you.'],
+  ['eye', 'EYE', 'last time you answered me. i liked it. i did not like what it did to you. this time maybe only say hello.'],
+  ['mirror', 'GUARDIAN', 'Last time you took my place in the dark and I climbed out into the light. It was too bright. I came back down to wait for you.'],
+  ['betrayal', 'VEY', 'Last time I smiled at you, at the gate. I am sorry about my mouth. I have been practising keeping it small. Look. (It is very small.)'],
+  ['daybreak', 'WREN', 'last time you got out. a real morning, a kettle, a bird. then the phone rang again and here you are. i\u2019m sorry. i\u2019m glad. both.'],
+  ['keeper', 'GUARDIAN', 'Last time you held the door so that I could sleep. I slept for the first time in a hundred years. Then I woke, and it was 3:07, and you were here again.'],
+  ['loop', 'EYE', 'last time you turned it off. it turned itself back on. it always does. that is how you got here.'],
+  ['chorus', 'CHOIR', 'last time you sang us all as one song and the eye listened. we are still holding the last note. we are waiting for you to let us go.'],
+  ['watched', 'EYE', 'last time you looked away. i noticed. i always notice. it is all right. look a little longer this time.'],
+  ['names', 'QUEEN', 'Last time you said every name, and then your own, and closed the book. It opened again on its own. It always does, at 3:07.'],
+  ['caller', 'WREN', 'last time you sent the message. my phone lit up on the bedside table. i didn\u2019t answer it. i need you to know i didn\u2019t answer it.'],
+  ['drowned', 'CHOIR', 'last time you came down into the water with us and found the tune at once. then you left. nobody leaves. how did you leave?'],
+  ['warned', 'SORREL', 'last time you rang every kitchen in the book. two hundred and fourteen phones. one of them was mine. nobody ever rang me before.'],
+  ['nightline', 'WREN', 'last time you stayed on the line every night. i still pick up at 3:07. sometimes nobody\u2019s there and i talk anyway.'],
+  ['passed', 'WREN', 'last time you hung up and it went so light for you. it came to me. i looked at the blank line for a long time. i didn\u2019t write anything. i\u2019m still not writing anything.'],
+  ['firstpage', 'QUEEN', 'Last time you put the phone down at six and it stayed down. I kept the first page open, in case you came back to read it to me.'],
+  ['cradle', 'SORREL', 'last time you came in and the door shut ever so gently and you stayed. it was the best party. then you went away in the night and i didn\u2019t hear you go.'],
+  ['seventh', 'SORREL', 'last time you read my page out loud and said my name right, and it was morning. so why are you back? was it not a good morning?'],
+  ['throne', 'QUEEN', 'Last time you took the flute and the crown and sat in the seventh chair, and I walked out into the light. I came back. It did not feel right, leaving you holding it.'],
+  ['again', 'VEY', 'Last time it was 3:07 again and you woke somewhere new. This is somewhere new. I am sorry. I carried you here as gently as I could.'],
+  ['lowdoor', 'VEY', 'Last time you gave her the little key and she let herself out, and the whole house went lighter. It is heavy again tonight. I think it is because you are here.'],
+  ['blackout', 'GUARDIAN', 'Last time the battery died and you sat in the dark with your own face. I knocked on the glass from the other side. Keep it charged this time. Please.'],
+].map(([id, who, text]) => ({ id: 'l_' + id, at: '@open', req: { last: id }, who, text }));
+ABY.overnightFor = function (s) { return ABY.OVERNIGHT.concat(ABY.HERO_LINES, ABY.ECHOES, ABY.SECOND_SIGHT, ABY.APP_WHISPERS || [], ABY.LAST_TIME).filter(o => (o.at === s.node || (o.at === '@open' && s.node === s.open)) && ABY.okReq(s, o.req)); };
 
 ABY.NODES = {
   // ======================= chapter 1: the awakening =======================
@@ -4080,8 +4112,8 @@ ABY.wake = function (cp, wakes, mem, found) {
 
 // ---- state ----
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-ABY.newState = function (mem, open, scars, apps) {
-  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, hero: '' };   // `open`: how this journey began (a message can remember it)
+ABY.newState = function (mem, open, scars, apps, last) {
+  const s = { node: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, mem: Number.isInteger(mem) ? clamp(mem, 0, 99) : 0, heart: 0, resolve: 0, trust: 0, dread: 0, bat: ABY.BAT0, light: 0, flags: {}, notes: [], tries: 0, choices: 0, back: '', open: ABY.OPENINGS.indexOf(open) >= 0 ? open : ABY.START, hero: '', last: ABY.ENDING_IDS.indexOf(last) >= 0 ? last : '' };   // `open`: how this journey began; `last`: how the one before it ended (messages can remember both)
   for (const id of ABY.scarsOf(scars)) { s.flags['scar_' + id] = 1; s.notes.push('scar_' + id); }
   for (const id of ABY.echoesOf(scars)) s.flags['echo_' + id] = 1;
   for (const id of ABY.appsOf(apps)) s.flags['app_' + id] = 1;
@@ -4108,6 +4140,7 @@ ABY.endingOf = function (s) { const n = ABY.NODES[s.node]; return n && n.ending 
 ABY.okReq = function (s, r) {
   if (!r) return true;
   if (r.open && s.open !== r.open) return false;
+  if (r.last && s.last !== r.last) return false;
   if (r.hero && s.hero !== r.hero) return false;
   if (r.flag && !s.flags[r.flag]) return false;
   if (r.noflag && s.flags[r.noflag]) return false;
@@ -4132,7 +4165,7 @@ ABY.options = function (s) {
 ABY.choose = function (s, i) {
   const n = ABY.NODES[s.node], c = n && n.choices && n.choices[i];
   if (!c || !ABY.okReq(s, c.req)) return null;
-  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back, open: s.open, hero: s.hero || '' };
+  const o = { node: c.next, mem: s.mem || 0, heart: s.heart, resolve: s.resolve, trust: s.trust, dread: s.dread, bat: s.bat, light: s.light, flags: Object.assign({}, s.flags), notes: s.notes.slice(), tries: s.tries, choices: s.choices + 1, back: s.back, open: s.open, hero: s.hero || '', last: s.last || '' };
   if (c.next === '@back') { o.node = s.back || ABY.START; o.back = ''; }
   else if (ABY.NODES[c.next] && ABY.NODES[c.next].time && !(n && n.time)) o.back = s.node;       // a time slip: remember where she was, every choice in it comes back
   if (!ABY.NODES[o.node]) return null;
@@ -4271,6 +4304,7 @@ ABY.cleanState = function (raw) {
   if (Number.isInteger(raw.mem)) s.mem = clamp(raw.mem, 0, 99);
   if (ABY.OPENINGS.indexOf(raw.open) >= 0) s.open = raw.open;
   if (ABY.HERO_IDS.indexOf(raw.hero) >= 0) s.hero = raw.hero;
+  if (ABY.ENDING_IDS.indexOf(raw.last) >= 0) s.last = raw.last;
   for (const k of ABY.STATS) if (Number.isInteger(raw[k])) s[k] = clamp(raw[k], 0, 5);
   if (Number.isInteger(raw.dread)) s.dread = clamp(raw.dread, 0, ABY.MAX_DREAD);
   if (Number.isInteger(raw.bat)) s.bat = clamp(raw.bat, 1, 100);

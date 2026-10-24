@@ -1455,6 +1455,27 @@ await block('long-pairs-ui', async () => {
   await ctx.close();
 });
 
+await block('last-time-ui', async () => {
+  // a new journey remembers how the last one ended: the first journey hears nothing; a fall (3:07 Again) is saved as the last ending, and the
+  // next journey's first scene opens on the Eye remembering it, before the scene's own text; a reload keeps it
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'last-time'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const first = await pg.evaluate(() => ({ text: document.getElementById('thread').textContent, last: ABY.game.state.last }));
+  await at(pg, 'd2_you', { mem: 2, dread: 1, heart: 2, flags: { knew_name: 1 } }); await pg.evaluate(() => { ABY.game.wakes = 0; }); await tapChip(pg, 'Turn the phone off'); const m = await memoryShown(pg);
+  const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('kudbee.abyss.v2')).lastEnd);
+  await pg.click('#memAct'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  const line = await pg.evaluate(() => ABY.LAST_TIME.filter(l => l.req.last === 'loop')[0].text);
+  const next = await pg.evaluate(() => ({ node: ABY.game.state.node, last: ABY.game.state.last, whos: [...document.querySelectorAll('#thread .who')].map(w => w.textContent), text: document.getElementById('thread').textContent }));
+  await pg.evaluate(() => { const b = [...document.querySelectorAll('#thread .m')].filter(e => /last time you turned it off/.test(e.textContent))[0]; if (b) b.scrollIntoView({ block: 'center' }); }); await sleep(300);
+  await pg.screenshot({ path: join(OUT, 'last-time.png') });
+  await pg.reload({ waitUntil: 'load' }); await pg.waitForFunction(() => ABY.game && document.getElementById('pre').classList.contains('done'), null, { timeout: 15000 });
+  const kept = await pg.evaluate(() => ({ g: ABY.game.lastEnd, s: ABY.game.state.last }));
+  const at0 = next.text.indexOf(line), own = next.text.indexOf(await pg.evaluate(() => ABY.NODES.awakening.text.slice(0, 30)));
+  rec('last-time-ui', !/last time/i.test(first.text) && first.last === '' && m.name === '3:07 Again' && saved === 'loop' && next.node === 'awakening' && next.last === 'loop'
+      && at0 >= 0 && (own < 0 || at0 < own) && kept.g === 'loop',
+    'a first journey hears nothing; after "' + m.name + '" the save remembers "' + saved + '", and the next journey opens on "' + line.slice(0, 48) + '…" before its own text; a reload keeps it');
+  await ctx.close();
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];
