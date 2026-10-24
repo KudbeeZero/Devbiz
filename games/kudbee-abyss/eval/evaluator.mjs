@@ -1317,6 +1317,24 @@ await block('robustness', async () => {
     rec('reduced-motion', o.red && o.bubbles >= 1, 'messages arrive without the typing delay, scene sway off'); await c.ctx.close(); }
 });
 
+// ================= sleek scrolling in the thread =================
+await block('thread-scroll', async () => {
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'threadscroll'); await wake(pg); await openMessages(pg); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 });
+  await pg.evaluate(() => { const th = document.getElementById('thread'); for (let i = 0; i < 30; i++) { const d = document.createElement('div'); d.className = 'm in'; d.style.animation = 'none'; d.textContent = 'an older message, number ' + i + ', long enough to take a line or two on a phone'; th.appendChild(d); } th.scrollTop = th.scrollHeight; th.dispatchEvent(new Event('scroll')); });
+  await sleep(200);
+  const atEnd = await pg.evaluate(() => ({ btn: document.getElementById('toLatest').classList.contains('on'), up: document.getElementById('thread').classList.contains('up') }));
+  await pg.evaluate(() => { const th = document.getElementById('thread'); th.style.scrollBehavior = 'auto'; th.scrollTop = 120; th.dispatchEvent(new Event('scroll')); }); await sleep(200);
+  const away = await pg.evaluate(() => ({ btn: document.getElementById('toLatest').classList.contains('on'), up: document.getElementById('thread').classList.contains('up'), top: document.getElementById('thread').scrollTop, bar: getComputedStyle(document.getElementById('thread')).scrollbarWidth, ov: getComputedStyle(document.getElementById('thread')).overscrollBehaviorY }));
+  await pg.screenshot({ path: join(OUT, 'thread-scrolled-up.png') });
+  const sz = await pg.evaluate(() => { const r = document.getElementById('toLatest').getBoundingClientRect(); return { w: r.width, h: r.height }; });
+  await pg.evaluate(() => { window.__sfx = 0; const o = ABY.Audio.sfx; ABY.Audio.sfx = function (n) { if (n === 'ui') window.__sfx++; return o.apply(this, arguments); }; });
+  await pg.click('#toLatest'); await sleep(900);
+  const end = await pg.evaluate(() => { const th = document.getElementById('thread'); return { gap: th.scrollHeight - th.scrollTop - th.clientHeight, btn: document.getElementById('toLatest').classList.contains('on'), sfx: window.__sfx }; });
+  rec('thread-scroll-sleek', !atEnd.btn && atEnd.up && away.btn && away.up && away.top < 200 && /thin|auto/.test(away.bar) && away.ov === 'contain' && sz.w >= 44 && sz.h >= 44 && end.gap < 4 && !end.btn && end.sfx >= 1,
+    'at the end: no jump button, the top fades; scrolled up: the button shows (' + sz.w + 'x' + sz.h + '), the bar is thin and the scroll is contained (' + away.bar + '/' + away.ov + '); the button takes her to the latest message with a sound (gap ' + end.gap + ')');
+  await ctx.close();
+});
+
 // ================= the road, longer: beats =================
 await block('beats', async () => {
   const { ctx, pg } = await open(Object.assign(phoneCtx(PHONES[0]), { beats: true }), 'beats'); await wake(pg); await openMessages(pg);
