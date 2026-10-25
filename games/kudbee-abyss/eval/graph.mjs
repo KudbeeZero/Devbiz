@@ -261,6 +261,20 @@ function walkChecks() {
       L.length + ' deductions, each pairing two real clues and opening a hidden choice that is reached (' + shaped.map(l => l.at).join(', ') + '); a wrong pair costs 2% and 1 dread, never past 1% or the edge; the scenes that return are offered once; a save keeps them; Detective counts five different deductions over any nights');
   }
 
+  { // the case file: every deduction is exactly one line of the timeline in Notes (and every line is a deduction), each entry has a heading and real
+    // text; the first line is the drawing on the first night and the last is tonight; nothing deduced shows only blanks, everything shows Sorrel's
+    // last line too; junk in a save fills nothing; Case Closed needs every deduction (over any nights), not one fewer
+    const C = ABY.CASE, keys = C.flatMap(e => Object.keys(e.lines)), all = Object.fromEntries(ABY.LINK_IDS.map(l => [l, 1])), but1 = Object.assign({}, all); delete but1.first_name;
+    const none = ABY.caseFile({}), full = ABY.caseFile(all), junk = ABY.caseFile({ nope: 1, birthday: 2, yes_man: '1' }), some = ABY.caseFile({ birthday: 1, two_warnings: 1 });
+    const badge = d => ABY.badgesFor({ dawn: 1 }, Object.assign(ABY.newState(0), { node: 'gate_opens', flags: {} }), d).includes('case_closed');
+    const shaped = C.every(e => e.when && Object.keys(e.lines).length && Object.values(e.lines).every(t => typeof t === 'string' && t.length > 40));
+    rec('case-file', keys.length === ABY.LINK_IDS.length && new Set(keys).size === keys.length && ABY.LINK_IDS.every(l => keys.includes(l)) && shaped && keys[0] === 'first_name' && keys[keys.length - 1] === 'two_warnings'
+      && none.have === 0 && none.total === keys.length && !none.done && !none.coda && none.entries.every(e => e.lines.every(l => l.text === null))
+      && full.done && full.coda && full.coda.who === 'SORREL' && full.entries.every(e => e.lines.every(l => l.text)) && junk.have === 0 && some.have === 2 && !some.coda
+      && badge(all) && !badge(but1) && !badge({}) && ABY.BADGE_IDS.includes('case_closed'),
+      C.length + ' entries, ' + keys.length + ' lines, one for each deduction, from "' + C[0].when + '" to "' + C[C.length - 1].when + '"; blanks until pinned (on any night), Sorrel\'s last line only when all are; a save\'s junk fills nothing; Case Closed needs all ' + keys.length);
+  }
+
   { // the long pairs: a deduction whose two clues are first filed at least two days apart, opening a scene on or after the later one's day. The
     // scene is offered once and every way out of it returns to the scene it was opened from, adding no clue: more of the night, not another way through
     const LL = ABY.LINKS.filter(l => l.long), wake = id => (/^d(\d)_wake$/.exec(id) || [])[1] - 1;

@@ -215,6 +215,41 @@ ABY.LINK_IDS = ABY.LINKS.map(l => l.id);
 const pairIs = (p, a, b) => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a);
 ABY.linkOf = function (a, b) { return ABY.LINKS.filter(l => pairIs([l.a, l.b], a, b) || (l.alt && pairIs(l.alt, a, b)) || (l.hero && pairIs(l.hero.slice(1), a, b)))[0] || null; };
 
+// the case file: every deduction is one line of what really happened, in the order it happened. Notes shows the whole timeline with a blank for each
+// line not yet deduced (on any night: `deduced`, kept on the phone), and when every line is filled Sorrel writes the last one herself. Pure reading:
+// it opens nothing and changes no path (the graph's `case-file` proves every deduction has exactly one line, in a real order, and the badge needs all).
+ABY.CASE = [
+  { when: 'The first night, before the first name', lines: {
+    first_name: 'A girl of four sits on a kitchen stool at 3:07 and draws a door, a crown, a woman with a flute and a phone, so that she can find the way home if she ever gets lost. Her mother keeps the drawing safe at the front of a book.' } },
+  { when: 'A fourth birthday', lines: {
+    birthday: 'Four candles, paper hats, a party nobody has come to yet. The candles are never lit. Behind the door it is still that birthday, and it has never once ended.',
+    what_she_gave: 'With the dark coming up the stairs, her mother makes a bargain: not to lose her, only to keep her, safe on the other side of a door, for as long as somebody holds the phone at 3:07.' } },
+  { when: 'The night of the lock', lines: {
+    yes_man: 'Corvin Ash, a captain in a clean coat, is asked to wear the crown and hold the door. He says yes, as he always says yes. He holds it for a hundred years.',
+    hands_width: 'The door is opened a hand’s width to say goodnight. Her mother goes to fetch the phone, and never comes back to open it the rest of the way.' } },
+  { when: 'Vey, on the servants’ stair', lines: {
+    many_hands: 'Vey carries the sleeping girl down to the door with only two hands, and from then on carries every holder a little, so that nobody falls.',
+    carried: 'It grows a hand for every name it carries: two hundred and fourteen. The newest one is very small, and nobody has decided who it is for.',
+    low_lock: 'Long ago, when it still loved her, Vey made her a little brass key for a lock very low down, so that one day she could let herself out.' } },
+  { when: 'Two hundred and fourteen', lines: {
+    your_name: 'Every holder ends under the lake, singing eleven notes. One face always stops to warn whoever comes next, in her mother’s voice, as it sounded before she was anybody’s Queen.',
+    the_steps: 'A voicemail nobody sent counts the stairs out loud, thirteen of them, so that the next holder knows how close they have let it come.' } },
+  { when: 'The Eye', lines: {
+    watcher: 'Behind the door the girl grows into a red eye that watches everyone, because nobody ever looked at her. SOMEBODY HAS TO SEE ME, all the way down the wall.',
+    a_welcome: 'She lights the stairs one step at a time for every holder. They all come up screaming. She keeps lighting them anyway, in case one day a guest walks up.' } },
+  { when: 'How the book chooses', lines: {
+    who_is_next: 'The book does not take the frightened ones. It takes whoever will not hang up.',
+    who_picks_up: 'Wren was told never to pick up after three. She picks up anyway. She always will, and so the book has already written her name.' } },
+  { when: 'Tonight', lines: {
+    two_warnings: 'A recording under the stones and a call from your own number say the same thing in two voices, hers and yours: it was never the Guardian behind the door. It was a child, asking if it is morning yet.' } },
+];
+ABY.CASE_CODA = { who: 'SORREL', text: 'you found all of it. nobody ever put it in order before. (In crayon, very big, all the way down the page.) MY NAME IS SORREL. I WAS FOUR. I DREW THE WAY HOME. YOU CAN USE IT TOO.' };
+ABY.caseFile = function (deduced) {   // deduced: { linkId: 1 } over any nights. Each line is its text, or null while still a blank
+  const has = id => !!(deduced && deduced[id] === 1), entries = ABY.CASE.map(e => ({ when: e.when, lines: Object.keys(e.lines).map(id => ({ id, text: has(id) ? e.lines[id] : null })) }));
+  const total = ABY.CASE.reduce((n, e) => n + Object.keys(e.lines).length, 0), have = ABY.CASE.reduce((n, e) => n + Object.keys(e.lines).filter(has).length, 0);
+  return { entries, have, total, done: have === total, coda: have === total ? ABY.CASE_CODA : null };
+};
+
 // overnight: what the people she has been kind or cruel to say to her while she sleeps. A day's wake scene (`at`) shows these messages before its own,
 // for whoever holds the flag (`req`, like a choice's). They are pure data, so the graph test can prove each one is reachable and its flag is set
 // on an earlier day; a message with a `note` also files that clue. They give the flags nothing else reads a voice.
@@ -4240,6 +4275,7 @@ ABY.BADGES = [
   { id: 'first_warning', name: 'First Warning', hint: 'Warn Wren on Day Five.' },
   { id: 'seventh_morning', name: 'Seventh Morning', hint: 'Close the book on Day Seven.' },
   { id: 'detective', name: 'Detective', hint: 'Pin five different pairs of clues together in Notes, over any nights.' },
+  { id: 'case_closed', name: 'Case Closed', hint: 'Fill every line of the Case File in Notes, over any nights.' },
   { id: 'completionist', name: 'Completionist', hint: 'Find every ending.' },
 ];
 ABY.BADGE_IDS = ABY.BADGES.map(b => b.id);
@@ -4260,6 +4296,7 @@ ABY.badgesFor = function (found, s, deduced) {   // deduced: { linkId: 1 } pinne
   if (id === 'warned') out.push('first_warning');
   if (id === 'seventh') out.push('seventh_morning');
   if (id && ABY.LINK_IDS.filter(l => f['link_' + l] || (deduced && deduced[l] === 1)).length >= 5) out.push('detective');
+  if (id && ABY.LINK_IDS.every(l => f['link_' + l] || (deduced && deduced[l] === 1))) out.push('case_closed');
   if (n >= ABY.ENDING_IDS.length) out.push('completionist');
   return out;
 };
