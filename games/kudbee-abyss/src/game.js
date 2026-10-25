@@ -260,14 +260,16 @@
     var stB = ABY.storeOpen(storeMeta()); G.credit = credits(G.state); if (id === 'seventh') { G.epi = ABY.bondSnap(G.state); G.epiSeen = false; }
     var first = !G.found[id]; G.found[id] = 1; G.lastEnd = id; G.lean = ABY.leaning(G.state); var gain = ABY.badgesFor(G.found, G.state, G.deduced).filter(function (b) { return !G.badges[b]; }); gain.forEach(function (b) { G.badges[b] = 1; }); G.run = false; var nx = ABY.isFall(id) ? (G.wakes > 0 && G.cp ? { kind: 'wake', id: id } : null) : (E.cont && ABY.carry(G.state) ? { kind: 'carry', id: id, state: ABY.carry(G.state) } : null); G.pend = nx; bubble('stamp', '', '— end —', true); G.log = []; save(); if (first) P.badge('gallery', 1);
     storeAlert(stB);
-    clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true); if (gain.length) P.banner({ title: 'Badge earned', icon: 'ic-gal', glyph: '\u2605', text: gain.map(function (b) { return badge(b).name; }).join(' · '), onTap: function () { open('gallery'); } }); }, reduced ? 300 : 2600);
+    clearTimeout(endTimer); endTimer = setTimeout(function () { P.lockAll(false); memory(id, first ? 'New memory saved' : 'Memory', true, gain); }, reduced ? 300 : 2600);
   }
   function badge(id) { return ABY.BADGES.filter(function (b) { return b.id === id; })[0]; }
-  function memory(id, kicker, ended) {
+  function memory(id, kicker, ended, gain) {
     $('blackout').classList.remove('on');
     var E = ABY.ENDINGS[id]; G.shown = id; $('eKick').textContent = kicker; $('eName').textContent = E.name; $('eText').textContent = E.text;
     var cr = ended ? G.credit || [] : []; $('eCredit').hidden = !cr.length; $('eCredit').textContent = cr.map(function (c) { return c.app.name + ' helped you see it: ' + c.link.title + '.'; }).join(' ');   // the apps that helped on this journey (credit only)
     var dots = $('eDots'); dots.innerHTML = ''; ABY.ENDING_IDS.forEach(function (e) { var d = document.createElement('i'); if (G.found[e]) d.className = 'f'; dots.appendChild(d); });
+    gain = gain || []; var eb = $('eBadge'); eb.hidden = !gain.length; eb.textContent = ''; eb.setAttribute('data-n', gain.length); eb.setAttribute('aria-label', gain.length ? (gain.length === 1 ? 'Badge earned: ' : gain.length + ' badges earned: ') + gain.map(function (b) { return badge(b).name; }).join(', ') + '. Open the Gallery' : '');   // the badges this ending just earned sit in the card, not in a banner over the art
+    if (gain.length) { var bi = document.createElement('i'), bt = document.createElement('span'), bk = document.createElement('b'); bi.textContent = '\u2605'; bk.textContent = gain.length === 1 ? 'Badge earned' : gain.length + ' badges earned'; bt.appendChild(bk); gain.forEach(function (g, i) { var n = document.createElement('span'); n.textContent = badge(g).name; if (i) { var sp = document.createElement('span'); sp.className = 'sep'; sp.textContent = ' \u00B7 '; bt.appendChild(sp); } bt.appendChild(n); }); eb.appendChild(bi); eb.appendChild(bt); }
     $('memAct').textContent = ended ? 'New journey' : 'Close'; $('memAct').setAttribute('data-ended', ended ? '1' : '0'); var fall = ended && ABY.isFall(id), mine = ended && G.pend && G.pend.id === id, canWake = mine && G.pend.kind === 'wake';   // (the offer is the saved one, so it is the same after the card was left)
     $('memNext').hidden = !mine; $('memNext').setAttribute('data-wake', canWake ? '1' : '0');
     if (canWake) $('memNext').textContent = 'Wake at dawn \u00B7 ' + G.wakes + ' left'; else if (E && E.cont) $('memNext').textContent = dayOf(E.cont);
@@ -438,13 +440,18 @@
     var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '\u2756 Case File'; p.textContent = cf.done ? 'Every line filled in. Sorrel wrote the last one.' : cf.have + ' of ' + cf.total + ' lines of what really happened. Each deduction fills one, on any night.';
     b.appendChild(h); b.appendChild(p); b.addEventListener('click', function () { caseOpen = true; pick = null; ABY.Audio.sfx('click'); buzz(8); renderNotes(); }); box.appendChild(b);
   }
+  function emptyNotes() {                                                 // nothing found yet: say what will land here, and fill the page while it waits
+    var d = document.createElement('div'), g = document.createElement('div'), h = document.createElement('h3'), p = document.createElement('p'), ul = document.createElement('ul'); d.className = 'nempty'; g.className = 'ng'; g.setAttribute('aria-hidden', 'true'); g.textContent = '\u270E';
+    h.textContent = 'No clues yet'; p.textContent = 'What you find is kept here, and some of it unlocks things you can say. Pin two together and they may tell you something neither could.';
+    ['Photos', 'Recordings', 'Calls', 'Pages'].forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }); d.appendChild(g); d.appendChild(h); d.appendChild(p); d.appendChild(ul); return d;
+  }
   function renderNotes(msg) {
     if (caseOpen) { noteN = 0; P.badge('notes', 0); return renderCase(); }
     var box = $('noteList'); box.innerHTML = ''; noteN = 0; P.badge('notes', 0); var ks = active() ? G.state.notes : [], live = canPin();
     var ded = active() ? ABY.LINKS.filter(function (l) { return G.state.flags['link_' + l.id]; }) : [];
     if (ks.indexOf(pick) < 0) pick = null;
     $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues' + (ded.length ? ' · ' + ded.length + (ded.length === 1 ? ' deduction' : ' deductions') : '');
-    if (!ks.length) { if (Object.keys(G.deduced || {}).length) caseButton(box); var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
+    if (!ks.length) { if (Object.keys(G.deduced || {}).length) caseButton(box); box.appendChild(emptyNotes()); return; }
     // the tray stays on screen while the list scrolls (position: sticky): what she has picked, a way to put it down, and what her last pin did
     var tray = document.createElement('div'); tray.className = 'pintray' + (live ? ' on' : ''); tray.setAttribute('role', 'status'); tray.setAttribute('aria-live', 'polite');
     var tt = document.createElement('span'); tt.id = 'nMsg';
@@ -635,6 +642,7 @@
   $('gOk').addEventListener('click', function () { G.guided = true; $('guide').hidden = true; save(); });
   $('fPlay').addEventListener('click', function () { startSong(true); });
   $('shareBtn').addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('ending', G.shown, 'gallery'); });
+  $('eBadge').addEventListener('click', function () { ABY.Audio.sfx('ui'); open('gallery'); });
   $('shNative').addEventListener('click', function () { shareAct('native'); }); $('shX').addEventListener('click', function () { shareAct('x'); }); $('shFb').addEventListener('click', function () { shareAct('fb'); }); $('shWa').addEventListener('click', function () { shareAct('wa'); }); $('shCopy').addEventListener('click', function () { shareAct('copy'); }); $('shSave').addEventListener('click', function () { shareAct('save'); });
   $('axBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show('store'); });
   $('shBack').addEventListener('click', function () { ABY.Audio.sfx('ui'); P.show(G.shareFrom || 'home'); });

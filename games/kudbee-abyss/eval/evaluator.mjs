@@ -1078,10 +1078,10 @@ await block('hard-rite-box', async () => { // the third hard rite: Sorrel's musi
 await block('badges-and-factions', async () => { // badges and factions are the player's own; a shared link starts from the beginning
   const { ctx, pg } = await open({}, 'badges'); await wake(pg); await openMessages(pg);
   await at(pg, 'd2_door', { trust: 3, mem: 4, dread: 0, flags: { knew_name: 1 }, choices: 12 }); await tapChip(pg, 'Say their names together, and open it'); await memoryShown(pg);
-  const bn = await pg.waitForSelector('#banner.on .note', { timeout: 6000 }).then(() => pg.evaluate(() => document.querySelector('#banner .note').textContent), () => '');
+  await sleep(1200); const eb = await pg.evaluate(() => { const e = document.getElementById('eBadge'), r = e.getBoundingClientRect(), c = document.querySelector('#memory .card').getBoundingClientRect(); return { shown: !e.hidden && r.height >= 43.5, inside: r.top >= c.top && r.bottom <= c.bottom + 1, text: e.textContent, banner: document.getElementById('banner').classList.contains('on') && /Badge earned/.test(document.getElementById('banner').textContent) }; });
   const got = await pg.evaluate(() => Object.keys(ABY.game.badges).sort().join());
-  rec('badges-earned', got === 'day_two,fearless,first_light,lamplighter,name_keeper,real_morning' && /Badge earned/.test(bn), 'one ending earned: ' + got + ' | banner "' + bn.slice(0, 50) + '"');
-  await pg.click('#memAct'); await sleep(500); await pg.evaluate(() => ABY.Phone.show('gallery')); await sleep(500);
+  rec('badges-earned', got === 'day_two,fearless,first_light,lamplighter,name_keeper,real_morning' && eb.shown && eb.inside && /6 badges earned/.test(eb.text) && /First Light/.test(eb.text) && !eb.banner, 'one ending earned: ' + got + ' | in the card (not a banner over the art): "' + eb.text.slice(0, 60) + '"');
+  await pg.click('#eBadge'); await pg.waitForFunction(() => ABY.Phone.screen === 'gallery' && !document.getElementById('memory').classList.contains('on'), null, { timeout: 5000 }); await sleep(500);
   const g = await pg.evaluate(() => ({ tiles: document.querySelectorAll('#tiles .tile').length, found: document.querySelectorAll('#tiles .tile.f').length, on: document.querySelectorAll('#badges .bdg.on').length, all: document.querySelectorAll('#badges .bdg').length, fb: [...document.querySelectorAll('#faction .fbtn')].map(b => b.textContent), lean: [...document.querySelectorAll('#faction .fbtn.lean')].length }));
   rec('gallery-badges-factions', g.tiles === 27 && g.found === 1 && g.on === 6 && g.all === 17 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
   await pg.locator('#faction .fbtn', { hasText: 'Order of the Door' }).click(); await sleep(300);
@@ -1205,6 +1205,21 @@ await block('calm', async () => { const c = await open({}, 'calm'); const pg = c
     'off: ' + off.shake + '/' + off.after + '/' + off.bg + ' (calm ' + off.calm + '); Calm flashes (saved across a reload): no shake (' + jump.shake + '), a dark fade (' + jump.after + ', ' + jump.bg + '), no glitch (' + glitch.sheet + '), a slow Eye (' + eye.after + ', pressed ' + pressed + '); on by default with reduced motion: ' + byDefault); });
 
 // ================= phone fit =================
+await block('portrait-quiet', async () => { // a tall phone: an empty Notes fills the page instead of leaving it blank, and a locked memory is a short riddle, not a square
+  const { ctx, pg } = await open(phoneCtx({ w: 390, h: 844 }), 'quiet'); await wake(pg);
+  await pg.click('#unlock'); await pg.waitForFunction(() => ABY.Phone.screen === 'home'); await pg.evaluate(() => ABY.Phone.show('notes')); await sleep(700);
+  const n = await pg.evaluate(() => { const e = document.querySelector('#noteList .nempty'), r = e && e.getBoundingClientRect(), pad = document.querySelector('#notes .pad').getBoundingClientRect(), g = e && e.querySelector('.ng').getBoundingClientRect(); return e && { h: r.height, pad: pad.height, mid: Math.abs((g.top + g.bottom) / 2 - (pad.top + pad.height * 0.4)) / pad.height, kinds: [...e.querySelectorAll('li')].map(l => l.textContent), title: e.querySelector('h3').textContent }; });
+  await pg.screenshot({ path: join(OUT, 'portrait-notes-empty.png') });
+  rec('notes-empty-portrait', !!n && n.h >= n.pad * 0.5 && n.mid < 0.2 && n.kinds.join() === 'Photos,Recordings,Calls,Pages' && n.title === 'No clues yet', n ? '"' + n.title + '" fills ' + Math.round(n.h / n.pad * 100) + '% of the page, its mark in the middle third; ' + n.kinds.join(' / ') : 'no empty state');
+  await pg.evaluate(() => { const d = JSON.parse(localStorage.getItem('kudbee.abyss.v2')); d.found = { dawn: 1 }; localStorage.setItem('kudbee.abyss.v2', JSON.stringify(d)); });
+  await pg.reload(); await pg.waitForFunction(() => document.getElementById('boot').classList.contains('gone'), null, { timeout: 15000 }); await pg.click('#unlock'); await pg.waitForFunction(() => ABY.Phone.screen === 'home'); await pg.evaluate(() => ABY.Phone.show('gallery')); await sleep(700);
+  const t = await pg.evaluate(() => { const sz = s => [...document.querySelectorAll(s)].map(e => e.getBoundingClientRect()); const f = sz('#tiles .tile.f')[0], l = sz('#tiles .tile.locked'); const rows = l.filter(r => Math.abs(r.top - f.top) > 2); return { f: f && f.height / f.width, lock: rows.map(r => r.height / r.width).sort((a, b) => a - b)[rows.length >> 1], min: Math.min(...l.map(r => r.height)), n: l.length, below: rows.filter(r => r.top < innerHeight).length }; });
+  await pg.screenshot({ path: join(OUT, 'portrait-gallery.png') });
+  await pg.setViewportSize({ width: 844, height: 390 }); await sleep(700);
+  const land = await pg.evaluate(() => { const r = document.querySelector('#tiles .tile.locked').getBoundingClientRect(); return r.height / r.width; });
+  rec('gallery-locked-short', Math.abs(t.f - 1) < 0.02 && t.lock < 0.75 && t.min >= 44 && t.below >= 8 && Math.abs(land - 1) < 0.02, 'found memory square, a typical locked one ' + t.lock.toFixed(2) + ' as tall as wide (' + t.below + ' on the first screen besides the top row); landscape keeps them square (' + land.toFixed(2) + ')');
+  await ctx.close();
+});
 await block('phone-fit', async () => {
   for (const p of PHONES) {
     ({ ctx, pg } = await open(phoneCtx(p), 'fit-' + p.n)); await wake(pg);
