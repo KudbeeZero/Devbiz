@@ -133,6 +133,20 @@
   function wait(ms, fn) { clearTimeout(delayT); G.flush = fn; delayT = setTimeout(function () { G.flush = null; fn(); }, G.fast || reduced ? Math.min(ms, 60) : ms); }
   function skip() { if (G.delivering && G.flush) { var f = G.flush; G.flush = null; clearTimeout(delayT); G.fast = true; f(); } }
 
+  // the grip: the story takes most of the screen (portrait only; the grip is not shown on a phone held wide)
+  var tall = false; try { tall = localStorage.getItem('kudbee.abyss.tall') === '1'; } catch (e) {}
+  function setTall(v, quiet) {
+    tall = !!v; $('sheet').classList.toggle('tall', tall); var g = $('grab'); g.setAttribute('aria-pressed', tall ? 'true' : 'false'); g.setAttribute('aria-label', tall ? 'Show less of the story' : 'Show more of the story');
+    try { localStorage.setItem('kudbee.abyss.tall', tall ? '1' : '0'); } catch (e) {}
+    if (!quiet) { try { ABY.Audio.sfx('click'); } catch (e) {} buzz(8); }
+    setTimeout(function () { scrollEnd(false); moreChoices($('replies')); }, 340);
+  }
+  var gripY = null, gripSwiped = false;
+  $('grab').addEventListener('pointerdown', function (e) { gripY = e.clientY; gripSwiped = false; try { this.setPointerCapture(e.pointerId); } catch (x) {} });
+  $('grab').addEventListener('pointerup', function (e) { if (gripY === null) return; var dy = e.clientY - gripY; gripY = null; if (Math.abs(dy) > 24) { gripSwiped = true; setTall(dy < 0); } });
+  $('grab').addEventListener('pointercancel', function () { gripY = null; });
+  $('grab').addEventListener('click', function () { if (gripSwiped) { gripSwiped = false; return; } setTall(!tall); });
+  if (tall) setTall(true, true);
   function moreChoices(box) { box.classList.toggle('more', box.scrollTop + box.clientHeight < box.scrollHeight - 4); }   // a fade says there are more choices below
   $('replies').addEventListener('scroll', function () { moreChoices($('replies')); }, { passive: true });
   function showReplies(n) {
