@@ -164,6 +164,9 @@
   .chip { width:100%; min-height:48px; padding:11px 18px; border-radius:999px; border:1.5px solid rgba(58,141,255,0.7); background:rgba(58,141,255,0.12); font:600 15px/1.25 var(--fd); text-align:left; transition:transform .2s var(--ease), background .2s; } .chip:hover,.chip:focus-visible { background:rgba(58,141,255,0.28); outline:none; transform:translateY(-1px); } .chip:active { transform:scale(0.98); }
   /* portrait: the story always keeps a readable window (a long list of choices scrolls instead of squeezing the text to one line), and the choices are a little more compact */
   @container phone (max-aspect-ratio:21/20) { #thread { min-height:26cqh; } #replies { gap:6px; } .chip { min-height:44px; padding:9px 16px; font-size:14.5px; } }
+  /* portrait: the grip at the top of the chat. Tap it, or drag it up, and the story takes most of the screen (the art keeps a strip at the top); tap or drag down to give the picture back. A phone held wide has no grip: the chat already sits beside the scene */
+  #grab { display:none; }
+  @container phone (max-aspect-ratio:21/20) { #grab { display:flex; align-items:flex-start; justify-content:center; position:relative; z-index:1; flex:none; width:100%; height:44px; margin-bottom:-14px; padding:10px 0 0; border:0; background:none; touch-action:none; cursor:pointer; -webkit-tap-highlight-color:transparent; } #grab i { display:block; width:44px; height:5px; border-radius:3px; background:rgba(255,255,255,0.38); transition:background .2s, width .2s; } #grab:active i, #sheet.tall #grab i { background:rgba(57,230,255,0.8); width:56px; } #grab:focus-visible { outline:2px solid #39e6ff; outline-offset:-2px; border-radius:12px; } #sheet { transition:max-height .32s var(--ease); } #sheet.tall { max-height:90%; } #sheet.tall #replies { max-height:40cqh; } @media (prefers-reduced-motion: reduce) { #sheet { transition:none; } #grab i { transition:none; } } }
   .chip.go { text-align:center; border-color:rgba(124,255,178,0.7); background:rgba(124,255,178,0.12); }
   .fakein { display:flex; align-items:center; gap:8px; margin:6px calc(14px + var(--sr)) 0 calc(14px + var(--sl)); padding:8px 14px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); color:#6d7894; font-size:13.5px; } .fakein::after { content:"\2191"; margin-left:auto; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-weight:700; color:#9fb0cc; }
   @container phone (max-aspect-ratio:21/20) and (min-height:760px) { .fakein { display:flex; } } .fakein { display:none; } @container phone (max-aspect-ratio:21/20) and (min-height:760px) { .fakein { display:flex; } }
@@ -385,6 +388,7 @@
         <button class="torch" id="torchBtn" type="button" aria-label="Flashlight" aria-pressed="false">&#128294;</button>
       </div>
       <div id="sheet">
+        <button id="grab" type="button" aria-label="Show more of the story" aria-pressed="false"><i></i></button>
         <div id="thread" aria-live="polite"></div>
         <div class="tolw"><button id="toLatest" type="button" aria-label="Jump to the latest message">&#8595;</button></div>
         <div id="replies"></div>

@@ -1537,6 +1537,28 @@ await block('sorrel-side-ui', async () => {
   await ctx.close();
 });
 
+await block('portrait-grip', async () => {
+  // portrait: a grip at the top of the chat. Tap it (or drag it up) and the story takes most of the screen; tap or drag down and the picture comes back.
+  // The choice is kept across a reload; a phone held wide has no grip; every choice stays reachable either way
+  const flags = { scar_cradle: 1, lullaby: 1, little_crown: 1, link_low_lock: 1, link_hands_width: 1 };
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true }))`;
+  let { ctx, pg } = await open(phoneCtx({ w: 390, h: 844 }), 'grip', { pre }); await wake(pg); await openMessages(pg);
+  await at(pg, 'd6_door', { mem: 9, heart: 3, trust: 3, flags, notes: ['recording'] }); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); await sleep(500);
+  const read = () => pg.evaluate(() => { const R = id => document.getElementById(id).getBoundingClientRect(), sh = R('sheet'), g = R('grab'), rp = document.getElementById('replies'); return { sheet: sh.height, thread: R('thread').height, dev: R('device').height, gw: g.width, gh: g.height, pressed: document.getElementById('grab').getAttribute('aria-pressed'), label: document.getElementById('grab').getAttribute('aria-label'), tall: document.getElementById('sheet').classList.contains('tall'), scrolls: rp.scrollHeight > rp.clientHeight + 4, saved: localStorage.getItem('kudbee.abyss.tall') }; });
+  const a = await read(); await pg.screenshot({ path: join(OUT, 'portrait-grip-off.png') });
+  await pg.click('#grab'); await sleep(700); const b = await read(); await pg.screenshot({ path: join(OUT, 'portrait-grip-on.png') });
+  const last = await pg.evaluate(() => { const rp = document.getElementById('replies'); rp.scrollTop = rp.scrollHeight; return rp.querySelectorAll('.chip').length; }); await sleep(200);
+  const swipe = async (from, to) => { const r = await pg.evaluate(() => { const g = document.getElementById('grab').getBoundingClientRect(); return { x: g.x + g.width / 2, y: g.y + g.height / 2 }; }); await pg.mouse.move(r.x, r.y); await pg.mouse.down(); await pg.mouse.move(r.x, r.y + to, { steps: 4 }); await pg.mouse.up(); await sleep(700); };
+  await swipe(0, 60); const c = await read(); await swipe(0, -60); const d = await read();
+  await pg.reload(); await pg.waitForFunction(() => ABY.Phone && ABY.Phone.screen === 'lock', null, { timeout: 15000 }); const e = await pg.evaluate(() => ({ tall: document.getElementById('sheet').classList.contains('tall'), pressed: document.getElementById('grab').getAttribute('aria-pressed') }));
+  await ctx.close();
+  ({ ctx, pg } = await open(phoneCtx(PHONES[0]), 'grip-land', { pre })); await wake(pg); await openMessages(pg);
+  const land = await pg.evaluate(() => getComputedStyle(document.getElementById('grab')).display); await ctx.close();
+  rec('portrait-grip', a.gw > 100 && a.gh >= 44 && !a.tall && a.pressed === 'false' && /more/.test(a.label) && b.tall && b.pressed === 'true' && /less/.test(b.label) && b.thread > a.thread * 1.25 && b.sheet > a.sheet + 80 && b.sheet <= b.dev * 0.91 && b.scrolls && last >= 5
+      && !c.tall && c.saved === '0' && Math.abs(c.sheet - a.sheet) < 4 && d.tall && d.saved === '1' && e.tall && e.pressed === 'true' && land === 'none',
+    'the grip sits at the top of the chat; tapping it grows the story from ' + Math.round(a.thread) + 'px to ' + Math.round(b.thread) + 'px of ' + Math.round(a.dev) + ' (all ' + last + ' choices still reachable by scrolling), a drag down gives the picture back, a drag up takes it again, the choice survives a reload, and a phone held wide has none');
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];
