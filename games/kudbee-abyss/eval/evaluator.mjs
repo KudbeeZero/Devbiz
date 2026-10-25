@@ -69,7 +69,7 @@ await block('share-meta', async () => {
     rec('share-meta-game-page', problems.length === 0, problems.join('; ') || 'og + twitter cards: absolute versioned 1200x630 image, alt text, canonical');
   }
   {
-    const problems = [], slugs = ABYS.ENDING_IDS.concat(['progress']);
+    const problems = [], slugs = ABYS.ENDING_IDS.concat(['progress', 'case']);
     for (const slug of slugs) {
       const f = join(GAME, 's', slug, 'index.html'); if (!existsSync(f)) { problems.push(slug + ': no landing page'); continue; }
       const M = metaOf(readFileSync(f, 'utf8')), want = SITE + '/games/kudbee-abyss/s/' + slug + '/';
@@ -1484,12 +1484,21 @@ await block('case-file-ui', async () => {
   await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#nCase', { timeout: 5000 });
   const btn = await pg.evaluate(() => document.getElementById('nCase').textContent);
   await pg.click('#nCase'); await pg.waitForSelector('#nCaseBack', { timeout: 5000 });
-  const part = await pg.evaluate(() => ({ sub: document.getElementById('nSub').textContent, filled: document.querySelectorAll('#noteList .cl:not(.blank)').length, blank: document.querySelectorAll('#noteList .cl.blank').length, coda: !!document.getElementById('nCaseCoda'), first: document.querySelector('#noteList .nt.case h3').textContent }));
+  const part = await pg.evaluate(() => ({ sub: document.getElementById('nSub').textContent, filled: document.querySelectorAll('#noteList .cl:not(.blank)').length, blank: document.querySelectorAll('#noteList .cl.blank').length, coda: !!document.getElementById('nCaseCoda'), share: !!document.getElementById('nCaseShare'), first: document.querySelector('#noteList .nt.case h3').textContent }));
   await pg.screenshot({ path: join(OUT, 'case-file.png') });
   await pg.click('#nCaseBack'); await sleep(200); const back = await pg.evaluate(() => ({ btn: !!document.getElementById('nCase'), sub: document.getElementById('nSub').textContent }));
   await pg.evaluate(() => { ABY.LINK_IDS.forEach(l => { ABY.game.deduced[l] = 1; }); }); await pg.click('#nCase'); await pg.waitForSelector('#nCaseCoda', { timeout: 5000 });
   const full = await pg.evaluate(() => ({ sub: document.getElementById('nSub').textContent, blank: document.querySelectorAll('#noteList .cl.blank').length, coda: document.getElementById('nCaseCoda').textContent }));
   await pg.evaluate(() => { document.querySelector('#notes .pad').scrollTop = 99999; }); await sleep(200); await pg.screenshot({ path: join(OUT, 'case-file-closed.png') });
+  // the closed case can be shared: a card, the case page as the link, and no share button while a line is still blank
+  const noShare = part.share === false;
+  await pg.evaluate(() => { window.__shared = null; navigator.canShare = () => true; navigator.share = d => { window.__shared = d; return Promise.resolve(); }; });
+  await pg.click('#nCaseShare'); await pg.waitForFunction(() => ABY.Phone.screen === 'share', null, { timeout: 5000 }); await sleep(700);
+  const shr = await pg.evaluate(() => ({ sub: document.getElementById('shSub').textContent, title: ABY.game.share.info.title, found: ABY.game.share.info.found.length, w: ABY.game.share.cv.width, h: ABY.game.share.cv.height }));
+  await pg.screenshot({ path: join(OUT, 'case-share.png') }); await pg.click('#shNative'); await sleep(300); const sent = await pg.evaluate(() => window.__shared);
+  await pg.click('#shBack'); await sleep(300); const home = await pg.evaluate(() => ABY.Phone.screen);
+  rec('case-share-ui', noShare && shr.sub === 'Case closed' && shr.title === 'CASE CLOSED' && shr.found === 15 && shr.w === 1200 && shr.h === 630 && sent && sent.url === SITE + '/games/kudbee-abyss/s/case/' && /15 lines of the Case File/.test(sent.text) && sent.files && sent.files[0] && home === 'notes',
+    'no share button with blanks left; with 15 of 15 the Share screen shows a 1200x630 "CASE CLOSED" card, the share sheet gets ' + (sent ? sent.url.replace(SITE, '') : 'nothing') + ', and Back returns to Notes');
   rec('case-file-ui', /4 of 15 lines/.test(btn) && part.sub === 'Case File · 4 of 15 lines' && part.filled === 4 && part.blank === 11 && !part.coda && /first night/.test(part.first)
       && back.btn && /clues/.test(back.sub) && full.sub === 'Case File · 15 of 15 lines' && full.blank === 0 && /MY NAME IS SORREL/.test(full.coda),
     'outside a journey, Notes offers "' + btn.slice(0, 40) + '…"; the file shows ' + part.filled + ' lines and ' + part.blank + ' blanks from "' + part.first + '"; back to the clues; with every deduction, 15 of 15 and Sorrel\'s last line');

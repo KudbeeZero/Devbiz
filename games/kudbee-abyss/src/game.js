@@ -281,7 +281,7 @@
     var prev = $('shPrev');
     var paint = function () { m.cv = ABY.Share.card(m.info); prev.innerHTML = ''; prev.appendChild(m.cv); m.cv.setAttribute('role', 'img'); m.cv.setAttribute('aria-label', 'Share card: ' + m.info.title); ABY.Share.file(m.cv).then(function (f) { m.file = f; }); };   // the file is ready before the tap that shares it
     paint(); if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('700 30px "Space Grotesk"'), document.fonts.load('500 20px "Space Grotesk"')]).then(function () { if (G.share === m) paint(); }, function () {});   // repaint once the game's font is in
-    $('shSub').textContent = kind === 'ending' ? ABY.ENDINGS[id].name : 'My progress'; $('shLink').textContent = m.url.replace(/^https:\/\//, '');
+    $('shSub').textContent = kind === 'ending' ? ABY.ENDINGS[id].name : kind === 'case' ? 'Case closed' : 'My progress'; $('shLink').textContent = m.url.replace(/^https:\/\//, '');
     $('shNative').hidden = !navigator.share; ['shCopy'].forEach(function (b) { $(b).textContent = 'Copy link'; });
     P.show('share');
   }
@@ -431,6 +431,7 @@
       box.appendChild(d);
     });
     if (cf.coda) { var c = document.createElement('div'); c.className = 'nt ded casecoda'; c.id = 'nCaseCoda'; var w = document.createElement('h3'), t = document.createElement('p'); w.textContent = WHO[cf.coda.who] || cf.coda.who; t.textContent = cf.coda.text; c.appendChild(w); c.appendChild(t); box.appendChild(c); }
+    if (cf.done) { var sb = document.createElement('button'); sb.type = 'button'; sb.className = 'nt casebtn'; sb.id = 'nCaseShare'; var sh = document.createElement('h3'), sp = document.createElement('p'); sh.textContent = '\u2756 Share the closed case'; sp.textContent = 'A card with every line filled in.'; sb.appendChild(sh); sb.appendChild(sp); sb.addEventListener('click', function () { ABY.Audio.sfx('ui'); openShare('case', null, 'notes'); }); box.appendChild(sb); }
   }
   function caseButton(box) {
     var cf = ABY.caseFile(G.deduced || {}), b = document.createElement('button'); b.type = 'button'; b.className = 'nt casebtn'; b.id = 'nCase';
