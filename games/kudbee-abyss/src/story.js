@@ -3971,6 +3971,40 @@ for (const r of ABY.ROADS) {
   from.choices.push(way);
 }
 
+// ---- Wren's end of the line: four nights told from her side of the phone ----
+// Each is two scenes (`thread: 'wren'`, `time: 'line'`), entered once from one scene of its day (`req: { noflag: id }`) and returning there (`@back`,
+// setting the flag). Every choice is free and adds nothing, so she comes back exactly as she left: the same scene, stats, battery, light and clues.
+// It is more of the night, from the other end, never another way through it (the graph's `wren-side` proves all of that; add one by adding an entry).
+ABY.WREN_SIDE = [
+  { id: 'ws_d4', from: 'd4_queen', label: 'Wren’s end: her bedroom, at 3:07 tonight',
+    a: { mood: 'dusk', text: 'Wren’s end of the line. Day Four, 3:07. i’m in bed with the phone face down on the birthday cards. your name keeps lighting up the ceiling through the case and i keep not turning it over. mum said never pick up after three. she said it in the voice she uses when it isn’t a rule, it’s a bargain.',
+      choices: ['Leave it face down', 'Turn it over'] },
+    b: { mood: 'dark', text: 'the screen says two hundred and fourteen contacts. i don’t have two hundred and fourteen contacts. the last one is you. (A long time, nothing.) my hand is doing the thing from the photo, coming out of the blankets on its own. i’m watching it like it’s somebody else’s hand. not tonight. i tell it, not tonight. tomorrow.',
+      choices: ['Let the hand stop, just short', 'Pull it back under the blankets'] } },
+  { id: 'ws_d5', from: 'd5_dawn', label: 'Wren’s end: the same call, from her bedroom',
+    a: { mood: 'dusk', text: 'Wren’s end of the line. Day Five, the call. minute one i nearly hang up, because it’s you and it’s 3:07 and you sound like you’ve been crying in a cave. minute nine i get the torch out of the drawer. minute twenty you tell me about the book and i write it on my arm in biro so i won’t think i dreamt it.',
+      choices: ['Keep listening, minute by minute', 'Skip to the end of the call'] },
+    b: { mood: 'dark', text: 'minute forty-one you stop talking, and i can hear it. underneath you. something very small breathing, as if it’s been listening the whole time too. i don’t hang up. i’m not brave. i just don’t want it to have you on your own. (The call log ticks over: 41:00.)',
+      choices: ['Stay on, from her end', 'Let the call end'] } },
+  { id: 'ws_d6', from: 'd6_hangup', label: 'Wren’s end: what rang for her when you hung up',
+    a: { mood: 'dusk', text: 'Wren’s end of the line. Day Six. you hang up on her, and a minute later the phone on my bedside table rings. a number with too few digits. a very small voice asks if this is where the party is. i say sorry, wrong number. and it says: no it isn’t. you’re on the list.',
+      choices: ['Ask what list', 'Hang up on her too'] },
+    b: { mood: 'dark', text: 'it rings again, so i listen. she reads me the list. it takes a long time. two hundred and fourteen names, some of them said very kindly and some of them whispered, and then she says yours, and then she says mine, and she says mine like she’s sorry about it. i put the phone under my pillow and lie on it till it’s light.',
+      choices: ['Lie on it till it is light', 'Write the names down on your arm'] } },
+  { id: 'ws_d7', from: 'd7_wren', label: 'Wren’s end: how she got here',
+    a: { mood: 'dusk', text: 'Wren’s end of the line. Day Seven, the drive. i take mum’s car keys out of the bowl. i’ve only ever driven it round the car park. every traffic light on the way is red, and every one of them goes green the second i stop, as if somebody is holding the door for me.',
+      choices: ['Drive faster', 'Stop at every light anyway'] },
+    b: { mood: 'dark', text: 'the satnav says 3:07 the whole way. arriving in 3:07, and then, you have arrived: a house i’ve never been to, with your light on upstairs. my legs won’t work, so i sit in the car and text you instead. (Delivered: not letting you do the last one on your own.) then i make my legs work.',
+      choices: ['Get out of the car', 'Run'] } },
+];
+for (const w of ABY.WREN_SIDE) {
+  const from = ABY.NODES[w.from], ch = from.ch, a = w.id.replace('_d', '') + '_a', b = w.id.replace('_d', '') + '_b';
+  const scene = (sc, next, last) => ({ ch, speaker: 'WREN', mood: sc.mood, focus: 'queen', time: 'line', thread: 'wren', safe: true, text: sc.text,
+    choices: sc.choices.map(label => Object.assign({ label, next, bat: 0, free: true }, last ? { set: w.id } : {})) });
+  ABY.NODES[a] = scene(w.a, b, false); ABY.NODES[b] = scene(w.b, '@back', true);
+  from.choices.push({ label: w.label, next: a, bat: 0, free: true, req: { noflag: w.id } });
+}
+
 // ---- the endings (decided by endingFor, or fixed by the node that reaches them) ----
 ABY.ENDINGS = {
   dawn: { tag: 'FREE THE GUARDIAN WITH TRUST', name: 'The Gate Opens', hint: 'Free the Guardian with trust.', mood: 'dawn', cont: 'd2_wake',

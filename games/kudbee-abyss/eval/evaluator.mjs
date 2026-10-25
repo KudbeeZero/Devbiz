@@ -751,10 +751,10 @@ await block('day-five', async () => { // Day Five: a dark Day Four ending carrie
   const w = await pg.evaluate(() => ({ node: ABY.game.state.node, flag: ABY.game.state.flags.rite_wake }));
   await tapChip(pg, 'Tell her to hold on until the light'); await pg.waitForSelector('#replies.on .chip', { timeout: 15000 }); const c1 = await chips(pg);
   await tapChip(pg, 'Have her call the first number'); const e = await memoryShown(pg); const fin = await pg.evaluate(() => document.getElementById('memNext').hidden);
-  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 5 && c1.some(c => /Stay on the line with Wren/.test(c)) && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
+  rec('day-five-wake-and-warning', w.node === 'd5_rite_win' && w.flag === 1 && c1.length === 6 && c1.some(c => /Stay on the line with Wren/.test(c)) && e.name === 'The Warning' && fin, 'the wake-up is won (' + w.node + '), dawn shows ' + c1.length + ' choices, "' + e.name + '" is final'); await pg.screenshot({ path: join(OUT, 'day5-warned.png') });
   await pg.click('#memAct'); await sleep(500);
   await at(pg, 'd5_dawn', { mem: 2, flags: { rite_wake: 1, told_truth: 1 } }); await pg.waitForSelector('#replies.on .chip', { timeout: 10000 }); const c0 = await chips(pg);
-  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 4 && c0.some(c => /Stay on the line with Wren/.test(c)), 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
+  rec('day-five-true-ending-gated', !c0.some(c => /first number/.test(c)) && c0.length === 5 && c0.some(c => /Stay on the line with Wren/.test(c)), 'with only 2 endings found the warning will not work: ' + c0.join(' / '));
   await ctx.close();
 });
 await block('falls-and-wakes', async () => { // falls and checkpoints: 3:07 Again is a fall, not a way on. It wakes her at the last dawn (one wake fewer, a little more afraid); with no wakes left, only a new journey
@@ -1493,6 +1493,22 @@ await block('case-file-ui', async () => {
   rec('case-file-ui', /4 of 15 lines/.test(btn) && part.sub === 'Case File · 4 of 15 lines' && part.filled === 4 && part.blank === 11 && !part.coda && /first night/.test(part.first)
       && back.btn && /clues/.test(back.sub) && full.sub === 'Case File · 15 of 15 lines' && full.blank === 0 && /MY NAME IS SORREL/.test(full.coda),
     'outside a journey, Notes offers "' + btn.slice(0, 40) + '…"; the file shows ' + part.filled + ' lines and ' + part.blank + ' blanks from "' + part.first + '"; back to the clues; with every deduction, 15 of 15 and Sorrel\'s last line');
+  await ctx.close();
+});
+
+await block('wren-side-ui', async () => {
+  // Wren's end of the line: a reply on Day Five crosses to her side of the same call (a stamp says so), two scenes, then back on your end with
+  // nothing changed, and it is not offered again
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'wren-side'); await wake(pg); await openMessages(pg);
+  const st = () => pg.evaluate(() => { const s = ABY.game.state; return { node: s.node, heart: s.heart, trust: s.trust, dread: s.dread, bat: s.bat, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), stamps: [...document.querySelectorAll('#thread .stamp')].map(e => e.textContent), text: document.getElementById('thread').textContent }; });
+  await at(pg, 'd5_dawn', { mem: 2, heart: 1, trust: 2, bat: 40 }); const s0 = await st();
+  await tapChip(pg, 'Wren\u2019s end'); await pg.waitForFunction(() => ABY.game.state.node === 'ws5_a' && !ABY.game.delivering, null, { timeout: 15000 }); const a = await st();
+  await tapChip(pg, a.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'ws5_b' && !ABY.game.delivering, null, { timeout: 15000 }); const b = await st();
+  await pg.screenshot({ path: join(OUT, 'wren-side.png') });
+  await tapChip(pg, b.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'd5_dawn' && !ABY.game.delivering, null, { timeout: 15000 }); await sleep(300); const s1 = await st();
+  rec('wren-side-ui', s0.chips.some(t => /Wren\u2019s end/.test(t)) && a.stamps.some(t => /other end of the line/.test(t)) && /minute forty-one/.test(b.text) && s1.stamps.some(t => /back on your end/.test(t))
+      && ['heart', 'trust', 'dread', 'bat'].every(k => s1[k] === s0[k]) && !s1.chips.some(t => /Wren\u2019s end/.test(t)) && s1.chips.length === s0.chips.length - 1,
+    'Day Five offers "' + (s0.chips.filter(t => /Wren/.test(t))[0] || '?') + '"; "' + (a.stamps.filter(t => /other end/.test(t))[0] || '?') + '", two scenes, "' + (s1.stamps.filter(t => /back on/.test(t))[0] || '?') + '"; heart, trust, dread and battery unchanged, and it is not offered again');
   await ctx.close();
 });
 
