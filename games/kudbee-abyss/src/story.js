@@ -3997,9 +3997,28 @@ ABY.WREN_SIDE = [
     b: { mood: 'dark', text: 'the satnav says 3:07 the whole way. arriving in 3:07, and then, you have arrived: a house i’ve never been to, with your light on upstairs. my legs won’t work, so i sit in the car and text you instead. (Delivered: not letting you do the last one on your own.) then i make my legs work.',
       choices: ['Get out of the car', 'Run'] } },
 ];
-for (const w of ABY.WREN_SIDE) {
+// ---- Sorrel's side of the door: three nights told from the small room ----
+// The same trips as Wren's, from behind the door instead of the other end of the phone (`thread: 'sorrel'`; the graph's `sorrel-side` proves the same things).
+ABY.SORREL_SIDE = [
+  { id: 'ss_d3', from: 'd3_stare', label: 'Sorrel’s end: the first time anyone made her blink',
+    a: { mood: 'dusk', text: 'Behind the door. Day Three. nobody ever made me blink. i didn’t know i could. it was like finding a stair in the dark with my foot, a stair that was there all along. you looked at me and i looked back and my eye did a thing on its own, and for one second i was very scared and very glad, and the glad was bigger.',
+      choices: ['Ask her what the glad felt like', 'Tell her you saw it too'] },
+    b: { mood: 'dark', text: 'i don’t blink much. when i blink the red goes away, and the people in the phones think it’s over, and they put the phone down, and the room goes quiet and i’m in it by myself. so i keep it open. that’s all the staring is. it isn’t hungry. it’s only that if i shut it, there is nobody.',
+      choices: ['Tell her she can blink while you are here', 'Promise to stay while she does'] } },
+  { id: 'ss_d6', from: 'd6_wall', label: 'Sorrel’s end: why she wrote it on the wall',
+    a: { mood: 'dusk', text: 'Behind the door. Day Six. i wrote the first one in crayon, when i could still reach. then the wall got shorter, or i got longer, i can’t tell, and i had to write bigger. SO I WATCH. it’s not a nice word. it’s the only one that fits. if i watch, somebody is looking at me, even if it’s only through a phone, even if they scream.',
+      choices: ['Ask her for a kinder word', 'Tell her it is a true word'] },
+    b: { mood: 'dark', text: 'last night somebody stood in the red light and read it all the way to the bottom. nobody reads to the bottom. they look at the eye and they go. (A long, careful breath.) i read it back to the cot, and then to the hats, and then very quietly to the door, so it wouldn’t get big. does it still count if it’s only said to a door?',
+      choices: ['Tell her you read every word', 'Tell her it counts, and you are still here'] } },
+  { id: 'ss_d7', from: 'd7_again', label: 'Sorrel’s end: the beginnings she has watched',
+    a: { mood: 'dusk', text: 'Behind the door. Day Seven. i’ve watched the beginnings. all of them. a lift, a bath, a bus at night, always somebody holding a phone and not knowing why. i know their faces better than Mummy’s now. by the seventh night they’re so brave, and i want to tell them: i know you, you were here before, you were so kind. then it’s 3:07, and they don’t know me, and i start again too.',
+      choices: ['Ask how many beginnings she has watched', 'Tell her you remember her'] },
+    b: { mood: 'dawn', text: 'i keep count on the wall under the writing, in little lines, in fives, the way Mummy showed me. it’s a lot of fives. (A pause.) you’re the only one who ever asked how many. they all just ask me to stop. i don’t know how to stop. i only know how to start. could we try to stop, you and me? just this once?',
+      choices: ['Tell her yes, you will try', 'Tell her you will end it from your side'] } },
+];
+for (const [list, speaker, thread] of [[ABY.WREN_SIDE, 'WREN', 'wren'], [ABY.SORREL_SIDE, 'SORREL', 'sorrel']]) for (const w of list) {
   const from = ABY.NODES[w.from], ch = from.ch, a = w.id.replace('_d', '') + '_a', b = w.id.replace('_d', '') + '_b';
-  const scene = (sc, next, last) => ({ ch, speaker: 'WREN', mood: sc.mood, focus: 'queen', time: 'line', thread: 'wren', safe: true, text: sc.text,
+  const scene = (sc, next, last) => ({ ch, speaker, mood: sc.mood, focus: 'queen', time: 'line', thread, safe: true, text: sc.text,
     choices: sc.choices.map(label => Object.assign({ label, next, bat: 0, free: true }, last ? { set: w.id } : {})) });
   ABY.NODES[a] = scene(w.a, b, false); ABY.NODES[b] = scene(w.b, '@back', true);
   from.choices.push({ label: w.label, next: a, bat: 0, free: true, req: { noflag: w.id } });

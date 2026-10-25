@@ -1521,6 +1521,22 @@ await block('wren-side-ui', async () => {
   await ctx.close();
 });
 
+await block('sorrel-side-ui', async () => {
+  // Sorrel's side of the door: a reply on Day Six crosses to the small room (a stamp says so), two scenes, then back on your end with nothing
+  // changed, and it is not offered again
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'sorrel-side'); await wake(pg); await openMessages(pg);
+  const st = () => pg.evaluate(() => { const s = ABY.game.state; return { node: s.node, heart: s.heart, trust: s.trust, dread: s.dread, bat: s.bat, chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), stamps: [...document.querySelectorAll('#thread .stamp')].map(e => e.textContent), text: document.getElementById('thread').textContent }; });
+  await at(pg, 'd6_wall', { mem: 2, heart: 1, trust: 2, bat: 40 }); const s0 = await st();
+  await tapChip(pg, 'Sorrel\u2019s end'); await pg.waitForFunction(() => ABY.game.state.node === 'ss6_a' && !ABY.game.delivering, null, { timeout: 15000 }); const a = await st();
+  await tapChip(pg, a.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'ss6_b' && !ABY.game.delivering, null, { timeout: 15000 }); const b = await st();
+  await pg.screenshot({ path: join(OUT, 'sorrel-side.png') });
+  await tapChip(pg, b.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'd6_wall' && !ABY.game.delivering, null, { timeout: 15000 }); await sleep(300); const s1 = await st();
+  rec('sorrel-side-ui', s0.chips.some(t => /Sorrel\u2019s end/.test(t)) && a.stamps.some(t => /Behind the door/.test(t)) && /read it all the way to the bottom/.test(b.text) && s1.stamps.some(t => /back on your end/.test(t))
+      && ['heart', 'trust', 'dread', 'bat'].every(k => s1[k] === s0[k]) && !s1.chips.some(t => /Sorrel\u2019s end/.test(t)) && s1.chips.length === s0.chips.length - 1,
+    'Day Six offers "' + (s0.chips.filter(t => /Sorrel/.test(t))[0] || '?') + '"; "' + (a.stamps.filter(t => /Behind the door/.test(t))[0] || '?') + '", two scenes, "' + (s1.stamps.filter(t => /back on/.test(t))[0] || '?') + '"; heart, trust, dread and battery unchanged, and it is not offered again');
+  await ctx.close();
+});
+
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
   const out = [];
