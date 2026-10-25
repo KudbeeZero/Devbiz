@@ -417,13 +417,33 @@
   }
   // Notes is also the evidence board: tap two clues to pin them together. The right pair files a deduction that opens a hidden choice later on;
   // a wrong one costs battery and dread (ABY.link). Clues can only be pinned during a journey, never on an ending or in a rite.
-  var pick = null;
+  var pick = null, caseOpen = false;
+  // the case file (ABY.caseFile): every deduction ever pinned, on any night, as one line of what really happened, in order; blanks for the rest
+  function renderCase() {
+    var box = $('noteList'), cf = ABY.caseFile(G.deduced || {}); box.innerHTML = '';
+    $('nSub').textContent = 'Case File · ' + cf.have + ' of ' + cf.total + ' lines';
+    var back = document.createElement('button'); back.type = 'button'; back.className = 'pincancel caseback'; back.id = 'nCaseBack'; back.textContent = '\u2039 Clues';
+    back.addEventListener('click', function () { caseOpen = false; ABY.Audio.sfx('click'); renderNotes(); }); box.appendChild(back);
+    cf.entries.forEach(function (e, i) {
+      var d = document.createElement('div'); d.className = 'nt case' + (e.lines.some(function (l) { return l.text; }) ? '' : ' empty'); d.setAttribute('data-case', i);
+      var h = document.createElement('h3'); h.textContent = e.when; d.appendChild(h);
+      e.lines.forEach(function (l) { var p = document.createElement('p'); p.className = l.text ? 'cl' : 'cl blank'; p.setAttribute('data-line', l.id); p.textContent = l.text || 'A pair you have not pinned yet.'; d.appendChild(p); });
+      box.appendChild(d);
+    });
+    if (cf.coda) { var c = document.createElement('div'); c.className = 'nt ded casecoda'; c.id = 'nCaseCoda'; var w = document.createElement('h3'), t = document.createElement('p'); w.textContent = WHO[cf.coda.who] || cf.coda.who; t.textContent = cf.coda.text; c.appendChild(w); c.appendChild(t); box.appendChild(c); }
+  }
+  function caseButton(box) {
+    var cf = ABY.caseFile(G.deduced || {}), b = document.createElement('button'); b.type = 'button'; b.className = 'nt casebtn'; b.id = 'nCase';
+    var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '\u2756 Case File'; p.textContent = cf.done ? 'Every line filled in. Sorrel wrote the last one.' : cf.have + ' of ' + cf.total + ' lines of what really happened. Each deduction fills one, on any night.';
+    b.appendChild(h); b.appendChild(p); b.addEventListener('click', function () { caseOpen = true; pick = null; ABY.Audio.sfx('click'); buzz(8); renderNotes(); }); box.appendChild(b);
+  }
   function renderNotes(msg) {
+    if (caseOpen) { noteN = 0; P.badge('notes', 0); return renderCase(); }
     var box = $('noteList'); box.innerHTML = ''; noteN = 0; P.badge('notes', 0); var ks = active() ? G.state.notes : [], live = canPin();
     var ded = active() ? ABY.LINKS.filter(function (l) { return G.state.flags['link_' + l.id]; }) : [];
     if (ks.indexOf(pick) < 0) pick = null;
     $('nSub').textContent = ks.length + ' of ' + Object.keys(ABY.NOTES).length + ' clues' + (ded.length ? ' · ' + ded.length + (ded.length === 1 ? ' deduction' : ' deductions') : '');
-    if (!ks.length) { var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
+    if (!ks.length) { if (Object.keys(G.deduced || {}).length) caseButton(box); var e = document.createElement('p'); e.className = 'hint2'; e.textContent = 'Nothing yet. Clues you find (photos, recordings, calls, pages) are kept here, and some unlock things you can say.'; box.appendChild(e); return; }
     // the tray stays on screen while the list scrolls (position: sticky): what she has picked, a way to put it down, and what her last pin did
     var tray = document.createElement('div'); tray.className = 'pintray' + (live ? ' on' : ''); tray.setAttribute('role', 'status'); tray.setAttribute('aria-live', 'polite');
     var tt = document.createElement('span'); tt.id = 'nMsg';
@@ -431,7 +451,7 @@
     if (pick) { var b = document.createElement('b'); b.textContent = '\u201C' + ABY.NOTES[pick].title + '\u201D'; tt.appendChild(document.createTextNode('Pinning ')); tt.appendChild(b); tt.appendChild(document.createTextNode(': now tap the clue it goes with.')); }
     tray.appendChild(tt);
     if (pick) { var x = document.createElement('button'); x.type = 'button'; x.className = 'pincancel'; x.id = 'nCancel'; x.textContent = 'Cancel'; x.addEventListener('click', function () { pick = null; ABY.Audio.sfx('click'); renderNotes(); }); tray.appendChild(x); }
-    box.appendChild(tray);
+    box.appendChild(tray); caseButton(box);
     var cr = credits(G.state);
     ded.forEach(function (l) { var d = document.createElement('div'); d.className = 'nt ded'; d.setAttribute('data-ded', l.id); var h = document.createElement('h3'), p = document.createElement('p'); h.textContent = '✦ ' + l.title; p.textContent = l.text; d.appendChild(h); d.appendChild(p);
       cr.filter(function (c) { return c.link === l; }).forEach(function (c) { var m = document.createElement('small'); m.className = 'cred'; m.style.color = c.app.c[0]; m.textContent = c.app.glyph + ' ' + c.app.name + ' showed you this'; d.appendChild(m); });
@@ -570,7 +590,7 @@
     if (name !== 'msg') G.autoPick = null;
     $('inst').hidden = true; $('news').hidden = true; $('epi').hidden = true; $('who').hidden = true;
     if (name === 'home') { maybeGuide(); if (G.pend && !G.run) P.badge('msg', 1); }       // an unfinished night waits behind the Messages icon
-    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') renderNotes(); else if (name === 'settings') renderSettings();
+    if (name === 'lock') renderLock(); else if (name === 'home') renderHome(); else if (name === 'home2') renderHome2(); else if (name === 'gallery') renderGallery(); else if (name === 'pulse') renderPulse(); else if (name === 'store') renderStore(); else if (name === 'flute') renderFlute(); else if (name === 'notes') { caseOpen = false; renderNotes(); } else if (name === 'settings') renderSettings();
     else if (name === 'msg') openMsgApp();
     if (name !== 'msg' && G.node && name !== 'lock') { /* the wallpaper keeps the speaker in view */ }
   }

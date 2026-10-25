@@ -1083,7 +1083,7 @@ await block('badges-and-factions', async () => { // badges and factions are the 
   rec('badges-earned', got === 'day_two,fearless,first_light,lamplighter,name_keeper,real_morning' && /Badge earned/.test(bn), 'one ending earned: ' + got + ' | banner "' + bn.slice(0, 50) + '"');
   await pg.click('#memAct'); await sleep(500); await pg.evaluate(() => ABY.Phone.show('gallery')); await sleep(500);
   const g = await pg.evaluate(() => ({ tiles: document.querySelectorAll('#tiles .tile').length, found: document.querySelectorAll('#tiles .tile.f').length, on: document.querySelectorAll('#badges .bdg.on').length, all: document.querySelectorAll('#badges .bdg').length, fb: [...document.querySelectorAll('#faction .fbtn')].map(b => b.textContent), lean: [...document.querySelectorAll('#faction .fbtn.lean')].length }));
-  rec('gallery-badges-factions', g.tiles === 27 && g.found === 1 && g.on === 6 && g.all === 16 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
+  rec('gallery-badges-factions', g.tiles === 27 && g.found === 1 && g.on === 6 && g.all === 17 && g.fb.join() === 'Choir of Recall,Order of the Door,Hollow Court' && g.lean === 1, g.found + ' of ' + g.tiles + ' memories (the new endings draw), ' + g.on + '/' + g.all + ' badges, factions ' + g.fb.join(' / '));
   await pg.locator('#faction .fbtn', { hasText: 'Order of the Door' }).click(); await sleep(300);
   const jf = await pg.evaluate(() => ({ f: ABY.game.faction, saved: JSON.parse(localStorage.getItem('kudbee.abyss.v2')).faction, title: document.querySelector('#faction h3').textContent, txt: ABY.Share.moment('progress', '', ABY.game.found, { faction: ABY.game.faction, badges: 6 }) }));
   rec('faction-pledge', jf.f === 'order' && jf.saved === 'order' && /Sworn to The Order of the Door/.test(jf.title) && /Order of the Door \(6 badges\)/.test(jf.txt.text) && /SWORN TO THE ORDER/.test(jf.txt.info.line1), 'pledged and saved: "' + jf.title + '"; the share says "' + jf.txt.text.slice(0, 80) + '..."');
@@ -1473,6 +1473,26 @@ await block('last-time-ui', async () => {
   rec('last-time-ui', !/last time/i.test(first.text) && first.last === '' && m.name === '3:07 Again' && saved === 'loop' && next.node === 'awakening' && next.last === 'loop'
       && at0 >= 0 && (own < 0 || at0 < own) && kept.g === 'loop',
     'a first journey hears nothing; after "' + m.name + '" the save remembers "' + saved + '", and the next journey opens on "' + line.slice(0, 48) + '…" before its own text; a reload keeps it');
+  await ctx.close();
+});
+
+await block('case-file-ui', async () => {
+  // Notes keeps a case file of every deduction ever pinned, in the order it happened, with a blank for each one not yet pinned; filling all of
+  // them adds Sorrel's last line. It reads the save, so it shows outside a journey too
+  const pre = `localStorage.setItem('kudbee.abyss.v2', JSON.stringify({ guided: true, deduced: { birthday: 1, what_she_gave: 1, yes_man: 1, two_warnings: 1 } }))`;
+  const { ctx, pg } = await open(phoneCtx(PHONES[0]), 'case-file', { pre }); await wake(pg);
+  await pg.evaluate(() => ABY.Phone.show('notes')); await pg.waitForSelector('#nCase', { timeout: 5000 });
+  const btn = await pg.evaluate(() => document.getElementById('nCase').textContent);
+  await pg.click('#nCase'); await pg.waitForSelector('#nCaseBack', { timeout: 5000 });
+  const part = await pg.evaluate(() => ({ sub: document.getElementById('nSub').textContent, filled: document.querySelectorAll('#noteList .cl:not(.blank)').length, blank: document.querySelectorAll('#noteList .cl.blank').length, coda: !!document.getElementById('nCaseCoda'), first: document.querySelector('#noteList .nt.case h3').textContent }));
+  await pg.screenshot({ path: join(OUT, 'case-file.png') });
+  await pg.click('#nCaseBack'); await sleep(200); const back = await pg.evaluate(() => ({ btn: !!document.getElementById('nCase'), sub: document.getElementById('nSub').textContent }));
+  await pg.evaluate(() => { ABY.LINK_IDS.forEach(l => { ABY.game.deduced[l] = 1; }); }); await pg.click('#nCase'); await pg.waitForSelector('#nCaseCoda', { timeout: 5000 });
+  const full = await pg.evaluate(() => ({ sub: document.getElementById('nSub').textContent, blank: document.querySelectorAll('#noteList .cl.blank').length, coda: document.getElementById('nCaseCoda').textContent }));
+  await pg.evaluate(() => { document.querySelector('#notes .pad').scrollTop = 99999; }); await sleep(200); await pg.screenshot({ path: join(OUT, 'case-file-closed.png') });
+  rec('case-file-ui', /4 of 15 lines/.test(btn) && part.sub === 'Case File · 4 of 15 lines' && part.filled === 4 && part.blank === 11 && !part.coda && /first night/.test(part.first)
+      && back.btn && /clues/.test(back.sub) && full.sub === 'Case File · 15 of 15 lines' && full.blank === 0 && /MY NAME IS SORREL/.test(full.coda),
+    'outside a journey, Notes offers "' + btn.slice(0, 40) + '…"; the file shows ' + part.filled + ' lines and ' + part.blank + ' blanks from "' + part.first + '"; back to the clues; with every deduction, 15 of 15 and Sorrel\'s last line');
   await ctx.close();
 });
 
