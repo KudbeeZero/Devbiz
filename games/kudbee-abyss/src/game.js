@@ -525,6 +525,7 @@
   }
   // What's New (Settings): the releases a player would have seen, newest first, from what actually shipped. Add one with each player-facing change.
   var RELEASES = [
+    { v: '1.0', d: '26 Oct 2026', n: ['Version 1.0: working and tested build'] },
     { v: '2.3', d: '22 Oct 2026', n: ['Add Abyss to your Home Screen: it opens full screen and plays with no signal', 'Settings: About (your data stays on this phone) and What\'s New', 'When an app\'s clue opens a deduction, Notes, the ending card and the app\'s own page give it the credit'] },
     { v: '2.2', d: '22 Oct 2026', n: ['The App Store grows: twelve listings, opened by what you have done, with reviews that remember you', 'Installed apps reach into the night: each speaks once, on a later day', 'Four apps leave a clue that can open a deduction your journey missed'] },
     { v: '2.1', d: '21 Oct 2026', n: ['Salt, a crayon and a cursed mirror: picked up early, spent days later', 'Codas, detours and second sight: the story remembers your other journeys', 'Bonds: how you treat the five who speak to you opens and closes choices', 'Day Seven: the accusation, and a new ending', 'Haptics: a heartbeat as dread rises, calls that shake the phone', 'A photosensitivity warning and a Calm flashes setting'] },
