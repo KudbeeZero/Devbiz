@@ -1551,6 +1551,21 @@ await block('sorrel-side-ui', async () => {
     'Day Six offers "' + (s0.chips.filter(t => /Sorrel/.test(t))[0] || '?') + '"; "' + (a.stamps.filter(t => /Behind the door/.test(t))[0] || '?') + '", two scenes, "' + (s1.stamps.filter(t => /back on/.test(t))[0] || '?') + '"; heart, trust, dread and battery unchanged, and it is not offered again');
   await ctx.close();
 });
+await block('vey-side-ui', async () => {
+  // Vey's side: on Day Four, over the little crown, a reply crosses to just behind her (a stamp says so, and the stage turns to Vey), two scenes,
+  // then back on your end with nothing changed, and it is not offered again
+  const { ctx, pg } = await open(phoneCtx(PHONES[2]), 'vey-side'); await wake(pg); await openMessages(pg);
+  const st = () => pg.evaluate(() => { const s = ABY.game.state; return { node: s.node, heart: s.heart, trust: s.trust, dread: s.dread, bat: s.bat, flags: Object.keys(s.flags).sort().join(), chips: [...document.querySelectorAll('#replies .chip')].map(c => c.textContent), stamps: [...document.querySelectorAll('#thread .stamp')].map(e => e.textContent), text: document.getElementById('thread').textContent, who: document.getElementById('mName').textContent }; });
+  await at(pg, 'd4_crown', { mem: 2, heart: 1, trust: 2, dread: 2, bat: 40, flags: { little_crown: 1 } }); const s0 = await st();
+  await tapChip(pg, 'Vey\u2019s end'); await pg.waitForFunction(() => ABY.game.state.node === 'vs4_a' && !ABY.game.delivering, null, { timeout: 15000 }); const a = await st();
+  await tapChip(pg, a.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'vs4_b' && !ABY.game.delivering, null, { timeout: 15000 }); const b = await st();
+  await pg.screenshot({ path: join(OUT, 'vey-side.png') });
+  await tapChip(pg, b.chips[0]); await pg.waitForFunction(() => ABY.game.state.node === 'd4_crown' && !ABY.game.delivering, null, { timeout: 15000 }); await sleep(300); const s1 = await st();
+  rec('vey-side-ui', s0.chips.some(t => /Vey\u2019s end/.test(t)) && a.stamps.some(t => /Just behind you/.test(t)) && /I kept it dry/.test(a.text) && /cake box/.test(b.text) && s1.stamps.some(t => /back on your end/.test(t))
+      && ['heart', 'trust', 'dread', 'bat'].every(k => s1[k] === s0[k]) && s1.flags === [s0.flags, 'vs_d4'].filter(Boolean).join(',').split(',').sort().join() && !s1.chips.some(t => /Vey\u2019s end/.test(t)) && s1.chips.length === s0.chips.length - 1,
+    'Day Four offers "' + (s0.chips.filter(t => /Vey/.test(t))[0] || '?') + '"; "' + (a.stamps.filter(t => /Just behind/.test(t))[0] || '?') + '", two scenes, "' + (s1.stamps.filter(t => /back on/.test(t))[0] || '?') + '"; heart, trust, dread and battery unchanged, and it is not offered again');
+  await ctx.close();
+});
 
 // ================= portrait: the story keeps a window =================
 await block('portrait-room', async () => {
