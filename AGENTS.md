@@ -25,7 +25,7 @@ This project uses a **commit-streaming workflow** (owner decision 2026-07-02):
 4. **AWAITING_AUDIT** only after scope frozen, checks documented, risks listed
 5. **No Auto-Merge** — explicit owner approval required
 6. **Green Status** — local verification only (CI workflows removed); say "local passed, no CI configured"
-7. **Owner-Only Decisions** — stop and ask before merging, deploying, changing pricing/permissions/security, enabling payment/API keys, changing production env vars, retargeting branches, opening new PR lanes
+7. **Owner-Only Decisions** — stop and ask before merging, deploying, changing pricing/permissions/security, enabling payment/API keys, changing production env vars, retargeting branches
 
 ## Memory Layers (where to read/write)
 

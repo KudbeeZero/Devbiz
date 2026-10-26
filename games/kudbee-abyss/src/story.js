@@ -4159,6 +4159,16 @@ ABY.CODAS = [
   { id: 'c_lowdoor_board', end: 'lowdoor', req: { flag: 'board_out' }, who: 'QUEEN', text: 'You laid it all out, and you saw what I did, and you still gave me the key. I do not know what to call that. She calls it fair.' },
   { id: 'c_blackout_marked', end: 'blackout', req: { flag: 'marked' }, who: 'EYE', text: 'it is dark now. i can see you better in the dark. i always could.' },
   { id: 'c_blackout_heard', end: 'blackout', req: { flag: 'heard' }, who: 'QUEEN', text: 'Your screen went out. I know what that sounds like from the inside. Knock twice if you can hear me.' },
+  { id: 'c_dawn_ledger', end: 'dawn', req: { flag: 'ledger' }, who: 'GUARDIAN', text: 'You read every name and then you walked out into the morning. I kept the ledger open to your page. It is the first page that has ever smelled like outside.' },
+  { id: 'c_song_heard', end: 'song', req: { flag: 'heard' }, who: 'QUEEN', text: 'You played the whole song, and you had already heard the recording. I think that is what made it sound like forgiveness instead of a spell.' },
+  { id: 'c_echo_marked', end: 'echo', req: { flag: 'marked' }, who: 'EYE', text: 'you echoed back, and you had looked at me on the first night. i am keeping both of those, in the same drawer.' },
+  { id: 'c_silence_carried', end: 'silence', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with me on the stairs, and then you walked out alone. I did not follow. I wanted you to hear how quiet it got after.' },
+  { id: 'c_crown_carried', end: 'crown', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with me on the stairs, and then you put on the crown. I was not surprised. I was only sad, and only a little.' },
+  { id: 'c_hollow_heard', end: 'hollow', req: { flag: 'heard' }, who: 'QUEEN', text: 'You heard the recording, and then you locked the door. I heard you do both. I am still hearing both.' },
+  { id: 'c_mirror_marked', end: 'mirror', req: { flag: 'marked' }, who: 'EYE', text: 'you paid for the truth and you had looked at me first. i did not know a look could cost that much. i am sorry.' },
+  { id: 'c_betrayal_marked', end: 'betrayal', req: { flag: 'marked' }, who: 'EYE', text: 'you looked at me, and then her voice said my name wrong. i am keeping the look. i am throwing away the name.' },
+  { id: 'c_daybreak_heard', end: 'daybreak', req: { flag: 'heard' }, who: 'QUEEN', text: 'Real morning, and the recording is still in your pocket. That is all right. Some things are not for putting down.' },
+  { id: 'c_blackout_carried', end: 'blackout', req: { flag: 'carried' }, who: 'QUEEN', text: 'You sat with me on the stairs, and then the screen went out. I was there, on the stairs, when it did. I did not move.' },
 ];
 // and whoever she was hears from Wren last: one line for a fall, one for an ending that carries on, one for an ending that is final (always after the others)
 ABY.HERO_CODAS = [
