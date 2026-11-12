@@ -4016,9 +4016,28 @@ ABY.SORREL_SIDE = [
     b: { mood: 'dawn', text: 'i keep count on the wall under the writing, in little lines, in fives, the way Mummy showed me. it’s a lot of fives. (A pause.) you’re the only one who ever asked how many. they all just ask me to stop. i don’t know how to stop. i only know how to start. could we try to stop, you and me? just this once?',
       choices: ['Tell her yes, you will try', 'Tell her you will end it from your side'] } },
 ];
-for (const [list, speaker, thread] of [[ABY.WREN_SIDE, 'WREN', 'wren'], [ABY.SORREL_SIDE, 'SORREL', 'sorrel']]) for (const w of list) {
+// Vey's side: three nights from just behind her, where it always is. What the hands are for, told by the thing that has them (Day Two once she has
+// recognised it, Day Four over the little crown it kept dry, Day Six over the song it hummed carrying the child down)
+ABY.VEY_SIDE = [
+  { id: 'vs_d2', from: 'd2_vey_called', label: 'Vey’s end: why it asked for the phone',
+    a: { mood: 'dark', text: 'Just behind you. Day Two. You remembered me. Nobody remembers me; that is what the place is for, and I have always been so grateful to it. (A small, careful sound: hands, folding and unfolding.) I asked for the phone because a phone is a thing that is carried. Everyone carries it. Nobody ever asks a phone whether it would like to be put down.',
+      choices: ['Ask it what it would like', 'Tell it you are not afraid of its hands'] },
+    b: { mood: 'dusk', text: 'I would like to be the thing that is carried, once. Only down one stair. (The voice goes very small, and very many.) But I am heavy in a way you would not believe, and every one of my hands would try to help. Keep the phone. Keep it warm. I only wanted to know what it is like to be held by somebody who knows what I am.',
+      choices: ['Tell it that it is held now', 'Hold the phone a little tighter'] } },
+  { id: 'vs_d4', from: 'd4_crown', label: 'Vey’s end: who kept the little crown dry',
+    a: { mood: 'gate', text: 'Just behind you, under the lake. Day Four. It is dry because I kept it dry. (A smell of wet paper and warm brass.) Every night since the first I have held it up out of the water, with one hand, the smallest, the one I am proudest of. The lake does not like that. The lake would like everything. I said: not this. This is hers. It is the only thing I have ever said no to.',
+      choices: ['Ask how long its arm has been up', 'Thank it for keeping it'] },
+    b: { mood: 'dusk', text: 'A hundred years, and these four nights. (A tiny laugh, from a long way down.) You stop feeling it after the first winter. Then you stop feeling the winters. Her mother cut it out of a cake box with the gold pen, and the little one put it on back to front and would not be told. I have never once let it fall. Put it where it goes, and then I can put my hand down.',
+      choices: ['Tell it to put its hand down now', 'Promise to put it where it goes'] } },
+  { id: 'vs_d6', from: 'd6_lull', label: 'Vey’s end: the eleven notes on the stair',
+    a: { mood: 'dusk', text: 'Just behind you, at the bottom of the servants’ stair. Day Six. I know that song. I hummed it all the way down on the first night, with her asleep on my shoulder. I had two hands then. Eleven notes, because her mother had only got that far, and I did not know the twelfth, and I would not make one up in case it was wrong and she woke and knew it was not Mummy.',
+      choices: ['Ask what happened at the bottom', 'Hum the eleven notes back to it'] },
+    b: { mood: 'dark', text: 'The captain held out his arms, and I would not give her to him. I carried her the whole way in and put her down in the cot, and when I came out I had three hands. The third one is hers. Every hand after it is someone I carried in and did not carry out. (Very many fingers, not moving.) She counts them for me through the gap, in fives. I think she would forgive me. That is the worst thing I know.',
+      choices: ['Tell it to tell her that itself', 'Tell it the twelfth note is hers to find'] } },
+];
+for (const [list, speaker, thread] of [[ABY.WREN_SIDE, 'WREN', 'wren'], [ABY.SORREL_SIDE, 'SORREL', 'sorrel'], [ABY.VEY_SIDE, 'VEY', 'vey']]) for (const w of list) {
   const from = ABY.NODES[w.from], ch = from.ch, a = w.id.replace('_d', '') + '_a', b = w.id.replace('_d', '') + '_b';
-  const scene = (sc, next, last) => ({ ch, speaker, mood: sc.mood, focus: 'queen', time: 'line', thread, safe: true, text: sc.text,
+  const scene = (sc, next, last) => ({ ch, speaker, mood: sc.mood, focus: ABY.SPEAKERS[speaker].focus, time: 'line', thread, safe: true, text: sc.text,
     choices: sc.choices.map(label => Object.assign({ label, next, bat: 0, free: true }, last ? { set: w.id } : {})) });
   ABY.NODES[a] = scene(w.a, b, false); ABY.NODES[b] = scene(w.b, '@back', true);
   from.choices.push({ label: w.label, next: a, bat: 0, free: true, req: { noflag: w.id } });

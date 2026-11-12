@@ -28,7 +28,7 @@ function walkChecks() {
   const noWay = ids.filter(id => !N[id].ending && !N[id].song && open(id).length === 0);
   rec('story-no-dead-ends', noWay.length === 0, noWay.join(', ') || 'every scene has at least one choice that is always available');
   const sure = new Set(ids.filter(id => N[id].ending));
-  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : /^hero_/.test(id) ? ABY.OPENINGS.every(o => sure.has(o)) : N[id].time ? open(id).some(c => c.next === '@back' || (/^(confide|holders|wren|sorrel)$/.test(N[id].thread || '') && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
+  for (let ch = true; ch;) { ch = false; for (const id of ids) if (!sure.has(id) && (N[id].song ? ['song_win', 'song_fail', 'reconcile'].every(x => sure.has(x) || true) : /^hero_/.test(id) ? ABY.OPENINGS.every(o => sure.has(o)) : N[id].time ? open(id).some(c => c.next === '@back' || (/^(confide|holders|wren|sorrel|vey)$/.test(N[id].thread || '') && sure.has(c.next))) : open(id).some(c => c.next === '@back' ? false : sure.has(c.next)))) { sure.add(id); ch = true; } }
   rec('story-always-finishable', ids.every(id => sure.has(id)), ids.filter(id => !sure.has(id)).join(', ') || 'from every scene the always-available choices reach an ending (' + sure.size + '/' + ids.length + ')');
 
   // REACHABILITY (a bounded search from the start, shallow first). Two states that behave the same are one state: a stat only matters up to
@@ -36,7 +36,7 @@ function walkChecks() {
   const READ = ['knew_name', 'crystal', 'ledger', 'vey_trusted', 'vey_doubt', 'truth', 'crown', 'sealed', 'lullaby', 'broken', 'rite_doors', 'rite_blood', 'rite_lull', 'rite_choir', 'read_names', 'rite_wake', 'told_truth', 'little_crown', 'crown_laid', 'bells_done', 'riff_done', 'eye_is_sorrel', 'named_eye', 'promised_sorrel', 'rite_seventh', 'board_out', 'vey3_hand', ...ABY.ENDING_IDS.filter(ABY.isFall).map(id => 'scar_' + id)];
   READ.push(...ABY.OBJECTS.flatMap(o => ['has_' + o.id, 'used_' + o.id]));
   READ.push(...ABY.LINK_IDS.map(l => 'link_' + l), 'ev_door', 'ev_line', 'ev_first', 'vey_known', 'refused_next',
-    ...ids.filter(id => N[id].time && !/^(confide|holders|wren|sorrel)$/.test(N[id].thread || '')).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
+    ...ids.filter(id => N[id].time && !/^(confide|holders|wren|sorrel|vey)$/.test(N[id].thread || '')).flatMap(id => N[id].choices.map(c => c.set)), 'doubt', 'asked_eye', 'ally', 'skipped_doors', 'doubt2', 'first_page', 'knows_loop', 'wren_with');   // the clock's slips (seen once) and what they read   // the evidence board's deductions, and its once-only scenes
   READ.push(...ABY.BOND_FLAGS);   // a bond is counted from these, so the walk keeps states with different bonds apart
   // the flags that matter, as bits of a few integers: far cheaper than filtering a hundred names into a string for every one of two million states
   const READBIT = new Map([...new Set(READ)].map((f, i) => [f, i])), READWORDS = Math.ceil(READBIT.size / 31);
@@ -98,7 +98,7 @@ function walkChecks() {
     if (N[id].ending) for (const nx of N[id].ending === 'auto' ? conts : [ABY.ENDINGS[N[id].ending] && ABY.ENDINGS[N[id].ending].cont].filter(Boolean)) link(id, nx); }
   const toward = (target) => { const d = new Map([[target, 0]]), q = [target]; for (let i = 0; i < q.length; i++) for (const p of from[q[i]] || []) if (!d.has(p)) { d.set(p, d.get(q[i]) + 1); q.push(p); } return id => d.has(id) ? d.get(id) : Infinity; };
   const unmet = () => { const out = [];
-    for (const id of ids) if (!reach.has(id) && !N[id].thread) out.push({ id, flags: into(id) });
+    for (const id of ids) if (!reach.has(id) && (!N[id].thread || N[id].time === 'line')) out.push({ id, flags: into(id) });   // (a trip to the other end of the line is chased too: its host can be a rare scene, like the little crown on Day Four)
     for (const id of ids) for (const c of N[id].choices || []) if (c.req && (need(c.req).length || c.req.bond) && reach.has(id) && !standing(id, c.req)) out.push({ id, flags: [...new Set([...need(c.req), ...into(id)])], own: need(c.req), req: c.req });
     return out; };
   // (two cheap rules keep the chases short: a scene none of whose ways in is reached yet waits for a later round, since only reaching one of those
@@ -312,7 +312,7 @@ function walkChecks() {
       LT.length + ' lines, one for each ending, from ' + new Set(LT.map(l => l.who)).size + ' voices; heard on all ' + ABY.OPENINGS.length + ' openings (after the "who were you" scene too) and nowhere else; a first journey hears none; no choice reads it; a save keeps it' + (shaped.length < LT.length ? ' | BAD ' + LT.filter(l => !shaped.includes(l)).map(l => l.id).join(', ') : '') + (read.length ? ' | READ BY ' + read.join(', ') : ''));
   }
 
-  for (const [cid, W, thread, speaker, who, min] of [['wren-side', ABY.WREN_SIDE, 'wren', 'WREN', 'Wren\'s end of the line', 4], ['sorrel-side', ABY.SORREL_SIDE, 'sorrel', 'SORREL', 'Sorrel\'s side of the door', 3]]) { // two scenes told from her side, entered once from one scene of its own day and returning there. Every
+  for (const [cid, W, thread, speaker, who, min] of [['wren-side', ABY.WREN_SIDE, 'wren', 'WREN', 'Wren\'s end of the line', 4], ['sorrel-side', ABY.SORREL_SIDE, 'sorrel', 'SORREL', 'Sorrel\'s side of the door', 3], ['vey-side', ABY.VEY_SIDE, 'vey', 'VEY', 'just behind her, where Vey is', 3]]) { // two scenes told from her side, entered once from one scene of its own day and returning there. Every
     // choice is free and adds nothing, so a round trip (flashlight on or off) leaves her exactly as she was, but for the once-only flag; no line
     // waits on the scene she leaves (it would be said twice), nothing else leads in, and both scenes are reached
     const lines = s => ABY.overnightFor(s).length, days = new Set(), bad = [];
@@ -704,7 +704,7 @@ function walkChecks() {
     const sh = (o) => Object.assign(ABY.newState(0), { node: 'd4_shore' }, o);
     const offer = (o) => ABY.options(sh(o)).some(x => x.c.next === 'd4_crown');
     const laid = ABY.choose(Object.assign(ABY.newState(0), { node: 'd4_crown', dread: 3 }), 0);
-    const named = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_crown' }, o)).length;
+    const named = (o) => ABY.options(Object.assign(ABY.newState(0), { node: 'd4_crown' }, o)).filter(x => !N[x.c.next].time).length;   // (Vey's side trip is offered here too, and checked on its own)
     rec('d4-little-crown', offer({ flags: { little_crown: 1 } }) && !offer({}) && !offer({ flags: { little_crown: 1, crown_laid: 1 } })
       && laid && laid.node === 'd4_shore' && laid.flags.crown_laid === 1 && laid.dread === 2 && named({ flags: { read_names: 1 } }) === 3 && named({}) === 2,
       'taking out the little crown needs it from the first night, can be done once, lowers dread when laid down, and returns to the shore');
@@ -782,7 +782,7 @@ function walkChecks() {
 // The walk is the slow part and depends only on the story and on this file, so its result is kept: an unchanged story re-checks instantly
 // (GRAPH_FRESH=1 forces a real walk). GRAPH_QUICK=1 walks a small slice and skips the checks that need the whole walk, for a fast look while editing.
 const here = dirname(fileURLToPath(import.meta.url));
-const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'long-pairs', 'wren-side', 'sorrel-side', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
+const NEEDS_FULL_WALK = new Set(['story-all-nodes-reachable', 'story-all-endings', 'hidden-choices', 'evidence-board', 'long-pairs', 'wren-side', 'sorrel-side', 'vey-side', 'overnight-messages', 'trust-ledger', 'badges-and-factions']);
 export function graphChecks() {
   if (process.env.GRAPH_QUICK) { process.env.WALK_LIMIT = process.env.WALK_LIMIT || '60000'; return walkChecks().map(r => NEEDS_FULL_WALK.has(r.id) && !r.pass ? { ...r, pass: true, note: 'SKIPPED in quick mode (needs the full walk) | ' + r.note } : r); }
   const sum = createHash('sha256').update(readFileSync(resolve(here, '..', 'src', 'story.js'))).update(readFileSync(fileURLToPath(import.meta.url))).update(String(process.env.WALK_LIMIT || '')).digest('hex');
